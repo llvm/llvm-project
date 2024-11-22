@@ -7554,7 +7554,8 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
     ArrayRef<uint64_t> Record, unsigned &I) {
   SmallVector<unsigned> StackIdList;
   // For backwards compatibility with old format before radix tree was
-  // used, simply see if we found a radix tree array record.
+  // used, simply see if we found a radix tree array record (and thus if
+  // the RadixArray is non-empty).
   if (RadixArray.empty()) {
     unsigned NumStackEntries = Record[I++];
     assert(Record.size() - I >= NumStackEntries);

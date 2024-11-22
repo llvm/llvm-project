@@ -4616,14 +4616,15 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     auto *Summary = VI.getSummaryList()[0].get();
     FunctionSummary *FS = cast<FunctionSummary>(Summary);
     collectMemProfCallStacks(
-        FS, /*GetStackIndex*/ [&](unsigned I) { return I; }, CallStacks);
+        FS, /*GetStackIndex*/ [](unsigned I) { return I; }, CallStacks);
   }
   // Finalize the radix tree, write it out, and get the map of positions in the
   // linearized tree array.
   DenseMap<CallStackId, LinearCallStackId> CallStackPos;
-  if (!CallStacks.empty())
+  if (!CallStacks.empty()) {
     CallStackPos =
         writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
+  }
 
   // Keep track of the current index into the CallStackPos map.
   CallStackId CallStackCount = 0;
@@ -4862,9 +4863,10 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // Finalize the radix tree, write it out, and get the map of positions in the
   // linearized tree array.
   DenseMap<CallStackId, LinearCallStackId> CallStackPos;
-  if (!CallStacks.empty())
+  if (!CallStacks.empty()) {
     CallStackPos =
         writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
+  }
 
   // Keep track of the current index into the CallStackPos map.
   CallStackId CallStackCount = 0;
