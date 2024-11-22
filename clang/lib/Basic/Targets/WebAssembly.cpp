@@ -337,7 +337,7 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
   if (HasBulkMemory) {
     HasBulkMemoryOpt = true;
   }
-  
+
   // The reference-types feature included the change to `call_indirect`
   // encodings to support overlong immediates.
   if (HasReferenceTypes) {

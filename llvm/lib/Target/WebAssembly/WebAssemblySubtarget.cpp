@@ -38,7 +38,7 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
   // bulk-memory implies bulk-memory-opt
   if (HasBulkMemory)
     HasBulkMemoryOpt = true;
-    
+
   // reference-types implies call-indirect-overlong
   if (HasReferenceTypes)
     HasCallIndirectOverlong = true;
