@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -22,14 +23,15 @@
 
 using namespace mlir;
 using namespace mlir::vector;
+using namespace mlir::gpu;
 
 /// Currently the distribution map is implicit based on the vector shape. In the
 /// future it will be part of the op.
 /// Example:
 /// ```
-/// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1x16x2xf32>) {
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1x16x2xf32>) {
 ///   ...
-///   vector.yield %3 : vector<32x16x64xf32>
+///   gpu.yield %3 : vector<32x16x64xf32>
 /// }
 /// ```
 /// Would have an implicit map of:
@@ -117,13 +119,13 @@ struct DistributedLoadStoreHelper {
   ///   2. vectors of type V<shapexT> transit through a memref<shapexT>
   ///
   /// When broadcastMode is true, the load is not distributed to account for
-  /// the broadcast semantics of the `vector.warp_execute_on_lane_0` op.
+  /// the broadcast semantics of the `gpu.warp_execute_on_lane_0` op.
   ///
   /// Example:
   ///
   /// ```
-  ///   %r = vector.warp_execute_on_lane_0(...) -> (f32) {
-  ///     vector.yield %cst : f32
+  ///   %r = gpu.warp_execute_on_lane_0(...) -> (f32) {
+  ///     gpu.yield %cst : f32
   ///   }
   ///   // Both types are f32. The constant %cst is broadcasted to all lanes.
   /// ```
@@ -180,10 +182,10 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
          "expected WarpOp with single block");
 
   auto yield =
-      cast<vector::YieldOp>(newOpBody.getBlocks().begin()->getTerminator());
+      cast<gpu::YieldOp>(newOpBody.getBlocks().begin()->getTerminator());
 
   rewriter.modifyOpInPlace(
-      yield, [&]() { yield.getOperandsMutable().assign(newYieldedValues); });
+      yield, [&]() { yield.getValuesMutable().assign(newYieldedValues); });
   return newWarpOp;
 }
 
@@ -195,7 +197,7 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
     llvm::SmallVector<size_t> &indices) {
   SmallVector<Type> types(warpOp.getResultTypes().begin(),
                           warpOp.getResultTypes().end());
-  auto yield = cast<vector::YieldOp>(
+  auto yield = cast<gpu::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   llvm::SmallSetVector<Value, 32> yieldValues(yield.getOperands().begin(),
                                               yield.getOperands().end());
@@ -233,7 +235,7 @@ static bool canBeHoisted(Operation *op,
 /// condition and is not dead.
 static OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
                                 const std::function<bool(Operation *)> &fn) {
-  auto yield = cast<vector::YieldOp>(
+  auto yield = cast<gpu::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
     Value yieldValues = yieldOperand.get();
@@ -348,7 +350,7 @@ struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // TODO: at this point, we can reuse the shared memory from previous
     // buffers.
     SmallVector<Value> replacements;
-    auto yieldOp = cast<vector::YieldOp>(ifOp.thenBlock()->getTerminator());
+    auto yieldOp = cast<gpu::YieldOp>(ifOp.thenBlock()->getTerminator());
     Location yieldLoc = yieldOp.getLoc();
     for (const auto &it : llvm::enumerate(yieldOp.getOperands())) {
       Value sequentialVal = it.value();
@@ -370,8 +372,8 @@ struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
       rewriter.setInsertionPointAfter(ifOp);
       // Result type and yielded value type are the same. This is a broadcast.
       // E.g.:
-      // %r = vector.warp_execute_on_lane_0(...) -> (f32) {
-      //   vector.yield %cst : f32
+      // %r = gpu.warp_execute_on_lane_0(...) -> (f32) {
+      //   gpu.yield %cst : f32
       // }
       // Both types are f32. The constant %cst is broadcasted to all lanes.
       // This is described in more detail in the documentation of the op.
@@ -472,17 +474,17 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 ///
 /// Example:
 /// ```
-/// %0 = vector.warp_execute_on_lane_0(%id){
+/// %0 = gpu.warp_execute_on_lane_0(%id){
 ///   ...
 ///   vector.transfer_write %v, %A[%c0] : vector<32xf32>, memref<128xf32>
-///   vector.yield
+///   gpu.yield
 /// }
 /// ```
 /// To
 /// ```
-/// %r:3 = vector.warp_execute_on_lane_0(%id) -> (vector<1xf32>) {
+/// %r:3 = gpu.warp_execute_on_lane_0(%id) -> (vector<1xf32>) {
 ///   ...
-///   vector.yield %v : vector<32xf32>
+///   gpu.yield %v : vector<32xf32>
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
 struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
@@ -598,7 +600,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
     // Do not process warp ops that contain only TransferWriteOps.
     if (llvm::all_of(warpOp.getOps(),
-                     llvm::IsaPred<vector::TransferWriteOp, vector::YieldOp>))
+                     llvm::IsaPred<vector::TransferWriteOp, gpu::YieldOp>))
       return failure();
 
     SmallVector<Value> yieldValues = {writeOp.getVector()};
@@ -617,13 +619,13 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
         cast<vector::TransferWriteOp>(rewriter.clone(*writeOp.getOperation()));
     newWriteOp.getVectorMutable().assign(newWarpOp.getResult(newRetIndices[0]));
     rewriter.eraseOp(writeOp);
-    rewriter.create<vector::YieldOp>(newWarpOp.getLoc());
+    rewriter.create<gpu::YieldOp>(newWarpOp.getLoc());
     return success();
   }
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<vector::YieldOp>(
+    auto yield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
     Operation *lastNode = yield->getPrevNode();
     auto writeOp = dyn_cast_or_null<vector::TransferWriteOp>(lastNode);
@@ -658,19 +660,19 @@ private:
 
 /// Sink out elementwise op feeding into a warp op yield.
 /// ```
-/// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
 ///   ...
 ///   %3 = arith.addf %1, %2 : vector<32xf32>
-///   vector.yield %3 : vector<32xf32>
+///   gpu.yield %3 : vector<32xf32>
 /// }
 /// ```
 /// To
 /// ```
-/// %r:3 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>,
+/// %r:3 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>,
 /// vector<1xf32>, vector<1xf32>) {
 ///   ...
 ///   %4 = arith.addf %2, %3 : vector<32xf32>
-///   vector.yield %4, %2, %3 : vector<32xf32>, vector<32xf32>,
+///   gpu.yield %4, %2, %3 : vector<32xf32>, vector<32xf32>,
 ///   vector<32xf32>
 /// }
 /// %0 = arith.addf %r#1, %r#2 : vector<1xf32>
@@ -728,15 +730,15 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
 /// Sink out splat constant op feeding into a warp op yield.
 /// ```
-/// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
 ///   ...
 ///   %cst = arith.constant dense<2.0> : vector<32xf32>
-///   vector.yield %cst : vector<32xf32>
+///   gpu.yield %cst : vector<32xf32>
 /// }
 /// ```
 /// To
 /// ```
-/// vector.warp_execute_on_lane_0(%arg0 {
+/// gpu.warp_execute_on_lane_0(%arg0 {
 ///   ...
 /// }
 /// %0 = arith.constant dense<2.0> : vector<1xf32>
@@ -821,20 +823,20 @@ bool delinearizeLaneId(OpBuilder &builder, Location loc,
 
 /// Sink out transfer_read op feeding into a warp op yield.
 /// ```
-/// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
 ///   ...
 //    %2 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>,
 //    vector<32xf32>
-///   vector.yield %2 : vector<32xf32>
+///   gpu.yield %2 : vector<32xf32>
 /// }
 /// ```
 /// To
 /// ```
-/// %dead = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>,
+/// %dead = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>,
 /// vector<1xf32>, vector<1xf32>) {
 ///   ...
 ///   %2 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>,
-///   vector<32xf32> vector.yield %2 : vector<32xf32>
+///   vector<32xf32> gpu.yield %2 : vector<32xf32>
 /// }
 /// %0 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>, vector<1xf32>
 struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
@@ -959,7 +961,7 @@ struct WarpOpDeadResult : public OpRewritePattern<WarpExecuteOnLane0Op> {
     newYieldValues.reserve(warpOp->getNumResults());
     DenseMap<Value, int64_t> dedupYieldOperandPositionMap;
     DenseMap<OpResult, int64_t> dedupResultPositionMap;
-    auto yield = cast<vector::YieldOp>(
+    auto yield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
 
     // Some values may be yielded multiple times and correspond to multiple
@@ -1016,7 +1018,7 @@ struct WarpOpForwardOperand : public OpRewritePattern<WarpExecuteOnLane0Op> {
                                 PatternRewriter &rewriter) const override {
     SmallVector<Type> resultTypes;
     SmallVector<Value> yieldValues;
-    auto yield = cast<vector::YieldOp>(
+    auto yield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
     Value valForwarded;
     unsigned resultIndex;
@@ -1135,16 +1137,16 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
 /// Sink out vector.create_mask op feeding into a warp op yield.
 /// ```
 /// %0 = ...
-/// %1 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
+/// %1 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
 ///   ...
 ///   %mask = vector.create_mask %0 : vector<32xi1>
-///   vector.yield %mask : vector<32xi1>
+///   gpu.yield %mask : vector<32xi1>
 /// }
 /// ```
 /// To
 /// ```
 /// %0 = ...
-/// vector.warp_execute_on_lane_0(%arg0) {
+/// gpu.warp_execute_on_lane_0(%arg0) {
 ///   ...
 /// }
 /// %cmp = arith.cmpi ult, %laneid, %0
@@ -1652,28 +1654,28 @@ struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
 /// WarpExecuteOnLane0Op. The new scf.for region will contain a new
 /// WarpExecuteOnLane0Op region. Example:
 /// ```
-/// %w = vector.warp_execute_on_lane_0(%laneid) -> (vector<4xf32>) {
+/// %w = gpu.warp_execute_on_lane_0(%laneid) -> (vector<4xf32>) {
 ///   ...
 ///   %v1 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %v)
 ///   -> (vector<128xf32>) {
 ///     ...
 ///     scf.yield %r : vector<128xf32>
 ///   }
-///   vector.yield %v1 : vector<128xf32>
+///   gpu.yield %v1 : vector<128xf32>
 /// }
 /// ```
 /// To:
-/// %w0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<4xf32>) {
+/// %w0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<4xf32>) {
 ///   ...
-///   vector.yield %v : vector<128xf32>
+///   gpu.yield %v : vector<128xf32>
 /// }
 /// %w = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%varg = %q0)
 ///   -> (vector<4xf32>) {
-///     %iw = vector.warp_execute_on_lane_0(%laneid)
+///     %iw = gpu.warp_execute_on_lane_0(%laneid)
 ///     args(%varg : vector<4xf32>) -> (vector<4xf32>) {
 ///     ^bb0(%arg: vector<128xf32>):
 ///       ...
-///       vector.yield %ir : vector<128xf32>
+///       gpu.yield %ir : vector<128xf32>
 ///     }
 ///     scf.yield %iw : vector<4xf32>
 ///  }
@@ -1686,7 +1688,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<vector::YieldOp>(
+    auto yield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
     // Only pick up forOp if it is the last op in the region.
     Operation *lastNode = yield->getPrevNode();
@@ -1722,7 +1724,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, escapingValues.getArrayRef(), distTypes,
         newRetIndices);
-    yield = cast<vector::YieldOp>(
+    yield = cast<gpu::YieldOp>(
         newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
 
     SmallVector<Value> newOperands;
@@ -1774,7 +1776,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
     rewriter.eraseOp(forOp.getBody()->getTerminator());
     rewriter.mergeBlocks(forOp.getBody(), innerWarp.getBody(), argMapping);
     rewriter.setInsertionPointToEnd(innerWarp.getBody());
-    rewriter.create<vector::YieldOp>(innerWarp.getLoc(), yieldOperands);
+    rewriter.create<gpu::YieldOp>(innerWarp.getLoc(), yieldOperands);
     rewriter.setInsertionPointAfter(innerWarp);
     if (!innerWarp.getResults().empty())
       rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
@@ -1807,17 +1809,17 @@ private:
 /// The vector is reduced in parallel. Currently limited to vector size
 /// matching the warpOp size. E.g.:
 /// ```
-/// %r = vector_ext.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
 ///   %0 = "some_def"() : () -> (vector<32xf32>)
 ///   %1 = vector.reduction "add", %0 : vector<32xf32> into f32
-///   vector_ext.yield %1 : f32
+///   gpu.yield %1 : f32
 /// }
 /// ```
 /// is lowered to:
 /// ```
-/// %0 = vector_ext.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
+/// %0 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
 ///   %1 = "some_def"() : () -> (vector<32xf32>)
-///   vector_ext.yield %1 : vector<32xf32>
+///   gpu.yield %1 : vector<32xf32>
 /// }
 /// %a = vector.extract %0[0] : f32 from vector<1xf32>
 /// %r = ("warp.reduction %a")
