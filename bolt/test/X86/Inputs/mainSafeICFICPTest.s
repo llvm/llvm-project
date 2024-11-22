@@ -60,6 +60,7 @@
 #   sum += ptr->func(b, a) + ptr2->func(b, a);
 #   return 0;
 # }
+# Manually modified to remove "extra" assembly.
   .text
 	.file	"main.cpp"
 	.section	.text.hot.,"ax",@progbits
@@ -68,26 +69,10 @@
 	.type	_Z10createTypei,@function
 _Z10createTypei:                        # @_Z10createTypei
 	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbx
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbx, -16
-	movl	%edi, %ebx
-	movl	$16, %edi
 	callq	_Znwm@PLT
-	cmpl	$4, %ebx
-	xorps	%xmm0, %xmm0
 	leaq	_ZTV8Derived2+16(%rip), %rcx
 	leaq	_ZTV8Derived3+16(%rip), %rdx
 	cmoveq	%rcx, %rdx
-	movl	$5, %ecx
-	movl	$500, %esi                      # imm = 0x1F4
-	cmovel	%ecx, %esi
-	movaps	%xmm0, (%rax)
-	movq	%rdx, (%rax)
-	movl	%esi, 8(%rax)
-	popq	%rbx
-	.cfi_def_cfa_offset 8
 	retq
 .Lfunc_end0:
 	.size	_Z10createTypei, .Lfunc_end0-_Z10createTypei
@@ -98,71 +83,22 @@ _Z10createTypei:                        # @_Z10createTypei
 	.type	main,@function
 main:                                   # @main
 	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	pushq	%r15
-	.cfi_def_cfa_offset 24
-	pushq	%r14
-	.cfi_def_cfa_offset 32
-	pushq	%rbx
-	.cfi_def_cfa_offset 40
-	pushq	%rax
-	.cfi_def_cfa_offset 48
-	.cfi_offset %rbx, -40
-	.cfi_offset %r14, -32
-	.cfi_offset %r15, -24
-	.cfi_offset %rbp, -16
 	callq	_Z16returnFourOrFivei@PLT
-	movl	%eax, %ebx
 	callq	_Z10returnFivev@PLT
-	movl	%eax, %ebp
-	movl	%ebx, %edi
 	callq	_Z10createTypei
-	movq	%rax, %r15
-	movl	%ebp, %edi
 	callq	_Z10createTypei
-	movq	%rax, %r14
-	movq	(%r15), %rax
-	movq	(%rax), %rax
 	leaq	_ZNK8Derived24funcEii(%rip), %rcx
-	movq	%r15, %rdi
-	movl	%ebp, %esi
-	movl	%ebx, %edx
-	cmpq	%rcx, %rax
 	jne	.LBB1_2
-# %bb.1:                                # %if.true.direct_targ
 	callq	_ZNK8Derived24funcEii
 .LBB1_3:                                # %if.end.icp
-	movq	(%r14), %rax
-	movq	(%rax), %rax
 	leaq	_ZNK8Derived34funcEii(%rip), %rcx
-	movq	%r14, %rdi
-	movl	%ebp, %esi
-	movl	%ebx, %edx
-	cmpq	%rcx, %rax
 	jne	.LBB1_5
-# %bb.4:                                # %if.true.direct_targ1
 	callq	_ZNK8Derived34funcEii
 .LBB1_6:                                # %if.end.icp3
-	xorl	%eax, %eax
-	addq	$8, %rsp
-	.cfi_def_cfa_offset 40
-	popq	%rbx
-	.cfi_def_cfa_offset 32
-	popq	%r14
-	.cfi_def_cfa_offset 24
-	popq	%r15
-	.cfi_def_cfa_offset 16
-	popq	%rbp
-	.cfi_def_cfa_offset 8
 	retq
 .LBB1_2:                                # %if.false.orig_indirect
-	.cfi_def_cfa_offset 48
-	callq	*%rax
 	jmp	.LBB1_3
 .LBB1_5:                                # %if.false.orig_indirect2
-	callq	*%rax
 	jmp	.LBB1_6
 .Lfunc_end1:
 	.size	main, .Lfunc_end1-main
@@ -174,11 +110,7 @@ main:                                   # @main
 	.type	_ZNK8Derived24funcEii,@function
 _ZNK8Derived24funcEii:                  # @_ZNK8Derived24funcEii
 	.cfi_startproc
-# %bb.0:                                # %entry
-	movl	%esi, %eax
-	subl	%edx, %eax
 	imull	%esi, %eax
-	addl	8(%rdi), %eax
 	retq
 .Lfunc_end2:
 	.size	_ZNK8Derived24funcEii, .Lfunc_end2-_ZNK8Derived24funcEii
@@ -203,11 +135,7 @@ _ZN8Derived2D0Ev:                       # @_ZN8Derived2D0Ev
 	.type	_ZNK8Derived34funcEii,@function
 _ZNK8Derived34funcEii:                  # @_ZNK8Derived34funcEii
 	.cfi_startproc
-# %bb.0:                                # %entry
-	movl	%esi, %eax
-	subl	%edx, %eax
 	imull	%esi, %eax
-	addl	8(%rdi), %eax
 	retq
 .Lfunc_end4:
 	.size	_ZNK8Derived34funcEii, .Lfunc_end4-_ZNK8Derived34funcEii
@@ -319,13 +247,3 @@ _ZTI8Derived3:
 	.cg_profile main, _ZNK8Derived24funcEii, 1
 	.cg_profile main, _ZNK8Derived34funcEii, 1
 	.ident	"clang version 20.0.0git"
-	.section	".note.GNU-stack","",@progbits
-	.addrsig
-	.addrsig_sym _ZTVN10__cxxabiv120__si_class_type_infoE
-	.addrsig_sym _ZTS8Derived2
-	.addrsig_sym _ZTVN10__cxxabiv117__class_type_infoE
-	.addrsig_sym _ZTS4Base
-	.addrsig_sym _ZTI4Base
-	.addrsig_sym _ZTI8Derived2
-	.addrsig_sym _ZTS8Derived3
-	.addrsig_sym _ZTI8Derived3

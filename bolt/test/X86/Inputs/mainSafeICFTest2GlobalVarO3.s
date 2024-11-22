@@ -52,8 +52,6 @@
 	.type	_Z6fooSubii,@function
 _Z6fooSubii:                            # @_Z6fooSubii
 	.cfi_startproc
-# %bb.0:
-	movl	%edi, %eax
 	subl	%esi, %eax
 	retq
 .Lfunc_end0:
@@ -65,8 +63,6 @@ _Z6fooSubii:                            # @_Z6fooSubii
 	.type	_Z6barSubii,@function
 _Z6barSubii:                            # @_Z6barSubii
 	.cfi_startproc
-# %bb.0:
-	movl	%edi, %eax
 	subl	%esi, %eax
 	retq
 .Lfunc_end1:
@@ -78,8 +74,6 @@ _Z6barSubii:                            # @_Z6barSubii
 	.type	_Z6fooMulii,@function
 _Z6fooMulii:                            # @_Z6fooMulii
 	.cfi_startproc
-# %bb.0:
-	movl	%edi, %eax
 	imull	%esi, %eax
 	retq
 .Lfunc_end2:
@@ -91,8 +85,6 @@ _Z6fooMulii:                            # @_Z6fooMulii
 	.type	_Z6barMulii,@function
 _Z6barMulii:                            # @_Z6barMulii
 	.cfi_startproc
-# %bb.0:
-	movl	%edi, %eax
 	imull	%esi, %eax
 	retq
 .Lfunc_end3:
@@ -132,20 +124,8 @@ _Z6barAddii:                            # @_Z6barAddii
 	.type	_Z7helper1PFiiiEii,@function
 _Z7helper1PFiiiEii:                     # @_Z7helper1PFiiiEii
 	.cfi_startproc
-# %bb.0:
 	leaq	_Z6barAddii(%rip), %rcx
 	cmpq	%rcx, %rdi
-	je	.LBB6_1
-# %bb.2:
-	pushq	%rax
-	.cfi_def_cfa_offset 16
-	movq	%rdi, %rax
-	movl	%esi, %edi
-	movl	%edx, %esi
-	callq	*%rax
-	addl	$-4, %eax
-	addq	$8, %rsp
-	.cfi_def_cfa_offset 8
 	retq
 .LBB6_1:
 	movl	$1, %eax
@@ -159,53 +139,7 @@ _Z7helper1PFiiiEii:                     # @_Z7helper1PFiiiEii
 	.type	_Z7helper2PFiiiES0_ii,@function
 _Z7helper2PFiiiES0_ii:                  # @_Z7helper2PFiiiES0_ii
 	.cfi_startproc
-# %bb.0:
-	cmpq	%rsi, %rdi
-	je	.LBB7_1
-# %bb.2:
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	pushq	%r15
-	.cfi_def_cfa_offset 24
-	pushq	%r14
-	.cfi_def_cfa_offset 32
-	pushq	%rbx
-	.cfi_def_cfa_offset 40
-	pushq	%rax
-	.cfi_def_cfa_offset 48
-	.cfi_offset %rbx, -40
-	.cfi_offset %r14, -32
-	.cfi_offset %r15, -24
-	.cfi_offset %rbp, -16
-	movl	%ecx, %ebx
-	movl	%edx, %ebp
-	movq	%rsi, %r14
-	movq	%rdi, %rax
-	movl	%edx, %edi
-	movl	%ecx, %esi
-	callq	*%rax
-	movl	%eax, %r15d
-	movl	%ebp, %edi
-	movl	%ebx, %esi
-	callq	*%r14
-	addl	%r15d, %eax
-	addq	$8, %rsp
-	.cfi_def_cfa_offset 40
-	popq	%rbx
-	.cfi_def_cfa_offset 32
-	popq	%r14
-	.cfi_def_cfa_offset 24
-	popq	%r15
-	.cfi_def_cfa_offset 16
-	popq	%rbp
-	.cfi_def_cfa_offset 8
-	.cfi_restore %rbx
-	.cfi_restore %r14
-	.cfi_restore %r15
-	.cfi_restore %rbp
-	retq
-.LBB7_1:
-	movl	$2, %eax
+  # Operates on registers.
 	retq
 .Lfunc_end7:
 	.size	_Z7helper2PFiiiES0_ii, .Lfunc_end7-_Z7helper2PFiiiES0_ii
@@ -216,62 +150,16 @@ _Z7helper2PFiiiES0_ii:                  # @_Z7helper2PFiiiES0_ii
 	.type	main,@function
 main:                                   # @main
 	.cfi_startproc
-# %bb.0:
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	pushq	%r15
-	.cfi_def_cfa_offset 24
-	pushq	%r14
-	.cfi_def_cfa_offset 32
-	pushq	%r12
-	.cfi_def_cfa_offset 40
-	pushq	%rbx
-	.cfi_def_cfa_offset 48
-	.cfi_offset %rbx, -48
-	.cfi_offset %r12, -40
-	.cfi_offset %r14, -32
-	.cfi_offset %r15, -24
-	.cfi_offset %rbp, -16
 	movq	FooVar@GOTPCREL(%rip), %r14
-	movl	(%r14), %esi
 	movq	BarVar@GOTPCREL(%rip), %r15
-	movl	(%r15), %edx
 	leaq	_Z6barAddii(%rip), %rdi
 	callq	_Z7helper1PFiiiEii
-	movl	%eax, %ebx
 	movq	funcGlobalBarMul(%rip), %rsi
-	movl	(%r14), %edx
-	movl	(%r15), %ecx
 	leaq	_Z6fooMulii(%rip), %rdi
 	callq	_Z7helper2PFiiiES0_ii
-	movl	%eax, %ebp
-	addl	%ebx, %ebp
-	movl	(%r14), %ebx
-	movl	(%r15), %r14d
-	movl	%ebx, %edi
-	movl	%r14d, %esi
 	callq	_Z6fooSubii
-	movl	%eax, %r15d
-	movl	%ebx, %edi
-	movl	%r14d, %esi
 	callq	_Z6barSubii
-	movl	%eax, %r12d
-	addl	%r15d, %r12d
-	addl	%ebp, %r12d
-	movl	%ebx, %edi
-	movl	%r14d, %esi
 	callq	_Z6fooAddii
-	addl	%r12d, %eax
-	popq	%rbx
-	.cfi_def_cfa_offset 40
-	popq	%r12
-	.cfi_def_cfa_offset 32
-	popq	%r14
-	.cfi_def_cfa_offset 24
-	popq	%r15
-	.cfi_def_cfa_offset 16
-	popq	%rbp
-	.cfi_def_cfa_offset 8
 	retq
 .Lfunc_end8:
 	.size	main, .Lfunc_end8-main
@@ -286,8 +174,3 @@ funcGlobalBarMul:
 	.size	funcGlobalBarMul, 8
 
 	.ident	"clang version 20.0.0git"
-	.section	".note.GNU-stack","",@progbits
-	.addrsig
-	.addrsig_sym _Z6fooMulii
-	.addrsig_sym _Z6barMulii
-	.addrsig_sym _Z6barAddii
