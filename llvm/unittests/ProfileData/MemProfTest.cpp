@@ -268,39 +268,6 @@ TEST(MemProf, PortableWrapper) {
   EXPECT_EQ(3UL, ReadBlock.getAllocCpuId());
 }
 
-TEST(MemProf, RecordSerializationRoundTripVersion1) {
-  const auto Schema = llvm::memprof::getFullSchema();
-
-  MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
-                    /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
-
-  llvm::SmallVector<llvm::SmallVector<FrameId>> AllocCallStacks = {
-      {0x123, 0x345}, {0x123, 0x567}};
-
-  llvm::SmallVector<llvm::SmallVector<FrameId>> CallSites = {{0x333, 0x777}};
-
-  IndexedMemProfRecord Record;
-  for (const auto &ACS : AllocCallStacks) {
-    // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(ACS, llvm::memprof::hashCallStack(ACS),
-                                   Info);
-  }
-  Record.CallSites.assign(CallSites);
-  for (const auto &CS : CallSites)
-    Record.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS));
-
-  std::string Buffer;
-  llvm::raw_string_ostream OS(Buffer);
-  Record.serialize(Schema, OS, llvm::memprof::Version1);
-
-  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
-      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
-      llvm::memprof::Version1);
-
-  EXPECT_EQ(Record, GotRecord);
-}
-
 TEST(MemProf, RecordSerializationRoundTripVerion2) {
   const auto Schema = llvm::memprof::getFullSchema();
 
