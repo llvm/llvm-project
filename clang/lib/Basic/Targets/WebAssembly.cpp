@@ -214,6 +214,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasBulkMemoryOpt = false;
       continue;
     }
+    if (Feature == "+call-indirect-overlong") {
+      HasCallIndirectOverlong = true;
+      continue;
+    }
+    if (Feature == "-call-indirect-overlong") {
+      HasCallIndirectOverlong = false;
+      continue;
+    }
     if (Feature == "+exception-handling") {
       HasExceptionHandling = true;
       continue;
@@ -277,14 +285,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-reference-types") {
       HasReferenceTypes = false;
-      continue;
-    }
-    if (Feature == "+call-indirect-overlong") {
-      HasCallIndirectOverlong = true;
-      continue;
-    }
-    if (Feature == "-call-indirect-overlong") {
-      HasCallIndirectOverlong = false;
       continue;
     }
     if (Feature == "+relaxed-simd") {

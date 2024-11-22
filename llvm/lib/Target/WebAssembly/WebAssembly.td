@@ -123,19 +123,19 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
                       [FeatureBulkMemory, FeatureBulkMemoryOpt,
-                       FeatureMultivalue, FeatureMutableGlobals,
-                       FeatureNontrappingFPToInt, FeatureReferenceTypes,
-                       FeatureCallIndirectOverlong, FeatureSignExt]>;
+                       FeatureCallIndirectOverlong, FeatureMultivalue,
+                       FeatureMutableGlobals, FeatureNontrappingFPToInt,
+                       FeatureReferenceTypes, FeatureSignExt]>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
                       [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
-                       FeatureExceptionHandling, FeatureExtendedConst,
-                       FeatureFP16, FeatureMultiMemory,
+                       FeatureCallIndirectOverlong, FeatureExceptionHandling,
+                       FeatureExtendedConst, FeatureFP16, FeatureMultiMemory,
                        FeatureMultivalue, FeatureMutableGlobals,
                        FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
-                       FeatureReferenceTypes, FeatureCallIndirectOverlong,
-                       FeatureSIMD128, FeatureSignExt, FeatureTailCall]>;
+                       FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
+                       FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration
