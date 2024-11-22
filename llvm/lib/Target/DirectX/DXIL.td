@@ -621,7 +621,7 @@ def CountBits :  DXILOp<31, unaryBits> {
 def FirstbitLo : DXILOp<32, unaryBits> {
   let Doc = "Returns the location of the first set bit starting from "
             "the lowest order bit and working upward.";
-  let LLVMIntrinsic = int_dx_firstbitlow;
+  let intrinsics = [ IntrinSelect<int_dx_firstbitlow> ];
   let arguments = [OverloadTy];
   let result = Int32Ty;
   let overloads =

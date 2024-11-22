@@ -108,8 +108,8 @@ private:
                            unsigned Opcode) const;
 
   bool selectFirstBitSet64(Register ResVReg, const SPIRVType *ResType,
-                           MachineInstr &I, unsigned BitSetOpcode,
-                           bool SwapPrimarySide) const;
+                           MachineInstr &I, Register SrcReg,
+                           unsigned BitSetOpcode, bool SwapPrimarySide) const;
 
   bool selectGlobalValue(Register ResVReg, MachineInstr &I,
                          const MachineInstr *Init = nullptr) const;
@@ -3171,23 +3171,116 @@ bool SPIRVInstructionSelector::selectFirstBitSet32(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectFirstBitSet64(Register ResVReg,
-                                                   const SPIRVType *ResType,
-                                                   MachineInstr &I,
-                                                   unsigned BitSetOpcode,
-                                                   bool SwapPrimarySide) const {
-  Register OpReg = I.getOperand(2).getReg();
-
-  // 1. Split int64 into 2 pieces using a bitcast
+bool SPIRVInstructionSelector::selectFirstBitSet64(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    Register SrcReg, unsigned BitSetOpcode, bool SwapPrimarySide) const {
   unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   SPIRVType *BaseType = GR.retrieveScalarOrVectorIntType(ResType);
+  bool ZeroAsNull = STI.isOpenCLEnv();
+  Register ConstIntZero =
+      GR.getOrCreateConstInt(0, I, BaseType, TII, ZeroAsNull);
+  Register ConstIntOne =
+      GR.getOrCreateConstInt(1, I, BaseType, TII, ZeroAsNull);
+
+  // SPIRV doesn't support vectors with more than 4 components. Since the
+  // algoritm below converts i64 -> i32x2 and i64x4 -> i32x8 it can only
+  // operate on vectors with 2 or less components. When largers vectors are
+  // seen. Split them, recurse, then recombine them.
+  if (ComponentCount > 2) {
+    unsigned LeftComponentCount = ComponentCount / 2;
+    unsigned RightComponentCount = ComponentCount - LeftComponentCount;
+    bool LeftIsVector = LeftComponentCount > 1;
+
+    // Split the SrcReg in half into 2 smaller vec registers
+    // (ie i64x4 -> i64x2, i64x2)
+    MachineIRBuilder MIRBuilder(I);
+    SPIRVType *OpType = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
+    SPIRVType *LeftVecOpType;
+    SPIRVType *LeftVecResType;
+    if (LeftIsVector) {
+      LeftVecOpType =
+          GR.getOrCreateSPIRVVectorType(OpType, LeftComponentCount, MIRBuilder);
+      LeftVecResType = GR.getOrCreateSPIRVVectorType(
+          BaseType, LeftComponentCount, MIRBuilder);
+    } else {
+      LeftVecOpType = OpType;
+      LeftVecResType = BaseType;
+    }
+
+    SPIRVType *RightVecOpType =
+        GR.getOrCreateSPIRVVectorType(OpType, RightComponentCount, MIRBuilder);
+    SPIRVType *RightVecResType = GR.getOrCreateSPIRVVectorType(
+        BaseType, RightComponentCount, MIRBuilder);
+
+    Register LeftSideIn =
+        MRI->createVirtualRegister(GR.getRegClass(LeftVecOpType));
+    Register RightSideIn =
+        MRI->createVirtualRegister(GR.getRegClass(RightVecOpType));
+
+    bool Result;
+
+    if (LeftIsVector) {
+      auto MIB =
+          BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                  TII.get(SPIRV::OpVectorShuffle))
+              .addDef(LeftSideIn)
+              .addUse(GR.getSPIRVTypeID(LeftVecOpType))
+              .addUse(SrcReg)
+              // Per the spec, repeat the vector if only one vec is needed
+              .addUse(SrcReg);
+
+      for (unsigned J = 0; J < LeftComponentCount; J++) {
+        MIB.addImm(J);
+      }
+
+      Result = MIB.constrainAllUses(TII, TRI, RBI);
+    } else {
+      Result =
+          selectOpWithSrcs(LeftSideIn, LeftVecOpType, I, {SrcReg, ConstIntZero},
+                           SPIRV::OpVectorExtractDynamic);
+    }
+
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpVectorShuffle))
+                   .addDef(RightSideIn)
+                   .addUse(GR.getSPIRVTypeID(RightVecOpType))
+                   .addUse(SrcReg)
+                   // Per the spec, repeat the vector if only one vec is needed
+                   .addUse(SrcReg);
+
+    for (unsigned J = LeftComponentCount; J < ComponentCount; J++) {
+      MIB.addImm(J);
+    }
+
+    Result = Result && MIB.constrainAllUses(TII, TRI, RBI);
+
+    // Recursively call selectFirstBitSet64 on the 2 registers
+    Register LeftSideOut =
+        MRI->createVirtualRegister(GR.getRegClass(LeftVecResType));
+    Register RightSideOut =
+        MRI->createVirtualRegister(GR.getRegClass(RightVecResType));
+    Result = Result &&
+             selectFirstBitSet64(LeftSideOut, LeftVecResType, I, LeftSideIn,
+                                 BitSetOpcode, SwapPrimarySide);
+    Result = Result &&
+             selectFirstBitSet64(RightSideOut, RightVecResType, I, RightSideIn,
+                                 BitSetOpcode, SwapPrimarySide);
+
+    // Join the two resulting registers back into the return type
+    // (ie i32x2, i32x2 -> i32x4)
+    return Result &&
+           selectOpWithSrcs(ResVReg, ResType, I, {LeftSideOut, RightSideOut},
+                            SPIRV::OpCompositeConstruct);
+  }
+
+  // 1. Split int64 into 2 pieces using a bitcast
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *PostCastType =
       GR.getOrCreateSPIRVVectorType(BaseType, 2 * ComponentCount, MIRBuilder);
   Register BitcastReg =
       MRI->createVirtualRegister(GR.getRegClass(PostCastType));
   bool Result =
-      selectOpWithSrcs(BitcastReg, PostCastType, I, {OpReg}, SPIRV::OpBitcast);
+      selectOpWithSrcs(BitcastReg, PostCastType, I, {SrcReg}, SPIRV::OpBitcast);
 
   // 2. Find the first set bit from the primary side for all the pieces in #1
   Register FBSReg = MRI->createVirtualRegister(GR.getRegClass(PostCastType));
@@ -3198,20 +3291,15 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(Register ResVReg,
   Register HighReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
   Register LowReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
 
-  bool ZeroAsNull = STI.isOpenCLEnv();
   bool IsScalarRes = ResType->getOpcode() != SPIRV::OpTypeVector;
   if (IsScalarRes) {
     // if scalar do a vector extract
-    Result = Result &&
-             selectOpWithSrcs(HighReg, ResType, I,
-                              {FBSReg, GR.getOrCreateConstInt(0, I, ResType,
-                                                              TII, ZeroAsNull)},
-                              SPIRV::OpVectorExtractDynamic);
-    Result = Result &&
-             selectOpWithSrcs(LowReg, ResType, I,
-                              {FBSReg, GR.getOrCreateConstInt(1, I, ResType,
-                                                              TII, ZeroAsNull)},
-                              SPIRV::OpVectorExtractDynamic);
+    Result =
+        Result && selectOpWithSrcs(HighReg, ResType, I, {FBSReg, ConstIntZero},
+                                   SPIRV::OpVectorExtractDynamic);
+    Result =
+        Result && selectOpWithSrcs(LowReg, ResType, I, {FBSReg, ConstIntOne},
+                                   SPIRV::OpVectorExtractDynamic);
   } else {
     // if vector do a shufflevector
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
@@ -3324,7 +3412,7 @@ bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
   case 32:
     return selectFirstBitSet32(ResVReg, ResType, I, OpReg, BitSetOpcode);
   case 64:
-    return selectFirstBitSet64(ResVReg, ResType, I, BitSetOpcode,
+    return selectFirstBitSet64(ResVReg, ResType, I, OpReg, BitSetOpcode,
                                /*SwapPrimarySide=*/false);
   default:
     report_fatal_error(
@@ -3350,7 +3438,7 @@ bool SPIRVInstructionSelector::selectFirstBitLow(Register ResVReg,
   case 32:
     return selectFirstBitSet32(ResVReg, ResType, I, OpReg, BitSetOpcode);
   case 64:
-    return selectFirstBitSet64(ResVReg, ResType, I, BitSetOpcode,
+    return selectFirstBitSet64(ResVReg, ResType, I, OpReg, BitSetOpcode,
                                /*SwapPrimarySide=*/true);
   default:
     report_fatal_error("spv_firstbitlow only supports 16,32,64 bits.");
