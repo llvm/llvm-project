@@ -119,5 +119,5 @@ bool EdgeBundles::invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
   // Invalidated when CFG is not preserved
   auto PAC = PA.getChecker<EdgeBundlesAnalysis>();
   return !PAC.preserved() && !PAC.preservedSet<CFGAnalyses>() &&
-           !PAC.preservedSet<AllAnalysesOn<MachineFunction>>();
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>();
 }
