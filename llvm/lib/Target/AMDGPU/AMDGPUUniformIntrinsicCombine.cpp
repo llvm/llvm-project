@@ -1,5 +1,4 @@
-//===-- AMDGPUUniformIntrinsicCombine.cpp
-//-----------------------------------------===//
+//===-- AMDGPUUniformIntrinsicCombine.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,13 +8,16 @@
 //
 /// \file
 /// This pass combines uniform intrinsic instructions.
-/// Unifrom Intrinsic combine uses pattern match to identify and optimize
-/// redundent intrinsic instruction.
+/// Uniform Intrinsic Combine uses pattern match to identify and optimize
+/// redundant intrinsic instructions.
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -42,7 +44,7 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.setPreservesCFG();
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
@@ -53,7 +55,7 @@ class AMDGPUUniformIntrinsicCombineImpl
 private:
   const UniformityInfo *UI;
 
-  void optimizeUniformIntrinsicInst(IntrinsicInst &II) const;
+  bool optimizeUniformIntrinsicInst(IntrinsicInst &II) const;
 
 public:
   AMDGPUUniformIntrinsicCombineImpl() = delete;
@@ -86,8 +88,6 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 
   const auto *UI = &AM.getResult<UniformityInfoAnalysis>(F);
 
-  // @todo check if it is required that this method must return bool, if so
-  // figure out what can be returned.
   bool IsChanged = AMDGPUUniformIntrinsicCombineImpl(UI).run(F);
 
   if (!IsChanged) {
@@ -96,14 +96,16 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserve<UniformityInfoAnalysis>();
+  PA.preserve<TargetLibraryAnalysis>();
   return PA;
 }
 
 bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
 
-  // @todo check if it is required that this method must return bool, if so
-  // figure out what can be returned.
-  const bool IsChanged{false};
+  bool IsChanged{false};
 
   // Iterate over each instruction in the function to get the desired intrinsic
   // inst to check for optimization.
@@ -111,7 +113,7 @@ bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
     for (Instruction &I : BB) {
       if (auto *Call = dyn_cast<CallInst>(&I)) {
         if (auto *Intrinsic = dyn_cast<IntrinsicInst>(Call)) {
-          optimizeUniformIntrinsicInst(*Intrinsic);
+          IsChanged |= optimizeUniformIntrinsicInst(*Intrinsic);
         }
       }
     }
@@ -120,55 +122,36 @@ bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
   return IsChanged;
 }
 
-void AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
+bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
     IntrinsicInst &II) const {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
 
   switch (IID) {
-  case Intrinsic::amdgcn_permlane64: {
-    Value *Src = II.getOperand(0);
-    if (UI->isUniform(Src)) {
-      return II.replaceAllUsesWith(Src);
-    }
-    break;
-  }
+  case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
-    Value *Srcv = II.getOperand(0);
-    if (UI->isUniform(Srcv)) {
-      return II.replaceAllUsesWith(Srcv);
-    }
-
-    // The rest of these may not be safe if the exec may not be the same between
-    // the def and use.
     Value *Src = II.getArgOperand(0);
+    // The below part may not be safe if the exec is not same between the def
+    // and use. Is this part stilll required??
     Instruction *SrcInst = dyn_cast<Instruction>(Src);
     if (SrcInst && SrcInst->getParent() != II.getParent())
       break;
 
     // readfirstlane (readfirstlane x) -> readfirstlane x
+    // readfirstlane (readlane x, y) -> readlane x, y
     // readlane (readfirstlane x), y -> readfirstlane x
-    if (match(Src,
-              PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readfirstlane>())) {
-      return II.replaceAllUsesWith(Src);
-    }
-
-    if (IID == Intrinsic::amdgcn_readfirstlane) {
-      // readfirstlane (readlane x, y) -> readlane x, y
-      if (match(Src, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readlane>())) {
-        return II.replaceAllUsesWith(Src);
-      }
-    } else {
-      // readlane (readlane x, y), y -> readlane x, y
-      if (match(Src, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readlane>(
-                         PatternMatch::m_Value(),
-                         PatternMatch::m_Specific(II.getArgOperand(1))))) {
-        return II.replaceAllUsesWith(Src);
-      }
+    // readlane (readlane x, y), z -> readlane x, y
+    // All these cases are identical and are dependent on the inner intrinsic
+    // results value.(i.e.irrespective of the which of these case is inner
+    // intrinsic will write the same value across all output lane indexes)
+    if (UI->isUniform(II.getOperandUse(0))) {
+      II.replaceAllUsesWith(Src);
+      return true;
     }
     break;
   }
   }
+  return false;
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUUniformIntrinsicCombine, DEBUG_TYPE,
