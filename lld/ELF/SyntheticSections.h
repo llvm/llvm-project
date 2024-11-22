@@ -1300,7 +1300,21 @@ private:
 const char ACLESESYM_PREFIX[] = "__acle_se_";
 const int ACLESESYM_SIZE = 8;
 
-class ArmCmseSGVeneer;
+class ArmCmseSGVeneer {
+public:
+  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
+                  std::optional<uint64_t> addr = std::nullopt)
+      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
+  static const size_t size{ACLESESYM_SIZE};
+  const std::optional<uint64_t> getAddr() const { return entAddr; };
+
+  Symbol *sym;
+  Symbol *acleSeSym;
+  uint64_t offset = 0;
+
+private:
+  const std::optional<uint64_t> entAddr;
+};
 
 class ArmCmseSGSection final : public SyntheticSection {
 public:
@@ -1316,7 +1330,7 @@ public:
 
 private:
   SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
-  SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
+  SmallVector<std::unique_ptr<ArmCmseSGVeneer>, 0> sgVeneers;
   uint64_t newEntries = 0;
 };
 

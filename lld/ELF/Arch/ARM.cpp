@@ -1330,22 +1330,6 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
   });
 }
 
-class elf::ArmCmseSGVeneer {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
-  static const size_t size{ACLESESYM_SIZE};
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-  uint64_t offset = 0;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
@@ -1389,19 +1373,19 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
     return;
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
-  ArmCmseSGVeneer *ss = nullptr;
+  std::unique_ptr<ArmCmseSGVeneer> ss;
   if (ctx.symtab->cmseImportLib.count(sym->getName())) {
     Defined *impSym = ctx.symtab->cmseImportLib[sym->getName()];
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
+    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
+    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym);
     ++newEntries;
   }
-  sgVeneers.emplace_back(ss);
+  sgVeneers.emplace_back(std::move(ss));
 }
 
 void ArmCmseSGSection::writeTo(uint8_t *buf) {
-  for (ArmCmseSGVeneer *s : sgVeneers) {
+  for (std::unique_ptr<ArmCmseSGVeneer> &s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(ctx, p + 0, 0xe97f); // SG
     write16(ctx, p + 2, 0xe97f);
@@ -1430,8 +1414,8 @@ void ArmCmseSGSection::finalizeContents() {
 
   auto it =
       std::stable_partition(sgVeneers.begin(), sgVeneers.end(),
-                            [](auto *i) { return i->getAddr().has_value(); });
-  std::sort(sgVeneers.begin(), it, [](auto *a, auto *b) {
+                            [](auto &i) { return i->getAddr().has_value(); });
+  std::sort(sgVeneers.begin(), it, [](auto &a, auto &b) {
     return a->getAddr().value() < b->getAddr().value();
   });
   // This is the partition of the veneers with fixed addresses.
@@ -1441,13 +1425,12 @@ void ArmCmseSGSection::finalizeContents() {
   // Check if the start address of '.gnu.sgstubs' correspond to the
   // linker-synthesized veneer with the lowest address.
   if ((getVA() & ~1) != (addr & ~1)) {
-    ErrAlways(ctx)
+    Err(ctx)
         << "start address of '.gnu.sgstubs' is different from previous link";
     return;
   }
 
-  for (size_t i = 0; i < sgVeneers.size(); ++i) {
-    ArmCmseSGVeneer *s = sgVeneers[i];
+  for (auto [i, s] : enumerate(sgVeneers)) {
     s->offset = i * s->size;
     Defined(ctx, file, StringRef(), s->sym->binding, s->sym->stOther,
             s->sym->type, s->offset | 1, s->size, this)
