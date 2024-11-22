@@ -463,6 +463,13 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
       return true;
   }
 
+  // Array index wasn't an integer literal, let's see if it was an enum or
+  // something similar
+  const auto IntConst = Node.getIdx()->getIntegerConstantExpr(Finder->getASTContext());
+  if (IntConst && *IntConst > 0 && *IntConst < size) {
+    return true;
+  }
+
   return false;
 }
 
