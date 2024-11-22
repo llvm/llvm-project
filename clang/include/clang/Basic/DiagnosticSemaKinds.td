@@ -1728,9 +1728,9 @@ def err_introducing_special_friend : Error<
 def err_tagless_friend_type_template : Error<
   "friend type templates must use an elaborated type">;
 def err_no_matching_local_friend : Error<
-  "no matching function found in local scope">;
+  "cannot define friend function in a local class definition">;
 def err_no_matching_local_friend_suggest : Error<
-  "no matching function %0 found in local scope; did you mean %3?">;
+  "cannot define friend function %0 in a local class definition; did you mean %3?">;
 def err_partial_specialization_friend : Error<
   "partial specialization cannot be declared as a friend">;
 def err_qualified_friend_def : Error<

@@ -2973,12 +2973,10 @@ class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
 // blgp.
 //
 // These should be <8 x i32> for f8 formats, <6 x i32> for f6 formats,
-// and <4 x i32> for f4 formats. If the format control bits imply a
-// smaller type than used, the high elements will be truncated.
-//
-// If the format control bits imply a larger type than used, the high
-// elements are padded with undef.
-
+// and <4 x i32> for f4 formats. It is invalid to use a format that
+// requires more registers than the corresponding vector type (e.g. it
+// is illegal to use <6 x i32> in operand 0 if cbsz specifies an f8
+// format that requires 8 registers).
 class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
   DefaultAttrsIntrinsic<[DestTy],
             [llvm_anyvector_ty, llvm_anyvector_ty, DestTy,
@@ -3148,10 +3146,24 @@ def int_amdgcn_mfma_f32_16x16x32_f16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty, llvm_v
 def int_amdgcn_mfma_f32_32x32x16_f16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty>;
 def int_amdgcn_mfma_i32_16x16x64_i8 : AMDGPUMfmaIntrinsic<llvm_v4i32_ty, llvm_v4i32_ty>;
 def int_amdgcn_mfma_i32_32x32x32_i8 : AMDGPUMfmaIntrinsic<llvm_v16i32_ty, llvm_v4i32_ty>;
-
+def int_amdgcn_mfma_f32_16x16x32_bf16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty, llvm_v8bf16_ty>;
 def int_amdgcn_mfma_f32_32x32x16_bf16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty>;
 def int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v4f32_ty>;
 def int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v16f32_ty>;
+def int_amdgcn_smfmac_f32_16x16x64_f16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
+def int_amdgcn_smfmac_f32_32x32x32_f16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
+def int_amdgcn_smfmac_f32_16x16x64_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8bf16_ty, llvm_v16bf16_ty>;
+def int_amdgcn_smfmac_f32_32x32x32_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty, llvm_v16bf16_ty>;
+def int_amdgcn_smfmac_i32_16x16x128_i8 : AMDGPUMSmfmacIntrinsic<llvm_v4i32_ty,  llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_i32_32x32x64_i8 : AMDGPUMSmfmacIntrinsic<llvm_v16i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_bf8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_bf8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_fp8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_bf8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_bf8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_fp8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 }
 
 //===----------------------------------------------------------------------===//

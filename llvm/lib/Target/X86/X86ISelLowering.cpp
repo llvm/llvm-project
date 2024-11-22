@@ -5207,18 +5207,19 @@ static bool isConstantPowerOf2(SDValue V, unsigned EltSizeInBIts,
   return IsPow2OrUndef;
 }
 
-// Match not(xor X, -1) -> X.
-// Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
-// Match not(extract_subvector(xor X, -1)) -> extract_subvector(X).
-// Match not(concat_vectors(xor X, -1, xor Y, -1)) -> concat_vectors(X, Y).
-// Match or(not(X),not(Y)) -> and(X, Y).
+// Helper to attempt to return a cheaper, bit-inverted version of \p V.
 static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
+  // TODO: don't always ignore oneuse constraints.
   V = peekThroughBitcasts(V);
   EVT VT = V.getValueType();
+
+  // Match not(xor X, -1) -> X.
   if (V.getOpcode() == ISD::XOR &&
       (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
        isAllOnesConstant(V.getOperand(1))))
     return V.getOperand(0);
+
+  // Match not(extract_subvector(not(X)) -> extract_subvector(X).
   if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
     if (SDValue Not = IsNOT(V.getOperand(0), DAG)) {
@@ -5227,6 +5228,8 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
                          V.getOperand(1));
     }
   }
+
+  // Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
   if (V.getOpcode() == X86ISD::PCMPGT &&
       !ISD::isBuildVectorAllZeros(V.getOperand(0).getNode()) &&
       !ISD::isBuildVectorAllOnes(V.getOperand(0).getNode()) &&
@@ -5250,15 +5253,20 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
       }
     }
   }
+
+  // Match not(concat_vectors(not(X), not(Y))) -> concat_vectors(X, Y).
   SmallVector<SDValue, 2> CatOps;
   if (collectConcatOps(V.getNode(), CatOps, DAG)) {
     for (SDValue &CatOp : CatOps) {
       SDValue NotCat = IsNOT(CatOp, DAG);
-      if (!NotCat) return SDValue();
+      if (!NotCat)
+        return SDValue();
       CatOp = DAG.getBitcast(CatOp.getValueType(), NotCat);
     }
     return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), VT, CatOps);
   }
+
+  // Match not(or(not(X),not(Y))) -> and(X, Y).
   if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
       V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
     // TODO: Handle cases with single NOT operand -> ANDNP
@@ -5267,6 +5275,7 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
         return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
                            DAG.getBitcast(VT, Op1));
   }
+
   return SDValue();
 }
 

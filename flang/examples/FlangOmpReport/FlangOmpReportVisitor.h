@@ -71,11 +71,12 @@ struct OpenMPCounterVisitor {
   void Post(const OmpDefaultmapClause::ImplicitBehavior &c);
   void Post(const OmpVariableCategory::Value &c);
   void Post(const OmpDeviceTypeClause::Type &c);
-  void Post(const OmpScheduleModifierType::ModType &c);
+  void Post(const OmpChunkModifier::Value &c);
   void Post(const OmpLinearModifier::Value &c);
+  void Post(const OmpOrderingModifier::Value &c);
   void Post(const OmpTaskDependenceType::Value &c);
   void Post(const OmpMapClause::Type &c);
-  void Post(const OmpScheduleClause::ScheduleType &c);
+  void Post(const OmpScheduleClause::Kind &c);
   void Post(const OmpIfClause::DirectiveNameModifier &c);
   void Post(const OmpCancelType::Type &c);
   void Post(const OmpClause &c);
