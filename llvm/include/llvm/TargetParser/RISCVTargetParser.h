@@ -43,7 +43,7 @@ struct CPUInfo {
   StringLiteral DefaultMarch;
   bool FastScalarUnalignedAccess;
   bool FastVectorUnalignedAccess;
-  CPUModel CPUModel;
+  CPUModel Model;
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
