@@ -1,0 +1,35 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1300 -run-pass=none -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK %s
+
+---
+name:            test
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+
+  bb.0:
+    ; CHECK: *** Bad machine code: missing memory operand from v_load/store_idx. ***
+    ; CHECK: - instruction: {{.*}}V_LOAD_IDX
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %1:vgpr_32 = V_LOAD_IDX %0, 0, implicit $exec
+    %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
+
+    ; CHECK: *** Bad machine code: missing memory operand from v_load/store_idx. ***
+    ; CHECK: - instruction: {{.*}}V_STORE_IDX
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %1:vgpr_32 = COPY %0:sreg_32_xexec_hi
+    %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
+    V_STORE_IDX %2:vgpr_32, %0, 0, implicit $exec
+
+    ; CHECK: *** Bad machine code: missing memory operand from v_load/store_idx. ***
+    ; CHECK: - instruction: {{.*}}V_LOAD_IDX
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    $idx1 = S_SET_GPR_IDX_U32 %0
+    BUNDLE implicit-def $stg_srca, implicit-def %1, implicit $idx1, implicit $exec {
+      $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec
+      %1:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    }
+...
+

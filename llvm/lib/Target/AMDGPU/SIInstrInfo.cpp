@@ -4807,6 +4807,13 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
+  if ((MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
+       MI.getOpcode() == AMDGPU::V_STORE_IDX) &&
+      MI.memoperands_empty()) {
+    ErrInfo = "missing memory operand from v_load/store_idx.";
+    return false;
+  }
+
   // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
