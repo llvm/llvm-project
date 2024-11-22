@@ -140,7 +140,7 @@ private:
 
   void emitCFIInstruction(const MCCFIInstruction &Inst) const;
 
-  /// Emit exception handling ranges for the function.
+  /// Emit exception handling ranges for the function fragment.
   void emitLSDA(BinaryFunction &BF, const FunctionFragment &FF);
 
   /// Emit line number information corresponding to \p NewLoc. \p PrevLoc
@@ -915,15 +915,15 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // Emit the LSDA header.
 
   // If LPStart is omitted, then the start of the FDE is used as a base for
-  // landing pad displacements. Then, if a cold fragment starts with a landing
-  // pad, this means that the first landing pad offset will be 0. However, C++
-  // runtime treats 0 as if there is no landing pad present, thus we *must* emit
-  // non-zero offsets for all valid LPs.
+  // landing pad displacements. Then, if a cold fragment starts with
+  // a landing pad, this means that the first landing pad offset will be 0.
+  // However, C++ runtime will treat 0 as if there is no landing pad, thus we
+  // cannot emit LP offset as 0.
   //
   // As a solution, for fixed-address binaries we set LPStart to 0, and for
-  // position-independent binaries we set LP start to FDE start minus one byte
-  // for FDEs that start with a landing pad.
-  const bool NeedsLPAdjustment = !FF.empty() && FF.front()->isLandingPad();
+  // position-independent binaries we offset LP start by one byte.
+  bool NeedsLPAdjustment = false;
+  const MCSymbol *LPStartSymbol = nullptr;
   std::function<void(const MCSymbol *)> emitLandingPad;
   if (BC.HasFixedLoadAddress) {
     Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1); // LPStart format
@@ -935,17 +935,26 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
         Streamer.emitIntValue(0, 4);
     };
   } else {
-    if (NeedsLPAdjustment) {
-      // Use relative LPStart format and emit LPStart as [SymbolStart - 1].
+    std::optional<FragmentNum> LPFN = BF.getLPFragment(FF.getFragmentNum());
+    LPStartSymbol = BF.getLPStartSymbol(FF.getFragmentNum());
+    assert(LPFN && LPStartSymbol && "Expected LPStart symbol to be set");
+
+    const FunctionFragment &LPFragment = BF.getLayout().getFragment(*LPFN);
+    NeedsLPAdjustment =
+        (!LPFragment.empty() && LPFragment.front()->isLandingPad());
+
+    // Emit LPStart encoding and optionally LPStart.
+    if (NeedsLPAdjustment || LPStartSymbol != StartSymbol) {
       Streamer.emitIntValue(dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4, 1);
       MCSymbol *DotSymbol = BC.Ctx->createTempSymbol("LPBase");
       Streamer.emitLabel(DotSymbol);
 
       const MCExpr *LPStartExpr = MCBinaryExpr::createSub(
-          MCSymbolRefExpr::create(StartSymbol, *BC.Ctx),
+          MCSymbolRefExpr::create(LPStartSymbol, *BC.Ctx),
           MCSymbolRefExpr::create(DotSymbol, *BC.Ctx), *BC.Ctx);
-      LPStartExpr = MCBinaryExpr::createSub(
-          LPStartExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
+      if (NeedsLPAdjustment)
+        LPStartExpr = MCBinaryExpr::createSub(
+            LPStartExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
       Streamer.emitValue(LPStartExpr, 4);
     } else {
       // DW_EH_PE_omit means FDE start (StartSymbol) will be used as LPStart.
@@ -955,7 +964,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
       if (LPSymbol) {
         const MCExpr *LPOffsetExpr = MCBinaryExpr::createSub(
             MCSymbolRefExpr::create(LPSymbol, *BC.Ctx),
-            MCSymbolRefExpr::create(StartSymbol, *BC.Ctx), *BC.Ctx);
+            MCSymbolRefExpr::create(LPStartSymbol, *BC.Ctx), *BC.Ctx);
         if (NeedsLPAdjustment)
           LPOffsetExpr = MCBinaryExpr::createAdd(
               LPOffsetExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
