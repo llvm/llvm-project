@@ -23,11 +23,11 @@ void noescapeFunc6(__attribute__((noescape)) const T &);
 template <class T>
 void noescapeFunc7(__attribute__((noescape)) T &&);
 
-void invalidFunc0(int __attribute__((noescape))); // expected-warning {{'noescape' attribute only applies to pointer arguments}}
+void invalidFunc0(int __attribute__((noescape))); // expected-warning {{'noescape' attribute only applies to a pointer, reference, class, struct, or union (0 is invalid)}}
 void invalidFunc1(int __attribute__((noescape(0)))); // expected-error {{'noescape' attribute takes no arguments}}
 void invalidFunc2(int0 *__attribute__((noescape))); // expected-error {{use of undeclared identifier 'int0'; did you mean 'int'?}}
-void invalidFunc3(__attribute__((noescape)) int (S::*Ty)); // expected-warning {{'noescape' attribute only applies to pointer arguments}}
-void invalidFunc4(__attribute__((noescape)) void (S::*Ty)()); // expected-warning {{'noescape' attribute only applies to pointer arguments}}
+void invalidFunc3(__attribute__((noescape)) int (S::*Ty)); // expected-warning {{'noescape' attribute only applies to a pointer, reference, class, struct, or union (0 is invalid)}}
+void invalidFunc4(__attribute__((noescape)) void (S::*Ty)()); // expected-warning {{'noescape' attribute only applies to a pointer, reference, class, struct, or union (0 is invalid)}}
 int __attribute__((noescape)) g; // expected-warning {{'noescape' attribute only applies to parameters}}
 
 struct S1 {
