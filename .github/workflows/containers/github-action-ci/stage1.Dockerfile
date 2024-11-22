@@ -19,13 +19,11 @@ RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$L
 
 WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
 
-COPY bootstrap.patch /
+# Patch to enable better PGO profile data.
+# TODO: Remove this for llvm 20
+ADD https://github.com/llvm/llvm-project/commit/738250989ce516f02f809bdfde474a039c77e81f.patch .
 
-# TODO(boomanaiden154): Remove the bootstrap patch once we unsplit the build
-# and no longer need to explicitly build the stage2 dependencies.
-RUN cat /bootstrap.patch | patch -p1
-
-RUN mkdir build
+RUN patch -p1 < 738250989ce516f02f809bdfde474a039c77e81f.patch
 
 RUN cmake -B ./build -G Ninja ./llvm \
   -C ./clang/cmake/caches/BOLT-PGO.cmake \
@@ -36,10 +34,9 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DCMAKE_INSTALL_PREFIX="$LLVM_SYSROOT" \
   -DLLVM_ENABLE_PROJECTS="bolt;clang;lld;clang-tools-extra" \
   -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build" \
-  -DCLANG_DEFAULT_LINKER="lld" \
-  -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/llvm-project-llvmorg-$LLVM_VERSION/llvm
+  -DCLANG_DEFAULT_LINKER="lld"
 
-RUN ninja -C ./build stage2-instrumented-clang stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution && rm -rf ./build
+RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution && rm -rf ./build
 
 FROM base
     
