@@ -561,6 +561,9 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
 
+- Clang now correctly recognises code after a call to a ``[[noreturn]]`` constructor
+  as unreachable (#GH63009).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
