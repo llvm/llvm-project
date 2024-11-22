@@ -59,11 +59,12 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         assert(ctx.arg.relocatable && (rel->flags & SHF_LINK_ORDER));
         return s->name;
       }
+      StringSaver &ss = saver(ctx);
       if (s->type == SHT_CREL)
-        return saver().save(".crel" + out->name);
+        return ss.save(".crel" + out->name);
       if (s->type == SHT_RELA)
-        return saver().save(".rela" + out->name);
-      return saver().save(".rel" + out->name);
+        return ss.save(".rela" + out->name);
+      return ss.save(".rel" + out->name);
     }
   }
 

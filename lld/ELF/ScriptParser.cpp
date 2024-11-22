@@ -317,7 +317,7 @@ void ScriptParser::addFile(StringRef s) {
     SmallString<128> pathData;
     StringRef path = (ctx.arg.sysroot + s).toStringRef(pathData);
     if (sys::fs::exists(path))
-      ctx.driver.addFile(saver().save(path), /*withLOption=*/false);
+      ctx.driver.addFile(saver(ctx).save(path), /*withLOption=*/false);
     else
       setError("cannot find " + s + " inside " + ctx.arg.sysroot);
     return;
@@ -331,7 +331,7 @@ void ScriptParser::addFile(StringRef s) {
     if (ctx.arg.sysroot.empty())
       ctx.driver.addFile(s.substr(1), /*withLOption=*/false);
     else
-      ctx.driver.addFile(saver().save(ctx.arg.sysroot + "/" + s.substr(1)),
+      ctx.driver.addFile(saver(ctx).save(ctx.arg.sysroot + "/" + s.substr(1)),
                          /*withLOption=*/false);
   } else if (s.starts_with("-l")) {
     // Case 3: search in the list of library paths.
@@ -354,7 +354,7 @@ void ScriptParser::addFile(StringRef s) {
     } else {
       // Finally, search in the list of library paths.
       if (std::optional<std::string> path = findFromSearchPaths(ctx, s))
-        ctx.driver.addFile(saver().save(*path), /*withLOption=*/true);
+        ctx.driver.addFile(saver(ctx).save(*path), /*withLOption=*/true);
       else
         setError("unable to find " + s);
     }
