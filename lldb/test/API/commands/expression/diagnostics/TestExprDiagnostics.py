@@ -195,6 +195,10 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         value = frame.EvaluateExpression('#error("I am error.")')
         error = value.GetError()
         self.assertEqual(error.GetType(), lldb.eErrorTypeExpression)
+        value = frame.FindVariable("f")
+        self.assertTrue(value.IsValid())
+        desc = value.GetObjectDescription()
+        self.assertEqual(desc, None)
 
     def test_command_expr_sbdata(self):
         """Test the structured diagnostics data"""
