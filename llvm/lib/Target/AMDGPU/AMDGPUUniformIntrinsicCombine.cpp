@@ -111,10 +111,8 @@ bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
   // inst to check for optimization.
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
-      if (auto *Call = dyn_cast<CallInst>(&I)) {
-        if (auto *Intrinsic = dyn_cast<IntrinsicInst>(Call)) {
-          IsChanged |= optimizeUniformIntrinsicInst(*Intrinsic);
-        }
+      if (auto *Intrinsic = dyn_cast<IntrinsicInst>(&I)) {
+        IsChanged |= optimizeUniformIntrinsicInst(*Intrinsic);
       }
     }
   }
@@ -131,11 +129,6 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
-    // The below part may not be safe if the exec is not same between the def
-    // and use. Is this part stilll required??
-    Instruction *SrcInst = dyn_cast<Instruction>(Src);
-    if (SrcInst && SrcInst->getParent() != II.getParent())
-      break;
 
     // readfirstlane (readfirstlane x) -> readfirstlane x
     // readfirstlane (readlane x, y) -> readlane x, y
