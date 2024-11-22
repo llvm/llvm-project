@@ -578,6 +578,8 @@ Improvements to Clang's diagnostics
 
 - Clang now omits shadowing warnings for parameter names in explicit object member functions (#GH95707).
 
+- Improved error recovery for function call arguments with trailing commas (#GH100921).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
