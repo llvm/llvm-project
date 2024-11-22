@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
@@ -455,6 +456,21 @@ public:
       return Impl->StandardNames[F];
     assert(State == TargetLibraryInfoImpl::CustomName);
     return Impl->CustomNames.find(F)->second;
+  }
+
+  static unsigned getISDNode(Intrinsic::ID ID) {
+    unsigned Node;
+    switch (ID) {
+    case Intrinsic::exp:
+      Node = ISD::FEXP;
+      break;
+    case Intrinsic::exp2:
+      Node = ISD::FEXP2;
+      break;
+    default:
+      llvm_unreachable("Intrinsic ID not supported yet");
+    }
+    return Node;
   }
 
   static void initExtensionsForTriple(bool &ShouldExtI32Param,
