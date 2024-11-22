@@ -798,7 +798,7 @@ def warn_cstruct_memaccess : Warning<
 def warn_cxxstruct_memaccess : Warning<
   "first argument in call to "
   "%0 is a pointer to non-trivially copyable type %1">,
-  InGroup<NonTrivialMemaccess>;
+  InGroup<NonTrivialMemcall>;
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
 def err_non_trivial_c_union_in_invalid_context : Error<
