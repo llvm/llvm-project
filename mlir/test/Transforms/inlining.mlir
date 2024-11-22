@@ -19,6 +19,15 @@ func.func @inline_with_arg(%arg0 : i32) -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: func @noinline_with_arg
+func.func @noinline_with_arg(%arg0 : i32) -> i32 {
+  // CHECK-NEXT: func_with_arg
+  // CHECK-NEXT: return
+
+  %0 = call @func_with_arg(%arg0) {"noinline"=""} : (i32) -> i32
+  return %0 : i32
+}
+
 // Inline a function that has multiple return operations.
 func.func @func_with_multi_return(%a : i1) -> (i32) {
   cf.cond_br %a, ^bb1, ^bb2

@@ -712,6 +712,10 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
   if (resolvedCall.call->hasTrait<OpTrait::IsTerminator>())
     return false;
 
+  // Don't inline calls which explicitly forbit inlining.
+  if (!resolvedCall.call.legalToInline())
+    return false;
+
   // Don't allow inlining if the target is a self-recursive function.
   if (llvm::count_if(*resolvedCall.targetNode,
                      [&](CallGraphNode::Edge const &edge) -> bool {
