@@ -545,4 +545,11 @@ void test_smfmac_f32_32x32x64_bf8_bf8(global v16f* out, v4i a, v8i b, v16f c, in
   *out = __builtin_amdgcn_smfmac_f32_32x32x64_bf8_bf8(a, b, c, idx, 0, 0);
 }
 
+// CHECK-GFX950-LABEL: @test_smfmac_f32_32x32x64_bf8_fp8
+// CHECK-GFX950: call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.bf8.fp8(<4 x i32> %a, <8 x i32> %b, <16 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_32x32x64_bf8_fp8(global v16f* out, v4i a, v8i b, v16f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x64_bf8_fp8(a, b, c, idx, 0, 0);
+}
+
 #endif
