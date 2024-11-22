@@ -58,7 +58,7 @@ public:
     addFile(FileName, Contents);
 
     CreateInvocationOptions CIOpts;
-    CIOpts.VFS = llvm::vfs::getRealFileSystem();
+    CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         CompilerInstance::createDiagnostics(*CIOpts.VFS,
                                             new DiagnosticOptions());
