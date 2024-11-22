@@ -160,8 +160,7 @@ public:
   bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &Inv);
 
-  // Move the default definitions to the implementation
-  // so the full definition of Node is available.
+  // Out of line definitions so unique_ptr<Node[]> doesn't need to be complete.
   SpillPlacement(SpillPlacement &&);
   ~SpillPlacement();
 

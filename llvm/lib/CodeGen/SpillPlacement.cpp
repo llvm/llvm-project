@@ -213,9 +213,10 @@ bool SpillPlacementAnalysis::Result::invalidate(
     MachineFunction &MF, const PreservedAnalyses &PA,
     MachineFunctionAnalysisManager::Invalidator &Inv) {
   auto PAC = PA.getChecker<SpillPlacementAnalysis>();
-  return (!PAC.preserved() &&
-          !PAC.preservedSet<AllAnalysesOn<MachineFunction>>()) ||
-         Inv.invalidate<EdgeBundlesAnalysis>(MF, PA) ||
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<MachineFunction>>())
+    return true;
+  // Check dependencies.
+  return Inv.invalidate<EdgeBundlesAnalysis>(MF, PA) ||
          Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
 }
 
