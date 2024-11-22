@@ -42,3 +42,5 @@
 
 ! CHECK: Use -mcpu or -mtune to specify the target's processor.
 ! CHECK: For example, clang --target=aarch64-unknown-linux-gnu
+
+ end program
