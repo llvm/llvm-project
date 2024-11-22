@@ -1502,13 +1502,13 @@ void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   p << " { " << payloadOp->getName().getStringRef();
   for (const auto &attr : payloadOp->getAttrs()) {
     if (auto fastAttr =
-            llvm::dyn_cast<arith::FastMathFlagsAttr>(attr.getValue())) {
+            dyn_cast<arith::FastMathFlagsAttr>(attr.getValue())) {
       if (fastAttr.getValue() == arith::FastMathFlags::none) {
         elidedAttrs.push_back(attr.getName().str());
       }
     }
     if (auto denormAttr =
-            llvm::dyn_cast<arith::DenormalModeAttr>(attr.getValue())) {
+            dyn_cast<arith::DenormalModeAttr>(attr.getValue())) {
       if (denormAttr.getValue() == arith::DenormalMode::ieee) {
         elidedAttrs.push_back(attr.getName().str());
       }
