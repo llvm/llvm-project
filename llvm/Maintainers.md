@@ -189,7 +189,7 @@ nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub) \
 Peter Smith (Anything ABI) \
 peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
 Ties Stuij (GlobalISel and early arch support) \
-ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub) \
+ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
 
 #### AVR backend
 
@@ -473,7 +473,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
-Renato Golin (rengolin@systemcall.eu), [rengolin](https://github.com/rengolin)) -- ARM backend \
+Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 
