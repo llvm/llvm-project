@@ -36,8 +36,9 @@
 ! AARCH64: cortex-a73
 ! AARCH64: cortex-a75
 
-! TODO: This is a line that is printed at the end of the output. The full line
-! also includes an example that references clang. That needs to be fixed and a
-! a check added here to make sure that it references flang, not clang.
+! The footer displayed contains a reference to clang. This should be changed to
+! flang, but that requires a change in llvm/MCSubtargetInfo. When that happens,
+! this test will need to be updated and this comment can be removed.
 
 ! CHECK: Use -mcpu or -mtune to specify the target's processor.
+! CHECK: For example, clang --target=aarch64-unknown-linux-gnu
