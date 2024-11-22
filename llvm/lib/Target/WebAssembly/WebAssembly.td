@@ -33,6 +33,10 @@ def FeatureBulkMemoryOpt :
       SubtargetFeature<"bulk-memory-opt", "HasBulkMemoryOpt", "true",
                        "Enable bulk memory optimization operations">;
 
+def FeatureCallIndirectOverlong :
+      SubtargetFeature<"call-indirect-overlong", "HasCallIndirectOverlong", "true",
+                       "Enable overlong encoding for call_indirect immediates">;
+
 def FeatureExceptionHandling :
       SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",
                        "Enable Wasm exception handling">;
@@ -66,10 +70,6 @@ def FeatureNontrappingFPToInt :
 def FeatureReferenceTypes :
       SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
                        "Enable reference types">;
-
-def FeatureCallIndirectOverlong :
-      SubtargetFeature<"call-indirect-overlong", "HasCallIndirectOverlong", "true",
-                       "Enable overlong encoding for call_indirect immediates">;
 
 def FeatureRelaxedSIMD :
       SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",

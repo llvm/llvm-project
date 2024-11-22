@@ -34,6 +34,10 @@ def HasBulkMemoryOpt :
     Predicate<"Subtarget->hasBulkMemoryOpt()">,
     AssemblerPredicate<(all_of FeatureBulkMemoryOpt), "bulk-memory-opt">;
 
+def HasCallIndirectOverlong :
+    Predicate<"Subtarget->hasCallIndirectOverlong()">,
+    AssemblerPredicate<(all_of FeatureCallIndirectOverlong), "call-indirect-overlong">;
+
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
     AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
@@ -71,10 +75,6 @@ def NotHasNontrappingFPToInt :
 def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
     AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
-
-def HasCallIndirectOverlong :
-    Predicate<"Subtarget->hasCallIndirectOverlong()">,
-    AssemblerPredicate<(all_of FeatureCallIndirectOverlong), "call-indirect-overlong">;
 
 def HasRelaxedSIMD :
     Predicate<"Subtarget->hasRelaxedSIMD()">,
