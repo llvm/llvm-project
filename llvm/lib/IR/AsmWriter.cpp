@@ -649,7 +649,7 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     OS << "target(\"";
     printEscapedString(Ty->getTargetExtName(), OS);
     OS << "\"";
-    for (Type *Inner : TETy->type_params()) 
+    for (Type *Inner : TETy->type_params())
       OS << ", " << *Inner;
     for (unsigned IntParam : TETy->int_params())
       OS << ", " << IntParam;
