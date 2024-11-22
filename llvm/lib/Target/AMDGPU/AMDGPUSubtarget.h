@@ -51,6 +51,7 @@ protected:
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -165,6 +166,10 @@ public:
   // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
+
+  bool hasBF16ConversionInsts() const {
+    return HasBF16ConversionInsts;
+  }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;

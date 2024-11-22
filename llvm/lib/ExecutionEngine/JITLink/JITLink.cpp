@@ -17,8 +17,6 @@
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -204,9 +202,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 
     auto TransferSymbol = [](Symbol &Sym, Block &B) {
       Sym.setOffset(Sym.getAddress() - B.getAddress());
+      Sym.setBlock(B);
       if (Sym.getSize() > B.getSize())
         Sym.setSize(B.getSize() - Sym.getOffset());
-      Sym.setBlock(B);
     };
 
     // Transfer symbols to all blocks except the last one.

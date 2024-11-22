@@ -26,7 +26,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cstddef>
@@ -1226,14 +1225,11 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   }
 }
 
-Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
-                                            const unsigned char *Ptr,
-                                            uint64_t FirstWord) {
+Error IndexedMemProfReader::deserializeV2(const unsigned char *Start,
+                                          const unsigned char *Ptr) {
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
-      Version == memprof::Version0
-          ? FirstWord
-          : support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   // The offset in the stream right before invoking
   // FrameTableGenerator.Emit.
   const uint64_t FramePayloadOffset =
@@ -1322,22 +1318,13 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
                                         uint64_t MemProfOffset) {
   const unsigned char *Ptr = Start + MemProfOffset;
 
-  // Read the first 64-bit word, which may be RecordTableOffset in
-  // memprof::MemProfVersion0 or the MemProf version number in
-  // memprof::MemProfVersion1 and above.
+  // Read the MemProf version number.
   const uint64_t FirstWord =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-  if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2 ||
-      FirstWord == memprof::Version3) {
+  if (FirstWord == memprof::Version2 || FirstWord == memprof::Version3) {
     // Everything is good.  We can proceed to deserialize the rest.
     Version = static_cast<memprof::IndexedVersion>(FirstWord);
-  } else if (FirstWord >= 24) {
-    // This is a heuristic/hack to detect memprof::MemProfVersion0,
-    // which does not have a version field in the header.
-    // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
-    // which should be at least 24 because of the MemProf header size.
-    Version = memprof::Version0;
   } else {
     return make_error<InstrProfError>(
         instrprof_error::unsupported_version,
@@ -1348,10 +1335,8 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   }
 
   switch (Version) {
-  case memprof::Version0:
-  case memprof::Version1:
   case memprof::Version2:
-    if (Error E = deserializeV012(Start, Ptr, FirstWord))
+    if (Error E = deserializeV2(Start, Ptr))
       return E;
     break;
   case memprof::Version3:
@@ -1572,25 +1557,6 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
 }
 
 static Expected<memprof::MemProfRecord>
-getMemProfRecordV0(const memprof::IndexedMemProfRecord &IndexedRecord,
-                   MemProfFrameHashTable &MemProfFrameTable) {
-  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
-      MemProfFrameTable);
-
-  memprof::MemProfRecord Record =
-      memprof::MemProfRecord(IndexedRecord, FrameIdConv);
-
-  // Check that all frame ids were successfully converted to frames.
-  if (FrameIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
-                                      "memprof frame not found for frame id " +
-                                          Twine(*FrameIdConv.LastUnmappedId));
-  }
-
-  return Record;
-}
-
-static Expected<memprof::MemProfRecord>
 getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
                    MemProfFrameHashTable &MemProfFrameTable,
                    MemProfCallStackHashTable &MemProfCallStackTable) {
@@ -1644,12 +1610,6 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 
   const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
-  case memprof::Version0:
-  case memprof::Version1:
-    assert(MemProfFrameTable && "MemProfFrameTable must be available");
-    assert(!MemProfCallStackTable &&
-           "MemProfCallStackTable must not be available");
-    return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable);
   case memprof::Version2:
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
@@ -1678,7 +1638,8 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   assert(Version == memprof::Version3);
 
   memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
-  memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv);
+  memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv,
+                                               RadixTreeSize);
 
   // The set of linear call stack IDs that we need to traverse from.  We expect
   // the set to be dense, so we use a BitVector.
@@ -1688,10 +1649,11 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   // duplicates, we first collect them in the form of a bit vector before
   // processing them.
   for (const memprof::IndexedMemProfRecord &IndexedRecord :
-       MemProfRecordTable->data())
+       MemProfRecordTable->data()) {
     for (const memprof::IndexedAllocationInfo &IndexedAI :
          IndexedRecord.AllocSites)
       Worklist.set(IndexedAI.CSId);
+  }
 
   // Collect caller-callee pairs for each linear call stack ID in Worklist.
   for (unsigned CS : Worklist.set_bits())

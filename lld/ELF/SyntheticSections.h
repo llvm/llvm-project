@@ -871,7 +871,7 @@ public:
 protected:
   void init(llvm::function_ref<void(InputFile *, InputChunk &, OutputChunk &)>);
   static void
-  parseDebugNames(InputChunk &inputChunk, OutputChunk &chunk,
+  parseDebugNames(Ctx &, InputChunk &inputChunk, OutputChunk &chunk,
                   llvm::DWARFDataExtractor &namesExtractor,
                   llvm::DataExtractor &strExtractor,
                   llvm::function_ref<SmallVector<uint32_t, 0>(
@@ -1300,7 +1300,21 @@ private:
 const char ACLESESYM_PREFIX[] = "__acle_se_";
 const int ACLESESYM_SIZE = 8;
 
-class ArmCmseSGVeneer;
+class ArmCmseSGVeneer {
+public:
+  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
+                  std::optional<uint64_t> addr = std::nullopt)
+      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
+  static const size_t size{ACLESESYM_SIZE};
+  const std::optional<uint64_t> getAddr() const { return entAddr; };
+
+  Symbol *sym;
+  Symbol *acleSeSym;
+  uint64_t offset = 0;
+
+private:
+  const std::optional<uint64_t> entAddr;
+};
 
 class ArmCmseSGSection final : public SyntheticSection {
 public:
@@ -1316,7 +1330,7 @@ public:
 
 private:
   SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
-  SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
+  SmallVector<std::unique_ptr<ArmCmseSGVeneer>, 0> sgVeneers;
   uint64_t newEntries = 0;
 };
 
@@ -1439,6 +1453,31 @@ Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
 
 void addVerneed(Ctx &, Symbol &ss);
 
+// This describes a program header entry.
+// Each contains type, access flags and range of output sections that will be
+// placed in it.
+struct PhdrEntry {
+  PhdrEntry(Ctx &ctx, unsigned type, unsigned flags)
+      : p_align(type == llvm::ELF::PT_LOAD ? ctx.arg.maxPageSize : 0),
+        p_type(type), p_flags(flags) {}
+  void add(OutputSection *sec);
+
+  uint64_t p_paddr = 0;
+  uint64_t p_vaddr = 0;
+  uint64_t p_memsz = 0;
+  uint64_t p_filesz = 0;
+  uint64_t p_offset = 0;
+  uint32_t p_align = 0;
+  uint32_t p_type = 0;
+  uint32_t p_flags = 0;
+
+  OutputSection *firstSec = nullptr;
+  OutputSection *lastSec = nullptr;
+  bool hasLMA = false;
+
+  uint64_t lmaOffset = 0;
+};
+
 // Linker generated per-partition sections.
 struct Partition {
   Ctx &ctx;
@@ -1447,7 +1486,7 @@ struct Partition {
 
   std::unique_ptr<SyntheticSection> elfHeader;
   std::unique_ptr<SyntheticSection> programHeaders;
-  SmallVector<PhdrEntry *, 0> phdrs;
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> phdrs;
 
   std::unique_ptr<ARMExidxSyntheticSection> armExidx;
   std::unique_ptr<BuildIdSection> buildId;

@@ -74,8 +74,7 @@ class VecCond<SDPatternOperator OpNode, ValueType TyNode,
   let usesCustomInserter = 1;
 }
 
-def vsplat_imm_eq_1 : PatFrags<(ops), [(build_vector),
-                                       (bitconvert (v4i32 (build_vector)))], [{
+def vsplat_imm_eq_1 : PatFrags<(ops), [(build_vector)], [{
   APInt Imm;
   EVT EltTy = N->getValueType(0).getVectorElementType();
 
@@ -116,8 +115,7 @@ def vsplati32_imm_eq_31 : PatFrags<(ops), [(build_vector)], [{
   return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
          Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 31;
 }]>;
-def vsplati64_imm_eq_63 : PatFrags<(ops), [(build_vector),
-                                           (bitconvert (v4i32 (build_vector)))], [{
+def vsplati64_imm_eq_63 : PatFrags<(ops), [(build_vector)], [{
   APInt Imm;
   EVT EltTy = N->getValueType(0).getVectorElementType();
 
@@ -225,12 +223,14 @@ def f64imm_vldi : PatLeaf<(fpimm), [{
 def to_f32imm_vldi : SDNodeXForm<fpimm, [{
   uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
   x = (0b11011 << 8) | (((x >> 24) & 0xc0) ^ 0x40) | ((x >> 19) & 0x3f);
-  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(SignExtend32<13>(x), SDLoc(N),
+                                         MVT::i32);
 }]>;
 def to_f64imm_vldi : SDNodeXForm<fpimm, [{
   uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
   x = (0b11100 << 8) | (((x >> 56) & 0xc0) ^ 0x40) | ((x >> 48) & 0x3f);
-  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(SignExtend32<13>(x), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 //===----------------------------------------------------------------------===//

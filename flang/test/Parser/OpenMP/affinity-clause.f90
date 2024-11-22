@@ -63,7 +63,7 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = task
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Affinity -> OmpAffinityClause
-!PARSE-TREE: | | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
