@@ -1728,9 +1728,9 @@ def err_introducing_special_friend : Error<
 def err_tagless_friend_type_template : Error<
   "friend type templates must use an elaborated type">;
 def err_no_matching_local_friend : Error<
-  "no matching function found in local scope">;
+  "cannot define friend function in a local class definition">;
 def err_no_matching_local_friend_suggest : Error<
-  "no matching function %0 found in local scope; did you mean %3?">;
+  "cannot define friend function %0 in a local class definition; did you mean %3?">;
 def err_partial_specialization_friend : Error<
   "partial specialization cannot be declared as a friend">;
 def err_qualified_friend_def : Error<
@@ -10129,10 +10129,11 @@ def err_lifetimebound_ctor_dtor : Error<
   "%select{constructor|destructor}0">;
 def err_lifetimebound_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to a parameter of a function "
-  "that returns void">;
+  "that returns void; did you mean 'lifetime_capture_by(X)'">;
 def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to an implicit object "
-  "parameter of a function that returns void">;
+  "parameter of a function that returns void; "
+  "did you mean 'lifetime_capture_by(X)'">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
@@ -10227,6 +10228,12 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
+def warn_dangling_reference_captured : Warning<
+   "object whose reference is captured by '%0' will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+def warn_dangling_reference_captured_by_unknown : Warning<
+   "object whose reference is captured will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.

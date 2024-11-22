@@ -409,3 +409,41 @@ entry:
   %23 = fcmp ogt <8 x float> zeroinitializer, %19
   ret void
 }
+
+define void @test13(<8 x i32> %0, ptr %out0, ptr %out1, ptr %out2) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v8i32(<32 x i32> poison, <8 x i32> [[TMP0:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <16 x i32> [ [[TMP4]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP5]], i64 12)
+; CHECK-NEXT:    [[OR0:%.*]] = or <4 x i32> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    store <4 x i32> [[OR0]], ptr [[OUT0:%.*]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP4]], i64 0)
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[OUT1:%.*]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP4]], i64 8)
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT2:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %4 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  br label %for.end.loopexit
+
+for.end.loopexit:
+  %phi0 = phi <4 x i32> [ %1, %entry ]
+  %phi1 = phi <4 x i32> [ %2, %entry ]
+  %phi2 = phi <4 x i32> [ %3, %entry ]
+  %phi3 = phi <4 x i32> [ %4, %entry ]
+  %or0 = or <4 x i32> %phi1, zeroinitializer
+  store <4 x i32> %or0, ptr %out0, align 4
+  store <4 x i32> %1, ptr %out1, align 4
+  store <4 x i32> %4, ptr %out2, align 4
+  ret void
+}

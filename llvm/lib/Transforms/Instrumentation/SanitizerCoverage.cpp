@@ -250,6 +250,8 @@ private:
                                                     const char *Section);
   GlobalVariable *CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   void CreateFunctionLocalArrays(Function &F, ArrayRef<BasicBlock *> AllBlocks);
+  Instruction *CreateGateBranch(Function &F, Value *&FunctionGateCmp,
+                                Instruction *I);
   Value *CreateFunctionLocalGateCmp(IRBuilder<> &IRB);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, size_t Idx,
                              Value *&FunctionGateCmp, bool IsLeafFunc = true);
@@ -815,6 +817,24 @@ Value *ModuleSanitizerCoverage::CreateFunctionLocalGateCmp(IRBuilder<> &IRB) {
   return Cmp;
 }
 
+Instruction *ModuleSanitizerCoverage::CreateGateBranch(Function &F,
+                                                       Value *&FunctionGateCmp,
+                                                       Instruction *IP) {
+  if (!FunctionGateCmp) {
+    // Create this in the entry block
+    BasicBlock &BB = F.getEntryBlock();
+    BasicBlock::iterator IP = BB.getFirstInsertionPt();
+    IP = PrepareToSplitEntryBlock(BB, IP);
+    IRBuilder<> EntryIRB(&*IP);
+    FunctionGateCmp = CreateFunctionLocalGateCmp(EntryIRB);
+  }
+  // Set the branch weights in order to minimize the price paid when the
+  // gate is turned off, allowing the default enablement of this
+  // instrumentation with as little of a performance cost as possible
+  auto Weights = MDBuilder(*C).createBranchWeights(1, 100000);
+  return SplitBlockAndInsertIfThen(FunctionGateCmp, IP, false, Weights);
+}
+
 bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks,
                                              bool IsLeafFunc) {
@@ -1012,19 +1032,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
                       ConstantInt::get(IntptrTy, Idx * 4)),
         PtrTy);
     if (Options.GatedCallbacks) {
-      if (!FunctionGateCmp) {
-        // Create this in the entry block
-        assert(IsEntryBB);
-        FunctionGateCmp = CreateFunctionLocalGateCmp(IRB);
-      }
-      // Set the branch weights in order to minimize the price paid when the
-      // gate is turned off, allowing the default enablement of this
-      // instrumentation with as little of a performance cost as possible
-      auto Weights = MDBuilder(*C).createBranchWeights(1, 100000);
-      auto ThenTerm =
-          SplitBlockAndInsertIfThen(FunctionGateCmp, &*IP, false, Weights);
-      IRBuilder<> ThenIRB(ThenTerm);
-      ThenIRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
+      Instruction *I = &*IP;
+      auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
+      IRBuilder<> GateIRB(GateBranch);
+      GateIRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
     } else {
       IRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
     }

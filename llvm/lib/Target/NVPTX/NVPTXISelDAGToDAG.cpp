@@ -3936,8 +3936,8 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       if (!CN->getAPIntValue().isSignedIntN(32))
         return false;
 
-      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(OpNode),
-                                         MVT::i32);
+      Offset = CurDAG->getSignedTargetConstant(CN->getSExtValue(),
+                                               SDLoc(OpNode), MVT::i32);
       return true;
     }
   }

@@ -67,7 +67,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<EdgeBundles>();
+      AU.addRequired<EdgeBundlesWrapperLegacy>();
       AU.addPreservedID(MachineLoopInfoID);
       AU.addPreservedID(MachineDominatorsID);
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -303,7 +303,7 @@ char FPS::ID = 0;
 
 INITIALIZE_PASS_BEGIN(FPS, DEBUG_TYPE, "X86 FP Stackifier",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
+INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
 INITIALIZE_PASS_END(FPS, DEBUG_TYPE, "X86 FP Stackifier",
                     false, false)
 
@@ -337,7 +337,7 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
   // Early exit.
   if (!FPIsUsed) return false;
 
-  Bundles = &getAnalysis<EdgeBundles>();
+  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   TII = MF.getSubtarget().getInstrInfo();
 
   // Prepare cross-MBB liveness.

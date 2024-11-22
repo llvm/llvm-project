@@ -69,6 +69,10 @@ public:
 private:
   ContainerTy Nodes;
 
+  /// Called by the DGNode destructor to avoid accessing freed memory.
+  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
+  friend DGNode::~DGNode(); // For eraseFromBundle().
+
 public:
   SchedBundle() = default;
   SchedBundle(ContainerTy &&Nodes) : Nodes(std::move(Nodes)) {
