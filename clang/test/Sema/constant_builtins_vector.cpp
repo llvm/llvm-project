@@ -745,3 +745,23 @@ constexpr long long reduceAddLong2 = __builtin_reduce_add((vector4long){(1LL << 
 // expected-note@-1 {{outside the range of representable values of type 'long long'}}
 static_assert(__builtin_reduce_add((vector4uint){~0U, 0, 0, 1}) == 0);
 static_assert(__builtin_reduce_add((vector4ulong){~0ULL, 0, 0, 1}) == 0);
+
+static_assert(__builtin_reduce_mul((vector4char){}) == 0);
+static_assert(__builtin_reduce_mul((vector4char){1, 2, 3, 4}) == 24);
+static_assert(__builtin_reduce_mul((vector4short){1, 2, 30, 40}) == 2400);
+static_assert(__builtin_reduce_mul((vector4int){10, 20, 300, 400}) == 24000000);
+static_assert(__builtin_reduce_mul((vector4long){1000L, 2000L, 3000L, 4000L}) == 24000000000000L);
+constexpr int reduceMulInt1 = __builtin_reduce_mul((vector4int){~(1 << 31), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'int'}}
+constexpr long long reduceMulLong1 = __builtin_reduce_mul((vector4long){~(1LL << 63), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'long long'}}
+constexpr int reduceMulInt2 = __builtin_reduce_mul((vector4int){(1 << 31), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'int'}}
+constexpr long long reduceMulLong2 = __builtin_reduce_mul((vector4long){(1LL << 63), 1, 1, 2});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{outside the range of representable values of type 'long long'}}
+static_assert(__builtin_reduce_mul((vector4uint){~0U, 1, 1, 2}) == ~0U - 1);
+static_assert(__builtin_reduce_mul((vector4ulong){~0ULL, 1, 1, 2}) == ~0ULL - 1);
