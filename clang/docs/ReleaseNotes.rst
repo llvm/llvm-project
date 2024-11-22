@@ -358,6 +358,7 @@ Non-comprehensive list of changes in this release
 - ``__builtin_reduce_add`` function can now be used in constant expressions.
 - ``__builtin_reduce_mul`` function can now be used in constant expressions.
 - ``__builtin_reduce_and`` function can now be used in constant expressions.
+- ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -560,6 +561,9 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses ``= delete("reason")`` extension warnings only in pedantic mode rather than on by default. (#GH109311).
 
 - Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
+
+- Clang now correctly recognises code after a call to a ``[[noreturn]]`` constructor
+  as unreachable (#GH63009).
 
 Improvements to Clang's time-trace
 ----------------------------------
