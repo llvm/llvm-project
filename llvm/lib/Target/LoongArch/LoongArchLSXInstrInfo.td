@@ -223,12 +223,14 @@ def f64imm_vldi : PatLeaf<(fpimm), [{
 def to_f32imm_vldi : SDNodeXForm<fpimm, [{
   uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
   x = (0b11011 << 8) | (((x >> 24) & 0xc0) ^ 0x40) | ((x >> 19) & 0x3f);
-  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(SignExtend32<13>(x), SDLoc(N),
+                                         MVT::i32);
 }]>;
 def to_f64imm_vldi : SDNodeXForm<fpimm, [{
   uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
   x = (0b11100 << 8) | (((x >> 56) & 0xc0) ^ 0x40) | ((x >> 48) & 0x3f);
-  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(SignExtend32<13>(x), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 //===----------------------------------------------------------------------===//
