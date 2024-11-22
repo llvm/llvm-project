@@ -3410,7 +3410,7 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
   }
   if (Invert) {
     SDValue Mask =
-      DAG.getSplatBuildVector(VT, DL, DAG.getConstant(-1, DL, MVT::i64));
+        DAG.getSplatBuildVector(VT, DL, DAG.getAllOnesConstant(DL, MVT::i64));
     Cmp = DAG.getNode(ISD::XOR, DL, VT, Cmp, Mask);
   }
   if (Chain && Chain.getNode() != Cmp.getNode()) {
@@ -3571,7 +3571,7 @@ SDValue SystemZTargetLowering::lowerGlobalAddress(GlobalAddressSDNode *Node,
   // addition for it.
   if (Offset != 0)
     Result = DAG.getNode(ISD::ADD, DL, PtrVT, Result,
-                         DAG.getConstant(Offset, DL, PtrVT));
+                         DAG.getSignedConstant(Offset, DL, PtrVT));
 
   return Result;
 }
@@ -3834,7 +3834,7 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
     const auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
     int Offset = TFL->getReturnAddressOffset(MF);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, FrameAddr,
-                              DAG.getConstant(Offset, DL, PtrVT));
+                              DAG.getSignedConstant(Offset, DL, PtrVT));
     return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Ptr,
                        MachinePointerInfo());
   }
@@ -4584,7 +4584,7 @@ static void getCSAddressAndShifts(SDValue Addr, SelectionDAG &DAG, SDLoc DL,
 
   // Get the address of the containing word.
   AlignedAddr = DAG.getNode(ISD::AND, DL, PtrVT, Addr,
-                            DAG.getConstant(-4, DL, PtrVT));
+                            DAG.getSignedConstant(-4, DL, PtrVT));
 
   // Get the number of bits that the word must be rotated left in order
   // to bring the field to the top bits of a GR32.
