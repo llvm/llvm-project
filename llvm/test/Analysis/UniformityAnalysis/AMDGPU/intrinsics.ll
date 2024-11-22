@@ -857,7 +857,6 @@ define amdgpu_kernel void @v_permlane_idx_gen_b32(ptr addrspace(1) %out, i32 %sr
 }
 
 
-
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1, i1) #1
