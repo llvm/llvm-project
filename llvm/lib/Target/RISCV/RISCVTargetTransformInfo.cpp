@@ -1156,6 +1156,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                               ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
                               CostKind);
   case Intrinsic::experimental_vp_splat: {
+    // TODO: Lower i1 experimental_vp_splat
+    if (cast<VectorType>(RetTy)->getElementType()->isIntegerTy(1))
+      return InstructionCost::getInvalid();
     auto LT = getTypeLegalizationCost(RetTy);
     return LT.first *
            getRISCVInstructionCost(RISCV::VMV_V_X, LT.second, CostKind);
