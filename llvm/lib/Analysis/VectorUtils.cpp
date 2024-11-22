@@ -742,6 +742,13 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
         Abort = true;
         break;
       }
+
+    // If all of instructions in the chain are load and cast instructions, we
+    // cannot get any benefit from MinBW.
+    if (all_of(llvm::make_range(ECs.member_begin(I), ECs.member_end()),
+               [](Value *M) { return isa<CastInst, LoadInst>(M); }))
+      Abort = true;
+
     if (Abort)
       continue;
 
