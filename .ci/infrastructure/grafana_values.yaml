@@ -1,0 +1,41 @@
+metrics:
+  enabled: true
+  alloy:
+    metricsTuning:
+      useIntegrationAllowList: true
+  cost:
+    enabled: true
+  kepler:
+    enabled: true
+  node-exporter:
+    enabled: true
+logs:
+  enabled: true
+  pod_logs:
+    enabled: true
+  cluster_events:
+    enabled: true
+traces:
+  enabled: true
+receivers:
+  grpc:
+    enabled: true
+  http:
+    enabled: true
+  zipkin:
+    enabled: true
+  grafanaCloudMetrics:
+    enabled: false
+opencost:
+  enabled: true
+kube-state-metrics:
+  enabled: true
+prometheus-node-exporter:
+  enabled: true
+prometheus-operator-crds:
+  enabled: true
+kepler:
+  enabled: true
+alloy: {}
+alloy-events: {}
+alloy-logs: {}

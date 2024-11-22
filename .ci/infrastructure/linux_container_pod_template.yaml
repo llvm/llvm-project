@@ -1,0 +1,26 @@
+spec:
+  tolerations:
+    - key: "premerge-platform"
+      operator: "Equal"
+      value: "linux"
+      effect: "NoSchedule"
+  nodeSelector:
+    premerge-platform: linux
+  containers:
+  - name: $job
+    resources:
+      # The container is always scheduled on the same pod as the runner.
+      # Since we use the runner requests.cpu for scheduling/autoscaling,
+      # the request here should be set to something small.
+      #
+      # The limit however should be the number of cores of the node. Any limit
+      # inferior to the number of core could slow down the job.
+      #
+      # For memory however, the request/limits shall be correct.
+      # It's not used for scheduling, but can be used by k8 for OOM kill.
+      requests:
+        cpu: "100m"
+        memory: "50Gi"
+      limits:
+        cpu: 56
+        memory: "100Gi"

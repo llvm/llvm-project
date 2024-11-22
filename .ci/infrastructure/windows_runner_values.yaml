@@ -1,0 +1,32 @@
+githubConfigUrl: "https://github.com/llvm"
+githubConfigSecret: "github-token"
+
+minRunners: 0
+maxRunners: 2
+
+template:
+  spec:
+    tolerations:
+    - key: "node.kubernetes.io/os"
+      operator: "Equal"
+      value: "windows"
+      effect: "NoSchedule"
+    - key: "premerge-platform"
+      operator: "Equal"
+      value: "windows"
+      effect: "NoSchedule"
+    nodeSelector:
+      premerge-platform: windows
+    containers:
+      - name: runner
+        resources:
+          requests:
+            cpu: 50
+        # TODO(boomanaiden154): Update this image when we have a proper windows
+        # image ready.
+        image: ghcr.io/keenuts-test-org/windows-ci-image:latest
+        command: ["run.cmd"]
+        args: ["--jitconfig", "$(ACTIONS_RUNNER_INPUT_JITCONFIG)"]
+        env:
+          - name: DISABLE_RUNNER_UPDATE
+            value: "true"

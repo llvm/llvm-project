@@ -1,0 +1,74 @@
+githubConfigUrl: "https://github.com/llvm"
+githubConfigSecret: "github-token"
+
+minRunners: 0
+maxRunners: 4
+
+containerMode:
+  type: "kubernetes"
+  kubernetesModeWorkVolumeClaim:
+    accessModes: ["ReadWriteOnce"]
+    storageClassName: "standard-rwo"
+    resources:
+      requests:
+        storage: "100Gi"
+  kubernetesModeServiceAccount:
+    annotations:
+
+template:
+  spec:
+    tolerations:
+    - key: "premerge-platform"
+      operator: "Equal"
+      value: "linux"
+      effect: "NoSchedule"
+    nodeSelector:
+      premerge-platform: linux
+    containers:
+    - name: runner
+      image: ghcr.io/actions/actions-runner:latest
+      command: ["/home/runner/run.sh"]
+      resources:
+        # The container will be scheduled on the same node as this runner.
+        # This means if we don't set the CPU request high-enough here, 2
+        # containers will be scheduled on the same pod, meaning 2 jobs.
+        #
+        # This number should be:
+        #  - greater than number_of_cores / 2:
+        #    A value lower than that could allow the scheduler to put 2
+        #    runners in the same pod. Meaning 2 containers in the same pod.
+        #    Meaning 2 jobs sharing the resources.
+        #  - lower than number_of_cores:
+        #    Each pod has some basic services running (metrics for ex). Those
+        #    already require some amount of CPU (~0.5). This means we don't
+        #    exactly have N cores to allocate, but N - epsilon.
+        #
+        # Memory however shall be handled at the container level. The runner
+        # itself doesn't need much, just using something enough not to get
+        # OOM killed.
+        requests:
+          cpu: 50
+          memory: "2Gi"
+        limits:
+          cpu: 56
+          memory: "2Gi"
+      env:
+        - name: ACTIONS_RUNNER_CONTAINER_HOOKS
+          value: /home/runner/k8s/index.js
+        - name: ACTIONS_RUNNER_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER
+          value: "true"
+        - name: ACTIONS_RUNNER_CONTAINER_HOOK_TEMPLATE
+          value: "/home/runner/pod-config/linux-container-pod-template.yaml"
+      volumeMounts:
+        - name: container-pod-config
+          mountPath: /home/runner/pod-config
+    securityContext:
+      fsGroup: 123
+    volumes:
+      - name: container-pod-config
+        configMap:
+          name: linux-container-pod-template
