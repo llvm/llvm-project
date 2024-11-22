@@ -1,13 +1,14 @@
 // RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.6-compute -S -finclude-default-header -o - %s | FileCheck %s
 
-// The purpose of this test is to ensure that the AST writer
-// only emits struct bodies when within the context of a 
-// larger object that is being outputted on the RHS.
-
+// The purpose of this test is to ensure that the target
+// extension type associated with the structured buffer only
+// contains anonymous struct types, rather than named
+// struct types
 
 // note that "{ <4 x float> }" in the check below is a struct type, but only the
 // body is emitted on the RHS because we are already in the context of a
 // target extension type definition (class.hlsl::StructuredBuffer)
+
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", { <4 x float> }, 0, 0), %struct.mystruct }
 // CHECK: %struct.mystruct = type { <4 x float> }
 // CHECK: %dx.types.Handle = type { ptr }

@@ -794,8 +794,17 @@ TargetExtType::TargetExtType(LLVMContext &C, StringRef Name,
   // Parameter storage immediately follows the class in allocation.
   Type **Params = reinterpret_cast<Type **>(this + 1);
   ContainedTys = Params;
-  for (Type *T : Types)
-    *Params++ = T;
+  for (Type *T : Types) {
+    // target ext type parameters may not be named struct types
+    // so we should convert any named struct types to anonymous
+    // struct types in the parameter list
+    Type *ConvertedTy = T;
+    if (auto *STy = dyn_cast<StructType>(T)) {
+      if (STy->hasName())
+        ConvertedTy = StructType::get(C, STy->elements(), /*isPacked=*/false);
+    }
+    *Params++ = ConvertedTy;
+  }
 
   setSubclassData(Ints.size());
   unsigned *IntParamSpace = reinterpret_cast<unsigned *>(Params);
