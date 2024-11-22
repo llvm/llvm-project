@@ -313,8 +313,7 @@ namespace {
         Disp = CurDAG->getTargetBlockAddress(AM.BlockAddr, MVT::i32, AM.Disp,
                                              AM.SymbolFlags);
       else
-        Disp =
-            CurDAG->getSignedConstant(AM.Disp, DL, MVT::i32, /*isTarget=*/true);
+        Disp = CurDAG->getSignedTargetConstant(AM.Disp, DL, MVT::i32);
 
       if (AM.Segment.getNode())
         Segment = AM.Segment;
@@ -3775,8 +3774,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       }
 
       if (MemVT != MVT::i64 || isInt<32>(OperandV)) {
-        Operand = CurDAG->getSignedConstant(OperandV, SDLoc(Node), MemVT,
-                                            /*isTarget=*/true);
+        Operand = CurDAG->getSignedTargetConstant(OperandV, SDLoc(Node), MemVT);
         NewOpc = SelectImmOpcode(Opc);
       }
     }
