@@ -303,6 +303,11 @@ void test_substr() {
     // CHECK-FIXES: str.starts_with(prefix);
 
     // Tests to verify macro behavior
+    #define MSG "hello"
+    str.substr(0, strlen(MSG)) == MSG;
+    // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr() == [modernize-use-starts-ends-with]
+    // CHECK-FIXES: str.starts_with(MSG);
+
     #define STARTS_WITH(X, Y) (X).substr(0, (Y).size()) == (Y)
     STARTS_WITH(str, prefix);
 

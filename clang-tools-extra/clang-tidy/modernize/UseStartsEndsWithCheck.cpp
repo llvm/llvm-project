@@ -183,7 +183,7 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
           .bind("expr"),
       this);
 
-  // Case 6: X.substr(0, LEN(Y)) [!=]= Y -> ends_with.
+  // Case 6: X.substr(0, LEN(Y)) [!=]= Y -> starts_with.
   Finder->addMatcher(
       cxxOperatorCallExpr(
           hasAnyOperatorName("==", "!="),
@@ -218,6 +218,9 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       FindExpr->getBeginLoc().isMacroID())
     return;
 
+  if (FindExpr->getNumArgs() == 0)
+    return;
+
   const bool Neg = isNegativeComparison(ComparisonExpr);
 
   // Retrieve the source text of the search expression.
@@ -240,9 +243,6 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
                                        ReplacementFunction->getName());
 
   // Replace arguments and everything after the function call.
-  if (FindExpr->getNumArgs() == 0) {
-    return;
-  }
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(FindExpr->getArg(0)->getBeginLoc(),
                                      ComparisonExpr->getEndLoc()),
