@@ -39,4 +39,27 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DCLANG_DEFAULT_LINKER="lld" \
   -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/llvm-project-llvmorg-$LLVM_VERSION/llvm
 
-RUN ninja -C ./build stage2-instrumented-clang stage2-instrumented-lld
+RUN ninja -C ./build stage2-instrumented-clang stage2-instrumented-lld stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution && rm -rf ./build
+
+FROM base
+    
+COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
+    
+# Need to install curl for hendrikmuhs/ccache-action
+# Need nodejs for some of the GitHub actions.
+# Need perl-modules for clang analyzer tests.
+# Need git for SPIRV-Tools tests.
+RUN apt-get update && \
+    apt-get install -y \
+    binutils \ 
+    cmake \
+    curl \
+    git \
+    libstdc++-11-dev \
+    ninja-build \
+    nodejs \
+    perl-modules \
+    python3-psutil
+
+ENV LLVM_SYSROOT=$LLVM_SYSROOT
+ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
