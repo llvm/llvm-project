@@ -1995,6 +1995,12 @@ def AtomicThreadFence : Builtin {
   let Prototype = "void(int)";
 }
 
+def ScopedAtomicThreadFence : Builtin {
+  let Spellings = ["__scoped_atomic_thread_fence"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(int, int)";
+}
+
 def AtomicSignalFence : Builtin {
   let Spellings = ["__atomic_signal_fence"];
   let Attributes = [NoThrow];
