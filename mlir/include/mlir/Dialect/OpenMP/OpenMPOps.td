@@ -1759,7 +1759,7 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", traits = [
   let summary = "declare mapper directive";
   let description = [{
     The declare mapper directive declares a user-defined mapper for a given
-    type, and may define a mapper-identifier that can be used in a map clause.
+    type, and defines a mapper-identifier that can be used in a map clause.
   }] # clausesDescription;
 
   let arguments = !con((ins SymbolNameAttr:$sym_name,
