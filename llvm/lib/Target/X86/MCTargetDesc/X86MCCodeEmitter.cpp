@@ -672,6 +672,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
         return Kind == REX2  ? X86::reloc_riprel_4byte_relax_rex2
                : Kind == REX ? X86::reloc_riprel_4byte_relax_rex
                              : X86::reloc_riprel_4byte_relax;
+      case X86::ADD64rm_NF:
       case X86::ADD64rm_ND:
       case X86::ADD64mr_ND:
       case X86::ADD64mr_NF_ND:
