@@ -57,7 +57,8 @@ struct __atomic_waitable< _Tp,
                                    decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(
                                        std::declval<const _Tp&>()))> > : true_type {};
 
-#if _LIBCPP_HAS_THREADS
+#if _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_HAS_THREADS
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*) _NOEXCEPT;
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*) _NOEXCEPT;
@@ -156,7 +157,7 @@ _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _
   std::__cxx_atomic_notify_all(__atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
 }
 
-#else // _LIBCPP_HAS_THREADS
+#  else // _LIBCPP_HAS_THREADS
 
 template <class _AtomicWaitable, class _Poll>
 _LIBCPP_HIDE_FROM_ABI void __atomic_wait_unless(const _AtomicWaitable& __a, memory_order __order, _Poll&& __poll) {
@@ -175,7 +176,7 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable&) {}
 template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable&) {}
 
-#endif // _LIBCPP_HAS_THREADS
+#  endif // _LIBCPP_HAS_THREADS
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
@@ -190,6 +191,8 @@ __atomic_wait(_AtomicWaitable& __a, _Tp __val, memory_order __order) {
     return !std::__cxx_nonatomic_compare_equal(__current, __val);
   });
 }
+
+#endif // C++20
 
 _LIBCPP_END_NAMESPACE_STD
 
