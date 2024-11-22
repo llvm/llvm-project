@@ -22,60 +22,63 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
   asm(R"(
       mov %c[rbx](%%rdi), %%rbx
-      xor %%rbx, %%rax
+      xor %%rbx, %[cookie]
       xor %[mask], %%rbx
-      mul %%rcx
-      xor %%rdx, %%rax
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %c[rbp](%%rdi), %%rbp
-      xor %%rbp, %%rax
+      xor %%rbp, %[cookie]
       xor %[mask], %%rbp
-      mul %%rcx
-      xor %%rdx, %%rax
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %c[r12](%%rdi), %%r12
-      xor %%r12, %%rax
+      xor %%r12, %[cookie]
       xor %[mask], %%r12
-      mul %%rcx
-      xor %%rdx, %%rax
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %c[r13](%%rdi), %%r13
-      xor %%r13, %%rax
+      xor %%r13, %[cookie]
       xor %[mask], %%r13
-      mul %%rcx
-      xor %%rdx, %%rax
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %c[r14](%%rdi), %%r14
-      xor %%r14, %%rax
+      xor %%r14, %[cookie]
       xor %[mask], %%r14
-      mul %%rcx
-      xor %%rdx, %%rax
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %c[r15](%%rdi), %%r15
-      xor %%r15, %%rax
+      xor %%r15, %[cookie]
       xor %[mask], %%r15
-      mul %%rcx
-      xor %%rdx, %%rax
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %c[rsp](%%rdi), %%rsp
-      xor %%rsp, %%rax
+      xor %%rsp, %[cookie]
       xor %[mask], %%rsp
-      mul %%rcx
-      xor %%rdx, %%rax
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
-      mov %%rcx, %%rdx
+      # move multiplication factor (which should be in rcx) to rdx
+      # free up rcx for PC recovery
+      mov %[multiple], %%rdx
       mov %c[rip](%%rdi), %%rcx
-      xor %%rcx, %%rax
+      xor %%rcx, %[cookie]
       xor %[mask], %%rcx
       mul %%rdx
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
 
-      cmp %c[chksum](%%rdi), %%rax
+      cmp %c[chksum](%%rdi), %[cookie]
       jne __libc_jmpbuf_corruption
 
+      # from this point, rax does not stand for accumulator but for return value 
       cmpl $0x1, %%esi
       adcl $0x0, %%esi
-      movq %%rsi, %%rax
+      movq %%rsi, %%rax 
 
       jmpq *%%rcx
       )" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
@@ -83,8 +86,9 @@ LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
       [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
       [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip)),
-      [chksum] "i"(offsetof(__jmp_buf, __chksum)), "c"(jmpbuf::MULTIPLE),
-      [cookie] "a"(jmpbuf::checksum_cookie), [mask] "m"(jmpbuf::value_mask)
+      [chksum] "i"(offsetof(__jmp_buf, __chksum)),
+      [multiple] "c"(jmpbuf::MULTIPLE), [cookie] "a"(jmpbuf::checksum_cookie),
+      [mask] "m"(jmpbuf::value_mask)
       :);
 }
 

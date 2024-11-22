@@ -25,60 +25,62 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
       mov %%rbx, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[rbx](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
       
       mov %%rbp, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[rbp](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %%r12, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r12](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %%r13, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r13](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %%r14, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r14](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov %%r15, %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[r15](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       lea 8(%%rsp), %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[rsp](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
       mov (%%rsp), %%rdx
       xor %[mask], %%rdx
       mov %%rdx, %c[rip](%%rdi)
-      xor %%rdx, %%rax
-      mulq %[multiple]
-      xor %%rdx, %%rax
+      xor %%rdx, %[cookie]
+      mul %[multiple]
+      xor %%rdx, %[cookie]
 
-      mov %%rax, %c[chksum](%%rdi)
+      mov %[cookie], %c[chksum](%%rdi)
+
+      # from this point, rax does not stand for accumulator but for return value
       xor %%rax, %%rax
       ret)" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
       [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
@@ -86,8 +88,8 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
       [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip)),
       [chksum] "i"(offsetof(__jmp_buf, __chksum)),
-      [multiple] "m"(jmpbuf::MULTIPLE), [cookie] "a"(jmpbuf::checksum_cookie),
-      [mask] "m"(jmpbuf::value_mask)
+      [multiple] "c"(jmpbuf::MULTIPLE), [cookie] "a"(jmpbuf::checksum_cookie),
+      [mask] "S"(jmpbuf::value_mask)
       :);
 }
 
