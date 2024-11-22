@@ -40,7 +40,6 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include <string>
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -3127,13 +3126,16 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)};
   const auto &varType{std::get<parser::TypeSpec>(spec.t)};
   const auto &varName{std::get<parser::Name>(spec.t)};
-  std::stringstream mapperNameStr;
-  if (mapperName.has_value()) {
-    mapperNameStr << mapperName->ToString();
-  } else {
-    mapperNameStr << "default_"
-                  << varType.declTypeSpec->derivedTypeSpec().name().ToString();
-  }
+  assert(varType.declTypeSpec->category() ==
+             semantics::DeclTypeSpec::Category::TypeDerived &&
+         "Expected derived type");
+
+  std::string mapperNameStr;
+  if (mapperName.has_value())
+    mapperNameStr = mapperName->ToString();
+  else
+    mapperNameStr =
+        "default_" + varType.declTypeSpec->derivedTypeSpec().name().ToString();
 
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
@@ -3149,7 +3151,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(converter.getCurrentLocation(), stmtCtx, clauseOps);
   auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
-      converter.getCurrentLocation(), mapperNameStr.str(), varVal, mlirType,
+      converter.getCurrentLocation(), mapperNameStr, varVal, mlirType,
       clauseOps.mapVars);
   converter.getMLIRSymbolTable()->insert(declMapperOp.getOperation());
   firOpBuilder.restoreInsertionPoint(insPt);
