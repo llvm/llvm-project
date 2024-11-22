@@ -19,6 +19,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRArithDialect
+  MLIRBufferizationDialect
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRInferIntRangeInterface
