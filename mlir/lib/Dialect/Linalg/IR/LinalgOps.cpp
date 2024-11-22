@@ -1501,14 +1501,12 @@ void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   std::string attrToElide;
   p << " { " << payloadOp->getName().getStringRef();
   for (const auto &attr : payloadOp->getAttrs()) {
-    if (auto fastAttr =
-            dyn_cast<arith::FastMathFlagsAttr>(attr.getValue())) {
+    if (auto fastAttr = dyn_cast<arith::FastMathFlagsAttr>(attr.getValue())) {
       if (fastAttr.getValue() == arith::FastMathFlags::none) {
         elidedAttrs.push_back(attr.getName().str());
       }
     }
-    if (auto denormAttr =
-            dyn_cast<arith::DenormalModeAttr>(attr.getValue())) {
+    if (auto denormAttr = dyn_cast<arith::DenormalModeAttr>(attr.getValue())) {
       if (denormAttr.getValue() == arith::DenormalMode::ieee) {
         elidedAttrs.push_back(attr.getName().str());
       }
