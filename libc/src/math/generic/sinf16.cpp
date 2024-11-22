@@ -19,12 +19,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-constexpr size_t N_EXCEPTS = 2;
+constexpr size_t N_EXCEPTS = 3;
 
 constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
     // (input, RZ output, RU offset, RD offset, RN offset)
     {0x585c, 0x3ba3, 1, 0, 1},
     {0x5cb0, 0xbbff, 0, 1, 0},
+    {0x51f5, 0xb80f, 0, 1, 0},
 }};
 
 LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
@@ -52,7 +53,7 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   	        sin(y * pi/32) * cos(k * pi/32)
 
   // Handle exceptional values
-  if (LIBC_UNLIKELY(x_abs == 0x585C || x_abs == 0x5cb0)) {
+  if (LIBC_UNLIKELY(x_abs == 0x585C || x_abs == 0x5cb0 || x_abs == 0x51f5)) {
     bool x_sign = x_u >> 15;
     if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
