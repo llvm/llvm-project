@@ -28163,7 +28163,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
   if (VT.getScalarSizeInBits() > Mask.getValueType().getScalarSizeInBits()) {
     assert(Load->getExtensionType() != ISD::NON_EXTLOAD &&
            "Incorrect mask type");
-    Mask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Mask);
+    Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Mask);
   }
   Mask = convertFixedMaskToScalableVector(Mask, DAG);
 
@@ -29210,6 +29210,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
     }
   }
+
+  // Try to widen the shuffle before generating a possibly expensive SVE TBL.
+  // This may allow the shuffle to be matched as something cheaper like ZIP1.
+  if (SDValue WideOp = tryWidenMaskForShuffle(Op, DAG))
+    return WideOp;
 
   // Avoid producing TBL instruction if we don't know SVE register minimal size,
   // unless NEON is not available and we can assume minimal SVE register size is

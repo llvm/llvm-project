@@ -25,8 +25,6 @@ struct MemProfRecord;
 
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
-  // Version 1: Added a version field to the header.
-  Version1 = 1,
   // Version 2: Added a call stack table.
   Version2 = 2,
   // Version 3: Added a radix tree for call stacks.  Switched to linear IDs for
@@ -34,7 +32,7 @@ enum IndexedVersion : uint64_t {
   Version3 = 3,
 };
 
-constexpr uint64_t MinimumSupportedVersion = Version1;
+constexpr uint64_t MinimumSupportedVersion = Version2;
 constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
@@ -486,20 +484,6 @@ struct MemProfRecord {
   llvm::SmallVector<std::vector<Frame>> CallSites;
 
   MemProfRecord() = default;
-  MemProfRecord(
-      const IndexedMemProfRecord &Record,
-      llvm::function_ref<const Frame(const FrameId Id)> IdToFrameCallback) {
-    for (const IndexedAllocationInfo &IndexedAI : Record.AllocSites) {
-      AllocSites.emplace_back(IndexedAI, IdToFrameCallback);
-    }
-    for (const ArrayRef<FrameId> Site : Record.CallSites) {
-      std::vector<Frame> Frames;
-      for (const FrameId Id : Site) {
-        Frames.push_back(IdToFrameCallback(Id));
-      }
-      CallSites.push_back(Frames);
-    }
-  }
 
   // Prints out the contents of the memprof record in YAML.
   void print(llvm::raw_ostream &OS) const {
@@ -1050,8 +1034,9 @@ struct FrameStat {
 };
 
 // Compute a histogram of Frames in call stacks.
-llvm::DenseMap<FrameId, FrameStat>
-computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+template <typename FrameIdTy>
+llvm::DenseMap<FrameIdTy, FrameStat>
+computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
                           &MemProfCallStackData);
 
 // Construct a radix tree of call stacks.
@@ -1109,7 +1094,7 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
 // On-disk IndexedMemProfRecord will refer to call stacks by their indexes into
 // the radix tree array, so we do not explicitly encode mappings like:
 // "CallStackId 1 -> 11".
-class CallStackRadixTreeBuilder {
+template <typename FrameIdTy> class CallStackRadixTreeBuilder {
   // The radix tree array.
   std::vector<LinearFrameId> RadixArray;
 
@@ -1136,23 +1121,25 @@ class CallStackRadixTreeBuilder {
   // RadixArray[Indexes[5 - 1]] is the last frame of the common prefix.
   std::vector<LinearCallStackId> Indexes;
 
-  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameId>>;
+  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameIdTy>>;
 
   // Encode a call stack into RadixArray.  Return the starting index within
   // RadixArray.
-  LinearCallStackId encodeCallStack(
-      const llvm::SmallVector<FrameId> *CallStack,
-      const llvm::SmallVector<FrameId> *Prev,
-      const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
+  LinearCallStackId
+  encodeCallStack(const llvm::SmallVector<FrameIdTy> *CallStack,
+                  const llvm::SmallVector<FrameIdTy> *Prev,
+                  std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
+                      MemProfFrameIndexes);
 
 public:
   CallStackRadixTreeBuilder() = default;
 
   // Build a radix tree array.
-  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
                  &&MemProfCallStackData,
-             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
-             llvm::DenseMap<FrameId, FrameStat> &FrameHistogram);
+             std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
+                 MemProfFrameIndexes,
+             llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram);
 
   ArrayRef<LinearFrameId> getRadixArray() const { return RadixArray; }
 

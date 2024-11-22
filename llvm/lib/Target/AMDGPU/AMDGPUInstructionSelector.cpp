@@ -1090,6 +1090,20 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_smfmac_f32_32x32x32_bf8_fp8:
   case Intrinsic::amdgcn_smfmac_f32_32x32x32_fp8_bf8:
   case Intrinsic::amdgcn_smfmac_f32_32x32x32_fp8_fp8:
+  case Intrinsic::amdgcn_smfmac_f32_16x16x64_f16:
+  case Intrinsic::amdgcn_smfmac_f32_32x32x32_f16:
+  case Intrinsic::amdgcn_smfmac_f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_smfmac_f32_32x32x32_bf16:
+  case Intrinsic::amdgcn_smfmac_i32_16x16x128_i8:
+  case Intrinsic::amdgcn_smfmac_i32_32x32x64_i8:
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_bf8_bf8:
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_bf8_fp8:
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_bf8:
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_fp8:
     return selectSMFMACIntrin(I);
   default:
     return selectImpl(I, *CoverageInfo);
@@ -1104,10 +1118,13 @@ static int getV_CMPOpcode(CmpInst::Predicate P, unsigned Size,
   if (Size == 16 && !ST.has16BitInsts())
     return -1;
 
-  const auto Select = [&](unsigned S16Opc, unsigned TrueS16Opc, unsigned S32Opc,
+  const auto Select = [&](unsigned S16Opc, unsigned TrueS16Opc,
+                          unsigned FakeS16Opc, unsigned S32Opc,
                           unsigned S64Opc) {
     if (Size == 16)
-      return ST.hasTrue16BitInsts() ? TrueS16Opc : S16Opc;
+      return ST.hasTrue16BitInsts()
+                 ? ST.useRealTrue16Insts() ? TrueS16Opc : FakeS16Opc
+                 : S16Opc;
     if (Size == 32)
       return S32Opc;
     return S64Opc;
@@ -1118,83 +1135,109 @@ static int getV_CMPOpcode(CmpInst::Predicate P, unsigned Size,
     llvm_unreachable("Unknown condition code!");
   case CmpInst::ICMP_NE:
     return Select(AMDGPU::V_CMP_NE_U16_e64, AMDGPU::V_CMP_NE_U16_t16_e64,
-                  AMDGPU::V_CMP_NE_U32_e64, AMDGPU::V_CMP_NE_U64_e64);
+                  AMDGPU::V_CMP_NE_U16_fake16_e64, AMDGPU::V_CMP_NE_U32_e64,
+                  AMDGPU::V_CMP_NE_U64_e64);
   case CmpInst::ICMP_EQ:
     return Select(AMDGPU::V_CMP_EQ_U16_e64, AMDGPU::V_CMP_EQ_U16_t16_e64,
-                  AMDGPU::V_CMP_EQ_U32_e64, AMDGPU::V_CMP_EQ_U64_e64);
+                  AMDGPU::V_CMP_EQ_U16_fake16_e64, AMDGPU::V_CMP_EQ_U32_e64,
+                  AMDGPU::V_CMP_EQ_U64_e64);
   case CmpInst::ICMP_SGT:
     return Select(AMDGPU::V_CMP_GT_I16_e64, AMDGPU::V_CMP_GT_I16_t16_e64,
-                  AMDGPU::V_CMP_GT_I32_e64, AMDGPU::V_CMP_GT_I64_e64);
+                  AMDGPU::V_CMP_GT_I16_fake16_e64, AMDGPU::V_CMP_GT_I32_e64,
+                  AMDGPU::V_CMP_GT_I64_e64);
   case CmpInst::ICMP_SGE:
     return Select(AMDGPU::V_CMP_GE_I16_e64, AMDGPU::V_CMP_GE_I16_t16_e64,
-                  AMDGPU::V_CMP_GE_I32_e64, AMDGPU::V_CMP_GE_I64_e64);
+                  AMDGPU::V_CMP_GE_I16_fake16_e64, AMDGPU::V_CMP_GE_I32_e64,
+                  AMDGPU::V_CMP_GE_I64_e64);
   case CmpInst::ICMP_SLT:
     return Select(AMDGPU::V_CMP_LT_I16_e64, AMDGPU::V_CMP_LT_I16_t16_e64,
-                  AMDGPU::V_CMP_LT_I32_e64, AMDGPU::V_CMP_LT_I64_e64);
+                  AMDGPU::V_CMP_LT_I16_fake16_e64, AMDGPU::V_CMP_LT_I32_e64,
+                  AMDGPU::V_CMP_LT_I64_e64);
   case CmpInst::ICMP_SLE:
     return Select(AMDGPU::V_CMP_LE_I16_e64, AMDGPU::V_CMP_LE_I16_t16_e64,
-                  AMDGPU::V_CMP_LE_I32_e64, AMDGPU::V_CMP_LE_I64_e64);
+                  AMDGPU::V_CMP_LE_I16_fake16_e64, AMDGPU::V_CMP_LE_I32_e64,
+                  AMDGPU::V_CMP_LE_I64_e64);
   case CmpInst::ICMP_UGT:
     return Select(AMDGPU::V_CMP_GT_U16_e64, AMDGPU::V_CMP_GT_U16_t16_e64,
-                  AMDGPU::V_CMP_GT_U32_e64, AMDGPU::V_CMP_GT_U64_e64);
+                  AMDGPU::V_CMP_GT_U16_fake16_e64, AMDGPU::V_CMP_GT_U32_e64,
+                  AMDGPU::V_CMP_GT_U64_e64);
   case CmpInst::ICMP_UGE:
     return Select(AMDGPU::V_CMP_GE_U16_e64, AMDGPU::V_CMP_GE_U16_t16_e64,
-                  AMDGPU::V_CMP_GE_U32_e64, AMDGPU::V_CMP_GE_U64_e64);
+                  AMDGPU::V_CMP_GE_U16_fake16_e64, AMDGPU::V_CMP_GE_U32_e64,
+                  AMDGPU::V_CMP_GE_U64_e64);
   case CmpInst::ICMP_ULT:
     return Select(AMDGPU::V_CMP_LT_U16_e64, AMDGPU::V_CMP_LT_U16_t16_e64,
-                  AMDGPU::V_CMP_LT_U32_e64, AMDGPU::V_CMP_LT_U64_e64);
+                  AMDGPU::V_CMP_LT_U16_fake16_e64, AMDGPU::V_CMP_LT_U32_e64,
+                  AMDGPU::V_CMP_LT_U64_e64);
   case CmpInst::ICMP_ULE:
     return Select(AMDGPU::V_CMP_LE_U16_e64, AMDGPU::V_CMP_LE_U16_t16_e64,
-                  AMDGPU::V_CMP_LE_U32_e64, AMDGPU::V_CMP_LE_U64_e64);
+                  AMDGPU::V_CMP_LE_U16_fake16_e64, AMDGPU::V_CMP_LE_U32_e64,
+                  AMDGPU::V_CMP_LE_U64_e64);
 
   case CmpInst::FCMP_OEQ:
     return Select(AMDGPU::V_CMP_EQ_F16_e64, AMDGPU::V_CMP_EQ_F16_t16_e64,
-                  AMDGPU::V_CMP_EQ_F32_e64, AMDGPU::V_CMP_EQ_F64_e64);
+                  AMDGPU::V_CMP_EQ_F16_fake16_e64, AMDGPU::V_CMP_EQ_F32_e64,
+                  AMDGPU::V_CMP_EQ_F64_e64);
   case CmpInst::FCMP_OGT:
     return Select(AMDGPU::V_CMP_GT_F16_e64, AMDGPU::V_CMP_GT_F16_t16_e64,
-                  AMDGPU::V_CMP_GT_F32_e64, AMDGPU::V_CMP_GT_F64_e64);
+                  AMDGPU::V_CMP_GT_F16_fake16_e64, AMDGPU::V_CMP_GT_F32_e64,
+                  AMDGPU::V_CMP_GT_F64_e64);
   case CmpInst::FCMP_OGE:
     return Select(AMDGPU::V_CMP_GE_F16_e64, AMDGPU::V_CMP_GE_F16_t16_e64,
-                  AMDGPU::V_CMP_GE_F32_e64, AMDGPU::V_CMP_GE_F64_e64);
+                  AMDGPU::V_CMP_GE_F16_fake16_e64, AMDGPU::V_CMP_GE_F32_e64,
+                  AMDGPU::V_CMP_GE_F64_e64);
   case CmpInst::FCMP_OLT:
     return Select(AMDGPU::V_CMP_LT_F16_e64, AMDGPU::V_CMP_LT_F16_t16_e64,
-                  AMDGPU::V_CMP_LT_F32_e64, AMDGPU::V_CMP_LT_F64_e64);
+                  AMDGPU::V_CMP_LT_F16_fake16_e64, AMDGPU::V_CMP_LT_F32_e64,
+                  AMDGPU::V_CMP_LT_F64_e64);
   case CmpInst::FCMP_OLE:
     return Select(AMDGPU::V_CMP_LE_F16_e64, AMDGPU::V_CMP_LE_F16_t16_e64,
-                  AMDGPU::V_CMP_LE_F32_e64, AMDGPU::V_CMP_LE_F64_e64);
+                  AMDGPU::V_CMP_LE_F16_fake16_e64, AMDGPU::V_CMP_LE_F32_e64,
+                  AMDGPU::V_CMP_LE_F64_e64);
   case CmpInst::FCMP_ONE:
     return Select(AMDGPU::V_CMP_NEQ_F16_e64, AMDGPU::V_CMP_NEQ_F16_t16_e64,
-                  AMDGPU::V_CMP_NEQ_F32_e64, AMDGPU::V_CMP_NEQ_F64_e64);
+                  AMDGPU::V_CMP_NEQ_F16_fake16_e64, AMDGPU::V_CMP_NEQ_F32_e64,
+                  AMDGPU::V_CMP_NEQ_F64_e64);
   case CmpInst::FCMP_ORD:
     return Select(AMDGPU::V_CMP_O_F16_e64, AMDGPU::V_CMP_O_F16_t16_e64,
-                  AMDGPU::V_CMP_O_F32_e64, AMDGPU::V_CMP_O_F64_e64);
+                  AMDGPU::V_CMP_O_F16_fake16_e64, AMDGPU::V_CMP_O_F32_e64,
+                  AMDGPU::V_CMP_O_F64_e64);
   case CmpInst::FCMP_UNO:
     return Select(AMDGPU::V_CMP_U_F16_e64, AMDGPU::V_CMP_U_F16_t16_e64,
-                  AMDGPU::V_CMP_U_F32_e64, AMDGPU::V_CMP_U_F64_e64);
+                  AMDGPU::V_CMP_U_F16_fake16_e64, AMDGPU::V_CMP_U_F32_e64,
+                  AMDGPU::V_CMP_U_F64_e64);
   case CmpInst::FCMP_UEQ:
     return Select(AMDGPU::V_CMP_NLG_F16_e64, AMDGPU::V_CMP_NLG_F16_t16_e64,
-                  AMDGPU::V_CMP_NLG_F32_e64, AMDGPU::V_CMP_NLG_F64_e64);
+                  AMDGPU::V_CMP_NLG_F16_fake16_e64, AMDGPU::V_CMP_NLG_F32_e64,
+                  AMDGPU::V_CMP_NLG_F64_e64);
   case CmpInst::FCMP_UGT:
     return Select(AMDGPU::V_CMP_NLE_F16_e64, AMDGPU::V_CMP_NLE_F16_t16_e64,
-                  AMDGPU::V_CMP_NLE_F32_e64, AMDGPU::V_CMP_NLE_F64_e64);
+                  AMDGPU::V_CMP_NLE_F16_fake16_e64, AMDGPU::V_CMP_NLE_F32_e64,
+                  AMDGPU::V_CMP_NLE_F64_e64);
   case CmpInst::FCMP_UGE:
     return Select(AMDGPU::V_CMP_NLT_F16_e64, AMDGPU::V_CMP_NLT_F16_t16_e64,
-                  AMDGPU::V_CMP_NLT_F32_e64, AMDGPU::V_CMP_NLT_F64_e64);
+                  AMDGPU::V_CMP_NLT_F16_fake16_e64, AMDGPU::V_CMP_NLT_F32_e64,
+                  AMDGPU::V_CMP_NLT_F64_e64);
   case CmpInst::FCMP_ULT:
     return Select(AMDGPU::V_CMP_NGE_F16_e64, AMDGPU::V_CMP_NGE_F16_t16_e64,
-                  AMDGPU::V_CMP_NGE_F32_e64, AMDGPU::V_CMP_NGE_F64_e64);
+                  AMDGPU::V_CMP_NGE_F16_fake16_e64, AMDGPU::V_CMP_NGE_F32_e64,
+                  AMDGPU::V_CMP_NGE_F64_e64);
   case CmpInst::FCMP_ULE:
     return Select(AMDGPU::V_CMP_NGT_F16_e64, AMDGPU::V_CMP_NGT_F16_t16_e64,
-                  AMDGPU::V_CMP_NGT_F32_e64, AMDGPU::V_CMP_NGT_F64_e64);
+                  AMDGPU::V_CMP_NGT_F16_fake16_e64, AMDGPU::V_CMP_NGT_F32_e64,
+                  AMDGPU::V_CMP_NGT_F64_e64);
   case CmpInst::FCMP_UNE:
     return Select(AMDGPU::V_CMP_NEQ_F16_e64, AMDGPU::V_CMP_NEQ_F16_t16_e64,
-                  AMDGPU::V_CMP_NEQ_F32_e64, AMDGPU::V_CMP_NEQ_F64_e64);
+                  AMDGPU::V_CMP_NEQ_F16_fake16_e64, AMDGPU::V_CMP_NEQ_F32_e64,
+                  AMDGPU::V_CMP_NEQ_F64_e64);
   case CmpInst::FCMP_TRUE:
     return Select(AMDGPU::V_CMP_TRU_F16_e64, AMDGPU::V_CMP_TRU_F16_t16_e64,
-                  AMDGPU::V_CMP_TRU_F32_e64, AMDGPU::V_CMP_TRU_F64_e64);
+                  AMDGPU::V_CMP_TRU_F16_fake16_e64, AMDGPU::V_CMP_TRU_F32_e64,
+                  AMDGPU::V_CMP_TRU_F64_e64);
   case CmpInst::FCMP_FALSE:
     return Select(AMDGPU::V_CMP_F_F16_e64, AMDGPU::V_CMP_F_F16_t16_e64,
-                  AMDGPU::V_CMP_F_F32_e64, AMDGPU::V_CMP_F_F64_e64);
+                  AMDGPU::V_CMP_F_F16_fake16_e64, AMDGPU::V_CMP_F_F32_e64,
+                  AMDGPU::V_CMP_F_F64_e64);
   }
 }
 
@@ -3285,9 +3328,14 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   MIB.add(MI.getOperand(1));            // rsrc
   MIB.add(MI.getOperand(5 + OpOffset)); // soffset
   MIB.add(MI.getOperand(6 + OpOffset)); // imm offset
+  bool IsGFX12Plus = AMDGPU::isGFX12Plus(STI);
   unsigned Aux = MI.getOperand(7 + OpOffset).getImm();
-  MIB.addImm(Aux & AMDGPU::CPol::ALL);                  // cpol
-  MIB.addImm(Aux & AMDGPU::CPol::SWZ_pregfx12 ? 1 : 0); // swz
+  MIB.addImm(Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL
+                                : AMDGPU::CPol::ALL_pregfx12)); // cpol
+  MIB.addImm(
+      Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
+          ? 1
+          : 0); // swz
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
@@ -3430,6 +3478,8 @@ bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
   return true;
 }
 
+// FIXME: This should be removed and let the patterns select. We just need the
+// AGPR/VGPR combination versions.
 bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
   unsigned Opc;
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -3474,6 +3524,48 @@ bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
     break;
   case Intrinsic::amdgcn_smfmac_f32_32x32x32_fp8_fp8:
     Opc = AMDGPU::V_SMFMAC_F32_32X32X32_FP8_FP8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_16x16x64_f16:
+    Opc = AMDGPU::V_SMFMAC_F32_16X16X64_F16_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_32x32x32_f16:
+    Opc = AMDGPU::V_SMFMAC_F32_32X32X32_F16_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_16x16x64_bf16:
+    Opc = AMDGPU::V_SMFMAC_F32_16X16X64_BF16_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_32x32x32_bf16:
+    Opc = AMDGPU::V_SMFMAC_F32_32X32X32_BF16_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_i32_16x16x128_i8:
+    Opc = AMDGPU::V_SMFMAC_I32_16X16X128_I8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_i32_32x32x64_i8:
+    Opc = AMDGPU::V_SMFMAC_I32_32X32X64_I8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_bf8:
+    Opc = AMDGPU::V_SMFMAC_F32_16X16X128_BF8_BF8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_fp8:
+    Opc = AMDGPU::V_SMFMAC_F32_16X16X128_BF8_FP8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_fp8_bf8:
+    Opc = AMDGPU::V_SMFMAC_F32_16X16X128_FP8_BF8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_16x16x128_fp8_fp8:
+    Opc = AMDGPU::V_SMFMAC_F32_16X16X128_FP8_FP8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_bf8_bf8:
+    Opc = AMDGPU::V_SMFMAC_F32_32X32X64_BF8_BF8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_bf8_fp8:
+    Opc = AMDGPU::V_SMFMAC_F32_32X32X64_BF8_FP8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_bf8:
+    Opc = AMDGPU::V_SMFMAC_F32_32X32X64_FP8_BF8_e64;
+    break;
+  case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_fp8:
+    Opc = AMDGPU::V_SMFMAC_F32_32X32X64_FP8_FP8_e64;
     break;
   default:
     llvm_unreachable("unhandled smfmac intrinsic");
@@ -5735,6 +5827,18 @@ void AMDGPUInstructionSelector::renderRoundMode(MachineInstrBuilder &MIB,
   // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
   // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
   MIB.addImm((MI.getOperand(OpIdx).getImm() + 3) % 4);
+}
+
+/// Convert from 2-bit value to enum values used for op_sel* source modifiers.
+void AMDGPUInstructionSelector::renderScaledMAIIntrinsicOperand(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  unsigned Val = MI.getOperand(OpIdx).getImm();
+  unsigned New = 0;
+  if (Val & 0x1)
+    New |= SISrcMods::OP_SEL_0;
+  if (Val & 0x2)
+    New |= SISrcMods::OP_SEL_1;
+  MIB.addImm(New);
 }
 
 bool AMDGPUInstructionSelector::isInlineImmediate(const APInt &Imm) const {
