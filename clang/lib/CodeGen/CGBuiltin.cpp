@@ -22715,22 +22715,22 @@ Value *CodeGenFunction::EmitRISCVCpuIs(StringRef CPUStr) {
     return CPUID;
   };
 
-  const llvm::RISCV::CPUModel CPUModel = llvm::RISCV::getCPUModel(CPUStr);
+  const llvm::RISCV::CPUModel Model = llvm::RISCV::getCPUModel(CPUStr);
 
   // Compare mvendorid.
   Value *VendorID = loadRISCVCPUID(0);
   Value *Result =
-      Builder.CreateICmpEQ(VendorID, Builder.getInt32(CPUModel.MVendorID));
+      Builder.CreateICmpEQ(VendorID, Builder.getInt32(Model.MVendorID));
 
   // Compare marchid.
   Value *ArchID = loadRISCVCPUID(1);
   Result = Builder.CreateAnd(
-      Result, Builder.CreateICmpEQ(ArchID, Builder.getInt64(CPUModel.MArchID)));
+      Result, Builder.CreateICmpEQ(ArchID, Builder.getInt64(Model.MArchID)));
 
   // Compare mimpid.
   Value *ImpID = loadRISCVCPUID(2);
   Result = Builder.CreateAnd(
-      Result, Builder.CreateICmpEQ(ImpID, Builder.getInt64(CPUModel.MImpID)));
+      Result, Builder.CreateICmpEQ(ImpID, Builder.getInt64(Model.MImpID)));
 
   return Result;
 }
