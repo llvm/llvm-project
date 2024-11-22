@@ -81,14 +81,6 @@ SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
   // Diagnose unsupported options only once.
   for (OptSpecifier Opt : getUnsupportedOpts()) {
     if (const Arg *A = Args.getLastArg(Opt)) {
-      // All sanitizer options are not currently supported, except
-      // AddressSanitizer.
-      if (A->getOption().getID() == options::OPT_fsanitize_EQ &&
-          A->getValues().size() == 1) {
-        std::string SanitizeVal = A->getValue();
-        if (SanitizeVal == "address")
-          continue;
-      }
       D.Diag(clang::diag::warn_drv_unsupported_option_for_target)
           << A->getAsString(Args) << getTriple().str();
     }
@@ -172,8 +164,4 @@ void SYCLToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                                  ArgStringList &CC1Args) const {
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
-}
-
-SanitizerMask SYCLToolChain::getSupportedSanitizers() const {
-  return SanitizerKind::Address;
 }

@@ -67,8 +67,6 @@ public:
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1Args) const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
-
 private:
   const ToolChain &HostTC;
   SYCLInstallationDetector SYCLInstallation;
