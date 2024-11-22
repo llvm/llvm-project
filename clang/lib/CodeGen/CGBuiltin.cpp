@@ -4621,7 +4621,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     if (getTarget().getTriple().getArch() == llvm::Triple::systemz) {
       // Call LLVM's EH setjmp, which is lightweight.
-      // We're not filling any fields of the jmp_buf here and leave 
+      // We're not filling any fields of the jmp_buf here and leave
       // it all to the back-end.
       Function *F = CGM.getIntrinsic(Intrinsic::eh_sjlj_setjmp);
       return RValue::get(Builder.CreateCall(F, Buf.emitRawPointer(*this)));

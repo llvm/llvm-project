@@ -1022,16 +1022,16 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   
 
   // thisMBB:
-  const int64_t FPOffset = 0; // Slot 1. 
+  const int64_t FPOffset = 0;                         // Slot 1.
   const int64_t LabelOffset = 1 * PVT.getStoreSize(); // Slot 2.
-  const int64_t BCOffset = 2 * PVT.getStoreSize(); // Slot 3.
+  const int64_t BCOffset = 2 * PVT.getStoreSize();    // Slot 3.
   const int64_t SPOffset = 3 * PVT.getStoreSize(); // Slot 4.
 
   // Buf address.
   Register BufReg = MI.getOperand(1).getReg();
 
   const TargetRegisterClass *PtrRC = getRegClassFor(PVT);
-  unsigned LabelReg = MRI.createVirtualRegister(PtrRC); 
+  unsigned LabelReg = MRI.createVirtualRegister(PtrRC);
 
   // Prepare IP for longjmp.
   BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LARL), LabelReg)
@@ -1047,34 +1047,34 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   auto *SpecialRegs = Subtarget.getSpecialRegisters();
   bool HasFP = Subtarget.getFrameLowering()->hasFP(*MF);
   if (HasFP) {
-     BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(SpecialRegs->getFramePointerRegister())
-          .addReg(BufReg)
-          .addImm(FPOffset)
-          .addReg(0);
+    BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
+        .addReg(SpecialRegs->getFramePointerRegister())
+        .addReg(BufReg)
+        .addImm(FPOffset)
+        .addReg(0);
   }
-  
+
   // Store SP.
   BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(SpecialRegs->getStackPointerRegister())
-          .addReg(BufReg)
-          .addImm(SPOffset)
-          .addReg(0);
+      .addReg(SpecialRegs->getStackPointerRegister())
+      .addReg(BufReg)
+      .addImm(SPOffset)
+      .addReg(0);
 
   // Slot 3(Offset = 2) Backchain value (if building with -mbackchain).
   bool BackChain = MF->getSubtarget<SystemZSubtarget>().hasBackChain();
   if (BackChain) {
-     Register BCReg = MRI.createVirtualRegister(RC);
-     MIB = BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LG), BCReg)
-             .addReg(SpecialRegs->getStackPointerRegister())
-             .addImm(0)
-             .addReg(0);
+    Register BCReg = MRI.createVirtualRegister(RC);
+    MIB = BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LG), BCReg)
+              .addReg(SpecialRegs->getStackPointerRegister())
+              .addImm(0)
+              .addReg(0);
 
-     BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(BCReg)
-          .addReg(BufReg)
-          .addImm(BCOffset)
-          .addReg(0);
+    BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
+        .addReg(BCReg)
+        .addReg(BufReg)
+        .addImm(BCOffset)
+        .addReg(0);
   }
 
   // Setup.  
@@ -1140,11 +1140,11 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
              .addImm(LabelOffset)
              .addReg(0);
 
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), 
-               SpecialRegs->getFramePointerRegister())
-             .addReg(BufReg)
-             .addImm(FPOffset)
-             .addReg(0);
+  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG),
+                SpecialRegs->getFramePointerRegister())
+            .addReg(BufReg)
+            .addImm(FPOffset)
+            .addReg(0);
 
   // We are restoring R13 even though we never stored in setjmp from llvm,
   // as gcc always stores R13 in builtin_setjmp. We could have mixed code 
@@ -1163,18 +1163,18 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
              .addReg(0);
   }
 
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), 
+  MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG),
                 SpecialRegs->getStackPointerRegister())
-             .addReg(BufReg)
-             .addImm(SPOffset)
-             .addReg(0);
+            .addReg(BufReg)
+            .addImm(SPOffset)
+            .addReg(0);
 
   if (BackChain) {
-     BuildMI(*MBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(BCReg)
-          .addReg(SpecialRegs->getStackPointerRegister())
-          .addImm(0)
-          .addReg(0);
+    BuildMI(*MBB, MI, DL, TII->get(SystemZ::STG))
+        .addReg(BCReg)
+        .addReg(SpecialRegs->getStackPointerRegister())
+        .addImm(0)
+        .addReg(0);
   }
 
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::BR)).addReg(Tmp);
@@ -6537,8 +6537,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerREADCYCLECOUNTER(Op, DAG);
   case ISD::EH_SJLJ_SETJMP:
   case ISD::EH_SJLJ_LONGJMP:
-    // These operations action  are Legal now, not Custom. The reason we need 
-    // to keep it here is that common code treats these Pseudos as Custom, 
+    // These operations action  are Legal now, not Custom. The reason we need
+    // to keep it here is that common code treats these Pseudos as Custom,
     // and expands them using EmitInstrWithCustomInserter in FinalizeISel.cpp
     // after ISel.
     return Op;
