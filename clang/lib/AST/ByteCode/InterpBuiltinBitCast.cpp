@@ -8,10 +8,8 @@
 #include "InterpBuiltinBitCast.h"
 #include "Boolean.h"
 #include "Context.h"
-#include "FixedPoint.h"
 #include "Floating.h"
 #include "Integral.h"
-#include "IntegralAP.h"
 #include "InterpState.h"
 #include "MemberPointer.h"
 #include "Pointer.h"
@@ -19,8 +17,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/BitVector.h"
-#include <bitset>
 
 using namespace clang;
 using namespace clang::interp;
@@ -258,7 +254,7 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
   };
   auto note = [&](int Construct, QualType NoteType, SourceRange NoteRange) {
     S.Note(NoteRange.getBegin(), diag::note_constexpr_bit_cast_invalid_subtype)
-        << NoteType << Construct << T << NoteRange;
+        << NoteType << Construct << T.getUnqualifiedType() << NoteRange;
     return false;
   };
 
@@ -392,10 +388,9 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   QualType FromType = FromPtr.getType();
   QualType ToType = ToPtr.getType();
 
-  if (!CheckBitcastType(S, OpPC, FromType, /*IsToType=*/false))
-    return false;
-
   if (!CheckBitcastType(S, OpPC, ToType, /*IsToType=*/true))
+    return false;
+  if (!CheckBitcastType(S, OpPC, FromType, /*IsToType=*/false))
     return false;
 
   BitcastBuffer Buffer;

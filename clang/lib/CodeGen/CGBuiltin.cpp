@@ -5213,6 +5213,136 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.SetInsertPoint(ContBB);
     return RValue::get(nullptr);
   }
+  case Builtin::BI__scoped_atomic_thread_fence: {
+    auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
+
+    Value *Order = EmitScalarExpr(E->getArg(0));
+    Value *Scope = EmitScalarExpr(E->getArg(1));
+    auto Ord = dyn_cast<llvm::ConstantInt>(Order);
+    auto Scp = dyn_cast<llvm::ConstantInt>(Scope);
+    if (Ord && Scp) {
+      SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
+                         ? ScopeModel->map(Scp->getZExtValue())
+                         : ScopeModel->map(ScopeModel->getFallBackValue());
+      switch (Ord->getZExtValue()) {
+      case 0:  // memory_order_relaxed
+      default: // invalid order
+        break;
+      case 1: // memory_order_consume
+      case 2: // memory_order_acquire
+        Builder.CreateFence(
+            llvm::AtomicOrdering::Acquire,
+            getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
+                                                llvm::AtomicOrdering::Acquire,
+                                                getLLVMContext()));
+        break;
+      case 3: // memory_order_release
+        Builder.CreateFence(
+            llvm::AtomicOrdering::Release,
+            getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
+                                                llvm::AtomicOrdering::Release,
+                                                getLLVMContext()));
+        break;
+      case 4: // memory_order_acq_rel
+        Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease,
+                            getTargetHooks().getLLVMSyncScopeID(
+                                getLangOpts(), SS,
+                                llvm::AtomicOrdering::AcquireRelease,
+                                getLLVMContext()));
+        break;
+      case 5: // memory_order_seq_cst
+        Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                            getTargetHooks().getLLVMSyncScopeID(
+                                getLangOpts(), SS,
+                                llvm::AtomicOrdering::SequentiallyConsistent,
+                                getLLVMContext()));
+        break;
+      }
+      return RValue::get(nullptr);
+    }
+
+    llvm::BasicBlock *ContBB = createBasicBlock("atomic.scope.continue", CurFn);
+
+    llvm::SmallVector<std::pair<llvm::BasicBlock *, llvm::AtomicOrdering>>
+        OrderBBs;
+    if (Ord) {
+      switch (Ord->getZExtValue()) {
+      case 0:  // memory_order_relaxed
+      default: // invalid order
+        ContBB->eraseFromParent();
+        return RValue::get(nullptr);
+      case 1: // memory_order_consume
+      case 2: // memory_order_acquire
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::Acquire);
+        break;
+      case 3: // memory_order_release
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::Release);
+        break;
+      case 4: // memory_order_acq_rel
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::AcquireRelease);
+        break;
+      case 5: // memory_order_seq_cst
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::SequentiallyConsistent);
+        break;
+      }
+    } else {
+      llvm::BasicBlock *AcquireBB = createBasicBlock("acquire", CurFn);
+      llvm::BasicBlock *ReleaseBB = createBasicBlock("release", CurFn);
+      llvm::BasicBlock *AcqRelBB = createBasicBlock("acqrel", CurFn);
+      llvm::BasicBlock *SeqCstBB = createBasicBlock("seqcst", CurFn);
+
+      Order = Builder.CreateIntCast(Order, Builder.getInt32Ty(), false);
+      llvm::SwitchInst *SI = Builder.CreateSwitch(Order, ContBB);
+      SI->addCase(Builder.getInt32(1), AcquireBB);
+      SI->addCase(Builder.getInt32(2), AcquireBB);
+      SI->addCase(Builder.getInt32(3), ReleaseBB);
+      SI->addCase(Builder.getInt32(4), AcqRelBB);
+      SI->addCase(Builder.getInt32(5), SeqCstBB);
+
+      OrderBBs.emplace_back(AcquireBB, llvm::AtomicOrdering::Acquire);
+      OrderBBs.emplace_back(ReleaseBB, llvm::AtomicOrdering::Release);
+      OrderBBs.emplace_back(AcqRelBB, llvm::AtomicOrdering::AcquireRelease);
+      OrderBBs.emplace_back(SeqCstBB,
+                            llvm::AtomicOrdering::SequentiallyConsistent);
+    }
+
+    for (auto &[OrderBB, Ordering] : OrderBBs) {
+      Builder.SetInsertPoint(OrderBB);
+      if (Scp) {
+        SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
+                           ? ScopeModel->map(Scp->getZExtValue())
+                           : ScopeModel->map(ScopeModel->getFallBackValue());
+        Builder.CreateFence(Ordering,
+                            getTargetHooks().getLLVMSyncScopeID(
+                                getLangOpts(), SS, Ordering, getLLVMContext()));
+        Builder.CreateBr(ContBB);
+      } else {
+        llvm::DenseMap<unsigned, llvm::BasicBlock *> BBs;
+        for (unsigned Scp : ScopeModel->getRuntimeValues())
+          BBs[Scp] = createBasicBlock(getAsString(ScopeModel->map(Scp)), CurFn);
+
+        auto *SC = Builder.CreateIntCast(Scope, Builder.getInt32Ty(), false);
+        llvm::SwitchInst *SI = Builder.CreateSwitch(SC, ContBB);
+        for (unsigned Scp : ScopeModel->getRuntimeValues()) {
+          auto *B = BBs[Scp];
+          SI->addCase(Builder.getInt32(Scp), B);
+
+          Builder.SetInsertPoint(B);
+          Builder.CreateFence(Ordering, getTargetHooks().getLLVMSyncScopeID(
+                                            getLangOpts(), ScopeModel->map(Scp),
+                                            Ordering, getLLVMContext()));
+          Builder.CreateBr(ContBB);
+        }
+      }
+    }
+
+    Builder.SetInsertPoint(ContBB);
+    return RValue::get(nullptr);
+  }
 
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
@@ -18922,8 +19052,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "cross operands must have a float representation");
     // make sure each vector has exactly 3 elements
     assert(
-        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
-        E->getArg(1)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        E->getArg(0)->getType()->castAs<VectorType>()->getNumElements() == 3 &&
+        E->getArg(1)->getType()->castAs<VectorType>()->getNumElements() == 3 &&
         "input vectors must have 3 elements each");
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getCrossIntrinsic(),
@@ -19151,6 +19281,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getStepIntrinsic(),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_any_true: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(Op->getType()->isIntegerTy(1) &&
+           "Intrinsic WaveActiveAnyTrue operand must be a bool");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
@@ -19599,7 +19738,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                             (uint64_t)0);
     return Builder.CreateInsertElement(I0, A, 1);
   }
+  case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
+    llvm::FixedVectorType *VT = FixedVectorType::get(Builder.getInt32Ty(), 8);
+    Function *F = CGM.getIntrinsic(
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4
+            ? Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4
+            : Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4,
+        {VT, VT});
 
+    SmallVector<Value *, 9> Args;
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
