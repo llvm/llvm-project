@@ -85,18 +85,16 @@ struct ComputedShaderFlags {
 
 struct ModuleShaderFlags {
   void initialize(const Module &);
-  const ComputedShaderFlags &getShaderFlagsMask(const Function *) const;
-  const ComputedShaderFlags getCombinedFlags() const { return CombinedSFMask; }
+  const ComputedShaderFlags &getFunctionFlags(const Function *) const;
+  const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
 private:
-  /// Vector of Function-Shader Flag mask pairs representing properties of each
-  /// of the functions in the module. Shader Flags of each function represent
-  /// both module-level and function-level flags
+  /// Vector of sorted Function-Shader Flag mask pairs representing properties
+  /// of each of the functions in the module. Shader Flags of each function
+  /// represent both module-level and function-level flags
   SmallVector<std::pair<Function const *, ComputedShaderFlags>> FunctionFlags;
   /// Combined Shader Flag Mask of all functions of the module
   ComputedShaderFlags CombinedSFMask{};
-
-  void updateFunctionFlags(ComputedShaderFlags &CSF, const Instruction &I);
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {

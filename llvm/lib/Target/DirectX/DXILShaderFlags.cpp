@@ -22,8 +22,8 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
-                                            const Instruction &I) {
+static void updateFunctionFlags(ComputedShaderFlags &CSF,
+                                const Instruction &I) {
   if (!CSF.Doubles)
     CSF.Doubles = I.getType()->isDoubleTy();
 
@@ -83,9 +83,11 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
 
 /// Return the shader flags mask of the specified function Func.
 const ComputedShaderFlags &
-ModuleShaderFlags::getShaderFlagsMask(const Function *Func) const {
-  std::pair<Function const *, ComputedShaderFlags> V{Func, {}};
-  const auto Iter = llvm::lower_bound(FunctionFlags, V);
+ModuleShaderFlags::getFunctionFlags(const Function *Func) const {
+  const auto Iter = llvm::lower_bound(
+      FunctionFlags, Func,
+      [](const std::pair<const Function *, ComputedShaderFlags> FSM,
+         const Function *FindFunc) { return (FSM.first < FindFunc); });
   assert((Iter != FunctionFlags.end() && Iter->first == Func) &&
          "No Shader Flags Mask exists for function");
   return Iter->second;
@@ -107,12 +109,17 @@ ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
   const ModuleShaderFlags &FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
+  // Print description of combined shader flags for all module functions
+  OS << "; Combined Shader Flags for Module\n";
+  FlagsInfo.getCombinedFlags().print(OS);
+  // Print shader flags mask for each of the module functions
+  OS << "; Shader Flags for Module Functions\n";
   for (const auto &F : M.getFunctionList()) {
     if (F.isDeclaration())
       continue;
-    OS << "; Shader Flags mask for Function: " << F.getName() << "\n";
-    auto SFMask = FlagsInfo.getShaderFlagsMask(&F);
-    SFMask.print(OS);
+    auto SFMask = FlagsInfo.getFunctionFlags(&F);
+    OS << formatv("; Function {0} : {1:x8}\n;\n", F.getName(),
+                  (uint64_t)(SFMask));
   }
 
   return PreservedAnalyses::all();

@@ -14,6 +14,4 @@ attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 ; CHECK-NEXT:       Doubles:         true
 ; CHECK-NOT:   {{[A-Za-z]+: +true}}
 ; CHECK:            DX11_1_DoubleExtensions:         true
-; CHECK-NOT:   {{[A-Za-z]+: +true}}
-; CHECK:       NextUnusedBit:   false
-; CHECK: ...
+

@@ -328,7 +328,7 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
     const ComputedShaderFlags &EntrySFMask =
-        ShaderFlags.getShaderFlagsMask(EntryProp.Entry);
+        ShaderFlags.getFunctionFlags(EntryProp.Entry);
 
     // If ShaderProfile is Library, mask is already consolidated in the
     // top-level library node. Hence it is not emitted.
