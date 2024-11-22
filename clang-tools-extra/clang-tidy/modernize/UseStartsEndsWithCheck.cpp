@@ -218,6 +218,7 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       FindExpr->getBeginLoc().isMacroID())
     return;
 
+  // Make sure FindExpr->getArg(0) can be used to make a range in the FitItHint.
   if (FindExpr->getNumArgs() == 0)
     return;
 
