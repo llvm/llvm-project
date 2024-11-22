@@ -25,14 +25,15 @@ define hidden zeroext i1 @eggs(ptr %arg, i1 %arg2) unnamed_addr align 2 {
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB8:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB11:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP]], align 8
 ; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb11:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[BB12]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[TMP]], [[BB11]] ], [ [[TMP9]], [[BB8]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ poison, [[BB11]] ], [ [[TMP9]], [[BB8]] ]
 ; CHECK-NEXT:    call void @snork.1(ptr [[TMP13]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb14:
@@ -49,7 +50,7 @@ bb6:                                              ; preds = %bb12, %bb3
   br label %bb7
 
 bb7:                                              ; preds = %bb6
-  br i1 undef, label %bb11, label %bb8
+  br i1 %arg2, label %bb11, label %bb8
 
 bb8:                                              ; preds = %bb7
   %tmp9 = load ptr, ptr %tmp, align 8

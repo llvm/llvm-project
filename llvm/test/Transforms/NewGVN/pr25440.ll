@@ -10,38 +10,39 @@ target triple = "thumbv7--linux-gnueabi"
 @length = external global [0 x i32], align 4
 
 ; Function Attrs: nounwind
-define fastcc void @foo(ptr nocapture readonly %x) {
+define fastcc void @foo(ptr nocapture readonly %x, i1 %arg) {
 ; CHECK-LABEL: define fastcc void @foo(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB0:%.*]]
 ; CHECK:       bb0:
-; CHECK-NEXT:    [[X_TR:%.*]] = phi ptr [ [[X]], [[ENTRY:%.*]] ], [ null, [[LAND_LHS_TRUE:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X_TR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    switch i32 [[CONV]], label [[IF_END_50:%.*]] [
 ; CHECK-NEXT:      i32 43, label [[CLEANUP:%.*]]
 ; CHECK-NEXT:      i32 52, label [[IF_THEN_5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then.5:
-; CHECK-NEXT:    br i1 undef, label [[LAND_LHS_TRUE]], label [[IF_THEN_26:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_LHS_TRUE:%.*]], label [[IF_THEN_26:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    br i1 undef, label [[CLEANUP]], label [[BB0]]
+; CHECK-NEXT:    br i1 true, label [[CLEANUP]], label [[BB0]]
 ; CHECK:       if.then.26:
-; CHECK-NEXT:    br i1 undef, label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; CHECK-NEXT:    br i1 false, label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[MODE:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[X_TR]], i32 0, i32 1
+; CHECK-NEXT:    [[MODE:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[X]], i32 0, i32 1
 ; CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[MODE]], align 2
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN_44:%.*]], label [[CLEANUP]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN_44:%.*]], label [[CLEANUP]]
 ; CHECK:       if.then.44:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end.50:
 ; CHECK-NEXT:    [[ARRAYIDX52:%.*]] = getelementptr inbounds [0 x i32], ptr @length, i32 0, i32 [[CONV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX52]], align 4
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY_57:%.*]], label [[CLEANUP]]
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY_57:%.*]], label [[CLEANUP]]
 ; CHECK:       for.body.57:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -59,14 +60,14 @@ bb0:                                      ; preds = %land.lhs.true, %entry
   ]
 
 if.then.5:                                        ; preds = %bb0
-  br i1 undef, label %land.lhs.true, label %if.then.26
+  br i1 %arg, label %land.lhs.true, label %if.then.26
 
 land.lhs.true:                                    ; preds = %if.then.5
-  br i1 undef, label %cleanup, label %bb0
+  br i1 true, label %cleanup, label %bb0
 
 if.then.26:                                       ; preds = %if.then.5
   %x.tr.lcssa163 = phi ptr [ %x.tr, %if.then.5 ]
-  br i1 undef, label %cond.end, label %cond.false
+  br i1 %arg, label %cond.end, label %cond.false
 
 cond.false:                                       ; preds = %if.then.26
   %mode = getelementptr inbounds %struct.a, ptr %x.tr.lcssa163, i32 0, i32 1
@@ -75,7 +76,7 @@ cond.false:                                       ; preds = %if.then.26
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %if.then.26
-  br i1 undef, label %if.then.44, label %cleanup
+  br i1 false, label %if.then.44, label %cleanup
 
 if.then.44:                                       ; preds = %cond.end
   unreachable
@@ -84,7 +85,7 @@ if.end.50:                                        ; preds = %bb0
   %conv.lcssa = phi i32 [ %conv, %bb0 ]
   %arrayidx52 = getelementptr inbounds [0 x i32], ptr @length, i32 0, i32 %conv.lcssa
   %1 = load i32, ptr %arrayidx52, align 4
-  br i1 undef, label %for.body.57, label %cleanup
+  br i1 false, label %for.body.57, label %cleanup
 
 for.body.57:                                      ; preds = %if.end.50
   %i.2157 = add nsw i32 %1, -1
@@ -97,12 +98,13 @@ cleanup:                                          ; preds = %if.end.50, %cond.en
 @yy_c_buf_p = external unnamed_addr global ptr, align 4
 @dfg_text = external global ptr, align 4
 
-define void @dfg_lex() {
-; CHECK-LABEL: define void @dfg_lex() {
+define void @dfg_lex(i1 %arg, i32 %arg2) {
+; CHECK-LABEL: define void @dfg_lex(
+; CHECK-SAME: i1 [[ARG:%.*]], i32 [[ARG2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODYTHREAD_PRE_SPLIT:%.*]]
 ; CHECK:       while.bodythread-pre-split:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN_14:%.*]], label [[IF_END_15:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN_14:%.*]], label [[IF_END_15:%.*]]
 ; CHECK:       if.then.14:
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr @dfg_text, align 4
 ; CHECK-NEXT:    br label [[IF_END_15]]
@@ -110,12 +112,12 @@ define void @dfg_lex() {
 ; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr @yy_c_buf_p, align 4
 ; CHECK-NEXT:    br label [[WHILE_COND_16:%.*]]
 ; CHECK:       while.cond.16:
-; CHECK-NEXT:    br i1 undef, label [[WHILE_COND_16]], label [[WHILE_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[WHILE_COND_16]], label [[WHILE_END:%.*]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[V2]], i32 undef
 ; CHECK-NEXT:    store ptr [[ADD_PTR]], ptr @dfg_text, align 4
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST25:%.*]] = ptrtoint ptr [[ADD_PTR]] to i32
-; CHECK-NEXT:    switch i32 undef, label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:    switch i32 [[ARG2]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 65, label [[WHILE_BODYTHREAD_PRE_SPLIT]]
 ; CHECK-NEXT:      i32 3, label [[RETURN:%.*]]
 ; CHECK-NEXT:      i32 57, label [[WHILE_BODYTHREAD_PRE_SPLIT]]
@@ -130,7 +132,7 @@ entry:
   br label %while.bodythread-pre-split
 
 while.bodythread-pre-split:                       ; preds = %while.end, %while.end, %entry
-  br i1 undef, label %if.then.14, label %if.end.15
+  br i1 %arg, label %if.then.14, label %if.end.15
 
 if.then.14:                                       ; preds = %while.end, %while.bodythread-pre-split
   %v1 = load i32, ptr @dfg_text, align 4
@@ -142,14 +144,14 @@ if.end.15:                                        ; preds = %if.then.14, %while.
   br label %while.cond.16
 
 while.cond.16:                                    ; preds = %while.cond.16, %if.end.15
-  br i1 undef, label %while.cond.16, label %while.end
+  br i1 %arg, label %while.cond.16, label %while.end
 
 while.end:                                        ; preds = %while.cond.16
   %add.ptr = getelementptr inbounds i8, ptr %v2, i32 undef
   store ptr %add.ptr, ptr @dfg_text, align 4
   %sub.ptr.rhs.cast25 = ptrtoint ptr %add.ptr to i32
   %sub.ptr.sub26 = sub i32 0, %sub.ptr.rhs.cast25
-  switch i32 undef, label %sw.default [
+  switch i32 %arg2, label %sw.default [
   i32 65, label %while.bodythread-pre-split
   i32 3, label %return
   i32 57, label %while.bodythread-pre-split

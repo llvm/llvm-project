@@ -12,37 +12,34 @@
 define void @g() {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND1THREAD_PRE_SPLIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND1THREAD_PRE_SPLIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.cond1thread-pre-split:
 ; CHECK-NEXT:    br label [[FOR_END4_SPLIT:%.*]]
 ; CHECK:       for.end4.split:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND6_PREHEADER:%.*]], label [[IF_END11:%.*]]
 ; CHECK:       for.cond6.preheader:
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND6_PREHEADER3:%.*]], label [[IF_END11_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND6_PREHEADER3:%.*]], label [[IF_END11_LOOPEXIT:%.*]]
 ; CHECK:       for.cond6.preheader3:
 ; CHECK-NEXT:    br label [[IF_END11_LOOPEXIT]]
 ; CHECK:       if.end11.loopexit:
-; CHECK-NEXT:    [[STOREMERGE_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND6_PREHEADER]] ], [ 1, [[FOR_COND6_PREHEADER3]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE_LCSSA]], ptr @b, align 4
+; CHECK-NEXT:    store i32 1, ptr @b, align 4
 ; CHECK-NEXT:    br label [[IF_END11]]
 ; CHECK:       if.end11:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @a, align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[CMP12:%.*]] = icmp eq i32 [[TMP0]], [[CONV]]
+; CHECK-NEXT:    [[CMP12:%.*]] = icmp eq i32 1, [[CONV]]
 ; CHECK-NEXT:    br i1 [[CMP12]], label [[IF_THEN14:%.*]], label [[IF_END16:%.*]]
 ; CHECK:       if.then14:
-; CHECK-NEXT:    [[CONV15:%.*]] = trunc i32 [[TMP0]] to i16
-; CHECK-NEXT:    store i16 [[CONV15]], ptr @f, align 2
+; CHECK-NEXT:    store i16 1, ptr @f, align 2
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end16:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tobool = icmp eq i32 undef, 0
-  br i1 %tobool, label %for.cond1thread-pre-split, label %for.cond.preheader
+  br i1 true, label %for.cond1thread-pre-split, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
   unreachable
@@ -51,10 +48,10 @@ for.cond1thread-pre-split:                        ; preds = %entry
   br label %for.end4.split
 
 for.end4.split:                                   ; preds = %for.cond1thread-pre-split
-  br i1 %tobool, label %for.cond6.preheader, label %if.end11
+  br i1 true, label %for.cond6.preheader, label %if.end11
 
 for.cond6.preheader:                              ; preds = %for.end4.split
-  br i1 undef, label %for.cond6.preheader3, label %if.end11.loopexit
+  br i1 true, label %for.cond6.preheader3, label %if.end11.loopexit
 
 for.cond6.preheader3:                             ; preds = %for.cond6.preheader
   br label %if.end11.loopexit

@@ -4,31 +4,35 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local void @print_long_format() #0 {
+define dso_local void @print_long_format(i32 %arg) #0 {
 ; CHECK-LABEL: define dso_local void @print_long_format(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 undef, label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:    switch i32 0, label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[SW_BB:%.*]]
 ; CHECK-NEXT:      i32 0, label [[SW_BB19:%.*]]
 ; CHECK-NEXT:      i32 2, label [[SW_BB23:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.bb19:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN37:%.*]], label [[IF_END50:%.*]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN37:%.*]], label [[IF_END50:%.*]]
 ; CHECK:       sw.bb23:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.default:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.then37:
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end50:
 ; CHECK-NEXT:    [[CALL180:%.*]] = call i32 @timespec_cmp() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  switch i32 undef, label %sw.default [
+  switch i32 0, label %sw.default [
   i32 1, label %sw.bb
   i32 0, label %sw.bb19
   i32 2, label %sw.bb23
@@ -38,7 +42,7 @@ sw.bb:                                            ; preds = %entry
   unreachable
 
 sw.bb19:                                          ; preds = %entry
-  br i1 undef, label %if.then37, label %if.end50
+  br i1 false, label %if.then37, label %if.end50
 
 sw.bb23:                                          ; preds = %entry
   unreachable
