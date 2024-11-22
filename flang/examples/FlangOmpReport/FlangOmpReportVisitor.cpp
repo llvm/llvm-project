@@ -208,10 +208,9 @@ void OpenMPCounterVisitor::Post(
       "implicit_behavior=" + std::string{OmpDefaultmapClause::EnumToString(c)} +
       ";";
 }
-void OpenMPCounterVisitor::Post(
-    const OmpDefaultmapClause::VariableCategory &c) {
+void OpenMPCounterVisitor::Post(const OmpVariableCategory::Value &c) {
   clauseDetails +=
-      "variable_category=" + std::string{OmpDefaultmapClause::EnumToString(c)} +
+      "variable_category=" + std::string{OmpVariableCategory::EnumToString(c)} +
       ";";
 }
 void OpenMPCounterVisitor::Post(const OmpScheduleModifierType::ModType &c) {

@@ -180,7 +180,10 @@ private:
                            MachineInstr &I, unsigned Opcode) const;
 
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
-                        MachineInstr &I) const;
+                        MachineInstr &I, bool Signed) const;
+
+  bool selectIntegerDotExpansion(Register ResVReg, const SPIRVType *ResType,
+                                 MachineInstr &I) const;
 
   template <bool Signed>
   bool selectDot4AddPacked(Register ResVReg, const SPIRVType *ResType,
@@ -257,11 +260,11 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectWaveOpInst(Register ResVReg, const SPIRVType *ResType,
+                        MachineInstr &I, unsigned Opcode) const;
+
   bool selectWaveActiveCountBits(Register ResVReg, const SPIRVType *ResType,
                                  MachineInstr &I) const;
-
-  bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
-                            MachineInstr &I) const;
 
   bool selectUnmergeValues(MachineInstr &I) const;
 
@@ -1705,11 +1708,28 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-// Since pre-1.6 SPIRV has no integer dot implementation,
-// expand by piecewise multiplying and adding the results
 bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                                                 const SPIRVType *ResType,
-                                                MachineInstr &I) const {
+                                                MachineInstr &I,
+                                                bool Signed) const {
+  assert(I.getNumOperands() == 4);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  auto DotOp = Signed ? SPIRV::OpSDot : SPIRV::OpUDot;
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+// Since pre-1.6 SPIRV has no integer dot implementation,
+// expand by piecewise multiplying and adding the results
+bool SPIRVInstructionSelector::selectIntegerDotExpansion(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
   assert(I.getNumOperands() == 4);
   assert(I.getOperand(2).isReg());
   assert(I.getOperand(3).isReg());
@@ -1939,24 +1959,36 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
+                                                const SPIRVType *ResType,
+                                                MachineInstr &I,
+                                                unsigned Opcode) const {
+  MachineBasicBlock &BB = *I.getParent();
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+
+  auto BMI = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I,
+                                                IntTy, TII));
+
+  for (unsigned J = 2; J < I.getNumOperands(); J++) {
+    BMI.addUse(I.getOperand(J).getReg());
+  }
+
+  return BMI.constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectWaveActiveCountBits(
     Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   SPIRVType *BallotType = GR.getOrCreateSPIRVVectorType(IntTy, 4, I, TII);
   Register BallotReg = MRI->createVirtualRegister(GR.getRegClass(BallotType));
+  bool Result = selectWaveOpInst(BallotReg, BallotType, I,
+                                 SPIRV::OpGroupNonUniformBallot);
 
-  bool Result =
-      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformBallot))
-          .addDef(BallotReg)
-          .addUse(GR.getSPIRVTypeID(BallotType))
-          .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-          .addUse(I.getOperand(2).getReg())
-          .constrainAllUses(TII, TRI, RBI);
-
+  MachineBasicBlock &BB = *I.getParent();
   Result &=
       BuildMI(BB, I, I.getDebugLoc(),
               TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
@@ -1968,26 +2000,6 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
           .constrainAllUses(TII, TRI, RBI);
 
   return Result;
-}
-
-bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
-                                                    const SPIRVType *ResType,
-                                                    MachineInstr &I) const {
-  assert(I.getNumOperands() == 4);
-  assert(I.getOperand(2).isReg());
-  assert(I.getOperand(3).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  // IntTy is used to define the execution scope, set to 3 to denote a
-  // cross-lane interaction equivalent to a SPIR-V subgroup.
-  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  return BuildMI(BB, I, I.getDebugLoc(),
-                 TII.get(SPIRV::OpGroupNonUniformShuffle))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII))
-      .addUse(I.getOperand(2).getReg())
-      .addUse(I.getOperand(3).getReg());
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
@@ -2763,7 +2775,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectFloatDot(ResVReg, ResType, I);
   case Intrinsic::spv_udot:
   case Intrinsic::spv_sdot:
-    return selectIntegerDot(ResVReg, ResType, I);
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
+        STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+      return selectIntegerDot(ResVReg, ResType, I,
+                              /*Signed=*/IID == Intrinsic::spv_sdot);
+    return selectIntegerDotExpansion(ResVReg, ResType, I);
   case Intrinsic::spv_dot4add_i8packed:
     if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
         STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
@@ -2838,16 +2854,13 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::s_clamp, GL::SClamp);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
-  case Intrinsic::spv_wave_is_first_lane: {
-    SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-    return BuildMI(BB, I, I.getDebugLoc(),
-                   TII.get(SPIRV::OpGroupNonUniformElect))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
-  }
+  case Intrinsic::spv_wave_any:
+    return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
+  case Intrinsic::spv_wave_is_first_lane:
+    return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_readlane:
-    return selectWaveReadLaneAt(ResVReg, ResType, I);
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformShuffle);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
