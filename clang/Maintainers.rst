@@ -184,6 +184,7 @@ Function Effect Analysis
 | Sirraide
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
+
 Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang
