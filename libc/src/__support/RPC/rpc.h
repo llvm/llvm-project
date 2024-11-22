@@ -51,11 +51,11 @@ static_assert(sizeof(Buffer) == 64, "Buffer size mismatch");
 /// perform and which threads are active in the slots.
 struct Header {
   uint64_t mask;
-  uint16_t opcode;
+  uint32_t opcode;
 };
 
 /// The maximum number of parallel ports that the RPC interface can support.
-constexpr uint64_t MAX_PORT_COUNT = 4096;
+constexpr static uint64_t MAX_PORT_COUNT = 4096;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains a read-only inbox and a write-only outbox used
@@ -166,8 +166,7 @@ template <bool Invert> struct Process {
   /// lane_mask is a bitmap of the threads in the warp that would hold the
   /// single lock on success, e.g. the result of rpc::get_lane_mask()
   /// The lock is held when the n-th bit of the lock bitfield is set.
-  [[clang::convergent]] LIBC_INLINE bool try_lock(uint64_t lane_mask,
-                                                  uint32_t index) {
+  LIBC_INLINE bool try_lock(uint64_t lane_mask, uint32_t index) {
     // On amdgpu, test and set to the nth lock bit and a sync_lane would suffice
     // On volta, need to handle differences between the threads running and
     // the threads that were detected in the previous call to get_lane_mask()
@@ -207,8 +206,7 @@ template <bool Invert> struct Process {
 
   /// Unlock the lock at index. We need a lane sync to keep this function
   /// convergent, otherwise the compiler will sink the store and deadlock.
-  [[clang::convergent]] LIBC_INLINE void unlock(uint64_t lane_mask,
-                                                uint32_t index) {
+  LIBC_INLINE void unlock(uint64_t lane_mask, uint32_t index) {
     // Do not move any writes past the unlock.
     __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_DEVICE);
 
@@ -319,11 +317,11 @@ public:
   template <typename A>
   LIBC_INLINE void recv_n(void **dst, uint64_t *size, A &&alloc);
 
-  LIBC_INLINE uint16_t get_opcode() const {
+  LIBC_INLINE uint32_t get_opcode() const {
     return process.header[index].opcode;
   }
 
-  LIBC_INLINE uint16_t get_index() const { return index; }
+  LIBC_INLINE uint32_t get_index() const { return index; }
 
   LIBC_INLINE void close() {
     // Wait for all lanes to finish using the port.
@@ -357,7 +355,7 @@ struct Client {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<false>;
-  template <uint16_t opcode> LIBC_INLINE Port open();
+  template <uint32_t opcode> LIBC_INLINE Port open();
 
 private:
   Process<false> process;
@@ -518,8 +516,7 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 /// port. Each port instance uses an associated \p opcode to tell the server
 /// what to do. The Client interface provides the appropriate lane size to the
 /// port using the platform's returned value.
-template <uint16_t opcode>
-[[clang::convergent]] LIBC_INLINE Client::Port Client::open() {
+template <uint32_t opcode> LIBC_INLINE Client::Port Client::open() {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.
   for (uint32_t index = 0;; ++index) {
@@ -553,7 +550,7 @@ template <uint16_t opcode>
 
 /// Attempts to open a port to use as the server. The server can only open a
 /// port if it has a pending receive operation
-[[clang::convergent]] LIBC_INLINE rpc::optional<typename Server::Port>
+LIBC_INLINE rpc::optional<typename Server::Port>
 Server::try_open(uint32_t lane_size, uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
