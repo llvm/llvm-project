@@ -78,6 +78,9 @@ Code actions
 
 - Added `Swap operands` tweak for certain binary operators.
 
+- Improved the extract-to-function code action to allow extracting statements
+  with overloaded operators like ``<<`` of ``std::ostream``.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -159,6 +162,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/dangling-handle>` check to treat `std::span` as a
   handle class.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` by fixing false positives
+  when a consteval function with throw statements.
+
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
@@ -190,6 +197,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional functions to match.
+
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` to avoid triggering on
+  ``reset()`` calls on moved-from ``std::optional`` and ``std::any`` objects,
+  similarly to smart pointers.
 
 - Improved :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` check to
   fix false positive that floating point variable is only used in increment

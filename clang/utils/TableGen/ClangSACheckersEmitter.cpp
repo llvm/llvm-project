@@ -1,4 +1,4 @@
-//=- ClangSACheckersEmitter.cpp - Generate Clang SA checkers tables -*- C++ -*-
+//===-- ClangSACheckersEmitter.cpp - Generate SA checkers tables ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <map>
 #include <string>
 
 using namespace llvm;

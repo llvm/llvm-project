@@ -132,17 +132,6 @@ static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   return filteredAttrs;
 }
 
-static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
-                                    NamedAttrList &result) {
-  return parser.parseOptionalAttrDict(result);
-}
-
-static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
-                             DictionaryAttr attrs) {
-  auto filteredAttrs = processFMFAttr(attrs.getValue());
-  printer.printOptionalAttrDict(filteredAttrs);
-}
-
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
 /// fully defined llvm.func.
 static LogicalResult verifySymbolAttrUse(FlatSymbolRefAttr symbol,

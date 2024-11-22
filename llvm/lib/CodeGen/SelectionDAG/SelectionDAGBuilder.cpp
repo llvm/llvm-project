@@ -6415,6 +6415,50 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   DAG.setRoot(Histogram);
 }
 
+void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
+                                                       unsigned Intrinsic) {
+  assert(Intrinsic == Intrinsic::experimental_vector_extract_last_active &&
+         "Tried lowering invalid vector extract last");
+  SDLoc sdl = getCurSDLoc();
+  SDValue Data = getValue(I.getOperand(0));
+  SDValue Mask = getValue(I.getOperand(1));
+  SDValue PassThru = getValue(I.getOperand(2));
+
+  EVT DataVT = Data.getValueType();
+  EVT ScalarVT = PassThru.getValueType();
+  EVT BoolVT = Mask.getValueType().getScalarType();
+
+  // Find a suitable type for a stepvector.
+  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Dummy value.
+  if (DataVT.isScalableVector())
+    VScaleRange = getVScaleRange(I.getCaller(), 64);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned EltWidth = TLI.getBitWidthForCttzElements(
+      I.getType(), DataVT.getVectorElementCount(), /*ZeroIsPoison=*/true,
+      &VScaleRange);
+  MVT StepVT = MVT::getIntegerVT(EltWidth);
+  EVT StepVecVT = DataVT.changeVectorElementType(StepVT);
+
+  // Zero out lanes with inactive elements, then find the highest remaining
+  // value from the stepvector.
+  SDValue Zeroes = DAG.getConstant(0, sdl, StepVecVT);
+  SDValue StepVec = DAG.getStepVector(sdl, StepVecVT);
+  SDValue ActiveElts = DAG.getSelect(sdl, StepVecVT, Mask, StepVec, Zeroes);
+  SDValue HighestIdx =
+      DAG.getNode(ISD::VECREDUCE_UMAX, sdl, StepVT, ActiveElts);
+
+  // Extract the corresponding lane from the data vector
+  EVT ExtVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+  SDValue Idx = DAG.getZExtOrTrunc(HighestIdx, sdl, ExtVT);
+  SDValue Extract =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ScalarVT, Data, Idx);
+
+  // If all mask lanes were inactive, choose the passthru value instead.
+  SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
+  SDValue Result = DAG.getSelect(sdl, ScalarVT, AnyActive, Extract, PassThru);
+  setValue(&I, Result);
+}
+
 /// Lower the call to the specified intrinsic function.
 void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                              unsigned Intrinsic) {
@@ -8234,6 +8278,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::experimental_vector_histogram_add: {
     visitVectorHistogram(I, Intrinsic);
+    return;
+  }
+  case Intrinsic::experimental_vector_extract_last_active: {
+    visitVectorExtractLastActive(I, Intrinsic);
     return;
   }
   }

@@ -170,9 +170,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT, Options), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options), TT, CPU, FS,
+                               Options, getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
   initAsmInfo();
 
@@ -474,7 +474,13 @@ bool RISCVPassConfig::addPreISel() {
     addPass(createBarrierNoopPass());
   }
 
-  if (EnableGlobalMerge == cl::BOU_TRUE) {
+  if ((TM->getOptLevel() != CodeGenOptLevel::None &&
+       EnableGlobalMerge == cl::BOU_UNSET) ||
+      EnableGlobalMerge == cl::BOU_TRUE) {
+    // FIXME: Like AArch64, we disable extern global merging by default due to
+    // concerns it might regress some workloads. Unlike AArch64, we don't
+    // currently support enabling the pass in an "OnlyOptimizeForSize" mode.
+    // Investigating and addressing both items are TODO.
     addPass(createGlobalMergePass(TM, /* MaxOffset */ 2047,
                                   /* OnlyOptimizeForSize */ false,
                                   /* MergeExternalByDefault */

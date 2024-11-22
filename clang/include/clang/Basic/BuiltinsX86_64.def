@@ -228,6 +228,12 @@ TARGET_BUILTIN(__builtin_ia32_aand64, "vv*SOi", "n", "raoint")
 TARGET_BUILTIN(__builtin_ia32_aor64, "vv*SOi", "n", "raoint")
 TARGET_BUILTIN(__builtin_ia32_axor64, "vv*SOi", "n", "raoint")
 
+// MOVRS
+TARGET_BUILTIN(__builtin_ia32_movrsqi, "ScvC*", "n", "movrs")
+TARGET_BUILTIN(__builtin_ia32_movrshi, "SsvC*", "n", "movrs")
+TARGET_BUILTIN(__builtin_ia32_movrssi, "SivC*", "n", "movrs")
+TARGET_BUILTIN(__builtin_ia32_movrsdi, "SLLivC*", "n", "movrs")
+
 // MOVRS and AVX10.2
 TARGET_BUILTIN(__builtin_ia32_vmovrsb128, "V16cV16cC*", "nV:128:", "movrs,avx10.2-256")
 TARGET_BUILTIN(__builtin_ia32_vmovrsb256, "V32cV32cC*", "nV:256:", "movrs,avx10.2-256")

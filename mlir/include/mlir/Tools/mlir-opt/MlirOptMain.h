@@ -183,6 +183,13 @@ public:
   }
   bool shouldVerifyPasses() const { return verifyPassesFlag; }
 
+  /// Set whether to run the verifier on parsing.
+  MlirOptMainConfig &verifyOnParsing(bool verify) {
+    disableVerifierOnParsingFlag = !verify;
+    return *this;
+  }
+  bool shouldVerifyOnParsing() const { return !disableVerifierOnParsingFlag; }
+
   /// Set whether to run the verifier after each transformation pass.
   MlirOptMainConfig &verifyRoundtrip(bool verify) {
     verifyRoundtripFlag = verify;
@@ -251,6 +258,9 @@ protected:
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
+
+  /// Disable the verifier on parsing.
+  bool disableVerifierOnParsingFlag = false;
 
   /// Verify that the input IR round-trips perfectly.
   bool verifyRoundtripFlag = false;

@@ -279,8 +279,7 @@ uint32_t LoongArch::calcEFlags() const {
 int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   case R_LARCH_32:
   case R_LARCH_TLS_DTPMOD32:
@@ -528,7 +527,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   //
   // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -775,8 +774,8 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
-                 << "insufficient padding bytes for " << lld::toString(r.type)
-                 << ": " << Twine(allBytes) << " bytes available for "
+                 << "insufficient padding bytes for " << r.type << ": "
+                 << Twine(allBytes) << " bytes available for "
                  << "requested alignment of " << Twine(align) << " bytes";
         remove = 0;
       }
@@ -852,7 +851,7 @@ void LoongArch::finalizeRelax(int passes) const {
       MutableArrayRef<Relocation> rels = sec->relocs();
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
-      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint8_t *p = ctx.bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;

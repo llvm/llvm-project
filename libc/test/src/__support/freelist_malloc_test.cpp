@@ -13,6 +13,7 @@
 #include "src/stdlib/malloc.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Block;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
@@ -22,15 +23,13 @@ TEST(LlvmLibcFreeListMalloc, Malloc) {
   constexpr size_t kCallocNum = 4;
   constexpr size_t kCallocSize = 64;
 
-  typedef FreeListHeap<>::BlockType Block;
-
   void *ptr1 = LIBC_NAMESPACE::malloc(kAllocSize);
-  auto *block = Block::from_usable_space(ptr1);
+  auto *block = Block<>::from_usable_space(ptr1);
   EXPECT_GE(block->inner_size(), kAllocSize);
 
   LIBC_NAMESPACE::free(ptr1);
-  ASSERT_NE(block->next(), static_cast<Block *>(nullptr));
-  ASSERT_EQ(block->next()->next(), static_cast<Block *>(nullptr));
+  ASSERT_NE(block->next(), static_cast<Block<> *>(nullptr));
+  ASSERT_EQ(block->next()->next(), static_cast<Block<> *>(nullptr));
   size_t heap_size = block->inner_size();
 
   void *ptr2 = LIBC_NAMESPACE::calloc(kCallocNum, kCallocSize);
@@ -47,7 +46,7 @@ TEST(LlvmLibcFreeListMalloc, Malloc) {
   void *ptr3 = LIBC_NAMESPACE::aligned_alloc(ALIGN, kAllocSize);
   EXPECT_NE(ptr3, static_cast<void *>(nullptr));
   EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr3) % ALIGN, size_t(0));
-  auto *aligned_block = reinterpret_cast<Block *>(ptr3);
+  auto *aligned_block = reinterpret_cast<Block<> *>(ptr3);
   EXPECT_GE(aligned_block->inner_size(), kAllocSize);
 
   LIBC_NAMESPACE::free(ptr3);

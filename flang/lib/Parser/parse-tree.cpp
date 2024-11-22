@@ -253,20 +253,20 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
-OmpDependenceType::Type OmpDoacross::GetDepType() const {
+OmpDependenceType::Value OmpDoacross::GetDepType() const {
   return common::visit( //
       common::visitors{
           [](const OmpDoacross::Sink &) {
-            return OmpDependenceType::Type::Sink;
+            return OmpDependenceType::Value::Sink;
           },
           [](const OmpDoacross::Source &) {
-            return OmpDependenceType::Type::Source;
+            return OmpDependenceType::Value::Source;
           },
       },
       u);
 }
 
-OmpTaskDependenceType::Type OmpDependClause::TaskDep::GetTaskDepType() const {
+OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
   return std::get<parser::OmpTaskDependenceType>(t).v;
 }
 
