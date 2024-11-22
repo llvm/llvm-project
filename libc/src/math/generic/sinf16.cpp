@@ -13,10 +13,19 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+constexpr size_t N_EXCEPTS = 2;
+
+constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
+    // (input, RZ output, RU offset, RD offset, RN offset)
+    {0x585c, 0x3ba3, 1, 0, 1},
+    {0x5cb0, 0xbbff, 0, 1, 0},
+}};
 
 LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   using FPBits = typename fputil::FPBits<float16>;
@@ -25,7 +34,7 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
   float xf = x;
-  
+
   // Range reduction:
   // For !x| > pi/32, we perform range reduction as follows:
   // Find k and y such that:
@@ -41,15 +50,35 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   sin(x) = sin((k + y) * pi/32)
   //   	      = sin(k * pi/32) * cos(y * pi/32) +
   //   	        sin(y * pi/32) * cos(k * pi/32)
-  
+
+  // Handle exceptional values
+  if (LIBC_UNLIKELY(x_abs == 0x585C || x_abs == 0x5cb0)) {
+    bool x_sign = x_u >> 15;
+    if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
+        LIBC_UNLIKELY(r.has_value()))
+      return r.value();
+  }
+
+  int rounding = fputil::quick_get_round();
   if (LIBC_UNLIKELY(x_abs <= 0x13d0)) {
-    int rounding = fputil::quick_get_round();
-    
-    // For signed zeros
-    if ((LIBC_UNLIKELY(x_abs == 0U)) ||
-	(rounding == FE_UPWARD && xbits.is_pos()) ||
-	(rounding == FE_DOWNWARD && xbits.is_neg()))
+    if (LIBC_UNLIKELY(x_abs == 0U))
       return x;
+
+    if ((rounding == FE_UPWARD && xbits.is_pos()) ||
+        (rounding == FE_DOWNWARD && xbits.is_neg()))
+      return x;
+
+    if (rounding == FE_UPWARD && xbits.is_neg()) {
+      x_u--;
+      return FPBits(x_u).get_val();
+    }
+  }
+
+  if (LIBC_UNLIKELY(x_abs == 0x2b45)) {
+    if (rounding == FE_DOWNWARD && xbits.is_neg()) {
+      x_u--;
+      return FPBits(x_u).get_val();
+    }
   }
 
   if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
@@ -61,7 +90,6 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
 
     return x + FPBits::quiet_nan().get_val();
   }
-  
 
   float sin_k, cos_k, sin_y, cosm1_y;
   sincosf16_eval(xf, sin_k, cos_k, sin_y, cosm1_y);
@@ -71,7 +99,8 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
 
   // Since, cosm1_y = cos_y - 1, therfore:
   //    sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
-  return fputil::cast<float16>(fputil::multiply_add(sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
+  return fputil::cast<float16>(fputil::multiply_add(
+      sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
