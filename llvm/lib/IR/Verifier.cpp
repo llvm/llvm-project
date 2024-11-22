@@ -2026,11 +2026,15 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
             "huge alignment values are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByVal)) {
+      Type *ByValTy = Attrs.getByValType();
       SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getByValType()->isSized(&Visited),
+      Check(ByValTy->isSized(&Visited),
             "Attribute 'byval' does not support unsized types!", V);
-      Check(DL.getTypeAllocSize(Attrs.getByValType()).getKnownMinValue() <
-                (1ULL << 32),
+      // Check if it is or contains a target extension type that disallows being
+      // used on the stack.
+      Check(!ByValTy->containsNonLocalTargetExtType(),
+            "'byval' argument has illegal target extension type", V);
+      Check(DL.getTypeAllocSize(ByValTy).getKnownMinValue() < (1ULL << 32),
             "huge 'byval' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByRef)) {
@@ -4323,9 +4327,13 @@ void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
 }
 
 void Verifier::visitAllocaInst(AllocaInst &AI) {
+  Type *Ty = AI.getAllocatedType();
   SmallPtrSet<Type*, 4> Visited;
-  Check(AI.getAllocatedType()->isSized(&Visited),
-        "Cannot allocate unsized type", &AI);
+  Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
+  // Check if it's a target extension type that disallows being used on the
+  // stack.
+  Check(!Ty->containsNonLocalTargetExtType(),
+        "Alloca has illegal target extension type", &AI);
   Check(AI.getArraySize()->getType()->isIntegerTy(),
         "Alloca array size must have integer type", &AI);
   if (MaybeAlign A = AI.getAlign()) {
@@ -4334,8 +4342,7 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
   }
 
   if (AI.isSwiftError()) {
-    Check(AI.getAllocatedType()->isPointerTy(),
-          "swifterror alloca must have pointer type", &AI);
+    Check(Ty->isPointerTy(), "swifterror alloca must have pointer type", &AI);
     Check(!AI.isArrayAllocation(),
           "swifterror alloca must not be array allocation", &AI);
     verifySwiftErrorValue(&AI);
