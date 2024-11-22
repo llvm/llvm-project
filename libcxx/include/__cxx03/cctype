@@ -34,9 +34,9 @@ int toupper(int c);
 }  // std
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <ctype.h>
+#include <__cxx03/ctype.h>
 
 #ifndef _LIBCPP_CTYPE_H
 #   error <cctype> tried including <ctype.h> but didn't find libc++'s <ctype.h> header. \

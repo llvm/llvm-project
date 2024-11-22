@@ -10,10 +10,10 @@
 #ifndef _LIBCPP___ITERATOR_RANGES_ITERATOR_TRAITS_H
 #define _LIBCPP___ITERATOR_RANGES_ITERATOR_TRAITS_H
 
-#include <__config>
-#include <__fwd/pair.h>
-#include <__ranges/concepts.h>
-#include <__type_traits/remove_const.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/pair.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__type_traits/remove_const.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_TO_N_RESULT_H
 #define _LIBCPP___FORMAT_FORMAT_TO_N_RESULT_H
 
-#include <__config>
-#include <__iterator/incrementable_traits.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/incrementable_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

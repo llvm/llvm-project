@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___RANDOM_KNUTH_B_H
 #define _LIBCPP___RANDOM_KNUTH_B_H
 
-#include <__config>
-#include <__random/linear_congruential_engine.h>
-#include <__random/shuffle_order_engine.h>
+#include <__cxx03/__config>
+#include <__cxx03/__random/linear_congruential_engine.h>
+#include <__cxx03/__random/shuffle_order_engine.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -106,43 +106,17 @@ public:
     return false;
   }
 
-  struct ArgSelect {
-    enum class Type {
-      Index,
-      I8,
-      I32,
-    };
-    Type Type = Type::Index;
-    int Value = -1;
-  };
-
-  [[nodiscard]] bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
-                                           ArrayRef<ArgSelect> ArgSelects) {
+  [[nodiscard]]
+  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
-      OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
-      if (ArgSelects.size()) {
-        for (const ArgSelect &A : ArgSelects) {
-          switch (A.Type) {
-          case ArgSelect::Type::Index:
-            Args.push_back(CI->getArgOperand(A.Value));
-            break;
-          case ArgSelect::Type::I8:
-            Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
-            break;
-          case ArgSelect::Type::I32:
-            Args.push_back(OpBuilder.getIRB().getInt32(A.Value));
-            break;
-          default:
-            llvm_unreachable("Invalid type of intrinsic arg select.");
-          }
-        }
-      } else if (IsVectorArgExpansion) {
-        Args = argVectorFlatten(CI, OpBuilder.getIRB());
-      } else {
+      OpBuilder.getIRB().SetInsertPoint(CI);
+      if (IsVectorArgExpansion) {
+        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
+        Args.append(NewArgs.begin(), NewArgs.end());
+      } else
         Args.append(CI->arg_begin(), CI->arg_end());
-      }
 
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
@@ -230,6 +204,25 @@ public:
     CleanupCasts.clear();
   }
 
+  // Remove the resource global associated with the handleFromBinding call
+  // instruction and their uses as they aren't needed anymore.
+  // TODO: We should verify that all the globals get removed.
+  // It's expected we'll need a custom pass in the future that will eliminate
+  // the need for this here.
+  void removeResourceGlobals(CallInst *CI) {
+    for (User *User : make_early_inc_range(CI->users())) {
+      if (StoreInst *Store = dyn_cast<StoreInst>(User)) {
+        Value *V = Store->getOperand(1);
+        Store->eraseFromParent();
+        if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+          if (GV->use_empty()) {
+            GV->removeDeadConstantUsers();
+            GV->eraseFromParent();
+          }
+      }
+    }
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -253,6 +246,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -297,6 +292,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -489,6 +486,30 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerUpdateCounter(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Op1 = CI->getArgOperand(1);
+
+      std::array<Value *, 2> Args{Handle, Op1};
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
+
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -609,10 +630,9 @@ public:
       switch (ID) {
       default:
         continue;
-#define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
+#define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
   case Intrin:                                                                 \
-    HasErrors |=                                                               \
-        replaceFunctionWithOp(F, OpCode, ArrayRef<ArgSelect>{__VA_ARGS__});    \
+    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
@@ -626,6 +646,9 @@ public:
         break;
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_updateCounter:
+        HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when
       // https://github.com/llvm/llvm-project/issues/113192 is fixed

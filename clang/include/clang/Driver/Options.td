@@ -965,6 +965,10 @@ def V : JoinedOrSeparate<["-"], "V">, Flags<[NoXarchOption, Unsupported]>;
 def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   HelpText<"Pass the comma separated arguments in <arg> to the assembler">,
   MetaVarName<"<arg>">;
+def warning_suppression_mappings_EQ : Joined<["--"],
+  "warning-suppression-mappings=">, Group<Diag_Group>,
+  HelpText<"File containing diagnostic suppresion mappings. See user manual "
+  "for file format.">, Visibility<[ClangOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
@@ -4068,6 +4072,11 @@ defm threadsafe_statics : BoolFOption<"threadsafe-statics",
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Do not emit code to make initialization of local statics thread safe">,
   PosFlag<SetTrue>>;
+defm ms_tls_guards : BoolFOption<"ms-tls-guards",
+  CodeGenOpts<"TlsGuards">, DefaultTrue,
+  NegFlag<SetFalse, [], [CC1Option],
+          "Do not emit code to perform on-demand initialization of thread-local variables">,
+  PosFlag<SetTrue>>;
 def ftime_report : Flag<["-"], "ftime-report">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"TimePasses">>;
@@ -4570,9 +4579,6 @@ def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
   HelpText<"Enable builtin #include directories even when -nostdinc is used "
            "before or after -ibuiltininc. "
            "Using -nobuiltininc after the option disables it">;
-def index_header_map : Flag<["-"], "index-header-map">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Make the next included directory (-I or -F) an indexer header map">;
 def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
@@ -4933,10 +4939,6 @@ def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Enable using library calls for save and restore">;
 def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Disable using library calls for save and restore">;
-def mforced_sw_shadow_stack : Flag<["-"], "mforced-sw-shadow-stack">, Group<m_riscv_Features_Group>,
-  HelpText<"Force using software shadow stack when shadow-stack enabled">;
-def mno_forced_sw_shadow_stack : Flag<["-"], "mno-forced-sw-shadow-stack">, Group<m_riscv_Features_Group>,
-  HelpText<"Not force using software shadow stack when shadow-stack enabled">;
 } // let Flags = [TargetSpecific]
 let Flags = [TargetSpecific] in {
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
@@ -6292,6 +6294,8 @@ def mno_80387 : Flag<["-"], "mno-80387">, Alias<mno_x87>;
 def mno_fp_ret_in_387 : Flag<["-"], "mno-fp-ret-in-387">, Alias<mno_x87>;
 def mmmx : Flag<["-"], "mmmx">, Group<m_x86_Features_Group>;
 def mno_mmx : Flag<["-"], "mno-mmx">, Group<m_x86_Features_Group>;
+def mamx_avx512 : Flag<["-"], "mamx-avx512">, Group<m_x86_Features_Group>;
+def mno_amx_avx512 : Flag<["-"], "mno-amx-avx512">, Group<m_x86_Features_Group>;
 def mamx_bf16 : Flag<["-"], "mamx-bf16">, Group<m_x86_Features_Group>;
 def mno_amx_bf16 : Flag<["-"], "mno-amx-bf16">, Group<m_x86_Features_Group>;
 def mamx_complex : Flag<["-"], "mamx-complex">, Group<m_x86_Features_Group>;
@@ -6300,8 +6304,16 @@ def mamx_fp16 : Flag<["-"], "mamx-fp16">, Group<m_x86_Features_Group>;
 def mno_amx_fp16 : Flag<["-"], "mno-amx-fp16">, Group<m_x86_Features_Group>;
 def mamx_int8 : Flag<["-"], "mamx-int8">, Group<m_x86_Features_Group>;
 def mno_amx_int8 : Flag<["-"], "mno-amx-int8">, Group<m_x86_Features_Group>;
+def mamx_fp8 : Flag<["-"], "mamx-fp8">, Group<m_x86_Features_Group>;
+def mno_amx_fp8 : Flag<["-"], "mno-amx-fp8">, Group<m_x86_Features_Group>;
+def mamx_tf32 : Flag<["-"], "mamx-tf32">, Group<m_x86_Features_Group>;
+def mno_amx_tf32 : Flag<["-"], "mno-amx-tf32">, Group<m_x86_Features_Group>;
 def mamx_tile : Flag<["-"], "mamx-tile">, Group<m_x86_Features_Group>;
 def mno_amx_tile : Flag<["-"], "mno-amx-tile">, Group<m_x86_Features_Group>;
+def mamx_transpose : Flag<["-"], "mamx-transpose">, Group<m_x86_Features_Group>;
+def mno_amx_transpose : Flag<["-"], "mno-amx-transpose">, Group<m_x86_Features_Group>;
+def mamx_movrs: Flag<["-"], "mamx-movrs">, Group<m_x86_Features_Group>;
+def mno_amx_movrs: Flag<["-"], "mno-amx-movrs">, Group<m_x86_Features_Group>;
 def mcmpccxadd : Flag<["-"], "mcmpccxadd">, Group<m_x86_Features_Group>;
 def mno_cmpccxadd : Flag<["-"], "mno-cmpccxadd">, Group<m_x86_Features_Group>;
 def msse : Flag<["-"], "msse">, Group<m_x86_Features_Group>;
@@ -6779,7 +6791,10 @@ def fsycl : Flag<["-"], "fsycl">,
 def fno_sycl : Flag<["-"], "fno-sycl">,
   Visibility<[ClangOption, CLOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
-
+def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
+  Visibility<[ClangOption, CLOption]>,
+  Group<sycl_Group>, HelpText<"Perform link through clang-sycl-linker via the target "
+  "offloading toolchain.">;
 // OS-specific options
 let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
@@ -8625,6 +8640,12 @@ def _SLASH_Zc_threadSafeInit : CLFlag<"Zc:threadSafeInit">,
 def _SLASH_Zc_threadSafeInit_ : CLFlag<"Zc:threadSafeInit-">,
   HelpText<"Disable thread-safe initialization of static variables">,
   Alias<fno_threadsafe_statics>;
+def _SLASH_Zc_tlsGuards : CLFlag<"Zc:tlsGuards">,
+  HelpText<"Enable on-demand initialization of thread-local variables">,
+  Alias<fms_tls_guards>;
+def _SLASH_Zc_tlsGuards_ : CLFlag<"Zc:tlsGuards-">,
+  HelpText<"Disable on-demand initialization of thread-local variables">,
+  Alias<fno_ms_tls_guards>;
 def _SLASH_Zc_trigraphs : CLFlag<"Zc:trigraphs">,
   HelpText<"Enable trigraphs">, Alias<ftrigraphs>;
 def _SLASH_Zc_trigraphs_off : CLFlag<"Zc:trigraphs-">,

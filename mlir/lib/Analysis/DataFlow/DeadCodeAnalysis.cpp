@@ -186,6 +186,8 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
       // If a callable symbol has a non-call use, then we can't be guaranteed to
       // know all callsites.
       Operation *symbol = symbolTable.lookupSymbolIn(top, use.getSymbolRef());
+      if (!symbol)
+        continue;
       auto *state = getOrCreate<PredecessorState>(getProgramPointAfter(symbol));
       propagateIfChanged(state, state->setHasUnknownPredecessors());
     }

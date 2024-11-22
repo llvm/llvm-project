@@ -7,6 +7,7 @@ if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
 endif()
 
 add_llvm_component_library(LLVMOrcJIT
+  AbsoluteSymbols.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp

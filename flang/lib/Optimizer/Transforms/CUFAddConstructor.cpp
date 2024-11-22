@@ -11,11 +11,13 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/Target.h"
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/CUDA/registration.h"
@@ -84,6 +86,8 @@ struct CUFAddConstructor
       auto registeredMod = builder.create<cuf::RegisterModuleOp>(
           loc, llvmPtrTy, mlir::SymbolRefAttr::get(ctx, gpuMod.getName()));
 
+      fir::LLVMTypeConverter typeConverter(mod, /*applyTBAA=*/false,
+                                           /*forceUnifiedTBAATree=*/false, *dl);
       // Register kernels
       for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
         if (func.isKernel()) {
@@ -115,17 +119,25 @@ struct CUFAddConstructor
               fir::factory::createStringLiteral(builder, loc, gblNameStr));
 
           // Global variable size
-          auto sizeAndAlign = fir::getTypeSizeAndAlignmentOrCrash(
-              loc, globalOp.getType(), *dl, kindMap);
-          auto size =
-              builder.createIntegerConstant(loc, idxTy, sizeAndAlign.first);
+          std::optional<uint64_t> size;
+          if (auto boxTy =
+                  mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+            mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+            size = dl->getTypeSizeInBits(structTy) / 8;
+          }
+          if (!size) {
+            size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(),
+                                                       *dl, kindMap)
+                       .first;
+          }
+          auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
 
           // Global variable address
           mlir::Value addr = builder.create<fir::AddrOfOp>(
               loc, globalOp.resultType(), globalOp.getSymbol());
 
           llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-              builder, loc, fTy, registeredMod, addr, gblName, size)};
+              builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
           builder.create<fir::CallOp>(loc, func, args);
         } break;
         case cuf::DataAttribute::Managed:

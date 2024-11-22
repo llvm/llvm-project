@@ -473,7 +473,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2p1)
     Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
 
-  if (HasSVE2 && HasSVE2AES)
+  if (HasSVE2 && HasSVEAES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
   if (HasSVE2 && HasSVE2BitPerm)
@@ -722,7 +722,7 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
   // FMV extensions which imply no backend features do not affect codegen.
   if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return !Ext->Features.empty();
+    return Ext->ID.has_value();
   return false;
 }
 
@@ -769,7 +769,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
-      .Case("sve2-pmull128", FPU & SveMode && HasSVE2AES)
+      .Case("sve-aes", HasSVEAES)
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
@@ -861,12 +861,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2p1 = true;
     }
-    if (Feature == "+sve2-aes") {
+    if (Feature == "+sve-aes") {
       FPU |= NeonMode;
-      FPU |= SveMode;
       HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2AES = true;
+      HasSVEAES = true;
     }
     if (Feature == "+sve2-sha3") {
       FPU |= NeonMode;
@@ -1714,7 +1712,7 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
 
-  getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
+  DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 
 TargetInfo::BuiltinVaListKind

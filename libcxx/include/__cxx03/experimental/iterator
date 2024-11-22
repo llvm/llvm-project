@@ -52,19 +52,19 @@ namespace std {
 
 */
 
-#include <__memory/addressof.h>
-#include <__type_traits/decay.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <experimental/__config>
-#include <iterator>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/iterator>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 14
 
@@ -120,8 +120,8 @@ _LIBCPP_END_NAMESPACE_LFTS
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iosfwd>
-#  include <type_traits>
+#  include <__cxx03/iosfwd>
+#  include <__cxx03/type_traits>
 #endif
 
 #endif // _LIBCPP_EXPERIMENTAL_ITERATOR

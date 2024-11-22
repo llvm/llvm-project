@@ -10,12 +10,12 @@
 #ifndef _LIBCPP___FUNCTIONAL_DEFAULT_SEARCHER_H
 #define _LIBCPP___FUNCTIONAL_DEFAULT_SEARCHER_H
 
-#include <__algorithm/search.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/operations.h>
-#include <__iterator/iterator_traits.h>
-#include <__utility/pair.h>
+#include <__cxx03/__algorithm/search.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

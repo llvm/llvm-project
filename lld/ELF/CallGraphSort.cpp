@@ -248,7 +248,8 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
     std::error_code ec;
     raw_fd_ostream os(ctx.arg.printSymbolOrder, ec, sys::fs::OF_None);
     if (ec) {
-      error("cannot open " + ctx.arg.printSymbolOrder + ": " + ec.message());
+      ErrAlways(ctx) << "cannot open " << ctx.arg.printSymbolOrder << ": "
+                     << ec.message();
       return orderMap;
     }
 

@@ -116,13 +116,13 @@ struct SyntaxConstraint {
     } else if (R.isSubClassOf("AnyToken")) {
       NodeType = "Leaf";
     } else if (R.isSubClassOf("NodeType")) {
-      NodeType = R.getName().str();
+      NodeType = R.getName();
     } else {
       assert(false && "Unhandled Syntax kind");
     }
   }
 
-  std::string NodeType;
+  StringRef NodeType;
   // optional and leaf types also go here, once we want to use them.
 };
 

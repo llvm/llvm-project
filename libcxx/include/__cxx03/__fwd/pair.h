@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___FWD_PAIR_H
 #define _LIBCPP___FWD_PAIR_H
 
-#include <__config>
-#include <__fwd/tuple.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/tuple.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

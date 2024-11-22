@@ -22,13 +22,11 @@
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #ifdef EXPENSIVE_CHECKS

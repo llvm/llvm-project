@@ -50,6 +50,7 @@
 // CHECK-SAME: {{^}}, gfx909
 // CHECK-SAME: {{^}}, gfx90a
 // CHECK-SAME: {{^}}, gfx90c
+// CHECK-SAME: {{^}}, gfx9-4-generic
 // CHECK-SAME: {{^}}, gfx940
 // CHECK-SAME: {{^}}, gfx941
 // CHECK-SAME: {{^}}, gfx942

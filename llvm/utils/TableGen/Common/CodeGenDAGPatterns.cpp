@@ -1838,7 +1838,7 @@ MVT::SimpleValueType SDNodeInfo::getKnownType(unsigned ResNo) const {
 
 static unsigned GetNumNodeResults(const Record *Operator,
                                   CodeGenDAGPatterns &CDP) {
-  if (Operator->getName() == "set" || Operator->getName() == "implicit")
+  if (Operator->getName() == "set")
     return 0; // All return nothing.
 
   if (Operator->isSubClassOf("Intrinsic"))
@@ -2945,8 +2945,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
       !Operator->isSubClassOf("Instruction") &&
       !Operator->isSubClassOf("SDNodeXForm") &&
       !Operator->isSubClassOf("Intrinsic") &&
-      !Operator->isSubClassOf("ComplexPattern") &&
-      Operator->getName() != "set" && Operator->getName() != "implicit")
+      !Operator->isSubClassOf("ComplexPattern") && Operator->getName() != "set")
     error("Unrecognized node '" + Operator->getName() + "'!");
 
   //  Check to see if this is something that is illegal in an input pattern.
@@ -3453,21 +3452,6 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     bool isUse = HandleUse(I, Pat, InstInputs);
     if (!isUse && Pat->getTransformFn())
       I.error("Cannot specify a transform function for a non-input value!");
-    return;
-  }
-
-  if (Pat->getOperator()->getName() == "implicit") {
-    for (unsigned i = 0, e = Pat->getNumChildren(); i != e; ++i) {
-      TreePatternNode &Dest = Pat->getChild(i);
-      if (!Dest.isLeaf())
-        I.error("implicitly defined value should be a register!");
-
-      const DefInit *Val = dyn_cast<DefInit>(Dest.getLeafValue());
-      if (!Val || !Val->getDef()->isSubClassOf("Register"))
-        I.error("implicitly defined value should be a register!");
-      if (Val)
-        InstImpResults.push_back(Val->getDef());
-    }
     return;
   }
 

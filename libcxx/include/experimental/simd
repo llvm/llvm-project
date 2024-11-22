@@ -85,4 +85,8 @@ inline namespace parallelism_v2 {
 #include <experimental/__simd/traits.h>
 #include <experimental/__simd/vec_ext.h>
 
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
+#endif
+
 #endif /* _LIBCPP_EXPERIMENTAL_SIMD */

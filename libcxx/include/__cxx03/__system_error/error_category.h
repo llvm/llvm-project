@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
 #define _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
 
-#include <__compare/ordering.h>
-#include <__config>
-#include <string>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

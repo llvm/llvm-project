@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "gisel-known-bits"
@@ -790,6 +789,14 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
                                  MI.getOperand(3).getReg(), DemandedElts,
                                  Depth + 1);
   }
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX:
+    // TODO: Handle clamp pattern with number of sign bits for SMIN/SMAX.
+    return computeNumSignBitsMin(MI.getOperand(1).getReg(),
+                                 MI.getOperand(2).getReg(), DemandedElts,
+                                 Depth + 1);
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SADDE:
   case TargetOpcode::G_UADDO:

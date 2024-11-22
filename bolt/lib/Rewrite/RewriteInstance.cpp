@@ -789,9 +789,44 @@ void RewriteInstance::discoverFileObjects() {
     BinarySection Section(*BC, *cantFail(Sym.getSection()));
     return Section.isAllocatable();
   };
+  auto checkSymbolInSection = [this](const SymbolInfo &S) {
+    // Sometimes, we encounter symbols with addresses outside their section. If
+    // such symbols happen to fall into another section, they can interfere with
+    // disassembly. Notably, this occurs with AArch64 marker symbols ($d and $t)
+    // that belong to .eh_frame, but end up pointing into .text.
+    // As a workaround, we ignore all symbols that lie outside their sections.
+    auto Section = cantFail(S.Symbol.getSection());
+
+    // Accept all absolute symbols.
+    if (Section == InputFile->section_end())
+      return true;
+
+    uint64_t SecStart = Section->getAddress();
+    uint64_t SecEnd = SecStart + Section->getSize();
+    uint64_t SymEnd = S.Address + ELFSymbolRef(S.Symbol).getSize();
+    if (S.Address >= SecStart && SymEnd <= SecEnd)
+      return true;
+
+    auto SymType = cantFail(S.Symbol.getType());
+    // Skip warnings for common benign cases.
+    if (opts::Verbosity < 1 && SymType == SymbolRef::ST_Other)
+      return false; // E.g. ELF::STT_TLS.
+
+    auto SymName = S.Symbol.getName();
+    auto SecName = cantFail(S.Symbol.getSection())->getName();
+    BC->errs() << "BOLT-WARNING: ignoring symbol "
+               << (SymName ? *SymName : "[unnamed]") << " at 0x"
+               << Twine::utohexstr(S.Address) << ", which lies outside "
+               << (SecName ? *SecName : "[unnamed]") << "\n";
+
+    return false;
+  };
   for (const SymbolRef &Symbol : InputFile->symbols())
-    if (isSymbolInMemory(Symbol))
-      SortedSymbols.push_back({cantFail(Symbol.getAddress()), Symbol});
+    if (isSymbolInMemory(Symbol)) {
+      SymbolInfo SymInfo{cantFail(Symbol.getAddress()), Symbol};
+      if (checkSymbolInSection(SymInfo))
+        SortedSymbols.push_back(SymInfo);
+    }
 
   auto CompareSymbols = [this](const SymbolInfo &A, const SymbolInfo &B) {
     if (A.Address != B.Address)
@@ -3772,7 +3807,6 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     if (!Function.isEmitted())
       continue;
 
-    bool TooLarge = false;
     ErrorOr<BinarySection &> FuncSection = Function.getCodeSection();
     assert(FuncSection && "cannot find section for function");
     FuncSection->setOutputAddress(Function.getAddress());
@@ -3783,11 +3817,8 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     MapSection(*FuncSection, Function.getAddress());
     Function.setImageAddress(FuncSection->getAllocAddress());
     Function.setImageSize(FuncSection->getOutputSize());
-    if (Function.getImageSize() > Function.getMaxSize()) {
-      assert(!BC->isX86() && "Unexpected large function.");
-      TooLarge = true;
-      FailedAddresses.emplace_back(Function.getAddress());
-    }
+    assert(Function.getImageSize() <= Function.getMaxSize() &&
+           "Unexpected large function");
 
     // Map jump tables if updating in-place.
     if (opts::JumpTables == JTS_BASIC) {
@@ -3817,28 +3848,17 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     assert(ColdSection && "cannot find section for cold part");
     // Cold fragments are aligned at 16 bytes.
     NextAvailableAddress = alignTo(NextAvailableAddress, 16);
-    if (TooLarge) {
-      // The corresponding FDE will refer to address 0.
-      FF.setAddress(0);
-      FF.setImageAddress(0);
-      FF.setImageSize(0);
-      FF.setFileOffset(0);
-    } else {
-      FF.setAddress(NextAvailableAddress);
-      FF.setImageAddress(ColdSection->getAllocAddress());
-      FF.setImageSize(ColdSection->getOutputSize());
-      FF.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
-      ColdSection->setOutputAddress(FF.getAddress());
-    }
+    FF.setAddress(NextAvailableAddress);
+    FF.setImageAddress(ColdSection->getAllocAddress());
+    FF.setImageSize(ColdSection->getOutputSize());
+    FF.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
+    ColdSection->setOutputAddress(FF.getAddress());
 
     LLVM_DEBUG(
         dbgs() << formatv(
             "BOLT: mapping cold fragment {0:x+} to {1:x+} with size {2:x+}\n",
             FF.getImageAddress(), FF.getAddress(), FF.getImageSize()));
     MapSection(*ColdSection, FF.getAddress());
-
-    if (TooLarge)
-      BC->deregisterSection(*ColdSection);
 
     NextAvailableAddress += FF.getImageSize();
   }
@@ -5779,7 +5799,7 @@ void RewriteInstance::writeEHFrameHeader() {
       getFileOffsetForAddress(NextAvailableAddress);
 
   std::vector<char> NewEHFrameHdr = CFIRdWrt->generateEHFrameHeader(
-      RelocatedEHFrame, NewEHFrame, EHFrameHdrOutputAddress, FailedAddresses);
+      RelocatedEHFrame, NewEHFrame, EHFrameHdrOutputAddress);
 
   Out->os().seek(EHFrameHdrFileOffset);
   Out->os().write(NewEHFrameHdr.data(), NewEHFrameHdr.size());

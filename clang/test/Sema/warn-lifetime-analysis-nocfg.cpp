@@ -384,6 +384,19 @@ struct X {
   std::unique_ptr<int> pointer;
 };
 
+struct [[gsl::Owner]] XOwner {
+  int* get() const [[clang::lifetimebound]];
+};
+struct X2 {
+  // A common usage that moves the passing owner to the class.
+  // verify no warning on this case.
+  X2(XOwner owner) :
+    pointee(owner.get()),
+    owner(std::move(owner)) {}
+  int* pointee;
+  XOwner owner;
+};
+
 std::vector<int>::iterator getIt();
 std::vector<int> getVec();
 

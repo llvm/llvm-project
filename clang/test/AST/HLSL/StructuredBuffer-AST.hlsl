@@ -16,7 +16,7 @@
 // EMPTY-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit <undeserialized declarations> class StructuredBuffer
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
-// There should be no more occurrances of StructuredBuffer
+// There should be no more occurrences of StructuredBuffer
 // EMPTY-NOT: {{[^[:alnum:]]}}StructuredBuffer
 
 #ifndef EMPTY
@@ -34,7 +34,7 @@ StructuredBuffer<float> Buffer;
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit TypedBuffer
+// CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit RawBuffer
 
 // CHECK: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> operator[] 'element_type &const (unsigned int) const'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Idx 'unsigned int'
@@ -61,4 +61,4 @@ StructuredBuffer<float> Buffer;
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
-// CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit TypedBuffer
+// CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit RawBuffer

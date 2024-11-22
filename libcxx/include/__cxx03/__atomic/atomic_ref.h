@@ -17,26 +17,26 @@
 #ifndef _LIBCPP___ATOMIC_ATOMIC_REF_H
 #define _LIBCPP___ATOMIC_ATOMIC_REF_H
 
-#include <__assert>
-#include <__atomic/atomic_sync.h>
-#include <__atomic/check_memory_order.h>
-#include <__atomic/to_gcc_order.h>
-#include <__concepts/arithmetic.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__type_traits/has_unique_object_representation.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
+#include <__cxx03/__assert>
+#include <__cxx03/__atomic/atomic_sync.h>
+#include <__cxx03/__atomic/check_memory_order.h>
+#include <__cxx03/__atomic/to_gcc_order.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/has_unique_object_representation.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
+#include <__cxx03/cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

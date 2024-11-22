@@ -13,6 +13,7 @@
 #include "llvm/IR/Type.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -436,20 +437,37 @@ bool StructType::containsHomogeneousTypes() const {
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
+  cantFail(setBodyOrError(Elements, isPacked));
+}
+
+Error StructType::setBodyOrError(ArrayRef<Type *> Elements, bool isPacked) {
   assert(isOpaque() && "Struct body already set!");
+
+  if (auto E = checkBody(Elements))
+    return E;
 
   setSubclassData(getSubclassData() | SCDB_HasBody);
   if (isPacked)
     setSubclassData(getSubclassData() | SCDB_Packed);
 
   NumContainedTys = Elements.size();
+  ContainedTys = Elements.empty()
+                     ? nullptr
+                     : Elements.copy(getContext().pImpl->Alloc).data();
 
-  if (Elements.empty()) {
-    ContainedTys = nullptr;
-    return;
+  return Error::success();
+}
+
+Error StructType::checkBody(ArrayRef<Type *> Elements) {
+  SmallSetVector<Type *, 4> Worklist(Elements.begin(), Elements.end());
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Type *Ty = Worklist[I];
+    if (Ty == this)
+      return createStringError(Twine("identified structure type '") +
+                               getName() + "' is recursive");
+    Worklist.insert(Ty->subtype_begin(), Ty->subtype_end());
   }
-
-  ContainedTys = Elements.copy(getContext().pImpl->Alloc).data();
+  return Error::success();
 }
 
 void StructType::setName(StringRef Name) {

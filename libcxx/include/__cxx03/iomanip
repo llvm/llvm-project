@@ -42,9 +42,9 @@ template <class charT, class traits, class Allocator>
 
 */
 
-#include <__config>
-#include <istream>
-#include <version>
+#include <__cxx03/__config>
+#include <__cxx03/istream>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -9,16 +9,16 @@
 #ifndef _LIBCPP___MUTEX_ONCE_FLAG_H
 #define _LIBCPP___MUTEX_ONCE_FLAG_H
 
-#include <__config>
-#include <__functional/invoke.h>
-#include <__memory/shared_ptr.h> // __libcpp_acquire_load
-#include <__tuple/tuple_indices.h>
-#include <__tuple/tuple_size.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__memory/shared_ptr.h> // __libcpp_acquire_load
+#include <__cxx03/__tuple/tuple_indices.h>
+#include <__cxx03/__tuple/tuple_size.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstdint>
 #ifndef _LIBCPP_CXX03_LANG
-#  include <tuple>
+#  include <__cxx03/tuple>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -26,7 +26,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

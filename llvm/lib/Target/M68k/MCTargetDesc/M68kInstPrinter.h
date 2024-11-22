@@ -42,7 +42,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
                                unsigned PrintMethodIdx, raw_ostream &O);
 
-  std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override;
+  std::pair<const char *, uint64_t>
+  getMnemonic(const MCInst &MI) const override;
 
 private:
   void printOperand(const MCInst *MI, unsigned opNum, raw_ostream &O);

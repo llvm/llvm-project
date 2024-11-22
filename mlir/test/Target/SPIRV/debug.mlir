@@ -39,7 +39,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
   spirv.func @group_non_uniform(%val: f32) "None" {
     // CHECK: loc({{".*debug.mlir"}}:42:10)
-    %0 = spirv.GroupNonUniformFAdd "Workgroup" "Reduce" %val : f32
+    %0 = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %val : f32 -> f32
     spirv.Return
   }
 

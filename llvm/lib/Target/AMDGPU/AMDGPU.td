@@ -1110,6 +1110,13 @@ def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "Target Requires Code Object V6"
 >;
 
+def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
+   "HasXF32Insts",
+   "true",
+   "Has instructions that support xf32 format, such as "
+   "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
+ >;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1444,9 +1451,6 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureDPALU_DPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
-   FeatureFP8Insts,
-   FeatureFP8ConversionInsts,
-   FeatureCvtFP8VOP1Bug,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1468,15 +1472,36 @@ def FeatureISAVersion9_4_Common : FeatureSet<
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureForceStoreSC0SC1])>;
+    [
+      FeatureForceStoreSC0SC1,
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
 
 def FeatureISAVersion9_4_1 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [FeatureForceStoreSC0SC1])>;
+    [
+      FeatureForceStoreSC0SC1,
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
 
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
-    [])>;
+    [
+      FeatureFP8Insts,
+      FeatureFP8ConversionInsts,
+      FeatureCvtFP8VOP1Bug,
+      FeatureXF32Insts
+    ])>;
+
+def FeatureISAVersion9_4_Generic : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+    [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion10_Common : FeatureSet<
   [FeatureGFX10,
@@ -2288,6 +2313,9 @@ def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
 
 def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
+
+def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
+   AssemblerPredicate<(all_of FeatureXF32Insts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

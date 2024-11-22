@@ -9,11 +9,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>

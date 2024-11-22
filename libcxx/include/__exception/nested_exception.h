@@ -22,7 +22,6 @@
 #include <__type_traits/is_final.h>
 #include <__type_traits/is_polymorphic.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

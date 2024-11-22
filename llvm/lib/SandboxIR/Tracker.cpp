@@ -111,10 +111,10 @@ void EraseFromParent::accept() {
 void EraseFromParent::revert(Tracker &Tracker) {
   // Place the bottom-most instruction first.
   auto [Operands, BotLLVMI] = InstrData[0];
-  if (auto *NextLLVMI = NextLLVMIOrBB.dyn_cast<llvm::Instruction *>()) {
+  if (auto *NextLLVMI = dyn_cast<llvm::Instruction *>(NextLLVMIOrBB)) {
     BotLLVMI->insertBefore(NextLLVMI);
   } else {
-    auto *LLVMBB = NextLLVMIOrBB.get<llvm::BasicBlock *>();
+    auto *LLVMBB = cast<llvm::BasicBlock *>(NextLLVMIOrBB);
     BotLLVMI->insertInto(LLVMBB, LLVMBB->end());
   }
   for (auto [OpNum, Op] : enumerate(Operands))
@@ -145,10 +145,10 @@ RemoveFromParent::RemoveFromParent(Instruction *RemovedI) : RemovedI(RemovedI) {
 }
 
 void RemoveFromParent::revert(Tracker &Tracker) {
-  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+  if (auto *NextI = dyn_cast<Instruction *>(NextInstrOrBB)) {
     RemovedI->insertBefore(NextI);
   } else {
-    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    auto *BB = cast<BasicBlock *>(NextInstrOrBB);
     RemovedI->insertInto(BB, BB->end());
   }
 }
@@ -170,7 +170,24 @@ void CatchSwitchAddHandler::revert(Tracker &Tracker) {
   LLVMCSI->removeHandler(LLVMCSI->handler_begin() + HandlerIdx);
 }
 
-void SwitchRemoveCase::revert(Tracker &Tracker) { Switch->addCase(Val, Dest); }
+SwitchRemoveCase::SwitchRemoveCase(SwitchInst *Switch) : Switch(Switch) {
+  for (const auto &C : Switch->cases())
+    Cases.push_back({C.getCaseValue(), C.getCaseSuccessor()});
+}
+
+void SwitchRemoveCase::revert(Tracker &Tracker) {
+  // SwitchInst::removeCase doesn't provide any guarantees about the order of
+  // cases after removal. In order to preserve the original ordering, we save
+  // all of them and, when reverting, clear them all then insert them in the
+  // desired order. This still relies on the fact that `addCase` will insert
+  // them at the end, but it is documented to invalidate `case_end()` so it's
+  // probably okay.
+  unsigned NumCases = Switch->getNumCases();
+  for (unsigned I = 0; I < NumCases; ++I)
+    Switch->removeCase(Switch->case_begin());
+  for (auto &Case : Cases)
+    Switch->addCase(Case.Val, Case.Dest);
+}
 
 #ifndef NDEBUG
 void SwitchRemoveCase::dump() const {
@@ -199,10 +216,10 @@ MoveInstr::MoveInstr(Instruction *MovedI) : MovedI(MovedI) {
 }
 
 void MoveInstr::revert(Tracker &Tracker) {
-  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+  if (auto *NextI = dyn_cast<Instruction *>(NextInstrOrBB)) {
     MovedI->moveBefore(NextI);
   } else {
-    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    auto *BB = cast<BasicBlock *>(NextInstrOrBB);
     MovedI->moveBefore(*BB, BB->end());
   }
 }

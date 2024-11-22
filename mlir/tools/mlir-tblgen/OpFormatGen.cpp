@@ -229,10 +229,9 @@ public:
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
-    function_ref<LiteralElement *(FormatElement * el)>
-        literalElementCastConverter =
-            [](FormatElement *el) { return cast<LiteralElement>(el); };
-    return llvm::map_range(literalElements, literalElementCastConverter);
+    return llvm::map_range(literalElements, [](FormatElement *el) {
+      return cast<LiteralElement>(el);
+    });
   }
 
   /// Returns a range to iterate over the parsing elements corresponding to the

@@ -193,7 +193,7 @@ multiclass FMA<bit add> {
     def sq_m_n: Intrinsic<Vector, (args Vector:$m1, Vector:$m2,
                                         unpromoted<Scalar>:$addend_s,
                                         Predicate:$pred),
-                          (seq (splat $addend_s):$addend, pred_cg)>;
+                          (select $pred, (seq (splat $addend_s):$addend, unpred_cg), $m1)>;
   }
 }
 

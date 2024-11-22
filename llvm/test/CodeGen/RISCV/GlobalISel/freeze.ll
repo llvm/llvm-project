@@ -3,30 +3,20 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+d,+zfh,+m,+v -global-isel -global-isel-abort=1 -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,RV64
 
 define i32 @freeze_int(i32 %x) {
-; RV32-LABEL: freeze_int:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mul a0, a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: freeze_int:
-; RV64:       # %bb.0:
-; RV64-NEXT:    mulw a0, a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: freeze_int:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a0, a0, a0
+; CHECK-NEXT:    ret
   %y1 = freeze i32 %x
   %t1 = mul i32 %y1, %y1
   ret i32 %t1
 }
 
 define i5 @freeze_int2(i5 %x) {
-; RV32-LABEL: freeze_int2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mul a0, a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: freeze_int2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    mulw a0, a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: freeze_int2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a0, a0, a0
+; CHECK-NEXT:    ret
   %y1 = freeze i5 %x
   %t1 = mul i5 %y1, %y1
   ret i5 %t1
@@ -106,19 +96,12 @@ define ptr @freeze_ptr(ptr %x) {
 %struct.T = type { i32, i32 }
 
 define i32 @freeze_struct(ptr %p) {
-; RV32-LABEL: freeze_struct:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 0(a0)
-; RV32-NEXT:    lw a0, 4(a0)
-; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: freeze_struct:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lw a1, 0(a0)
-; RV64-NEXT:    lw a0, 4(a0)
-; RV64-NEXT:    addw a0, a1, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: freeze_struct:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    lw a0, 4(a0)
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    ret
   %s = load %struct.T, ptr %p
   %y1 = freeze %struct.T %s
   %v1 = extractvalue %struct.T %y1, 0
@@ -128,19 +111,12 @@ define i32 @freeze_struct(ptr %p) {
 }
 
 define i32 @freeze_anonstruct(ptr %p) {
-; RV32-LABEL: freeze_anonstruct:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 0(a0)
-; RV32-NEXT:    lw a0, 4(a0)
-; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: freeze_anonstruct:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lw a1, 0(a0)
-; RV64-NEXT:    lw a0, 4(a0)
-; RV64-NEXT:    addw a0, a1, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: freeze_anonstruct:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    lw a0, 4(a0)
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    ret
   %s = load {i32, i32}, ptr %p
   %y1 = freeze {i32, i32} %s
   %v1 = extractvalue {i32, i32} %y1, 0
@@ -165,9 +141,9 @@ define i32 @freeze_anonstruct2(ptr %p) {
 ; RV64-NEXT:    lh a1, 4(a0)
 ; RV64-NEXT:    lw a0, 0(a0)
 ; RV64-NEXT:    lui a2, 16
-; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    addiw a2, a2, -1
 ; RV64-NEXT:    and a1, a1, a2
-; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    ret
   %s = load {i32, i16}, ptr %p
   %y1 = freeze {i32, i16} %s
@@ -179,19 +155,12 @@ define i32 @freeze_anonstruct2(ptr %p) {
 }
 
 define i32 @freeze_array(ptr %p) nounwind {
-; RV32-LABEL: freeze_array:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 0(a0)
-; RV32-NEXT:    lw a0, 4(a0)
-; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: freeze_array:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lw a1, 0(a0)
-; RV64-NEXT:    lw a0, 4(a0)
-; RV64-NEXT:    addw a0, a1, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: freeze_array:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    lw a0, 4(a0)
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    ret
   %s = load [2 x i32], ptr %p
   %y1 = freeze [2 x i32] %s
   %v1 = extractvalue [2 x i32] %y1, 0

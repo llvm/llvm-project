@@ -388,6 +388,61 @@ void nb26() [[clang::nonblocking]] {
 	abort_wrapper(); // no diagnostic
 }
 
+// --- Make sure we don't traverse requires and noexcept clauses. ---
+
+// Apparently some requires clauses are able to be collapsed into a constant before the nonblocking
+// analysis sees any function calls. This example (extracted from a real-world case where
+// `operator&&` in <valarray>, preceding the inclusion of <expected>) is sufficiently complex
+// to look like it contains function calls. There may be simpler examples.
+
+namespace ExpectedTest {
+
+template <class _Tp>
+inline constexpr bool is_copy_constructible_v = __is_constructible(_Tp, _Tp&);
+
+template <bool, class _Tp = void>
+struct enable_if {};
+template <class _Tp>
+struct enable_if<true, _Tp> {
+  typedef _Tp type;
+};
+
+template <bool _Bp, class _Tp = void>
+using enable_if_t = typename enable_if<_Bp, _Tp>::type;
+
+// Doesn't seem to matter whether the enable_if is true or false.
+template <class E1, class E2, enable_if_t<is_copy_constructible_v<E1>> = 0>
+inline bool operator&&(const E1& x, const E2& y);
+
+template <class _Tp, class _Err>
+class expected {
+public:
+  constexpr expected()
+    {}
+
+  // This is a deliberate corruption of the real implementation for simplicity.
+  constexpr expected(const expected&)
+    requires(is_copy_constructible_v<_Tp> && is_copy_constructible_v<_Err>)
+  = default;
+};
+
+void test() [[clang::nonblocking]]
+{
+	expected<int, int> a;
+	auto b = a;            // Copy constructor.
+}
+
+} // namespace ExpectedTest
+
+// Make sure a function call in a noexcept() clause is ignored.
+constexpr bool foo() [[clang::nonblocking(false)]] { return true; }
+void nb27() noexcept(foo()) [[clang::nonblocking]] {}
+
+// Make sure that simple type traits don't cause violations.
+void nb28() [[clang::nonblocking]] {
+	bool x = __is_constructible(int, const int&);
+}
+
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
 

@@ -1740,6 +1740,10 @@ multiclass BFI<string Instr, ValueType T, RegisterClass RC, Operand ImmCls> {
                 [(set (T RC:$f), (bfi (T imm:$a), (T RC:$b), (i32 imm:$c), (i32 imm:$d)))]>;
 }
 
+def Hexu32imm : Operand<i32> {
+  let PrintMethod = "printHexu32imm";
+}
+
 multiclass PRMT<ValueType T, RegisterClass RC> {
   def rrr
     : NVPTXInst<(outs RC:$d),
@@ -1748,12 +1752,12 @@ multiclass PRMT<ValueType T, RegisterClass RC> {
                 [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 Int32Regs:$c), imm:$mode))]>;
   def rri
     : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, i32imm:$c, PrmtMode:$mode),
+                (ins RC:$a, Int32Regs:$b, Hexu32imm:$c, PrmtMode:$mode),
                 !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
                 [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 imm:$c), imm:$mode))]>;
   def rii
     : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, i32imm:$b, i32imm:$c, PrmtMode:$mode),
+                (ins RC:$a, i32imm:$b, Hexu32imm:$c, PrmtMode:$mode),
                 !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
                 [(set (T RC:$d), (prmt (T RC:$a), (T imm:$b), (i32 imm:$c), imm:$mode))]>;
 }
@@ -3859,6 +3863,44 @@ foreach a_type = ["s", "u"] in {
     }
   }
 }
+
+//
+// Stack Manipulation
+//
+
+def SDTStackRestore : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
+def stackrestore :
+  SDNode<"NVPTXISD::STACKRESTORE", SDTStackRestore,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def stacksave :
+  SDNode<"NVPTXISD::STACKSAVE", SDTIntLeaf,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def STACKRESTORE_32 :
+  NVPTXInst<(outs), (ins Int32Regs:$ptr),
+            "stackrestore.u32 \t$ptr;",
+            [(stackrestore (i32 Int32Regs:$ptr))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def STACKSAVE_32 :
+  NVPTXInst<(outs Int32Regs:$dst), (ins),
+            "stacksave.u32 \t$dst;",
+            [(set Int32Regs:$dst, (i32 stacksave))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def STACKRESTORE_64 :
+  NVPTXInst<(outs), (ins Int64Regs:$ptr),
+            "stackrestore.u64 \t$ptr;",
+            [(stackrestore (i64 Int64Regs:$ptr))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def STACKSAVE_64 :
+  NVPTXInst<(outs Int64Regs:$dst), (ins),
+            "stacksave.u64 \t$dst;",
+            [(set Int64Regs:$dst, (i64 stacksave))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
 
 include "NVPTXIntrinsics.td"
 

@@ -351,6 +351,10 @@ public:
     ParsedAttributesView ArgAttrs;
   };
 
+  ParmVarDecl *ActOnMethodParmDeclaration(Scope *S, ObjCArgInfo &ArgInfo,
+                                          int ParamIndex,
+                                          bool MethodDefinition);
+
   Decl *ActOnMethodDeclaration(
       Scope *S,
       SourceLocation BeginLoc, // location of the + or -.
@@ -359,7 +363,7 @@ public:
       ArrayRef<SourceLocation> SelectorLocs, Selector Sel,
       // optional arguments. The number of types/arguments is obtained
       // from the Sel.getNumArgs().
-      ObjCArgInfo *ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
+      ParmVarDecl **ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
       unsigned CNumArgs, // c-style args
       const ParsedAttributesView &AttrList, tok::ObjCKeywordKind MethodImplKind,
       bool isVariadic, bool MethodDefinition);

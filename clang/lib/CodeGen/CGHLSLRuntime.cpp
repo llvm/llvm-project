@@ -306,6 +306,16 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
       continue;
 
     llvm::hlsl::ResourceClass RC = AttrResType->getAttrs().ResourceClass;
+    if (RC == llvm::hlsl::ResourceClass::UAV ||
+        RC == llvm::hlsl::ResourceClass::SRV)
+      // UAVs and SRVs have already been converted to use LLVM target types,
+      // we can disable generating of these resource annotations. This will
+      // enable progress on structured buffers with user defined types this
+      // resource annotations code does not handle and it crashes.
+      // This whole function is going to be removed as soon as cbuffers are
+      // converted to target types (llvm/llvm-project #114126).
+      return;
+
     bool IsROV = AttrResType->getAttrs().IsROV;
     llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
     llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);

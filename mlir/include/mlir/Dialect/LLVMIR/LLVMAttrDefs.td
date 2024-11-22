@@ -722,6 +722,22 @@ def LLVM_DICommonBlockAttr : LLVM_Attr<"DICommonBlock", "di_common_block",
 }
 
 //===----------------------------------------------------------------------===//
+// DIGenericSubrangeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGenericSubrangeAttr : LLVM_Attr<"DIGenericSubrange",
+                                           "di_generic_subrange", /*traits=*/[],
+                                           "DINodeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"::mlir::Attribute">:$count,
+    "::mlir::Attribute":$lowerBound,
+    OptionalParameter<"::mlir::Attribute">:$upperBound,
+    "::mlir::Attribute":$stride
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DISubroutineTypeAttr
 //===----------------------------------------------------------------------===//
 

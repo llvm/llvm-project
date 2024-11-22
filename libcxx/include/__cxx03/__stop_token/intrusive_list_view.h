@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___STOP_TOKEN_INTRUSIVE_LIST_VIEW_H
 #define _LIBCPP___STOP_TOKEN_INTRUSIVE_LIST_VIEW_H
 
-#include <__assert>
-#include <__config>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

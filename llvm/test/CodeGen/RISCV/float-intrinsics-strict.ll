@@ -414,6 +414,66 @@ define float @tan_f32(float %a) nounwind strictfp {
   ret float %1
 }
 
+declare float @llvm.experimental.constrained.atan2.f32(float, float, metadata, metadata)
+
+define float @atan2_f32(float %a, float %b) nounwind strictfp {
+; RV32IF-LABEL: atan2_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi sp, sp, -16
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    call atan2f
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: atan2_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    call atan2f
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: atan2_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call atan2f
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: atan2_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call atan2f
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
+; RV32I-LABEL: atan2_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call atan2f
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: atan2_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call atan2f
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.experimental.constrained.atan2.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret float %1
+}
+
 declare float @llvm.experimental.constrained.pow.f32(float, float, metadata, metadata)
 
 define float @pow_f32(float %a, float %b) nounwind strictfp {

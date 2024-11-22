@@ -527,72 +527,72 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <__functional/binary_function.h>
-#include <__functional/binary_negate.h>
-#include <__functional/bind.h>
-#include <__functional/binder1st.h>
-#include <__functional/binder2nd.h>
-#include <__functional/hash.h>
-#include <__functional/mem_fn.h> // TODO: deprecate
-#include <__functional/mem_fun_ref.h>
-#include <__functional/operations.h>
-#include <__functional/pointer_to_binary_function.h>
-#include <__functional/pointer_to_unary_function.h>
-#include <__functional/reference_wrapper.h>
-#include <__functional/unary_function.h>
-#include <__functional/unary_negate.h>
+#include <__cxx03/__functional/binary_function.h>
+#include <__cxx03/__functional/binary_negate.h>
+#include <__cxx03/__functional/bind.h>
+#include <__cxx03/__functional/binder1st.h>
+#include <__cxx03/__functional/binder2nd.h>
+#include <__cxx03/__functional/hash.h>
+#include <__cxx03/__functional/mem_fn.h> // TODO: deprecate
+#include <__cxx03/__functional/mem_fun_ref.h>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__functional/pointer_to_binary_function.h>
+#include <__cxx03/__functional/pointer_to_unary_function.h>
+#include <__cxx03/__functional/reference_wrapper.h>
+#include <__cxx03/__functional/unary_function.h>
+#include <__cxx03/__functional/unary_negate.h>
 
 #ifndef _LIBCPP_CXX03_LANG
-#  include <__functional/function.h>
+#  include <__cxx03/__functional/function.h>
 #endif
 
 #if _LIBCPP_STD_VER >= 17
-#  include <__functional/boyer_moore_searcher.h>
-#  include <__functional/default_searcher.h>
-#  include <__functional/invoke.h>
-#  include <__functional/not_fn.h>
+#  include <__cxx03/__functional/boyer_moore_searcher.h>
+#  include <__cxx03/__functional/default_searcher.h>
+#  include <__cxx03/__functional/invoke.h>
+#  include <__cxx03/__functional/not_fn.h>
 #endif
 
 #if _LIBCPP_STD_VER >= 20
-#  include <__functional/bind_back.h>
-#  include <__functional/bind_front.h>
-#  include <__functional/identity.h>
-#  include <__functional/ranges_operations.h>
-#  include <__type_traits/unwrap_ref.h>
+#  include <__cxx03/__functional/bind_back.h>
+#  include <__cxx03/__functional/bind_front.h>
+#  include <__cxx03/__functional/identity.h>
+#  include <__cxx03/__functional/ranges_operations.h>
+#  include <__cxx03/__type_traits/unwrap_ref.h>
 #endif
 
-#include <version>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && defined(_LIBCPP_CXX03_LANG)
-#  include <limits>
-#  include <new>
+#  include <__cxx03/limits>
+#  include <__cxx03/new>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 14
-#  include <array>
-#  include <initializer_list>
-#  include <unordered_map>
-#  include <vector>
+#  include <__cxx03/array>
+#  include <__cxx03/initializer_list>
+#  include <__cxx03/unordered_map>
+#  include <__cxx03/vector>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <atomic>
-#  include <concepts>
-#  include <cstdlib>
-#  include <exception>
-#  include <iosfwd>
-#  include <memory>
-#  include <stdexcept>
-#  include <tuple>
-#  include <type_traits>
-#  include <typeinfo>
-#  include <utility>
+#  include <__cxx03/atomic>
+#  include <__cxx03/concepts>
+#  include <__cxx03/cstdlib>
+#  include <__cxx03/exception>
+#  include <__cxx03/iosfwd>
+#  include <__cxx03/memory>
+#  include <__cxx03/stdexcept>
+#  include <__cxx03/tuple>
+#  include <__cxx03/type_traits>
+#  include <__cxx03/typeinfo>
+#  include <__cxx03/utility>
 #endif
 
 #endif // _LIBCPP_FUNCTIONAL

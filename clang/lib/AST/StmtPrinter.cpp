@@ -1184,6 +1184,18 @@ void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
   PrintStmt(S->getLoop());
 }
 
+void StmtPrinter::VisitOpenACCCombinedConstruct(OpenACCCombinedConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS, Policy);
+    Printer.VisitClauseList(S->clauses());
+  }
+  OS << '\n';
+
+  PrintStmt(S->getLoop());
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
