@@ -16,10 +16,8 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -145,9 +143,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
              .Case<VPWidenStoreEVLRecipe>([&](const VPWidenStoreEVLRecipe *S) {
                return VerifyEVLUse(*S, 2);
              })
-             .Case<VPWidenLoadEVLRecipe>([&](const VPWidenLoadEVLRecipe *L) {
-               return VerifyEVLUse(*L, 1);
-             })
+             .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe>(
+                 [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
              .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
                return VerifyEVLUse(
                    *W, Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
@@ -248,14 +245,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     return false;
   }
 
-  VPBlockBase *MiddleBB =
-      IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
-  if (IRBB != IRBB->getPlan()->getPreheader() &&
-      IRBB->getSinglePredecessor() != MiddleBB) {
-    errs() << "VPIRBasicBlock can only be used as pre-header or a successor of "
-              "middle-block at the moment!\n";
-    return false;
-  }
   return true;
 }
 
@@ -419,12 +408,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
               "BranchOnCond VPInstruction\n";
     return false;
   }
-
-  for (const auto &KV : Plan.getLiveOuts())
-    if (KV.second->getNumOperands() != 1) {
-      errs() << "live outs must have a single operand\n";
-      return false;
-    }
 
   return true;
 }

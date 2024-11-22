@@ -10,7 +10,7 @@
 define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocapture %arg) #0 {
 ; GCN-LABEL: reduced_nested_loop_conditions:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s0, s[2:3], 0x9
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    s_mov_b32 m0, -1
 ; GCN-NEXT:    s_mov_b32 s2, 0

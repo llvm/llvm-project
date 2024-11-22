@@ -96,14 +96,15 @@ def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
 def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
                       GIComplexPatternEquiv<sh3add_uw_op>;
 
-// FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
-def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
-          (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
+def gi_sexti32 : GIComplexOperandMatcher<s64, "selectSExtBits<32>">,
+                 GIComplexPatternEquiv<sexti32>;
 
-let Predicates = [IsRV64] in {
-def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
-}
+def gi_zexti32 : GIComplexOperandMatcher<s64, "selectZExtBits<32>">,
+                 GIComplexPatternEquiv<zexti32>;
+def gi_zexti16 : GIComplexOperandMatcher<s32, "selectZExtBits<16>">,
+                 GIComplexPatternEquiv<zexti16>;
+def gi_zexti8  : GIComplexOperandMatcher<s32, "selectZExtBits<8>">,
+                 GIComplexPatternEquiv<zexti8>;
 
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
@@ -168,11 +169,31 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
+// Load and store patterns for i16, needed because Zfh makes s16 load/store
+// legal and regbank select may not constrain registers to FP.
+def : LdPat<load, LH, i16>;
+def : StPat<store, SH, GPR, i16>;
+
+def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
+def : StPat<truncstorei8, SB, GPR, i16>;
+
+let Predicates = [HasAtomicLdSt] in {
+  def : LdPat<atomic_load_8,  LB, i16>;
+  def : LdPat<atomic_load_16, LH, i16>;
+
+  def : StPat<atomic_store_8,  SB, GPR, i16>;
+  def : StPat<atomic_store_16, SH, GPR, i16>;
+}
+
+let Predicates = [HasAtomicLdSt, IsRV64] in {
+  def : LdPat<atomic_load_32, LW, i32>;
+  def : StPat<atomic_store_32, SW, GPR, i32>;
+}
+
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
-def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
 def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
 
 def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
@@ -181,117 +202,56 @@ def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
 }]>;
 
 let Predicates = [IsRV64] in {
-def : LdPat<sextloadi8, LB, i32>;
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
-def : LdPat<sextloadi16, LH, i32>;
 def : LdPat<extloadi16, LH, i32>;
-def : LdPat<zextloadi8, LBU, i32>;
-def : LdPat<zextloadi16, LHU, i32>;
 
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
 
-def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
-def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
-def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
-
-def : PatGprGpr<add, ADDW, i32, i32>;
-def : PatGprGpr<sub, SUBW, i32, i32>;
-def : PatGprGpr<and, AND, i32, i32>;
-def : PatGprGpr<or, OR, i32, i32>;
-def : PatGprGpr<xor, XOR, i32, i32>;
-def : PatGprGpr<shl, SLLW, i32, i32>;
-def : PatGprGpr<srl, SRLW, i32, i32>;
-def : PatGprGpr<sra, SRAW, i32, i32>;
-
-def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (and GPR:$rs1, simm12i32:$imm)),
-          (ANDI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
-          (ORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
-          (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
-          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
-          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
-          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
-                (i64 (XLenSubTrailingOnes $mask)))>;
+def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
+def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
+def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 
 // Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
+def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }
 
-let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
+let Predicates = [IsRV64, NotHasStdExtZba] in
+def : Pat<(zext (i32 GPR:$src)), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 
-// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
-// shifts instead of 3. This can occur when unsigned is used to index an array.
-def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
-          (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
-}
+let Predicates = [IsRV32, NoStdExtZbb, NoStdExtZbkb] in 
+def : Pat<(XLenVT (zext (i16 GPR:$src))),
+          (SRLI (XLenVT (SLLI GPR:$src, 16)), 16)>;
 
-//===----------------------------------------------------------------------===//
-// M RV64 i32 legalization patterns.
-//===----------------------------------------------------------------------===//
+let Predicates = [IsRV64, NoStdExtZbb, NoStdExtZbkb] in
+def : Pat<(i64 (zext (i16 GPR:$src))),
+          (SRLI (XLenVT (SLLI GPR:$src, 48)), 48)>;
 
-let Predicates = [HasStdExtZmmul, IsRV64] in {
-def : PatGprGpr<mul, MULW, i32, i32>;
-}
+let Predicates = [IsRV32, NoStdExtZbb] in
+def : Pat<(XLenVT (sext (i16 GPR:$src))),
+          (SRAI (XLenVT (SLLI GPR:$src, 16)), 16)>;
 
-let Predicates = [HasStdExtM, IsRV64] in {
-def : PatGprGpr<sdiv, DIVW, i32, i32>;
-def : PatGprGpr<udiv, DIVUW, i32, i32>;
-def : PatGprGpr<srem, REMW, i32, i32>;
-def : PatGprGpr<urem, REMUW, i32, i32>;
-}
+let Predicates = [IsRV64, NoStdExtZbb] in
+def : Pat<(i64 (sext (i16 GPR:$src))),
+          (SRAI (XLenVT (SLLI GPR:$src, 48)), 48)>;
 
 //===----------------------------------------------------------------------===//
-// Zb* RV64 i32 patterns not used by SelectionDAG.
+// Zb* RV64 patterns not used by SelectionDAG.
 //===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZbb, IsRV64] in {
-def : PatGpr<ctlz, CLZW, i32>;
-def : PatGpr<cttz, CTZW, i32>;
-def : PatGpr<ctpop, CPOPW, i32>;
-
-def : Pat<(i32 (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
-def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
-
-def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
-} // Predicates = [HasStdExtZbb, IsRV64]
-
-let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
-def : Pat<(i32 (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
-
-def : PatGprGpr<rotl, ROLW, i32, i32>;
-def : PatGprGpr<rotr, RORW, i32, i32>;
-def : Pat<(i32 (rotr GPR:$rs1, uimm5i32:$imm)),
-          (RORIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$rs2)),
-          (RORIW GPR:$rs1, (ImmSubFrom32 uimm5i32:$rs2))>;
-} // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
-          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
-
-def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
-          (ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
-
-foreach i = {1,2,3} in {
-  defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i32 i)), GPR:$rs2)),
-            (shxadd GPR:$rs1, GPR:$rs2)>;
+def : Pat<(zext (i32 GPR:$src)), (ADD_UW GPR:$src, (XLenVT X0))>;
 }
-}
+
+let Predicates= [HasStdExtZbb] in
+def : Pat<(XLenVT (sext (i16 GPR:$rs))), (SEXT_H GPR:$rs)>;
+
+let Predicates = [HasStdExtZbb, IsRV32] in
+def : Pat<(i32 (zext (i16 GPR:$rs))), (ZEXT_H_RV32 GPR:$rs)>;
+let Predicates = [HasStdExtZbb, IsRV64] in
+def : Pat<(i64 (zext (i16 GPR:$rs))), (ZEXT_H_RV64 GPR:$rs)>;
+
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32] in
+def : Pat<(i32 (zext (i16 GPR:$rs))), (PACK GPR:$rs, (XLenVT X0))>;
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in
+def : Pat<(i64 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;

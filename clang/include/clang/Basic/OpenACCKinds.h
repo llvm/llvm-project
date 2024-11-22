@@ -152,6 +152,12 @@ inline bool isOpenACCComputeDirectiveKind(OpenACCDirectiveKind K) {
          K == OpenACCDirectiveKind::Kernels;
 }
 
+inline bool isOpenACCCombinedDirectiveKind(OpenACCDirectiveKind K) {
+  return K == OpenACCDirectiveKind::ParallelLoop ||
+         K == OpenACCDirectiveKind::SerialLoop ||
+         K == OpenACCDirectiveKind::KernelsLoop;
+}
+
 enum class OpenACCAtomicKind : uint8_t {
   Read,
   Write,

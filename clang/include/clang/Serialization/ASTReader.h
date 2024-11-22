@@ -50,6 +50,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
@@ -1341,9 +1342,48 @@ private:
   serialization::InputFile getInputFile(ModuleFile &F, unsigned ID,
                                         bool Complain = true);
 
+  /// The buffer used as the temporary backing storage for resolved paths.
+  SmallString<0> PathBuf;
+
+  /// A wrapper around StringRef that temporarily borrows the underlying buffer.
+  class TemporarilyOwnedStringRef {
+    StringRef String;
+    llvm::SaveAndRestore<SmallString<0>> UnderlyingBuffer;
+
+  public:
+    TemporarilyOwnedStringRef(StringRef S, SmallString<0> &UnderlyingBuffer)
+        : String(S), UnderlyingBuffer(UnderlyingBuffer, {}) {}
+
+    /// Return the wrapped \c StringRef that must be outlived by \c this.
+    const StringRef *operator->() const & { return &String; }
+    const StringRef &operator*() const & { return String; }
+
+    /// Make it harder to get a \c StringRef that outlives \c this.
+    const StringRef *operator->() && = delete;
+    const StringRef &operator*() && = delete;
+  };
+
 public:
-  void ResolveImportedPath(ModuleFile &M, std::string &Filename);
-  static void ResolveImportedPath(std::string &Filename, StringRef Prefix);
+  /// Get the buffer for resolving paths.
+  SmallString<0> &getPathBuf() { return PathBuf; }
+
+  /// Resolve \c Path in the context of module file \c M. The return value
+  /// must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory. The return
+  /// value must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, StringRef Prefix);
+
+  /// Resolve \c Path in the context of module file \c M.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    StringRef Prefix);
 
   /// Returns the first key declaration for the given declaration. This
   /// is one that is formerly-canonical (or still canonical) and whose module
@@ -2335,6 +2375,8 @@ public:
   /// Translate a FileID from another module file's FileID space into ours.
   FileID TranslateFileID(ModuleFile &F, FileID FID) const {
     assert(FID.ID >= 0 && "Reading non-local FileID.");
+    if (FID.isInvalid())
+      return FID;
     return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
   }
 
@@ -2347,11 +2389,8 @@ public:
 
   // Read a string
   static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
-
-  // Skip a string
-  static void SkipString(const RecordData &Record, unsigned &Idx) {
-    Idx += Record[Idx] + 1;
-  }
+  static StringRef ReadStringBlob(const RecordDataImpl &Record, unsigned &Idx,
+                                  StringRef &Blob);
 
   // Read a path
   std::string ReadPath(ModuleFile &F, const RecordData &Record, unsigned &Idx);
@@ -2359,11 +2398,8 @@ public:
   // Read a path
   std::string ReadPath(StringRef BaseDirectory, const RecordData &Record,
                        unsigned &Idx);
-
-  // Skip a path
-  static void SkipPath(const RecordData &Record, unsigned &Idx) {
-    SkipString(Record, Idx);
-  }
+  std::string ReadPathBlob(StringRef BaseDirectory, const RecordData &Record,
+                           unsigned &Idx, StringRef &Blob);
 
   /// Read a version tuple.
   static VersionTuple ReadVersionTuple(const RecordData &Record, unsigned &Idx);

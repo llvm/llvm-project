@@ -39,17 +39,17 @@ static cl::opt<std::string> Class("class",
                                   cl::value_desc("class name"),
                                   cl::cat(PrintEnumsCat));
 
-static void PrintRecords(const RecordKeeper &Records, raw_ostream &OS) {
+static void printRecords(const RecordKeeper &Records, raw_ostream &OS) {
   OS << Records; // No argument, dump all contents
 }
 
-static void PrintEnums(const RecordKeeper &Records, raw_ostream &OS) {
+static void printEnums(const RecordKeeper &Records, raw_ostream &OS) {
   for (const Record *Rec : Records.getAllDerivedDefinitions(Class))
     OS << Rec->getName() << ", ";
   OS << "\n";
 }
 
-static void PrintSets(const RecordKeeper &Records, raw_ostream &OS) {
+static void printSets(const RecordKeeper &Records, raw_ostream &OS) {
   SetTheory Sets;
   Sets.addFieldExpander("Set", "Elements");
   for (const Record *Rec : Records.getAllDerivedDefinitions("Set")) {
@@ -63,15 +63,15 @@ static void PrintSets(const RecordKeeper &Records, raw_ostream &OS) {
 }
 
 static TableGen::Emitter::Opt X[] = {
-    {"print-records", PrintRecords, "Print all records to stdout (default)",
+    {"print-records", printRecords, "Print all records to stdout (default)",
      true},
     {"print-detailed-records", EmitDetailedRecords,
      "Print full details of all records to stdout"},
     {"null-backend", [](const RecordKeeper &Records, raw_ostream &OS) {},
      "Do nothing after parsing (useful for timing)"},
     {"dump-json", EmitJSON, "Dump all records as machine-readable JSON"},
-    {"print-enums", PrintEnums, "Print enum values for a class"},
-    {"print-sets", PrintSets, "Print expanded sets for testing DAG exprs"},
+    {"print-enums", printEnums, "Print enum values for a class"},
+    {"print-sets", printSets, "Print expanded sets for testing DAG exprs"},
 };
 
 int main(int argc, char **argv) {

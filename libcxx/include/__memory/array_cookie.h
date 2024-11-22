@@ -12,10 +12,10 @@
 
 #include <__config>
 #include <__configuration/abi.h>
+#include <__cstddef/size_t.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/negation.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
