@@ -2051,7 +2051,8 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // Prior work:
   // https://discourse.llvm.org/t/rfc-clang-diagnostic-for-demangling-failures/82835/8
   // https://github.com/llvm/llvm-project/issues/111345
-  // assert(llvm::isMangledName(MangledName) &&
+  // assert((MangledName.startswith("_Z") || MangledName.startswith("?")) &&
+  //        !GD->hasAttr<AsmLabelAttr>() &&
   //        llvm::demangle(MangledName) != MangledName &&
   //        "LLVM demangler must demangle clang-generated names");
 
