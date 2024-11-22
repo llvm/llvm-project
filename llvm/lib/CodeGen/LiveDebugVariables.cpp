@@ -1316,14 +1316,13 @@ LiveDebugVariablesAnalysis::run(MachineFunction &MF,
   return LDV;
 }
 
-LiveDebugVariables::~LiveDebugVariables() {
-  if (PImpl)
-    delete static_cast<LDVImpl *>(PImpl);
+void LiveDebugVariables::Deleter::operator()(void *Ptr) const {
+  delete static_cast<LDVImpl *>(Ptr);
 }
 
 void LiveDebugVariables::releaseMemory() {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl)->clear();
+    static_cast<LDVImpl *>(PImpl.get())->clear();
 }
 
 void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
@@ -1334,13 +1333,12 @@ void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
     return;
   }
 
-  if (!PImpl)
-    PImpl = new LDVImpl(LIS); // reuse same object across analysis runs
+  PImpl.reset(new LDVImpl(LIS));
 
   // Have we been asked to track variable locations using instruction
   // referencing?
   bool InstrRef = MF.useDebugInstrRef();
-  static_cast<LDVImpl *>(PImpl)->runOnMachineFunction(MF, InstrRef);
+  static_cast<LDVImpl *>(PImpl.get())->runOnMachineFunction(MF, InstrRef);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1523,7 +1521,7 @@ void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
 void LiveDebugVariables::
 splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl)->splitRegister(OldReg, NewRegs);
+    static_cast<LDVImpl *>(PImpl.get())->splitRegister(OldReg, NewRegs);
 }
 
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
@@ -1975,12 +1973,12 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl)->emitDebugValues(VRM);
+    static_cast<LDVImpl *>(PImpl.get())->emitDebugValues(VRM);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveDebugVariables::dump() const {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl)->print(dbgs());
+    static_cast<LDVImpl *>(PImpl.get())->print(dbgs());
 }
 #endif

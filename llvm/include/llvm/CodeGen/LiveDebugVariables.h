@@ -33,20 +33,13 @@ class VirtRegMap;
 
 class LiveDebugVariables {
 private:
-  void *PImpl;
+  struct Deleter {
+    void operator()(void *Ptr) const;
+  };
+  std::unique_ptr<void, Deleter> PImpl;
 
 public:
   LiveDebugVariables() = default;
-  ~LiveDebugVariables();
-
-  LiveDebugVariables(LiveDebugVariables &&Other) : PImpl(Other.PImpl) {
-    Other.PImpl = nullptr;
-  }
-
-  LiveDebugVariables &operator=(LiveDebugVariables &&Other);
-
-  LiveDebugVariables &operator=(const LiveDebugVariables &) = delete;
-  LiveDebugVariables(const LiveDebugVariables &) = delete;
 
   void analyze(MachineFunction &MF, LiveIntervals *LIS);
   /// splitRegister - Move any user variables in OldReg to the live ranges in
