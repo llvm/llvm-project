@@ -6,10 +6,15 @@ tbx z0.b, z1.b, z2.b
 // CHECK: error: instruction requires: sve2 or sme
 // CHECK-NEXT: tbx z0.b, z1.b, z2.b
 
-.arch armv9-a+sve2-aes
-.arch armv9-a+nosve2-aes
+.arch armv9-a+sve-aes+nosve-aes
 aesd z23.b, z23.b, z13.b
-// CHECK: error: instruction requires: sve2-aes
+// CHECK: error: instruction requires: sve-aes
+// CHECK-NEXT: aesd z23.b, z23.b, z13.b
+
+// nosve2-aes should disable sve-aes but not sve2.
+.arch armv9-a+sve2-aes+nosve2-aes
+aesd z23.b, z23.b, z13.b
+// CHECK: error: instruction requires: sve-aes
 // CHECK-NEXT: aesd z23.b, z23.b, z13.b
 
 .arch armv9-a+sve2-sm4

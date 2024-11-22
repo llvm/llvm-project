@@ -22,6 +22,8 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
 
 #include "math.h"
 #include "sincos_helpers.h"
@@ -64,7 +66,8 @@ _CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
   int2 t = as_int2(regn & 1 ? tt.y : tt.x);
   t.hi ^= (x < 0.0) << 31;
 
-  return isnan(x) || isinf(x) ? as_double(QNANBITPATT_DP64) : as_double(t);
+  return __clc_isnan(x) || __clc_isinf(x) ? as_double(QNANBITPATT_DP64)
+                                          : as_double(t);
 }
 _CLC_UNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_tan, double);
 

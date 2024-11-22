@@ -805,7 +805,7 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   // 3. Inject an incoming cast op at the beginning of the block for the bbArg
   // corresponding to the `replacement` value.
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(&newBlock, newBlock.begin());
+  rewriter.setInsertionPointToStart(&newBlock);
   BlockArgument newRegionIterArg = newForOp.getTiedLoopRegionIterArg(
       &newForOp->getOpOperand(operand.getOperandNumber()));
   Value castIn = castFn(rewriter, newForOp.getLoc(), oldType, newRegionIterArg);

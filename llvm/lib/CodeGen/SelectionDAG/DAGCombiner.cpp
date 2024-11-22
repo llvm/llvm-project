@@ -149,6 +149,11 @@ static cl::opt<bool> EnableVectorFCopySignExtendRound(
     cl::desc(
         "Enable merging extends and rounds into FCOPYSIGN on vector types"));
 
+static cl::opt<unsigned int>
+    MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
+             cl::desc("DAG combiner limit number of steps when searching DAG "
+                      "for predecessor nodes"));
+
 namespace {
 
   class DAGCombiner {
@@ -2330,6 +2335,8 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
   if (N->getOpcode() == ISD::TRUNCATE) {
     Op = N->getOperand(0);
     Known = DAG.computeKnownBits(Op);
+    if (N->getFlags().hasNoUnsignedWrap())
+      Known.Zero.setBitsFrom(N.getScalarValueSizeInBits());
     return true;
   }
 
@@ -7094,8 +7101,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // fold (and (masked_load) (splat_vec (x, ...))) to zext_masked_load
     auto *MLoad = dyn_cast<MaskedLoadSDNode>(N0);
     ConstantSDNode *Splat = isConstOrConstSplat(N1, true, true);
-    if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && Splat &&
-        N1.hasOneUse()) {
+    if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && Splat) {
       EVT LoadVT = MLoad->getMemoryVT();
       EVT ExtVT = VT;
       if (TLI.isLoadExtLegal(ISD::ZEXTLOAD, ExtVT, LoadVT)) {
@@ -13889,23 +13895,27 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     unsigned OpBits   = Op.getScalarValueSizeInBits();
     unsigned MidBits  = N0.getScalarValueSizeInBits();
     unsigned DestBits = VT.getScalarSizeInBits();
-    unsigned NumSignBits = DAG.ComputeNumSignBits(Op);
 
-    if (OpBits == DestBits) {
-      // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
-      // bits, it is already ready.
-      if (NumSignBits > DestBits-MidBits)
+    if (N0->getFlags().hasNoSignedWrap() ||
+        DAG.ComputeNumSignBits(Op) > OpBits - MidBits) {
+      if (OpBits == DestBits) {
+        // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
+        // bits, it is already ready.
         return Op;
-    } else if (OpBits < DestBits) {
-      // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
-      // bits, just sext from i32.
-      if (NumSignBits > OpBits-MidBits)
+      }
+
+      if (OpBits < DestBits) {
+        // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
+        // bits, just sext from i32.
         return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op);
-    } else {
+      }
+
       // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
       // bits, just truncate to i32.
-      if (NumSignBits > OpBits-MidBits)
-        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
+      SDNodeFlags Flags;
+      Flags.setNoSignedWrap(true);
+      Flags.setNoUnsignedWrap(N0->getFlags().hasNoUnsignedWrap());
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
     }
 
     // fold (sext (truncate x)) -> (sextinreg x).
@@ -14176,24 +14186,28 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       unsigned OpBits = SrcVT.getScalarSizeInBits();
       unsigned MidBits = MinVT.getScalarSizeInBits();
       unsigned DestBits = VT.getScalarSizeInBits();
-      unsigned NumSignBits = DAG.ComputeNumSignBits(Op);
 
-      if (OpBits == DestBits) {
-        // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
-        // bits, it is already ready.
-        if (NumSignBits > DestBits - MidBits)
+      if (N0->getFlags().hasNoSignedWrap() ||
+          DAG.ComputeNumSignBits(Op) > OpBits - MidBits) {
+        if (OpBits == DestBits) {
+          // Op is i32, Mid is i8, and Dest is i32.  If Op has more than 24 sign
+          // bits, it is already ready.
           return Op;
-      } else if (OpBits < DestBits) {
-        // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
-        // bits, just sext from i32.
-        // FIXME: This can probably be ZERO_EXTEND nneg?
-        if (NumSignBits > OpBits - MidBits)
+        }
+
+        if (OpBits < DestBits) {
+          // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
+          // bits, just sext from i32.
+          // FIXME: This can probably be ZERO_EXTEND nneg?
           return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op);
-      } else {
+        }
+
         // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
         // bits, just truncate to i32.
-        if (NumSignBits > OpBits - MidBits)
-          return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
+        SDNodeFlags Flags;
+        Flags.setNoSignedWrap(true);
+        Flags.setNoUnsignedWrap(true);
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op, Flags);
       }
     }
 
@@ -18902,7 +18916,6 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
-  constexpr unsigned int MaxSteps = 8192;
   if (isa<ConstantSDNode>(Offset))
     for (SDNode::use_iterator UI = BasePtr->use_begin(),
                               UE = BasePtr->use_end();
@@ -19080,7 +19093,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
                                    IsMasked, OtherPtr, TLI)) {
         SmallVector<const SDNode *, 2> Worklist;
         Worklist.push_back(Use);
-        if (SDNode::hasPredecessorHelper(N, Visited, Worklist))
+        if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps))
           return false;
       }
     }
@@ -19121,7 +19134,6 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
     // Check for #2.
     SmallPtrSet<const SDNode *, 32> Visited;
     SmallVector<const SDNode *, 8> Worklist;
-    constexpr unsigned int MaxSteps = 8192;
     // Ptr is predecessor to both N and Op.
     Visited.insert(Ptr.getNode());
     Worklist.push_back(N);

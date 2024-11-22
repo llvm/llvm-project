@@ -37,7 +37,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1541,7 +1540,10 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // Note that this relies on the structure of the AArch64 register file. In
     // particular, a subregister cannot be written without overwriting the
     // whole register.
-    if (RegClass->HasDisjunctSubRegs) {
+    if (RegClass->HasDisjunctSubRegs && RegClass->CoveredBySubRegs &&
+        (TRI->getSubRegisterClass(RegClass, AArch64::dsub0) ||
+         TRI->getSubRegisterClass(RegClass, AArch64::qsub0) ||
+         TRI->getSubRegisterClass(RegClass, AArch64::zsub0))) {
       LLVM_DEBUG(
           dbgs()
           << "  Cannot rename operands with multiple disjunct subregisters ("

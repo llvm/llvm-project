@@ -37,7 +37,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
-#include <memory>
 #include <queue>
 #include <stack>
 

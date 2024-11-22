@@ -24,7 +24,7 @@ define protected amdgpu_kernel void @test(ptr addrspace(1) nocapture %ptr.coerce
 ; GCN-NEXT:    ds_write_b8 v1, v0
 ; GCN-NEXT:    ds_read_u8 v2, v1 offset:2
 ; GCN-NEXT:    ds_read_u16 v3, v1
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b8 v1, v2 offset:6
 ; GCN-NEXT:    ds_write_b16 v1, v3 offset:4

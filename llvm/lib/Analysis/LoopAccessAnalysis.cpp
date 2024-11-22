@@ -100,7 +100,7 @@ static cl::opt<unsigned> MemoryCheckMergeThreshold(
 
 /// Maximum SIMD width.
 const unsigned VectorizerParams::MaxVectorWidth = 64;
-/// Maximum LMUL factor.
+/// Maximum unroll factor or maximum LMUL factor for RISC-V-based targets.
 const unsigned VectorizerParams::MaxVectorUF = 8;
 
 /// We collect dependences up to this threshold.

@@ -311,6 +311,8 @@ struct APFloatBase {
   static unsigned int semanticsIntSizeInBits(const fltSemantics&, bool);
   static bool semanticsHasZero(const fltSemantics &);
   static bool semanticsHasSignedRepr(const fltSemantics &);
+  static bool semanticsHasInf(const fltSemantics &);
+  static bool semanticsHasNaN(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
@@ -1126,21 +1128,6 @@ public:
   ///
   /// \param Semantics - type float semantics
   static APFloat getAllOnesValue(const fltSemantics &Semantics);
-
-  /// Returns true if the given semantics supports either NaN or Infinity.
-  ///
-  /// \param Sem - type float semantics
-  static bool hasNanOrInf(const fltSemantics &Sem) {
-    switch (SemanticsToEnum(Sem)) {
-    default:
-      return true;
-    // Below Semantics do not support {NaN or Inf}
-    case APFloat::S_Float6E3M2FN:
-    case APFloat::S_Float6E2M3FN:
-    case APFloat::S_Float4E2M1FN:
-      return false;
-    }
-  }
 
   /// Returns true if the given semantics has actual significand.
   ///

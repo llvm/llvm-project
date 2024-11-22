@@ -24,6 +24,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -984,8 +985,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
-    MainCGPipeline.addPass(
-        createCGSCCToFunctionPassAdaptor(CoroAnnotationElidePass()));
+    MainCGPipeline.addPass(CoroAnnotationElidePass());
   }
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
@@ -1036,7 +1036,8 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         CoroSplitPass(Level != OptimizationLevel::O0)));
-    MPM.addPass(createModuleToFunctionPassAdaptor(CoroAnnotationElidePass()));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(CoroAnnotationElidePass()));
   }
 
   return MPM;
@@ -2161,6 +2162,19 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
+
+  if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
+    // Explicitly disable sample loader inlining and use flattened profile in O0
+    // pipeline.
+    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
+                                        PGOOpt->ProfileRemappingFile,
+                                        ThinOrFullLTOPhase::None, nullptr,
+                                        /*DisableSampleProfileInlining=*/true,
+                                        /*UseFlattenedProfile=*/true));
+    // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
+    // RequireAnalysisPass for PSI before subsequent non-module passes.
+    MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  }
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 

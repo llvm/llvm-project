@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ByteProvider.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -889,6 +888,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::GET_FPMODE, MVT::i32, Legal);
 
   setOperationAction(ISD::MUL, MVT::i1, Promote);
+
+  if (Subtarget->hasBF16ConversionInsts()) {
+    setOperationAction(ISD::FP_ROUND, MVT::v2bf16, Legal);
+    setOperationAction(ISD::FP_ROUND, MVT::bf16, Legal);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
+  }
 
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
@@ -2376,9 +2381,7 @@ void SITargetLowering::allocateSpecialInputSGPRs(
   if (UserSGPRInfo.hasDispatchPtr())
     allocateSGPR64Input(CCInfo, ArgInfo.DispatchPtr);
 
-  const Module *M = MF.getFunction().getParent();
-  if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5)
+  if (UserSGPRInfo.hasQueuePtr())
     allocateSGPR64Input(CCInfo, ArgInfo.QueuePtr);
 
   // Implicit arg ptr takes the place of the kernarg segment pointer. This is a
@@ -2429,9 +2432,7 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
-  const Module *M = MF.getFunction().getParent();
-  if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
+  if (UserSGPRInfo.hasQueuePtr()) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
@@ -3947,8 +3948,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (InGlue)
     Ops.push_back(InGlue);
 
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
   if (IsTailCall) {
@@ -3964,11 +3963,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     }
 
-    return DAG.getNode(OPC, DL, NodeTys, Ops);
+    return DAG.getNode(OPC, DL, MVT::Other, Ops);
   }
 
   // Returns a chain and a flag for retval copy to use.
-  SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, NodeTys, Ops);
+  SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   Chain = Call.getValue(0);
   InGlue = Call.getValue(1);
 
@@ -9398,27 +9397,33 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getAtomic(Opcode, SDLoc(Op), M->getMemoryVT(), M->getVTList(),
                          Ops, M->getMemOperand());
   }
-  case Intrinsic::amdgcn_s_get_barrier_state: {
+  case Intrinsic::amdgcn_s_get_barrier_state:
+  case Intrinsic::amdgcn_s_get_named_barrier_state: {
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;
     unsigned Opc;
-    bool IsInlinableBarID = false;
-    int64_t BarID;
 
     if (isa<ConstantSDNode>(Op->getOperand(2))) {
-      BarID = cast<ConstantSDNode>(Op->getOperand(2))->getSExtValue();
-      IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarID);
-    }
-
-    if (IsInlinableBarID) {
+      uint64_t BarID = cast<ConstantSDNode>(Op->getOperand(2))->getZExtValue();
+      if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
+        BarID = (BarID >> 4) & 0x3F;
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
       Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
-      SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(2));
-      Ops.push_back(M0Val.getValue(0));
+      if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state) {
+        SDValue M0Val;
+        M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, Op->getOperand(2),
+                            DAG.getShiftAmountConstant(4, MVT::i32, DL));
+        M0Val = SDValue(
+            DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
+                               DAG.getTargetConstant(0x3F, DL, MVT::i32)),
+            0);
+        Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
+      } else
+        Ops.push_back(copyToM0(DAG, Chain, DL, Op->getOperand(2)).getValue(0));
     }
 
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
@@ -9820,6 +9825,22 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFEN
                          : AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFSET;
       break;
+    case 12:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_BOTHEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_IDXEN
+                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFSET;
+      break;
+    case 16:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_BOTHEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_IDXEN
+                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFEN
+                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFSET;
+      break;
     }
 
     SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(3));
@@ -9839,11 +9860,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     Ops.push_back(Rsrc);
     Ops.push_back(Op.getOperand(6 + OpOffset)); // soffset
     Ops.push_back(Op.getOperand(7 + OpOffset)); // imm offset
+    bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
     unsigned Aux = Op.getConstantOperandVal(8 + OpOffset);
-    Ops.push_back(
-        DAG.getTargetConstant(Aux & AMDGPU::CPol::ALL, DL, MVT::i8)); // cpol
     Ops.push_back(DAG.getTargetConstant(
-        Aux & AMDGPU::CPol::SWZ_pregfx12 ? 1 : 0, DL, MVT::i8)); // swz
+        Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12),
+        DL, MVT::i8)); // cpol
+    Ops.push_back(DAG.getTargetConstant(
+        Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
+            ? 1
+            : 0,
+        DL, MVT::i8));                                           // swz
     Ops.push_back(M0Val.getValue(0));                            // Chain
     Ops.push_back(M0Val.getValue(1));                            // Glue
 
@@ -9888,6 +9914,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       break;
     case 4:
       Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
+      break;
+    case 12:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX3;
+      break;
+    case 16:
+      if (!Subtarget->hasLDSLoadB96_B128())
+        return SDValue();
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX4;
       break;
     }
 
@@ -9958,27 +9994,55 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                       Op->getOperand(2), Chain),
                    0);
   case Intrinsic::amdgcn_s_barrier_init:
+  case Intrinsic::amdgcn_s_barrier_signal_var: {
+    // these two intrinsics have two operands: barrier pointer and member count
+    SDValue Chain = Op->getOperand(0);
+    SmallVector<SDValue, 2> Ops;
+    SDValue BarOp = Op->getOperand(2);
+    SDValue CntOp = Op->getOperand(3);
+    SDValue M0Val;
+    unsigned Opc = IntrinsicID == Intrinsic::amdgcn_s_barrier_init
+                       ? AMDGPU::S_BARRIER_INIT_M0
+                       : AMDGPU::S_BARRIER_SIGNAL_M0;
+    // extract the BarrierID from bits 4-9 of BarOp
+    SDValue BarID;
+    BarID = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
+                        DAG.getShiftAmountConstant(4, MVT::i32, DL));
+    BarID =
+        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, BarID,
+                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
+                0);
+    // Member count should be put into M0[ShAmt:+6]
+    // Barrier ID should be put into M0[5:0]
+    M0Val =
+        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
+                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
+                0);
+    constexpr unsigned ShAmt = 16;
+    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
+                        DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
+
+    M0Val = SDValue(
+        DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32, M0Val, BarID), 0);
+
+    Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
+
+    auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    return SDValue(NewMI, 0);
+  }
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_wakeup_barrier: {
+    // these three intrinsics have one operand: barrier pointer
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;
     SDValue BarOp = Op->getOperand(2);
     unsigned Opc;
-    bool IsInlinableBarID = false;
-    int64_t BarVal;
 
     if (isa<ConstantSDNode>(BarOp)) {
-      BarVal = cast<ConstantSDNode>(BarOp)->getSExtValue();
-      IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarVal);
-    }
-
-    if (IsInlinableBarID) {
+      uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
       switch (IntrinsicID) {
       default:
         return SDValue();
-      case Intrinsic::amdgcn_s_barrier_init:
-        Opc = AMDGPU::S_BARRIER_INIT_IMM;
-        break;
       case Intrinsic::amdgcn_s_barrier_join:
         Opc = AMDGPU::S_BARRIER_JOIN_IMM;
         break;
@@ -9986,16 +10050,15 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
         break;
       }
-
-      SDValue K = DAG.getTargetConstant(BarVal, DL, MVT::i32);
+      // extract the BarrierID from bits 4-9 of the immediate
+      unsigned BarID = (BarVal >> 4) & 0x3F;
+      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
+      Ops.push_back(Chain);
     } else {
       switch (IntrinsicID) {
       default:
         return SDValue();
-      case Intrinsic::amdgcn_s_barrier_init:
-        Opc = AMDGPU::S_BARRIER_INIT_M0;
-        break;
       case Intrinsic::amdgcn_s_barrier_join:
         Opc = AMDGPU::S_BARRIER_JOIN_M0;
         break;
@@ -10003,25 +10066,15 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
         break;
       }
-    }
-
-    if (IntrinsicID == Intrinsic::amdgcn_s_barrier_init) {
+      // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
       SDValue M0Val;
-      // Member count will be read from M0[16:22]
-      M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, Op.getOperand(3),
-                          DAG.getShiftAmountConstant(16, MVT::i32, DL));
-
-      if (!IsInlinableBarID) {
-        // If reference to barrier id is not an inline constant then it must be
-        // referenced with M0[4:0]. Perform an OR with the member count to
-        // include it in M0.
-        M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, Op.getOperand(2), M0Val);
-      }
+      M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
+                          DAG.getShiftAmountConstant(4, MVT::i32, DL));
+      M0Val =
+          SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
+                                     DAG.getTargetConstant(0x3F, DL, MVT::i32)),
+                  0);
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
-    } else if (IsInlinableBarID) {
-      Ops.push_back(Chain);
-    } else {
-      Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
     }
 
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
@@ -13988,13 +14041,11 @@ static void placeSources(ByteProvider<SDValue> &Src0,
   Src0s.push_back(
       {*Src0.Src,
        ((Src0.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
-       Src1.SrcOffset / 4});
+       Src0.SrcOffset / 4});
   Src1s.push_back(
       {*Src1.Src,
        ((Src1.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
        Src1.SrcOffset / 4});
-
-  return;
 }
 
 static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
@@ -15401,6 +15452,22 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         // v_accvgpr_read, but we do not produce agpr reads during selection,
         // so no use checks are needed.
         MRI.setRegClass(Op.getReg(), NewRC);
+      }
+
+      if (TII->isMAI(MI)) {
+        // The ordinary src0, src1, src2 were legalized above.
+        //
+        // We have to also legalize the appended v_mfma_ld_scale_b32 operands,
+        // as a separate instruction.
+        int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                 AMDGPU::OpName::scale_src0);
+        if (Src0Idx != -1) {
+          int Src1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                   AMDGPU::OpName::scale_src1);
+          if (TII->usesConstantBus(MRI, MI, Src0Idx) &&
+              TII->usesConstantBus(MRI, MI, Src1Idx))
+            TII->legalizeOpWithMove(MI, Src1Idx);
+        }
       }
 
       if (!HasAGPRs)

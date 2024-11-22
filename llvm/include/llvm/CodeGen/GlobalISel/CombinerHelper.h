@@ -870,6 +870,14 @@ public:
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+
+  /// Remove references to rhs if it is undef
+  bool matchShuffleUndefRHS(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Turn shuffle a, b, mask -> shuffle undef, b, mask iff mask does not
+  /// reference a.
+  bool matchShuffleDisjointMask(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
@@ -924,6 +932,15 @@ public:
   // unmerge_values(anyext(build vector)) -> build vector(anyext)
   bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
                                            BuildFnTy &MatchInfo);
+
+  // merge_values(_, undef) -> anyext
+  bool matchMergeXAndUndef(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // merge_values(_, zero) -> zext
+  bool matchMergeXAndZero(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // overflow sub
+  bool matchSuboCarryOut(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

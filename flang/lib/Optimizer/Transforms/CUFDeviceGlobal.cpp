@@ -26,25 +26,37 @@ namespace fir {
 
 namespace {
 
+static void processAddrOfOp(fir::AddrOfOp addrOfOp,
+                            mlir::SymbolTable &symbolTable, bool onlyConstant) {
+  if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
+          addrOfOp.getSymbol().getRootReference().getValue())) {
+    bool isCandidate{(onlyConstant ? globalOp.getConstant() : true) &&
+                     !globalOp.getDataAttr()};
+    if (isCandidate)
+      globalOp.setDataAttrAttr(cuf::DataAttributeAttr::get(
+          addrOfOp.getContext(), globalOp.getConstant()
+                                     ? cuf::DataAttribute::Constant
+                                     : cuf::DataAttribute::Device));
+  }
+}
+
 static void prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
                                          mlir::SymbolTable &symbolTable,
                                          bool onlyConstant = true) {
   auto cudaProcAttr{
       funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
-  if (!cudaProcAttr || cudaProcAttr.getValue() == cuf::ProcAttribute::Host)
-    return;
-  for (auto addrOfOp : funcOp.getBody().getOps<fir::AddrOfOp>()) {
-    if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
-            addrOfOp.getSymbol().getRootReference().getValue())) {
-      bool isCandidate{(onlyConstant ? globalOp.getConstant() : true) &&
-                       !globalOp.getDataAttr()};
-      if (isCandidate)
-        globalOp.setDataAttrAttr(cuf::DataAttributeAttr::get(
-            funcOp.getContext(), globalOp.getConstant()
-                                     ? cuf::DataAttribute::Constant
-                                     : cuf::DataAttribute::Device));
+  if (!cudaProcAttr || cudaProcAttr.getValue() == cuf::ProcAttribute::Host) {
+    // Look for globlas in CUF KERNEL DO operations.
+    for (auto cufKernelOp : funcOp.getBody().getOps<cuf::KernelOp>()) {
+      cufKernelOp.walk([&](fir::AddrOfOp addrOfOp) {
+        processAddrOfOp(addrOfOp, symbolTable, onlyConstant);
+      });
     }
+    return;
   }
+  funcOp.walk([&](fir::AddrOfOp addrOfOp) {
+    processAddrOfOp(addrOfOp, symbolTable, onlyConstant);
+  });
 }
 
 class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {

@@ -89,6 +89,53 @@ define ptr addrspace(7) @simple_inbounds_gep(ptr addrspace(7) %ptr, i32 %off) {
   ret ptr addrspace(7) %ret
 }
 
+define ptr addrspace(7) @simple_nuw_gep(ptr addrspace(7) %ptr, i32 %off) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @simple_nuw_gep
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nuw i32 [[OFF]], 4
+; CHECK-NEXT:    [[RET:%.*]] = add nuw i32 [[PTR_OFF]], [[RET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[PTR_RSRC]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %ret = getelementptr nuw i32, ptr addrspace(7) %ptr, i32 %off
+  ret ptr addrspace(7) %ret
+}
+
+define ptr addrspace(7) @simple_nusw_gep(ptr addrspace(7) %ptr, i32 %off) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @simple_nusw_gep
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nsw i32 [[OFF]], 4
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PTR_OFF]], [[RET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[PTR_RSRC]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %ret = getelementptr nusw i32, ptr addrspace(7) %ptr, i32 %off
+  ret ptr addrspace(7) %ret
+}
+
+define ptr addrspace(7) @nusw_gep_pair(ptr addrspace(7) %ptr, i32 %off) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @nusw_gep_pair
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[P1_IDX:%.*]] = mul nsw i32 [[OFF]], 4
+; CHECK-NEXT:    [[P1:%.*]] = add i32 [[PTR_OFF]], [[P1_IDX]]
+; CHECK-NEXT:    [[RET:%.*]] = add nuw i32 [[P1]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[PTR_RSRC]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %p1 = getelementptr nusw i32, ptr addrspace(7) %ptr, i32 %off
+  %ret = getelementptr nusw i32, ptr addrspace(7) %p1, i32 4
+  ret ptr addrspace(7) %ret
+}
+
 define ptr addrspace(7) @zero_gep(ptr addrspace(7) %ptr) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @zero_gep
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {

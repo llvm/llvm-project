@@ -23,6 +23,8 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_abs.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_max.h>
 
 #include "config.h"
@@ -36,11 +38,12 @@ struct fp {
 
 _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
   /* special cases */
-  if (isnan(a) || isnan(b) || isnan(c) || isinf(a) || isinf(b))
+  if (__clc_isnan(a) || __clc_isnan(b) || __clc_isnan(c) || __clc_isinf(a) ||
+      __clc_isinf(b))
     return mad(a, b, c);
 
   /* If only c is inf, and both a,b are regular numbers, the result is c*/
-  if (isinf(c))
+  if (__clc_isinf(c))
     return c;
 
   a = __clc_flush_denormal_if_not_supported(a);

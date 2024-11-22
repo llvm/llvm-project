@@ -18,7 +18,7 @@ RELOCS-NEXT:    Address: 0x2000
 RELOCS-NEXT:  }
 
 RUN: llvm-readobj --hex-dump=.test impsym.dll | FileCheck --check-prefix=TEST %s
-TEST: 0x180003000 00200000
+TEST: 0x180004000 00200000
 
 RUN: llvm-readobj --hex-dump=.rdata impsym.dll | FileCheck --check-prefix=RDATA-DEMANGLED %s
 RDATA-MANGLED:   0x180002000 00100080 01000000

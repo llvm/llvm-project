@@ -100,6 +100,39 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
+  static Instruction *getLowest(ArrayRef<Instruction *> Instrs) {
+    Instruction *LowestI = Instrs.front();
+    for (auto *I : drop_begin(Instrs)) {
+      if (LowestI->comesBefore(I))
+        LowestI = I;
+    }
+    return LowestI;
+  }
+  /// If all values in \p Bndl are of the same scalar type then return it,
+  /// otherwise return nullptr.
+  static Type *tryGetCommonScalarType(ArrayRef<Value *> Bndl) {
+    Value *V0 = Bndl[0];
+    Type *Ty0 = Utils::getExpectedType(V0);
+    Type *ScalarTy = VecUtils::getElementType(Ty0);
+    for (auto *V : drop_begin(Bndl)) {
+      Type *NTy = Utils::getExpectedType(V);
+      Type *NScalarTy = VecUtils::getElementType(NTy);
+      if (NScalarTy != ScalarTy)
+        return nullptr;
+    }
+    return ScalarTy;
+  }
+
+  /// Similar to tryGetCommonScalarType() but will assert that there is a common
+  /// type. So this is faster in release builds as it won't iterate through the
+  /// values.
+  static Type *getCommonScalarType(ArrayRef<Value *> Bndl) {
+    Value *V0 = Bndl[0];
+    Type *Ty0 = Utils::getExpectedType(V0);
+    Type *ScalarTy = VecUtils::getElementType(Ty0);
+    assert(tryGetCommonScalarType(Bndl) && "Expected common scalar type!");
+    return ScalarTy;
+  }
 };
 
 } // namespace llvm::sandboxir

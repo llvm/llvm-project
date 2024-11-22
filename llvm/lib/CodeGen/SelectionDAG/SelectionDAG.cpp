@@ -2509,7 +2509,11 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
-  SDValue StoresInChain{};
+  // FIXME: This should allow stores with the same chains (not just the entry
+  // chain), but there's a risk the store is within a (CALLSEQ_START,
+  // CALLSEQ_END) pair, which after this expansion will lead to nested call
+  // sequences.
+  SDValue InChain = getEntryNode();
   SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
   for (SDNode *User : Node->uses()) {
     if (!ISD::isNormalStore(User))
@@ -2522,11 +2526,9 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
         ST->getAddressSpace() != 0 ||
         ST->getAlign() <
             getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
-        (StoresInChain && ST->getChain() != StoresInChain) ||
-        Node->isPredecessorOf(ST->getChain().getNode()))
+        ST->getChain() != InChain)
       continue;
     ResultStores[ResNo] = ST;
-    StoresInChain = ST->getChain();
   }
 
   TargetLowering::ArgListTy Args;
@@ -2568,7 +2570,6 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   Type *RetType = CallRetResNo.has_value()
                       ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
                       : Type::getVoidTy(Ctx);
-  SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
   SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
                                      TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
@@ -3918,6 +3919,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::PARITY: {
     // Parity returns 0 everywhere but the LSB.
     Known.Zero.setBitsFrom(1);
+    break;
+  }
+  case ISD::MGATHER:
+  case ISD::MLOAD: {
+    ISD::LoadExtType ETy =
+        (Opcode == ISD::MGATHER)
+            ? cast<MaskedGatherSDNode>(Op)->getExtensionType()
+            : cast<MaskedLoadSDNode>(Op)->getExtensionType();
+    if (ETy == ISD::ZEXTLOAD) {
+      EVT MemVT = cast<MemSDNode>(Op)->getMemoryVT();
+      KnownBits Known0(MemVT.getScalarSizeInBits());
+      return Known0.zext(BitWidth);
+    }
     break;
   }
   case ISD::LOAD: {

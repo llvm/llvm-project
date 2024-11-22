@@ -596,6 +596,10 @@ public:
                                 SMDiagnostic &Error, SMRange &SourceRange);
 
   void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
+  bool isWWMReg(Register Reg) const {
+    return Reg.isVirtual() ? checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG)
+                           : WWMReservedRegs.contains(Reg);
+  }
 
   void updateNonWWMRegMask(BitVector &RegMask) { NonWWMRegMask = RegMask; }
   BitVector getNonWWMRegMask() const { return NonWWMRegMask; }

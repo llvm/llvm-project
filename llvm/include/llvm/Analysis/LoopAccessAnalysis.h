@@ -33,8 +33,8 @@ class TargetTransformInfo;
 struct VectorizerParams {
   /// Maximum SIMD width.
   static const unsigned MaxVectorWidth;
-  /// Maximum unroll factor factor. Can represent actual unroll factor and/or
-  /// some other target-specific features, like LMUL factor for RISC-V with RVV
+  /// Maximum unroll factor. Can represent actual unroll factor and/or some
+  /// other target-specific features, like LMUL factor for RISC-V with RVV
   /// support.
   static const unsigned MaxVectorUF;
 
@@ -350,7 +350,7 @@ private:
   /// backwards-vectorizable or unknown (triggering a runtime check).
   unsigned MaxTargetVectorWidthInBits = 0;
 
-  /// true if current target supports non-power-of-2 dependence distances.
+  /// True if current target supports non-power-of-2 dependence distances.
   bool AllowNonPow2Deps = false;
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of

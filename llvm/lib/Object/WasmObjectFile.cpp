@@ -21,16 +21,13 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 
 #define DEBUG_TYPE "wasm-object"
 
@@ -1242,7 +1239,6 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
       Sig.Params.push_back(parseValType(Ctx, ParamType));
-      continue;
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
     while (ReturnCount--) {

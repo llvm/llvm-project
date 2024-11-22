@@ -2879,8 +2879,10 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
   Instruction *LastInst = Insts.pop_back_val();
   LastInst->removeFromParent();
 
-  for (auto *Inst : Insts)
+  for (auto *Inst : Insts) {
+    Inst->setDebugLoc(I.getDebugLoc());
     Worklist.push(Inst);
+  }
   return LastInst;
 }
 

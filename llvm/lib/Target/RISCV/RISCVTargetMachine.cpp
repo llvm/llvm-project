@@ -17,7 +17,6 @@
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -35,7 +34,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
@@ -52,6 +50,13 @@ static cl::opt<bool> EnableRedundantCopyElimination(
 static cl::opt<cl::boolOrDefault>
     EnableGlobalMerge("riscv-enable-global-merge", cl::Hidden,
                       cl::desc("Enable the global merge pass"));
+
+static cl::opt<bool> ForceEnableGlobalMergeExternalGlobals(
+    "riscv-force-enable-global-merge-external-globals", cl::Hidden,
+    cl::init(false),
+    cl::desc(
+        "If the global merge pass is enabled, force enable global merging of "
+        "external globals (overriding any logic that might disable it)"));
 
 static cl::opt<bool>
     EnableMachineCombiner("riscv-enable-machine-combiner",
@@ -165,9 +170,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT, Options), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options), TT, CPU, FS,
+                               Options, getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
   initAsmInfo();
 
@@ -469,10 +474,17 @@ bool RISCVPassConfig::addPreISel() {
     addPass(createBarrierNoopPass());
   }
 
-  if (EnableGlobalMerge == cl::BOU_TRUE) {
+  if ((TM->getOptLevel() != CodeGenOptLevel::None &&
+       EnableGlobalMerge == cl::BOU_UNSET) ||
+      EnableGlobalMerge == cl::BOU_TRUE) {
+    // FIXME: Like AArch64, we disable extern global merging by default due to
+    // concerns it might regress some workloads. Unlike AArch64, we don't
+    // currently support enabling the pass in an "OnlyOptimizeForSize" mode.
+    // Investigating and addressing both items are TODO.
     addPass(createGlobalMergePass(TM, /* MaxOffset */ 2047,
                                   /* OnlyOptimizeForSize */ false,
-                                  /* MergeExternalByDefault */ true));
+                                  /* MergeExternalByDefault */
+                                  ForceEnableGlobalMergeExternalGlobals));
   }
 
   return false;

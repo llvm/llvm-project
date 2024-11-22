@@ -41,13 +41,7 @@ enum AssignFlags {
   DeallocateLHS = 1 << 6
 };
 
-using MemmoveFct = void *(*)(void *, const void *, std::size_t);
-
 #ifdef RT_DEVICE_COMPILATION
-static RT_API_ATTRS void *MemmoveWrapper(
-    void *dest, const void *src, std::size_t count) {
-  return Fortran::runtime::memmove(dest, src, count);
-}
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
     Terminator &terminator, int flags, MemmoveFct memmoveFct = &MemmoveWrapper);
 #else

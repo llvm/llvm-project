@@ -60,6 +60,7 @@
 #include <__type_traits/maybe_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__vector/vector.h>
 #include <initializer_list>
 #include <stdexcept>
@@ -112,7 +113,7 @@ public:
   class value_compare {
   private:
     key_compare __comp_;
-    value_compare(key_compare __c) : __comp_(__c) {}
+    _LIBCPP_HIDE_FROM_ABI value_compare(key_compare __c) : __comp_(__c) {}
     friend flat_map;
 
   public:
@@ -658,7 +659,7 @@ public:
 
   template <class _InputIterator>
     requires __has_input_iterator_category<_InputIterator>::value
-  void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
+  _LIBCPP_HIDE_FROM_ABI void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve(__last - __first);
     }
