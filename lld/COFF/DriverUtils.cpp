@@ -934,7 +934,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   }
 
   // Handle /WX early since it converts missing argument warnings to errors.
-  errorHandler().fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
+  ctx.e.fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
 
   if (missingCount)
     fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
