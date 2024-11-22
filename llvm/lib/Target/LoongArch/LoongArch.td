@@ -118,6 +118,11 @@ def FeatureLAM_BH
                         "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
 def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
 
+def FeatureLD_SEQ_SA
+    : SubtargetFeature<"ld-seq-sa", "HasLD_SEQ_SA", "true",
+                        "Don't use load-load barrier (dbar 0x700).">;
+def HasLD_SEQ_SA : Predicate<"Subtarget->hasLD_SEQ_SA()">;
+
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
