@@ -4350,6 +4350,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   SmallVector<RecipeVFPair> InvalidCosts;
   for (const auto &Plan : VPlans) {
     for (ElementCount VF : Plan->vectorFactors()) {
+      if (VF.isScalar())
+        continue;
+
       VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
                             CM, CM.CostKind);
       precomputeCosts(*Plan, VF, CostCtx);
