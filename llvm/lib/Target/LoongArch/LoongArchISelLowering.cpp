@@ -16,7 +16,6 @@
 #include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchRegisterInfo.h"
 #include "LoongArchSubtarget.h"
-#include "LoongArchTargetMachine.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
