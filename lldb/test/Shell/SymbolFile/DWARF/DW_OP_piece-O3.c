@@ -7,7 +7,7 @@
 
 // RUN: %clang_host -O3 -gdwarf %s -o %t
 // RUN: %lldb %t \
-// RUN:   -o "b done" \
+// RUN:   -o "b 25" \
 // RUN:   -o "r" \
 // RUN:   -o "p/x array[2]" \
 // RUN:   -b | FileCheck %s
@@ -17,10 +17,10 @@
 
 static char array[5] = {0, 1, 2, 3, 4};
 
-int done() __attribute__((noinline));
-int done() { return array[2]; };
+void func() __attribute__((noinline));
+void func() { ++array[2]; };
 
 int main(void) {
-  ++array[2];
-  return done();
+  func();
+  return 0;
 }
