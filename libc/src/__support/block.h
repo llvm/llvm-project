@@ -174,32 +174,16 @@ public:
     return inner_size - sizeof(prev_) + BLOCK_OVERHEAD;
   }
 
-  /// @returns The number of usable bytes inside the block were it to be
-  /// allocated.
+  /// @returns The number of usable bytes inside the block.
   size_t inner_size() const {
     if (!next())
       return 0;
     return inner_size(outer_size());
   }
 
-  /// @returns The number of usable bytes inside a block with the given outer
-  /// size were it to be allocated.
   static size_t inner_size(size_t outer_size) {
     // The usable region includes the prev_ field of the next block.
-    return inner_size_free(outer_size) + sizeof(prev_);
-  }
-
-  /// @returns The number of usable bytes inside the block if it remains free.
-  size_t inner_size_free() const {
-    if (!next())
-      return 0;
-    return inner_size_free(outer_size());
-  }
-
-  /// @returns The number of usable bytes inside a block with the given outer
-  /// size if it remains free.
-  static size_t inner_size_free(size_t outer_size) {
-    return outer_size - BLOCK_OVERHEAD;
+    return outer_size - BLOCK_OVERHEAD + sizeof(prev_);
   }
 
   /// @returns A pointer to the usable space inside this block.
@@ -217,11 +201,14 @@ public:
 
   /// Attempts to split this block.
   ///
-  /// If successful, the block will have an inner size of at least
-  /// `new_inner_size`, rounded to ensure that the split point is on an
-  /// ALIGNMENT boundary. The remaining space will be returned as a new block.
-  /// Note that the prev_ field of the next block counts as part of the inner
-  /// size of the returnd block.
+  /// If successful, the block will have an inner size of `new_inner_size`,
+  /// rounded to ensure that the split point is on an ALIGNMENT boundary. The
+  /// remaining space will be returned as a new block. Note that the prev_ field
+  /// of the next block counts as part of the inner size of the returnd block.
+  ///
+  /// This method may fail if the remaining space is too small to hold a new
+  /// block. If this method fails for any reason, the original block is
+  /// unmodified.
   optional<Block *> split(size_t new_inner_size);
 
   /// Merges this block with the one that comes after it.
@@ -455,7 +442,7 @@ Block<OffsetType, kAlign>::split(size_t new_inner_size) {
   // The prev_ field of the next block is always available, so there is a
   // minimum size to a block created through splitting.
   if (new_inner_size < sizeof(prev_))
-    new_inner_size = sizeof(prev_);
+    return {};
 
   size_t old_inner_size = inner_size();
   new_inner_size =
