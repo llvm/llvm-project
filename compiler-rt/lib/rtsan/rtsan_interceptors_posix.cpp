@@ -736,6 +736,26 @@ INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
 #define RTSAN_MAYBE_INTERCEPT_KEVENT64
 #endif // SANITIZER_INTERCEPT_KQUEUE
 
+INTERCEPTOR(int, pipe, int pipefd[2]) {
+  __rtsan_notify_intercepted_call("pipe");
+  return REAL(pipe)(pipefd);
+}
+
+INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkfifo");
+  return REAL(mkfifo)(pathname, mode);
+}
+
+// see comment above about -Wunguarded-availability-new
+// and why we disable it here
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
+INTERCEPTOR(int, mkfifoat, int dirfd, const char *pathname, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkfifoat");
+  return REAL(mkfifoat)(dirfd, pathname, mode);
+}
+#pragma clang diagnostic pop
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -836,6 +856,10 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_KQUEUE;
   RTSAN_MAYBE_INTERCEPT_KEVENT;
   RTSAN_MAYBE_INTERCEPT_KEVENT64;
+
+  INTERCEPT_FUNCTION(pipe);
+  INTERCEPT_FUNCTION(mkfifo);
+  INTERCEPT_FUNCTION(mkfifoat);
 }
 
 #endif // SANITIZER_POSIX
