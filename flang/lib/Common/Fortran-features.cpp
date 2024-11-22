@@ -43,6 +43,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::BadBranchTarget);
   warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
+  warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
   warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
