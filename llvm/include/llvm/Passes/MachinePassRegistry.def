@@ -97,6 +97,7 @@ LOOP_PASS("loop-term-fold", LoopTermFoldPass())
 // LiveVariables can be removed completely, and LiveIntervals can be directly
 // computed. (We still either need to regenerate kill flags after regalloc, or
 // preferably fix the scavenger to not depend on them).
+MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-intervals", LiveIntervalsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-reg-matrix", LiveRegMatrixAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
@@ -114,7 +115,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PI
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksPass())
-// MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("lazy-machine-bfi",
 // LazyMachineBlockFrequencyInfoAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopInfoAnalysis())
