@@ -818,6 +818,15 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def MakeDouble :  DXILOp<101, makeDouble> {
+  let Doc = "creates a double value";
+  let LLVMIntrinsic = int_dx_asdouble;
+  let arguments = [Int32Ty, Int32Ty];
+  let result = DoubleTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def SplitDouble :  DXILOp<102, splitDouble> {
   let Doc = "Splits a double into 2 uints";
   let arguments = [OverloadTy];
@@ -859,6 +868,14 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+}
+
+def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
+  let Doc = "returns true if the expression is true in any of the active lanes in the current wave";
+  let LLVMIntrinsic = int_dx_wave_any;
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {

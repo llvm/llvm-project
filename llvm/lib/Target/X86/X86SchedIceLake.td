@@ -350,8 +350,8 @@ defm : ICXWriteResPair<WriteFVarBlendZ,[ICXPort015], 2, [2], 2, 7>;
 defm : X86WriteRes<WriteVecLoad,         [ICXPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [ICXPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [ICXPort23], 7, [1], 1>;
-defm : X86WriteRes<WriteVecLoadNT,       [ICXPort23], 6, [1], 1>;
-defm : X86WriteRes<WriteVecLoadNTY,      [ICXPort23], 7, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [ICXPort23,ICXPort015], 7, [1,1], 2>;
+defm : X86WriteRes<WriteVecLoadNTY,      [ICXPort23,ICXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [ICXPort23,ICXPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [ICXPort23,ICXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecStore,        [ICXPort78,ICXPort49], 1, [1,1], 2>;
@@ -392,7 +392,7 @@ defm : ICXWriteResPair<WriteShuffle,  [ICXPort5],  1, [1], 1, 5>; // Vector shuf
 defm : ICXWriteResPair<WriteShuffleX, [ICXPort15], 1, [1], 1, 6>;
 defm : ICXWriteResPair<WriteShuffleY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteShuffleZ, [ICXPort5],  1, [1], 1, 7>;
-defm : ICXWriteResPair<WriteVarShuffle,  [ICXPort5],  1, [1], 1, 5>; // Vector variable shuffles.
+defm : ICXWriteResPair<WriteVarShuffle,  [ICXPort0,ICXPort5],  1, [1,1], 2, 5>; // Vector variable shuffles.
 defm : ICXWriteResPair<WriteVarShuffleX, [ICXPort15], 1, [1], 1, 6>;
 defm : ICXWriteResPair<WriteVarShuffleY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarShuffleZ, [ICXPort5],  1, [1], 1, 7>;
@@ -861,8 +861,8 @@ def: InstRW<[ICXWriteResGroup33], (instregex "KADD(B|D|Q|W)kk",
                                              "VCMPPD(Z|Z128|Z256)rri",
                                              "VCMPPS(Z|Z128|Z256)rri",
                                              "VCMP(SD|SS)Zrr",
-                                             "VFPCLASS(PD|PS)(Z|Z128|Z256)rr",
-                                             "VFPCLASS(SD|SS)Zrr",
+                                             "VFPCLASS(PD|PS)(Z|Z128|Z256)ri",
+                                             "VFPCLASS(SD|SS)Zri",
                                              "VPCMPB(Z|Z128|Z256)rri",
                                              "VPCMPD(Z|Z128|Z256)rri",
                                              "VPCMPEQ(B|D|Q|W)(Z|Z128|Z256)rr",
@@ -1361,8 +1361,7 @@ def ICXWriteResGroup95 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup95], (instrs VMOVNTDQAZ128rm,
-                                          VPBLENDDrmi)>;
+def: InstRW<[ICXWriteResGroup95], (instrs VPBLENDDrmi)>;
 def: InstRW<[ICXWriteResGroup95, ReadAfterVecXLd],
                                   (instregex "VBLENDMPDZ128rm(b?)",
                                              "VBLENDMPSZ128rm(b?)",
@@ -1568,8 +1567,7 @@ def ICXWriteResGroup121 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup121], (instrs VMOVNTDQAZ256rm,
-                                           VPBLENDDYrmi)>;
+def: InstRW<[ICXWriteResGroup121], (instrs VPBLENDDYrmi)>;
 def: InstRW<[ICXWriteResGroup121, ReadAfterVecYLd],
                                    (instregex "VBLENDMPD(Z|Z256)rm(b?)",
                                               "VBLENDMPS(Z|Z256)rm(b?)",
@@ -1591,14 +1589,14 @@ def: InstRW<[ICXWriteResGroup121, ReadAfterVecYLd],
                                               "VBROADCASTI64X4Zrm(b?)",
                                               "VBROADCASTSD(Z|Z256)rm(b?)",
                                               "VBROADCASTSS(Z|Z256)rm(b?)",
-                                              "VINSERTF32x4(Z|Z256)rm(b?)",
-                                              "VINSERTF32x8Zrm(b?)",
-                                              "VINSERTF64x2(Z|Z256)rm(b?)",
-                                              "VINSERTF64x4Zrm(b?)",
-                                              "VINSERTI32x4(Z|Z256)rm(b?)",
-                                              "VINSERTI32x8Zrm(b?)",
-                                              "VINSERTI64x2(Z|Z256)rm(b?)",
-                                              "VINSERTI64x4Zrm(b?)",
+                                              "VINSERTF32X4(Z|Z256)rm(b?)",
+                                              "VINSERTF32X8Zrm(b?)",
+                                              "VINSERTF64X2(Z|Z256)rm(b?)",
+                                              "VINSERTF64X4Zrm(b?)",
+                                              "VINSERTI32X4(Z|Z256)rm(b?)",
+                                              "VINSERTI32X8Zrm(b?)",
+                                              "VINSERTI64X2(Z|Z256)rm(b?)",
+                                              "VINSERTI64X4Zrm(b?)",
                                               "VMOVAPD(Z|Z256)rm(b?)",
                                               "VMOVAPS(Z|Z256)rm(b?)",
                                               "VMOVDDUP(Z|Z256)rm(b?)",
@@ -1705,8 +1703,8 @@ def: InstRW<[ICXWriteResGroup136], (instrs VPMOVSXBWYrm,
                                            VPMOVSXWDYrm,
                                            VPMOVZXWDYrm)>;
 def: InstRW<[ICXWriteResGroup136], (instregex "VALIGN(D|Q)Z128rm(b?)i",
-                                              "VFPCLASSSDZrm(b?)",
-                                              "VFPCLASSSSZrm(b?)",
+                                              "VFPCLASSSDZm(b?)i",
+                                              "VFPCLASSSSZm(b?)i",
                                               "(V?)PCMPGTQrm",
                                               "VPERMI2DZ128rm(b?)",
                                               "VPERMI2PDZ128rm(b?)",
@@ -1728,15 +1726,15 @@ def ICXWriteResGroup136_2 : SchedWriteRes<[ICXPort5,ICXPort23]> {
 }
 def: InstRW<[ICXWriteResGroup136_2], (instregex "VCMP(PD|PS)Z128rm(b?)i",
                                                 "VCMP(SD|SS)Zrm",
-                                                "VFPCLASSPDZ128rm(b?)",
-                                                "VFPCLASSPSZ128rm(b?)",
-                                                "VPCMPBZ128rmi(b?)",
-                                                "VPCMPDZ128rmi(b?)",
+                                                "VFPCLASSPDZ128m(b?)i",
+                                                "VFPCLASSPSZ128m(b?)i",
+                                                "VPCMPBZ128rm(b?)i",
+                                                "VPCMPDZ128rm(b?)i",
                                                 "VPCMPEQ(B|D|Q|W)Z128rm(b?)",
                                                 "VPCMPGT(B|D|Q|W)Z128rm(b?)",
-                                                "VPCMPQZ128rmi(b?)",
-                                                "VPCMPU(B|D|Q|W)Z128rmi(b?)",
-                                                "VPCMPWZ128rmi(b?)",
+                                                "VPCMPQZ128rm(b?)i",
+                                                "VPCMPU(B|D|Q|W)Z128rm(b?)i",
+                                                "VPCMPWZ128rm(b?)i",
                                                 "(V?)PACK(U|S)S(DW|WB)(Z128)?rm",
                                                 "VPTESTMBZ128rm(b?)",
                                                 "VPTESTMDZ128rm(b?)",
@@ -1793,10 +1791,10 @@ def ICXWriteResGroup148_2 : SchedWriteRes<[ICXPort5,ICXPort23]> {
 }
 def: InstRW<[ICXWriteResGroup148_2], (instregex "VCMPPD(Z|Z256)rm(b?)i",
                                                 "VCMPPS(Z|Z256)rm(b?)i",
-                                                "VFPCLASSPD(Z|Z256)rm(b?)",
-                                                "VFPCLASSPS(Z|Z256)rm(b?)",
-                                                "VPCMPB(Z|Z256)rmi(b?)",
-                                                "VPCMPD(Z|Z256)rmi(b?)",
+                                                "VFPCLASSPD(Z|Z256)m(b?)i",
+                                                "VFPCLASSPS(Z|Z256)m(b?)i",
+                                                "VPCMPB(Z|Z256)rm(b?)i",
+                                                "VPCMPD(Z|Z256)rm(b?)i",
                                                 "VPCMPEQB(Z|Z256)rm(b?)",
                                                 "VPCMPEQD(Z|Z256)rm(b?)",
                                                 "VPCMPEQQ(Z|Z256)rm(b?)",
@@ -1805,10 +1803,10 @@ def: InstRW<[ICXWriteResGroup148_2], (instregex "VCMPPD(Z|Z256)rm(b?)i",
                                                 "VPCMPGTD(Z|Z256)rm(b?)",
                                                 "VPCMPGTQ(Z|Z256)rm(b?)",
                                                 "VPCMPGTW(Z|Z256)rm(b?)",
-                                                "VPCMPQ(Z|Z256)rmi(b?)",
-                                                "VPCMPU(B|D|Q|W)Z256rmi(b?)",
-                                                "VPCMPU(B|D|Q|W)Zrmi(b?)",
-                                                "VPCMPW(Z|Z256)rmi(b?)",
+                                                "VPCMPQ(Z|Z256)rm(b?)i",
+                                                "VPCMPU(B|D|Q|W)Z256rm(b?)i",
+                                                "VPCMPU(B|D|Q|W)Zrm(b?)i",
+                                                "VPCMPW(Z|Z256)rm(b?)i",
                                                 "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z256)rm",
                                                 "VPTESTM(B|D|Q|W)Z256rm(b?)",
                                                 "VPTESTM(B|D|Q|W)Zrm(b?)",

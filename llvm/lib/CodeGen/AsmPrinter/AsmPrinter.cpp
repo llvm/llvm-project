@@ -3849,6 +3849,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
                                    AsmPrinter &AP, const Constant *BaseCV,
                                    uint64_t Offset,
                                    AsmPrinter::AliasMapTy *AliasList) {
+  assert((!AliasList || AP.TM.getTargetTriple().isOSBinFormatXCOFF()) &&
+         "AliasList only expected for XCOFF");
   emitGlobalAliasInline(AP, Offset, AliasList);
   uint64_t Size = DL.getTypeAllocSize(CV->getType());
 
@@ -3858,7 +3860,27 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (!BaseCV && CV->hasOneUse())
     BaseCV = dyn_cast<Constant>(CV->user_back());
 
-  if (isa<ConstantAggregateZero>(CV) || isa<UndefValue>(CV))
+  if (isa<ConstantAggregateZero>(CV)) {
+    StructType *structType;
+    if (AliasList && (structType = llvm::dyn_cast<StructType>(CV->getType()))) {
+      // Handle cases of aliases to direct struct elements
+      const StructLayout *Layout = DL.getStructLayout(structType);
+      uint64_t SizeSoFar = 0;
+      for (unsigned int i = 0, n = structType->getNumElements(); i < n - 1;
+           ++i) {
+        uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
+        AP.OutStreamer->emitZeros(GapToNext);
+        SizeSoFar += GapToNext;
+        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
+      }
+      AP.OutStreamer->emitZeros(Size - SizeSoFar);
+      return;
+    } else {
+      return AP.OutStreamer->emitZeros(Size);
+    }
+  }
+
+  if (isa<UndefValue>(CV))
     return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {

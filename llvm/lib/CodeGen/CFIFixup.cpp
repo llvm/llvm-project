@@ -67,7 +67,12 @@
 
 #include "llvm/CodeGen/CFIFixup.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -75,6 +80,8 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Target/TargetMachine.h"
+
+#include <iterator>
 
 using namespace llvm;
 
@@ -120,7 +127,7 @@ findPrologueEnd(MachineFunction &MF, MachineBasicBlock::iterator &PrologueEnd) {
 // iterator can point to the end of the block. Instructions are inserted
 // *before* the iterator.
 struct InsertionPoint {
-  MachineBasicBlock *MBB;
+  MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator Iterator;
 };
 
@@ -150,6 +157,30 @@ insertRememberRestorePair(const InsertionPoint &RememberInsertPt,
                         ->getIterator())};
 }
 
+// Copies all CFI instructions before PrologueEnd and inserts them before
+// DstInsertPt. Returns the iterator to the first instruction after the
+// inserted instructions.
+static InsertionPoint cloneCfiPrologue(const InsertionPoint &PrologueEnd,
+                                       const InsertionPoint &DstInsertPt) {
+  MachineFunction &MF = *DstInsertPt.MBB->getParent();
+
+  auto cloneCfiInstructions = [&](MachineBasicBlock::iterator Begin,
+                                  MachineBasicBlock::iterator End) {
+    auto ToClone = map_range(
+        make_filter_range(make_range(Begin, End), isPrologueCFIInstruction),
+        [&](const MachineInstr &MI) { return MF.CloneMachineInstr(&MI); });
+    DstInsertPt.MBB->insert(DstInsertPt.Iterator, ToClone.begin(),
+                            ToClone.end());
+  };
+
+  // Clone all CFI instructions from previous blocks.
+  for (auto &MBB : make_range(MF.begin(), PrologueEnd.MBB->getIterator()))
+    cloneCfiInstructions(MBB.begin(), MBB.end());
+  // Clone all CFI instructions from the final prologue block.
+  cloneCfiInstructions(PrologueEnd.MBB->begin(), PrologueEnd.Iterator);
+  return DstInsertPt;
+}
+
 bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   const TargetFrameLowering &TFL = *MF.getSubtarget().getFrameLowering();
   if (!TFL.enableCFIFixup(MF))
@@ -172,7 +203,8 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
     bool HasFrameOnEntry : 1;
     bool HasFrameOnExit : 1;
   };
-  SmallVector<BlockFlags, 32> BlockInfo(NumBlocks, {false, false, false, false});
+  SmallVector<BlockFlags, 32> BlockInfo(NumBlocks,
+                                        {false, false, false, false});
   BlockInfo[0].Reachable = true;
   BlockInfo[0].StrongNoFrameOnEntry = true;
 
@@ -209,10 +241,11 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   // of the previous block. If the intended frame state is different, insert
   // compensating CFI instructions.
   bool Change = false;
-  // `InsertPt` always points to the point in a preceding block where we have to
-  // insert a `.cfi_remember_state`, in the case that the current block needs a
-  // `.cfi_restore_state`.
-  InsertionPoint InsertPt = {PrologueBlock, PrologueEnd};
+  // `InsertPt[sectionID]` always points to the point in a preceding block where
+  // we have to insert a `.cfi_remember_state`, in the case that the current
+  // block needs a `.cfi_restore_state`.
+  SmallDenseMap<MBBSectionID, InsertionPoint> InsertionPts;
+  InsertionPts[PrologueBlock->getSectionID()] = {PrologueBlock, PrologueEnd};
 
   assert(PrologueEnd != PrologueBlock->begin() &&
          "Inconsistent notion of \"prologue block\"");
@@ -239,14 +272,28 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 #endif
+
+    // If the block is the first block in its section, then it doesn't have a
+    // frame on entry.
+    HasFrame &= !CurrBB->isBeginSection();
     if (!Info.StrongNoFrameOnEntry && Info.HasFrameOnEntry && !HasFrame) {
       // Reset to the "after prologue" state.
 
-      // There's an earlier block known to have a stack frame. Insert a
-      // `.cfi_remember_state` instruction into that block and a
-      // `.cfi_restore_state` instruction at the beginning of the current block.
-      InsertPt = insertRememberRestorePair(
-          InsertPt, InsertionPoint{&*CurrBB, CurrBB->begin()});
+      InsertionPoint &InsertPt = InsertionPts[CurrBB->getSectionID()];
+      if (InsertPt.MBB == nullptr) {
+        // CurBB is the first block in its section, so there is no "after
+        // prologue" state. Clone the CFI instructions from the prologue block
+        // to create it.
+        InsertPt = cloneCfiPrologue({PrologueBlock, PrologueEnd},
+                                    {&*CurrBB, CurrBB->begin()});
+      } else {
+        // There's an earlier block known to have a stack frame. Insert a
+        // `.cfi_remember_state` instruction into that block and a
+        // `.cfi_restore_state` instruction at the beginning of the current
+        // block.
+        InsertPt =
+            insertRememberRestorePair(InsertPt, {&*CurrBB, CurrBB->begin()});
+      }
       Change = true;
     } else if ((Info.StrongNoFrameOnEntry || !Info.HasFrameOnEntry) &&
                HasFrame) {

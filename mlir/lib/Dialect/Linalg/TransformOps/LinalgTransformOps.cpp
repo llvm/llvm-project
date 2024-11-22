@@ -229,9 +229,9 @@ void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
   linalg::populateEraseUnnecessaryInputsPatterns(patterns);
 }
 
-void transform::ApplyGeneralizeTensorPackUnpackPatternsOp::populatePatterns(
+void transform::ApplyDecomposeTensorPackUnpackPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  linalg::populateGeneralizePatterns(patterns);
+  linalg::populateDecomposePackUnpackPatterns(patterns);
 }
 
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(

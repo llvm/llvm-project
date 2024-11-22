@@ -70,7 +70,6 @@ public:
         ) {
   }
   using llvmOmpClause = const llvm::omp::Clause;
-  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
@@ -162,8 +161,6 @@ private:
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
-  bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
-      const parser::OmpScheduleModifierType::ModType &);
   void CheckAllowedMapTypes(const parser::OmpMapClause::Type &,
       const std::list<parser::OmpMapClause::Type> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
@@ -202,7 +199,7 @@ private:
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
-  void CheckIteratorModifier(const parser::OmpIteratorModifier &x);
+  void CheckIteratorModifier(const parser::OmpIterator &x);
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -218,8 +215,8 @@ private:
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
-  void CheckDependenceType(const parser::OmpDependenceType::Type &x);
-  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Type &x);
+  void CheckDependenceType(const parser::OmpDependenceType::Value &x);
+  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -227,7 +224,7 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
-  void CheckReductionModifier(const ReductionModifier &);
+  void CheckReductionModifier(const parser::OmpReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);

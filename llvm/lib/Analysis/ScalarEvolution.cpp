@@ -6314,8 +6314,10 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S) {
     return getConstantMultiple(Z->getOperand()).zext(BitWidth);
   }
   case scSignExtend: {
+    // Only multiples that are a power of 2 will hold after sext.
     const SCEVSignExtendExpr *E = cast<SCEVSignExtendExpr>(S);
-    return getConstantMultiple(E->getOperand()).sext(BitWidth);
+    uint32_t TZ = getMinTrailingZeros(E->getOperand());
+    return GetShiftedByZeros(TZ);
   }
   case scMulExpr: {
     const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
@@ -11874,7 +11876,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
                                    CmpInst::Predicate P2) {
     assert(P1 != P2 && "Handled earlier!");
     return CmpInst::isRelational(P2) &&
-           P1 == CmpInst::getFlippedSignednessPredicate(P2);
+           P1 == ICmpInst::getFlippedSignednessPredicate(P2);
   };
   if (IsSignFlippedPredicate(Pred, FoundPred)) {
     // Unsigned comparison is the same as signed comparison when both the
