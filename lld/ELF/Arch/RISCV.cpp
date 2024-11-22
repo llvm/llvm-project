@@ -662,7 +662,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           if (overwriteULEB128(loc, val) >= 0x80)
             Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value "
                      << Twine(val) << " exceeds available space; references '"
-                     << lld::toString(*rel.sym) << "'";
+                     << rel.sym << "'";
           ++i;
           continue;
         }
@@ -833,8 +833,8 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
-                 << "insufficient padding bytes for " << lld::toString(r.type)
-                 << ": " << Twine(r.addend)
+                 << "insufficient padding bytes for " << r.type << ": "
+                 << Twine(r.addend)
                  << " bytes available "
                     "for requested alignment of "
                  << Twine(align) << " bytes";
