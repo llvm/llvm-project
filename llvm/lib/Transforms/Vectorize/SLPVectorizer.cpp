@@ -975,6 +975,9 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       Type *Ty1 = Inst->getOperand(0)->getType();
       if (Ty0 == Ty1) {
         assert(InstOpcode == Opcode && "Expected same CmpInst opcode.");
+        assert(InstOpcode == AltOpcode &&
+               "Alternate instructions are only supported by BinaryOperator "
+               "and CastInst.");
         // Check for compatible operands. If the corresponding operands are not
         // compatible - need to perform alternate vectorization.
         CmpInst::Predicate CurrentPred = Inst->getPredicate();
@@ -1003,7 +1006,10 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
             AltPred == CurrentPred || AltPred == SwappedCurrentPred)
           continue;
       }
-    } else if (InstOpcode == Opcode || InstOpcode == AltOpcode) {
+    } else if (InstOpcode == Opcode) {
+      assert(InstOpcode == AltOpcode &&
+             "Alternate instructions are only supported by BinaryOperator and "
+             "CastInst.");
       if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
         if (Gep->getNumOperands() != 2 ||
             Gep->getOperand(0)->getType() != IBase->getOperand(0)->getType())
@@ -5471,11 +5477,13 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     // Try build correct order for extractelement instructions.
     SmallVector<int> ReusedMask(TE.ReuseShuffleIndices.begin(),
                                 TE.ReuseShuffleIndices.end());
-    if (TE.getOpcode() == Instruction::ExtractElement && !TE.isAltShuffle() &&
+    if (TE.getOpcode() == Instruction::ExtractElement &&
         all_of(TE.Scalars, [Sz](Value *V) {
           std::optional<unsigned> Idx = getExtractIndex(cast<Instruction>(V));
           return Idx && *Idx < Sz;
         })) {
+      assert(!TE.isAltShuffle() && "Alternate instructions are only supported "
+                                   "by BinaryOperator and CastInst.");
       SmallVector<int> ReorderMask(Sz, PoisonMaskElem);
       if (TE.ReorderIndices.empty())
         std::iota(ReorderMask.begin(), ReorderMask.end(), 0);
@@ -5520,9 +5528,11 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
   if ((TE.State == TreeEntry::Vectorize ||
        TE.State == TreeEntry::StridedVectorize) &&
       (isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE.getMainOp()) ||
-       (TopToBottom && isa<StoreInst, InsertElementInst>(TE.getMainOp()))) &&
-      !TE.isAltShuffle())
+       (TopToBottom && isa<StoreInst, InsertElementInst>(TE.getMainOp())))) {
+    assert(!TE.isAltShuffle() && "Alternate instructions are only supported by "
+                                 "BinaryOperator and CastInst.");
     return TE.ReorderIndices;
+  }
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
@@ -5616,18 +5626,12 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       }
       return false;
     };
-    SmallDenseMap<unsigned, unsigned, 16> PhiToId;
-    SmallVector<unsigned> Phis(TE.Scalars.size());
+    OrdersType Phis(TE.Scalars.size());
     std::iota(Phis.begin(), Phis.end(), 0);
-    OrdersType ResOrder(TE.Scalars.size());
-    for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id)
-      PhiToId[Id] = Id;
     stable_sort(Phis, PHICompare);
-    for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
-      ResOrder[Id] = PhiToId[Phis[Id]];
-    if (isIdentityOrder(ResOrder))
+    if (isIdentityOrder(Phis))
       return std::nullopt; // No need to reorder.
-    return std::move(ResOrder);
+    return std::move(Phis);
   }
   if (TE.isGather() && !TE.isAltShuffle() && allSameType(TE.Scalars)) {
     // TODO: add analysis of other gather nodes with extractelement
@@ -5918,8 +5922,11 @@ void BoUpSLP::reorderTopToBottom() {
           continue;
       }
       // Stores actually store the mask, not the order, need to invert.
-      if (OpTE->State == TreeEntry::Vectorize && !OpTE->isAltShuffle() &&
+      if (OpTE->State == TreeEntry::Vectorize &&
           OpTE->getOpcode() == Instruction::Store && !Order.empty()) {
+        assert(!OpTE->isAltShuffle() &&
+               "Alternate instructions are only supported by BinaryOperator "
+               "and CastInst.");
         SmallVector<int> Mask;
         inversePermutation(Order, Mask);
         unsigned E = Order.size();
@@ -5999,8 +6006,10 @@ void BoUpSLP::reorderTopToBottom() {
       if ((TE->State == TreeEntry::Vectorize ||
            TE->State == TreeEntry::StridedVectorize) &&
           isa<ExtractElementInst, ExtractValueInst, LoadInst, StoreInst,
-              InsertElementInst>(TE->getMainOp()) &&
-          !TE->isAltShuffle()) {
+              InsertElementInst>(TE->getMainOp())) {
+        assert(!TE->isAltShuffle() &&
+               "Alternate instructions are only supported by BinaryOperator "
+               "and CastInst.");
         // Build correct orders for extract{element,value}, loads and
         // stores.
         reorderOrder(TE->ReorderIndices, Mask);
@@ -6180,8 +6189,11 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
               return P.second == OpTE;
             });
         // Stores actually store the mask, not the order, need to invert.
-        if (OpTE->State == TreeEntry::Vectorize && !OpTE->isAltShuffle() &&
+        if (OpTE->State == TreeEntry::Vectorize &&
             OpTE->getOpcode() == Instruction::Store && !Order.empty()) {
+          assert(!OpTE->isAltShuffle() &&
+                 "Alternate instructions are only supported by BinaryOperator "
+                 "and CastInst.");
           SmallVector<int> Mask;
           inversePermutation(Order, Mask);
           unsigned E = Order.size();
