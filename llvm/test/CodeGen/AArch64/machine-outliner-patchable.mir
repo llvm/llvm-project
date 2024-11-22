@@ -1,4 +1,5 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-outliner -verify-machineinstrs -enable-machine-outliner %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-outliner -verify-machineinstrs -enable-machine-outliner %s -o - | FileCheck %s -check-prefixes=CHECK,FUNCTION_A
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-outliner -verify-machineinstrs -enable-machine-outliner %s -o - | FileCheck %s -check-prefixes=CHECK,FUNCTION_B
 --- |
   ; Function Attrs: minsize
   declare void @foo(i32, i32, i32, i32) #0
@@ -47,20 +48,16 @@ stack:
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
+  ; COM: Make sure that PATCHABLE_FUNCTION_ENTER and PATCHABLE_FUNCTION_EXIT
+  ; COM: instructions aren't outlined.
   ; CHECK-LABEL: name: xray0
   ; CHECK:       bb.0.entry:
   ; CHECK:         PATCHABLE_FUNCTION_ENTER
   ; CHECK:       bb.1.if.then:
-  ; CHECK:         BL @[[OUTLINED_FUNCTION:OUTLINED_FUNCTION_[0-9]]]
+  ; CHECK:         BL @[[OUTLINED_FUNCTION_A:OUTLINED_FUNCTION_[0-9]]]
   ; CHECK:       bb.2.if.end:
-  ; CHECK-NEXT:    $w0 = MOVZWi 5, 0
-  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
-  ; CHECK-NEXT:    $w2 = MOVZWi 7, 0
-  ; CHECK-NEXT:    $w3 = MOVZWi 8, 0
-  ; CHECK-NEXT:    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
-  ; CHECK:         $w0 = MOVZWi 5, 0
-  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
-  ; CHECK-NEXT:    PATCHABLE_FUNCTION_EXIT
+  ; CHECK:         BL @[[OUTLINED_FUNCTION_B:OUTLINED_FUNCTION_[0-9]]]
+  ; CHECK:         PATCHABLE_FUNCTION_EXIT
   ; CHECK-NEXT:    RET undef $lr
 
   bb.0.entry:
@@ -109,16 +106,10 @@ body:             |
   ; CHECK:       bb.0.entry:
   ; CHECK:         PATCHABLE_FUNCTION_ENTER
   ; CHECK:       bb.1.if.then:
-  ; CHECK:         BL @[[OUTLINED_FUNCTION]]
+  ; CHECK:         BL @[[OUTLINED_FUNCTION_A]]
   ; CHECK:       bb.2.if.end:
-  ; CHECK-NEXT:    $w0 = MOVZWi 5, 0
-  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
-  ; CHECK-NEXT:    $w2 = MOVZWi 7, 0
-  ; CHECK-NEXT:    $w3 = MOVZWi 8, 0
-  ; CHECK-NEXT:    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit-def $sp
-  ; CHECK:         $w0 = MOVZWi 5, 0
-  ; CHECK-NEXT:    $w1 = MOVZWi 6, 0
-  ; CHECK-NEXT:    PATCHABLE_FUNCTION_EXIT
+  ; CHECK:         BL @[[OUTLINED_FUNCTION_B]]
+  ; CHECK:         PATCHABLE_FUNCTION_EXIT
   ; CHECK-NEXT:    RET undef $lr
 
   bb.0.entry:
@@ -150,13 +141,20 @@ body:             |
     PATCHABLE_FUNCTION_EXIT
     RET undef $lr
 
-  ; CHECK: name: [[OUTLINED_FUNCTION]]
-  ; CHECK:     bb.0:
-  ; CHECK:       $w0 = MOVZWi 1, 0
-  ; CHECK-NEXT:  $w1 = MOVZWi 2, 0
-  ; CHECK-NEXT:  $w2 = MOVZWi 3, 0
-  ; CHECK-NEXT:  $w3 = MOVZWi 4, 0
-  ; CHECK-NEXT:  TCRETURNdi @foo, 0, implicit $sp
+  ; FUNCTION_A: name: [[OUTLINED_FUNCTION_A]]
+  ; FUNCTION_A:     bb.0:
+  ; FUNCTION_A:       $w0 = MOVZWi 1, 0
+  ; FUNCTION_A-NEXT:  $w1 = MOVZWi 2, 0
+  ; FUNCTION_A-NEXT:  $w2 = MOVZWi 3, 0
+  ; FUNCTION_A-NEXT:  $w3 = MOVZWi 4, 0
+  ; FUNCTION_A-NEXT:  TCRETURNdi @foo, 0, implicit $sp
+
+  ; FUNCTION_B: name: [[OUTLINED_FUNCTION_B]]
+  ; FUNCTION_B:     bb.0:
+  ; FUNCTION_B:       $w0 = MOVZWi 5, 0
+  ; FUNCTION_B-NEXT:  $w1 = MOVZWi 6, 0
+  ; FUNCTION_B-NEXT:  $w2 = MOVZWi 7, 0
+  ; FUNCTION_B-NEXT:  $w3 = MOVZWi 8, 0
+  ; FUNCTION_B-NEXT:  TCRETURNdi @foo, 0, implicit $sp
 
 ...
-

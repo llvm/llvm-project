@@ -11,7 +11,7 @@ define void @fentry0(i1 %a) nounwind "fentry-call"="true" {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    # FEntry call
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
+; CHECK-NEXT:    call t0, [[OUTLINED_FUNCTION:OUTLINED_FUNCTION_[0-9]+]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -27,7 +27,7 @@ define void @fentry1(i1 %a) nounwind "fentry-call"="true" {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    # FEntry call
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
+; CHECK-NEXT:    call t0, [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -47,7 +47,7 @@ define void @patchable0(i1 %a) nounwind "patchable-function-entry"="2" {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
+; CHECK-NEXT:    call t0, [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -65,7 +65,7 @@ define void @patchable1(i1 %a) nounwind "patchable-function-entry"="2" {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
+; CHECK-NEXT:    call t0, [[OUTLINED_FUNCTION]]
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -75,3 +75,13 @@ if.end:
   call void @foo(i32 5, i32 6, i32 7, i32 8)
   ret void
 }
+
+;; Make sure that OUTLINED_FUNCTION contains the right instructions
+; CHECK: [[OUTLINED_FUNCTION]]:
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    li      a0, 1
+; CHECK-NEXT:    li      a1, 2
+; CHECK-NEXT:    li      a2, 3
+; CHECK-NEXT:    li      a3, 4
+; CHECK-NEXT:    jr      t0
+
