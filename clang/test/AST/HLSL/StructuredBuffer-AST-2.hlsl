@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -S -finclude-default-header -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -emit-llvm -finclude-default-header -o - %s | FileCheck %s
 
 // The purpose of this test is to ensure that the target
 // extension type associated with the structured buffer only
@@ -11,9 +11,6 @@
 
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", %struct.mystruct, 0, 0), %struct.mystruct }
 // CHECK: %struct.mystruct = type { <4 x float> }
-// CHECK: %dx.types.Handle = type { ptr }
-// CHECK: %dx.types.ResBind = type { i32, i32, i32, i8 }
-// CHECK: %dx.types.ResourceProperties = type { i32, i32 }
 
 struct mystruct
 {

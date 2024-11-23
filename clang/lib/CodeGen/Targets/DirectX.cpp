@@ -43,6 +43,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
     if (ContainedTy.isNull())
       return nullptr;
 
+    // convert element type
     llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
 
     llvm::StringRef TypeName =
