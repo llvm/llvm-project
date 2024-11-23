@@ -93,8 +93,8 @@ int get_timezone_offset(char *timezone) {
     return 0;
   }
 
-  // currently only supporting tzfile v2
-  if (version != 0x32) {
+  // currently only supporting tzfile v2 and v3
+  if (version != 0x32 && version != 0x33) {
     return 0;
   }
 
