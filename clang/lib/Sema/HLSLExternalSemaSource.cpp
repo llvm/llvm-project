@@ -285,10 +285,9 @@ struct BuiltinTypeDeclBuilder {
         SourceLocation());
   }
 
-  TemplateParameterListBuilder addTemplateArgumentList(Sema &S);
-  BuiltinTypeDeclBuilder &
-  addSimpleTemplateParams(Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD);
-  BuiltinTypeDeclBuilder &addConceptSpecializationExpr(Sema &S);
+  TemplateParameterListBuilder addTemplateArgumentList();
+  BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
+                                                  ConceptDecl *CD);
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
@@ -512,7 +511,7 @@ private:
     // create method type
     ASTContext &AST = DeclBuilder.S.getASTContext();
     SmallVector<QualType> ParamTypes;
-    for (auto &MP : Params)
+    for (MethodParam &MP : Params)
       ParamTypes.emplace_back(MP.Ty);
     QualType MethodTy = AST.getFunctionType(ReturnTy, ParamTypes,
                                             FunctionProtoType::ExtProtoInfo());
@@ -528,8 +527,8 @@ private:
     SmallVector<ParmVarDecl *> ParmDecls;
     auto FnProtoLoc =
         Method->getTypeSourceInfo()->getTypeLoc().getAs<FunctionProtoTypeLoc>();
-    unsigned i = 0;
-    for (auto &MP : Params) {
+    for (int I = 0, E = Params.size(); I != E; I++) {
+      MethodParam &MP = Params[I];
       ParmVarDecl *Parm = ParmVarDecl::Create(
           AST, Method->getDeclContext(), SourceLocation(), SourceLocation(),
           &MP.NameII, MP.Ty,
@@ -541,7 +540,7 @@ private:
         Parm->addAttr(Mod);
       }
       ParmDecls.push_back(Parm);
-      FnProtoLoc.setParam(i++, Parm);
+      FnProtoLoc.setParam(I, Parm);
     }
     Method->setParams({ParmDecls});
   }
@@ -639,8 +638,9 @@ TemplateParameterListBuilder BuiltinTypeDeclBuilder::addTemplateArgumentList() {
   return TemplateParameterListBuilder(*this);
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
-    Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD = nullptr) {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
+                                                ConceptDecl *CD = nullptr) {
   if (Record->isCompleteDefinition()) {
     assert(Template && "existing record it not a template");
     assert(Template->getTemplateParameters()->size() == Names.size() &&
@@ -648,7 +648,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
     return *this;
   }
 
-  TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
+  TemplateParameterListBuilder Builder = this->addTemplateArgumentList();
   for (StringRef Name : Names)
     Builder.addTypeParameter(Name);
   return Builder.finalizeTemplateArgs(CD);
@@ -843,8 +843,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   ConceptDecl *TypedBufferConcept =
       constructTypedBufferConceptDecl(*SemaPtr, HLSLNamespace);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addSimpleTemplateParams(*SemaPtr, {"element_type"},
-                                      TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
              .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
@@ -958,6 +957,5 @@ static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name) {
   // this assert *will* fail. Should this call LookupBuiltin instead?
   assert(R.isSingleResult() &&
          "Since this is a builtin it should always resolve!");
-  assert(isa<FunctionDecl>(R.getFoundDecl()));
   return cast<FunctionDecl>(R.getFoundDecl());
 }
