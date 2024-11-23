@@ -12,6 +12,8 @@
 #include "src/__support/macros/config.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
+#include "time_utils.h"
+#include "timezone.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

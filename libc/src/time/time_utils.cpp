@@ -127,6 +127,7 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 volatile int file_usage = 0;
 
 void release_file(FILE *fp, char *timezone) {
+  (void)timezone;
   file_usage = 0;
   fclose(fp);
 }
@@ -253,7 +254,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
     strncpy(timezone, env_tz, sizeof(timezone));
     timezone[sizeof(timezone) - 1] = '\0';
   } else {
-    fp = fopen("/etc/timezone", "rb");
+    fp = fopen("/etc/localtime", "rb");
     if (fp == NULL) {
       return time_utils::out_of_range();
     }
