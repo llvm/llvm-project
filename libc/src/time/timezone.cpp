@@ -72,7 +72,8 @@ int get_timezone_offset(char *timezone) {
   size_t i;
   __uint128_t tmp;
 
-  // these locations in timezone files are defined in `tzfile`
+  // these locations in timezone files are defined in documentation
+  // for `tzfile`
   magic = (hdr[0] << 24) | (hdr[1] << 16) | (hdr[2] << 8) | hdr[3];
   version = hdr[4];
   for (i = 5; i <= 20; i++) {
@@ -95,8 +96,7 @@ int get_timezone_offset(char *timezone) {
     return 0;
   }
 
-  // currently only supporting tzfile v2 and v3
-  if (version != 0x32 && version != 0x33) {
+  if (version != 0x32 && version != 0x33 && version != 0x34) {
     return 0;
   }
 
