@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
+def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
-def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
+def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
