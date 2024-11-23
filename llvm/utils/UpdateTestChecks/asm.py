@@ -223,7 +223,7 @@ ASM_FUNCTION_VE_RE = re.compile(
 )
 
 ASM_FUNCTION_XTENSA_RE = re.compile(
-    r"^(?P<func>[^:]+): +# @(?P=func)\n" r"(?P<body>.*?)\n" r"\.Lfunc_end\d+:\n",
+    r"^(?P<func>[^:]+): +# @(?P=func)\n(?P<body>.*?)\n\.Lfunc_end\d+:\n",
     flags=(re.M | re.S),
 )
 
