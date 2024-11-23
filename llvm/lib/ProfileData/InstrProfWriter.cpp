@@ -636,7 +636,7 @@ writeMemProfCallStackArray(
       MemProfCallStackIndexes;
 
   memprof::CallStackRadixTreeBuilder<memprof::FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
   for (auto I : Builder.getRadixArray())
     OS.write32(I);
