@@ -42,7 +42,7 @@ void rev_str(char *str) {
 int get_timezone_offset(char *timezone) {
   (void)timezone;
 
-  unsigned char hdr[TIMEZONE_HDR_SIZE];
+  unsigned char hdr[TIMEZONE_HDR_SIZE + 1];
 
   int32_t magic;
   unsigned char version;
@@ -76,16 +76,16 @@ int get_timezone_offset(char *timezone) {
   // for `tzfile`
   magic = (hdr[0] << 24) | (hdr[1] << 16) | (hdr[2] << 8) | hdr[3];
   version = hdr[4];
-  for (i = 5; i <= 20; i++) {
+  for (i = 5; i < 21; i++) {
     tmp = (tmp << 8) | hdr[i];
   }
   reserved = tmp;
-  tzh_ttisutcnt = (hdr[20] << 24) | (hdr[21] << 16) | (hdr[22] << 8) | hdr[23];
-  tzh_ttisstdcnt = (hdr[24] << 24) | (hdr[25] << 16) | (hdr[26] << 8) | hdr[27];
-  tzh_leapcnt = (hdr[28] << 24) | (hdr[29] << 16) | (hdr[30] << 8) | hdr[31];
-  tzh_timecnt = (hdr[32] << 24) | (hdr[33] << 16) | (hdr[34] << 8) | hdr[35];
-  tzh_typecnt = (hdr[36] << 24) | (hdr[37] << 16) | (hdr[38] << 8) | hdr[39];
-  tzh_charcnt = (hdr[40] << 24) | (hdr[41] << 16) | (hdr[42] << 8) | hdr[43];
+  tzh_ttisutcnt = (hdr[21] << 24) | (hdr[22] << 16) | (hdr[23] << 8) | hdr[24];
+  tzh_ttisstdcnt = (hdr[25] << 24) | (hdr[26] << 16) | (hdr[27] << 8) | hdr[28];
+  tzh_leapcnt = (hdr[29] << 24) | (hdr[30] << 16) | (hdr[31] << 8) | hdr[32];
+  tzh_timecnt = (hdr[33] << 24) | (hdr[34] << 16) | (hdr[35] << 8) | hdr[36];
+  tzh_typecnt = (hdr[37] << 24) | (hdr[38] << 16) | (hdr[39] << 8) | hdr[40];
+  tzh_charcnt = (hdr[41] << 24) | (hdr[42] << 16) | (hdr[43] << 8) | hdr[44];
   (void)tzh_ttisutcnt;
   (void)tzh_ttisstdcnt;
   (void)tzh_leapcnt;
@@ -101,7 +101,7 @@ int get_timezone_offset(char *timezone) {
   }
 
   // according to `tzfile`, 15 bytes should be 0
-  if ((reserved ^ 0x00) != 0) {
+  if (reserved != 0) {
     return 0;
   }
 
