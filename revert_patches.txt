@@ -17,3 +17,6 @@ breaks build of hipRuntime
 51ad2901ca54 [Clang] Improve diagnostic on `[[nodiscard]]` attribute (#112521)
 Ron, Maneesh
 ---
+Revert: breaks build of rocRAND: assert SLP
+b8703369daf7 [SLP] Match poison as instruction with the same opcode 
+---
