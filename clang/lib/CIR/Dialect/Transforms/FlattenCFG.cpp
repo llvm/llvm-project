@@ -135,13 +135,10 @@ public:
     // Split the current block before the ScopeOp to create the inlining
     // point.
     auto *currentBlock = rewriter.getInsertionBlock();
-    auto *remainingOpsBlock =
+    mlir::Block *continueBlock =
         rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
-    mlir::Block *continueBlock;
-    if (scopeOp.getNumResults() == 0)
-      continueBlock = remainingOpsBlock;
-    else
-      llvm_unreachable("NYI");
+    if (scopeOp.getNumResults() > 0)
+      continueBlock->addArguments(scopeOp.getResultTypes(), loc);
 
     // Inline body region.
     auto *beforeBody = &scopeOp.getRegion().front();
