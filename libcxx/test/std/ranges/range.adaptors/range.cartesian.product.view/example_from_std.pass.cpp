@@ -28,8 +28,7 @@ constexpr bool test() {
 
   const std::vector<int> v{0, 1, 2};
   ConstexprStringStream out;
-  // fixme: replace by views::cartesian_product
-  for (auto&& [a, b, c] : std::ranges::cartesian_product_view(v, v, v)) {
+  for (auto&& [a, b, c] : std::ranges::views::cartesian_product(v, v, v)) {
     out << a << ' ' << b << ' ' << c << '\n';
   }
 
