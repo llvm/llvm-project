@@ -869,7 +869,9 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
 
   if (getNumOperands() != 0) {
     O << " (extra operand: ";
-    printOperands(O, SlotTracker);
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    O << " from ";
+    getParent()->getPredecessors()[0]->printAsOperand(O);
     O << ")";
   }
 }
