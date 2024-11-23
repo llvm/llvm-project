@@ -3865,17 +3865,17 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
     for (BranchInst *BI : Q.DC->conditionsFor(V1)) {
       Value *Cond = BI->getCondition();
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
-      if (isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+      if (Q.DT->dominates(Edge0, Q.CxtI->getParent()) &&
+          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
                              /*LHSIsTrue=*/true, Depth)
-              .value_or(false) &&
-          Q.DT->dominates(Edge0, Q.CxtI->getParent()))
+              .value_or(false))
         return true;
 
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
-      if (isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+      if (Q.DT->dominates(Edge1, Q.CxtI->getParent()) &&
+          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
                              /*LHSIsTrue=*/false, Depth)
-              .value_or(false) &&
-          Q.DT->dominates(Edge1, Q.CxtI->getParent()))
+              .value_or(false))
         return true;
     }
   }
