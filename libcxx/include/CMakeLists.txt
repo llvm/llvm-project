@@ -560,6 +560,7 @@ set(files
   __memory/destroy.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
+  __memory/is_trivially_allocator_relocatable.h
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
@@ -567,12 +568,14 @@ set(files
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
+  __memory/relocate_at.h
   __memory/shared_count.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
+  __memory/uninitialized_relocate.h
   __memory/unique_ptr.h
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h

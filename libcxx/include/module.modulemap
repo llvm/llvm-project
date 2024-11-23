@@ -1575,6 +1575,7 @@ module std [system] {
     module destruct_n                         { header "__memory/destruct_n.h" }
     module fwd                                { header "__fwd/memory.h" }
     module inout_ptr                          { header "__memory/inout_ptr.h" }
+    module is_trivially_allocator_relocatable { header "__memory/is_trivially_allocator_relocatable.h" }
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
@@ -1585,6 +1586,7 @@ module std [system] {
       export std.algorithm.in_out_result
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
+    module relocate_at                        { header "__memory/relocate_at.h" }
     module shared_count                       { header "__memory/shared_count.h" }
     module shared_ptr                         { header "__memory/shared_ptr.h" }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
@@ -1596,6 +1598,9 @@ module std [system] {
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
       export std.utility.pair
+    }
+    module uninitialized_relocate {
+      header "__memory/uninitialized_relocate.h"
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
