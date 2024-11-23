@@ -413,7 +413,8 @@ protected:
   virtual void addFastRegAlloc();
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// CodeGenCommonTMImpl provides standard regalloc passes for most targets.
+  /// CodeGenTargetMachineImpl provides standard regalloc passes for most
+  /// targets.
   virtual void addOptimizedRegAlloc();
 
   /// addPreRewrite - Add passes to the optimized register allocation pipeline

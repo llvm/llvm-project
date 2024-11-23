@@ -6605,8 +6605,8 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue Cond = N->getOperand(0);
-  SDValue ConstTrue =
-    CurDAG->getConstant(N->getOpcode() == ISD::SIGN_EXTEND ? -1 : 1, dl, VT);
+  SDValue ConstTrue = CurDAG->getSignedConstant(
+      N->getOpcode() == ISD::SIGN_EXTEND ? -1 : 1, dl, VT);
   SDValue ConstFalse = CurDAG->getConstant(0, dl, VT);
 
   do {

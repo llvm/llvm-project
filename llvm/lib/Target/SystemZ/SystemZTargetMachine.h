@@ -44,7 +44,7 @@ public:
   // attributes of each function.
   const SystemZSubtarget *getSubtargetImpl() const = delete;
 
-  // Override LLVMTargetMachine
+  // Override CodeGenTargetMachineImpl
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 

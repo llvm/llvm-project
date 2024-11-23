@@ -14,15 +14,16 @@
 // Make sure these are included first so they don't conflict with the system.
 #include <limits.h>
 
+#include "shared/rpc.h"
+
 #include "llvmlibc_rpc_server.h"
 
-#include "src/__support/RPC/rpc.h"
+#include "include/llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/parser.h"
 #include "src/stdio/printf_core/writer.h"
 
-#include "src/stdio/gpu/file.h"
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
@@ -52,6 +53,26 @@ struct TempStorage {
   std::vector<std::unique_ptr<char[]>> storage;
 };
 } // namespace
+
+enum Stream {
+  File = 0,
+  Stdin = 1,
+  Stdout = 2,
+  Stderr = 3,
+};
+
+// Get the associated stream out of an encoded number.
+LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
+  ::FILE *stream = reinterpret_cast<FILE *>(f & ~0x3ull);
+  Stream type = static_cast<Stream>(f & 0x3ull);
+  if (type == Stdin)
+    return stdin;
+  if (type == Stdout)
+    return stdout;
+  if (type == Stderr)
+    return stderr;
+  return stream;
+}
 
 template <bool packed, uint32_t lane_size>
 static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
@@ -215,8 +236,8 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
 template <uint32_t lane_size>
 rpc_status_t handle_server_impl(
     rpc::Server &server,
-    const std::unordered_map<uint16_t, rpc_opcode_callback_ty> &callbacks,
-    const std::unordered_map<uint16_t, void *> &callback_data,
+    const std::unordered_map<uint32_t, rpc_opcode_callback_ty> &callbacks,
+    const std::unordered_map<uint32_t, void *> &callback_data,
     uint32_t &index) {
   auto port = server.try_open(lane_size, index);
   if (!port)
@@ -260,7 +281,7 @@ rpc_status_t handle_server_impl(
     port->recv([&](rpc::Buffer *buffer, uint32_t id) {
       data[id] = temp_storage.alloc(buffer->data[0]);
       sizes[id] =
-          fread(data[id], 1, buffer->data[0], file::to_stream(buffer->data[1]));
+          fread(data[id], 1, buffer->data[0], to_stream(buffer->data[1]));
     });
     port->send_n(data, sizes);
     port->send([&](rpc::Buffer *buffer, uint32_t id) {
@@ -273,9 +294,8 @@ rpc_status_t handle_server_impl(
     void *data[lane_size] = {nullptr};
     port->recv([&](rpc::Buffer *buffer, uint32_t id) {
       data[id] = temp_storage.alloc(buffer->data[0]);
-      const char *str =
-          fgets(reinterpret_cast<char *>(data[id]), buffer->data[0],
-                file::to_stream(buffer->data[1]));
+      const char *str = fgets(reinterpret_cast<char *>(data[id]),
+                              buffer->data[0], to_stream(buffer->data[1]));
       sizes[id] = !str ? 0 : std::strlen(str) + 1;
     });
     port->send_n(data, sizes);
@@ -335,46 +355,46 @@ rpc_status_t handle_server_impl(
   }
   case RPC_FEOF: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = feof(file::to_stream(buffer->data[0]));
+      buffer->data[0] = feof(to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_FERROR: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = ferror(file::to_stream(buffer->data[0]));
+      buffer->data[0] = ferror(to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_CLEARERR: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      clearerr(file::to_stream(buffer->data[0]));
+      clearerr(to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_FSEEK: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = fseek(file::to_stream(buffer->data[0]),
-                              static_cast<long>(buffer->data[1]),
-                              static_cast<int>(buffer->data[2]));
+      buffer->data[0] =
+          fseek(to_stream(buffer->data[0]), static_cast<long>(buffer->data[1]),
+                static_cast<int>(buffer->data[2]));
     });
     break;
   }
   case RPC_FTELL: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = ftell(file::to_stream(buffer->data[0]));
+      buffer->data[0] = ftell(to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_FFLUSH: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = fflush(file::to_stream(buffer->data[0]));
+      buffer->data[0] = fflush(to_stream(buffer->data[0]));
     });
     break;
   }
   case RPC_UNGETC: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = ungetc(static_cast<int>(buffer->data[0]),
-                               file::to_stream(buffer->data[1]));
+      buffer->data[0] =
+          ungetc(static_cast<int>(buffer->data[0]), to_stream(buffer->data[1]));
     });
     break;
   }
@@ -477,8 +497,8 @@ struct Device {
   void *buffer;
   rpc::Server server;
   rpc::Client client;
-  std::unordered_map<uint16_t, rpc_opcode_callback_ty> callbacks;
-  std::unordered_map<uint16_t, void *> callback_data;
+  std::unordered_map<uint32_t, rpc_opcode_callback_ty> callbacks;
+  std::unordered_map<uint32_t, void *> callback_data;
 };
 
 rpc_status_t rpc_server_init(rpc_device_t *rpc_device, uint64_t num_ports,
@@ -528,7 +548,7 @@ rpc_status_t rpc_handle_server(rpc_device_t rpc_device) {
   }
 }
 
-rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint16_t opcode,
+rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint32_t opcode,
                                    rpc_opcode_callback_ty callback,
                                    void *data) {
   if (!rpc_device.handle)

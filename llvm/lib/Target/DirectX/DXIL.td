@@ -770,6 +770,14 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def Discard : DXILOp<82, discard> {
+  let Doc = "discard the current pixel";
+  let LLVMIntrinsic = int_dx_discard;
+  let arguments = [Int1Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [pixel]>];
+}
+
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let LLVMIntrinsic = int_dx_thread_id;
@@ -807,6 +815,15 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def MakeDouble :  DXILOp<101, makeDouble> {
+  let Doc = "creates a double value";
+  let LLVMIntrinsic = int_dx_asdouble;
+  let arguments = [Int32Ty, Int32Ty];
+  let result = DoubleTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
@@ -851,6 +868,14 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+}
+
+def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
+  let Doc = "returns true if the expression is true in any of the active lanes in the current wave";
+  let LLVMIntrinsic = int_dx_wave_any;
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {

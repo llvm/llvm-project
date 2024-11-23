@@ -230,6 +230,7 @@ const u8 kUnpatchableCode6[] = {
     0x90, 0x90, 0x90, 0x90,
 };
 
+#      if SANITIZER_WINDOWS64
 const u8 kUnpatchableCode7[] = {
     0x33, 0xc0,                     // xor     eax,eax
     0x48, 0x85, 0xd2,               // test    rdx,rdx
@@ -286,7 +287,9 @@ const u8 kPatchableCode11[] = {
     0x48, 0x83, 0xec, 0x38,         // sub     rsp,38h
     0x83, 0x64, 0x24, 0x28, 0x00,   // and     dword ptr [rsp+28h],0
 };
+#      endif
 
+#      if !SANITIZER_WINDOWS64
 const u8 kPatchableCode12[] = {
     0x55,                           // push    ebp
     0x53,                           // push    ebx
@@ -302,6 +305,7 @@ const u8 kPatchableCode13[] = {
     0x56,                           // push    esi
     0x8b, 0x5c, 0x24, 0x14,         // mov     ebx,dword ptr[esp+14h]
 };
+#      endif
 
 const u8 kPatchableCode14[] = {
     0x55,                           // push    ebp

@@ -53,6 +53,7 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processBind(mlir::omp::BindClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
                   mlir::omp::LoopRelatedClauseOps &result,
@@ -166,8 +167,7 @@ private:
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
       const omp::ObjectList &objects,
       llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
-      std::map<const semantics::Symbol *,
-               llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const;
 

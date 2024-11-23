@@ -135,7 +135,7 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
     llvm_unreachable("Unexpected memory type in indexed load");
   }
 
-  SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
+  SDValue IncV = CurDAG->getSignedTargetConstant(Inc, dl, MVT::i32);
   MachineMemOperand *MemOp = LD->getMemOperand();
 
   auto getExt64 = [this,ExtType] (MachineSDNode *N, const SDLoc &dl)
@@ -213,7 +213,8 @@ MachineSDNode *HexagonDAGToDAGISel::LoadInstrForLoadIntrinsic(SDNode *IntN) {
     EVT RTys[] = { ValTy, MVT::i32, MVT::Other };
     // Operands: { Base, Increment, Modifier, Chain }
     auto Inc = cast<ConstantSDNode>(IntN->getOperand(5));
-    SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), dl, MVT::i32);
+    SDValue I =
+        CurDAG->getSignedTargetConstant(Inc->getSExtValue(), dl, MVT::i32);
     MachineSDNode *Res = CurDAG->getMachineNode(FLC->second, dl, RTys,
           { IntN->getOperand(2), I, IntN->getOperand(4),
             IntN->getOperand(0) });
@@ -531,7 +532,7 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
                                            dl, MVT::i32, Value);
   }
 
-  SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
+  SDValue IncV = CurDAG->getSignedTargetConstant(Inc, dl, MVT::i32);
   MachineMemOperand *MemOp = ST->getMemOperand();
 
   //                  Next address   Chain
@@ -889,7 +890,7 @@ void HexagonDAGToDAGISel::SelectV2Q(SDNode *N) {
   MVT OpTy = N->getOperand(0).getValueType().getSimpleVT(); (void)OpTy;
   assert(HST->getVectorLength() * 8 == OpTy.getSizeInBits());
 
-  SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
+  SDValue C = CurDAG->getSignedTargetConstant(-1, dl, MVT::i32);
   SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);
   SDNode *T = CurDAG->getMachineNode(Hexagon::V6_vandvrt, dl, ResTy,
                                      N->getOperand(0), SDValue(R,0));
@@ -902,7 +903,7 @@ void HexagonDAGToDAGISel::SelectQ2V(SDNode *N) {
   // The result of V2Q should be a single vector.
   assert(HST->getVectorLength() * 8 == ResTy.getSizeInBits());
 
-  SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
+  SDValue C = CurDAG->getSignedTargetConstant(-1, dl, MVT::i32);
   SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);
   SDNode *T = CurDAG->getMachineNode(Hexagon::V6_vandqrt, dl, ResTy,
                                      N->getOperand(0), SDValue(R,0));
@@ -1491,7 +1492,7 @@ inline bool HexagonDAGToDAGISel::SelectAnyInt(SDValue &N, SDValue &R) {
   EVT T = N.getValueType();
   if (!T.isInteger() || T.getSizeInBits() != 32 || !isa<ConstantSDNode>(N))
     return false;
-  int32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
+  uint32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
   R = CurDAG->getTargetConstant(V, SDLoc(N), N.getValueType());
   return true;
 }
@@ -1502,7 +1503,7 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
   case ISD::Constant: {
     if (N.getValueType() != MVT::i32)
       return false;
-    int32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
+    uint32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
     if (!isAligned(Alignment, V))
       return false;
     R = CurDAG->getTargetConstant(V, SDLoc(N), N.getValueType());

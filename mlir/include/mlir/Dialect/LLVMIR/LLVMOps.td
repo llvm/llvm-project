@@ -93,6 +93,26 @@ class LLVM_IntArithmeticOpWithExactFlag<string mnemonic, string instName,
     "$res = builder.Create" # instName #
     "($lhs, $rhs, /*Name=*/\"\", op.getIsExact());";
 }
+class LLVM_IntArithmeticOpWithDisjointFlag<string mnemonic, string instName,
+                                   list<Trait> traits = []> :
+    LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
+    !listconcat([DeclareOpInterfaceMethods<DisjointFlagInterface>], traits)> {
+  let arguments = !con(commonArgs, (ins UnitAttr:$isDisjoint));
+
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
+    moduleImport.setDisjointFlag(inst, op);
+    $res = op;
+  }];
+  let assemblyFormat = [{
+    (`disjoint` $isDisjoint^)? $lhs `,` $rhs attr-dict `:` type($res)
+  }];
+  string llvmBuilder = [{
+    auto inst = builder.Create}] # instName # [{($lhs, $rhs, /*Name=*/"");
+    moduleTranslation.setDisjointFlag(op, inst);
+    $res = inst;
+  }];
+}
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, instName,
@@ -138,7 +158,7 @@ def LLVM_SDivOp : LLVM_IntArithmeticOpWithExactFlag<"sdiv", "SDiv">;
 def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem">;
 def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem">;
 def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And">;
-def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or"> {
+def LLVM_OrOp : LLVM_IntArithmeticOpWithDisjointFlag<"or", "Or"> {
   let hasFolder = 1;
 }
 def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "Xor">;

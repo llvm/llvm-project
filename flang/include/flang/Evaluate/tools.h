@@ -1416,6 +1416,8 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
+
 } // namespace Fortran::semantics
 
 #endif // FORTRAN_EVALUATE_TOOLS_H_

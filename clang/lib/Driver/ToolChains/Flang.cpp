@@ -747,6 +747,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   } else if (isa<AssembleJobAction>(JA)) {
     CmdArgs.push_back("-emit-obj");
+  } else if (isa<PrecompileJobAction>(JA)) {
+    // The precompile job action is only needed for options such as -mcpu=help.
+    // Those will already have been handled by the fc1 driver.
   } else {
     assert(false && "Unexpected action class for Flang tool.");
   }
@@ -911,8 +914,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Output.getFilename());
   }
 
-  assert(Input.isFilename() && "Invalid input.");
-
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
@@ -932,7 +933,18 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  CmdArgs.push_back(Input.getFilename());
+  // The input could be Ty_Nothing when "querying" options such as -mcpu=help
+  // are used.
+  ArrayRef<InputInfo> FrontendInputs = Input;
+  if (Input.isNothing())
+    FrontendInputs = {};
+
+  for (const InputInfo &Input : FrontendInputs) {
+    if (Input.isFilename())
+      CmdArgs.push_back(Input.getFilename());
+    else
+      Input.getInputArg().renderAsInput(Args, CmdArgs);
+  }
 
   const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,
