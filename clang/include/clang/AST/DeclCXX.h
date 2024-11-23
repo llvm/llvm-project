@@ -269,7 +269,6 @@ class CXXRecordDecl : public RecordDecl {
 
   friend void FunctionDecl::setIsPureVirtual(bool);
   friend void TagDecl::startDefinition();
-  friend void FieldDecl::removeInClassInitializer();
 
   /// Values used in DefinitionData fields to represent special members.
   enum SpecialMemberFlags {
@@ -319,9 +318,6 @@ private:
 
     /// The number of virtual base class specifiers in VBases.
     unsigned NumVBases = 0;
-
-    /// The number of C++11 in-class-initializers in this class.
-    unsigned NumInClassInitializers = 0;
 
     /// Base classes of this class.
     ///
@@ -500,17 +496,6 @@ private:
   /// members have been added. It will be invoked by DeclContext::addDecl()
   /// whenever a member is added to this record.
   void addedMember(Decl *D);
-
-  /// Decreasing the number of C++11 in-class-initializers, and update the
-  /// HasInClassInitializer if there is no in-class-initializer in this class.
-  ///
-  /// This routine helps maintain the number of C++11 in-class-initializers.
-  /// The RecordDecl::hasInClassInitializer() needs to be consistent with the
-  /// FieldDecl::hasInClassInitializer(), When calling
-  /// FieldDecl::hasInClassInitializer() to remove the in-class-initializer in
-  /// the field, we need to check whether there are any in-class-initializers in
-  /// this class, and update HasInClassInitializer to the correct value.
-  void removeInClassInitializer();
 
   void markedVirtualFunctionPure();
 

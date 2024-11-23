@@ -1145,7 +1145,6 @@ void CXXRecordDecl::addedMember(Decl *D) {
         (Field->isAnonymousStructOrUnion() &&
          Field->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
       data().HasInClassInitializer = true;
-      data().NumInClassInitializers++;
 
       // C++11 [class]p5:
       //   A default constructor is trivial if [...] no non-static data member
@@ -1440,13 +1439,6 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (Using->getDeclName().getCXXOverloadedOperator() == OO_Equal)
       data().HasInheritedAssignment = true;
   }
-}
-
-void CXXRecordDecl::removeInClassInitializer() {
-  assert(data().NumInClassInitializers > 0 &&
-         "No member initializer in this class");
-  if (--data().NumInClassInitializers == 0)
-    data().HasInClassInitializer = false;
 }
 
 bool CXXRecordDecl::isLiteral() const {

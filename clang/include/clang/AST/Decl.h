@@ -3219,7 +3219,15 @@ private:
 
 public:
   /// Remove the C++11 in-class initializer from this member.
-  void removeInClassInitializer();
+  void removeInClassInitializer() {
+    assert(hasInClassInitializer() && "no initializer to remove");
+    StorageKind = ISK_NoInit;
+    if (BitField) {
+      // Read the bit width before we change the active union member.
+      Expr *ExistingBitWidth = InitAndBitWidth->BitWidth;
+      BitWidth = ExistingBitWidth;
+    }
+  }
 
   /// Determine whether this member captures the variable length array
   /// type.
