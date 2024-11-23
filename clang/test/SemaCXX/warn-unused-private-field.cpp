@@ -40,13 +40,6 @@ class FriendEqDefaultCompareOutOfClass {
 
 bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &) = default;
 
-class UnusedConstPrivateField {
-public:
-    UnusedConstPrivateField() : unused_(0) {}
-private:
-    const int unused_; // expected-warning{{private field 'unused_' is not used}}
-};
-
 class HasUnusedField {
   int unused_; // expected-warning{{private field 'unused_' is not used}}
 };

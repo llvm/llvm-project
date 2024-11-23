@@ -641,6 +641,20 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
 
+- Fixed a bug where Clang would not emit ``-Wunused-private-field`` warnings when an unrelated class 
+  defined a defaulted comparison operator (#GH116270).
+
+  .. code-block:: c++
+
+    class A {
+    private:
+      int a; // warning: private field 'a' is not used, no diagnostic previously
+    };
+
+    class C {
+      bool operator==(const C&) = default;
+    };
+
 Improvements to Clang's time-trace
 ----------------------------------
 
