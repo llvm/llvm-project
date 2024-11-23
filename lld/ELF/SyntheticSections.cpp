@@ -89,8 +89,8 @@ static ArrayRef<uint8_t> getVersion(Ctx &ctx) {
 // The returned object is a mergeable string section.
 MergeInputSection *elf::createCommentSection(Ctx &ctx) {
   auto *sec =
-      make<MergeInputSection>(ctx, SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1,
-                              getVersion(ctx), ".comment");
+      make<MergeInputSection>(ctx, ".comment", SHT_PROGBITS,
+                              SHF_MERGE | SHF_STRINGS, 1, getVersion(ctx));
   sec->splitIntoPieces();
   return sec;
 }
@@ -273,8 +273,9 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
   StringRef s = ctx.saver.save(ctx.arg.dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
-  return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
-                            contents, ".interp");
+  return make<InputSection>(ctx.internalFile, ".interp", SHT_PROGBITS,
+                            SHF_ALLOC,
+                            /*addralign=*/1, /*entsize=*/0, contents);
 }
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
