@@ -222,8 +222,6 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
   if (FindExpr->getNumArgs() == 0)
     return;
 
-  const bool Neg = isNegativeComparison(ComparisonExpr);
-
   // Retrieve the source text of the search expression.
   const auto SearchExprText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
@@ -247,7 +245,7 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       (SearchExprText + ")").str());
 
   // Add negation if necessary.
-  if (Neg)
+  if (isNegativeComparison(ComparisonExpr))
     Diagnostic << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
 }
 
