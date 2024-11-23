@@ -19,6 +19,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
+#include <__memory/destroy.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
@@ -510,14 +511,6 @@ __uninitialized_allocator_value_construct_n_multidimensional(_Alloc& __alloc, _B
 }
 
 #endif // _LIBCPP_STD_VER >= 17
-
-// Destroy all elements in [__first, __last) from left to right using allocator destruction.
-template <class _Alloc, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
-  for (; __first != __last; ++__first)
-    allocator_traits<_Alloc>::destroy(__alloc, std::__to_address(__first));
-}
 
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
