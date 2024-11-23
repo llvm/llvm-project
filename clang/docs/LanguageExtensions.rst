@@ -1986,7 +1986,7 @@ Enumerations with a fixed underlying type
 -----------------------------------------
 
 Clang provides support for C++11 enumerations with a fixed underlying type
-within Objective-C.  For example, one can write an enumeration type as:
+within Objective-C and C `prior to C23 <https://open-std.org/JTC1/SC22/WG14/www/docs/n3030.htm>`_.  For example, one can write an enumeration type as:
 
 .. code-block:: c++
 
@@ -1997,6 +1997,9 @@ value, is ``unsigned char``.
 
 Use ``__has_feature(objc_fixed_enum)`` to determine whether support for fixed
 underlying types is available in Objective-C.
+
+Use ``__has_extension(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C.
 
 Interoperability with C++11 lambdas
 -----------------------------------
