@@ -16,6 +16,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/concepts.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>

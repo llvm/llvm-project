@@ -57,9 +57,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* __construct_at(_Tp* __l
 // The internal functions are available regardless of the language version (with the exception of the `__destroy_at`
 // taking an array).
 
-template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator __destroy(_ForwardIterator, _ForwardIterator);
-
 template <class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy_at(_Tp* __loc) {
   _LIBCPP_ASSERT_NON_NULL(__loc != nullptr, "null pointer given to destroy_at");
@@ -70,27 +67,11 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy_at(_Tp* __loc
 template <class _Tp, __enable_if_t<is_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy_at(_Tp* __loc) {
   _LIBCPP_ASSERT_NON_NULL(__loc != nullptr, "null pointer given to destroy_at");
-  std::__destroy(std::begin(*__loc), std::end(*__loc));
+  auto const __end = std::end(*__loc);
+  for (auto __it = std::begin(*__loc); __it != __end; ++__it)
+    std::__destroy_at(*__it);
 }
 #endif
-
-template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
-__destroy(_ForwardIterator __first, _ForwardIterator __last) {
-  for (; __first != __last; ++__first)
-    std::__destroy_at(std::addressof(*__first));
-  return __first;
-}
-
-template <class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIterator
-__reverse_destroy(_BidirectionalIterator __first, _BidirectionalIterator __last) {
-  while (__last != __first) {
-    --__last;
-    std::__destroy_at(std::addressof(*__last));
-  }
-  return __last;
-}
 
 #if _LIBCPP_STD_VER >= 17
 
@@ -105,18 +86,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy_at(_Tp* __loc) 
   std::__destroy_at(__loc);
 }
 #  endif
-
-template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy(_ForwardIterator __first, _ForwardIterator __last) {
-  (void)std::__destroy(std::move(__first), std::move(__last));
-}
-
-template <class _ForwardIterator, class _Size>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator destroy_n(_ForwardIterator __first, _Size __n) {
-  for (; __n > 0; (void)++__first, --__n)
-    std::__destroy_at(std::addressof(*__first));
-  return __first;
-}
 
 #endif // _LIBCPP_STD_VER >= 17
 

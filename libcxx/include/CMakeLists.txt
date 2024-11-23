@@ -549,6 +549,7 @@ set(files
   __memory/compressed_pair.h
   __memory/concepts.h
   __memory/construct_at.h
+  __memory/destroy.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
   __memory/noexcept_move_assign_container.h
