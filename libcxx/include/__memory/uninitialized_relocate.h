@@ -11,7 +11,9 @@
 
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/destroy.h>
 #include <__memory/is_trivially_allocator_relocatable.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/relocate_at.h>
@@ -30,8 +32,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// TODO: We currently use std::__to_address but we don't guarantee contiguous iterators. How does that work?
-
 // __uninitialized_relocate relocates the objects in [__first, __last) into __result.
 //
 // Relocation means that the objects in [__first, __last) are placed into __result as-if by move-construct and destroy,
@@ -49,7 +49,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //  - __result contains the objects from [__first, __last)
 //  - [__first, __last) doesn't contain any objects
 template <class _InputIter, class _NothrowForwardIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIter
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _NothrowForwardIter
 __uninitialized_relocate(_InputIter __first, _InputIter __last, _NothrowForwardIter __result) {
   if constexpr (__libcpp_is_contiguous_iterator<_InputIter>::value &&
                 __libcpp_is_contiguous_iterator<_NothrowForwardIter>::value) {
@@ -64,10 +64,12 @@ __uninitialized_relocate(_InputIter __first, _InputIter __last, _NothrowForwardI
   if constexpr (__libcpp_is_contiguous_iterator<_InputIter>::value &&
                 __libcpp_is_contiguous_iterator<_NothrowForwardIter>::value &&
                 __libcpp_is_trivially_relocatable<_ValueType>::value) {
-    // TODO: We might be able to memcpy if we don't overlap at all?
-    std::__libcpp_builtin_trivially_relocate_at(
-        std::__to_address(__first), std::__to_address(__last), std::__to_address(__result));
-    return __result + (__last - __first);
+    if (!__libcpp_is_constant_evaluated()) {
+      // TODO: We might be able to memcpy if we don't overlap at all?
+      std::__libcpp_builtin_trivially_relocate_at(
+          std::__to_address(__first), std::__to_address(__last), std::__to_address(__result));
+      return __result + (__last - __first);
+    }
   }
 
   // Otherwise, relocate elements one by one.
@@ -77,7 +79,7 @@ __uninitialized_relocate(_InputIter __first, _InputIter __last, _NothrowForwardI
   auto const __first_result = __result;
   try {
     while (__first != __last) {
-      std::__relocate_at(std::__to_address(__first), std::__to_address(__result));
+      std::__relocate_at(std::addressof(*__first), std::addressof(*__result));
       ++__first;
       ++__result;
     }
@@ -93,14 +95,13 @@ __uninitialized_relocate(_InputIter __first, _InputIter __last, _NothrowForwardI
 // the range [first, last) to another range ending at __result_last. The elements are relocated in reverse
 // order, but their relative order is preserved.
 template <class _BidirectionalIter, class _NothrowBidirectionalIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIter __uninitialized_relocate_backward(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _NothrowBidirectionalIter __uninitialized_relocate_backward(
     _BidirectionalIter __first, _BidirectionalIter __last, _NothrowBidirectionalIter __result_last) {
   if constexpr (__libcpp_is_contiguous_iterator<_BidirectionalIter>::value &&
                 __libcpp_is_contiguous_iterator<_NothrowBidirectionalIter>::value) {
-    // TODO: Check for off-by-one here, we might want to check __result_last - 1
     _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
         !std::__is_pointer_in_range(
-            std::__to_address(__first), std::__to_address(__last), std::__to_address(__result_last)),
+            std::__to_address(__first), std::__to_address(__last), std::__to_address(__result_last) - 1),
         "uninitialized_relocate_backward requires the end of the result not to overlap with the input range");
   }
   using _ValueType = typename iterator_traits<_BidirectionalIter>::value_type;
@@ -110,11 +111,13 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIter __uniniti
   if constexpr (__libcpp_is_contiguous_iterator<_BidirectionalIter>::value &&
                 __libcpp_is_contiguous_iterator<_NothrowBidirectionalIter>::value &&
                 __libcpp_is_trivially_relocatable<_ValueType>::value) {
-    auto __result = __result_last - (__last - __first);
-    // TODO: We might be able to memcpy if we don't overlap at all?
-    std::__libcpp_builtin_trivially_relocate_at(
-        std::__to_address(__first), std::__to_address(__last), std::__to_address(__result));
-    return __result;
+    if (!__libcpp_is_constant_evaluated()) {
+      auto __result = __result_last - (__last - __first);
+      // TODO: We might be able to memcpy if we don't overlap at all?
+      std::__libcpp_builtin_trivially_relocate_at(
+          std::__to_address(__first), std::__to_address(__last), std::__to_address(__result));
+      return __result;
+    }
   }
 
   // Otherwise, relocate elements one by one, starting from the end.
@@ -126,7 +129,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIter __uniniti
     while (__last != __first) {
       --__last;
       --__result;
-      std::__relocate_at(std::__to_address(__last), std::__to_address(__result));
+      std::__relocate_at(std::addressof(*__last), std::addressof(*__result));
     }
   } catch (...) {
     std::destroy(__first, __last);
@@ -156,7 +159,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _NothrowForwardIter __uninit
     auto const __first_result = __result;
     try {
       while (__first != __last) {
-        std::__allocator_relocate_at(__alloc, std::__to_address(__first), std::__to_address(__result));
+        std::__allocator_relocate_at(__alloc, std::addressof(*__first), std::addressof(*__result));
         ++__first;
         ++__result;
       }
@@ -176,10 +179,9 @@ __uninitialized_allocator_relocate_backward(
     _Alloc& __alloc, _BidirectionalIter __first, _BidirectionalIter __last, _NothrowBidirectionalIter __result_last) {
   if constexpr (__libcpp_is_contiguous_iterator<_BidirectionalIter>::value &&
                 __libcpp_is_contiguous_iterator<_NothrowBidirectionalIter>::value) {
-    // TODO: Off by one?
     _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
         !std::__is_pointer_in_range(
-            std::__to_address(__first), std::__to_address(__last), std::__to_address(__result_last)),
+            std::__to_address(__first), std::__to_address(__last), std::__to_address(__result_last) - 1),
         "uninitialized_allocator_relocate_backward requires the end of the result not to overlap with the input range");
   }
 
@@ -194,7 +196,7 @@ __uninitialized_allocator_relocate_backward(
       while (__last != __first) {
         --__last;
         --__result;
-        std::__allocator_relocate_at(__alloc, std::__to_address(__last), std::__to_address(__result));
+        std::__allocator_relocate_at(__alloc, std::addressof(*__last), std::addressof(*__result));
       }
     } catch (...) {
       std::__allocator_destroy(__alloc, __first, __last);

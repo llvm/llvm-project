@@ -49,7 +49,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp* __libcpp_builtin_trivially_relocate_at(_Tp* __source,
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp* __libcpp_builtin_trivially_relocate_at(_Tp* __first, Tp* __last, _Tp* __dest) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _Tp* __libcpp_builtin_trivially_relocate_at(_Tp* __first, _Tp* __last, _Tp* __dest) _NOEXCEPT {
   static_assert(__libcpp_is_trivially_relocatable<_Tp>::value, "");
   // Casting to void* to suppress clang complaining that this is technically UB.
   __builtin_memmove(static_cast<void*>(__dest), __first, (__last - __first) * sizeof(_Tp));
