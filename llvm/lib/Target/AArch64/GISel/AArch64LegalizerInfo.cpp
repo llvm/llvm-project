@@ -840,13 +840,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{s64, p0}, {v2s64, v2p0}})
       .widenScalarToNextPow2(0, 64)
-      .clampScalar(0, s64, s64);
+      .clampScalar(0, s64, s64)
+      .clampMaxNumElements(0, s64, 2);
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .unsupportedIf([&](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() != Query.Types[1].getSizeInBits();
       })
-      .legalFor({{p0, s64}, {v2p0, v2s64}});
+      .legalFor({{p0, s64}, {v2p0, v2s64}})
+      .clampMaxNumElements(1, s64, 2);
 
   // Casts for 32 and 64-bit width type are just copies.
   // Same for 128-bit width type, except they are on the FPR bank.
@@ -1053,7 +1055,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         if (DstTy != SrcTy)
           return false;
         return llvm::is_contained(
-            {v2s64, v2p0, v2s32, v4s32, v4s16, v16s8, v8s8, v8s16}, DstTy);
+            {v2s64, v2s32, v4s32, v4s16, v16s8, v8s8, v8s16}, DstTy);
       })
       // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors), we
       // just want those lowered into G_BUILD_VECTOR
@@ -1079,7 +1081,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v4s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64);
+      .clampNumElements(0, v2s64, v2s64)
+      .bitcastIf(isPointerVector(0), [=](const LegalityQuery &Query) {
+        // Bitcast pointers vector to i64.
+        const LLT DstTy = Query.Types[0];
+        return std::pair(0, LLT::vector(DstTy.getElementCount(), 64));
+      });
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalFor({{v4s32, v2s32}, {v8s16, v4s16}, {v16s8, v8s8}})
