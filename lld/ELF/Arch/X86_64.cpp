@@ -495,7 +495,9 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      Err(ctx) << getErrorLoc(ctx, loc - 3)
+      Err(ctx) << getErrorLoc(ctx, (rel.type == R_X86_64_GOTPC32_TLSDESC)
+                                       ? loc - 3
+                                       : loc - 4)
                << "R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC "
                   "must be used in leaq x@tlsdesc(%rip), %REG";
       return;
@@ -540,11 +542,11 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
              rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq x@gottpoff(%rip), %REG.
-    assert(rel.type == R_X86_64_GOTPC32_TLSDESC ||
-           rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      Err(ctx) << getErrorLoc(ctx, loc - 3)
+      Err(ctx) << getErrorLoc(ctx, (rel.type == R_X86_64_GOTPC32_TLSDESC)
+                                       ? loc - 3
+                                       : loc - 4)
                << "R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC "
                   "must be used in leaq x@tlsdesc(%rip), %REG";
       return;
