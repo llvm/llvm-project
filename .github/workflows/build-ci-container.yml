@@ -18,14 +18,12 @@ on:
       - '.github/workflows/containers/github-action-ci/**'
 
 jobs:
-  # TODO(boomanaiden154): Switch this back to a single stage build when we can
-  # run this on the self-hosted runners and don't have to do it this way to
-  # avoid timeouts.
-  build-ci-container-stage1:
-    permissions:
-      packages: write
+  build-ci-container:
     if: github.repository_owner == 'llvm'
     runs-on: depot-ubuntu-24.04-16
+    outputs:
+      container-name: ${{ steps.vars.outputs.container-name }}
+      container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -44,17 +42,43 @@ jobs:
           podman build -t ${{ steps.vars.outputs.container-name-tag }} -f stage1.Dockerfile .
           podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
 
+      - name: Save container image
+        run: |
+          podman save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-name-tag }}.tar
+
+      # Upload the container so we have it in case the push fails.  This also
+      # allows us to separate the push step into a separate job so we can
+      # maintain minimal permissions while building the container.
+      - name: Upload container image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.container-name-tag }}
+          path: ${{ steps.vars.outputs.container-name-tag }}.tar
+          retention-days: 14
+
       - name: Test Container
         run: |
           for image in ${{ steps.vars.outputs.container-name-tag }} ${{  steps.vars.outputs.container-name }}; do
             podman run --rm -it $image /usr/bin/bash -x -c 'printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
           done
 
-      - name: Push Container
-        if: github.event_name == 'push'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download container
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-ci-container.outputs.container-name-tag }}
+
+       - name: Push Container
         run: |
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
-          podman push ${{ steps.vars.outputs.container-name-tag }}
-          podman push ${{ steps.vars.outputs.container-name }}:latest
+          podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
+          podman push ${{ needs.build-ci-container.outputs.container-name }}:latest
