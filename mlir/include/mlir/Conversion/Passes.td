@@ -23,16 +23,18 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
     `ConvertToLLVMPatternInterface` dialect interface to delegate to dialects
     the injection of conversion patterns.
 
-    If `use-conversion-attrs` is set to `true`, the pass will look for
+    If `dynamic` is set to `true`, the pass will look for
     `ConvertToLLVMAttrInterface` attributes and use them to further configure
-    the conversion process. Enabling this option incurs in extra overhead.
+    the conversion process. This option also uses the `DataLayoutAnalysis`
+    analysis to configure the type converter. Enabling this option incurs in
+    extra overhead.
   }];
 
   let constructor = "mlir::createConvertToLLVMPass()";
   let options = [
     ListOption<"filterDialects", "filter-dialects", "std::string",
                "Test conversion patterns of only the specified dialects">,
-    Option<"useConversionAttrs", "use-conversion-attrs", "bool", "false",
+    Option<"useDynamic", "dynamic", "bool", "false",
            "Use op conversion attributes to configure the conversion">,
   ];
 }
