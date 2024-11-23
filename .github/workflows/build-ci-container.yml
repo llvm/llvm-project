@@ -31,17 +31,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: .github/workflows/containers/github-action-ci/
-      - name: Change podman Root Direcotry
-        run: |
-          mkdir -p ~/.config/containers
-          sudo mkdir -p /mnt/podman
-          sudo chown `whoami`:`whoami` /mnt/podman
-          cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
-          podman info
-      - name: Build container stage1
-        working-directory: ./.github/workflows/containers/github-action-ci/
-        run: |
-          podman build -t stage1-toolchain --target stage1-toolchain -f stage1.Dockerfile .
       - name: Write Variables
         id: vars
         run: |
@@ -49,6 +38,11 @@ jobs:
           container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
           echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
+      - name: Build container
+        working-directory: ./.github/workflows/containers/github-action-ci/
+        run: |
+          podman build -t ${{ steps.vars.outputs.container-name-tag }} -f stage1.Dockerfile .
+          podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
 
       - name: Test Container
         run: |
