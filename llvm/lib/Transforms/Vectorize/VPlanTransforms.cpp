@@ -509,12 +509,6 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
 
-  for (VPRecipeBase &R : make_early_inc_range(
-           reverse(*cast<VPBasicBlock>(Plan.getPreheader())))) {
-    if (isDeadRecipe(R))
-      R.eraseFromParent();
-  }
-
   for (VPBasicBlock *VPBB : reverse(VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
@@ -1809,8 +1803,7 @@ void VPlanTransforms::createInterleaveGroups(
 
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-    ArrayRef<BasicBlock *> UncountableExitingBlocks,
-    VPRecipeBuilder &RecipeBuilder) {
+    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
   auto *LatchVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
@@ -1818,36 +1811,34 @@ void VPlanTransforms::handleUncountableEarlyExit(
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPValue *EarlyExitTaken = nullptr;
 
-  // Process all uncountable exiting blocks. For each exiting block, update the
-  // EarlyExitTaken, which tracks if any uncountable early exit has been taken.
-  // Also split the middle block and branch to the exit block for the early exit
-  // if it has been taken.
-  for (BasicBlock *Exiting : UncountableExitingBlocks) {
-    auto *ExitingTerm = cast<BranchInst>(Exiting->getTerminator());
-    BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
-    BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
-    VPIRBasicBlock *VPExitBlock;
-    if (OrigLoop->getUniqueExitBlock()) {
-      VPExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
-    } else {
-      VPExitBlock = VPIRBasicBlock::fromBasicBlock(
-          !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-    }
-
-    VPValue *M = RecipeBuilder.getBlockInMask(
-        OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-    auto *N = Builder.createNot(M);
-    EarlyExitTaken = Builder.createNaryOp(VPInstruction::AnyOf, {N});
-
-    VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
-    VPBlockUtils::disconnectBlocks(LoopRegion, MiddleVPBB);
-    VPBlockUtils::insertBlockAfter(NewMiddle, LoopRegion);
-    VPBlockUtils::connectBlocks(NewMiddle, VPExitBlock);
-    VPBlockUtils::connectBlocks(NewMiddle, MiddleVPBB);
-
-    VPBuilder MiddleBuilder(NewMiddle);
-    MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {EarlyExitTaken});
+  // Process the uncountable exiting block. Update EarlyExitTaken, which tracks
+  // if any uncountable early exit has been taken. Also split the middle block
+  // and branch to the exit block for the early exit if it has been taken.
+  auto *ExitingTerm =
+      cast<BranchInst>(UncountableExitingBlock->getTerminator());
+  BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
+  BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
+  VPIRBasicBlock *VPExitBlock;
+  if (OrigLoop->getUniqueExitBlock()) {
+    VPExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
+  } else {
+    VPExitBlock = VPIRBasicBlock::fromBasicBlock(
+        !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
   }
+
+  VPValue *M = RecipeBuilder.getBlockInMask(
+      OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+  auto *N = Builder.createNot(M);
+  EarlyExitTaken = Builder.createNaryOp(VPInstruction::AnyOf, {N});
+
+  VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
+  VPBlockUtils::disconnectBlocks(LoopRegion, MiddleVPBB);
+  VPBlockUtils::insertBlockAfter(NewMiddle, LoopRegion);
+  VPBlockUtils::connectBlocks(NewMiddle, VPExitBlock);
+  VPBlockUtils::connectBlocks(NewMiddle, MiddleVPBB);
+
+  VPBuilder MiddleBuilder(NewMiddle);
+  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {EarlyExitTaken});
 
   // Replace the condition controlling the exit from the vector loop with one
   // exiting if either the original condition of the vector latch is true or any

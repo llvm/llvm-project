@@ -114,6 +114,162 @@ e2:
   ret i64 %p2
 }
 
+define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
+; CHECK-LABEL: VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<128> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
+; CHECK-NEXT:   IR call void @init(ptr %src)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%3>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
+; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
+; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
+; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.split
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.split:
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operand: ir<1>, ir<0>)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop.header>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK:      No successors
+; CHECK-NEXT: }
+
+entry:
+  %src = alloca [128 x i32]
+  call void @init(ptr %src)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src
+  %c.1 = icmp eq i32 %l, 10
+  br i1 %c.1, label %exit, label %loop.latch
+
+loop.latch:
+  %inc = add nuw i64 %iv, 1
+  %c.2 = icmp eq i64 %inc, 128
+  br i1 %c.2, label %exit, label %loop.header
+
+exit:
+  %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ]
+  ret i64 %p
+}
+
+define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
+; CHECK-LABEL: VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<128> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
+; CHECK-NEXT:   IR call void @init(ptr %src)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%3>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
+; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
+; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
+; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.split
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.split:
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operand: ir<1>, ir<0>)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop.header>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK:      No successors
+; CHECK-NEXT: }
+
+entry:
+  %src = alloca [128 x i32]
+  call void @init(ptr %src)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src
+  %c.1 = icmp eq i32 %l, 10
+  br i1 %c.1, label %exit, label %loop.latch
+
+loop.latch:
+  %inc = add nuw i64 %iv, 1
+  %c.2 = icmp eq i64 %inc, 128
+  br i1 %c.2, label %exit, label %loop.header
+
+exit:
+  %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ]
+  ret i64 %p
+
+; uselistorder directives
+  uselistorder label %exit, { 1, 0 }
+}
+
+
 define i64 @multi_exiting_to_same_exit_load_exit_value() {
 ; CHECK-NOT: VPlan 'Final VPlan for VF={4},UF={1}' {
 

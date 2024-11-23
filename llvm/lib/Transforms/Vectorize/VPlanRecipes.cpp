@@ -68,8 +68,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
     default:
       return true;
     }
-  case VPExpandSCEVSC:
-    return getParent()->getPlan()->getTripCount() == getVPSingleValue();
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -165,8 +163,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPScalarCastSC:
   case VPReverseVectorPointerSC:
     return false;
-  case VPExpandSCEVSC:
-    return getParent()->getPlan()->getTripCount() == getVPSingleValue();
   case VPInstructionSC:
     return mayWriteToMemory();
   case VPWidenCallSC: {

@@ -7783,7 +7783,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     LoopVectorizeHints Hints(L, true, *ORE);
     Hints.setAlreadyVectorized();
   }
-
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue)
@@ -8882,9 +8881,9 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
 static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
+  auto *MiddleVPBB = Plan.getMiddleBlock();
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-    BasicBlock *ExitBB = ExitVPBB->getIRBasicBlock();
     for (VPRecipeBase &R : *ExitVPBB) {
       auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
       if (!ExitIRI)
@@ -8892,26 +8891,34 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
       auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
       if (!ExitPhi)
         break;
-      for (BasicBlock *ExitingBB : predecessors(ExitBB)) {
-        if (!OrigLoop->contains(ExitingBB))
-          continue;
-      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
-      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-      // Exit values for inductions are computed and updated outside of VPlan
-      // and independent of induction recipes.
-      // TODO: Compute induction exit values in VPlan.
-      if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
-           !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
-          isa<VPWidenPointerInductionRecipe>(V) ||
-          (isa<Instruction>(IncomingValue) &&
-           OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
-           any_of(IncomingValue->users(), [&Inductions](User *U) {
-             auto *P = dyn_cast<PHINode>(U);
-             return P && Inductions.contains(P);
-           })))
-        continue;
-      ExitUsersToFix.insert(ExitIRI);
-      ExitIRI->addOperand(V);
+      for (VPBlockBase *PredVPBB : ExitVPBB->getPredecessors()) {
+        BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
+        if (PredVPBB != MiddleVPBB) {
+          SmallVector<BasicBlock *> ExitingBlocks;
+          OrigLoop->getExitingBlocks(ExitingBlocks);
+          assert(ExitingBlocks.size() == 2 && "only support 2 exiting blocks");
+          ExitingBB = ExitingBB == ExitingBlocks[0] ? ExitingBlocks[1]
+                                                    : ExitingBlocks[0];
+        }
+        Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
+        VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
+        // Exit values for inductions are computed and updated outside of VPlan
+        // and independent of induction recipes.
+        // TODO: Compute induction exit values in VPlan.
+        if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
+             !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
+            isa<VPWidenPointerInductionRecipe>(V) ||
+            (isa<Instruction>(IncomingValue) &&
+             OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
+             any_of(IncomingValue->users(), [&Inductions](User *U) {
+               auto *P = dyn_cast<PHINode>(U);
+               return P && Inductions.contains(P);
+             }))) {
+          if (ExitVPBB->getSinglePredecessor() == MiddleVPBB)
+            continue;
+        }
+        ExitUsersToFix.insert(ExitIRI);
+        ExitIRI->addOperand(V);
       }
     }
   }
@@ -8919,24 +8926,28 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
 }
 
 // Add exit values to \p Plan. Extracts are added for each entry in \p
-// ExitUsersToFix if needed and their operands are updated.
-static void
+// ExitUsersToFix if needed and their operands are updated. Returns true if all
+// exit users can be handled, otherwise return false.
+static bool
 addUsersInExitBlocks(VPlan &Plan,
                      const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
-    return;
+    return true;
+
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-
     VPValue *V = ExitIRI->getOperand(0);
     // Pass live-in values used by exit phis directly through to their users in
     // the exit block.
     if (V->isLiveIn())
       continue;
 
-    // Currently only live-ins can be used by exit values from blocks not exiting via the vector latch through to the middle block.
+    // Currently only live-ins can be used by exit values from blocks not
+    // exiting via the vector latch through to the middle block.
     if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
       return false;
 
@@ -9218,31 +9229,19 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   RecipeBuilder.fixHeaderPhis();
 
   if (Legal->hasUncountableEarlyExit()) {
+    assert(Legal->getUncountableExitingBlocks().size() == 1 &&
+           "Only single uncountable exiting bock supported");
     VPlanTransforms::handleUncountableEarlyExit(
-        *Plan, *PSE.getSE(), OrigLoop, Legal->getUncountableExitingBlocks(),
+        *Plan, *PSE.getSE(), OrigLoop, Legal->getUncountableExitingBlocks()[0],
         RecipeBuilder);
   }
   addScalarResumePhis(RecipeBuilder, *Plan);
   SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlocks(
       OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) 
-<<<<<<< HEAD
+  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix))
+    return nullptr;
 
-  if (Legal->hasUncountableEarlyExit()) {
-    if (any_of(Plan->getExitBlocks(), [](VPIRBasicBlock *ExitBB) {
-          return any_of(*ExitBB, [](VPRecipeBase &R) {
-            auto VPIRI = cast<VPIRInstruction>(&R);
-            return VPIRI->getNumOperands() == 0 ||
-                   any_of(VPIRI->operands(),
-                          [](VPValue *Op) { return !Op->isLiveIn(); });
-          });
-        }))
-      return nullptr;
-  }
-
-=======
->>>>>>> origin/main
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.
@@ -9998,11 +9997,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (LVL.hasUncountableEarlyExit()) {
     if (!EnableEarlyExitVectorization) {
       reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                                 "early exit is not yet supported",
+                                 "early exit is not enabled",
                                  "Auto-vectorization of loops with uncountable "
-                                 "early exit is not yet supported",
-                                 "UncountableEarlyExitLoopsUnsupported", ORE,
-                                 L);
+                                 "early exit is no enabled",
+                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
   }

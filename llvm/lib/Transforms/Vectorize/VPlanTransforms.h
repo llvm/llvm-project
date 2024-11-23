@@ -127,13 +127,13 @@ struct VPlanTransforms {
   /// Update \p Plan to account for uncountable exit blocks in \p
   /// UncountableExitingBlocks by
   ///  * updating the condition to exit the vector loop to include the early
-  ///  exit conditions
+  ///    exit conditions
   ///  * splitting the original middle block to branch to the early exit blocks
-  ///  if taken. Returns false if the transformation wasn't successful.
-  static void
-  handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-                             ArrayRef<BasicBlock *> UncountableExitingBlocks,
-                             VPRecipeBuilder &RecipeBuilder);
+  ///    if taken. Returns false if the transformation wasn't successful.
+  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+                                         Loop *OrigLoop,
+                                         BasicBlock *UncountableExitingBlock,
+                                         VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm

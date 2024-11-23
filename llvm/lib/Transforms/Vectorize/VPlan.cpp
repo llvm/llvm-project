@@ -872,8 +872,10 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which is used when
-  // vectorizing loops with uncountable early exits
+  // vectorizing loops with uncountable early exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
+  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
+         "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
                                                        InductionTy, TheLoop);
@@ -907,16 +909,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // 2) If we require a scalar epilogue, there is no conditional branch as
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
-  BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
-  if (!IRExitBlock) {
-    // If there's no unique exit block (i.e. vectorizing with an uncountable
-    // early exit), use the block exiting from the latch. The other uncountable
-    // exit blocks will be added later.
-    auto *Term = cast<BranchInst>(TheLoop->getLoopLatch()->getTerminator());
-    IRExitBlock = TheLoop->contains(Term->getSuccessor(0))
-                      ? Term->getSuccessor(1)
-                      : Term->getSuccessor(0);
-  }
+  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional
   // branch.
