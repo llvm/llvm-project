@@ -35,16 +35,17 @@ namespace {
 
 struct TemplateParameterListBuilder;
 
-struct BuiltinTypeDeclBuilder {
-  Sema &SemaRef;
+class BuiltinTypeDeclBuilder {
   CXXRecordDecl *Record = nullptr;
   ClassTemplateDecl *Template = nullptr;
   ClassTemplateDecl *PrevTemplate = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
   llvm::StringMap<FieldDecl *> Fields;
 
-  BuiltinTypeDeclBuilder(Sema &SemaRef, CXXRecordDecl *R)
-      : SemaRef(SemaRef), Record(R) {
+public:
+  friend struct TemplateParameterListBuilder;
+
+  BuiltinTypeDeclBuilder(CXXRecordDecl *R) : Record(R) {
     Record->startDefinition();
     Template = Record->getDescribedClassTemplate();
   }
@@ -87,11 +88,20 @@ struct BuiltinTypeDeclBuilder {
   }
 
   ~BuiltinTypeDeclBuilder() {
-    if (!Record->getTypeForDecl())
-      Record->getASTContext().getTypeDeclType(Record,
-                                              Record->getPreviousDecl());
     if (HLSLNamespace && !Template && Record->getDeclContext() == HLSLNamespace)
       HLSLNamespace->addDecl(Record);
+  }
+
+  CXXRecordDecl *finalizeForwardDeclaration() {
+    // Force the QualType to be generated for the record declaration. In most
+    // cases this will happen naturally when something uses the type the
+    // QualType gets lazily created. Unfortunately, with our injected types if a
+    // type isn't used in a translation unit the QualType may not get
+    // automatically generated before a PCH is generated. To resolve this we
+    // just force that the QualType is generated after we create a forward
+    // declaration.
+    (void)Record->getASTContext().getRecordType(Record);
+    return Record;
   }
 
   BuiltinTypeDeclBuilder &
@@ -865,8 +875,9 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   ConceptDecl *TypedBufferConcept =
       constructTypedBufferConceptDecl(*SemaPtr, HLSLNamespace);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
-             .Record;
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
@@ -878,8 +889,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
-          .addSimpleTemplateParams({"element_type"})
-          .Record;
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+          .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
                     ResourceKind::TypedBuffer, /*IsROV=*/true,
@@ -889,8 +900,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "StructuredBuffer")
-             .addSimpleTemplateParams({"element_type"})
-             .Record;
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -899,8 +910,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWStructuredBuffer")
-             .addSimpleTemplateParams({"element_type"})
-             .Record;
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -912,8 +923,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "AppendStructuredBuffer")
-          .addSimpleTemplateParams({"element_type"})
-          .Record;
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+          .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -922,8 +933,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConsumeStructuredBuffer")
-          .addSimpleTemplateParams({"element_type"})
-          .Record;
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+          .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -932,8 +943,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
                                 "RasterizerOrderedStructuredBuffer")
-             .addSimpleTemplateParams({"element_type"})
-             .Record;
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/true, /*RawBuffer=*/true)
@@ -944,7 +955,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ByteAddressBuffer")
-             .Record;
+             .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
                     /*IsROV=*/false,
