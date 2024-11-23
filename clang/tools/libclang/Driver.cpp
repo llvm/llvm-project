@@ -42,14 +42,15 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
 
   CXDiagnosticSetDiagnosticConsumer DiagConsumer;
   auto DiagOpts = CreateAndPopulateDiagOpts(ArrayRef(ArgV, ArgC));
-  auto Diags = CompilerInstance::createDiagnostics(DiagOpts.release(),
-                                                   &DiagConsumer, false);
 
   // Use createPhysicalFileSystem instead of getRealFileSystem so that
   // setCurrentWorkingDirectory doesn't change the working directory of the
   // process.
   std::unique_ptr<llvm::vfs::FileSystem> VFS =
       llvm::vfs::createPhysicalFileSystem();
+
+  auto Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts.release(),
+                                                   &DiagConsumer, false);
   if (WorkingDirectory)
     if (std::error_code EC =
           VFS->setCurrentWorkingDirectory(WorkingDirectory)) {
