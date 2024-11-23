@@ -1331,9 +1331,9 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
 }
 
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
-    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
-                       llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs") {
+    : SyntheticSection(ctx, ".gnu.sgstubs", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR,
+                       /*addralign=*/32) {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
