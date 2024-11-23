@@ -49,7 +49,7 @@ private:
   }
   // Helper method for hash testing
   bool TestHash(uint32_t hash) const {
-    assert(IsInitialized && "Bloom filter is not initialized!");
+    assert(Initialized && "Bloom filter is not initialized!");
     uint32_t hash2 = hash >> BloomShift;
     uint32_t n = (hash >> log2u(Bits)) % BloomSize;
     uint64_t mask = ((1ULL << (hash % Bits)) | (1ULL << (hash2 % Bits)));
@@ -58,7 +58,7 @@ private:
 
   // Helper method to add a hash
   void AddHash(uint32_t hash) {
-    assert(IsInitialized && "Bloom filter is not initialized!");
+    assert(Initialized && "Bloom filter is not initialized!");
     uint32_t hash2 = hash >> BloomShift;
     uint32_t n = (hash >> log2u(Bits)) % BloomSize;
     uint64_t mask = ((1ULL << (hash % Bits)) | (1ULL << (hash2 % Bits)));

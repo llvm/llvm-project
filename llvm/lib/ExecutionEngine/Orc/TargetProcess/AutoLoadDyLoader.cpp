@@ -491,7 +491,7 @@ public:
       : AutoLoadDylibMgr(DLM), ShouldPermanentlyIgnoreCallback(shouldIgnore),
         ExecutableFormat(execFormat) {}
 
-  ~DynamicLoader(){};
+  ~DynamicLoader() {};
 
   std::string searchLibrariesForSymbol(StringRef mangledName,
                                        bool searchSystem);
