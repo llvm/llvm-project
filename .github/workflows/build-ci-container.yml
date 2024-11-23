@@ -77,7 +77,7 @@ jobs:
         with:
           name: ${{ needs.build-ci-container.outputs.container-name-tag }}
 
-       - name: Push Container
+      - name: Push Container
         run: |
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
           podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
