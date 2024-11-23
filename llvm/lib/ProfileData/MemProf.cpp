@@ -537,22 +537,5 @@ template llvm::DenseMap<LinearFrameId, FrameStat>
 computeFrameHistogram<LinearFrameId>(
     llvm::MapVector<CallStackId, llvm::SmallVector<LinearFrameId>>
         &MemProfCallStackData);
-
-void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
-  for (const auto &AS : Record.AllocSites) {
-    assert(AS.CSId == hashCallStack(AS.CallStack));
-    (void)AS;
-  }
-}
-
-void verifyFunctionProfileData(
-    const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
-        &FunctionProfileData) {
-  for (const auto &[GUID, Record] : FunctionProfileData) {
-    (void)GUID;
-    verifyIndexedMemProfRecord(Record);
-  }
-}
-
 } // namespace memprof
 } // namespace llvm
