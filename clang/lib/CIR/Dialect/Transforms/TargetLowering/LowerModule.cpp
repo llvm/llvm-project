@@ -11,10 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME(cir): This header file is not exposed to the public API, but can be
-// reused by CIR ABI lowering since it holds target-specific information.
-#include "../../../../Basic/Targets.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 
 #include "CIRLowerContext.h"
