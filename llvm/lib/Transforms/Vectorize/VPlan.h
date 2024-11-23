@@ -643,7 +643,7 @@ public:
   virtual void dropAllReferences(VPValue *NewValue) = 0;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void printAsOperand(raw_ostream &OS, bool PrintType) const {
+  void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
     OS << getName();
   }
 
