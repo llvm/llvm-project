@@ -59,11 +59,13 @@ int get_timezone_offset(char *timezone) {
 
   fd = open("/etc/localtime", O_RDONLY);
   if (fd < 0) {
+    close(fd);
     return 0;
   }
 
   bytes = read(fd, hdr, sizeof(hdr));
   if (bytes != sizeof(hdr)) {
+    close(fd);
     return 0;
   }
 
