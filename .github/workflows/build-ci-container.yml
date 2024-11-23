@@ -41,7 +41,9 @@ jobs:
       - name: Build container
         working-directory: ./.github/workflows/containers/github-action-ci/
         run: |
-          podman build -t ${{ steps.vars.outputs.container-name-tag }} -f stage1.Dockerfile .
+          #podman build -t ${{ steps.vars.outputs.container-name-tag }} -f stage1.Dockerfile .
+          podman pull docker.io/library/ubuntu:22.04
+          podman tag  docker.io/library/ubuntu:22.04 ${{ steps.vars.outputs.container-name-tag }}
 
       - name: Save container image
         run: |
