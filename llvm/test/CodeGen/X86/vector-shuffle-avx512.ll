@@ -339,7 +339,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
-; AVX512F-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (zmm2 & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    ret{{[l|q]}}
 entry:
   %0 = shufflevector <64 x i8> %A, <64 x i8> %W, <64 x i32>  <i32 64, i32 1, i32 66, i32 3, i32 68, i32 5, i32 70, i32 7, i32 72, i32 9, i32 74, i32 11, i32 76, i32 13, i32 78, i32 15, i32 80, i32 17, i32 82, i32 19, i32 84, i32 21, i32 86, i32 23, i32 88, i32 25, i32 90, i32 27, i32 92, i32 29, i32 94, i32 31, i32 96, i32 33, i32 98, i32 35, i32 100, i32 37, i32 102, i32 39, i32 104, i32 41, i32 106, i32 43, i32 108, i32 45, i32 110, i32 47, i32 112, i32 49, i32 114, i32 51, i32 116, i32 53, i32 118, i32 55, i32 120, i32 57, i32 122, i32 59, i32 124, i32 61, i32 126, i32 63>
@@ -354,15 +354,10 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ; AVX512-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    ret{{[l|q]}}
 ;
-; X86-AVX512F-LABEL: test_mm512_mask_blend_epi16:
-; X86-AVX512F:       # %bb.0: # %entry
-; X86-AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %zmm0
-; X86-AVX512F-NEXT:    retl
-;
-; X64-AVX512F-LABEL: test_mm512_mask_blend_epi16:
-; X64-AVX512F:       # %bb.0: # %entry
-; X64-AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
-; X64-AVX512F-NEXT:    retq
+; AVX512F-LABEL: test_mm512_mask_blend_epi16:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (mem & (zmm0 ^ zmm1))
+; AVX512F-NEXT:    ret{{[l|q]}}
 entry:
   %0 = shufflevector <32 x i16> %A, <32 x i16> %W, <32 x i32>  <i32 32, i32 1, i32 34, i32 3, i32 36, i32 5, i32 38, i32 7, i32 40, i32 9, i32 42, i32 11, i32 44, i32 13, i32 46, i32 15, i32 48, i32 17, i32 50, i32 19, i32 52, i32 21, i32 54, i32 23, i32 56, i32 25, i32 58, i32 27, i32 60, i32 29, i32 62, i32 31>
   ret <32 x i16> %0
