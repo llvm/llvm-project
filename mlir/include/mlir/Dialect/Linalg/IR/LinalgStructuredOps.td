@@ -564,7 +564,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
 
   let summary = [{
     Performs a matrix multiplication of two 2D inputs without broadcast or transpose.
-    }];
+  }];
   let description = [{
     Numeric casting is performed on the operands to the inner multiply,
     promoting them to the same data type as the accumulator/output.
@@ -604,83 +604,83 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                     ]
                     ins(%arg0, %arg1 : memref<5x3xf32>, memref<7xf32>) outs(%arg2: memref<3x7xf32>)
     ```
-    }];
+  }];
 
-    let arguments = (ins
-      Variadic<AnyType>:$inputs,
-      Variadic<AnyShaped>:$outputs,
-      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
-      DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
-    );
-    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
-    let regions = (region AnyRegion:$region);
+  let arguments = (ins
+    Variadic<AnyType>:$inputs,
+    Variadic<AnyShaped>:$outputs,
+    DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
+    DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
+  );
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+  let regions = (region AnyRegion:$region);
 
-    let skipDefaultBuilders = 1;
-    let builders = [
-      OpBuilder<
-      (ins "ValueRange":$inputs, "ValueRange":$outputs,
-            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
-      [{
-        buildMatmulOp($_builder, $_state, std::nullopt, inputs, outputs,
-          attributes, MatmulOp::getRegionBuilder(),
-          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
-      }]>,
-      OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-            "ValueRange":$outputs,
-            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
-      [{
-        buildMatmulOp($_builder, $_state, resultTensorTypes,
-          inputs, outputs, attributes, MatmulOp::getRegionBuilder(),
-          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
-      }]>,
-      OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-       "ValueRange":$outputs,
-       "Attribute":$cast, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
-      [{
-        $_state.addAttribute("cast", cast);
-        buildMatmulOp($_builder, $_state, resultTensorTypes, inputs, outputs,
-          attributes, MatmulOp::getRegionBuilder(),
-          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
-      }]>
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<
+    (ins "ValueRange":$inputs, "ValueRange":$outputs,
+          CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+    [{
+      buildMatmulOp($_builder, $_state, std::nullopt, inputs, outputs,
+        attributes, MatmulOp::getRegionBuilder(),
+        MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
+    }]>,
+    OpBuilder<
+    (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+          "ValueRange":$outputs,
+          CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+    [{
+      buildMatmulOp($_builder, $_state, resultTensorTypes,
+        inputs, outputs, attributes, MatmulOp::getRegionBuilder(),
+        MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
+    }]>,
+    OpBuilder<
+    (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+      "ValueRange":$outputs,
+      "Attribute":$cast, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+    [{
+      $_state.addAttribute("cast", cast);
+      buildMatmulOp($_builder, $_state, resultTensorTypes, inputs, outputs,
+        attributes, MatmulOp::getRegionBuilder(),
+        MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
+    }]>
 
-    ];
-    let hasCustomAssemblyFormat = 1;
-    let hasFolder = 1;
-    let hasVerifier = 1;
+  ];
+  let hasCustomAssemblyFormat = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
 
-    let extraClassDeclaration = structuredOpsBaseDecls # [{
-      SmallVector<utils::IteratorType> getIteratorTypesArray();
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
+    SmallVector<utils::IteratorType> getIteratorTypesArray();
 
-      /// Implements the block region builder.
-      static void regionBuilder(ImplicitLocOpBuilder &b,
-                                Block &block, ArrayRef<NamedAttribute> attrs);
+    /// Implements the block region builder.
+    static void regionBuilder(ImplicitLocOpBuilder &b,
+                              Block &block, ArrayRef<NamedAttribute> attrs);
 
-      /// Returns a list of AffineMap with the typical matmul indexing charactristic.
-      static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+    /// Returns a list of AffineMap with the typical matmul indexing characteristic.
+    static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
-      /// Returns true if the given broadcast map \p bcastMap is valid for this op.
-      bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);
+    /// Returns true if the given broadcast map \p bcastMap is valid for this op.
+    bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);
 
-      static std::function<void(ImplicitLocOpBuilder &,
-                                Block &, ArrayRef<NamedAttribute>)>
-      getRegionBuilder() {
-        return regionBuilder;
-      }
+    static std::function<void(ImplicitLocOpBuilder &,
+                              Block &, ArrayRef<NamedAttribute>)>
+    getRegionBuilder() {
+      return regionBuilder;
+    }
 
-      ::mlir::MutableOperandRange getDpsInitsMutable() {
-        return getOutputsMutable();
-      }
+    ::mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
+    }
 
-      // Generic methods.
-      static unsigned getNumRegionArgs();
-      std::string getLibraryCallName();
-      bool hasDynamicIndexingMaps();
-      /// Check if the op has broadcast and/or transpose semantic. Returns true if the
-      /// user defined indexing maps are not equal to default map.
-      bool hasUserDefinedMaps();
-    }];
+    // Generic methods.
+    static unsigned getNumRegionArgs();
+    std::string getLibraryCallName();
+    bool hasDynamicIndexingMaps();
+    /// Check if the op has broadcast and/or transpose semantic. Returns true if the
+    /// user defined indexing maps are not equal to default map.
+    bool hasUserDefinedMaps();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
