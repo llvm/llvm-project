@@ -6926,59 +6926,89 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
 //   return vqrshrun_high_n_s64(a, b, 19);
 // }
 
-// NYI-LABEL: @test_vqshrn_n_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
-// NYI:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// NYI:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshrn.v8i8(<8 x i16> [[VQSHRN_N]], i32 3)
-// NYI:   ret <8 x i8> [[VQSHRN_N1]]
-// int8x8_t test_vqshrn_n_s16(int16x8_t a) {
-//   return vqshrn_n_s16(a, 3);
-// }
+int8x8_t test_vqshrn_n_s16(int16x8_t a) {
+  return vqshrn_n_s16(a, 3);
 
-// NYI-LABEL: @test_vqshrn_n_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
-// NYI:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// NYI:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshrn.v4i16(<4 x i32> [[VQSHRN_N]], i32 19)
-// NYI:   ret <4 x i16> [[VQSHRN_N1]]
-// int16x4_t test_vqshrn_n_s32(int32x4_t a) {
-//   return vqshrn_n_s32(a, 9);
-// }
+  // CIR-LABEL: vqshrn_n_s16
+  // CIR: cir.llvm.intrinsic "aarch64.neon.sqshrn" {{%.*}}, {{%.*}} : 
+  // CIR-SAME: (!cir.vector<!s16i x 8>, !s32i) -> !cir.vector<!s8i x 8>
 
-// NYI-LABEL: @test_vqshrn_n_s64(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// NYI:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// NYI:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqshrn.v2i32(<2 x i64> [[VQSHRN_N]], i32 19)
-// NYI:   ret <2 x i32> [[VQSHRN_N1]]
-// int32x2_t test_vqshrn_n_s64(int64x2_t a) {
-//   return vqshrn_n_s64(a, 19);
-// }
+  // LLVM:{{.*}}test_vqshrn_n_s16(<8 x i16>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+  // LLVM:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+  // LLVM:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshrn.v8i8(<8 x i16> [[VQSHRN_N]], i32 3)
+  // LLVM:   ret <8 x i8> [[VQSHRN_N1]]
+}
 
-// NYI-LABEL: @test_vqshrn_n_u16(
-// NYI:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
-// NYI:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// NYI:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshrn.v8i8(<8 x i16> [[VQSHRN_N]], i32 3)
-// NYI:   ret <8 x i8> [[VQSHRN_N1]]
-// uint8x8_t test_vqshrn_n_u16(uint16x8_t a) {
-//   return vqshrn_n_u16(a, 3);
-// }
+int16x4_t test_vqshrn_n_s32(int32x4_t a) {
+  return vqshrn_n_s32(a, 9);
 
-// NYI-LABEL: @test_vqshrn_n_u32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
-// NYI:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// NYI:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshrn.v4i16(<4 x i32> [[VQSHRN_N]], i32 9)
-// NYI:   ret <4 x i16> [[VQSHRN_N1]]
-// uint16x4_t test_vqshrn_n_u32(uint32x4_t a) {
-//   return vqshrn_n_u32(a, 9);
-// }
+  // CIR-LABEL: vqshrn_n_s32
+  // CIR: cir.llvm.intrinsic "aarch64.neon.sqshrn" {{%.*}}, {{%.*}} : 
+  // CIR-SAME: (!cir.vector<!s32i x 4>, !s32i) -> !cir.vector<!s16i x 4>
 
-// NYI-LABEL: @test_vqshrn_n_u64(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// NYI:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// NYI:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqshrn.v2i32(<2 x i64> [[VQSHRN_N]], i32 19)
-// NYI:   ret <2 x i32> [[VQSHRN_N1]]
-// uint32x2_t test_vqshrn_n_u64(uint64x2_t a) {
-//   return vqshrn_n_u64(a, 19);
-// }
+  // LLVM:{{.*}}test_vqshrn_n_s32(<4 x i32>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+  // LLVM:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+  // LLVM:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshrn.v4i16(<4 x i32> [[VQSHRN_N]], i32 9)
+  // LLVM:   ret <4 x i16> [[VQSHRN_N1]]
+}
+
+int32x2_t test_vqshrn_n_s64(int64x2_t a) {
+  return vqshrn_n_s64(a, 19);
+
+  // CIR-LABEL: vqshrn_n_s64
+  // CIR: cir.llvm.intrinsic "aarch64.neon.sqshrn" {{%.*}}, {{%.*}} : 
+  // CIR-SAME: (!cir.vector<!s64i x 2>, !s32i) -> !cir.vector<!s32i x 2>
+
+  // LLVM:{{.*}}test_vqshrn_n_s64(<2 x i64>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+  // LLVM:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+  // LLVM:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqshrn.v2i32(<2 x i64> [[VQSHRN_N]], i32 19)
+  // LLVM:   ret <2 x i32> [[VQSHRN_N1]]
+}
+
+uint8x8_t test_vqshrn_n_u16(uint16x8_t a) {
+  return vqshrn_n_u16(a, 3);
+
+  // CIR-LABEL: vqshrn_n_u16
+  // CIR: cir.llvm.intrinsic "aarch64.neon.uqshrn" {{%.*}}, {{%.*}} : 
+  // CIR-SAME: (!cir.vector<!u16i x 8>, !s32i) -> !cir.vector<!u8i x 8>
+
+  // LLVM:{{.*}}test_vqshrn_n_u16(<8 x i16>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+  // LLVM:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+  // LLVM:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshrn.v8i8(<8 x i16> [[VQSHRN_N]], i32 3)
+  // LLVM:   ret <8 x i8> [[VQSHRN_N1]]
+}
+
+uint16x4_t test_vqshrn_n_u32(uint32x4_t a) {
+  return vqshrn_n_u32(a, 9);
+
+  // CIR-LABEL: vqshrn_n_u32
+  // CIR: cir.llvm.intrinsic "aarch64.neon.uqshrn" {{%.*}}, {{%.*}} : 
+  // CIR-SAME: (!cir.vector<!u32i x 4>, !s32i) -> !cir.vector<!u16i x 4>
+
+  // LLVM:{{.*}}test_vqshrn_n_u32(<4 x i32>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+  // LLVM:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+  // LLVM:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshrn.v4i16(<4 x i32> [[VQSHRN_N]], i32 9)
+  // LLVM:   ret <4 x i16> [[VQSHRN_N1]]
+}
+
+uint32x2_t test_vqshrn_n_u64(uint64x2_t a) {
+  return vqshrn_n_u64(a, 19);
+
+  // CIR-LABEL: vqshrn_n_u64
+  // CIR: cir.llvm.intrinsic "aarch64.neon.uqshrn" {{%.*}}, {{%.*}} : 
+  // CIR-SAME: (!cir.vector<!u64i x 2>, !s32i) -> !cir.vector<!u32i x 2>
+
+  // LLVM:{{.*}}test_vqshrn_n_u64(<2 x i64>{{.*}}[[A:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+  // LLVM:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+  // LLVM:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqshrn.v2i32(<2 x i64> [[VQSHRN_N]], i32 19)
+  // LLVM:   ret <2 x i32> [[VQSHRN_N1]]
+}
 
 // NYI-LABEL: @test_vqshrn_high_n_s16(
 // NYI:   [[TMP0:%.*]] = bitcast <8 x i16> %b to <16 x i8>
