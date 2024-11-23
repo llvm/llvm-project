@@ -588,26 +588,27 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
           << getErrorLoc(ctx, loc - 3)
           << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
     }
-  } else {
-    assert(rel.type == R_X86_64_CODE_4_GOTTPOFF &&
-           "Unsupported relocation type!");
-    assert((loc[-4] == 0xd5) &&
-           "Invalid prefix with R_X86_64_CODE_4_GOTTPOFF!");
+  } else if (rel.type == R_X86_64_CODE_4_GOTTPOFF) {
+    if (loc[-4] != 0xd5)
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "Invalid prefix with R_X86_64_CODE_4_GOTTPOFF!";
     const uint8_t rex = loc[-3];
     loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
     *regSlot = 0xc0 | reg;
 
-    // "movq foo@gottpoff(%rip),%r[16-31]" -> "movq $foo,%r[16-31]"
-    if (loc[-2] == 0x8b)
+    if (loc[-2] == 0x8b) {
+      // "movq foo@gottpoff(%rip),%r[16-31]" -> "movq $foo,%r[16-31]"
       loc[-2] = 0xc7;
-    else {
+    } else if (loc[-2] == 0x03) {
       // "addq foo@gottpoff(%rip),%r[16-31]" -> "addq $foo,%r[16-31]"
-      if (loc[-2] != 0x03)
-        Err(ctx) << getErrorLoc(ctx, loc - 3)
-                 << "R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ "
-                    "instructions only";
       loc[-2] = 0x81;
+    } else {
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ "
+                  "instructions only";
     }
+  } else {
+    llvm_unreachable("Unsupported relocation type!");
   }
 
   // The original code used a PC relative relocation.
