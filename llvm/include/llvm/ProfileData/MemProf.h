@@ -389,14 +389,6 @@ struct AllocationInfo {
   PortableMemInfoBlock Info;
 
   AllocationInfo() = default;
-  AllocationInfo(
-      const IndexedAllocationInfo &IndexedAI,
-      llvm::function_ref<const Frame(const FrameId)> IdToFrameCallback) {
-    for (const FrameId &Id : IndexedAI.CallStack) {
-      CallStack.push_back(IdToFrameCallback(Id));
-    }
-    Info = IndexedAI.Info;
-  }
 
   void printYAML(raw_ostream &OS) const {
     OS << "    -\n";
