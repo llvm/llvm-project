@@ -1,4 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX940 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX950 %s
 
 # GCN-LABEL: name: valu_write_vgpr_sgemm_mfma_read
 # GCN:      V_MOV_B32
@@ -803,8 +804,12 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_read
 body:             |
@@ -867,8 +872,13 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_dot_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
+
 # GCN-NEXT: V_DOT
 name:            dmfma16x16_write_vgpr_dot_read
 body:             |
@@ -1505,8 +1515,12 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            dmfma16x16_write_agpr_valu_read
 body:             |
