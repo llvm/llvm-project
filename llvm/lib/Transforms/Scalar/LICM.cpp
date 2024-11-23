@@ -2030,7 +2030,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
   bool DereferenceableInPH = false;
   bool StoreIsGuanteedToExecute = false;
-  bool LoadIsGuanteedToExecute = false;
+  bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
 
   // Goes from Unknown to either Safe or Unsafe, but can't switch between them.
@@ -2090,15 +2090,12 @@ bool llvm::promoteLoopAccessesToScalars(
         FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
-        bool GuaranteedToExecute =
-            SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
-        LoadIsGuanteedToExecute |= GuaranteedToExecute;
+        LoadIsGuaranteedToExecut |= SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
         // to execute does as well.  Thus we can increase our guaranteed
         // alignment as well.
-
         if (!DereferenceableInPH || (InstAlignment > Alignment))
           if (isSafeToExecuteUnconditionally(
                   *Load, DT, TLI, CurLoop, SafetyInfo, ORE,
@@ -2253,7 +2250,7 @@ bool llvm::promoteLoopAccessesToScalars(
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
     PreheaderLoad->setDebugLoc(DebugLoc());
-    if (AATags && LoadIsGuanteedToExecute)
+    if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
     MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
