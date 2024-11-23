@@ -573,15 +573,13 @@ void RemoveDeadValues::runOnOperation() {
   Operation *module = getOperation();
 
   // The removal of non-live values is performed iff there are no branch ops,
-  // all symbol ops present in the IR are function-like, and all symbol user ops
-  // present in the IR are call-like.
+  // and all symbol user ops present in the IR are call-like.
   WalkResult acceptableIR = module->walk([&](Operation *op) {
     if (op == module)
       return WalkResult::advance();
     if (isa<BranchOpInterface>(op) ||
-        (isa<SymbolOpInterface>(op) && !isa<FunctionOpInterface>(op)) ||
         (isa<SymbolUserOpInterface>(op) && !isa<CallOpInterface>(op))) {
-      op->emitError() << "cannot optimize an IR with non-function symbol ops, "
+      op->emitError() << "cannot optimize an IR with "
                          "non-call symbol user ops or branch ops\n";
       return WalkResult::interrupt();
     }
