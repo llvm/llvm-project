@@ -55,8 +55,10 @@ void constant_enum_safe() {
 }
 
 void constant_enum_unsafe(FooEnum e) {
-  int buffer[FooEnum::D] = { 0, 1, 2 };
-  buffer[e] = 0; // expected-warning{{unsafe buffer access}}
+  int buffer[FooEnum::D] = { 0, 1, 2 }; // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}
+                                        // expected-note@-1{{change type of 'buffer' to 'std::array' to label it for hardening}}
+
+  buffer[e] = 0; // expected-note{{used in buffer access here}}
 }
 
 void constant_id_string(unsigned idx) {
