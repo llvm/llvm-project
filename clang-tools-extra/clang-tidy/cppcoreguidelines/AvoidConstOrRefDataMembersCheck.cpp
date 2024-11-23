@@ -14,13 +14,13 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static bool hasCopyConstructor(CXXRecordDecl const &Node) {
+static bool isCopyConstructible(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForCopyConstructor() &&
       Node.needsImplicitCopyConstructor()) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr && !hasCopyConstructor(*BRD))
+      if (BRD != nullptr && !isCopyConstructible(*BRD))
         return false;
     }
   }
@@ -32,13 +32,13 @@ static bool hasCopyConstructor(CXXRecordDecl const &Node) {
   return false;
 }
 
-static bool hasMoveConstructor(CXXRecordDecl const &Node) {
+static bool isMoveConstructible(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForMoveConstructor() &&
       Node.needsImplicitMoveConstructor()) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr && !hasMoveConstructor(*BRD))
+      if (BRD != nullptr && !isMoveConstructible(*BRD))
         return false;
     }
   }
@@ -50,13 +50,13 @@ static bool hasMoveConstructor(CXXRecordDecl const &Node) {
   return false;
 }
 
-static bool hasCopyAssignment(CXXRecordDecl const &Node) {
+static bool isCopyAssignable(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForCopyAssignment() &&
       Node.needsImplicitCopyAssignment()) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr && !hasCopyAssignment(*BRD))
+      if (BRD != nullptr && !isCopyAssignable(*BRD))
         return false;
     }
   }
@@ -68,13 +68,13 @@ static bool hasCopyAssignment(CXXRecordDecl const &Node) {
   return false;
 }
 
-static bool hasMoveAssignment(CXXRecordDecl const &Node) {
+static bool isMoveAssignable(CXXRecordDecl const &Node) {
   if (Node.needsOverloadResolutionForMoveAssignment() &&
       Node.needsImplicitMoveAssignment()) {
     // unresolved
     for (CXXBaseSpecifier const &BS : Node.bases()) {
       CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
-      if (BRD != nullptr && !hasMoveAssignment(*BRD))
+      if (BRD != nullptr && !isMoveAssignable(*BRD))
         return false;
     }
   }
@@ -93,8 +93,8 @@ AST_MATCHER(FieldDecl, isMemberOfLambda) {
 }
 
 AST_MATCHER(CXXRecordDecl, isCopyableOrMovable) {
-  return hasCopyConstructor(Node) || hasMoveConstructor(Node) ||
-         hasCopyAssignment(Node) || hasMoveAssignment(Node);
+  return isCopyConstructible(Node) || isMoveConstructible(Node) ||
+         isCopyAssignable(Node) || isMoveAssignable(Node);
 }
 
 } // namespace
