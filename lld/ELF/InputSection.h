@@ -93,10 +93,10 @@ public:
 
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
-  uint32_t addralign;
-  uint32_t entsize;
   uint32_t link;
   uint32_t info;
+  uint32_t addralign;
+  uint32_t entsize;
 
   Ctx &getCtx() const;
   OutputSection *getOutputSection();
@@ -116,11 +116,11 @@ public:
 
 protected:
   constexpr SectionBase(Kind sectionKind, InputFile *file, StringRef name,
-                        uint64_t flags, uint32_t entsize, uint32_t addralign,
-                        uint32_t type, uint32_t info, uint32_t link)
+                        uint32_t type, uint64_t flags, uint32_t link,
+                        uint32_t info, uint32_t addralign, uint32_t entsize)
       : sectionKind(sectionKind), bss(false), keepUnique(false), type(type),
-        file(file), name(name), flags(flags), addralign(addralign),
-        entsize(entsize), link(link), info(info) {}
+        file(file), name(name), flags(flags), link(link), info(info),
+        addralign(addralign), entsize(entsize) {}
 };
 
 struct SymbolAnchor {
@@ -148,9 +148,9 @@ public:
   InputSectionBase(ObjFile<ELFT> &file, const typename ELFT::Shdr &header,
                    StringRef name, Kind sectionKind);
 
-  InputSectionBase(InputFile *file, uint64_t flags, uint32_t type,
-                   uint64_t entsize, uint32_t link, uint32_t info,
-                   uint32_t addralign, ArrayRef<uint8_t> data, StringRef name,
+  InputSectionBase(InputFile *file, StringRef name, uint32_t type,
+                   uint64_t flags, uint32_t link, uint32_t info,
+                   uint32_t addralign, uint32_t entsize, ArrayRef<uint8_t> data,
                    Kind sectionKind);
 
   static bool classof(const SectionBase *s) {
@@ -315,8 +315,8 @@ public:
   template <class ELFT>
   MergeInputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                     StringRef name);
-  MergeInputSection(Ctx &, uint64_t flags, uint32_t type, uint64_t entsize,
-                    ArrayRef<uint8_t> data, StringRef name);
+  MergeInputSection(Ctx &, StringRef name, uint32_t type, uint64_t flags,
+                    uint64_t entsize, ArrayRef<uint8_t> data);
 
   static bool classof(const SectionBase *s) { return s->kind() == Merge; }
   void splitIntoPieces();
@@ -394,8 +394,9 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection(InputFile *f, uint64_t flags, uint32_t type, uint32_t addralign,
-               ArrayRef<uint8_t> data, StringRef name, Kind k = Regular);
+  InputSection(InputFile *f, StringRef name, uint32_t type, uint64_t flags,
+               uint32_t addralign, uint32_t entsize, ArrayRef<uint8_t> data,
+               Kind k = Regular);
   template <class ELFT>
   InputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                StringRef name);
@@ -473,8 +474,8 @@ public:
   Ctx &ctx;
   SyntheticSection(Ctx &ctx, uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
-      : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
-                     InputSectionBase::Synthetic),
+      : InputSection(ctx.internalFile, name, type, flags, addralign,
+                     /*entsize=*/0, {}, InputSectionBase::Synthetic),
         ctx(ctx) {}
 
   virtual ~SyntheticSection() = default;
