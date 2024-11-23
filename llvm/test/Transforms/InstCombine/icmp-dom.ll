@@ -534,3 +534,215 @@ else:
   %cmp1 = icmp eq i32 %and1, 0
   ret i1 %cmp1
 }
+
+; TODO: X != Y implies X | Y != 0
+define i1 @or_nonzero_from_nonequal(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_nonzero_from_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond = icmp eq i8 %x, %y
+  br i1 %cond, label %if.else, label %if.then
+
+if.then:
+  %or = or i8 %x, %y
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
+define i1 @test_nonequal_domcond1(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_domcond1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W]], [[Z]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp eq i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.end, label %if.then
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_domcond2(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_domcond2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W]], [[Z]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  %cond2 = icmp ne i64 %w, %z
+  %or.cond = select i1 %cond1, i1 %cond2, i1 false
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_assume(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W]], [[Z]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp ne i64 %w, %z
+  call void @llvm.assume(i1 %cond2)
+
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @test_nonequal_invalid_domcond1(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_domcond1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.end, label %if.then
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_invalid_domcond2(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_domcond2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W]], [[Z]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond1 = icmp eq i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+}
+
+define i1 @test_nonequal_invalid_assume(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y]], [[X]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+
+  call void @side_effect()
+  %cond1 = icmp ne i64 %y, %x
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp ne i64 %w, %z
+  call void @llvm.assume(i1 %cond2)
+  ret i1 %cmp
+}
+
+declare void @side_effect()
