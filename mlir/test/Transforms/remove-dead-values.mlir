@@ -3,9 +3,10 @@
 // The IR is updated regardless of memref.global private constant
 //
 module {
-  memref.global "private" constant @__something_global : memref<i32> = dense<0>
+  memref.global "private" constant @global_buffer : memref<5xi32> = dense<[1, 2, 3, 4, 5]> : tensor<5xi32>
   func.func @main(%arg0: i32) -> i32 {
     %0 = tensor.empty() : tensor<10xbf16>
+    %1 = memref.get_global @global_buffer : memref<5xi32>
     // CHECK-NOT: tensor.empty
     return %arg0 : i32
   }
