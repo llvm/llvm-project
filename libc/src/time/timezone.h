@@ -15,6 +15,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
+// accoring to `tzfile`, timezone header if always 44 bytes
+#define TIMEZONE_HDR_SIZE 44
+
 int get_timezone_offset(char *timezone);
 
 } // namespace timezone
