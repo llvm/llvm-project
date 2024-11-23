@@ -9,21 +9,13 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIMEZONE_H
 #define LLVM_LIBC_SRC_TIME_TIMEZONE_H
 
-#include <stddef.h> // For size_t.
-
-#include "src/__support/CPP/limits.h"
-#include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
-#include "src/time/mktime.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-extern int get_timezone_offset(char *timezone);
+int get_timezone_offset(char *timezone);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL

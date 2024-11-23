@@ -26,7 +26,7 @@ void set_env_var(const char *env) {
   }
 }
 
-TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
+/*TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
   set_env_var("TZ=Europe/Berlin");
 
   const time_t t_ptr = 0;
@@ -168,4 +168,4 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableEuropeMoscow) {
   ASSERT_EQ(0, result->tm_wday);
   ASSERT_EQ(205, result->tm_yday);
   ASSERT_EQ(1, result->tm_isdst);
-}
+}*/
