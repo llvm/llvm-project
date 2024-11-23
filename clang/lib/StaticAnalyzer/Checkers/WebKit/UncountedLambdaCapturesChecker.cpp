@@ -114,7 +114,7 @@ public:
         if (!DRE)
           return;
         auto *MD = dyn_cast_or_null<CXXMethodDecl>(DRE->getDecl());
-        if (!MD || CE->getNumArgs() != 1)
+        if (!MD || CE->getNumArgs() < 1)
           return;
         auto *Arg = CE->getArg(0)->IgnoreParenCasts();
         auto *ArgRef = dyn_cast<DeclRefExpr>(Arg);
