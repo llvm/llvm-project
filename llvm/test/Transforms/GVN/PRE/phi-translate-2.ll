@@ -251,7 +251,7 @@ if.end3:                                          ; preds = %if.then2, %if.else,
 ; Here the load from arrayidx1 is partially redundant, but its value is
 ; available in if.then. Check that we correctly phi-translate to the phi that
 ; the load has been replaced with.
-define void @test6(ptr %ptr) {
+define void @test6(ptr %ptr, i1 %arg) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX1_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 1
@@ -272,7 +272,7 @@ define void @test6(ptr %ptr) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[WHILE]] ]
-; CHECK-NEXT:    br i1 undef, label [[WHILE_END:%.*]], label [[WHILE]]
+; CHECK-NEXT:    br i1 %arg, label [[WHILE_END:%.*]], label [[WHILE]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -295,7 +295,7 @@ if.then:
   br label %if.end
 
 if.end:
-  br i1 undef, label %while.end, label %while
+  br i1 %arg, label %while.end, label %while
 
 while.end:
   ret void

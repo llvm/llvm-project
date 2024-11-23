@@ -162,8 +162,9 @@ class LegalityAnalysis {
   const DataLayout &DL;
 
 public:
-  LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL)
-      : Sched(AA), SE(SE), DL(DL) {}
+  LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
+                   Context &Ctx)
+      : Sched(AA, Ctx), SE(SE), DL(DL) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT... Args) {

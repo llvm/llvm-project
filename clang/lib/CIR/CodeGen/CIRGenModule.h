@@ -31,10 +31,8 @@ class LangOptions;
 class SourceLocation;
 class SourceRange;
 class TargetInfo;
-} // namespace clang
 
-using namespace clang;
-namespace cir {
+namespace CIRGen {
 
 /// This class organizes the cross-function state that is used while generating
 /// CIR code.
@@ -74,15 +72,15 @@ public:
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
 
-  void buildTopLevelDecl(clang::Decl *decl);
+  void emitTopLevelDecl(clang::Decl *decl);
 
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
-  void buildGlobal(clang::GlobalDecl gd);
+  void emitGlobal(clang::GlobalDecl gd);
 
-  void buildGlobalDefinition(clang::GlobalDecl gd,
-                             mlir::Operation *op = nullptr);
-  void buildGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+  void emitGlobalDefinition(clang::GlobalDecl gd,
+                            mlir::Operation *op = nullptr);
+  void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
 
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(llvm::StringRef);
@@ -91,6 +89,8 @@ public:
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef);
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef, llvm::StringRef);
 };
-} // namespace cir
+} // namespace CIRGen
+
+} // namespace clang
 
 #endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H

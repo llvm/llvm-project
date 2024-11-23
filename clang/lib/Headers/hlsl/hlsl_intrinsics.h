@@ -362,6 +362,24 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double4);
 
 //===----------------------------------------------------------------------===//
+// asdouble builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn double asdouble(uint LowBits, uint HighBits)
+/// \brief Reinterprets a cast value (two 32-bit values) into a double.
+/// \param LowBits The low 32-bit pattern of the input value.
+/// \param HighBits The high 32-bit pattern of the input value.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
+double asdouble(uint, uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
+double2 asdouble(uint2, uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
+double3 asdouble(uint3, uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asdouble)
+double4 asdouble(uint4, uint4);
+
+//===----------------------------------------------------------------------===//
 // asfloat builtins
 //===----------------------------------------------------------------------===//
 
@@ -656,6 +674,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
 double4 clamp(double4, double4, double4);
 
 //===----------------------------------------------------------------------===//
+// clip builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void clip(T Val)
+/// \brief Discards the current pixel if the specified value is less than zero.
+/// \param Val The input value.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clip)
+void clip(float4);
+
+//===----------------------------------------------------------------------===//
 // cos builtins
 //===----------------------------------------------------------------------===//
 
@@ -942,7 +977,13 @@ uint64_t dot(uint64_t4, uint64_t4);
 
 _HLSL_AVAILABILITY(shadermodel, 6.4)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot4add_i8packed)
-int dot4add_i8packed(unsigned int, unsigned int, int);
+int dot4add_i8packed(uint, uint, int);
+
+/// \fn uint dot4add_u8packed(uint A, uint B, uint C)
+
+_HLSL_AVAILABILITY(shadermodel, 6.4)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot4add_u8packed)
+uint dot4add_u8packed(uint, uint, uint);
 
 //===----------------------------------------------------------------------===//
 // exp builtins
@@ -2199,6 +2240,15 @@ float4 trunc(float4);
 //===----------------------------------------------------------------------===//
 // Wave* builtins
 //===----------------------------------------------------------------------===//
+
+/// \brief Returns true if the expression is true in any active lane in the
+/// current wave.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return True if the expression is true in any lane.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_any_true)
+__attribute__((convergent)) bool WaveActiveAnyTrue(bool Val);
 
 /// \brief Counts the number of boolean variables which evaluate to true across
 /// all active lanes in the current wave.

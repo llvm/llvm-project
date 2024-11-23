@@ -64,6 +64,9 @@ PreservedAnalyses SandboxVectorizerPass::run(Function &F,
 }
 
 bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
+  if (Ctx == nullptr)
+    Ctx = std::make_unique<sandboxir::Context>(LLVMF.getContext());
+
   if (PrintPassPipeline) {
     FPM.printPipeline(outs());
     return false;
@@ -82,8 +85,7 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
   }
 
   // Create SandboxIR for LLVMF and run BottomUpVec on it.
-  sandboxir::Context Ctx(LLVMF.getContext());
-  sandboxir::Function &F = *Ctx.createFunction(&LLVMF);
+  sandboxir::Function &F = *Ctx->createFunction(&LLVMF);
   sandboxir::Analyses A(*AA, *SE);
   return FPM.runOnFunction(F, A);
 }

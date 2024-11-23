@@ -460,14 +460,6 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
-  ScheduleDAGMI::DumpDirection D;
-  if (ForceTopDown)
-    D = ScheduleDAGMI::DumpDirection::TopDown;
-  else if (ForceBottomUp)
-    D = ScheduleDAGMI::DumpDirection::BottomUp;
-  else
-    D = ScheduleDAGMI::DumpDirection::Bidirectional;
-  Scheduler->setDumpDirection(D);
   scheduleRegions(*Scheduler, false);
 
   LLVM_DEBUG(LIS->dump());
@@ -501,14 +493,6 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
-  ScheduleDAGMI::DumpDirection D;
-  if (PostRADirection == MISchedPostRASched::TopDown)
-    D = ScheduleDAGMI::DumpDirection::TopDown;
-  else if (PostRADirection == MISchedPostRASched::BottomUp)
-    D = ScheduleDAGMI::DumpDirection::BottomUp;
-  else
-    D = ScheduleDAGMI::DumpDirection::Bidirectional;
-  Scheduler->setDumpDirection(D);
   scheduleRegions(*Scheduler, true);
 
   if (VerifyScheduling)
@@ -796,6 +780,16 @@ void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
   ScheduleDAGInstrs::enterRegion(bb, begin, end, regioninstrs);
 
   SchedImpl->initPolicy(begin, end, regioninstrs);
+
+  // Set dump direction after initializing sched policy.
+  ScheduleDAGMI::DumpDirection D;
+  if (SchedImpl->getPolicy().OnlyTopDown)
+    D = ScheduleDAGMI::DumpDirection::TopDown;
+  else if (SchedImpl->getPolicy().OnlyBottomUp)
+    D = ScheduleDAGMI::DumpDirection::BottomUp;
+  else
+    D = ScheduleDAGMI::DumpDirection::Bidirectional;
+  setDumpDirection(D);
 }
 
 /// This is normally called from the main scheduler loop but may also be invoked
@@ -3903,15 +3897,28 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
 void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
                                       MachineBasicBlock::iterator End,
                                       unsigned NumRegionInstrs) {
-  if (PostRADirection == MISchedPostRASched::TopDown) {
-    RegionPolicy.OnlyTopDown = true;
-    RegionPolicy.OnlyBottomUp = false;
-  } else if (PostRADirection == MISchedPostRASched::BottomUp) {
-    RegionPolicy.OnlyTopDown = false;
-    RegionPolicy.OnlyBottomUp = true;
-  } else if (PostRADirection == MISchedPostRASched::Bidirectional) {
-    RegionPolicy.OnlyBottomUp = false;
-    RegionPolicy.OnlyTopDown = false;
+  const MachineFunction &MF = *Begin->getMF();
+
+  // Default to top-down because it was implemented first and existing targets
+  // expect that behavior by default.
+  RegionPolicy.OnlyTopDown = true;
+  RegionPolicy.OnlyBottomUp = false;
+
+  // Allow the subtarget to override default policy.
+  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, NumRegionInstrs);
+
+  // After subtarget overrides, apply command line options.
+  if (PostRADirection.getNumOccurrences() > 0) {
+    if (PostRADirection == MISchedPostRASched::TopDown) {
+      RegionPolicy.OnlyTopDown = true;
+      RegionPolicy.OnlyBottomUp = false;
+    } else if (PostRADirection == MISchedPostRASched::BottomUp) {
+      RegionPolicy.OnlyTopDown = false;
+      RegionPolicy.OnlyBottomUp = true;
+    } else if (PostRADirection == MISchedPostRASched::Bidirectional) {
+      RegionPolicy.OnlyBottomUp = false;
+      RegionPolicy.OnlyTopDown = false;
+    }
   }
 }
 

@@ -708,15 +708,7 @@ public:
   bool isUndef() const { return NodeType == ISD::UNDEF; }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
-  /// INTRINSIC_W_CHAIN and INTRINSIC_VOID nodes are sometimes created for
-  /// non-memory intrinsics (with chains) that are not really instances of
-  /// MemSDNode. For such nodes, we need some extra state to determine the
-  /// proper classof relationship.
-  bool isMemIntrinsic() const {
-    return (NodeType == ISD::INTRINSIC_W_CHAIN ||
-            NodeType == ISD::INTRINSIC_VOID) &&
-           SDNodeBits.IsMemIntrinsic;
-  }
+  bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
 
   /// Test if this node is a strict floating point pseudo-op.
   bool isStrictFPOpcode() {
@@ -1464,7 +1456,6 @@ public:
     switch (N->getOpcode()) {
     case ISD::LOAD:
     case ISD::STORE:
-    case ISD::PREFETCH:
     case ISD::ATOMIC_CMP_SWAP:
     case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     case ISD::ATOMIC_SWAP:
@@ -1504,7 +1495,7 @@ public:
     case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
       return true;
     default:
-      return N->isMemIntrinsic() || N->isTargetMemoryOpcode();
+      return N->isMemIntrinsic();
     }
   }
 };
@@ -1596,9 +1587,7 @@ public:
   static bool classof(const SDNode *N) {
     // We lower some target intrinsics to their target opcode
     // early a node with a target opcode can be of this class
-    return N->isMemIntrinsic()             ||
-           N->getOpcode() == ISD::PREFETCH ||
-           N->isTargetMemoryOpcode();
+    return N->isMemIntrinsic();
   }
 };
 

@@ -2,7 +2,7 @@
 
 subroutine f00
   integer :: obj
-!ERROR: A DEPEND clause on a DEPOBJ construct must not have SOURCE, SINK or DEPOBJ as dependence-type
+!ERROR: A DEPEND clause on a DEPOBJ construct must not have SINK, SOURCE or DEPOBJ as dependence type
   !$omp depobj(obj) depend(source)
 end
 

@@ -717,6 +717,19 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtulr
     libc.src.stdfix.uhksqrtus
     libc.src.stdfix.uksqrtui
+    libc.src.stdfix.hrbits
+    libc.src.stdfix.uhrbits
+    libc.src.stdfix.rbits
+    libc.src.stdfix.urbits
+    libc.src.stdfix.lrbits
+    libc.src.stdfix.ulrbits
+    libc.src.stdfix.hkbits
+    libc.src.stdfix.uhkbits
+    libc.src.stdfix.kbits
+    libc.src.stdfix.ukbits
+    # TODO: https://github.com/llvm/llvm-project/issues/115778
+    libc.src.stdfix.lkbits
+    libc.src.stdfix.ulkbits
   )
 endif()
 
@@ -885,6 +898,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch
     libc.src.search.hsearch_r
     libc.src.search.insque
+    libc.src.search.lfind
     libc.src.search.remque
 
     # threads.h entrypoints

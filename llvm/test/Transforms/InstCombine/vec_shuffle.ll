@@ -1490,7 +1490,7 @@ define <4 x i32> @splat_assoc_add(<4 x i32> %x, <4 x i32> %y) {
 
 define <vscale x 4 x i32> @vsplat_assoc_add(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
 ; CHECK-LABEL: @vsplat_assoc_add(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 4 x i32> [[X:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 317426, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 4 x i32> [[X:%.*]], splat (i32 317426)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = add <vscale x 4 x i32> [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
@@ -2409,6 +2409,18 @@ define <4 x i32> @shuf_same_length_vec_select(<4 x i1> %cond) {
   %sel = select <4 x i1> %cond, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %shuf = shufflevector <4 x i32> %sel, <4 x i32> <i32 8, i32 9, i32 10, i32 11>, <4 x i32> <i32 2, i32 1, i32 3, i32 5>
   ret <4 x i32> %shuf
+}
+
+; Make sure we do not fold in this case.
+define <4 x i8> @shuf_cmp_may_be_poison(<4 x i8> %x, <4 x i8> %y, i1 %cmp) {
+; CHECK-LABEL: @shuf_cmp_may_be_poison(
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[CMP:%.*]], <4 x i8> [[Y1:%.*]], <4 x i8> <i8 0, i8 poison, i8 0, i8 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> <i8 poison, i8 1, i8 poison, i8 3>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+;
+  %sel = select i1 %cmp, <4 x i8> %y, <4 x i8> <i8 0, i8 poison, i8 0, i8 poison>
+  %shuf = shufflevector <4 x i8> %sel, <4 x i8> <i8 poison, i8 1, i8 poison, i8 3>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i8> %shuf
 }
 
 declare i1 @cond()

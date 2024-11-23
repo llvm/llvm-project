@@ -410,3 +410,65 @@ TEST_F(VecUtilsTest, GetWideType) {
   auto *Int32X8Ty = sandboxir::FixedVectorType::get(Int32Ty, 8);
   EXPECT_EQ(sandboxir::VecUtils::getWideType(Int32X4Ty, 2), Int32X8Ty);
 }
+
+TEST_F(VecUtilsTest, GetLowest) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+bb0:
+  %A = add i8 %v, %v
+  %B = add i8 %v, %v
+  %C = add i8 %v, %v
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *IA = &*It++;
+  auto *IB = &*It++;
+  auto *IC = &*It++;
+  SmallVector<sandboxir::Instruction *> ABC({IA, IB, IC});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC), IC);
+  SmallVector<sandboxir::Instruction *> ACB({IA, IC, IB});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ACB), IC);
+  SmallVector<sandboxir::Instruction *> CAB({IC, IA, IB});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(CAB), IC);
+  SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(CBA), IC);
+}
+
+TEST_F(VecUtilsTest, GetCommonScalarType) {
+  parseIR(R"IR(
+define void @foo(i8 %v, ptr %ptr) {
+bb0:
+  %add0 = add i8 %v, %v
+  store i8 %v, ptr %ptr
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  {
+    SmallVector<sandboxir::Value *> Vec = {Add0, Store};
+    EXPECT_EQ(sandboxir::VecUtils::tryGetCommonScalarType(Vec),
+              Add0->getType());
+    EXPECT_EQ(sandboxir::VecUtils::getCommonScalarType(Vec), Add0->getType());
+  }
+  {
+    SmallVector<sandboxir::Value *> Vec = {Add0, Ret};
+    EXPECT_EQ(sandboxir::VecUtils::tryGetCommonScalarType(Vec), nullptr);
+#ifndef NDEBUG
+    EXPECT_DEATH(sandboxir::VecUtils::getCommonScalarType(Vec), ".*common.*");
+#endif // NDEBUG
+  }
+}

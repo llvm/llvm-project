@@ -42,6 +42,11 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
+* Added a new IRNormalizer pass which aims to transform LLVM modules into
+  a normal form by reordering and renaming instructions while preserving the
+  same semantics. The normalizer makes it easier to spot semantic differences
+  when diffing two modules which have undergone different passes.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -185,12 +190,28 @@ Changes to the RISC-V Backend
 * The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
+* `-mcpu=tt-ascalon-d8` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
 * The `Sha` extension is now supported.
 * The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
   as experimental.
+* `.insn <length>, <raw encoding>` can be used to assemble 48- and 64-bit
+  instructions from raw integer values.
+* `.insn [<length>,] <raw encoding>` now accepts absolute expressions for both
+  expressions, so that they can be computed from constants and absolute symbols.
+* The following new inline assembly constraints and modifiers are accepted:
+  * `cr` constraint meaning an RVC-encoding compatible GPR (`x8`-`x15`)
+  * `cf` constraint meaning an RVC-encoding compatible FPR (`f8`-`f15`)
+  * `R` constraint meaning an even-odd GPR pair (prints as the even register,
+    but both registers in the pair are considered live).
+  * `N` modifer meaning print the register encoding (0-31) rather than the name.
+* `f` and `cf` inline assembly constraints, when using F-/D-/H-in-X extensions,
+  will use the relevant GPR rather than FPR. This makes inline assembly portable
+  between e.g. F and Zfinx code.
+
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -230,6 +251,8 @@ Changes to the X86 Backend
 * Supported ISA of `SM4(EVEX)`.
 
 * Supported ISA of `MSR_IMM`.
+
+* Supported ``-mcpu=diamondrapids``
 
 Changes to the OCaml bindings
 -----------------------------
@@ -303,6 +326,28 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* LLDB now now supports inline diagnostics for the expression evaluator and command line parser.
+
+  Old:
+  ```
+  (lldb) p a+b
+  error: <user expression 0>:1:1: use of undeclared identifier 'a'
+      1 | a+b
+        | ^
+  error: <user expression 0>:1:3: use of undeclared identifier 'b'
+      1 | a+b
+        |   ^
+  ```
+
+  New:
+
+  ```
+  (lldb) p a+b
+           ˄ ˄
+           │ ╰─ error: use of undeclared identifier 'b'
+           ╰─ error: use of undeclared identifier 'a'
+  ```
+
 * LLDB can now read the `fpmr` register from AArch64 Linux processes and core
   files.
 
@@ -310,6 +355,36 @@ Changes to LLDB
   * eg. `settings set target.output-path/target.error-path <path/to/file>`
 
 * A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
+
+* LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
+
+* On the command line, LLDB now limits tab completions to your terminal width to avoid wrapping.
+
+  Old:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorthand
+  formats.
+          _regexp-bt        -- Show backtrace of the current thread's call sta
+  ck. Any numeric argument displays at most that many frames. The argument 'al
+  l' displays all threads. Use 'settings set frame-format' to customize the pr
+  inting of individual frames and 'settings set thread-format' to customize th
+  e thread header. Frame recognizers may filter thelist. Use 'thread backtrace
+  -u (--unfiltered)' to see them all.
+          _regexp-display   -- Evaluate an expression at every stop (see 'help
+  target stop-hook'.)
+
+  ```
+
+  New:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorth...
+          _regexp-bt        -- Show backtrace of the current thread's call ...
+          _regexp-display   -- Evaluate an expression at every stop (see 'h...
+  ```
 
 Changes to BOLT
 ---------------------------------
