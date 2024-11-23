@@ -120,4 +120,49 @@ func.func @_QQsub6() attributes {fir.bindc_name = "test"} {
 // CHECK: %[[B_BOX:.*]] = fir.convert %[[B]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: fir.call @_FortranACUFAllocatableAllocate(%[[B_BOX]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
+
+func.func @_QPallocate_source() {
+  %c0_i64 = arith.constant 0 : i64
+  %c1_i32 = arith.constant 1 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>> {bindc_name = "a", uniq_name = "_QFallocate_sourceEa"}
+  %4 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocate_sourceEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %5 = cuf.alloc !fir.box<!fir.heap<!fir.array<?x?xf32>>> {bindc_name = "a_d", data_attr = #cuf.cuda<device>, uniq_name = "_QFallocate_sourceEa_d"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %7 = fir.declare %5 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocate_sourceEa_d"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %8 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %22 = cuf.allocate %7 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> source(%8 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>) {data_attr = #cuf.cuda<device>} -> i32
+  return
+}
+
+// CHECK-LABEL: func.func @_QPallocate_source()
+// CHECK: %[[DECL_HOST:.*]] = fir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocate_sourceEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+// CHECK: %[[DECL_DEV:.*]] = fir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocate_sourceEa_d"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+// CHECK: %[[SOURCE:.*]] = fir.load %[[DECL_HOST]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+// CHECK: %[[DEV_CONV:.*]] = fir.convert %[[DECL_DEV]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: %[[SOURCE_CONV:.*]] = fir.convert %[[SOURCE]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<none>
+// CHECK: %{{.*}} = fir.call @_FortranACUFAllocatableAllocateSource(%[[DEV_CONV]], %[[SOURCE_CONV]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+
+fir.global @_QMmod1Ea_d {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+  %c0 = arith.constant 0 : index
+  %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+  %1 = fir.shape %c0, %c0 : (index, index) -> !fir.shape<2>
+  %2 = fir.embox %0(%1) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+  fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+}
+func.func @_QMmod1Pallocate_source_global() {
+  %0 = fir.address_of(@_QMmod1Ea_d) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmod1Ea_d"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %2 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>> {bindc_name = "a", uniq_name = "_QMmod1Fallocate_source_globalEa"}
+  %6 = fir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmod1Fallocate_source_globalEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %7 = fir.load %6 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %21 = cuf.allocate %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> source(%7 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>) {data_attr = #cuf.cuda<device>} -> i32
+  return
+}
+
+// CHECK-LABEL: func.func @_QMmod1Pallocate_source_global()
+// CHECK: fir.call @_FortranACUFAllocatableAllocateSourceSync
+
 } // end of module
