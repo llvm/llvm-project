@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
+def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
-def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
+def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
@@ -805,6 +805,10 @@ defm atomic_load_fmax : SIAtomicM0Glue2 <"LOAD_FMAX", 0, SDTAtomic2_f32, 0>;
 
 def as_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
+}]>;
+
+def as_i1timm_zext : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i8imm : SDNodeXForm<imm, [{

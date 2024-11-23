@@ -227,7 +227,7 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop>:
 ; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; DBG-NEXT:   IR   %for = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ] (extra operand: vp<[[RESUME_P]]>)
+; DBG-NEXT:   IR   %for = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ] (extra operand: vp<[[RESUME_P]]> from scalar.ph)
 ; DBG:        IR   %ec = icmp slt i32 %iv.next.trunc, %n
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }

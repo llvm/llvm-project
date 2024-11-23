@@ -19406,6 +19406,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.radians");
   }
+  case Builtin::BI__builtin_hlsl_buffer_update_counter: {
+    Value *ResHandle = EmitScalarExpr(E->getArg(0));
+    Value *Offset = EmitScalarExpr(E->getArg(1));
+    Value *OffsetI8 = Builder.CreateIntCast(Offset, Int8Ty, true);
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Offset->getType(),
+        CGM.getHLSLRuntime().getBufferUpdateCounterIntrinsic(),
+        ArrayRef<Value *>{ResHandle, OffsetI8}, nullptr);
+  }
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
 
     assert((E->getArg(0)->getType()->hasFloatingRepresentation() &&
@@ -20196,6 +20205,32 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F =
         CGM.getIntrinsic(Intrinsic::amdgcn_s_sendmsg_rtn, {ResultType});
     return Builder.CreateCall(F, {Arg});
+  }
+  case AMDGPU::BI__builtin_amdgcn_permlane16_swap:
+  case AMDGPU::BI__builtin_amdgcn_permlane32_swap: {
+    // Because builtin types are limited, and the intrinsic uses a struct/pair
+    // output, marshal the pair-of-i32 to <2 x i32>.
+    Value *VDstOld = EmitScalarExpr(E->getArg(0));
+    Value *VSrcOld = EmitScalarExpr(E->getArg(1));
+    Value *FI = EmitScalarExpr(E->getArg(2));
+    Value *BoundCtrl = EmitScalarExpr(E->getArg(3));
+    Function *F =
+        CGM.getIntrinsic(BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16_swap
+                             ? Intrinsic::amdgcn_permlane16_swap
+                             : Intrinsic::amdgcn_permlane32_swap);
+    llvm::CallInst *Call =
+        Builder.CreateCall(F, {VDstOld, VSrcOld, FI, BoundCtrl});
+
+    llvm::Value *Elt0 = Builder.CreateExtractValue(Call, 0);
+    llvm::Value *Elt1 = Builder.CreateExtractValue(Call, 1);
+
+    llvm::Type *ResultType = ConvertType(E->getType());
+
+    llvm::Value *Insert0 = Builder.CreateInsertElement(
+        llvm::PoisonValue::get(ResultType), Elt0, UINT64_C(0));
+    llvm::Value *AsVector =
+        Builder.CreateInsertElement(Insert0, Elt1, UINT64_C(1));
+    return AsVector;
   }
   case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
     return emitBuiltinWithOneOverloadedType<4>(
