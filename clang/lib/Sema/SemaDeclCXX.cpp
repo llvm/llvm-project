@@ -11451,7 +11451,11 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     bool MightInstantiateToSpecialization = false;
     if (auto RetTST =
             TSI->getTypeLoc().getAsAdjusted<TemplateSpecializationTypeLoc>()) {
-      TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
+      const TemplateSpecializationType *TST = RetTST.getTypePtr();
+      while (TST->isTypeAlias())
+        TST = TST->getAliasedType()->getAs<TemplateSpecializationType>();
+
+      TemplateName SpecifiedName = TST->getTemplateName();
       bool TemplateMatches = Context.hasSameTemplateName(
           SpecifiedName, GuidedTemplate, /*IgnoreDeduced=*/true);
 
