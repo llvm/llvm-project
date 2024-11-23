@@ -4342,8 +4342,8 @@ def LLrintOp : UnaryFPToIntBuiltinOp<"llrint", "LlrintOp">;
 
 class UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins CIR_AnyFloat:$src);
-  let results = (outs CIR_AnyFloat:$result);
+  let arguments = (ins CIR_AnyFloatOrVecOfFloat:$src);
+  let results = (outs CIR_AnyFloatOrVecOfFloat:$result);
   let summary = "libc builtin equivalent ignoring "
                 "floating point exceptions and errno";
   let assemblyFormat = "$src `:` type($src) attr-dict";

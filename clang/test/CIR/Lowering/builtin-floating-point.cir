@@ -2,48 +2,132 @@
 // RUN: FileCheck --input-file=%t.ll %s
 
 module {
-  cir.func @test(%arg0 : !cir.float) {
+  cir.func @test(%arg0 : !cir.float, %arg1 : !cir.vector<!cir.double x 2>, %arg2 : !cir.vector<!cir.float x 4>) {
     %1 = cir.cos %arg0 : !cir.float
     // CHECK: llvm.intr.cos(%arg0) : (f32) -> f32
+    
+    %101 = cir.cos %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.cos(%arg1) : (vector<2xf64>) -> vector<2xf64>
 
+    %201 = cir.cos %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.cos(%arg2)  : (vector<4xf32>) -> vector<4xf32>
+    
     %2 = cir.ceil %arg0 : !cir.float
     // CHECK: llvm.intr.ceil(%arg0) : (f32) -> f32
+
+    %102 = cir.ceil %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.ceil(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %202 = cir.ceil %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.ceil(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
     %3 = cir.exp %arg0 : !cir.float
     // CHECK: llvm.intr.exp(%arg0) : (f32) -> f32
 
+    %103 = cir.exp %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.exp(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %203 = cir.exp %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.exp(%arg2)  : (vector<4xf32>) -> vector<4xf32>
+
     %4 = cir.exp2 %arg0 : !cir.float
     // CHECK: llvm.intr.exp2(%arg0) : (f32) -> f32
+
+    %104 = cir.exp2 %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.exp2(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %204 = cir.exp2 %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.exp2(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
     %5 = cir.fabs %arg0 : !cir.float
     // CHECK: llvm.intr.fabs(%arg0) : (f32) -> f32
 
+    %105 = cir.fabs %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.fabs(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %205 = cir.fabs %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.fabs(%arg2)  : (vector<4xf32>) -> vector<4xf32>
+
     %6 = cir.floor %arg0 : !cir.float
     // CHECK: llvm.intr.floor(%arg0) : (f32) -> f32
+
+    %106 = cir.floor %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.floor(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %206 = cir.floor %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.floor(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
     %7 = cir.log %arg0 : !cir.float
     // CHECK: llvm.intr.log(%arg0) : (f32) -> f32
 
+    %107 = cir.log %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.log(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %207 = cir.log %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.log(%arg2)  : (vector<4xf32>) -> vector<4xf32>
+
     %8 = cir.log10 %arg0 : !cir.float
     // CHECK: llvm.intr.log10(%arg0) : (f32) -> f32
+
+    %108 = cir.log10 %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.log10(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %208 = cir.log10 %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.log10(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
     %9 = cir.log2 %arg0 : !cir.float
     // CHECK: llvm.intr.log2(%arg0) : (f32) -> f32
 
+    %109 = cir.log2 %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.log2(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %209 = cir.log2 %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.log2(%arg2)  : (vector<4xf32>) -> vector<4xf32>
+
     %10 = cir.nearbyint %arg0 : !cir.float
     // CHECK: llvm.intr.nearbyint(%arg0) : (f32) -> f32
+
+    %110 = cir.nearbyint %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.nearbyint(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %210 = cir.nearbyint %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.nearbyint(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
     %11 = cir.rint %arg0 : !cir.float
     // CHECK: llvm.intr.rint(%arg0) : (f32) -> f32
 
+    %111 = cir.rint %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.rint(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %211 = cir.rint %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.rint(%arg2)  : (vector<4xf32>) -> vector<4xf32>
+
     %12 = cir.round %arg0 : !cir.float
     // CHECK: llvm.intr.round(%arg0) : (f32) -> f32
+
+    %112 = cir.round %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.round(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %212 = cir.round %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.round(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
     %13 = cir.sin %arg0 : !cir.float
     // CHECK: llvm.intr.sin(%arg0) : (f32) -> f32
 
+    %113 = cir.sin %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.sin(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %213 = cir.sin %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.sin(%arg2)  : (vector<4xf32>) -> vector<4xf32>
+
     %14 = cir.sqrt %arg0 : !cir.float
     // CHECK: llvm.intr.sqrt(%arg0) : (f32) -> f32
+
+    %114 = cir.sqrt %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.sqrt(%arg1) : (vector<2xf64>) -> vector<2xf64>
+
+    %214 = cir.sqrt %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.sqrt(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
     cir.return
   }

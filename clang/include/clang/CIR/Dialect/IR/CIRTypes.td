@@ -553,10 +553,20 @@ def SignedIntegerVector : Type<
     ]>, "!cir.vector of !cir.int"> {
 }
 
+// Vector of Float type
+def FPVector : Type<
+    And<[
+      CPred<"::mlir::isa<::cir::VectorType>($_self)">,
+      CPred<"::mlir::isa<::cir::SingleType, ::cir::DoubleType>("
+            "::mlir::cast<::cir::VectorType>($_self).getEltType())">,
+    ]>, "!cir.vector of !cir.fp"> {
+}
+
 // Constraints
 def CIR_AnyIntOrVecOfInt: AnyTypeOf<[CIR_IntType, IntegerVector]>;
 def CIR_AnySignedIntOrVecOfSignedInt: AnyTypeOf<
                                         [PrimitiveSInt, SignedIntegerVector]>;
+def CIR_AnyFloatOrVecOfFloat: AnyTypeOf<[CIR_AnyFloat, FPVector]>;
 
 // Pointer to Arrays
 def ArrayPtr : Type<
