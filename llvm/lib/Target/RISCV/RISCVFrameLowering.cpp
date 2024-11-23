@@ -1758,8 +1758,7 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
   if (!HasFP) {
     uint64_t ScalarLocalVarSize =
         MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
-        RVFI->getRVPushStackSize() - RVFI->getVarArgsSaveSize() +
-        RVFI->getRVVPadding();
+        RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
     FixedSize -= ScalarLocalVarSize;
   }
 
