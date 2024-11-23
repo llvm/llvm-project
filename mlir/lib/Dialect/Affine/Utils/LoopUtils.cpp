@@ -2304,21 +2304,26 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
 
   // Walk this range of operations  to gather all memory regions.
   block->walk(begin, end, [&](Operation *opInst) {
+    Value memref;
+    MemRefType memrefType;
     // Gather regions to allocate to buffers in faster memory space.
     if (auto loadOp = dyn_cast<AffineLoadOp>(opInst)) {
-      if ((filterMemRef.has_value() && filterMemRef != loadOp.getMemRef()) ||
-          (loadOp.getMemRefType().getMemorySpaceAsInt() !=
-           copyOptions.slowMemorySpace))
-        return;
+      memref = loadOp.getMemRef();
+      memrefType = loadOp.getMemRefType();
     } else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst)) {
-      if ((filterMemRef.has_value() && filterMemRef != storeOp.getMemRef()) ||
-          storeOp.getMemRefType().getMemorySpaceAsInt() !=
-              copyOptions.slowMemorySpace)
-        return;
-    } else {
-      // Neither load nor a store op.
-      return;
+      memref = storeOp.getMemRef();
+      memrefType = storeOp.getMemRefType();
     }
+    // Neither load nor a store op.
+    if (!memref)
+      return;
+
+    auto memorySpaceAttr =
+        dyn_cast_or_null<IntegerAttr>(memrefType.getMemorySpace());
+    if ((filterMemRef.has_value() && filterMemRef != memref) ||
+        (memorySpaceAttr &&
+         memrefType.getMemorySpaceAsInt() != copyOptions.slowMemorySpace))
+      return;
 
     // Compute the MemRefRegion accessed.
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());
