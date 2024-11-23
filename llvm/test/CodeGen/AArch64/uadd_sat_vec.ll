@@ -2,6 +2,10 @@
 ; RUN: llc < %s -mtriple=aarch64-- | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for v16i4
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v2i128
+
 declare <1 x i8> @llvm.uadd.sat.v1i8(<1 x i8>, <1 x i8>)
 declare <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8>, <2 x i8>)
 declare <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8>, <4 x i8>)
