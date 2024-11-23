@@ -491,11 +491,24 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FP Operations
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
-                               G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+  getActionDefinitionsBuilder({G_FSUB, G_FDIV, G_FNEG})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16});
+
+  // FIXME: Merge with FSUB/FDIV/etc when we use libcalls for them.
+  getActionDefinitionsBuilder(
+      {G_FADD, G_FMUL, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+      .legalFor(ST.hasStdExtF(), {s32})
+      .legalFor(ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfh(), {s16})
+      .libcallFor({s32, s64});
+
+  getActionDefinitionsBuilder(G_FABS)
+      .legalFor(ST.hasStdExtF(), {s32})
+      .legalFor(ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfh(), {s16})
+      .lowerFor({s32, s64});
 
   getActionDefinitionsBuilder(G_FREM)
       .libcallFor({s32, s64})
@@ -506,7 +519,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {{s32, s32}})
       .legalFor(ST.hasStdExtD(), {{s64, s64}, {s32, s64}, {s64, s32}})
       .legalFor(ST.hasStdExtZfh(), {{s16, s16}, {s16, s32}, {s32, s16}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}, {s64, s16}});
+      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}, {s64, s16}})
+      .lower();
 
   // FIXME: Use Zfhmin.
   getActionDefinitionsBuilder(G_FPTRUNC)
@@ -528,7 +542,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_IS_FPCLASS)
       .customFor(ST.hasStdExtF(), {{s1, s32}})
       .customFor(ST.hasStdExtD(), {{s1, s64}})
-      .customFor(ST.hasStdExtZfh(), {{s1, s16}});
+      .customFor(ST.hasStdExtZfh(), {{s1, s16}})
+      .lowerFor({{s1, s32}, {s1, s64}});
 
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor(ST.hasStdExtF(), {s32})
