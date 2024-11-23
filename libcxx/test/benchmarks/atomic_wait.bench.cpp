@@ -15,6 +15,8 @@
 #include <pthread.h>
 #include <sched.h>
 #include <thread>
+#include <chrono>
+#include <array>
 
 #include "benchmark/benchmark.h"
 #include "make_test_thread.h"
