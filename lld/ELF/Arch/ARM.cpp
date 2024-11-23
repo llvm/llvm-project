@@ -49,14 +49,14 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
 
+  DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap;
+
 private:
-void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
-                           int group, bool check) const;
+  void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                      int group, bool check) const;
 };
 enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 } // namespace
-
-static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
 ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_ARM_COPY;
@@ -1047,10 +1047,10 @@ static bool isDataMapSymbol(const Symbol *b) {
   return b->getName() == "$d" || b->getName().starts_with("$d.");
 }
 
-void elf::sortArmMappingSymbols() {
+void elf::sortArmMappingSymbols(Ctx &ctx) {
   // For each input section make sure the mapping symbols are sorted in
   // ascending order.
-  for (auto &kv : sectionMap) {
+  for (auto &kv : static_cast<ARM &>(*ctx.target).sectionMap) {
     SmallVector<const Defined *, 0> &mapSyms = kv.second;
     llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
       return a->value < b->value;
@@ -1063,6 +1063,7 @@ void elf::addArmInputSectionMappingSymbols(Ctx &ctx) {
   // The linker generated mapping symbols for all the synthetic
   // sections are adding into the sectionmap through the function
   // addArmSyntheitcSectionMappingSymbol.
+  auto &sectionMap = static_cast<ARM &>(*ctx.target).sectionMap;
   for (ELFFileBase *file : ctx.objectFiles) {
     for (Symbol *sym : file->getLocalSymbols()) {
       auto *def = dyn_cast<Defined>(sym);
@@ -1088,7 +1089,7 @@ void elf::addArmSyntheticSectionMappingSymbol(Defined *sym) {
     return;
   if (auto *sec = cast_if_present<InputSection>(sym->section))
     if (sec->flags & SHF_EXECINSTR)
-      sectionMap[sec].push_back(sym);
+      static_cast<ARM &>(*sec->file->ctx.target).sectionMap[sec].push_back(sym);
 }
 
 static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
@@ -1109,7 +1110,9 @@ static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
 // identify half open intervals of Arm code [$a, non $a) and Thumb code
 // [$t, non $t) and convert these to little endian a word or half word at a
 // time respectively.
-void elf::convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf) {
+void elf::convertArmInstructionstoBE8(Ctx &ctx, InputSection *sec,
+                                      uint8_t *buf) {
+  auto &sectionMap = static_cast<ARM &>(*ctx.target).sectionMap;
   auto it = sectionMap.find(sec);
   if (it == sectionMap.end())
     return;
@@ -1327,22 +1330,6 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
   });
 }
 
-class elf::ArmCmseSGVeneer {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
-  static const size_t size{ACLESESYM_SIZE};
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-  uint64_t offset = 0;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
@@ -1386,19 +1373,19 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
     return;
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
-  ArmCmseSGVeneer *ss = nullptr;
+  std::unique_ptr<ArmCmseSGVeneer> ss;
   if (ctx.symtab->cmseImportLib.count(sym->getName())) {
     Defined *impSym = ctx.symtab->cmseImportLib[sym->getName()];
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
+    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
+    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym);
     ++newEntries;
   }
-  sgVeneers.emplace_back(ss);
+  sgVeneers.emplace_back(std::move(ss));
 }
 
 void ArmCmseSGSection::writeTo(uint8_t *buf) {
-  for (ArmCmseSGVeneer *s : sgVeneers) {
+  for (std::unique_ptr<ArmCmseSGVeneer> &s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(ctx, p + 0, 0xe97f); // SG
     write16(ctx, p + 2, 0xe97f);
@@ -1427,8 +1414,8 @@ void ArmCmseSGSection::finalizeContents() {
 
   auto it =
       std::stable_partition(sgVeneers.begin(), sgVeneers.end(),
-                            [](auto *i) { return i->getAddr().has_value(); });
-  std::sort(sgVeneers.begin(), it, [](auto *a, auto *b) {
+                            [](auto &i) { return i->getAddr().has_value(); });
+  std::sort(sgVeneers.begin(), it, [](auto &a, auto &b) {
     return a->getAddr().value() < b->getAddr().value();
   });
   // This is the partition of the veneers with fixed addresses.
@@ -1438,13 +1425,12 @@ void ArmCmseSGSection::finalizeContents() {
   // Check if the start address of '.gnu.sgstubs' correspond to the
   // linker-synthesized veneer with the lowest address.
   if ((getVA() & ~1) != (addr & ~1)) {
-    ErrAlways(ctx)
+    Err(ctx)
         << "start address of '.gnu.sgstubs' is different from previous link";
     return;
   }
 
-  for (size_t i = 0; i < sgVeneers.size(); ++i) {
-    ArmCmseSGVeneer *s = sgVeneers[i];
+  for (auto [i, s] : enumerate(sgVeneers)) {
     s->offset = i * s->size;
     Defined(ctx, file, StringRef(), s->sym->binding, s->sym->stOther,
             s->sym->type, s->offset | 1, s->size, this)

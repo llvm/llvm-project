@@ -444,8 +444,6 @@ functional tuple
 functional typeinfo
 functional unordered_map
 functional version
-future array
-future atomic
 future bitset
 future cctype
 future cerrno
@@ -474,7 +472,6 @@ future stdexcept
 future streambuf
 future string
 future string_view
-future thread
 future tuple
 future typeinfo
 future version

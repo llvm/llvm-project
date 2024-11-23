@@ -130,6 +130,11 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source,
                    "llvm::ArrayRef<OpFoldResult>": $offsets)>,
 
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType> ": $source,
+                   "llvm::ArrayRef<OpFoldResult>": $offsets,
+                   "llvm::ArrayRef<OpFoldResult>": $shape,
+                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
+
     OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source,
                    "llvm::ArrayRef<OpFoldResult>": $offsets,
                    "llvm::ArrayRef<OpFoldResult>": $shape,

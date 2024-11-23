@@ -33,7 +33,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/KnownBits.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "ve-lower"
