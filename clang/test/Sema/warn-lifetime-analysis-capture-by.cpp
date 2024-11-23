@@ -366,3 +366,48 @@ void use() {
   capture3(std::string(), x3); // expected-warning {{object whose reference is captured by 'x3' will be destroyed at the end of the full-expression}}
 }
 } // namespace temporary_views
+
+// ****************************************************************************
+// Inferring annotation for STL containers
+// ****************************************************************************
+namespace inferred_capture_by {
+const std::string* getLifetimeBoundPointer(const std::string &s [[clang::lifetimebound]]);
+const std::string* getNotLifetimeBoundPointer(const std::string &s);
+
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+std::string_view getNotLifetimeBoundView(const std::string& s);
+void use() {
+  std::string local;
+  std::vector<std::string_view> views;
+  views.push_back(std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.insert(views.begin(), 
+            std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(getNotLifetimeBoundView(std::string()));
+  views.push_back(local);
+  views.insert(views.end(), local);
+
+  std::vector<std::string> strings;
+  strings.push_back(std::string());
+  strings.insert(strings.begin(), std::string());
+
+  std::vector<const std::string*> pointers;
+  pointers.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'pointers' will be destroyed at the end of the full-expression}}
+  pointers.push_back(&local);
+}
+
+namespace with_span {
+// Templated view types.
+template<typename T>
+struct [[gsl::Pointer]] Span {
+  Span(const std::vector<T> &V);
+};
+
+void use() {
+  std::vector<Span<int>> spans;
+  spans.push_back(std::vector<int>{1, 2, 3}); // expected-warning {{object whose reference is captured by 'spans' will be destroyed at the end of the full-expression}}
+  std::vector<int> local;
+  spans.push_back(local);
+}
+} // namespace with_span
+} // namespace inferred_capture_by

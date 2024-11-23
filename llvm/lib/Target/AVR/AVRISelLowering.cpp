@@ -1111,7 +1111,7 @@ bool AVRTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
     }
 
     Base = Op->getOperand(0);
-    Offset = DAG.getConstant(RHSC, DL, MVT::i8);
+    Offset = DAG.getSignedConstant(RHSC, DL, MVT::i8);
     AM = ISD::PRE_DEC;
 
     return true;
