@@ -16,15 +16,8 @@ def getOSName(os):
     if os == 'watchos': return 'watchOS'
     return os
 
-def getArch(os):
-    if os == 'macosx': return lldbplatformutil.getArchitecture()
-    if os == 'ios': return 'arm64'
-    if os == 'tvos': return 'arm64'
-    if os == 'watchos': return 'armv7k'
-    return os
-
-def getTriple(os, version):
-    return getArch(os) + '-apple-' + os + version
+def getTriple(os, arch, version):
+    return f"{arch}-apple-{os}{version}"
 
 def getOlderVersion(major, minor):
     if minor != 0:
@@ -43,6 +36,7 @@ class TestAvailability(TestBase):
     @skipIf(oslist=['linux', 'windows'])
     def testAvailability(self):
         platform_name = lldbplatformutil.getPlatform()
+        arch = lldbplatformutil.getArchitecture()
         os_name = getOSName(platform_name)
         platform = lldb.selected_platform
         major = platform.GetOSMajorVersion()
@@ -121,7 +115,7 @@ print("in top_level") // break_7
         with open(self.getBuildArtifact("main.swift"), 'w') as main:
             main.write(program %(os_name, version))
 
-        self.build(dictionary={'TRIPLE': getTriple(platform_name,
+        self.build(dictionary={'TRIPLE': getTriple(platform_name, arch,
                                                    getOlderVersion(major, minor))})
         source_spec = lldb.SBFileSpec("main.swift")
         (target, process, thread, brk0) = \
