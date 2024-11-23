@@ -450,6 +450,22 @@ private:
   }
 };
 
+namespace views {
+namespace __cartesian_product {
+struct __fn {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()() { return views::single(tuple()); }
+
+  template <class... _Ranges>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ranges&&... __rs)
+      -> decltype(cartesian_product_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...)) {
+    return cartesian_product_view<all_t<_Ranges>...>(std::forward<_Ranges>(__rs)...);
+  }
+};
+} // namespace __cartesian_product
+inline namespace __cpo {
+inline constexpr auto cartesian_product = __cartesian_product::__fn{};
+} // namespace __cpo
+} // namespace views
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
