@@ -9239,8 +9239,13 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlocks(
       OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix))
+  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) {
+    reportVectorizationFailure(
+        "Some exit values in loop with uncountable exit not supported yet",
+        "Some exit values in loop with uncountable exit not supported yet",
+        "UncountableEarlyExitLoopsUnsupportedExitValue", ORE, OrigLoop);
     return nullptr;
+  }
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
