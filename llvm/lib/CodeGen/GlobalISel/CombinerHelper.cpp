@@ -171,6 +171,10 @@ bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
          isLegal({TargetOpcode::G_CONSTANT, {EltTy}});
 }
 
+bool CombinerHelper::isUndefLegalOrBeforeLegalizer(const LLT Ty) const {
+  return isPreLegalize() || isLegal({TargetOpcode::G_IMPLICIT_DEF, {Ty}});
+}
+
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
                                     Register ToReg) const {
   Observer.changingAllUsesOfReg(MRI, FromReg);

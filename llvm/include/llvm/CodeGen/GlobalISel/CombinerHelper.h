@@ -150,6 +150,10 @@ public:
   /// is a legal integer constant type on the target.
   bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
 
+  /// \return true if the combine is running prior to legalization, or if \p Ty
+  /// is a legal undef type on the target.
+  bool isUndefLegalOrBeforeLegalizer(const LLT Ty) const;
+
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
 
