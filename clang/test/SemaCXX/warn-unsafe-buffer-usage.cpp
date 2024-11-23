@@ -128,25 +128,25 @@ T_t funRetT();
 T_t * funRetTStar();
 
 void testStructMembers(struct T * sp, struct T s, T_t * sp2, T_t s2) {
-  foo(sp->a[1],     // expected-warning{{unsafe buffer access}}
+  foo(sp->a[1],
       sp->b[1],     // expected-warning{{unsafe buffer access}}
-      sp->c.a[1],   // expected-warning{{unsafe buffer access}}
+      sp->c.a[1],
       sp->c.b[1],   // expected-warning{{unsafe buffer access}}
-      s.a[1],       // expected-warning{{unsafe buffer access}}
+      s.a[1],
       s.b[1],       // expected-warning{{unsafe buffer access}}
-      s.c.a[1],     // expected-warning{{unsafe buffer access}}
+      s.c.a[1],
       s.c.b[1],     // expected-warning{{unsafe buffer access}}
-      sp2->a[1],    // expected-warning{{unsafe buffer access}}
+      sp2->a[1],
       sp2->b[1],    // expected-warning{{unsafe buffer access}}
-      sp2->c.a[1],  // expected-warning{{unsafe buffer access}}
+      sp2->c.a[1],
       sp2->c.b[1],  // expected-warning{{unsafe buffer access}}
-      s2.a[1],      // expected-warning{{unsafe buffer access}}
+      s2.a[1],
       s2.b[1],      // expected-warning{{unsafe buffer access}}
-      s2.c.a[1],           // expected-warning{{unsafe buffer access}}
+      s2.c.a[1],
       s2.c.b[1],           // expected-warning{{unsafe buffer access}}
-      funRetT().a[1],      // expected-warning{{unsafe buffer access}}
+      funRetT().a[1],
       funRetT().b[1],      // expected-warning{{unsafe buffer access}}
-      funRetTStar()->a[1], // expected-warning{{unsafe buffer access}}
+      funRetTStar()->a[1],
       funRetTStar()->b[1]  // expected-warning{{unsafe buffer access}}
       );
 }
@@ -213,7 +213,6 @@ void testTypedefs(T_ptr_t p) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
   foo(p[1],       // expected-note{{used in buffer access here}}
       p[1].a[1],  // expected-note{{used in buffer access here}}
-                  // expected-warning@-1{{unsafe buffer access}}
       p[1].b[1]   // expected-note{{used in buffer access here}}
                   // expected-warning@-1{{unsafe buffer access}}
       );

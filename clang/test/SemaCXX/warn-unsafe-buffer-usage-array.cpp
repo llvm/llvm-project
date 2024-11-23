@@ -47,8 +47,11 @@ enum FooEnum {
 };
 
 void constant_enum_safe() {
-  int buffer[FooEnum::D] = { 0, 1, 2 };
+  int buffer[FooEnum::D] = { 0, 1, 2 }; // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}
+                                        // expected-note@-1{{change type of 'buffer' to 'std::array' to label it for hardening}}
+  buffer[A] = 0; // no-warning
   buffer[C] = 0; // no-warning
+  buffer[D] = 0; // expected-note{{used in buffer access here}}
 }
 
 void constant_enum_unsafe(FooEnum e) {
