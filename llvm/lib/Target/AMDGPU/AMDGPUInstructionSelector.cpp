@@ -1105,6 +1105,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_bf8:
   case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_fp8:
     return selectSMFMACIntrin(I);
+  case Intrinsic::amdgcn_permlane16_swap:
+  case Intrinsic::amdgcn_permlane32_swap:
+    return selectPermlaneSwapIntrin(I, IntrinsicID);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -3581,6 +3584,29 @@ bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectPermlaneSwapIntrin(
+    MachineInstr &MI, Intrinsic::ID IntrID) const {
+  if (IntrID == Intrinsic::amdgcn_permlane16_swap &&
+      !Subtarget->hasPermlane16Swap())
+    return false;
+  if (IntrID == Intrinsic::amdgcn_permlane32_swap &&
+      !Subtarget->hasPermlane32Swap())
+    return false;
+
+  unsigned Opcode = IntrID == Intrinsic::amdgcn_permlane16_swap
+                        ? AMDGPU::V_PERMLANE16_SWAP_B32_e64
+                        : AMDGPU::V_PERMLANE32_SWAP_B32_e64;
+
+  MI.removeOperand(2);
+  MI.setDesc(TII.get(Opcode));
+  MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+
+  MachineOperand &FI = MI.getOperand(4);
+  FI.setImm(FI.getImm() ? AMDGPU::DPP::DPP_FI_1 : AMDGPU::DPP::DPP_FI_0);
+
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+}
+
 bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -5767,6 +5793,12 @@ void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
     MIB.addImm(Imm);
   else
     MIB.addImm(Op.getImm());
+}
+
+void AMDGPUInstructionSelector::renderZextBoolTImm(MachineInstrBuilder &MIB,
+                                                   const MachineInstr &MI,
+                                                   int OpIdx) const {
+  MIB.addImm(MI.getOperand(OpIdx).getImm() != 0);
 }
 
 void AMDGPUInstructionSelector::renderOpSelTImm(MachineInstrBuilder &MIB,
