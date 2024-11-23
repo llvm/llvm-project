@@ -12,11 +12,10 @@
 // constexpr iterator<true > begin() const requires (range<const First> && ... && range<const Vs>);
 
 #include <ranges>
-
-// #include <cassert>
-// #include <concepts>
-// #include <tuple>
-// #include <utility>
+#include <cassert>
+#include <concepts>
+#include <tuple>
+#include <utility>
 
 #include "types.h"
 
@@ -27,9 +26,9 @@ template <class T>
 concept HasNonConstBegin = requires(T& t) { t.begin(); };
 
 template <class T>
-concept HasConstAndNonConstBegin =
-    HasConstBegin<T> && HasNonConstBegin<T> && 
-    requires(T& t, const T& ct) { requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>; };
+concept HasConstAndNonConstBegin = HasConstBegin<T> && HasNonConstBegin<T> && requires(T& t, const T& ct) {
+  requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>;
+};
 
 template <class T>
 concept HasOnlyNonConstBegin = HasNonConstBegin<T> && !HasConstBegin<T>;
@@ -37,7 +36,7 @@ concept HasOnlyNonConstBegin = HasNonConstBegin<T> && !HasConstBegin<T>;
 template <class T>
 concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
-struct OnlyNonConstBeginView : std::ranges::view_base {
+struct NoConstBeginView : std::ranges::view_base {
   int* begin();
   int* end();
 };
@@ -73,8 +72,7 @@ constexpr bool test() {
     }
   }
 
-  {
-    // underlying ranges all model simple-view
+  { // underlying ranges all model simple-view
     std::ranges::cartesian_product_view v(SimpleCommon{buffer}, SimpleCommon{buffer});
     static_assert(std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
     assert(v.begin() == std::as_const(v).begin());
@@ -89,28 +87,26 @@ constexpr bool test() {
     static_assert(!HasConstAndNonConstBegin<View>);
   }
 
-  // {
-  //   // not all underlying ranges model simple-view
-  //   std::ranges::zip_view v(SimpleCommon{buffer}, NonSimpleNonCommon{buffer});
-  //   static_assert(!std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
-  //   assert(v.begin() == std::as_const(v).begin());
-  //   auto [x, y] = *std::as_const(v).begin();
-  //   assert(&x == &buffer[0]);
-  //   assert(&y == &buffer[0]);
+  { // not all underlying ranges model simple-view
+    std::ranges::cartesian_product_view v(SimpleCommon{buffer}, NonSimpleNonCommon{buffer});
+    static_assert(!std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
+    assert(v.begin() == std::as_const(v).begin());
+    auto [x, y] = *std::as_const(v).begin();
+    assert(&x == &buffer[0]);
+    assert(&y == &buffer[0]);
 
-  //   using View = decltype(v);
-  //   static_assert(!HasOnlyConstBegin<View>);
-  //   static_assert(!HasOnlyNonConstBegin<View>);
-  //   static_assert(HasConstAndNonConstBegin<View>);
-  // }
+    using View = decltype(v);
+    static_assert(!HasOnlyConstBegin<View>);
+    static_assert(!HasOnlyNonConstBegin<View>);
+    static_assert(HasConstAndNonConstBegin<View>);
+  }
 
-  // {
-  //   // underlying const R is not a range
-  //   using View = std::ranges::zip_view<SimpleCommon, NoConstBeginView>;
-  //   static_assert(!HasOnlyConstBegin<View>);
-  //   static_assert(HasOnlyNonConstBegin<View>);
-  //   static_assert(!HasConstAndNonConstBegin<View>);
-  // }
+  { // underlying const R is not a range
+    using View = std::ranges::cartesian_product_view<SimpleCommon, NoConstBeginView>;
+    static_assert(!HasOnlyConstBegin<View>);
+    static_assert(HasOnlyNonConstBegin<View>);
+    static_assert(!HasConstAndNonConstBegin<View>);
+  }
   return true;
 }
 

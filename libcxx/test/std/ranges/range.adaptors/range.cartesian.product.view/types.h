@@ -86,23 +86,23 @@ using SimpleCommon = Common<true>;
 // static_assert(simple_view<SimpleCommonNonRandom>);
 // static_assert(!simple_view<NonSimpleCommonNonRandom>);
 
-// template <bool Simple>
-// struct NonCommon : IntBufferView {
-//   using IntBufferView::IntBufferView;
-//   constexpr int* begin()
-//     requires(!Simple) {
-//     return buffer_;
-//   }
-//   constexpr const int* begin() const { return buffer_; }
-//   constexpr sentinel_wrapper<int*> end()
-//     requires(!Simple) {
-//     return sentinel_wrapper<int*>(buffer_ + size_);
-//   }
-//   constexpr sentinel_wrapper<const int*> end() const { return sentinel_wrapper<const int*>(buffer_ + size_); }
-// };
+template <bool Simple>
+struct NonCommon : IntBufferView {
+  using IntBufferView::IntBufferView;
+  constexpr int* begin()
+    requires(!Simple) {
+    return buffer_;
+  }
+  constexpr const int* begin() const { return buffer_; }
+  constexpr sentinel_wrapper<int*> end()
+    requires(!Simple) {
+    return sentinel_wrapper<int*>(buffer_ + size_);
+  }
+  constexpr sentinel_wrapper<const int*> end() const { return sentinel_wrapper<const int*>(buffer_ + size_); }
+};
 
 // using SimpleNonCommon = NonCommon<true>;
-// using NonSimpleNonCommon = NonCommon<false>;
+using NonSimpleNonCommon = NonCommon<false>;
 
 // static_assert(!std::ranges::common_range<SimpleNonCommon>);
 // static_assert(std::ranges::random_access_range<SimpleNonCommon>);
