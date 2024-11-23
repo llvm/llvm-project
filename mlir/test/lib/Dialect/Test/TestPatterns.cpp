@@ -1215,6 +1215,11 @@ struct TestTypeConverter : public TypeConverter {
       return success();
     }
 
+    // Drop I24 types.
+    if (t.isInteger(24)) {
+      return success();
+    }
+
     // Otherwise, convert the type directly.
     results.push_back(t);
     return success();

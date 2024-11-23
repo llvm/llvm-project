@@ -45,26 +45,10 @@ using namespace llvm;
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
-static const MCSubtargetInfo &addDefaultWaveSize(const MCSubtargetInfo &STI,
-                                                 MCContext &Ctx) {
-  if (!STI.hasFeature(AMDGPU::FeatureWavefrontSize64) &&
-      !STI.hasFeature(AMDGPU::FeatureWavefrontSize32)) {
-    MCSubtargetInfo &STICopy = Ctx.getSubtargetCopy(STI);
-    // If there is no default wave size it must be a generation before gfx10,
-    // these have FeatureWavefrontSize64 in their definition already. For gfx10+
-    // set wave32 as a default.
-    STICopy.ToggleFeature(AMDGPU::FeatureWavefrontSize32);
-    return STICopy;
-  }
-
-  return STI;
-}
-
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
-    : MCDisassembler(addDefaultWaveSize(STI, Ctx), Ctx), MCII(MCII),
-      MRI(*Ctx.getRegisterInfo()), MAI(*Ctx.getAsmInfo()),
-      TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+    : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
+      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
@@ -1842,28 +1826,28 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
           STI.hasFeature(AMDGPU::FeatureGFX10)) &&
          "SDWAVopcDst should be present only on GFX9+");
 
-  bool IsWave64 = STI.hasFeature(AMDGPU::FeatureWavefrontSize64);
+  bool IsWave32 = STI.hasFeature(AMDGPU::FeatureWavefrontSize32);
 
   if (Val & SDWA9EncValues::VOPC_DST_VCC_MASK) {
     Val &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
 
     int TTmpIdx = getTTmpIdx(Val);
     if (TTmpIdx >= 0) {
-      auto TTmpClsId = getTtmpClassId(IsWave64 ? OPW64 : OPW32);
+      auto TTmpClsId = getTtmpClassId(IsWave32 ? OPW32 : OPW64);
       return createSRegOperand(TTmpClsId, TTmpIdx);
     }
     if (Val > SGPR_MAX) {
-      return IsWave64 ? decodeSpecialReg64(Val) : decodeSpecialReg32(Val);
+      return IsWave32 ? decodeSpecialReg32(Val) : decodeSpecialReg64(Val);
     }
-    return createSRegOperand(getSgprClassId(IsWave64 ? OPW64 : OPW32), Val);
+    return createSRegOperand(getSgprClassId(IsWave32 ? OPW32 : OPW64), Val);
   }
-  return createRegOperand(IsWave64 ? AMDGPU::VCC : AMDGPU::VCC_LO);
+  return createRegOperand(IsWave32 ? AMDGPU::VCC_LO : AMDGPU::VCC);
 }
 
 MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
-  return STI.hasFeature(AMDGPU::FeatureWavefrontSize64)
-             ? decodeSrcOp(OPW64, Val)
-             : decodeSrcOp(OPW32, Val);
+  return STI.hasFeature(AMDGPU::FeatureWavefrontSize32)
+             ? decodeSrcOp(OPW32, Val)
+             : decodeSrcOp(OPW64, Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeSplitBarrier(unsigned Val) const {
