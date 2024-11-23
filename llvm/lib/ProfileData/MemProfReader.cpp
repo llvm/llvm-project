@@ -507,7 +507,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
       const Frame &F = idToFrame(Callstack[I]);
       IndexedMemProfRecord &Record = MemProfData.Records[F.Function];
-      Record.AllocSites.emplace_back(Callstack, CSId, MIB);
+      Record.AllocSites.emplace_back(CSId, MIB);
 
       if (!F.IsInlineFrame)
         break;
@@ -522,7 +522,6 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     for (LocationPtr Loc : Locs) {
       CallStackId CSId = hashCallStack(*Loc);
       MemProfData.CallStacks.insert({CSId, *Loc});
-      Record.CallSites.push_back(*Loc);
       Record.CallSiteIds.push_back(CSId);
     }
   }
