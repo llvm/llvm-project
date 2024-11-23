@@ -36,26 +36,28 @@ namespace {
 struct TemplateParameterListBuilder;
 
 struct BuiltinTypeDeclBuilder {
-  Sema &S;
+  Sema &SemaRef;
   CXXRecordDecl *Record = nullptr;
   ClassTemplateDecl *Template = nullptr;
   ClassTemplateDecl *PrevTemplate = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
   llvm::StringMap<FieldDecl *> Fields;
 
-  BuiltinTypeDeclBuilder(Sema &S, CXXRecordDecl *R) : S(S), Record(R) {
+  BuiltinTypeDeclBuilder(Sema &SemaRef, CXXRecordDecl *R)
+      : SemaRef(SemaRef), Record(R) {
     Record->startDefinition();
     Template = Record->getDescribedClassTemplate();
   }
 
-  BuiltinTypeDeclBuilder(Sema &S, NamespaceDecl *Namespace, StringRef Name)
-      : S(S), HLSLNamespace(Namespace) {
-    ASTContext &AST = S.getASTContext();
+  BuiltinTypeDeclBuilder(Sema &SemaRef, NamespaceDecl *Namespace,
+                         StringRef Name)
+      : SemaRef(SemaRef), HLSLNamespace(Namespace) {
+    ASTContext &AST = SemaRef.getASTContext();
     IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
 
-    LookupResult Result(S, &II, SourceLocation(), Sema::LookupTagName);
+    LookupResult Result(SemaRef, &II, SourceLocation(), Sema::LookupTagName);
     CXXRecordDecl *PrevDecl = nullptr;
-    if (S.LookupQualifiedName(Result, HLSLNamespace)) {
+    if (SemaRef.LookupQualifiedName(Result, HLSLNamespace)) {
       // Declaration already exists (from precompiled headers)
       NamedDecl *Found = Result.getFoundDecl();
       if (auto *TD = dyn_cast<ClassTemplateDecl>(Found)) {
@@ -120,7 +122,7 @@ struct BuiltinTypeDeclBuilder {
                   AccessSpecifier Access = AccessSpecifier::AS_private) {
     assert(!Record->isCompleteDefinition() && "record is already complete");
 
-    ASTContext &Ctx = S.getASTContext();
+    ASTContext &Ctx = SemaRef.getASTContext();
     TypeSourceInfo *ElementTypeInfo = nullptr;
 
     QualType ElemTy = Ctx.Char8Ty;
@@ -138,7 +140,7 @@ struct BuiltinTypeDeclBuilder {
             ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
             : nullptr};
     Attr *ResourceAttr = HLSLResourceAttr::CreateImplicit(Ctx, RK);
-    if (CreateHLSLAttributedResourceType(S, Ctx.HLSLResourceTy, Attrs,
+    if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
                                          AttributedResTy))
       addMemberVariable("__handle", AttributedResTy, {ResourceAttr}, Access);
     return *this;
@@ -279,7 +281,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   Expr *getConstantIntExpr(int value) {
-    ASTContext &AST = S.getASTContext();
+    ASTContext &AST = SemaRef.getASTContext();
     return IntegerLiteral::Create(
         AST, llvm::APInt(AST.getTypeSize(AST.IntTy), value, true), AST.IntTy,
         SourceLocation());
@@ -306,7 +308,7 @@ struct TemplateParameterListBuilder {
   addTypeParameter(StringRef Name, QualType DefaultValue = QualType()) {
     assert(!Builder.Record->isCompleteDefinition() &&
            "record is already complete");
-    ASTContext &AST = Builder.S.getASTContext();
+    ASTContext &AST = Builder.SemaRef.getASTContext();
     unsigned Position = static_cast<unsigned>(Params.size());
     auto *Decl = TemplateTypeParmDecl::Create(
         AST, Builder.Record->getDeclContext(), SourceLocation(),
@@ -316,9 +318,9 @@ struct TemplateParameterListBuilder {
         /* ParameterPack */ false,
         /* HasTypeConstraint*/ false);
     if (!DefaultValue.isNull())
-      Decl->setDefaultArgument(
-          AST, Builder.S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
-                                                       SourceLocation()));
+      Decl->setDefaultArgument(AST,
+                               Builder.SemaRef.getTrivialTemplateArgumentLoc(
+                                   DefaultValue, QualType(), SourceLocation()));
 
     Params.emplace_back(Decl);
     return *this;
@@ -421,12 +423,11 @@ struct TemplateParameterListBuilder {
     if (Params.empty())
       return Builder;
 
-    ASTContext &AST = Builder.S.Context;
+    ASTContext &AST = Builder.SemaRef.Context;
     ConceptSpecializationExpr *CSE =
-        CD ? constructConceptSpecializationExpr(Builder.S, CD) : nullptr;
-    auto *ParamList = TemplateParameterList::Create(AST, SourceLocation(),
-                                                    SourceLocation(), Params,
-                                                    SourceLocation(), CSE);
+        CD ? constructConceptSpecializationExpr(Builder.SemaRef, CD) : nullptr;
+    auto *ParamList = TemplateParameterList::Create(
+        AST, SourceLocation(), SourceLocation(), Params, SourceLocation(), CSE);
     Builder.Template = ClassTemplateDecl::Create(
         AST, Builder.Record->getDeclContext(), SourceLocation(),
         DeclarationName(Builder.Record->getIdentifier()), ParamList,
@@ -509,7 +510,7 @@ private:
     assert(Method == nullptr && "Method already created");
 
     // create method type
-    ASTContext &AST = DeclBuilder.S.getASTContext();
+    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
     SmallVector<QualType> ParamTypes;
     for (MethodParam &MP : Params)
       ParamTypes.emplace_back(MP.Ty);
@@ -554,7 +555,7 @@ public:
     if (!Method)
       createMethodDecl();
 
-    ASTContext &AST = DeclBuilder.S.getASTContext();
+    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
     CXXThisExpr *This = CXXThisExpr::Create(
         AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
     FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
@@ -572,8 +573,8 @@ public:
     if (!Method)
       createMethodDecl();
 
-    ASTContext &AST = DeclBuilder.S.getASTContext();
-    FunctionDecl *FD = lookupBuiltinFunction(DeclBuilder.S, BuiltinName);
+    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+    FunctionDecl *FD = lookupBuiltinFunction(DeclBuilder.SemaRef, BuiltinName);
     DeclRefExpr *DRE = DeclRefExpr::Create(
         AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
         FD->getNameInfo(), FD->getType(), VK_PRValue);
@@ -600,7 +601,7 @@ public:
         "method decl not created; are you missing a call to build the body?");
 
     if (!Method->hasBody()) {
-      ASTContext &AST = DeclBuilder.S.getASTContext();
+      ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
       assert((ReturnTy == AST.VoidTy || !StmtsList.empty()) &&
              "nothing to return from non-void method");
       if (ReturnTy != AST.VoidTy) {
@@ -655,16 +656,16 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
-  return BuiltinTypeMethodBuilder(S, *this, "IncrementCounter",
-                                  S.getASTContext().UnsignedIntTy)
+  return BuiltinTypeMethodBuilder(SemaRef, *this, "IncrementCounter",
+                                  SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter",
                    {getConstantIntExpr(1)})
       .finalizeMethod();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
-  return BuiltinTypeMethodBuilder(S, *this, "DecrementCounter",
-                                  S.getASTContext().UnsignedIntTy)
+  return BuiltinTypeMethodBuilder(SemaRef, *this, "DecrementCounter",
+                                  SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter",
                    {getConstantIntExpr(-1)})
       .finalizeMethod();
