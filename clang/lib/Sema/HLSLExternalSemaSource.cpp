@@ -12,9 +12,7 @@
 #include "clang/Sema/HLSLExternalSemaSource.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
@@ -22,43 +20,36 @@
 #include "clang/Sema/SemaHLSL.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #include <functional>
 
 using namespace clang;
 using namespace llvm::hlsl;
 
-static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name);
-
 namespace {
 
 struct TemplateParameterListBuilder;
 
 struct BuiltinTypeDeclBuilder {
-  Sema &SemaRef;
   CXXRecordDecl *Record = nullptr;
   ClassTemplateDecl *Template = nullptr;
   ClassTemplateDecl *PrevTemplate = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
   llvm::StringMap<FieldDecl *> Fields;
 
-  BuiltinTypeDeclBuilder(Sema &SemaRef, CXXRecordDecl *R)
-      : SemaRef(SemaRef), Record(R) {
+  BuiltinTypeDeclBuilder(CXXRecordDecl *R) : Record(R) {
     Record->startDefinition();
     Template = Record->getDescribedClassTemplate();
   }
 
-  BuiltinTypeDeclBuilder(Sema &SemaRef, NamespaceDecl *Namespace,
-                         StringRef Name)
-      : SemaRef(SemaRef), HLSLNamespace(Namespace) {
-    ASTContext &AST = SemaRef.getASTContext();
+  BuiltinTypeDeclBuilder(Sema &S, NamespaceDecl *Namespace, StringRef Name)
+      : HLSLNamespace(Namespace) {
+    ASTContext &AST = S.getASTContext();
     IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
 
-    LookupResult Result(SemaRef, &II, SourceLocation(), Sema::LookupTagName);
+    LookupResult Result(S, &II, SourceLocation(), Sema::LookupTagName);
     CXXRecordDecl *PrevDecl = nullptr;
-    if (SemaRef.LookupQualifiedName(Result, HLSLNamespace)) {
-      // Declaration already exists (from precompiled headers)
+    if (S.LookupQualifiedName(Result, HLSLNamespace)) {
       NamedDecl *Found = Result.getFoundDecl();
       if (auto *TD = dyn_cast<ClassTemplateDecl>(Found)) {
         PrevDecl = TD->getTemplatedDecl();
@@ -70,7 +61,6 @@ struct BuiltinTypeDeclBuilder {
 
     if (PrevDecl && PrevDecl->isCompleteDefinition()) {
       Record = PrevDecl;
-      Template = PrevTemplate;
       return;
     }
 
@@ -94,7 +84,8 @@ struct BuiltinTypeDeclBuilder {
   BuiltinTypeDeclBuilder &
   addMemberVariable(StringRef Name, QualType Type, llvm::ArrayRef<Attr *> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
-    assert(!Record->isCompleteDefinition() && "record is already complete");
+    if (Record->isCompleteDefinition())
+      return *this;
     assert(Record->isBeingDefined() &&
            "Definition must be started before adding members!");
     ASTContext &AST = Record->getASTContext();
@@ -118,16 +109,22 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(ResourceClass RC, ResourceKind RK, bool IsROV, bool RawBuffer,
+  addHandleMember(Sema &S, ResourceClass RC, ResourceKind RK, bool IsROV,
+                  bool RawBuffer,
                   AccessSpecifier Access = AccessSpecifier::AS_private) {
-    assert(!Record->isCompleteDefinition() && "record is already complete");
+    if (Record->isCompleteDefinition())
+      return *this;
 
-    ASTContext &Ctx = SemaRef.getASTContext();
+    ASTContext &Ctx = S.getASTContext();
     TypeSourceInfo *ElementTypeInfo = nullptr;
 
     QualType ElemTy = Ctx.Char8Ty;
-    if (Template)
-      ElemTy = getFirstTemplateTypeParam();
+    if (Template) {
+      if (const auto *TTD = dyn_cast<TemplateTypeParmDecl>(
+              Template->getTemplateParameters()->getParam(0))) {
+        ElemTy = QualType(TTD->getTypeForDecl(), 0);
+      }
+    }
     ElementTypeInfo = Ctx.getTrivialTypeSourceInfo(ElemTy, SourceLocation());
 
     // add handle member with resource type attributes
@@ -140,13 +137,32 @@ struct BuiltinTypeDeclBuilder {
             ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
             : nullptr};
     Attr *ResourceAttr = HLSLResourceAttr::CreateImplicit(Ctx, RK);
-    if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
+    if (CreateHLSLAttributedResourceType(S, Ctx.HLSLResourceTy, Attrs,
                                          AttributedResTy))
       addMemberVariable("__handle", AttributedResTy, {ResourceAttr}, Access);
     return *this;
   }
 
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor() {
+  static DeclRefExpr *lookupBuiltinFunction(ASTContext &AST, Sema &S,
+                                            StringRef Name) {
+    IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
+    DeclarationNameInfo NameInfo =
+        DeclarationNameInfo(DeclarationName(&II), SourceLocation());
+    LookupResult R(S, NameInfo, Sema::LookupOrdinaryName);
+    // AllowBuiltinCreation is false but LookupDirect will create
+    // the builtin when searching the global scope anyways...
+    S.LookupName(R, S.getCurScope());
+    // FIXME: If the builtin function was user-declared in global scope,
+    // this assert *will* fail. Should this call LookupBuiltin instead?
+    assert(R.isSingleResult() &&
+           "Since this is a builtin it should always resolve!");
+    auto *VD = cast<ValueDecl>(R.getFoundDecl());
+    QualType Ty = VD->getType();
+    return DeclRefExpr::Create(AST, NestedNameSpecifierLoc(), SourceLocation(),
+                               VD, false, NameInfo, Ty, VK_PRValue);
+  }
+
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S) {
     if (Record->isCompleteDefinition())
       return *this;
     ASTContext &AST = Record->getASTContext();
@@ -171,18 +187,25 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &addArraySubscriptOperators() {
+    if (Record->isCompleteDefinition())
+      return *this;
     addArraySubscriptOperator(true);
     addArraySubscriptOperator(false);
     return *this;
   }
 
   BuiltinTypeDeclBuilder &addArraySubscriptOperator(bool IsConst) {
-    assert(!Record->isCompleteDefinition() && "record is already complete");
+    if (Record->isCompleteDefinition())
+      return *this;
 
     ASTContext &AST = Record->getASTContext();
     QualType ElemTy = AST.Char8Ty;
-    if (Template)
-      ElemTy = getFirstTemplateTypeParam();
+    if (Template) {
+      if (const auto *TTD = dyn_cast<TemplateTypeParmDecl>(
+              Template->getTemplateParameters()->getParam(0))) {
+        ElemTy = QualType(TTD->getTypeForDecl(), 0);
+      }
+    }
     QualType ReturnTy = ElemTy;
 
     FunctionProtoType::ExtProtoInfo ExtInfo;
@@ -248,31 +271,16 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
-  FieldDecl *getResourceHandleField() {
-    auto I = Fields.find("__handle");
-    assert(I != Fields.end() &&
-           I->second->getType()->isHLSLAttributedResourceType() &&
-           "record does not have resource handle field");
-    return I->second;
-  }
-
-  QualType getFirstTemplateTypeParam() {
-    assert(Template && "record it not a template");
-    if (const auto *TTD = dyn_cast<TemplateTypeParmDecl>(
-            Template->getTemplateParameters()->getParam(0))) {
-      return QualType(TTD->getTypeForDecl(), 0);
-    }
-    return QualType();
-  }
-
   BuiltinTypeDeclBuilder &startDefinition() {
-    assert(!Record->isCompleteDefinition() && "record is already complete");
+    if (Record->isCompleteDefinition())
+      return *this;
     Record->startDefinition();
     return *this;
   }
 
   BuiltinTypeDeclBuilder &completeDefinition() {
-    assert(!Record->isCompleteDefinition() && "record is already complete");
+    if (Record->isCompleteDefinition())
+      return *this;
     assert(Record->isBeingDefined() &&
            "Definition must be started before completing it.");
 
@@ -280,47 +288,38 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
-  Expr *getConstantIntExpr(int value) {
-    ASTContext &AST = SemaRef.getASTContext();
-    return IntegerLiteral::Create(
-        AST, llvm::APInt(AST.getTypeSize(AST.IntTy), value, true), AST.IntTy,
-        SourceLocation());
-  }
-
-  TemplateParameterListBuilder addTemplateArgumentList();
-  BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
-                                                  ConceptDecl *CD);
-
-  // Builtin types methods
-  BuiltinTypeDeclBuilder &addIncrementCounterMethod();
-  BuiltinTypeDeclBuilder &addDecrementCounterMethod();
+  TemplateParameterListBuilder addTemplateArgumentList(Sema &S);
+  BuiltinTypeDeclBuilder &
+  addSimpleTemplateParams(Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD);
+  BuiltinTypeDeclBuilder &addConceptSpecializationExpr(Sema &S);
 };
 
 struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &Builder;
+  Sema &S;
   llvm::SmallVector<NamedDecl *> Params;
 
-  TemplateParameterListBuilder(BuiltinTypeDeclBuilder &RB) : Builder(RB) {}
+  TemplateParameterListBuilder(Sema &S, BuiltinTypeDeclBuilder &RB)
+      : Builder(RB), S(S) {}
 
   ~TemplateParameterListBuilder() { finalizeTemplateArgs(); }
 
   TemplateParameterListBuilder &
   addTypeParameter(StringRef Name, QualType DefaultValue = QualType()) {
-    assert(!Builder.Record->isCompleteDefinition() &&
-           "record is already complete");
-    ASTContext &AST = Builder.SemaRef.getASTContext();
+    if (Builder.Record->isCompleteDefinition())
+      return *this;
     unsigned Position = static_cast<unsigned>(Params.size());
     auto *Decl = TemplateTypeParmDecl::Create(
-        AST, Builder.Record->getDeclContext(), SourceLocation(),
+        S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         SourceLocation(), /* TemplateDepth */ 0, Position,
-        &AST.Idents.get(Name, tok::TokenKind::identifier),
+        &S.Context.Idents.get(Name, tok::TokenKind::identifier),
         /* Typename */ true,
         /* ParameterPack */ false,
         /* HasTypeConstraint*/ false);
     if (!DefaultValue.isNull())
-      Decl->setDefaultArgument(AST,
-                               Builder.SemaRef.getTrivialTemplateArgumentLoc(
-                                   DefaultValue, QualType(), SourceLocation()));
+      Decl->setDefaultArgument(
+          S.Context, S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
+                                                     SourceLocation()));
 
     Params.emplace_back(Decl);
     return *this;
@@ -422,14 +421,14 @@ struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &finalizeTemplateArgs(ConceptDecl *CD = nullptr) {
     if (Params.empty())
       return Builder;
-
-    ASTContext &AST = Builder.SemaRef.Context;
     ConceptSpecializationExpr *CSE =
-        CD ? constructConceptSpecializationExpr(Builder.SemaRef, CD) : nullptr;
-    auto *ParamList = TemplateParameterList::Create(
-        AST, SourceLocation(), SourceLocation(), Params, SourceLocation(), CSE);
+        CD ? constructConceptSpecializationExpr(S, CD) : nullptr;
+
+    auto *ParamList = TemplateParameterList::Create(S.Context, SourceLocation(),
+                                                    SourceLocation(), Params,
+                                                    SourceLocation(), CSE);
     Builder.Template = ClassTemplateDecl::Create(
-        AST, Builder.Record->getDeclContext(), SourceLocation(),
+        S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         DeclarationName(Builder.Record->getIdentifier()), ParamList,
         Builder.Record);
 
@@ -444,231 +443,24 @@ struct TemplateParameterListBuilder {
     Params.clear();
 
     QualType T = Builder.Template->getInjectedClassNameSpecialization();
-    T = AST.getInjectedClassNameType(Builder.Record, T);
+    T = S.Context.getInjectedClassNameType(Builder.Record, T);
 
     return Builder;
   }
 };
-
-// Builder for methods of builtin types. Allows adding methods to builtin types
-// using the builder pattern like this:
-//
-//   BuiltinTypeMethodBuilder(Sema, RecordBuilder, "MethodName", ReturnType)
-//       .addParam("param_name", Type, InOutModifier)
-//       .callBuiltin("buildin_name", { BuiltinParams })
-//       .finalizeMethod();
-//
-// The builder needs to have all of the method parameters before it can create
-// a CXXMethodDecl. It collects them in addParam calls and when a first
-// method that builds the body is called or when access to 'this` is needed it
-// creates the CXXMethodDecl and ParmVarDecls instances. These can then be
-// referenced from the body building methods. Destructor or an explicit call to
-// finalizeMethod() will complete the method definition.
-//
-// The callBuiltin helper method passes in the resource handle as the first
-// argument of the builtin call. If this is not desired it takes a bool flag to
-// disable this.
-//
-// If the method that is being built has a non-void return type the
-// finalizeMethod will create a return statent with the value of the last
-// statement (unless the last statement is already a ReturnStmt).
-struct BuiltinTypeMethodBuilder {
-  struct MethodParam {
-    const IdentifierInfo &NameII;
-    QualType Ty;
-    HLSLParamModifierAttr::Spelling Modifier;
-    MethodParam(const IdentifierInfo &NameII, QualType Ty,
-                HLSLParamModifierAttr::Spelling Modifier)
-        : NameII(NameII), Ty(Ty), Modifier(Modifier) {}
-  };
-
-  BuiltinTypeDeclBuilder &DeclBuilder;
-  DeclarationNameInfo NameInfo;
-  QualType ReturnTy;
-  CXXMethodDecl *Method;
-  llvm::SmallVector<MethodParam> Params;
-  llvm::SmallVector<Stmt *> StmtsList;
-
-public:
-  BuiltinTypeMethodBuilder(Sema &S, BuiltinTypeDeclBuilder &DB, StringRef Name,
-                           QualType ReturnTy)
-      : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr) {
-    const IdentifierInfo &II =
-        S.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
-    NameInfo = DeclarationNameInfo(DeclarationName(&II), SourceLocation());
-  }
-
-  BuiltinTypeMethodBuilder &addParam(StringRef Name, QualType Ty,
-                                     HLSLParamModifierAttr::Spelling Modifier =
-                                         HLSLParamModifierAttr::Keyword_in) {
-    assert(Method == nullptr && "Cannot add param, method already created");
-    llvm_unreachable("not yet implemented");
-  }
-
-private:
-  void createMethodDecl() {
-    assert(Method == nullptr && "Method already created");
-
-    // create method type
-    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-    SmallVector<QualType> ParamTypes;
-    for (MethodParam &MP : Params)
-      ParamTypes.emplace_back(MP.Ty);
-    QualType MethodTy = AST.getFunctionType(ReturnTy, ParamTypes,
-                                            FunctionProtoType::ExtProtoInfo());
-
-    // create method decl
-    auto *TSInfo = AST.getTrivialTypeSourceInfo(MethodTy, SourceLocation());
-    Method =
-        CXXMethodDecl::Create(AST, DeclBuilder.Record, SourceLocation(),
-                              NameInfo, MethodTy, TSInfo, SC_None, false, false,
-                              ConstexprSpecKind::Unspecified, SourceLocation());
-
-    // create params & set them to the function prototype
-    SmallVector<ParmVarDecl *> ParmDecls;
-    auto FnProtoLoc =
-        Method->getTypeSourceInfo()->getTypeLoc().getAs<FunctionProtoTypeLoc>();
-    for (int I = 0, E = Params.size(); I != E; I++) {
-      MethodParam &MP = Params[I];
-      ParmVarDecl *Parm = ParmVarDecl::Create(
-          AST, Method->getDeclContext(), SourceLocation(), SourceLocation(),
-          &MP.NameII, MP.Ty,
-          AST.getTrivialTypeSourceInfo(MP.Ty, SourceLocation()), SC_None,
-          nullptr);
-      if (MP.Modifier != HLSLParamModifierAttr::Keyword_in) {
-        auto *Mod =
-            HLSLParamModifierAttr::Create(AST, SourceRange(), MP.Modifier);
-        Parm->addAttr(Mod);
-      }
-      ParmDecls.push_back(Parm);
-      FnProtoLoc.setParam(I, Parm);
-    }
-    Method->setParams({ParmDecls});
-  }
-
-public:
-  ~BuiltinTypeMethodBuilder() { finalizeMethod(); }
-
-  Expr *getResourceHandleExpr() {
-    // The first statement added to a method or access to 'this' creates the
-    // declaration.
-    if (!Method)
-      createMethodDecl();
-
-    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-    CXXThisExpr *This = CXXThisExpr::Create(
-        AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
-    FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
-    return MemberExpr::CreateImplicit(AST, This, false, HandleField,
-                                      HandleField->getType(), VK_LValue,
-                                      OK_Ordinary);
-  }
-
-  BuiltinTypeMethodBuilder &
-  callBuiltin(StringRef BuiltinName, ArrayRef<Expr *> CallParms,
-              bool AddResourceHandleAsFirstArg = true) {
-
-    // The first statement added to a method or access to 'this` creates the
-    // declaration.
-    if (!Method)
-      createMethodDecl();
-
-    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-    FunctionDecl *FD = lookupBuiltinFunction(DeclBuilder.SemaRef, BuiltinName);
-    DeclRefExpr *DRE = DeclRefExpr::Create(
-        AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
-        FD->getNameInfo(), FD->getType(), VK_PRValue);
-
-    SmallVector<Expr *> NewCallParms;
-    if (AddResourceHandleAsFirstArg) {
-      NewCallParms.push_back(getResourceHandleExpr());
-      for (auto *P : CallParms)
-        NewCallParms.push_back(P);
-    }
-
-    Expr *Call = CallExpr::Create(
-        AST, DRE, AddResourceHandleAsFirstArg ? NewCallParms : CallParms,
-        FD->getReturnType(), VK_PRValue, SourceLocation(), FPOptionsOverride());
-    StmtsList.push_back(Call);
-    return *this;
-  }
-
-  BuiltinTypeDeclBuilder &finalizeMethod() {
-    assert(!DeclBuilder.Record->isCompleteDefinition() &&
-           "record is already complete");
-    assert(
-        Method != nullptr &&
-        "method decl not created; are you missing a call to build the body?");
-
-    if (!Method->hasBody()) {
-      ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-      assert((ReturnTy == AST.VoidTy || !StmtsList.empty()) &&
-             "nothing to return from non-void method");
-      if (ReturnTy != AST.VoidTy) {
-        if (Expr *LastExpr = dyn_cast<Expr>(StmtsList.back())) {
-          assert(AST.hasSameUnqualifiedType(
-                     isa<CallExpr>(LastExpr)
-                         ? cast<CallExpr>(LastExpr)->getCallReturnType(AST)
-                         : LastExpr->getType(),
-                     ReturnTy) &&
-                 "Return type of the last statement must match the return type "
-                 "of the method");
-          if (!isa<ReturnStmt>(LastExpr)) {
-            StmtsList.pop_back();
-            StmtsList.push_back(
-                ReturnStmt::Create(AST, SourceLocation(), LastExpr, nullptr));
-          }
-        }
-      }
-
-      Method->setBody(CompoundStmt::Create(AST, StmtsList, FPOptionsOverride(),
-                                           SourceLocation(), SourceLocation()));
-      Method->setLexicalDeclContext(DeclBuilder.Record);
-      Method->setAccess(AccessSpecifier::AS_public);
-      Method->addAttr(AlwaysInlineAttr::CreateImplicit(
-          AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
-      DeclBuilder.Record->addDecl(Method);
-    }
-    return DeclBuilder;
-  }
-};
-
 } // namespace
 
-TemplateParameterListBuilder BuiltinTypeDeclBuilder::addTemplateArgumentList() {
-  return TemplateParameterListBuilder(*this);
+TemplateParameterListBuilder
+BuiltinTypeDeclBuilder::addTemplateArgumentList(Sema &S) {
+  return TemplateParameterListBuilder(S, *this);
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
-                                                ConceptDecl *CD = nullptr) {
-  if (Record->isCompleteDefinition()) {
-    assert(Template && "existing record it not a template");
-    assert(Template->getTemplateParameters()->size() == Names.size() &&
-           "template param count mismatch");
-    return *this;
-  }
-
-  TemplateParameterListBuilder Builder = this->addTemplateArgumentList();
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
+    Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD = nullptr) {
+  TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
     Builder.addTypeParameter(Name);
   return Builder.finalizeTemplateArgs(CD);
-}
-
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
-  return BuiltinTypeMethodBuilder(SemaRef, *this, "IncrementCounter",
-                                  SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter",
-                   {getConstantIntExpr(1)})
-      .finalizeMethod();
-}
-
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
-  return BuiltinTypeMethodBuilder(SemaRef, *this, "DecrementCounter",
-                                  SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter",
-                   {getConstantIntExpr(-1)})
-      .finalizeMethod();
 }
 
 HLSLExternalSemaSource::~HLSLExternalSemaSource() {}
@@ -774,9 +566,9 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, ResourceKind RK,
                                               bool IsROV, bool RawBuffer) {
-  return BuiltinTypeDeclBuilder(S, Decl)
-      .addHandleMember(RC, RK, IsROV, RawBuffer)
-      .addDefaultHandleConstructor();
+  return BuiltinTypeDeclBuilder(Decl)
+      .addHandleMember(S, RC, RK, IsROV, RawBuffer)
+      .addDefaultHandleConstructor(S);
 }
 
 Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
@@ -844,7 +636,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   ConceptDecl *TypedBufferConcept =
       constructTypedBufferConceptDecl(*SemaPtr, HLSLNamespace);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"},
+                                      TypedBufferConcept)
              .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
@@ -857,7 +650,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
-          .addSimpleTemplateParams({"element_type"})
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
@@ -868,7 +661,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "StructuredBuffer")
-             .addSimpleTemplateParams({"element_type"})
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
@@ -878,20 +671,18 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWStructuredBuffer")
-             .addSimpleTemplateParams({"element_type"})
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
         .addArraySubscriptOperators()
-        .addIncrementCounterMethod()
-        .addDecrementCounterMethod()
         .completeDefinition();
   });
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "AppendStructuredBuffer")
-          .addSimpleTemplateParams({"element_type"})
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
@@ -901,7 +692,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConsumeStructuredBuffer")
-          .addSimpleTemplateParams({"element_type"})
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
@@ -911,22 +702,19 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
                                 "RasterizerOrderedStructuredBuffer")
-             .addSimpleTemplateParams({"element_type"})
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/true, /*RawBuffer=*/true)
         .addArraySubscriptOperators()
-        .addIncrementCounterMethod()
-        .addDecrementCounterMethod()
         .completeDefinition();
   });
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
                                           CompletionFunction Fn) {
-  if (!Record->isCompleteDefinition())
-    Completions.insert(std::make_pair(Record->getCanonicalDecl(), Fn));
+  Completions.insert(std::make_pair(Record->getCanonicalDecl(), Fn));
 }
 
 void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
@@ -943,20 +731,4 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   if (It == Completions.end())
     return;
   It->second(Record);
-}
-
-static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name) {
-  IdentifierInfo &II =
-      S.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
-  DeclarationNameInfo NameInfo =
-      DeclarationNameInfo(DeclarationName(&II), SourceLocation());
-  LookupResult R(S, NameInfo, Sema::LookupOrdinaryName);
-  // AllowBuiltinCreation is false but LookupDirect will create
-  // the builtin when searching the global scope anyways...
-  S.LookupName(R, S.getCurScope());
-  // FIXME: If the builtin function was user-declared in global scope,
-  // this assert *will* fail. Should this call LookupBuiltin instead?
-  assert(R.isSingleResult() &&
-         "Since this is a builtin it should always resolve!");
-  return cast<FunctionDecl>(R.getFoundDecl());
 }
