@@ -2222,7 +2222,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     Expr *OffsetExpr = TheCall->getArg(1);
     std::optional<llvm::APSInt> Offset =
         OffsetExpr->getIntegerConstantExpr(SemaRef.getASTContext());
-    if (!Offset.has_value() || abs(Offset->getExtValue()) != 1) {
+    if (!Offset.has_value() || std::abs(Offset->getExtValue()) != 1) {
       SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
                    diag::err_hlsl_expect_arg_const_int_one_or_neg_one)
           << 1;
