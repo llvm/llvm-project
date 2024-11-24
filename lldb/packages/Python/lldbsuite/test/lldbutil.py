@@ -1353,33 +1353,6 @@ def get_args_as_string(frame, showFuncName=True):
         return "(%s)" % (", ".join(args))
 
 
-def print_registers(frame, string_buffer=False):
-    """Prints all the register sets of the frame."""
-
-    output = io.StringIO() if string_buffer else sys.stdout
-
-    print("Register sets for " + str(frame), file=output)
-
-    registerSet = frame.GetRegisters()  # Return type of SBValueList.
-    print(
-        "Frame registers (size of register set = %d):" % registerSet.GetSize(),
-        file=output,
-    )
-    for value in registerSet:
-        # print(value, file=output)
-        print(
-            "%s (number of children = %d):" % (value.GetName(), value.GetNumChildren()),
-            file=output,
-        )
-        for child in value:
-            print(
-                "Name: %s, Value: %s" % (child.GetName(), child.GetValue()), file=output
-            )
-
-    if string_buffer:
-        return output.getvalue()
-
-
 def get_registers(frame, kind):
     """Returns the registers given the frame and the kind of registers desired.
 
