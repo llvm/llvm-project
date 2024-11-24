@@ -173,12 +173,12 @@ AutoLoadDynamicLibraryLookup ::AutoLoadDynamicLibraryLookup() {
 #if __APPLE__
       "DYLD_LIBRARY_PATH",
       "DYLD_FALLBACK_LIBRARY_PATH",
-      /*
-      "DYLD_VERSIONED_LIBRARY_PATH",
-      "DYLD_FRAMEWORK_PATH",
-      "DYLD_FALLBACK_FRAMEWORK_PATH",
-      "DYLD_VERSIONED_FRAMEWORK_PATH",
-      */
+  /*
+  "DYLD_VERSIONED_LIBRARY_PATH",
+  "DYLD_FRAMEWORK_PATH",
+  "DYLD_FALLBACK_FRAMEWORK_PATH",
+  "DYLD_VERSIONED_FRAMEWORK_PATH",
+  */
 #elif defined(_WIN32)
       "PATH",
 #endif
