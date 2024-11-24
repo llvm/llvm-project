@@ -371,7 +371,7 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
           auto *TTPD = dyn_cast<TemplateTypeParmDecl>(LocalPack);
           return TTPD && TTPD->getTypeForDecl() == TTPT;
         }
-        return declaresSameEntity(Pack.first.get<NamedDecl *>(), LocalPack);
+        return declaresSameEntity(cast<NamedDecl *>(Pack.first), LocalPack);
       };
       if (llvm::any_of(CSI->LocalPacks, DeclaresThisPack))
         ParamPackReferences.push_back(Pack);
@@ -423,7 +423,7 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
           = Unexpanded[I].first.dyn_cast<const TemplateTypeParmType *>())
       Name = TTP->getIdentifier();
     else
-      Name = Unexpanded[I].first.get<NamedDecl *>()->getIdentifier();
+      Name = cast<NamedDecl *>(Unexpanded[I].first)->getIdentifier();
 
     if (Name && NamesKnown.insert(Name).second)
       Names.push_back(Name);
@@ -770,7 +770,7 @@ bool Sema::CheckParameterPacksForExpansion(
       Index = TTP->getIndex();
       Name = TTP->getIdentifier();
     } else {
-      NamedDecl *ND = ParmPack.first.get<NamedDecl *>();
+      NamedDecl *ND = cast<NamedDecl *>(ParmPack.first);
       if (isa<VarDecl>(ND))
         IsVarDeclPack = true;
       else
@@ -787,10 +787,10 @@ bool Sema::CheckParameterPacksForExpansion(
 
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
           CurrentInstantiationScope->findInstantiationOf(
-              ParmPack.first.get<NamedDecl *>());
-      if (Instantiation->is<DeclArgumentPack *>()) {
+              cast<NamedDecl *>(ParmPack.first));
+      if (isa<DeclArgumentPack *>(*Instantiation)) {
         // We could expand this function parameter pack.
-        NewPackSize = Instantiation->get<DeclArgumentPack *>()->size();
+        NewPackSize = cast<DeclArgumentPack *>(*Instantiation)->size();
       } else {
         // We can't expand this function parameter pack, so we can't expand
         // the pack expansion.
@@ -895,20 +895,20 @@ std::optional<unsigned> Sema::getNumArgumentsInExpansionFromUnexpanded(
       Depth = TTP->getDepth();
       Index = TTP->getIndex();
     } else {
-      NamedDecl *ND = Unexpanded[I].first.get<NamedDecl *>();
+      NamedDecl *ND = cast<NamedDecl *>(Unexpanded[I].first);
       if (isa<VarDecl>(ND)) {
         // Function parameter pack or init-capture pack.
         typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
 
         llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
             CurrentInstantiationScope->findInstantiationOf(
-                Unexpanded[I].first.get<NamedDecl *>());
-        if (Instantiation->is<Decl *>())
+                cast<NamedDecl *>(Unexpanded[I].first));
+        if (isa<Decl *>(*Instantiation))
           // The pattern refers to an unexpanded pack. We're not ready to expand
           // this pack yet.
           return std::nullopt;
 
-        unsigned Size = Instantiation->get<DeclArgumentPack *>()->size();
+        unsigned Size = cast<DeclArgumentPack *>(*Instantiation)->size();
         assert((!Result || *Result == Size) && "inconsistent pack sizes");
         Result = Size;
         continue;
