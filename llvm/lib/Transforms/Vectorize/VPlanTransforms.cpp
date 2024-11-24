@@ -693,9 +693,14 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   SmallVector<VPValue *> PossiblyDead(Term->operands());
   Term->eraseFromParent();
   auto *Header = cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getEntry());
-  if (all_of(Header->phis(), [](VPRecipeBase &R) {
-        return !isa<VPWidenIntOrFpInductionRecipe, VPReductionPHIRecipe>(&R);
-      })) {
+  if (any_of(Header->phis(),
+             IsaPred<VPWidenIntOrFpInductionRecipe, VPReductionPHIRecipe>)) {
+    LLVMContext &Ctx = SE.getContext();
+    auto *BOC = new VPInstruction(
+        VPInstruction::BranchOnCond,
+        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
+    ExitingVPBB->appendRecipe(BOC);
+  } else {
     for (VPRecipeBase &R : make_early_inc_range(Header->phis())) {
       auto *P = cast<VPHeaderPHIRecipe>(&R);
       P->replaceAllUsesWith(P->getStartValue());
@@ -720,13 +725,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     // be deleted when the region is deleted.
     LoopRegion->clearEntry();
     delete LoopRegion;
-  } else {
-    LLVMContext &Ctx = SE.getContext();
-    auto *BOC =
-        new VPInstruction(VPInstruction::BranchOnCond,
-                          {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
-
-    ExitingVPBB->appendRecipe(BOC);
   }
   for (VPValue *Op : PossiblyDead)
     recursivelyDeleteDeadRecipes(Op);

@@ -1054,8 +1054,8 @@ void VPlan::execute(VPTransformState *State) {
       if (isa<VPWidenPHIRecipe>(&R))
         continue;
 
-      if (isa<VPWidenPointerInductionRecipe>(&R) ||
-          isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+      if (isa<VPWidenPointerInductionRecipe, VPWidenIntOrFpInductionRecipe>(
+              &R)) {
         PHINode *Phi = nullptr;
         if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
           Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
@@ -1085,10 +1085,10 @@ void VPlan::execute(VPTransformState *State) {
       // previous iteration. For non-ordered reductions all UF parts are
       // generated.
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+      auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(PhiR);
       bool NeedsScalar =
           isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
-          (isa<VPReductionPHIRecipe>(PhiR) &&
-           cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+          (RedPhiR && RedPhiR->isInLoop());
       Value *Phi = State->get(PhiR, NeedsScalar);
       Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
