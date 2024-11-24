@@ -1220,6 +1220,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Object",
+        ":ProfileData",
         ":Support",
         ":TargetParser",
         ":config",
