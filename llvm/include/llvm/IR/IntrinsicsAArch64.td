@@ -3818,7 +3818,7 @@ let TargetPrefix = "aarch64" in {
                             [llvm_nxv16i8_ty],
                             [IntrReadMem, IntrInaccessibleMemOnly]>;
   //
-  // CVT from half-precision/BFloat16 to delinterleaved FP8 multi-vectors
+  // CVT from FP8 to deinterleaved half-precision/BFloat16 multi-vector
   //
   def int_aarch64_sve_fp8_cvtl1_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
   def int_aarch64_sve_fp8_cvtl2_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
