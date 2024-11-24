@@ -28,15 +28,32 @@ module @named_module_acceptable {
 
 // -----
 
-// The IR remains untouched because of the presence of a branch op `cf.cond_br`.
+// The IR is optimized regardless of the presence of a branch op `cf.cond_br`.
 //
-func.func @dont_touch_unacceptable_ir_has_cleanable_simple_op_with_branch_op(%arg0: i1) {
+func.func @acceptable_ir_has_cleanable_simple_op_with_branch_op(%arg0: i1) {
   %non_live = arith.constant 0 : i32
-  // expected-error @+1 {{cannot optimize an IR with branch ops}}
+  // CHECK-NOT: non_live
   cf.cond_br %arg0, ^bb1(%non_live : i32), ^bb2(%non_live : i32)
 ^bb1(%non_live_0 : i32):
+  // CHECK-NOT: non_live_0
   cf.br ^bb3
 ^bb2(%non_live_1 : i32):
+  // CHECK-NOT: non_live_1
+  cf.br ^bb3
+^bb3:
+  return
+}
+
+// -----
+
+// Arguments of unconditional branch op `cf.br` are properly removed.
+//
+func.func @acceptable_ir_has_cleanable_simple_op_with_unconditional_branch_op(%arg0: i1) {
+  %non_live = arith.constant 0 : i32
+  // CHECK-NOT: non_live
+  cf.br ^bb1(%non_live : i32)
+^bb1(%non_live_1 : i32):
+  // CHECK-NOT: non_live_1
   cf.br ^bb3
 ^bb3:
   return

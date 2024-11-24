@@ -563,6 +563,44 @@ static void cleanRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   dropUsesAndEraseResults(regionBranchOp.getOperation(), resultsToKeep.flip());
 }
 
+// 1. Iterate over each successor block of the given BranchOpInterface
+// operation.
+// 2. For each successor block:
+//    a. Retrieve the operands passed to the successor.
+//    b. Use the provided liveness analysis (`RunLivenessAnalysis`) to determine
+//    which
+//       operands are live in the successor block.
+//    c. Mark each operand as live or dead based on the analysis.
+// 3. Remove dead operands from the branch operation and arguments accordingly
+
+static void cleanBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la) {
+  unsigned numSuccessors = branchOp->getNumSuccessors();
+
+  // Do (1)
+  for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
+    Block *successorBlock = branchOp->getSuccessor(succIdx);
+
+    // Do (2)
+    SuccessorOperands successorOperands =
+        branchOp.getSuccessorOperands(succIdx);
+    SmallVector<Value> operandValues;
+    for (unsigned operandIdx = 0; operandIdx < successorOperands.size();
+         ++operandIdx) {
+      operandValues.push_back(successorOperands[operandIdx]);
+    }
+
+    BitVector successorLiveOperands = markLives(operandValues, la);
+
+    // Do (3)
+    for (int argIdx = successorLiveOperands.size() - 1; argIdx >= 0; --argIdx) {
+      if (!successorLiveOperands[argIdx]) {
+        successorOperands.erase(argIdx);
+        successorBlock->eraseArgument(argIdx);
+      }
+    }
+  }
+}
+
 struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
   void runOnOperation() override;
 };
@@ -572,26 +610,13 @@ void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
 
-  // The removal of non-live values is performed iff there are no branch ops,
-  // and all symbol user ops present in the IR are call-like.
-  WalkResult acceptableIR = module->walk([&](Operation *op) {
-    if (op == module)
-      return WalkResult::advance();
-    if (isa<BranchOpInterface>(op)) {
-      op->emitError() << "cannot optimize an IR with branch ops\n";
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-
-  if (acceptableIR.wasInterrupted())
-    return signalPassFailure();
-
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
       cleanFuncOp(funcOp, module, la);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       cleanRegionBranchOp(regionBranchOp, la);
+    } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
+      cleanBranchOp(branchOp, la);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
       // Nothing to do here because this is a terminator op and it should be
       // honored with respect to its parent
