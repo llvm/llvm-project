@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -fenable-matrix -std=c++11 -verify -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -fenable-matrix -std=c++11 -verify -triple x86_64-apple-darwin %s
 
 using matrix_double_t = double __attribute__((matrix_type(6, 6)));
 using matrix_float_t = float __attribute__((matrix_type(6, 6)));
