@@ -522,42 +522,39 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
 // Custom error message if Sym is defined in a discarded section.
 template <class ELFT>
-static std::string maybeReportDiscarded(Ctx &ctx, Undefined &sym) {
+static void maybeReportDiscarded(Ctx &ctx, ELFSyncStream &msg, Undefined &sym) {
   auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
   if (!file || !sym.discardedSecIdx)
-    return "";
+    return;
   ArrayRef<typename ELFT::Shdr> objSections =
       file->template getELFShdrs<ELFT>();
 
-  std::string msg;
   if (sym.type == ELF::STT_SECTION) {
-    msg = "relocation refers to a discarded section: ";
-    msg += CHECK2(
+    msg << "relocation refers to a discarded section: ";
+    msg << CHECK2(
         file->getObj().getSectionName(objSections[sym.discardedSecIdx]), file);
   } else {
-    msg = "relocation refers to a symbol in a discarded section: " +
-          toStr(ctx, sym);
+    msg << "relocation refers to a symbol in a discarded section: " << &sym;
   }
-  msg += "\n>>> defined in " + toStr(ctx, file);
+  msg << "\n>>> defined in " << file;
 
   Elf_Shdr_Impl<ELFT> elfSec = objSections[sym.discardedSecIdx - 1];
   if (elfSec.sh_type != SHT_GROUP)
-    return msg;
+    return;
 
   // If the discarded section is a COMDAT.
   StringRef signature = file->getShtGroupSignature(objSections, elfSec);
   if (const InputFile *prevailing =
           ctx.symtab->comdatGroups.lookup(CachedHashStringRef(signature))) {
-    msg += "\n>>> section group signature: " + signature.str() +
-           "\n>>> prevailing definition is in " + toStr(ctx, prevailing);
+    msg << "\n>>> section group signature: "
+        << signature.str() + "\n>>> prevailing definition is in " << prevailing;
     if (sym.nonPrevailing) {
-      msg += "\n>>> or the symbol in the prevailing group had STB_WEAK "
+      msg << "\n>>> or the symbol in the prevailing group had STB_WEAK "
              "binding and the symbol in a non-prevailing group had STB_GLOBAL "
              "binding. Mixing groups with STB_WEAK and STB_GLOBAL binding "
              "signature is not supported";
     }
   }
-  return msg;
 }
 
 // Check whether the definition name def is a mangled function name that matches
@@ -695,8 +692,9 @@ static const Symbol *getAlternativeSpelling(Ctx &ctx, const Undefined &sym,
 static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
                                   bool correctSpelling) {
   Undefined &sym = *undef.sym;
+  ELFSyncStream msg(ctx, DiagLevel::None);
 
-  auto visibility = [&]() -> std::string {
+  auto visibility = [&]() {
     switch (sym.visibility()) {
     case STV_INTERNAL:
       return "internal ";
@@ -709,75 +707,70 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     }
   };
 
-  std::string msg;
   switch (ctx.arg.ekind) {
   case ELF32LEKind:
-    msg = maybeReportDiscarded<ELF32LE>(ctx, sym);
+    maybeReportDiscarded<ELF32LE>(ctx, msg, sym);
     break;
   case ELF32BEKind:
-    msg = maybeReportDiscarded<ELF32BE>(ctx, sym);
+    maybeReportDiscarded<ELF32BE>(ctx, msg, sym);
     break;
   case ELF64LEKind:
-    msg = maybeReportDiscarded<ELF64LE>(ctx, sym);
+    maybeReportDiscarded<ELF64LE>(ctx, msg, sym);
     break;
   case ELF64BEKind:
-    msg = maybeReportDiscarded<ELF64BE>(ctx, sym);
+    maybeReportDiscarded<ELF64BE>(ctx, msg, sym);
     break;
   default:
     llvm_unreachable("");
   }
-  if (msg.empty())
-    msg = "undefined " + visibility() + "symbol: " + toStr(ctx, sym);
+  if (msg.str().empty())
+    msg << "undefined " << visibility() << "symbol: " << &sym;
 
   const size_t maxUndefReferences = 3;
-  size_t i = 0;
-  for (UndefinedDiag::Loc l : undef.locs) {
-    if (i >= maxUndefReferences)
-      break;
+  for (UndefinedDiag::Loc l :
+       ArrayRef(undef.locs).take_front(maxUndefReferences)) {
     InputSectionBase &sec = *l.sec;
     uint64_t offset = l.offset;
 
-    msg += "\n>>> referenced by ";
+    msg << "\n>>> referenced by ";
     // In the absence of line number information, utilize DW_TAG_variable (if
     // present) for the enclosing symbol (e.g. var in `int *a[] = {&undef};`).
     Symbol *enclosing = sec.getEnclosingSymbol(offset);
     std::string src = sec.getSrcMsg(enclosing ? *enclosing : sym, offset);
     if (!src.empty())
-      msg += src + "\n>>>               ";
-    msg += sec.getObjMsg(offset);
-    i++;
+      msg << src << "\n>>>               ";
+    msg << sec.getObjMsg(offset);
   }
 
-  if (i < undef.locs.size())
-    msg += ("\n>>> referenced " + Twine(undef.locs.size() - i) + " more times")
-               .str();
+  if (maxUndefReferences < undef.locs.size())
+    msg << "\n>>> referenced " << (undef.locs.size() - maxUndefReferences)
+        << " more times";
 
   if (correctSpelling) {
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
             getAlternativeSpelling(ctx, sym, pre_hint, post_hint)) {
-      msg +=
-          "\n>>> did you mean" + pre_hint + toStr(ctx, *corrected) + post_hint;
+      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint;
       if (corrected->file)
-        msg += "\n>>> defined in: " + toStr(ctx, corrected->file);
+        msg << "\n>>> defined in: " << corrected->file;
     }
   }
 
   if (sym.getName().starts_with("_ZTV"))
-    msg +=
-        "\n>>> the vtable symbol may be undefined because the class is missing "
-        "its key function (see https://lld.llvm.org/missingkeyfunction)";
+    msg << "\n>>> the vtable symbol may be undefined because the class is "
+           "missing its key function "
+           "(see https://lld.llvm.org/missingkeyfunction)";
   if (ctx.arg.gcSections && ctx.arg.zStartStopGC &&
       sym.getName().starts_with("__start_")) {
-    msg += "\n>>> the encapsulation symbol needs to be retained under "
+    msg << "\n>>> the encapsulation symbol needs to be retained under "
            "--gc-sections properly; consider -z nostart-stop-gc "
            "(see https://lld.llvm.org/ELF/start-stop-gc)";
   }
 
   if (undef.isWarning)
-    Warn(ctx) << msg;
+    Warn(ctx) << msg.str();
   else
-    ctx.e.error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
+    ctx.e.error(msg.str(), ErrorTag::SymbolNotFound, {sym.getName()});
 }
 
 void elf::reportUndefinedSymbols(Ctx &ctx) {
