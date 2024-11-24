@@ -23,8 +23,7 @@ int pidfd_open(pid_t pid, unsigned int flags) {
 }
 
 TEST(LlvmLibcMProcessMReleaseTest, NoError) {
-  pid_t child_pid = LIBC_NAMESPACE::fork();
-
+  pid_t child_pid = fork();
   EXPECT_GE(child_pid, 0);
 
   if (child_pid == 0) {
@@ -49,7 +48,6 @@ TEST(LlvmLibcMProcessMReleaseTest, NoError) {
 
 TEST(LlvmLibcMProcessMReleaseTest, ErrorNotKilled) {
   pid_t child_pid = fork();
-
   EXPECT_GE(child_pid, 0);
 
   if (child_pid == 0) {

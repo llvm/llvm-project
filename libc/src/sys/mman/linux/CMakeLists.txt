@@ -1,26 +1,28 @@
 add_entrypoint_object(
   madvise
   SRCS
-  madvise.cpp
+    madvise.cpp
   HDRS
-  ../madvise.h
+    ../madvise.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   mmap
   SRCS
-  mmap.cpp
+    mmap.cpp
   HDRS
-  ../mmap.h
+    ../mmap.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   mremap
@@ -34,180 +36,193 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
-
 add_entrypoint_object(
   munmap
   SRCS
-  munmap.cpp
+    munmap.cpp
   HDRS
-  ../munmap.h
+    ../munmap.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   mprotect
   SRCS
-  mprotect.cpp
+    mprotect.cpp
   HDRS
-  ../mprotect.h
+    ../mprotect.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   posix_madvise
   SRCS
-  posix_madvise.cpp
+    posix_madvise.cpp
   HDRS
-  ../posix_madvise.h
+    ../posix_madvise.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
 
 add_entrypoint_object(
   mincore
   SRCS
-  mincore.cpp
+    mincore.cpp
   HDRS
-  ../mincore.h
+    ../mincore.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   mlock
   SRCS
-  mlock.cpp
+    mlock.cpp
   HDRS
-  ../mlock.h
+    ../mlock.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   mlock2
   SRCS
-  mlock2.cpp
+    mlock2.cpp
   HDRS
-  ../mlock2.h
+    ../mlock2.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   munlock
   SRCS
-  munlock.cpp
+    munlock.cpp
   HDRS
-  ../munlock.h
+    ../munlock.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   mlockall
   SRCS
-  mlockall.cpp
+    mlockall.cpp
   HDRS
-  ../mlockall.h
+    ../mlockall.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   munlockall
   SRCS
-  munlockall.cpp
+    munlockall.cpp
   HDRS
-  ../munlockall.h
+    ../munlockall.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   msync
   SRCS
-  msync.cpp
+    msync.cpp
   HDRS
-  ../msync.h
+    ../msync.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   remap_file_pages
   SRCS
-  remap_file_pages.cpp
+    remap_file_pages.cpp
   HDRS
-  ../remap_file_pages.h
+    ../remap_file_pages.h
   DEPENDS
-  libc.include.sys_mman
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
 
 add_header_library(
   shm_common
   HDRS
-  shm_common.h
+    shm_common.h
   DEPENDS
-  libc.src.__support.CPP.array
-  libc.src.__support.CPP.string_view
-  libc.src.__support.CPP.optional
-  libc.src.__support.common
-  libc.src.errno.errno
-  libc.src.string.memory_utils.inline_memcpy)
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.optional
+    libc.src.__support.common
+    libc.src.errno.errno
+    libc.src.string.memory_utils.inline_memcpy
+)
 
 add_entrypoint_object(
   shm_open
   SRCS
-  shm_open.cpp
+    shm_open.cpp
   HDRS
-  ../shm_open.h
+    ../shm_open.h
   DEPENDS
-  libc.src.fcntl.open
-  libc.hdr.types.mode_t
-  .shm_common)
+    libc.src.fcntl.open
+    libc.hdr.types.mode_t
+    .shm_common
+)
 
 add_entrypoint_object(
   shm_unlink
   SRCS
-  shm_unlink.cpp
+    shm_unlink.cpp
   HDRS
-  ../shm_unlink.h
+    ../shm_unlink.h
   DEPENDS
-  libc.src.unistd.unlink
-  .shm_common)
+    libc.src.unistd.unlink
+    .shm_common
+)
 
 add_entrypoint_object(
   process_mrelease
   SRCS
-  process_mrelease.cpp
+    process_mrelease.cpp
   HDRS
-  ../process_mrelease.h
+    ../process_mrelease.h
   DEPENDS
-  libc.include.signal
-  libc.src.signal.kill
-  libc.include.sys_syscall
-  libc.src.__support.OSUtil.osutil
-  libc.src.errno.errno)
+    libc.include.signal
+    libc.src.signal.kill
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno)
