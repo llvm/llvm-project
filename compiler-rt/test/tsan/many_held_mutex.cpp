@@ -1,6 +1,6 @@
 // RUN: %clangxx_tsan -O1 %s %link_libcxx_tsan -fsanitize=thread -o %t
 // RUN: %run %t 128
-// RUN: not %run %t 129
+// RUN: %env_tsan_opts=fast_unwind_on_fatal=1 not %run %t 129
 
 #include <mutex>
 #include <vector>
