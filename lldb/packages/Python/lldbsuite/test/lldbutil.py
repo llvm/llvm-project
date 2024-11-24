@@ -1578,21 +1578,6 @@ def set_actions_for_signal(
     )
 
 
-class PrintableRegex(object):
-    def __init__(self, text):
-        self.regex = re.compile(text)
-        self.text = text
-
-    def match(self, str):
-        return self.regex.match(str)
-
-    def __str__(self):
-        return "%s" % (self.text)
-
-    def __repr__(self):
-        return "re.compile(%s) -> %s" % (self.text, self.regex)
-
-
 def skip_if_callable(test, mycallable, reason):
     if callable(mycallable):
         if mycallable(test):
