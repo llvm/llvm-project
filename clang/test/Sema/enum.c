@@ -121,6 +121,17 @@ int NegativeShortTest[NegativeShort == -1 ? 1 : -1];
 enum Color { Red, Green, Blue }; // expected-note{{previous use is here}}
 typedef struct Color NewColor; // expected-error {{use of 'Color' with tag type that does not match previous declaration}}
 
+// Enumerations with a fixed underlying type. 
+// https://github.com/llvm/llvm-project/issues/116880
+#if __STDC_VERSION__ >= 202311L
+    typedef enum : unsigned char { Pink, Black, Cyan } Color;
+#else
+    _Static_assert(__has_extension(c_fixed_enum), "Ensure language extension support for enumerations with a fixed underlying type in <C23");
+    typedef enum : unsigned char { Pink, Black, Cyan } Color; // expected-warning {{enumeration types with a fixed underlying type are a C23 extension}}
+#endif
+
+
+
 // PR28903
 // In C it is valid to define tags inside enums.
 struct PR28903 {
@@ -173,6 +184,7 @@ enum IncOverflow {
   V2 = __INT_MAX__,
   V3 // pre-c23-warning {{incremented enumerator value which exceeds the range of 'int' is a C23 extension}}
 };
+
 
 #if __STDC_VERSION__ >= 202311L
 // FIXME: GCC picks __uint128_t as the underlying type for the enumeration
