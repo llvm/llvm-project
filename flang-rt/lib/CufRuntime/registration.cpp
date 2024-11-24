@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/registration.h"
-#include "../terminator.h"
+#include "../flang_rt/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"
