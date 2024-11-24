@@ -332,7 +332,7 @@ void test() {
   delete O12;
 
   InclassNew9 *O13 = new InclassNew9;
-  // expected-error@-1 {{type aware 'operator new' requires matching 'operator delete' in 'InclassNew9'}}
+  // expected-warning@-1 {{type aware 'operator new' requires matching 'operator delete' in 'InclassNew9'}}
   // expected-note@#42 {{type aware 'operator new' found in 'InclassNew9'}}
   // expected-note@#43 {{type aware 'operator delete' found in the global namespace}}
 
@@ -384,13 +384,13 @@ void test() {
   // expected-note@#59 {{member 'operator delete' declared here}}
 
   SubClass6_1 *O22 = new SubClass6_1;
-  // expected-error@-1 {{type aware 'operator new<SubClass6_1>' requires matching 'operator delete' in 'SubClass6_1'}}
+  // expected-warning@-1 {{type aware 'operator new<SubClass6_1>' requires matching 'operator delete' in 'SubClass6_1'}}
   // expected-note@#62 {{type aware 'operator new<SubClass6_1>' found in 'SubClass6_1'}}
   // expected-note@#61 {{type aware 'operator delete<SubClass6_1>' found in 'BaseClass6'}}
   delete O22;
 
   SubClass6_2 *O23 = new SubClass6_2;
-  // expected-error@-1 {{type aware 'operator new<SubClass6_2>' requires matching 'operator delete' in 'BaseClass6'}}
+  // expected-warning@-1 {{type aware 'operator new<SubClass6_2>' requires matching 'operator delete' in 'BaseClass6'}}
   // expected-note@#60 {{type aware 'operator new<SubClass6_2>' found in 'BaseClass6'}}
   // expected-note@#63 {{type aware 'operator delete<SubClass6_2>' found in 'SubClass6_2'}}
   delete O23;

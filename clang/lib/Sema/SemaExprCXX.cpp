@@ -3188,7 +3188,7 @@ bool Sema::FindAllocationFunctions(
     if ((isTypeAwareAllocation(IAP.PassTypeIdentity)) &&
         OperatorDelete->getDeclContext() != OperatorNew->getDeclContext()) {
       Diag(StartLoc,
-           diag::err_no_matching_type_aware_cleanup_deallocator_mismatch)
+           diag::warn_type_aware_cleanup_deallocator_context_mismatch)
           << OperatorNew << DeleteName << OperatorNew->getDeclContext();
       Diag(OperatorNew->getLocation(), diag::err_type_aware_operator_found)
           << OperatorNew << OperatorNew->getDeclContext();
