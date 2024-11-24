@@ -211,8 +211,8 @@ static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
 void processArmCmseSymbols(Ctx &);
 
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-uint8_t getMipsFpAbiFlag(Ctx &, uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
+uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
+                         uint8_t newFlag);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
