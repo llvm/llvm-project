@@ -20,7 +20,7 @@ on:
 jobs:
   build-ci-container:
     if: github.repository_owner == 'llvm'
-    runs-on: depot-ubuntu-24.04-16
+    runs-on: llvm-premerge-linux-runners
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
