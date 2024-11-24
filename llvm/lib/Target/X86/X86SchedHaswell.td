@@ -393,12 +393,12 @@ defm : HWWriteResPair<WriteCvtPD2PS,  [HWPort1,HWPort5], 4, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteCvtPD2PSY, [HWPort1,HWPort5], 6, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteCvtPD2PSZ, [HWPort1,HWPort5], 4, [1,1], 2, 6>; // Unsupported = 1
 
-defm : X86WriteRes<WriteCvtPH2PS,     [HWPort0,HWPort5], 2, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSY,    [HWPort0,HWPort5], 2, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSZ,    [HWPort0,HWPort5], 2, [1,1], 2>; // Unsupported = 1
-defm : X86WriteRes<WriteCvtPH2PSLd,  [HWPort0,HWPort23], 6, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSYLd, [HWPort0,HWPort23], 7, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSZLd, [HWPort0,HWPort23], 7, [1,1], 2>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtPH2PS,     [HWPort1,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSY,    [HWPort1,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZ,    [HWPort1,HWPort5], 2, [1,1], 2>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtPH2PSLd,  [HWPort1,HWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSYLd, [HWPort1,HWPort23], 7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZLd, [HWPort1,HWPort23], 7, [1,1], 2>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtPS2PH,    [HWPort1,HWPort5], 4, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPS2PHY,   [HWPort1,HWPort5], 6, [1,1], 2>;
