@@ -161,10 +161,10 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // how the expression is handled. Additionally, `*` and `&` are not supported.
   bool try_variable_path = expr.find_first_of("*&->[]") == StringRef::npos;
   if (frame && try_variable_path) {
-    Status status;
     VariableSP var_sp;
+    Status status;
     auto valobj_sp = frame->GetValueForVariableExpressionPath(
-        expr, eDynamicDontRunTarget,
+        expr, eval_options.GetUseDynamic(),
         StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
         status);
     if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
