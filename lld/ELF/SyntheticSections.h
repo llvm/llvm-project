@@ -177,7 +177,9 @@ public:
   bool isNeeded() const override { return size != 0; }
   size_t getSize() const override { return size; }
 
-  static bool classof(const SectionBase *s) { return s->bss; }
+  static bool classof(const SectionBase *s) {
+    return isa<SyntheticSection>(s) && cast<SyntheticSection>(s)->bss;
+  }
   uint64_t size;
 };
 

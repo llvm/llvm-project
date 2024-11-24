@@ -59,25 +59,17 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output, Class };
+  enum Kind : uint8_t {
+    Regular,
+    Synthetic,
+    Spill,
+    EHFrame,
+    Merge,
+    Output,
+    Class,
+  };
 
-  Kind kind() const { return (Kind)sectionKind; }
-
-  LLVM_PREFERRED_TYPE(Kind)
-  uint8_t sectionKind : 3;
-
-  // The next two bit fields are only used by InputSectionBase, but we
-  // put them here so the struct packs better.
-
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t bss : 1;
-
-  // Set for sections that should not be folded by ICF.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t keepUnique : 1;
-
-  uint8_t partition = 1;
-  uint32_t type;
+  Kind kind() const { return sectionKind; }
 
   // The file which contains this section. For InputSectionBase, its dynamic
   // type is usually ObjFile<ELFT>, but may be an InputFile of InternalKind
@@ -93,10 +85,17 @@ public:
 
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
+  uint32_t type;
   uint32_t link;
   uint32_t info;
   uint32_t addralign;
   uint32_t entsize;
+
+  Kind sectionKind;
+  uint8_t partition = 1;
+
+  // The next two bit fields are only used by InputSectionBase, but we
+  // put them here so the struct packs better.
 
   Ctx &getCtx() const;
   OutputSection *getOutputSection();
@@ -118,9 +117,9 @@ protected:
   constexpr SectionBase(Kind sectionKind, InputFile *file, StringRef name,
                         uint32_t type, uint64_t flags, uint32_t link,
                         uint32_t info, uint32_t addralign, uint32_t entsize)
-      : sectionKind(sectionKind), bss(false), keepUnique(false), type(type),
-        file(file), name(name), flags(flags), link(link), info(info),
-        addralign(addralign), entsize(entsize) {}
+      : file(file), name(name), flags(flags), type(type), link(link),
+        info(info), addralign(addralign), entsize(entsize),
+        sectionKind(sectionKind) {}
 };
 
 struct SymbolAnchor {
@@ -157,6 +156,25 @@ public:
     return s->kind() != Output && s->kind() != Class;
   }
 
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t bss : 1;
+
+  // Whether this section is SHT_CREL and has been decoded to RELA by
+  // relsOrRelas.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t decodedCrel : 1;
+
+  // Set for sections that should not be folded by ICF.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t keepUnique : 1;
+
+  // Whether the section needs to be padded with a NOP filler due to
+  // deleteFallThruJmpInsn.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t nopFiller : 1;
+
+  mutable bool compressed = false;
+
   // Input sections are part of an output section. Special sections
   // like .eh_frame and merge sections are first combined into a
   // synthetic section that is then added to an output section. In all
@@ -175,16 +193,6 @@ public:
   // indicate the number of bytes which is not counted in the size. This should
   // be reset to zero after uses.
   uint32_t bytesDropped = 0;
-
-  mutable bool compressed = false;
-
-  // Whether this section is SHT_CREL and has been decoded to RELA by
-  // relsOrRelas.
-  bool decodedCrel = false;
-
-  // Whether the section needs to be padded with a NOP filler due to
-  // deleteFallThruJmpInsn.
-  bool nopFiller = false;
 
   void drop_back(unsigned num) {
     assert(bytesDropped + num < 256);
@@ -467,7 +475,7 @@ public:
   }
 };
 
-static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
+static_assert(sizeof(InputSection) <= 152, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
