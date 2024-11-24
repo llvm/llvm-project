@@ -71,6 +71,7 @@
 #include "lld/Common/LLVM.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -158,13 +159,14 @@ enum class DiagLevel { None, Log, Msg, Warn, Err, Fatal };
 class SyncStream {
   ErrorHandler &e;
   DiagLevel level;
-  std::string buf;
+  llvm::SmallString<0> buf;
 
 public:
-  mutable llvm::raw_string_ostream os{buf};
+  mutable llvm::raw_svector_ostream os{buf};
   SyncStream(ErrorHandler &e, DiagLevel level) : e(e), level(level) {}
   SyncStream(SyncStream &&o) : e(o.e), level(o.level), buf(std::move(o.buf)) {}
   ~SyncStream();
+  StringRef str() { return os.str(); }
 };
 
 [[noreturn]] void exitLld(int val);

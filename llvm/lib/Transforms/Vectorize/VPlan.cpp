@@ -478,32 +478,23 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
 
 void VPBasicBlock::execute(VPTransformState *State) {
   bool Replica = bool(State->Lane);
-  VPBasicBlock *PrevVPBB = State->CFG.PrevVPBB;
-  VPBlockBase *SingleHPred = nullptr;
   BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
 
-  auto IsLoopRegion = [](VPBlockBase *BB) {
-    auto *R = dyn_cast<VPRegionBlock>(BB);
-    return R && !R->isReplicator();
+  auto IsReplicateRegion = [](VPBlockBase *BB) {
+    auto *R = dyn_cast_or_null<VPRegionBlock>(BB);
+    return R && R->isReplicator();
   };
 
   // 1. Create an IR basic block.
-  if (PrevVPBB && /* A */
-      !((SingleHPred = getSingleHierarchicalPredecessor()) &&
-        SingleHPred->getExitingBasicBlock() == PrevVPBB &&
-        PrevVPBB->getSingleHierarchicalSuccessor() &&
-        (SingleHPred->getParent() == getEnclosingLoopRegion() &&
-         !IsLoopRegion(SingleHPred))) &&         /* B */
-      !(Replica && getPredecessors().empty())) { /* C */
-    // The last IR basic block is reused, as an optimization, in three cases:
-    // A. the first VPBB reuses the loop pre-header BB - when PrevVPBB is null;
-    // B. when the current VPBB has a single (hierarchical) predecessor which
-    //    is PrevVPBB and the latter has a single (hierarchical) successor which
-    //    both are in the same non-replicator region; and
-    // C. when the current VPBB is an entry of a region replica - where PrevVPBB
-    //    is the exiting VPBB of this region from a previous instance, or the
-    //    predecessor of this region.
-
+  if (this == getPlan()->getVectorPreheader() ||
+      (Replica && this == getParent()->getEntry()) ||
+      IsReplicateRegion(getSingleHierarchicalPredecessor())) {
+    // Reuse the previous basic block if the current VPBB is either
+    //  * the vector preheader,
+    //  * the entry to a replicate region, or
+    //  * the exit of a replicate region.
+    State->CFG.VPBB2IRBB[this] = NewBB;
+  } else {
     NewBB = createEmptyBasicBlock(State->CFG);
 
     State->Builder.SetInsertPoint(NewBB);
@@ -518,8 +509,6 @@ void VPBasicBlock::execute(VPTransformState *State) {
     State->CFG.PrevBB = NewBB;
     State->CFG.VPBB2IRBB[this] = NewBB;
     connectToPredecessors(State->CFG);
-  } else {
-    State->CFG.VPBB2IRBB[this] = NewBB;
   }
 
   // 2. Fill the IR basic block with IR instructions.
