@@ -5163,9 +5163,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       }
     }
     if (IRFunctionArgs.hasSRetArg()) {
-      // If the caller allocated the return slot, it is possible that the
-      // alloca was AS casted to the default as, so we ensure the cast is
-      // stripped before binding to the sret arg, which is in the allocaAS.
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
     } else if (RetAI.isInAlloca()) {
