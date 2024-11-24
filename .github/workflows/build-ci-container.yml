@@ -20,17 +20,12 @@ on:
 jobs:
   build-ci-container:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-linux-runners
+    runs-on: depot-ubuntu-24.04-16
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
       container-filename: ${{ steps.vars.outputs.container-filename }}
-    container:
-      image: registry.fedoraproject.org/fedora:41 
     steps:
-      - name: Setup Image
-        run: |
-          dnf install -y podman
       - name: Checkout LLVM
         uses: actions/checkout@v4
         with:
@@ -75,14 +70,9 @@ jobs:
     permissions:
       packages: write
     runs-on: ubuntu-24.04
-    container:
-      image: registry.fedoraproject.org/fedora:41 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Setup Image
-        run: |
-          dnf install -y podman
       - name: Download container
         uses: actions/download-artifact@v4
         with:
