@@ -12,6 +12,10 @@
 #ifndef __DWARF_PARSER_HPP__
 #define __DWARF_PARSER_HPP__
 
+#ifndef __STDC_FORMAT_MACROS
+// Ensure PRId64 macro is available
+#define __STDC_FORMAT_MACROS 1
+#endif
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
