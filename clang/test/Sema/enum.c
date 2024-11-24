@@ -185,7 +185,6 @@ enum IncOverflow {
   V3 // pre-c23-warning {{incremented enumerator value which exceeds the range of 'int' is a C23 extension}}
 };
 
-
 #if __STDC_VERSION__ >= 202311L
 // FIXME: GCC picks __uint128_t as the underlying type for the enumeration
 // value and Clang picks unsigned long long.
