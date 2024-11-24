@@ -11,11 +11,12 @@
 // XFAIL: msvc
 
 // UNSUPPORTED: no-threads
-// REQUIRES: thread-safety
 
 // <mutex>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS
+// ADDITIONAL_COMPILE_FLAGS: -Wthread-safety
+
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <mutex>
 
