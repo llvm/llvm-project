@@ -25,6 +25,8 @@ jobs:
       container-name: ${{ steps.vars.outputs.container-name }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
       container-filename: ${{ steps.vars.outputs.container-filename }}
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -70,6 +72,8 @@ jobs:
     permissions:
       packages: write
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
