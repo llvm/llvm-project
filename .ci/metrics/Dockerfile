@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM docker.io/python:3.12
 
 COPY requirements.lock.txt ./
 RUN pip3 install --no-cache-dir -r requirements.lock.txt
