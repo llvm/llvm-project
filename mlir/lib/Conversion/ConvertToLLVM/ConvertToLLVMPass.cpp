@@ -28,6 +28,42 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+/// Base class for creating the internal implementation of `convert-to-llvm`
+/// passes.
+class ConvertToLLVMPassInterface {
+public:
+  ConvertToLLVMPassInterface(MLIRContext *context,
+                             ArrayRef<std::string> filterDialects);
+  virtual ~ConvertToLLVMPassInterface() = default;
+
+  /// Get the dependent dialects used by `convert-to-llvm`.
+  static void getDependentDialects(DialectRegistry &registry);
+
+  /// Initialize the internal state of the `convert-to-llvm` pass
+  /// implementation. This method is invoked by `ConvertToLLVMPass::initialize`.
+  /// This method returns whether the initialization process failed.
+  virtual LogicalResult initialize() = 0;
+
+  /// Transform `op` to LLVM with the conversions available in the pass. The
+  /// analysis manager can be used to query analyzes like `DataLayoutAnalysis`
+  /// to further configure the conversion process. This method is invoked by
+  /// `ConvertToLLVMPass::runOnOperation`. This method returns whether the
+  /// transformation process failed.
+  virtual LogicalResult transform(Operation *op,
+                                  AnalysisManager manager) const = 0;
+
+protected:
+  /// Visit the `ConvertToLLVMPatternInterface` dialect interfaces and call
+  /// `visitor` with each of the interfaces. If `filterDialects` is non-empty,
+  /// then `visitor` is invoked only with the dialects in the `filterDialects`
+  /// list.
+  LogicalResult visitInterfaces(
+      llvm::function_ref<void(ConvertToLLVMPatternInterface *)> visitor);
+  MLIRContext *context;
+  /// List of dialects names to use as filters.
+  ArrayRef<std::string> filterDialects;
+};
+
 /// This DialectExtension can be attached to the context, which will invoke the
 /// `apply()` method for every loaded dialect. If a dialect implements the
 /// `ConvertToLLVMPatternInterface` interface, we load dependent dialects
