@@ -2702,21 +2702,6 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-static void reportMissingFeature(Ctx &ctx, StringRef config,
-                                 const Twine &report) {
-  if (config == "error")
-    ErrAlways(ctx) << report;
-  else if (config == "warning")
-    Warn(ctx) << report;
-}
-
-static void checkAndReportMissingFeature(Ctx &ctx, StringRef config,
-                                         uint32_t features, uint32_t mask,
-                                         const Twine &report) {
-  if (!(features & mask))
-    reportMissingFeature(ctx, config, report);
-}
-
 // To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
@@ -2749,28 +2734,43 @@ static void readSecurityNotes(Ctx &ctx) {
   bool hasValidPauthAbiCoreInfo = llvm::any_of(
       ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
+  auto report = [&](StringRef config) -> ELFSyncStream {
+    if (config == "error")
+      return {ctx, DiagLevel::Err};
+    else if (config == "warning")
+      return {ctx, DiagLevel::Warn};
+    return {ctx, DiagLevel::None};
+  };
+  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    return report(config);
+  };
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
-        toStr(ctx, f) + ": -z bti-report: file does not have "
-                        "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
+    reportUnless(ctx.arg.zBtiReport,
+                 features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
+        << f
+        << ": -z bti-report: file does not have "
+           "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
-        toStr(ctx, f) + ": -z gcs-report: file does not have "
-                        "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
+    reportUnless(ctx.arg.zGcsReport,
+                 features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+        << f
+        << ": -z gcs-report: file does not have "
+           "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
-        toStr(ctx, f) + ": -z cet-report: file does not have "
-                        "GNU_PROPERTY_X86_FEATURE_1_IBT property");
+    reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
+        << f
+        << ": -z cet-report: file does not have "
+           "GNU_PROPERTY_X86_FEATURE_1_IBT property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
-        toStr(ctx, f) + ": -z cet-report: file does not have "
-                        "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
+    reportUnless(ctx.arg.zCetReport,
+                 features & GNU_PROPERTY_X86_FEATURE_1_SHSTK)
+        << f
+        << ": -z cet-report: file does not have "
+           "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
@@ -2800,11 +2800,11 @@ static void readSecurityNotes(Ctx &ctx) {
       continue;
 
     if (f->aarch64PauthAbiCoreInfo.empty()) {
-      reportMissingFeature(ctx, ctx.arg.zPauthReport,
-                           toStr(ctx, f) +
-                               ": -z pauth-report: file does not have AArch64 "
-                               "PAuth core info while '" +
-                               referenceFileName + "' has one");
+      report(ctx.arg.zPauthReport)
+          << f
+          << ": -z pauth-report: file does not have AArch64 "
+             "PAuth core info while '"
+          << referenceFileName << "' has one";
       continue;
     }
 
