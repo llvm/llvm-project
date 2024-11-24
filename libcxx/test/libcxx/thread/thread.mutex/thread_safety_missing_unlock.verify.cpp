@@ -11,11 +11,15 @@
 // XFAIL: msvc
 
 // UNSUPPORTED: no-threads
-// REQUIRES: thread-safety
 
 // <mutex>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS
+// GCC doesn't have thread safety attributes
+// UNSUPPORTED: gcc
+
+// ADDITIONAL_COMPILE_FLAGS: -Wthread-safety
+
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <mutex>
 
@@ -23,4 +27,4 @@ std::mutex m;
 
 void f() {
   m.lock();
-} // expected-error {{mutex 'm' is still held at the end of function}}
+} // expected-warning {{mutex 'm' is still held at the end of function}}
