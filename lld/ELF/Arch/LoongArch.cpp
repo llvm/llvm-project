@@ -775,8 +775,8 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
                  << "insufficient padding bytes for " << r.type << ": "
-                 << Twine(allBytes) << " bytes available for "
-                 << "requested alignment of " << Twine(align) << " bytes";
+                 << allBytes << " bytes available for "
+                 << "requested alignment of " << align << " bytes";
         remove = 0;
       }
       break;
@@ -807,7 +807,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    Fatal(ctx) << "section size decrease is too large: " << Twine(delta);
+    Fatal(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }
@@ -838,7 +838,7 @@ bool LoongArch::relaxOnce(int pass) const {
 }
 
 void LoongArch::finalizeRelax(int passes) const {
-  Log(ctx) << "relaxation passes: " << Twine(passes);
+  Log(ctx) << "relaxation passes: " << passes;
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))

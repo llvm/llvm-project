@@ -2116,8 +2116,8 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // Don't allow the section to shrink; otherwise the size of the section can
   // oscillate infinitely. Trailing 1s do not decode to more relocations.
   if (relrRelocs.size() < oldSize) {
-    Log(ctx) << ".relr.dyn needs " << Twine(oldSize - relrRelocs.size()) <<
-        " padding word(s)";
+    Log(ctx) << ".relr.dyn needs " << (oldSize - relrRelocs.size())
+             << " padding word(s)";
     relrRelocs.resize(oldSize, Elf_Relr(1));
   }
 
@@ -2870,7 +2870,7 @@ void DebugNamesBaseSection::parseDebugNames(
     nd.hdr = ni.getHeader();
     if (nd.hdr.Format != DwarfFormat::DWARF32) {
       Err(ctx) << namesSec.sec
-               << Twine(": found DWARF64, which is currently unsupported");
+               << ": found DWARF64, which is currently unsupported";
       return;
     }
     if (nd.hdr.Version != 5) {
@@ -2880,8 +2880,7 @@ void DebugNamesBaseSection::parseDebugNames(
     uint32_t dwarfSize = dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
     DWARFDebugNames::DWARFDebugNamesOffsets locs = ni.getOffsets();
     if (locs.EntriesBase > namesExtractor.getData().size()) {
-      Err(ctx) << namesSec.sec
-               << Twine(": entry pool start is beyond end of section");
+      Err(ctx) << namesSec.sec << ": entry pool start is beyond end of section";
       return;
     }
 
@@ -2962,7 +2961,7 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
       // ForeignTypeUnitCount are left as 0.
       if (nd.hdr.LocalTypeUnitCount || nd.hdr.ForeignTypeUnitCount)
         Warn(ctx) << inputChunk.section.sec
-                  << Twine(": type units are not implemented");
+                  << ": type units are not implemented";
       // If augmentation strings are not identical, use an empty string.
       if (i == 0) {
         hdr.AugmentationStringSize = nd.hdr.AugmentationStringSize;

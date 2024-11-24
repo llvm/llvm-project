@@ -503,7 +503,7 @@ calculateMipsRelChain(Ctx &ctx, uint8_t *loc, uint32_t type, uint64_t val) {
   if (type2 == R_MIPS_SUB && (type3 == R_MIPS_HI16 || type3 == R_MIPS_LO16))
     return std::make_pair(type3, -val);
   Err(ctx) << getErrorLoc(ctx, loc) << "unsupported relocations combination "
-           << Twine(type);
+           << type;
   return std::make_pair(type & 0xff, val);
 }
 

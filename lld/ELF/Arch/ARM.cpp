@@ -557,8 +557,8 @@ void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
     rot = (lz + 8) << 7;
   }
   if (check && imm > 0xff)
-    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate "
-             << Twine(val).str() << " for relocation " << rel.type;
+    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate " << val
+             << " for relocation " << rel.type;
   write32(ctx, loc,
           (read32(ctx, loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
@@ -1238,8 +1238,8 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
 
     if (eSym.st_size != ACLESESYM_SIZE) {
       Warn(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
-                << this << "' does not have correct size of "
-                << Twine(ACLESESYM_SIZE) << " bytes";
+                << this << "' does not have correct size of " << ACLESESYM_SIZE
+                << " bytes";
     }
 
     ctx.symtab->cmseImportLib[sym->getName()] = sym;
