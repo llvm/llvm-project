@@ -750,6 +750,18 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
     if (Field->hasInClassInitializer()) {
       if (VerifyOnly)
         return;
+
+      // We do not want to aggressively set the hadError flag and cutoff
+      // parsing. Try to recover when in-class-initializer is a RecoveryExpr.
+      if (isa_and_nonnull<RecoveryExpr>(Field->getInClassInitializer())) {
+        if (Init < NumInits)
+          ILE->setInit(Init, Field->getInClassInitializer());
+        else
+          ILE->updateInit(SemaRef.Context, Init,
+                          Field->getInClassInitializer());
+        return;
+      }
+
       ExprResult DIE;
       {
         // Enter a default initializer rebuild context, then we can support
