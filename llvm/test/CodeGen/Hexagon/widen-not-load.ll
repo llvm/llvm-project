@@ -1,4 +1,5 @@
 ; Test that double word post increment load is not generated.
+; REQUIRES: asserts
 
 ; RUN: llc -march=hexagon -O2 -debug-only=hexagon-load-store-widening %s -o 2>&1 - | FileCheck %s
 
