@@ -375,32 +375,17 @@ memory. The elements of a structure may be any type that has a size.
 Structure types are represented in a single dedicated class
 mlir::LLVM::LLVMStructType. Internally, the struct type stores a (potentially
 empty) name, a (potentially empty) list of contained types and a bitmask
-indicating whether the struct is named, opaque, packed or uninitialized.
+indicating whether the struct is opaque or packed.
 Structure types that don't have a name are referred to as _literal_ structs.
 Such structures are uniquely identified by their contents. _Identified_ structs
-on the other hand are uniquely identified by the name.
+on the other hand are uniquely identified by the name and contents.
 
 #### Identified Structure Types
 
-Identified structure types are uniqued using their name in a given context.
-Attempting to construct an identified structure with the same name a structure
-that already exists in the context *will result in the existing structure being
-returned*. **MLIR does not auto-rename identified structs in case of name
+Identified structure types are uniqued using their name and contents in a given
+context. **MLIR does not auto-rename identified structs in case of name
 conflicts** because there is no naming scope equivalent to a module in LLVM IR
 since MLIR modules can be arbitrarily nested.
-
-Programmatically, identified structures can be constructed in an _uninitialized_
-state. In this case, they are given a name but the body must be set up by a
-later call, using MLIR's type mutation mechanism. Such uninitialized types can
-be used in type construction, but must be eventually initialized for IR to be
-valid. This mechanism allows for constructing _recursive_ or mutually referring
-structure types: an uninitialized type can be used in its own initialization.
-
-Once the type is initialized, its body cannot be changed anymore. Any further
-attempts to modify the body will fail and return failure to the caller _unless
-the type is initialized with the exact same body_. Type initialization is
-thread-safe; however, if a concurrent thread initializes the type before the
-current thread, the initialization may return failure.
 
 The syntax for identified structure types is as follows.
 

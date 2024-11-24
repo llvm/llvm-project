@@ -371,6 +371,23 @@ class DefaultValuedParameter<string type, string value, string desc = ""> :
   let defaultValue = value;
 }
 
+// Bool parameter that is true or false depending on whether an optional group
+// is present in the assembly syntax.
+// Example:
+// `<` (`opaque` `` $opaque^)? `>`
+//
+// The 'opaque' parameter will be set to true if the `opaque` keyword is
+// present, false otherwise. This is analogous as to how 'UnitAttr' can be used
+// in op definition syntax.
+class ImpliedBoolParameter<string desc = "">
+  : DefaultValuedParameter<"bool", "false", desc> {
+
+  // Always set to true if the parser is invocated.
+  let parser = "true";
+  // Printing should do nothing.
+  let printer = "";
+}
+
 // For StringRefs, which require allocation.
 class StringRefParameter<string desc = "", string value = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {

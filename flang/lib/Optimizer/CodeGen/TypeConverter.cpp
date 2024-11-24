@@ -136,16 +136,6 @@ mlir::Type LLVMTypeConverter::indexType() const {
 std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
-  auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
-
-  auto &callStack = getCurrentThreadRecursiveStack();
-  if (llvm::count(callStack, derived)) {
-    results.push_back(st);
-    return mlir::success();
-  }
-  callStack.push_back(derived);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([&callStack]() { callStack.pop_back(); });
 
   llvm::SmallVector<mlir::Type> members;
   for (auto mem : derived.getTypeList()) {
@@ -156,8 +146,8 @@ std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     else
       members.push_back(mlir::cast<mlir::Type>(convertType(mem.second)));
   }
-  if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
-    return mlir::failure();
+  auto st = mlir::LLVM::LLVMStructType::get(&getContext(), name, members,
+                                            /*isPacked=*/false);
   results.push_back(st);
   return mlir::success();
 }
@@ -179,14 +169,10 @@ mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
   // remove fir.heap/fir.ref/fir.ptr
   if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
     ele = removeIndirection;
-  auto eleTy = convertType(ele);
+
   // base_addr*
-  if (mlir::isa<SequenceType>(ele) &&
-      mlir::isa<mlir::LLVM::LLVMPointerType>(eleTy))
-    dataDescFields.push_back(eleTy);
-  else
-    dataDescFields.push_back(
-        mlir::LLVM::LLVMPointerType::get(eleTy.getContext()));
+  dataDescFields.push_back(mlir::LLVM::LLVMPointerType::get(ele.getContext()));
+
   // elem_len
   dataDescFields.push_back(
       getDescFieldTypeModel<kElemLenPosInBox>()(&getContext()));

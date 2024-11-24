@@ -21,46 +21,6 @@ func.func @function_taking_function() {
 
 // -----
 
-func.func @repeated_struct_name() {
-  "some.op"() : () -> !llvm.struct<"a", (ptr)>
-  // expected-error @+1 {{identified type already used with a different body}}
-  "some.op"() : () -> !llvm.struct<"a", (i32)>
-}
-
-// -----
-
-func.func @repeated_struct_name_packed() {
-  "some.op"() : () -> !llvm.struct<"a", packed (i32)>
-  // expected-error @+1 {{identified type already used with a different body}}
-  "some.op"() : () -> !llvm.struct<"a", (i32)>
-}
-
-// -----
-
-func.func @repeated_struct_opaque() {
-  "some.op"() : () -> !llvm.struct<"a", opaque>
-  // expected-error @+1 {{identified type already used with a different body}}
-  "some.op"() : () -> !llvm.struct<"a", ()>
-}
-
-// -----
-
-func.func @repeated_struct_opaque_non_empty() {
-  "some.op"() : () -> !llvm.struct<"a", opaque>
-  // expected-error @+1 {{identified type already used with a different body}}
-  "some.op"() : () -> !llvm.struct<"a", (i32, i32)>
-}
-
-// -----
-
-func.func @repeated_struct_opaque_redefinition() {
-  "some.op"() : () -> !llvm.struct<"a", ()>
-  // expected-error @+1 {{redeclaring defined struct as opaque}}
-  "some.op"() : () -> !llvm.struct<"a", opaque>
-}
-
-// -----
-
 func.func @struct_literal_opaque() {
   // expected-error @+1 {{only identified structs can be opaque}}
   "some.op"() : () -> !llvm.struct<opaque>
@@ -69,15 +29,8 @@ func.func @struct_literal_opaque() {
 // -----
 
 func.func @top_level_struct_no_body() {
-  // expected-error @below {{struct without a body only allowed in a recursive struct}}
+  // expected-error @below {{expected ','}}
   "some.op"() : () -> !llvm.struct<"a">
-}
-
-// -----
-
-func.func @nested_redefine_attempt() {
-  // expected-error @below {{identifier already used for an enclosing struct}}
-  "some.op"() : () -> !llvm.struct<"a", (struct<"a", ()>)>
 }
 
 // -----
@@ -92,14 +45,6 @@ func.func @unexpected_type() {
 func.func @unexpected_type() {
   // expected-error @+1 {{unknown LLVM type}}
   "some.op"() : () -> !llvm.ifoo
-}
-
-// -----
-
-func.func @explicitly_opaque_struct() {
-  "some.op"() : () -> !llvm.struct<"a", opaque>
-  // expected-error @+1 {{identified type already used with a different body}}
-  "some.op"() : () -> !llvm.struct<"a", ()>
 }
 
 // -----

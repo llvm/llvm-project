@@ -102,28 +102,14 @@ MlirType mlirLLVMStructTypeOpaqueGet(MlirContext ctx, MlirStringRef name) {
   return wrap(LLVMStructType::getOpaque(unwrap(name), unwrap(ctx)));
 }
 
-MlirType mlirLLVMStructTypeIdentifiedGet(MlirContext ctx, MlirStringRef name) {
-  return wrap(LLVMStructType::getIdentified(unwrap(ctx), unwrap(name)));
-}
-
 MlirType mlirLLVMStructTypeIdentifiedNewGet(MlirContext ctx, MlirStringRef name,
                                             intptr_t nFieldTypes,
                                             MlirType const *fieldTypes,
                                             bool isPacked) {
   SmallVector<Type> fields;
-  return wrap(LLVMStructType::getNewIdentified(
-      unwrap(ctx), unwrap(name), unwrapList(nFieldTypes, fieldTypes, fields),
-      isPacked));
-}
-
-MlirLogicalResult mlirLLVMStructTypeSetBody(MlirType structType,
-                                            intptr_t nFieldTypes,
-                                            MlirType const *fieldTypes,
-                                            bool isPacked) {
-  SmallVector<Type> fields;
-  return wrap(
-      cast<LLVM::LLVMStructType>(unwrap(structType))
-          .setBody(unwrapList(nFieldTypes, fieldTypes, fields), isPacked));
+  return wrap(LLVMStructType::get(unwrap(ctx), unwrap(name),
+                                  unwrapList(nFieldTypes, fieldTypes, fields),
+                                  isPacked));
 }
 
 MlirAttribute mlirLLVMDIExpressionElemAttrGet(MlirContext ctx,

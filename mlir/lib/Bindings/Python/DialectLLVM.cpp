@@ -44,14 +44,6 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
       "loc"_a = py::none());
 
   llvmStructType.def_classmethod(
-      "get_identified",
-      [](py::object cls, const std::string &name, MlirContext context) {
-        return cls(mlirLLVMStructTypeIdentifiedGet(
-            context, mlirStringRefCreate(name.data(), name.size())));
-      },
-      "cls"_a, "name"_a, py::kw_only(), "context"_a = py::none());
-
-  llvmStructType.def_classmethod(
       "get_opaque",
       [](py::object cls, const std::string &name, MlirContext context) {
         return cls(mlirLLVMStructTypeOpaqueGet(
@@ -59,20 +51,8 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
       },
       "cls"_a, "name"_a, "context"_a = py::none());
 
-  llvmStructType.def(
-      "set_body",
-      [](MlirType self, const std::vector<MlirType> &elements, bool packed) {
-        MlirLogicalResult result = mlirLLVMStructTypeSetBody(
-            self, elements.size(), elements.data(), packed);
-        if (!mlirLogicalResultIsSuccess(result)) {
-          throw py::value_error(
-              "Struct body already set to different content.");
-        }
-      },
-      "elements"_a, py::kw_only(), "packed"_a = false);
-
   llvmStructType.def_classmethod(
-      "new_identified",
+      "get",
       [](py::object cls, const std::string &name,
          const std::vector<MlirType> &elements, bool packed, MlirContext ctx) {
         return cls(mlirLLVMStructTypeIdentifiedNewGet(

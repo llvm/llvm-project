@@ -113,22 +113,19 @@ private:
   /// structs. This will _create_ a new identified structure every time, use
   /// `convertType` if a structure with the same name must be looked up instead.
   llvm::Type *translate(LLVM::LLVMStructType type) {
-    SmallVector<llvm::Type *, 8> subtypes;
-    if (!type.isIdentified()) {
-      translateTypes(type.getBody(), subtypes);
-      return llvm::StructType::get(context, subtypes, type.isPacked());
-    }
+    if (type.isOpaque())
+      return llvm::StructType::create(context, type.getName());
 
-    llvm::StructType *structType =
-        llvm::StructType::create(context, type.getName());
+    SmallVector<llvm::Type *, 8> subtypes;
+    translateTypes(type.getBody(), subtypes);
+    if (!type.isIdentified())
+      return llvm::StructType::get(context, subtypes, type.isPacked());
+
+    llvm::StructType *structType = llvm::StructType::create(
+        context, subtypes, type.getName(), type.isPacked());
     // Mark the type we just created as known so that recursive calls can pick
     // it up and use directly.
     knownTranslations.try_emplace(type, structType);
-    if (type.isOpaque())
-      return structType;
-
-    translateTypes(type.getBody(), subtypes);
-    structType->setBody(subtypes, type.isPacked());
     return structType;
   }
 

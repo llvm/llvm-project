@@ -175,3 +175,8 @@ llvm.func @return_s_symbols() -> !llvm.struct<"name with spaces and !^$@$#", pac
 llvm.func @return_s_struct_of_arrays() -> !llvm.struct<"struct-of-arrays", (array<10 x i32>)>
 // CHECK: declare [10 x %array-of-structs]
 llvm.func @return_s_array_of_structs() -> !llvm.array<10 x struct<"array-of-structs", (i32)>>
+
+// CHECK: declare %[[RET:foo.*]] @structs_with_same_name(
+// CHECK-NOT: %[[RET]]
+// CHECK-SAME: )
+llvm.func @structs_with_same_name(!llvm.struct<"foo", (i32)>) -> !llvm.struct<"foo", (i64)>
