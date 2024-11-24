@@ -145,7 +145,9 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
     // There was a forward reference.
     sec = secRef;
   } else {
-    sec = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
+    descPool.emplace_back(
+        std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0));
+    sec = descPool.back().get();
     if (!secRef)
       secRef = sec;
   }
@@ -154,10 +156,14 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
 }
 
 OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
-  OutputDesc *&cmdRef = nameToOutputSection[CachedHashStringRef(name)];
-  if (!cmdRef)
-    cmdRef = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
-  return cmdRef;
+  auto &secRef = nameToOutputSection[CachedHashStringRef(name)];
+  if (!secRef) {
+    secRef = descPool
+                 .emplace_back(
+                     std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0))
+                 .get();
+  }
+  return secRef;
 }
 
 // Expands the memory region by the specified size.
