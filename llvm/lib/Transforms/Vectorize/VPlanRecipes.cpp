@@ -869,11 +869,12 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
 
   if (getNumOperands() != 0) {
     O << " (extra operand" << (getNumOperands() > 1 ? "s" : "") << ": ";
-    interleaveComma(enumerate(operands()), O, [this, &O, &SlotTracker](auto Op) {
-                         Op.value()->printAsOperand(O, SlotTracker);
-                         O << " from ";
-                        getParent()->getPredecessors()[Op.index()]->printAsOperand(O);
-                         });
+    interleaveComma(
+        enumerate(operands()), O, [this, &O, &SlotTracker](auto Op) {
+          Op.value()->printAsOperand(O, SlotTracker);
+          O << " from ";
+          getParent()->getPredecessors()[Op.index()]->printAsOperand(O);
+        });
     O << ")";
   }
 }
