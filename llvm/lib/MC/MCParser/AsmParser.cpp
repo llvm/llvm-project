@@ -523,6 +523,7 @@ private:
     DK_CFI_WINDOW_SAVE,
     DK_CFI_LABEL,
     DK_CFI_B_KEY_FRAME,
+    DK_CFI_VAL_OFFSET,
     DK_MACROS_ON,
     DK_MACROS_OFF,
     DK_ALTMACRO,
@@ -626,6 +627,7 @@ private:
   bool parseDirectiveCFISignalFrame(SMLoc DirectiveLoc);
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
   bool parseDirectiveCFILabel(SMLoc DirectiveLoc);
+  bool parseDirectiveCFIValOffset(SMLoc DirectiveLoc);
 
   // macro directives
   bool parseDirectivePurgeMacro(SMLoc DirectiveLoc);
@@ -1044,7 +1046,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Check to see that all assembler local symbols were actually defined.
   // Targets that don't do subsections via symbols may not want this, though,
   // so conservatively exclude them. Only do this if we're finalizing, though,
-  // as otherwise we won't necessarilly have seen everything yet.
+  // as otherwise we won't necessarily have seen everything yet.
   if (!NoFinalize) {
     if (MAI.hasSubsectionsViaSymbols()) {
       for (const auto &TableEntry : getContext().getSymbols()) {
@@ -2232,6 +2234,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFIWindowSave(IDLoc);
     case DK_CFI_LABEL:
       return parseDirectiveCFILabel(IDLoc);
+    case DK_CFI_VAL_OFFSET:
+      return parseDirectiveCFIValOffset(IDLoc);
     case DK_MACROS_ON:
     case DK_MACROS_OFF:
       return parseDirectiveMacrosOnOff(IDVal);
@@ -4531,6 +4535,20 @@ bool AsmParser::parseDirectiveCFILabel(SMLoc Loc) {
   return false;
 }
 
+/// parseDirectiveCFIValOffset
+/// ::= .cfi_val_offset register, offset
+bool AsmParser::parseDirectiveCFIValOffset(SMLoc DirectiveLoc) {
+  int64_t Register = 0;
+  int64_t Offset = 0;
+
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(Offset) || parseEOL())
+    return true;
+
+  getStreamer().emitCFIValOffset(Register, Offset, DirectiveLoc);
+  return false;
+}
+
 /// parseDirectiveAltmacro
 /// ::= .altmacro
 /// ::= .noaltmacro
@@ -5603,6 +5621,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_label"] = DK_CFI_LABEL;
   DirectiveKindMap[".cfi_b_key_frame"] = DK_CFI_B_KEY_FRAME;
   DirectiveKindMap[".cfi_mte_tagged_frame"] = DK_CFI_MTE_TAGGED_FRAME;
+  DirectiveKindMap[".cfi_val_offset"] = DK_CFI_VAL_OFFSET;
   DirectiveKindMap[".macros_on"] = DK_MACROS_ON;
   DirectiveKindMap[".macros_off"] = DK_MACROS_OFF;
   DirectiveKindMap[".macro"] = DK_MACRO;
@@ -6398,33 +6417,6 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
 namespace llvm {
 namespace MCParserUtils {
 
-/// Returns whether the given symbol is used anywhere in the given expression,
-/// or subexpressions.
-static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
-  switch (Value->getKind()) {
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = static_cast<const MCBinaryExpr *>(Value);
-    return isSymbolUsedInExpression(Sym, BE->getLHS()) ||
-           isSymbolUsedInExpression(Sym, BE->getRHS());
-  }
-  case MCExpr::Target:
-  case MCExpr::Constant:
-    return false;
-  case MCExpr::SymbolRef: {
-    const MCSymbol &S =
-        static_cast<const MCSymbolRefExpr *>(Value)->getSymbol();
-    if (S.isVariable() && !S.isWeakExternal())
-      return isSymbolUsedInExpression(Sym, S.getVariableValue());
-    return &S == Sym;
-  }
-  case MCExpr::Unary:
-    return isSymbolUsedInExpression(
-        Sym, static_cast<const MCUnaryExpr *>(Value)->getSubExpr());
-  }
-
-  llvm_unreachable("Unknown expr kind!");
-}
-
 bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                MCAsmParser &Parser, MCSymbol *&Sym,
                                const MCExpr *&Value) {
@@ -6449,7 +6441,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     //
     // FIXME: Diagnostics. Note the location of the definition as a label.
     // FIXME: Diagnose assignment to protected identifier (e.g., register name).
-    if (isSymbolUsedInExpression(Sym, Value))
+    if (Value->isSymbolUsedInExpression(Sym))
       return Parser.Error(EqualLoc, "Recursive use of '" + Name + "'");
     else if (Sym->isUndefined(/*SetUsed*/ false) && !Sym->isUsed() &&
              !Sym->isVariable())

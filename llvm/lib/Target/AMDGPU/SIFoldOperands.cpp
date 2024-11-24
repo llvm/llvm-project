@@ -78,6 +78,28 @@ public:
   bool frameIndexMayFold(const MachineInstr &UseMI, int OpNo,
                          const MachineOperand &OpToFold) const;
 
+  // TODO: Just use TII::getVALUOp
+  unsigned convertToVALUOp(unsigned Opc, bool UseVOP3 = false) const {
+    switch (Opc) {
+    case AMDGPU::S_ADD_I32: {
+      if (ST->hasAddNoCarry())
+        return UseVOP3 ? AMDGPU::V_ADD_U32_e64 : AMDGPU::V_ADD_U32_e32;
+      return UseVOP3 ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_ADD_CO_U32_e32;
+    }
+    case AMDGPU::S_OR_B32:
+      return UseVOP3 ? AMDGPU::V_OR_B32_e64 : AMDGPU::V_OR_B32_e32;
+    case AMDGPU::S_AND_B32:
+      return UseVOP3 ? AMDGPU::V_AND_B32_e64 : AMDGPU::V_AND_B32_e32;
+    case AMDGPU::S_MUL_I32:
+      return AMDGPU::V_MUL_LO_U32_e64;
+    default:
+      return AMDGPU::INSTRUCTION_LIST_END;
+    }
+  }
+
+  bool foldCopyToVGPROfScalarAddOfFrameIndex(Register DstReg, Register SrcReg,
+                                             MachineInstr &MI) const;
+
   bool updateOperand(FoldCandidate &Fold) const;
 
   bool canUseImmWithOpSel(FoldCandidate &Fold) const;
@@ -176,7 +198,7 @@ static unsigned macToMad(unsigned Opc) {
     return AMDGPU::V_FMA_F32_e64;
   case AMDGPU::V_FMAC_F16_e64:
     return AMDGPU::V_FMA_F16_gfx9_e64;
-  case AMDGPU::V_FMAC_F16_t16_e64:
+  case AMDGPU::V_FMAC_F16_fake16_e64:
     return AMDGPU::V_FMA_F16_gfx9_e64;
   case AMDGPU::V_FMAC_LEGACY_F32_e64:
     return AMDGPU::V_FMA_LEGACY_F32_e64;
@@ -196,6 +218,8 @@ bool SIFoldOperandsImpl::frameIndexMayFold(
   const unsigned Opc = UseMI.getOpcode();
   switch (Opc) {
   case AMDGPU::S_ADD_I32:
+  case AMDGPU::S_OR_B32:
+  case AMDGPU::S_AND_B32:
   case AMDGPU::V_ADD_U32_e32:
   case AMDGPU::V_ADD_CO_U32_e32:
     // TODO: Possibly relax hasOneUse. It matters more for mubuf, since we have
@@ -222,6 +246,76 @@ bool SIFoldOperandsImpl::frameIndexMayFold(
 
   int VIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
   return OpNo == VIdx && SIdx == -1;
+}
+
+/// Fold %vgpr = COPY (S_ADD_I32 x, frameindex)
+///
+///   => %vgpr = V_ADD_U32 x, frameindex
+bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
+    Register DstReg, Register SrcReg, MachineInstr &MI) const {
+  if (TRI->isVGPR(*MRI, DstReg) && TRI->isSGPRReg(*MRI, SrcReg) &&
+      MRI->hasOneNonDBGUse(SrcReg)) {
+    MachineInstr *Def = MRI->getVRegDef(SrcReg);
+    if (!Def || Def->getNumOperands() != 4)
+      return false;
+
+    MachineOperand *Src0 = &Def->getOperand(1);
+    MachineOperand *Src1 = &Def->getOperand(2);
+
+    // TODO: This is profitable with more operand types, and for more
+    // opcodes. But ultimately this is working around poor / nonexistent
+    // regbankselect.
+    if (!Src0->isFI() && !Src1->isFI())
+      return false;
+
+    if (Src0->isFI())
+      std::swap(Src0, Src1);
+
+    const bool UseVOP3 = !Src0->isImm() || TII->isInlineConstant(*Src0);
+    unsigned NewOp = convertToVALUOp(Def->getOpcode(), UseVOP3);
+    if (NewOp == AMDGPU::INSTRUCTION_LIST_END ||
+        !Def->getOperand(3).isDead()) // Check if scc is dead
+      return false;
+
+    MachineBasicBlock *MBB = Def->getParent();
+    const DebugLoc &DL = Def->getDebugLoc();
+    if (NewOp != AMDGPU::V_ADD_CO_U32_e32) {
+      MachineInstrBuilder Add =
+          BuildMI(*MBB, *Def, DL, TII->get(NewOp), DstReg);
+
+      if (Add->getDesc().getNumDefs() == 2) {
+        Register CarryOutReg = MRI->createVirtualRegister(TRI->getBoolRC());
+        Add.addDef(CarryOutReg, RegState::Dead);
+        MRI->setRegAllocationHint(CarryOutReg, 0, TRI->getVCC());
+      }
+
+      Add.add(*Src0).add(*Src1).setMIFlags(Def->getFlags());
+      if (AMDGPU::hasNamedOperand(NewOp, AMDGPU::OpName::clamp))
+        Add.addImm(0);
+
+      Def->eraseFromParent();
+      MI.eraseFromParent();
+      return true;
+    }
+
+    assert(NewOp == AMDGPU::V_ADD_CO_U32_e32);
+
+    MachineBasicBlock::LivenessQueryResult Liveness =
+        MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, *Def, 16);
+    if (Liveness == MachineBasicBlock::LQR_Dead) {
+      // TODO: If src1 satisfies operand constraints, use vop3 version.
+      BuildMI(*MBB, *Def, DL, TII->get(NewOp), DstReg)
+          .add(*Src0)
+          .add(*Src1)
+          .setOperandDead(3) // implicit-def $vcc
+          .setMIFlags(Def->getFlags());
+      Def->eraseFromParent();
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  return false;
 }
 
 FunctionPass *llvm::createSIFoldOperandsLegacyPass() {
@@ -1470,9 +1564,10 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
 
 bool SIFoldOperandsImpl::tryFoldFoldableCopy(
     MachineInstr &MI, MachineOperand *&CurrentKnownM0Val) const {
+  Register DstReg = MI.getOperand(0).getReg();
   // Specially track simple redefs of m0 to the same value in a block, so we
   // can erase the later ones.
-  if (MI.getOperand(0).getReg() == AMDGPU::M0) {
+  if (DstReg == AMDGPU::M0) {
     MachineOperand &NewM0Val = MI.getOperand(1);
     if (CurrentKnownM0Val && CurrentKnownM0Val->isIdenticalTo(NewM0Val)) {
       MI.eraseFromParent();
@@ -1510,8 +1605,12 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   //    %3 = COPY %vgpr0; VGPR_32:%3
   //    ...
   //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
-  if (!MI.getOperand(0).getReg().isVirtual())
+  if (!DstReg.isVirtual())
     return false;
+
+  if (OpToFold.isReg() &&
+      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
+    return true;
 
   bool Changed = foldInstOperand(MI, OpToFold);
 

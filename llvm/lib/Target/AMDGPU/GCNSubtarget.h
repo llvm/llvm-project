@@ -106,6 +106,7 @@ protected:
   bool GFX9Insts = false;
   bool GFX90AInsts = false;
   bool GFX940Insts = false;
+  bool GFX950Insts = false;
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
@@ -179,6 +180,7 @@ protected:
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
   bool HasDefaultComponentBroadcast = false;
+  bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -218,7 +220,9 @@ protected:
   bool HasSALUFloatInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
-
+  bool HasPrngInst = false;
+  bool HasPermlane16Swap = false;
+  bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
@@ -240,7 +244,8 @@ protected:
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
-
+  bool HasMinimum3Maximum3F32 = false;
+  bool HasMinimum3Maximum3F16 = false;
   bool RequiresCOV6 = false;
 
   // Dummy feature to use for assembler in tablegen.
@@ -1282,6 +1287,17 @@ public:
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
+  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // hasGFX940Insts and hasGFX90AInsts are also true.
+  bool hasGFX950Insts() const { return GFX950Insts; }
+
+  /// Returns true if the target supports
+  /// global_load_lds_dwordx3/global_load_lds_dwordx4 or
+  /// buffer_load_dwordx3/buffer_load_dwordx4 with the lds bit.
+  bool hasLDSLoadB96_B128() const {
+    return hasGFX950Insts();
+  }
+
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
@@ -1302,10 +1318,26 @@ public:
     return getGeneration() == GFX12;
   }
 
+  /// \returns true if the target has instructions with xf32 format support.
+  bool hasXF32Insts() const { return HasXF32Insts; }
+
+  bool hasPermlane16Swap() const { return HasPermlane16Swap; }
+  bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+
+  bool hasMinimum3Maximum3F32() const {
+    return HasMinimum3Maximum3F32;
+  }
+
+  bool hasMinimum3Maximum3F16() const {
+    return HasMinimum3Maximum3F16;
+  }
+
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
+
+  bool hasPrngInst() const { return HasPrngInst; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1535,6 +1567,14 @@ public:
 
   bool isWave64() const {
     return getWavefrontSize() == 64;
+  }
+
+  /// Returns if the wavesize of this subtarget is known reliable. This is false
+  /// only for the a default target-cpu that does not have an explicit
+  /// +wavefrontsize target feature.
+  bool isWaveSizeKnown() const {
+    return hasFeature(AMDGPU::FeatureWavefrontSize32) ||
+           hasFeature(AMDGPU::FeatureWavefrontSize64);
   }
 
   const TargetRegisterClass *getBoolRC() const {

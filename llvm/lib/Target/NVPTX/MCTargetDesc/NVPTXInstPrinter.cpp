@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/NVPTXInstPrinter.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,7 +21,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/FormattedStream.h"
 #include <cctype>
 using namespace llvm;
 
@@ -371,6 +369,12 @@ void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
     O << "+";
     printOperand(MI, OpNum, O);
   }
+}
+
+void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
+                                      raw_ostream &O, const char *Modifier) {
+  int64_t Imm = MI->getOperand(OpNum).getImm();
+  O << formatHex(Imm) << "U";
 }
 
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,

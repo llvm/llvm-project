@@ -63,6 +63,8 @@ enum NodeType : unsigned {
   PRMT,
   FCOPYSIGN,
   DYNAMIC_STACKALLOC,
+  STACKRESTORE,
+  STACKSAVE,
   BrxStart,
   BrxItem,
   BrxEnd,
@@ -526,6 +528,8 @@ public:
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
   std::string
   getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
@@ -615,6 +619,8 @@ public:
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
+
+  SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;

@@ -59,6 +59,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include <mutex>
@@ -2183,6 +2184,7 @@ public:
   void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   void VisitOpenACCComputeConstruct(const OpenACCComputeConstruct *D);
   void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *D);
+  void VisitOpenACCCombinedConstruct(const OpenACCCombinedConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -3579,6 +3581,13 @@ void EnqueueVisitor::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *C) {
     EnqueueChildren(Clause);
 }
 
+void EnqueueVisitor::VisitOpenACCCombinedConstruct(
+    const OpenACCCombinedConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {
   EnqueueChildren(A);
 }
@@ -4084,7 +4093,8 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
   auto HSOpts = std::make_shared<HeaderSearchOptions>();
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          new DiagnosticOptions());
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ast_filename, CXXIdx->getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, Diags, FileSystemOpts, HSOpts,
@@ -4157,7 +4167,8 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
       llvm::ArrayRef(command_line_args, num_command_line_args));
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      CompilerInstance::createDiagnostics(DiagOpts.release()));
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          DiagOpts.release()));
 
   if (options & CXTranslationUnit_KeepGoing)
     Diags->setFatalsAsError(true);
@@ -6329,6 +6340,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCComputeConstruct");
   case CXCursor_OpenACCLoopConstruct:
     return cxstring::createRef("OpenACCLoopConstruct");
+  case CXCursor_OpenACCCombinedConstruct:
+    return cxstring::createRef("OpenACCCombinedConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

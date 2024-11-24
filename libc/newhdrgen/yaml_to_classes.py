@@ -253,7 +253,7 @@ def main():
     args = parser.parse_args()
 
     if args.add_function:
-        add_function_to_yaml(yaml_file, args.add_function)
+        add_function_to_yaml(args.yaml_file, args.add_function)
 
     header_class = GpuHeader if args.export_decls else HeaderFile
     header = load_yaml_file(args.yaml_file, header_class, args.entry_points)

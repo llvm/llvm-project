@@ -31,7 +31,7 @@ int __attribute__((target_version("flagm2"))) diff_link2(void) { return 1; }
 extern int __attribute__((target_version("flagm"))) diff_link2(void);
 
 namespace {
-static int __attribute__((target_version("memtag3"))) diff_link2(void) { return 2; }
+static int __attribute__((target_version("memtag"))) diff_link2(void) { return 2; }
 int __attribute__((target_version("sve2-bitperm"))) diff_link2(void) { return 1; }
 } // namespace
 

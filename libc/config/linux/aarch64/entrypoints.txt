@@ -245,6 +245,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mlock2
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.mmap
+    libc.src.sys.mman.mremap
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.msync
     libc.src.sys.mman.munlock
@@ -330,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lseek
     libc.src.unistd.pathconf
     libc.src.unistd.pipe
+    libc.src.unistd.pipe2
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -356,6 +358,14 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # complex.h entrypoints
+    libc.src.complex.creal
+    libc.src.complex.crealf
+    libc.src.complex.creall
+    libc.src.complex.cimag
+    libc.src.complex.cimagf
+    libc.src.complex.cimagl
+
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept
@@ -603,6 +613,10 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # complex.h C23 _Complex _Float16 entrypoints
+    # libc.src.complex.crealf16
+    # libc.src.complex.cimagf16
+    
     # math.h C23 _Float16 entrypoints
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
@@ -704,6 +718,10 @@ endif()
 
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # complex.h C23 _Complex _Float128 entrypoints
+    libc.src.complex.crealf128
+    libc.src.complex.cimagf128
+
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
@@ -942,6 +960,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch
     libc.src.search.hsearch_r
     libc.src.search.insque
+    libc.src.search.lfind
     libc.src.search.remque
 
     # threads.h entrypoints

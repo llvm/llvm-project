@@ -32,6 +32,7 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
+#include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
@@ -41,6 +42,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
+#include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/type_identity.h>
@@ -544,7 +546,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
     reset(__u.release());
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
-    __checker_ = std::move(std::move(__u.__checker_));
+    __checker_ = std::move(__u.__checker_);
     return *this;
   }
 
@@ -758,55 +760,36 @@ operator<=>(const unique_ptr<_T1, _D1>& __x, nullptr_t) {
 
 #if _LIBCPP_STD_VER >= 14
 
-template <class _Tp>
-struct __unique_if {
-  typedef unique_ptr<_Tp> __unique_single;
-};
-
-template <class _Tp>
-struct __unique_if<_Tp[]> {
-  typedef unique_ptr<_Tp[]> __unique_array_unknown_bound;
-};
-
-template <class _Tp, size_t _Np>
-struct __unique_if<_Tp[_Np]> {
-  typedef void __unique_array_known_bound;
-};
-
-template <class _Tp, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
-make_unique(_Args&&... __args) {
+template <class _Tp, class... _Args, enable_if_t<!is_array<_Tp>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique(_Args&&... __args) {
   return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...));
 }
 
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
-make_unique(size_t __n) {
+template <class _Tp, enable_if_t<__is_unbounded_array_v<_Tp>, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique(size_t __n) {
   typedef __remove_extent_t<_Tp> _Up;
   return unique_ptr<_Tp>(__private_constructor_tag(), new _Up[__n](), __n);
 }
 
-template <class _Tp, class... _Args>
-typename __unique_if<_Tp>::__unique_array_known_bound make_unique(_Args&&...) = delete;
+template <class _Tp, class... _Args, enable_if_t<__is_bounded_array_v<_Tp>, int> = 0>
+void make_unique(_Args&&...) = delete;
 
 #endif // _LIBCPP_STD_VER >= 14
 
 #if _LIBCPP_STD_VER >= 20
 
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
-make_unique_for_overwrite() {
+template <class _Tp, enable_if_t<!is_array_v<_Tp>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique_for_overwrite() {
   return unique_ptr<_Tp>(new _Tp);
 }
 
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
-make_unique_for_overwrite(size_t __n) {
+template <class _Tp, enable_if_t<is_unbounded_array_v<_Tp>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr<_Tp> make_unique_for_overwrite(size_t __n) {
   return unique_ptr<_Tp>(__private_constructor_tag(), new __remove_extent_t<_Tp>[__n], __n);
 }
 
-template <class _Tp, class... _Args>
-typename __unique_if<_Tp>::__unique_array_known_bound make_unique_for_overwrite(_Args&&...) = delete;
+template <class _Tp, class... _Args, enable_if_t<is_bounded_array_v<_Tp>, int> = 0>
+void make_unique_for_overwrite(_Args&&...) = delete;
 
 #endif // _LIBCPP_STD_VER >= 20
 

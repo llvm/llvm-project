@@ -25,7 +25,6 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
-#include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
@@ -614,7 +613,7 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const {
 }
 
 bool DWARFDebugInfoEntry::IsGlobalOrStaticScopeVariable() const {
-  if (Tag() != DW_TAG_variable)
+  if (Tag() != DW_TAG_variable && Tag() != DW_TAG_member)
     return false;
   const DWARFDebugInfoEntry *parent_die = GetParent();
   while (parent_die != nullptr) {

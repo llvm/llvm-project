@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 

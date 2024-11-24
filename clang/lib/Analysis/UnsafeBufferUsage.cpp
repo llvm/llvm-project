@@ -9,9 +9,9 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
@@ -82,11 +82,8 @@ static std::string getDREAncestorString(const DeclRefExpr *DRE,
 namespace clang::ast_matchers {
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
-class MatchDescendantVisitor
-    : public RecursiveASTVisitor<MatchDescendantVisitor> {
+class MatchDescendantVisitor : public DynamicRecursiveASTVisitor {
 public:
-  typedef RecursiveASTVisitor<MatchDescendantVisitor> VisitorBase;
-
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
@@ -96,7 +93,10 @@ public:
                          internal::ASTMatchFinder::BindKind Bind,
                          const bool ignoreUnevaluatedContext)
       : Matcher(Matcher), Finder(Finder), Builder(Builder), Bind(Bind),
-        Matches(false), ignoreUnevaluatedContext(ignoreUnevaluatedContext) {}
+        Matches(false), ignoreUnevaluatedContext(ignoreUnevaluatedContext) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
+  }
 
   // Returns true if a match is found in a subtree of `DynNode`, which belongs
   // to the same callable of `DynNode`.
@@ -117,7 +117,7 @@ public:
   // For the matchers so far used in safe buffers, we only need to match
   // `Stmt`s.  To override more as needed.
 
-  bool TraverseDecl(Decl *Node) {
+  bool TraverseDecl(Decl *Node) override {
     if (!Node)
       return true;
     if (!match(*Node))
@@ -126,69 +126,58 @@ public:
     if (isa<FunctionDecl, BlockDecl, ObjCMethodDecl>(Node))
       return true;
     // Traverse descendants
-    return VisitorBase::TraverseDecl(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecl(Node);
   }
 
-  bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) {
+  bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) override {
     // These are unevaluated, except the result expression.
     if (ignoreUnevaluatedContext)
       return TraverseStmt(Node->getResultExpr());
-    return VisitorBase::TraverseGenericSelectionExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseGenericSelectionExpr(Node);
   }
 
-  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) {
+  bool
+  TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseUnaryExprOrTypeTraitExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
   }
 
-  bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) {
+  bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseCXXNoexceptExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseCXXNoexceptExpr(Node);
   }
 
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) {
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return VisitorBase::TraverseCXXTypeidExpr(Node);
+    return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
   }
 
-  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) {
-    if (!TraverseStmt(Node->getExpr()))
-      return false;
-    return VisitorBase::TraverseCXXDefaultInitExpr(Node);
-  }
-
-  bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
+  bool TraverseStmt(Stmt *Node) override {
     if (!Node)
       return true;
     if (!match(*Node))
       return false;
-    return VisitorBase::TraverseStmt(Node);
-  }
-
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const {
-    // TODO: let's ignore implicit code for now
-    return false;
+    return DynamicRecursiveASTVisitor::TraverseStmt(Node);
   }
 
 private:
@@ -366,6 +355,7 @@ isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
+//   6. `std::span<T>{std::addressof(...), 1}`
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
@@ -410,6 +400,15 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
       // Check form 3:
       return Arg1CV && Arg1CV->isOne();
     break;
+  case Stmt::CallExprClass:
+    if (const auto *CE = dyn_cast<CallExpr>(Arg0)) {
+      const auto FnDecl = CE->getDirectCallee();
+      if (FnDecl && FnDecl->getNameAsString() == "addressof" &&
+          FnDecl->isInStdNamespace()) {
+        return Arg1CV && Arg1CV->isOne();
+      }
+    }
+    break;
   default:
     break;
   }
@@ -436,21 +435,31 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
 
   const auto *BaseDRE =
       dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  if (!BaseDRE)
+  const auto *SLiteral =
+      dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts());
+  uint64_t size;
+
+  if (!BaseDRE && !SLiteral)
     return false;
-  if (!BaseDRE->getDecl())
-    return false;
-  const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-      BaseDRE->getDecl()->getType());
-  if (!CATy)
-    return false;
+
+  if (BaseDRE) {
+    if (!BaseDRE->getDecl())
+      return false;
+    const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
+        BaseDRE->getDecl()->getType());
+    if (!CATy) {
+      return false;
+    }
+    size = CATy->getLimitedSize();
+  } else if (SLiteral) {
+    size = SLiteral->getLength() + 1;
+  }
 
   if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
     const APInt ArrIdx = IdxLit->getValue();
     // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
     // bug
-    if (ArrIdx.isNonNegative() &&
-        ArrIdx.getLimitedValue() < CATy->getLimitedSize())
+    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < size)
       return true;
   }
 
@@ -1978,18 +1987,14 @@ public:
 };
 
 /// Scan the function and return a list of gadgets found with provided kits.
-static void findGadgets(const Stmt *S, ASTContext &Ctx,
-                        const UnsafeBufferUsageHandler &Handler,
-                        bool EmitSuggestions, FixableGadgetList &FixableGadgets,
-                        WarningGadgetList &WarningGadgets,
-                        DeclUseTracker &Tracker) {
+static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
+findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
+            bool EmitSuggestions) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
-    GadgetFinderCallback(FixableGadgetList &FixableGadgets,
-                         WarningGadgetList &WarningGadgets,
-                         DeclUseTracker &Tracker)
-        : FixableGadgets(FixableGadgets), WarningGadgets(WarningGadgets),
-          Tracker(Tracker) {}
+    FixableGadgetList FixableGadgets;
+    WarningGadgetList WarningGadgets;
+    DeclUseTracker Tracker;
 
     void run(const MatchFinder::MatchResult &Result) override {
       // In debug mode, assert that we've found exactly one gadget.
@@ -2030,14 +2035,10 @@ static void findGadgets(const Stmt *S, ASTContext &Ctx,
       assert(numFound >= 1 && "Gadgets not found in match result!");
       assert(numFound <= 1 && "Conflicting bind tags in gadgets!");
     }
-
-    FixableGadgetList &FixableGadgets;
-    WarningGadgetList &WarningGadgets;
-    DeclUseTracker &Tracker;
   };
 
   MatchFinder M;
-  GadgetFinderCallback CB{FixableGadgets, WarningGadgets, Tracker};
+  GadgetFinderCallback CB;
 
   // clang-format off
   M.addMatcher(
@@ -2082,7 +2083,9 @@ static void findGadgets(const Stmt *S, ASTContext &Ctx,
     // clang-format on
   }
 
-  M.match(*S, Ctx);
+  M.match(*D->getBody(), D->getASTContext());
+  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
+          std::move(CB.Tracker)};
 }
 
 // Compares AST nodes by source locations.
@@ -3626,9 +3629,39 @@ public:
   }
 };
 
-void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
-                  WarningGadgetList WarningGadgets, DeclUseTracker Tracker,
-                  UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
+void clang::checkUnsafeBufferUsage(const Decl *D,
+                                   UnsafeBufferUsageHandler &Handler,
+                                   bool EmitSuggestions) {
+#ifndef NDEBUG
+  Handler.clearDebugNotes();
+#endif
+
+  assert(D && D->getBody());
+  // We do not want to visit a Lambda expression defined inside a method
+  // independently. Instead, it should be visited along with the outer method.
+  // FIXME: do we want to do the same thing for `BlockDecl`s?
+  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
+    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
+      return;
+  }
+
+  // Do not emit fixit suggestions for functions declared in an
+  // extern "C" block.
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    for (FunctionDecl *FReDecl : FD->redecls()) {
+      if (FReDecl->isExternC()) {
+        EmitSuggestions = false;
+        break;
+      }
+    }
+  }
+
+  WarningGadgetSets UnsafeOps;
+  FixableGadgetSets FixablesForAllVars;
+
+  auto [FixableGadgets, WarningGadgets, Tracker] =
+      findGadgets(D, Handler, EmitSuggestions);
+
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
     // every problematic operation and consider it done. No need to deal
@@ -3672,10 +3705,8 @@ void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
   if (WarningGadgets.empty())
     return;
 
-  WarningGadgetSets UnsafeOps =
-      groupWarningGadgetsByVar(std::move(WarningGadgets));
-  FixableGadgetSets FixablesForAllVars =
-      groupFixablesByVar(std::move(FixableGadgets));
+  UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
+  FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
 
@@ -3895,57 +3926,4 @@ void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
                                D->getASTContext());
     }
   }
-}
-
-void clang::checkUnsafeBufferUsage(const Decl *D,
-                                   UnsafeBufferUsageHandler &Handler,
-                                   bool EmitSuggestions) {
-#ifndef NDEBUG
-  Handler.clearDebugNotes();
-#endif
-
-  assert(D);
-
-  SmallVector<Stmt *> Stmts;
-
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    // We do not want to visit a Lambda expression defined inside a method
-    // independently. Instead, it should be visited along with the outer method.
-    // FIXME: do we want to do the same thing for `BlockDecl`s?
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-      if (MD->getParent()->isLambda() && MD->getParent()->isLocalClass())
-        return;
-    }
-
-    for (FunctionDecl *FReDecl : FD->redecls()) {
-      if (FReDecl->isExternC()) {
-        // Do not emit fixit suggestions for functions declared in an
-        // extern "C" block.
-        EmitSuggestions = false;
-        break;
-      }
-    }
-
-    Stmts.push_back(FD->getBody());
-
-    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
-      for (const CXXCtorInitializer *CI : ID->inits()) {
-        Stmts.push_back(CI->getInit());
-      }
-    }
-  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
-    Stmts.push_back(D->getBody());
-  }
-
-  assert(!Stmts.empty());
-
-  FixableGadgetList FixableGadgets;
-  WarningGadgetList WarningGadgets;
-  DeclUseTracker Tracker;
-  for (Stmt *S : Stmts) {
-    findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
-                WarningGadgets, Tracker);
-  }
-  applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
-               std::move(Tracker), Handler, EmitSuggestions);
 }

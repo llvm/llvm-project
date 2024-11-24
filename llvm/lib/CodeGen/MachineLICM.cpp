@@ -19,7 +19,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -152,7 +151,7 @@ namespace {
       if (Inserted) {
         SmallVector<MachineBasicBlock *, 8> ExitBlocks;
         CurLoop->getExitBlocks(ExitBlocks);
-        It->second = ExitBlocks;
+        It->second = std::move(ExitBlocks);
       }
       return is_contained(It->second, MBB);
     }
@@ -1371,7 +1370,8 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),
-               [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
+               [&CurLoop, this, DefReg,
+                Cost = std::move(Cost)](MachineInstr &UseMI) {
                  if (!CurLoop->contains(&UseMI))
                    return false;
 
@@ -1501,7 +1501,7 @@ void MachineLICMImpl::InitializeLoadsHoistableLoops() {
       if (!AllowedToHoistLoads[Loop])
         continue;
       for (auto &MI : *MBB) {
-        if (!MI.mayStore() && !MI.isCall() &&
+        if (!MI.isLoadFoldBarrier() && !MI.mayStore() && !MI.isCall() &&
             !(MI.mayLoad() && MI.hasOrderedMemoryRef()))
           continue;
         for (MachineLoop *L = Loop; L != nullptr; L = L->getParentLoop())
@@ -1763,9 +1763,6 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   bool Changed = MachineLICMImpl(PreRegAlloc, nullptr, &MFAM).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();

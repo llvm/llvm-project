@@ -96,7 +96,7 @@ define <2 x double> @returned_zero_vector() {
 define <2 x double> @returned_negzero_vector() {
 ; CHECK-LABEL: define noundef nofpclass(nan inf pzero sub norm) <2 x double> @returned_negzero_vector() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret <2 x double> <double -0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double -0.000000e+00)
 ;
   call void @unknown()
   ret <2 x double> <double -0.0, double -0.0>
@@ -2667,7 +2667,7 @@ define <vscale x 4 x float> @scalable_splat_pnorm() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define <vscale x 4 x float> @scalable_splat_pnorm
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 1.000000e+00)
 ;
   ret <vscale x 4 x float> splat (float 1.0)
 }
@@ -2909,7 +2909,7 @@ define <2 x float> @bitcast_to_float_vect_nnan(<2 x i32> %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) <2 x float> @bitcast_to_float_vect_nnan
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[ARG]], <i32 4, i32 4>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[ARG]], splat (i32 4)
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[SHR]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[CAST]]
 ;
@@ -2922,7 +2922,7 @@ define <2 x float> @bitcast_to_float_vect_sign_1(<2 x i32> %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) <2 x float> @bitcast_to_float_vect_sign_1
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], splat (i32 -2147483648)
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[OR]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[CAST]]
 ;
@@ -2935,7 +2935,7 @@ define <2 x float> @bitcast_to_float_vect_nan(<2 x i32> %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x float> @bitcast_to_float_vect_nan
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], <i32 2139095041, i32 2139095041>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], splat (i32 2139095041)
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[OR]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[CAST]]
 ;

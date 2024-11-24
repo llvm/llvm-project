@@ -21,8 +21,7 @@
  */
 
 #include <clc/clc.h>
-
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_OVERLOAD _CLC_DEF float step(float edge, float x) {
   return x < edge ? 0.0f : 1.0f;

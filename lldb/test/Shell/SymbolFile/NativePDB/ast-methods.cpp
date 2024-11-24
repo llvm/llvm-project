@@ -44,8 +44,7 @@ int main(int argc, char **argv) {
 // AST: |   |-ParmVarDecl {{.*}} 'char'
 // AST: |   `-ParmVarDecl {{.*}} 'int'
 
-// SYMBOL:      int main(int argc, char **argv);
-// SYMBOL-NEXT: struct Struct {
+// SYMBOL:      struct Struct {
 // SYMBOL-NEXT:     void simple_method();
 // SYMBOL-NEXT:     static void static_method();
 // SYMBOL-NEXT:     virtual void virtual_method();
@@ -53,3 +52,5 @@ int main(int argc, char **argv) {
 // SYMBOL-NEXT:     int overloaded_method(char);
 // SYMBOL-NEXT:     int overloaded_method(char, int, ...);
 // SYMBOL-NEXT: };
+// SYMBOL-NEXT: Struct s;
+// SYMBOL-NEXT: int main(int argc, char **argv);

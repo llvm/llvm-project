@@ -120,7 +120,7 @@ func.func @atomic_write(%a: !llvm.ptr) -> () {
 // CHECK: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
 // CHECK: omp.atomic.read %[[ARG1]] = %[[ARG0]] hint(contended) memory_order(acquire) : !llvm.ptr
 func.func @atomic_read(%a: !llvm.ptr, %b: !llvm.ptr) -> () {
-  omp.atomic.read %b = %a memory_order(acquire) hint(contended) : !llvm.ptr, i32
+  omp.atomic.read %b = %a memory_order(acquire) hint(contended) : !llvm.ptr, !llvm.ptr, i32
   return
 }
 

@@ -42,18 +42,100 @@ static_assert(!CanEmplaceHint<Map, int, double>);
 #endif
 
 template <class KeyContainer, class ValueContainer>
-void test_simple() {
+void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
   using R     = M::iterator;
-  M m;
-  ASSERT_SAME_TYPE(decltype(m.emplace_hint(m.cbegin())), R);
-  R r = m.emplace_hint(m.end(), typename M::value_type(2, 3.5));
-  assert(r == m.begin());
-  assert(m.size() == 1);
-  assert(m.begin()->first == 2);
-  assert(m.begin()->second == 3.5);
+  {
+    // was empty
+    M m;
+    std::same_as<R> decltype(auto) r = m.emplace_hint(m.end(), typename M::value_type(2, 3.5));
+    assert(r == m.begin());
+    assert(m.size() == 1);
+    assert(r->first == 2);
+    assert(r->second == 3.5);
+  }
+  {
+    // hints correct at the begin
+    M m                              = {{3, 3.0}, {4, 4.0}};
+    auto hint                        = m.begin();
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin());
+    assert(m.size() == 3);
+    assert(r->first == 2);
+    assert(r->second == 2.0);
+  }
+  {
+    // hints correct in the middle
+    M m                              = {{0, 0.0}, {1, 1.0}, {3, 3.0}, {4, 4.0}};
+    auto hint                        = m.begin() + 2;
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin() + 2);
+    assert(m.size() == 5);
+    assert(r->first == 2);
+    assert(r->second == 2.0);
+  }
+  {
+    // hints correct at the end
+    M m                              = {{0, 0.0}, {1, 1.0}};
+    auto hint                        = m.end();
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin() + 2);
+    assert(m.size() == 3);
+    assert(r->first == 2);
+    assert(r->second == 2.0);
+  }
+  {
+    // hints correct but key already exists
+    M m                              = {{0, 0.0}, {1, 1.0}, {2, 1.9}, {3, 3.0}, {4, 4.0}};
+    auto hint                        = m.begin() + 2;
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin() + 2);
+    assert(m.size() == 5);
+    assert(r->first == 2);
+    assert(r->second == 1.9);
+  }
+  {
+    // hints incorrectly at the begin
+    M m                              = {{1, 1.0}, {4, 4.0}};
+    auto hint                        = m.begin();
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin() + 1);
+    assert(m.size() == 3);
+    assert(r->first == 2);
+    assert(r->second == 2.0);
+  }
+  {
+    // hints incorrectly in the middle
+    M m                              = {{0, 0.0}, {1, 1.0}, {3, 3.0}, {4, 4.0}};
+    auto hint                        = m.begin() + 1;
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin() + 2);
+    assert(m.size() == 5);
+    assert(r->first == 2);
+    assert(r->second == 2.0);
+  }
+  {
+    // hints incorrectly at the end
+    M m                              = {{0, 0.0}, {3, 3.0}};
+    auto hint                        = m.end();
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin() + 1);
+    assert(m.size() == 3);
+    assert(r->first == 2);
+    assert(r->second == 2.0);
+  }
+  {
+    // hints incorrect and key already exists
+    M m                              = {{0, 0.0}, {1, 1.0}, {2, 1.9}, {3, 3.0}, {4, 4.0}};
+    auto hint                        = m.begin();
+    std::same_as<R> decltype(auto) r = m.emplace_hint(hint, typename M::value_type(2, 2.0));
+    assert(r == m.begin() + 2);
+    assert(m.size() == 5);
+    assert(r->first == 2);
+    assert(r->second == 1.9);
+  }
 }
 
 template <class KeyContainer, class ValueContainer>
@@ -81,10 +163,10 @@ void test_emplaceable() {
 }
 
 int main(int, char**) {
-  test_simple<std::vector<int>, std::vector<double>>();
-  test_simple<std::deque<int>, std::vector<double>>();
-  test_simple<MinSequenceContainer<int>, MinSequenceContainer<double>>();
-  test_simple<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   test_emplaceable<std::vector<int>, std::vector<Emplaceable>>();
   test_emplaceable<std::deque<int>, std::vector<Emplaceable>>();
