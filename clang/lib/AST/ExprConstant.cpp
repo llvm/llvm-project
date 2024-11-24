@@ -11304,6 +11304,9 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
 }
 
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
+  if (!IsConstantEvaluatedBuiltinCall(E))
+    return ExprEvaluatorBaseTy::VisitCallExpr(E);
+
   switch (E->getBuiltinCallee()) {
   default:
     return false;
