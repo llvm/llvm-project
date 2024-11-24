@@ -8,14 +8,12 @@
 
 #include "UseInternalLinkageCheck.h"
 #include "../utils/FileExtensionsUtils.h"
-#include "../utils/LexerUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -46,6 +44,8 @@ namespace clang::tidy::misc {
 namespace {
 
 AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
+
+AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 
 static bool isInMainFile(SourceLocation L, SourceManager &SM,
                          const FileExtensionsSet &HeaderFileExtensions) {
@@ -103,7 +103,7 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                 // 4. friend
                 hasAncestor(friendDecl()))));
   Finder->addMatcher(
-      functionDecl(Common, unless(cxxMethodDecl()), unless(isMain()))
+      functionDecl(Common, hasBody(), unless(cxxMethodDecl()), unless(isMain()))
           .bind("fn"),
       this);
   Finder->addMatcher(varDecl(Common, hasGlobalStorage()).bind("var"), this);

@@ -229,8 +229,9 @@ Changes in existing checks
   false positive for C++23 deducing this.
 
 - Improved :doc:`misc-use-internal-linkage
-  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
-  before type qualifiers such as ``const`` and ``volatile``.
+  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static``
+  keyword before type qualifiers such as ``const`` and ``volatile`` and fix
+  false positives for function declaration without body.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
