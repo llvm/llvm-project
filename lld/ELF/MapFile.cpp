@@ -59,7 +59,9 @@ static std::vector<Defined *> getSymbols(Ctx &ctx) {
     for (Symbol *b : file->getSymbols())
       if (auto *dr = dyn_cast<Defined>(b))
         if (!dr->isSection() && dr->section && dr->section->isLive() &&
-            (dr->file == file || dr->hasFlag(NEEDS_COPY) || dr->section->bss))
+            (dr->file == file || dr->hasFlag(NEEDS_COPY) ||
+             (isa<SyntheticSection>(dr->section) &&
+              cast<SyntheticSection>(dr->section)->bss)))
           v.push_back(dr);
   return v;
 }

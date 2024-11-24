@@ -647,7 +647,7 @@ public:
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
         break;
-      case Intrinsic::dx_bufferUpdateCounter:
+      case Intrinsic::dx_updateCounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when
