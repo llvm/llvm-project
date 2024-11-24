@@ -4033,7 +4033,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, Descriptor::InlineDescMD, IsConst,
-                                     Src.is<const Expr *>());
+                                     isa<const Expr *>(Src));
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
