@@ -163,9 +163,7 @@ private:
   // Populate gnu uuid for each NT_FILE entry
   void UpdateBuildIdForNTFileEntries();
 
-  bool GetModuleSpec(const lldb_private::FileSpec &module_file_spec,
-                     const lldb_private::ArchSpec &arch,
-                     lldb_private::ModuleSpec &module_spec) override;
+  lldb_private::UUID FindModuleUUID(const llvm::StringRef path) override;
 
   // Returns the value of certain type of note of a given start address
   lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
