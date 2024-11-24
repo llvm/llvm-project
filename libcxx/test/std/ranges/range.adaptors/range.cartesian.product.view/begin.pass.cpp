@@ -44,32 +44,22 @@ struct NoConstBeginView : std::ranges::view_base {
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
-  {   // all underlying iterators should be at the begin position
-    { // non-const
-      std::ranges::cartesian_product_view v(
-          SizedRandomAccessView{buffer}, std::views::iota(0), std::ranges::single_view(2.0));
-      std::same_as<std::tuple<int&, int, double&>> decltype(auto) val = *v.begin();
-      assert(val == std::make_tuple(1, 0, 2.0));
-      assert(&(std::get<0>(val)) == &buffer[0]);
-    }
-    { // const
-      const std::ranges::cartesian_product_view v(
-          SizedRandomAccessView{buffer}, std::views::iota(0), std::ranges::single_view(2.0));
-      std::same_as<std::tuple<int&, int, const double&>> decltype(auto) val = *v.begin();
-      assert(val == std::make_tuple(1, 0, 2.0));
-      assert(&(std::get<0>(val)) == &buffer[0]);
-    }
+  { // all underlying iterators should be at the begin position
+    std::ranges::cartesian_product_view v(
+        SizedRandomAccessView{buffer}, std::views::iota(0), std::ranges::single_view(2.0));
+    std::same_as<std::tuple<int&, int, double&>> decltype(auto) mutVal = *v.begin();
+    std::same_as<std::tuple<int&, int, const double&>> decltype(auto) constVal =
+        *std::as_const(v).begin();
+    assert(mutVal == std::make_tuple(1, 0, 2.0));
+    assert(constVal == std::make_tuple(1, 0, 2.0));
+    assert(&(std::get<0>(mutVal)) == &buffer[0]);
+    assert(&(std::get<0>(constVal)) == &buffer[0]);
   }
 
-  {   // with empty range
-    { // non-const
-      std::ranges::cartesian_product_view v(SizedRandomAccessView{buffer}, std::ranges::empty_view<int>());
-      assert(v.begin() == v.end());
-    }
-    { // const
-      const std::ranges::cartesian_product_view v(SizedRandomAccessView{buffer}, std::ranges::empty_view<int>());
-      assert(v.begin() == v.end());
-    }
+  { // with empty range
+    std::ranges::cartesian_product_view v(SizedRandomAccessView{buffer}, std::ranges::empty_view<int>());
+    assert(v.begin() == v.end());
+    assert(std::as_const(v).begin() == std::as_const(v).end());
   }
 
   { // underlying ranges all model simple-view
