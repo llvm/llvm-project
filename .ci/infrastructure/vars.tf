@@ -1,8 +1,3 @@
-variable "namespace" {
-  type    = string
-  default = "default"
-}
-
 variable "cluster_name" {
   type    = string
   default = "llvm-premerge-prototype"

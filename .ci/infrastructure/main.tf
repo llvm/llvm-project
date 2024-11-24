@@ -105,6 +105,8 @@ resource "google_container_node_pool" "llvm_premerge_windows" {
     total_max_node_count = 2
   }
 
+  # We do not set a taint for the windows nodes as kubernetes by default sets
+  # a node.kubernetes.io/os taint for windows nodes.
   node_config {
     machine_type = "c2d-highcpu-56"
     labels = {
@@ -255,11 +257,17 @@ resource "helm_release" "github_actions_runner_set_windows" {
   ]
 }
 
+resource "kubernetes_namespace" "grafana" {
+  metadata {
+    name = "grafana"
+  }
+}
+
 resource "helm_release" "grafana-k8s-monitoring" {
   name             = "grafana-k8s-monitoring"
   repository       = "https://grafana.github.io/helm-charts"
   chart            = "k8s-monitoring"
-  namespace        = var.namespace
+  namespace        = "grafana"
   create_namespace = true
   atomic           = true
   timeout          = 300
@@ -325,6 +333,8 @@ resource "helm_release" "grafana-k8s-monitoring" {
     name  = "opencost.opencost.prometheus.external.url"
     value = format("%s/api/prom", var.externalservices_prometheus_host)
   }
+
+  depends_on = [ kubernetes_namespace.grafana ]
 }
 
 data "google_secret_manager_secret_version" "metrics_github_pat" {
