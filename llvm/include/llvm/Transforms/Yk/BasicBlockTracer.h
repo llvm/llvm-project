@@ -5,6 +5,7 @@
 
 // The name of the trace function
 #define YK_TRACE_FUNCTION "__yk_trace_basicblock"
+#define YK_TRACE_FUNCTION_DUMMY "__yk_trace_basicblock_dummy"
 
 namespace llvm {
 ModulePass *createYkBasicBlockTracerPass();

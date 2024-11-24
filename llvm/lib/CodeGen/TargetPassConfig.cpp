@@ -57,6 +57,7 @@
 #include "llvm/Transforms/Yk/Stackmaps.h"
 #include "llvm/Transforms/Yk/NoCallsInEntryBlocks.h"
 #include "llvm/Transforms/Yk/BasicBlockTracer.h"
+#include "llvm/Transforms/Yk/BasicBlockTracerNoop.h"
 #include "llvm/Transforms/Yk/ModuleClone.h"
 #include <cassert>
 #include <optional>
@@ -1125,7 +1126,6 @@ bool TargetPassConfig::addCoreISelPasses() {
 
   // Print the instruction selected machine code...
   printAndVerify("After Instruction Selection");
-
   return false;
 }
 
@@ -1140,7 +1140,6 @@ bool TargetPassConfig::addISelPasses() {
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
-  
   // Default number of control points in a module.
   int numberOfControlPoints = 1;
 
@@ -1199,9 +1198,17 @@ bool TargetPassConfig::addISelPasses() {
 
   if (YkBasicBlockTracer) {
     addPass(createYkBasicBlockTracerPass());
-  }  
+  }
 
   addISelPrepare();
+  // Why Here? Placing your pass after addIRPasses() ensures it operates
+  // on the optimized IR
+  // Before Code Generation: By inserting the pass before
+  // addCodeGenPrepare() we ensure that any changes your pass makes
+  // are properly prepared for code generation.
+  // if (YkBasicBlockTracer) {
+  //   addPass(createYkBasicBlockTracerNoopPass());
+  // }
   return addCoreISelPasses();
 }
 
