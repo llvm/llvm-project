@@ -223,6 +223,26 @@ struct SubClass6_2 : BaseClass6 {
   SubClass6_2();
 };
 
+struct MultiDimensionArrayTest1 {
+  int i;
+  MultiDimensionArrayTest1();
+  template <typename T, unsigned N> void *operator new[](std::type_identity<T[N]>, size_t) = delete; // #64
+  template <typename T, unsigned N> void operator delete[](std::type_identity<T[N]>, void*) = delete; // #65
+};
+
+struct MultiDimensionArrayTest2 {
+  int i;
+  MultiDimensionArrayTest2();
+  template <unsigned N> void *operator new[](std::type_identity<MultiDimensionArrayTest2[N]>, size_t) = delete; // #66
+  template <unsigned N> void operator delete[](std::type_identity<MultiDimensionArrayTest2[N]>, void*) = delete; // #67
+};
+
+struct MultiDimensionArrayTest3 {
+  int i;
+  MultiDimensionArrayTest3();
+  template <unsigned N> requires (N%4 == 0) void *operator new[](std::type_identity<MultiDimensionArrayTest3[N]>, size_t) = delete; // #68
+  template <unsigned N> requires (N%4 == 0) void operator delete[](std::type_identity<MultiDimensionArrayTest3[N]>, void*) = delete; // #69
+};
 
 void test() {
   
@@ -394,4 +414,49 @@ void test() {
   // expected-note@#60 {{type aware 'operator new<SubClass6_2>' found in 'BaseClass6'}}
   // expected-note@#63 {{type aware 'operator delete<SubClass6_2>' found in 'SubClass6_2'}}
   delete O23;
+
+  MultiDimensionArrayTest1 *O24 = new MultiDimensionArrayTest1;
+  delete O24;
+
+  MultiDimensionArrayTest1 *O25 = new MultiDimensionArrayTest1[10];
+  // expected-error@-1 {{no matching function for call to 'operator new[]'}}
+  delete [] O25;
+  // expected-error@-1 {{no suitable member 'operator delete[]' in 'MultiDimensionArrayTest1'}}
+  // expected-note@#65 {{member 'operator delete[]' declared here}}
+
+  {
+    using InnerArray = MultiDimensionArrayTest1[3];
+    InnerArray *O26 = new InnerArray[7];
+    // expected-error@-1 {{call to deleted function 'operator new[]'}}
+    // expected-note@#64 {{candidate function [with T = MultiDimensionArrayTest1, N = 3] has been explicitly deleted}}
+    delete [] O26;
+    // expected-error@-1 {{attempt to use a deleted function}}
+    // expected-note@#65 {{'operator delete[]<MultiDimensionArrayTest1, 3U>' has been explicitly marked deleted here}}
+  }
+  {
+    using InnerArray = MultiDimensionArrayTest2[3];
+    InnerArray *O27 = new InnerArray[7];
+    // expected-error@-1 {{call to deleted function 'operator new[]'}}
+    // expected-note@#66 {{candidate function [with N = 3] has been explicitly deleted}}
+    delete [] O27;
+    // expected-error@-1 {{attempt to use a deleted function}}
+    // expected-note@#67 {{'operator delete[]<3U>' has been explicitly marked deleted here}}
+  }
+  {
+    using InnerArray = MultiDimensionArrayTest3[3];
+    InnerArray *O28 = new InnerArray[3];
+    // expected-error@-1 {{no matching function for call to 'operator new[]'}}
+    delete [] O28;
+    // expected-error@-1 {{no suitable member 'operator delete[]' in 'MultiDimensionArrayTest3'}}
+    // expected-note@#69 {{member 'operator delete[]' declared here}}
+  }
+  {
+    using InnerArray = MultiDimensionArrayTest3[4];
+    InnerArray *O29 = new InnerArray[3];
+    // expected-error@-1 {{call to deleted function 'operator new[]'}}
+    // expected-note@#68 {{candidate function [with N = 4] has been explicitly deleted}}
+    delete [] O29;
+    // expected-error@-1 {{attempt to use a deleted function}}
+    // expected-note@#69 {{'operator delete[]<4U>' has been explicitly marked deleted here}}
+  }
 }

@@ -2921,7 +2921,7 @@ bool Sema::FindAllocationFunctions(
   QualType TypeIdentity = Context.getSizeType();
   if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
     if (std::optional<QualType> SpecializedTypeIdentity =
-            instantiateSpecializedTypeIdentity(AllocElemType)) {
+            instantiateSpecializedTypeIdentity(AllocType)) {
       TypeIdentity = *SpecializedTypeIdentity;
       if (RequireCompleteType(StartLoc, TypeIdentity,
                               diag::err_incomplete_type))
