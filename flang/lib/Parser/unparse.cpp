@@ -2133,13 +2133,10 @@ public:
     }
     Walk(std::get<OmpObjectList>(x.t));
   }
-  void Unparse(const OmpScheduleModifier &x) {
-    Walk(std::get<OmpScheduleModifier::Modifier1>(x.t));
-    Walk(",", std::get<std::optional<OmpScheduleModifier::Modifier2>>(x.t));
-  }
   void Unparse(const OmpScheduleClause &x) {
-    Walk(std::get<std::optional<OmpScheduleModifier>>(x.t), ":");
-    Walk(std::get<OmpScheduleClause::ScheduleType>(x.t));
+    using Modifier = OmpScheduleClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<OmpScheduleClause::Kind>(x.t));
     Walk(",", std::get<std::optional<ScalarIntExpr>>(x.t));
   }
   void Unparse(const OmpDeviceClause &x) {
@@ -2189,10 +2186,8 @@ public:
     Walk(":", x.step);
   }
   void Unparse(const OmpReductionClause &x) {
-    Walk(std::get<std::optional<OmpReductionClause::ReductionModifier>>(x.t),
-        ",");
-    Walk(std::get<OmpReductionIdentifier>(x.t));
-    Put(":");
+    using Modifier = OmpReductionClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpDetachClause &x) { Walk(x.v); }
@@ -2232,8 +2227,9 @@ public:
     Put(")");
   }
   void Unparse(const OmpOrderClause &x) {
-    Walk(std::get<std::optional<OmpOrderModifier>>(x.t), ":");
-    Walk(std::get<OmpOrderClause::Type>(x.t));
+    using Modifier = OmpOrderClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<OmpOrderClause::Ordering>(x.t));
   }
   void Unparse(const OmpGrainsizeClause &x) {
     Walk(std::get<std::optional<OmpGrainsizeClause::Prescriptiveness>>(x.t),
@@ -2256,9 +2252,9 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpDefaultmapClause &x) {
+    using Modifier = OmpDefaultmapClause::Modifier;
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
-    Walk(":",
-        std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
+    Walk(":", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
   void Unparse(const OmpToClause &x) {
     auto &expect{
@@ -2906,22 +2902,22 @@ public:
   WALK_NESTED_ENUM(OmpProcBindClause, Type) // OMP PROC_BIND
   WALK_NESTED_ENUM(OmpDefaultClause, Type) // OMP DEFAULT
   WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP DEFAULTMAP
-  WALK_NESTED_ENUM(OmpDefaultmapClause, VariableCategory) // OMP DEFAULTMAP
+  WALK_NESTED_ENUM(OmpVariableCategory, Value) // OMP variable-category
   WALK_NESTED_ENUM(
       OmpLastprivateClause, LastprivateModifier) // OMP lastprivate-modifier
-  WALK_NESTED_ENUM(OmpScheduleModifierType, ModType) // OMP schedule-modifier
+  WALK_NESTED_ENUM(OmpChunkModifier, Value) // OMP chunk-modifier
   WALK_NESTED_ENUM(OmpLinearModifier, Value) // OMP linear-modifier
+  WALK_NESTED_ENUM(OmpOrderingModifier, Value) // OMP ordering-modifier
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
-  WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
+  WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
-  WALK_NESTED_ENUM(
-      OmpReductionClause, ReductionModifier) // OMP reduction-modifier
+  WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpFromClause, Expectation) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
-  WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
-  WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
+  WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
+  WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
   WALK_NESTED_ENUM(
       OmpGrainsizeClause, Prescriptiveness) // OMP grainsize-modifier
   WALK_NESTED_ENUM(OmpNumTasksClause, Prescriptiveness) // OMP numtasks-modifier

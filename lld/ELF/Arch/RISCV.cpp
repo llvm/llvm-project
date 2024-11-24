@@ -1045,7 +1045,7 @@ namespace {
 class RISCVAttributesSection final : public SyntheticSection {
 public:
   RISCVAttributesSection(Ctx &ctx)
-      : SyntheticSection(ctx, 0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {
+      : SyntheticSection(ctx, ".riscv.attributes", SHT_RISCV_ATTRIBUTES, 0, 1) {
   }
 
   size_t getSize() const override { return size; }

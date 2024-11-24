@@ -33,18 +33,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-
-env:
-  # LLVM POST-BRANCH bump version
-  # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
-  # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-  LLVM_HEAD_VERSION: "19"   # Used compiler, update POST-BRANCH.
-  LLVM_PREVIOUS_VERSION: "18"
-  LLVM_OLDEST_VERSION: "17"
-  GCC_STABLE_VERSION: "13"
-  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
-  CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
-
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'

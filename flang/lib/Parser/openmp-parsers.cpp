@@ -228,6 +228,23 @@ TYPE_PARSER(construct<OmpLinearModifier>( //
 TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
     construct<OmpReductionIdentifier>(Parser<ProcedureDesignator>{}))
 
+TYPE_PARSER(construct<OmpChunkModifier>( //
+    "SIMD" >> pure(OmpChunkModifier::Value::Simd)))
+
+TYPE_PARSER(construct<OmpOrderModifier>(
+    "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
+    "UNCONSTRAINED" >> pure(OmpOrderModifier::Value::Unconstrained)))
+
+TYPE_PARSER(construct<OmpOrderingModifier>(
+    "MONOTONIC" >> pure(OmpOrderingModifier::Value::Monotonic) ||
+    "NONMONOTONIC" >> pure(OmpOrderingModifier::Value::Nonmonotonic) ||
+    "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
+
+TYPE_PARSER(construct<OmpReductionModifier>(
+    "INSCAN" >> pure(OmpReductionModifier::Value::Inscan) ||
+    "TASK" >> pure(OmpReductionModifier::Value::Task) ||
+    "DEFAULT" >> pure(OmpReductionModifier::Value::Default)))
+
 TYPE_PARSER(construct<OmpTaskDependenceType>(
     "DEPOBJ" >> pure(OmpTaskDependenceType::Value::Depobj) ||
     "IN"_id >> pure(OmpTaskDependenceType::Value::In) ||
@@ -235,6 +252,29 @@ TYPE_PARSER(construct<OmpTaskDependenceType>(
     "INOUTSET"_id >> pure(OmpTaskDependenceType::Value::Inoutset) ||
     "MUTEXINOUTSET" >> pure(OmpTaskDependenceType::Value::Mutexinoutset) ||
     "OUT" >> pure(OmpTaskDependenceType::Value::Out)))
+
+TYPE_PARSER(construct<OmpVariableCategory>(
+    "AGGREGATE" >> pure(OmpVariableCategory::Value::Aggregate) ||
+    "ALL"_id >> pure(OmpVariableCategory::Value::All) ||
+    "ALLOCATABLE" >> pure(OmpVariableCategory::Value::Allocatable) ||
+    "POINTER" >> pure(OmpVariableCategory::Value::Pointer) ||
+    "SCALAR" >> pure(OmpVariableCategory::Value::Scalar)))
+
+// This could be auto-generated.
+TYPE_PARSER(
+    sourced(construct<OmpOrderClause::Modifier>(Parser<OmpOrderModifier>{})))
+
+TYPE_PARSER(sourced(construct<OmpReductionClause::Modifier>(sourced(
+    construct<OmpReductionClause::Modifier>(Parser<OmpReductionModifier>{}) ||
+    construct<OmpReductionClause::Modifier>(
+        Parser<OmpReductionIdentifier>{})))))
+
+TYPE_PARSER(sourced(construct<OmpScheduleClause::Modifier>(sourced(
+    construct<OmpScheduleClause::Modifier>(Parser<OmpChunkModifier>{}) ||
+    construct<OmpScheduleClause::Modifier>(Parser<OmpOrderingModifier>{})))))
+
+TYPE_PARSER(sourced(
+    construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
 
 // --- Parsers for clauses --------------------------------------------
 
@@ -313,36 +353,18 @@ TYPE_PARSER(construct<OmpDefaultmapClause>(
             pure(OmpDefaultmapClause::ImplicitBehavior::Firstprivate) ||
         "NONE" >> pure(OmpDefaultmapClause::ImplicitBehavior::None) ||
         "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
-    maybe(":" >>
-        construct<OmpDefaultmapClause::VariableCategory>(
-            "ALL"_id >> pure(OmpDefaultmapClause::VariableCategory::All) ||
-            "SCALAR" >> pure(OmpDefaultmapClause::VariableCategory::Scalar) ||
-            "AGGREGATE" >>
-                pure(OmpDefaultmapClause::VariableCategory::Aggregate) ||
-            "ALLOCATABLE" >>
-                pure(OmpDefaultmapClause::VariableCategory::Allocatable) ||
-            "POINTER" >>
-                pure(OmpDefaultmapClause::VariableCategory::Pointer)))))
+    maybe(":" >> nonemptyList(Parser<OmpDefaultmapClause::Modifier>{}))))
 
-// 2.7.1 SCHEDULE ([modifier1 [, modifier2]:]kind[, chunk_size])
-//       Modifier ->  MONITONIC | NONMONOTONIC | SIMD
-//       kind -> STATIC | DYNAMIC | GUIDED | AUTO | RUNTIME
-//       chunk_size -> ScalarIntExpr
-TYPE_PARSER(construct<OmpScheduleModifierType>(
-    "MONOTONIC" >> pure(OmpScheduleModifierType::ModType::Monotonic) ||
-    "NONMONOTONIC" >> pure(OmpScheduleModifierType::ModType::Nonmonotonic) ||
-    "SIMD" >> pure(OmpScheduleModifierType::ModType::Simd)))
+TYPE_PARSER(construct<OmpScheduleClause::Kind>(
+    "STATIC" >> pure(OmpScheduleClause::Kind::Static) ||
+    "DYNAMIC" >> pure(OmpScheduleClause::Kind::Dynamic) ||
+    "GUIDED" >> pure(OmpScheduleClause::Kind::Guided) ||
+    "AUTO" >> pure(OmpScheduleClause::Kind::Auto) ||
+    "RUNTIME" >> pure(OmpScheduleClause::Kind::Runtime)))
 
-TYPE_PARSER(construct<OmpScheduleModifier>(Parser<OmpScheduleModifierType>{},
-    maybe("," >> Parser<OmpScheduleModifierType>{}) / ":"))
-
-TYPE_PARSER(construct<OmpScheduleClause>(maybe(Parser<OmpScheduleModifier>{}),
-    "STATIC" >> pure(OmpScheduleClause::ScheduleType::Static) ||
-        "DYNAMIC" >> pure(OmpScheduleClause::ScheduleType::Dynamic) ||
-        "GUIDED" >> pure(OmpScheduleClause::ScheduleType::Guided) ||
-        "AUTO" >> pure(OmpScheduleClause::ScheduleType::Auto) ||
-        "RUNTIME" >> pure(OmpScheduleClause::ScheduleType::Runtime),
-    maybe("," >> scalarIntExpr)))
+TYPE_PARSER(construct<OmpScheduleClause>(
+    maybe(nonemptyList(Parser<OmpScheduleClause::Modifier>{}) / ":"),
+    Parser<OmpScheduleClause::Kind>{}, maybe("," >> scalarIntExpr)))
 
 // device([ device-modifier :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpDeviceClause>(
@@ -379,12 +401,8 @@ TYPE_PARSER(construct<OmpIfClause>(
     scalarLogicalExpr))
 
 TYPE_PARSER(construct<OmpReductionClause>(
-    maybe(
-        ("INSCAN" >> pure(OmpReductionClause::ReductionModifier::Inscan) ||
-            "TASK" >> pure(OmpReductionClause::ReductionModifier::Task) ||
-            "DEFAULT" >> pure(OmpReductionClause::ReductionModifier::Default)) /
-        ","),
-    Parser<OmpReductionIdentifier>{} / ":", Parser<OmpObjectList>{}))
+    maybe(nonemptyList(Parser<OmpReductionClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
 
 // OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)
 TYPE_PARSER(construct<OmpInReductionClause>(
@@ -489,14 +507,9 @@ TYPE_PARSER(construct<OmpUpdateClause>(
     construct<OmpUpdateClause>(Parser<OmpDependenceType>{}) ||
     construct<OmpUpdateClause>(Parser<OmpTaskDependenceType>{})))
 
-// 2.9.5 ORDER ([order-modifier :]concurrent)
-TYPE_PARSER(construct<OmpOrderModifier>(
-                "REPRODUCIBLE" >> pure(OmpOrderModifier::Kind::Reproducible)) ||
-    construct<OmpOrderModifier>(
-        "UNCONSTRAINED" >> pure(OmpOrderModifier::Kind::Unconstrained)))
-
-TYPE_PARSER(construct<OmpOrderClause>(maybe(Parser<OmpOrderModifier>{} / ":"),
-    "CONCURRENT" >> pure(OmpOrderClause::Type::Concurrent)))
+TYPE_PARSER(construct<OmpOrderClause>(
+    maybe(nonemptyList(Parser<OmpOrderClause::Modifier>{}) / ":"),
+    "CONCURRENT" >> pure(OmpOrderClause::Ordering::Concurrent)))
 
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpGrainsizeClause>(

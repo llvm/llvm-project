@@ -89,8 +89,8 @@ static ArrayRef<uint8_t> getVersion(Ctx &ctx) {
 // The returned object is a mergeable string section.
 MergeInputSection *elf::createCommentSection(Ctx &ctx) {
   auto *sec =
-      make<MergeInputSection>(ctx, SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1,
-                              getVersion(ctx), ".comment");
+      make<MergeInputSection>(ctx, ".comment", SHT_PROGBITS,
+                              SHF_MERGE | SHF_STRINGS, 1, getVersion(ctx));
   sec->splitIntoPieces();
   return sec;
 }
@@ -99,7 +99,7 @@ MergeInputSection *elf::createCommentSection(Ctx &ctx) {
 template <class ELFT>
 MipsAbiFlagsSection<ELFT>::MipsAbiFlagsSection(Ctx &ctx,
                                                Elf_Mips_ABIFlags flags)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_MIPS_ABIFLAGS, 8, ".MIPS.abiflags"),
+    : SyntheticSection(ctx, ".MIPS.abiflags", SHT_MIPS_ABIFLAGS, SHF_ALLOC, 8),
       flags(flags) {
   this->entsize = sizeof(Elf_Mips_ABIFlags);
 }
@@ -163,7 +163,7 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
 // .MIPS.options section.
 template <class ELFT>
 MipsOptionsSection<ELFT>::MipsOptionsSection(Ctx &ctx, Elf_Mips_RegInfo reginfo)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_MIPS_OPTIONS, 8, ".MIPS.options"),
+    : SyntheticSection(ctx, ".MIPS.options", SHT_MIPS_OPTIONS, SHF_ALLOC, 8),
       reginfo(reginfo) {
   this->entsize = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
 }
@@ -225,7 +225,7 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
 // MIPS .reginfo section.
 template <class ELFT>
 MipsReginfoSection<ELFT>::MipsReginfoSection(Ctx &ctx, Elf_Mips_RegInfo reginfo)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_MIPS_REGINFO, 4, ".reginfo"),
+    : SyntheticSection(ctx, ".reginfo", SHT_MIPS_REGINFO, SHF_ALLOC, 4),
       reginfo(reginfo) {
   this->entsize = sizeof(Elf_Mips_RegInfo);
 }
@@ -273,8 +273,9 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
   StringRef s = ctx.saver.save(ctx.arg.dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
-  return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
-                            contents, ".interp");
+  return make<InputSection>(ctx.internalFile, ".interp", SHT_PROGBITS,
+                            SHF_ALLOC,
+                            /*addralign=*/1, /*entsize=*/0, contents);
 }
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
@@ -323,8 +324,8 @@ static size_t getHashSize(Ctx &ctx) {
 // sets is empty, or some input files didn't have .note.gnu.property sections),
 // we don't create this section.
 GnuPropertySection::GnuPropertySection(Ctx &ctx)
-    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
-                       ctx.arg.wordsize, ".note.gnu.property") {}
+    : SyntheticSection(ctx, ".note.gnu.property", SHT_NOTE, SHF_ALLOC,
+                       ctx.arg.wordsize) {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
   write32(ctx, buf, 4);                          // Name size
@@ -365,7 +366,7 @@ size_t GnuPropertySection::getSize() const {
 }
 
 BuildIdSection::BuildIdSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_NOTE, 4, ".note.gnu.build-id"),
+    : SyntheticSection(ctx, ".note.gnu.build-id", SHT_NOTE, SHF_ALLOC, 4),
       hashSize(getHashSize(ctx)) {}
 
 void BuildIdSection::writeTo(uint8_t *buf) {
@@ -383,14 +384,14 @@ void BuildIdSection::writeBuildId(ArrayRef<uint8_t> buf) {
 
 BssSection::BssSection(Ctx &ctx, StringRef name, uint64_t size,
                        uint32_t alignment)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE, SHT_NOBITS, alignment,
-                       name) {
+    : SyntheticSection(ctx, name, SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
+                       alignment) {
   this->bss = true;
   this->size = size;
 }
 
 EhFrameSection::EhFrameSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame") {}
+    : SyntheticSection(ctx, ".eh_frame", SHT_PROGBITS, SHF_ALLOC, 1) {}
 
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
@@ -661,8 +662,8 @@ void EhFrameSection::writeTo(uint8_t *buf) {
 }
 
 GotSection::GotSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       ctx.target->gotEntrySize, ".got") {
+    : SyntheticSection(ctx, ".got", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
+                       ctx.target->gotEntrySize) {
   numEntries = ctx.target->gotHeaderEntriesNum;
 }
 
@@ -745,8 +746,8 @@ static uint64_t getMipsPageCount(uint64_t size) {
 }
 
 MipsGotSection::MipsGotSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL,
-                       SHT_PROGBITS, 16, ".got") {}
+    : SyntheticSection(ctx, ".got", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, 16) {}
 
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
@@ -1179,8 +1180,8 @@ void MipsGotSection::writeTo(uint8_t *buf) {
 // section. I don't know why we have a BSS style type for the section but it is
 // consistent across both 64-bit PowerPC ABIs as well as the 32-bit PowerPC ABI.
 GotPltSection::GotPltSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       ctx.arg.wordsize, ".got.plt") {
+    : SyntheticSection(ctx, ".got.plt", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
+                       ctx.arg.wordsize) {
   if (ctx.arg.emachine == EM_PPC) {
     name = ".plt";
   } else if (ctx.arg.emachine == EM_PPC64) {
@@ -1231,9 +1232,9 @@ static StringRef getIgotPltName(Ctx &ctx) {
 // On PowerPC64 the GotPltSection type is SHT_NOBITS so we have to follow suit
 // with the IgotPltSection.
 IgotPltSection::IgotPltSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE,
+    : SyntheticSection(ctx, getIgotPltName(ctx),
                        ctx.arg.emachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
-                       ctx.target->gotEntrySize, getIgotPltName(ctx)) {}
+                       SHF_ALLOC | SHF_WRITE, ctx.target->gotEntrySize) {}
 
 void IgotPltSection::addEntry(Symbol &sym) {
   assert(ctx.symAux.back().pltIdx == entries.size());
@@ -1252,8 +1253,8 @@ void IgotPltSection::writeTo(uint8_t *buf) {
 }
 
 StringTableSection::StringTableSection(Ctx &ctx, StringRef name, bool dynamic)
-    : SyntheticSection(ctx, dynamic ? (uint64_t)SHF_ALLOC : 0, SHT_STRTAB, 1,
-                       name),
+    : SyntheticSection(ctx, name, SHT_STRTAB, dynamic ? (uint64_t)SHF_ALLOC : 0,
+                       1),
       dynamic(dynamic) {
   // ELF string tables start with a NUL byte.
   strings.push_back("");
@@ -1296,8 +1297,8 @@ static unsigned getVerDefNum(Ctx &ctx) {
 
 template <class ELFT>
 DynamicSection<ELFT>::DynamicSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE, SHT_DYNAMIC,
-                       ctx.arg.wordsize, ".dynamic") {
+    : SyntheticSection(ctx, ".dynamic", SHT_DYNAMIC, SHF_ALLOC | SHF_WRITE,
+                       ctx.arg.wordsize) {
   this->entsize = ELFT::Is64Bits ? 16 : 8;
 
   // .dynamic section is not writable on MIPS and on Fuchsia OS
@@ -1651,7 +1652,7 @@ RelocationBaseSection::RelocationBaseSection(Ctx &ctx, StringRef name,
                                              int32_t sizeDynamicTag,
                                              bool combreloc,
                                              unsigned concurrency)
-    : SyntheticSection(ctx, SHF_ALLOC, type, ctx.arg.wordsize, name),
+    : SyntheticSection(ctx, name, type, SHF_ALLOC, ctx.arg.wordsize),
       dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag),
       relocsVec(concurrency), combreloc(combreloc) {}
 
@@ -1767,11 +1768,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
 RelrBaseSection::RelrBaseSection(Ctx &ctx, unsigned concurrency,
                                  bool isAArch64Auth)
     : SyntheticSection(
-          ctx, SHF_ALLOC,
+          ctx, isAArch64Auth ? ".relr.auth.dyn" : ".relr.dyn",
           isAArch64Auth
               ? SHT_AARCH64_AUTH_RELR
               : (ctx.arg.useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR),
-          ctx.arg.wordsize, isAArch64Auth ? ".relr.auth.dyn" : ".relr.dyn"),
+          SHF_ALLOC, ctx.arg.wordsize),
       relocsVec(concurrency) {}
 
 void RelrBaseSection::mergeRels() {
@@ -2128,10 +2129,10 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize(Ctx &ctx) {
 
 SymbolTableBaseSection::SymbolTableBaseSection(Ctx &ctx,
                                                StringTableSection &strTabSec)
-    : SyntheticSection(ctx, strTabSec.isDynamic() ? (uint64_t)SHF_ALLOC : 0,
+    : SyntheticSection(ctx, strTabSec.isDynamic() ? ".dynsym" : ".symtab",
                        strTabSec.isDynamic() ? SHT_DYNSYM : SHT_SYMTAB,
-                       ctx.arg.wordsize,
-                       strTabSec.isDynamic() ? ".dynsym" : ".symtab"),
+                       strTabSec.isDynamic() ? (uint64_t)SHF_ALLOC : 0,
+                       ctx.arg.wordsize),
       strTabSec(strTabSec) {}
 
 // Orders symbols according to their positions in the GOT,
@@ -2348,7 +2349,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
 }
 
 SymtabShndxSection::SymtabShndxSection(Ctx &ctx)
-    : SyntheticSection(ctx, 0, SHT_SYMTAB_SHNDX, 4, ".symtab_shndx") {
+    : SyntheticSection(ctx, ".symtab_shndx", SHT_SYMTAB_SHNDX, 0, 4) {
   this->entsize = 4;
 }
 
@@ -2419,8 +2420,8 @@ size_t SymtabShndxSection::getSize() const {
 // about .gnu.hash, you want to specify --hash-style=gnu. Otherwise, a
 // safe bet is to specify --hash-style=both for backward compatibility.
 GnuHashTableSection::GnuHashTableSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_GNU_HASH, ctx.arg.wordsize,
-                       ".gnu.hash") {}
+    : SyntheticSection(ctx, ".gnu.hash", SHT_GNU_HASH, SHF_ALLOC,
+                       ctx.arg.wordsize) {}
 
 void GnuHashTableSection::finalizeContents() {
   if (OutputSection *sec = getPartition(ctx).dynSymTab->getParent())
@@ -2529,7 +2530,7 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
 }
 
 HashTableSection::HashTableSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_HASH, 4, ".hash") {
+    : SyntheticSection(ctx, ".hash", SHT_HASH, SHF_ALLOC, 4) {
   this->entsize = 4;
 }
 
@@ -2569,8 +2570,8 @@ void HashTableSection::writeTo(uint8_t *buf) {
 }
 
 PltSection::PltSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
-                       ".plt"),
+    : SyntheticSection(ctx, ".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
+                       16),
       headerSize(ctx.target->pltHeaderSize) {
   // On PowerPC, this section contains lazy symbol resolvers.
   if (ctx.arg.emachine == EM_PPC64) {
@@ -2630,8 +2631,8 @@ void PltSection::addSymbols() {
 }
 
 IpltSection::IpltSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
-                       ".iplt") {
+    : SyntheticSection(ctx, ".iplt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
+                       16) {
   if (ctx.arg.emachine == EM_PPC || ctx.arg.emachine == EM_PPC64) {
     name = ".glink";
     addralign = 4;
@@ -2737,8 +2738,8 @@ size_t PPC32GlinkSection::getSize() const {
 // That said, the 2-PLT scheme is a part of the ABI, debuggers and other tools
 // depend on it, so we implement the ABI.
 IBTPltSection::IBTPltSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
-                       ".plt") {}
+    : SyntheticSection(ctx, ".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
+                       16) {}
 
 void IBTPltSection::writeTo(uint8_t *buf) {
   ctx.target->writeIBTPlt(buf, ctx.in.plt->getNumEntries());
@@ -2752,8 +2753,8 @@ size_t IBTPltSection::getSize() const {
 bool IBTPltSection::isNeeded() const { return ctx.in.plt->getNumEntries() > 0; }
 
 RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1,
-                       ".relro_padding") {}
+    : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
+                       1) {}
 
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {
@@ -2766,7 +2767,7 @@ static uint32_t computeGdbHash(StringRef s) {
 // 4-byte alignment ensures that values in the hash lookup table and the name
 // table are aligned.
 DebugNamesBaseSection::DebugNamesBaseSection(Ctx &ctx)
-    : SyntheticSection(ctx, 0, SHT_PROGBITS, 4, ".debug_names") {}
+    : SyntheticSection(ctx, ".debug_names", SHT_PROGBITS, 0, 4) {}
 
 // Get the size of the .debug_names section header in bytes for DWARF32:
 static uint32_t getDebugNamesHeaderSize(uint32_t augmentationStringSize) {
@@ -3358,7 +3359,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
 }
 
 GdbIndexSection::GdbIndexSection(Ctx &ctx)
-    : SyntheticSection(ctx, 0, SHT_PROGBITS, 1, ".gdb_index") {}
+    : SyntheticSection(ctx, ".gdb_index", SHT_PROGBITS, 0, 1) {}
 
 // Returns the desired size of an on-disk hash table for a .gdb_index section.
 // There's a tradeoff between size and collision rate. We aim 75% utilization.
@@ -3654,7 +3655,7 @@ void GdbIndexSection::writeTo(uint8_t *buf) {
 bool GdbIndexSection::isNeeded() const { return !chunks.empty(); }
 
 EhFrameHeader::EhFrameHeader(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_PROGBITS, 4, ".eh_frame_hdr") {}
+    : SyntheticSection(ctx, ".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC, 4) {}
 
 void EhFrameHeader::writeTo(uint8_t *buf) {
   // Unlike most sections, the EhFrameHeader section is written while writing
@@ -3699,8 +3700,8 @@ bool EhFrameHeader::isNeeded() const {
 }
 
 VersionDefinitionSection::VersionDefinitionSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_GNU_verdef, sizeof(uint32_t),
-                       ".gnu.version_d") {}
+    : SyntheticSection(ctx, ".gnu.version_d", SHT_GNU_verdef, SHF_ALLOC,
+                       sizeof(uint32_t)) {}
 
 StringRef VersionDefinitionSection::getFileDefName() {
   if (!getPartition(ctx).name.empty())
@@ -3761,8 +3762,8 @@ size_t VersionDefinitionSection::getSize() const {
 
 // .gnu.version is a table where each entry is 2 byte long.
 VersionTableSection::VersionTableSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_GNU_versym, sizeof(uint16_t),
-                       ".gnu.version") {
+    : SyntheticSection(ctx, ".gnu.version", SHT_GNU_versym, SHF_ALLOC,
+                       sizeof(uint16_t)) {
   this->entsize = 2;
 }
 
@@ -3812,8 +3813,8 @@ void elf::addVerneed(Ctx &ctx, Symbol &ss) {
 
 template <class ELFT>
 VersionNeedSection<ELFT>::VersionNeedSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_GNU_verneed, sizeof(uint32_t),
-                       ".gnu.version_r") {}
+    : SyntheticSection(ctx, ".gnu.version_r", SHT_GNU_verneed, SHF_ALLOC,
+                       sizeof(uint32_t)) {}
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
   for (SharedFile *f : ctx.sharedFiles) {
@@ -4020,12 +4021,12 @@ void elf::combineEhSections(Ctx &ctx) {
 }
 
 MipsRldMapSection::MipsRldMapSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       ctx.arg.wordsize, ".rld_map") {}
+    : SyntheticSection(ctx, ".rld_map", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
+                       ctx.arg.wordsize) {}
 
 ARMExidxSyntheticSection::ARMExidxSyntheticSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
-                       ctx.arg.wordsize, ".ARM.exidx") {}
+    : SyntheticSection(ctx, ".ARM.exidx", SHT_ARM_EXIDX,
+                       SHF_ALLOC | SHF_LINK_ORDER, ctx.arg.wordsize) {}
 
 static InputSection *findExidxSection(InputSection *isec) {
   for (InputSection *d : isec->dependentSections)
@@ -4250,8 +4251,9 @@ bool ARMExidxSyntheticSection::isNeeded() const {
 }
 
 ThunkSection::ThunkSection(Ctx &ctx, OutputSection *os, uint64_t off)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
-                       ctx.arg.emachine == EM_PPC64 ? 16 : 4, ".text.thunk") {
+    : SyntheticSection(ctx, ".text.thunk", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR,
+                       ctx.arg.emachine == EM_PPC64 ? 16 : 4) {
   this->parent = os;
   this->outSecOff = off;
 }
@@ -4294,7 +4296,7 @@ bool ThunkSection::assignOffsets() {
 }
 
 PPC32Got2Section::PPC32Got2Section(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, 4, ".got2") {}
+    : SyntheticSection(ctx, ".got2", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE, 4) {}
 
 bool PPC32Got2Section::isNeeded() const {
   // See the comment below. This is not needed if there is no other
@@ -4327,9 +4329,9 @@ void PPC32Got2Section::finalizeContents() {
 // position-independent code the section has type SHT_NOBITS since it will be
 // allocated and filled in by the dynamic linker.
 PPC64LongBranchTargetSection::PPC64LongBranchTargetSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE,
-                       ctx.arg.isPic ? SHT_NOBITS : SHT_PROGBITS, 8,
-                       ".branch_lt") {}
+    : SyntheticSection(ctx, ".branch_lt",
+                       ctx.arg.isPic ? SHT_NOBITS : SHT_PROGBITS,
+                       SHF_ALLOC | SHF_WRITE, 8) {}
 
 uint64_t PPC64LongBranchTargetSection::getEntryVA(const Symbol *sym,
                                                   int64_t addend) {
@@ -4442,7 +4444,7 @@ template <typename ELFT> void elf::writePhdrs(uint8_t *buf, Partition &part) {
 
 template <typename ELFT>
 PartitionElfHeaderSection<ELFT>::PartitionElfHeaderSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_LLVM_PART_EHDR, 1, "") {}
+    : SyntheticSection(ctx, "", SHT_LLVM_PART_EHDR, SHF_ALLOC, 1) {}
 
 template <typename ELFT>
 size_t PartitionElfHeaderSection<ELFT>::getSize() const {
@@ -4460,7 +4462,7 @@ void PartitionElfHeaderSection<ELFT>::writeTo(uint8_t *buf) {
 
 template <typename ELFT>
 PartitionProgramHeadersSection<ELFT>::PartitionProgramHeadersSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_LLVM_PART_PHDR, 1, ".phdrs") {}
+    : SyntheticSection(ctx, ".phdrs", SHT_LLVM_PART_PHDR, SHF_ALLOC, 1) {}
 
 template <typename ELFT>
 size_t PartitionProgramHeadersSection<ELFT>::getSize() const {
@@ -4473,7 +4475,7 @@ void PartitionProgramHeadersSection<ELFT>::writeTo(uint8_t *buf) {
 }
 
 PartitionIndexSection::PartitionIndexSection(Ctx &ctx)
-    : SyntheticSection(ctx, SHF_ALLOC, SHT_PROGBITS, 4, ".rodata") {}
+    : SyntheticSection(ctx, ".rodata", SHT_PROGBITS, SHF_ALLOC, 4) {}
 
 size_t PartitionIndexSection::getSize() const {
   return 12 * (ctx.partitions.size() - 1);
