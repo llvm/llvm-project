@@ -130,8 +130,6 @@ typedef struct Color NewColor; // expected-error {{use of 'Color' with tag type 
     typedef enum : unsigned char { Pink, Black, Cyan } Color; // expected-warning {{enumeration types with a fixed underlying type are a C23 extension}}
 #endif
 
-
-
 // PR28903
 // In C it is valid to define tags inside enums.
 struct PR28903 {
