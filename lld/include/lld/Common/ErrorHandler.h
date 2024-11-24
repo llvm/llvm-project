@@ -151,7 +151,7 @@ void message(const Twine &msg, llvm::raw_ostream &s = outs());
 void warn(const Twine &msg);
 uint64_t errorCount();
 
-enum class DiagLevel { Log, Msg, Warn, Err, Fatal };
+enum class DiagLevel { None, Log, Msg, Warn, Err, Fatal };
 
 // A class that synchronizes thread writing to the same stream similar
 // std::osyncstream.
