@@ -1331,9 +1331,9 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
 }
 
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
-    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
-                       llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs") {
+    : SyntheticSection(ctx, ".gnu.sgstubs", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR,
+                       /*addralign=*/32) {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
@@ -1445,21 +1445,22 @@ void ArmCmseSGSection::finalizeContents() {
 // See Arm® v8-M Security Extensions: Requirements on Development Tools
 // https://developer.arm.com/documentation/ecm0359818/latest
 template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
-  StringTableSection *shstrtab =
-      make<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
-  StringTableSection *strtab =
-      make<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
-  SymbolTableBaseSection *impSymTab =
-      make<SymbolTableSection<ELFT>>(ctx, *strtab);
+  auto shstrtab =
+      std::make_unique<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
+  auto strtab =
+      std::make_unique<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
+  auto impSymTab = std::make_unique<SymbolTableSection<ELFT>>(ctx, *strtab);
 
   SmallVector<std::pair<std::unique_ptr<OutputSection>, SyntheticSection *>, 0>
       osIsPairs;
   osIsPairs.emplace_back(
-      std::make_unique<OutputSection>(ctx, strtab->name, 0, 0), strtab);
+      std::make_unique<OutputSection>(ctx, strtab->name, 0, 0), strtab.get());
   osIsPairs.emplace_back(
-      std::make_unique<OutputSection>(ctx, impSymTab->name, 0, 0), impSymTab);
+      std::make_unique<OutputSection>(ctx, impSymTab->name, 0, 0),
+      impSymTab.get());
   osIsPairs.emplace_back(
-      std::make_unique<OutputSection>(ctx, shstrtab->name, 0, 0), shstrtab);
+      std::make_unique<OutputSection>(ctx, shstrtab->name, 0, 0),
+      shstrtab.get());
 
   llvm::sort(ctx.symtab->cmseSymMap, [&](const auto &a, const auto &b) {
     return a.second.sym->getVA(ctx) < b.second.sym->getVA(ctx);

@@ -59,6 +59,7 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
                                    Kind sectionKind)
     : SectionBase(sectionKind, file, name, type, flags, link, info, addralign,
                   entsize),
+      bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
       content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
