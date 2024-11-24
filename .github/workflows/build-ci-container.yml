@@ -26,8 +26,11 @@ jobs:
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
       container-filename: ${{ steps.vars.outputs.container-filename }}
     container:
-      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
+      image: registry.fedoraproject.org/fedora:41 
     steps:
+      - name: Setup Image
+        run: |
+          dnf install -y podman
       - name: Checkout LLVM
         uses: actions/checkout@v4
         with:
@@ -73,10 +76,13 @@ jobs:
       packages: write
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
+      image: registry.fedoraproject.org/fedora:41 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Setup Image
+        run: |
+          dnf install -y podman
       - name: Download container
         uses: actions/download-artifact@v4
         with:
