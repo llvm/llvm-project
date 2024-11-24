@@ -132,7 +132,7 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
 
   let description = [{
     LLVM dialect structure type representing a collection of different-typed
-    elements manipulated together. Structured can optionally be packed, meaning
+    elements manipulated together. Struct types can optionally be packed, meaning
     that their elements immediately follow each other in memory without
     accounting for potential alignment.
 
