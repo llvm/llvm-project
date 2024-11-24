@@ -17,6 +17,12 @@ declare dso_local void @yk_mt_shutdown(ptr noundef)
 
 define dso_local i32 @func_inc_with_address_taken(i32 %x) {
 entry:
+  %call = call i32 @inc(i32 %x)
+  ret i32 %call
+}
+
+define dso_local i32 @inc(i32 %x) {
+entry:
   %0 = add i32 %x, 1
   ret i32 %0
 }
@@ -60,6 +66,13 @@ entry:
 ; CHECK: declare dso_local void @yk_location_drop(i64)
 ; CHECK: declare dso_local void @yk_mt_shutdown(ptr noundef)
 
+; Check original function: inc
+; CHECK-LABEL: define dso_local i32 @inc(i32 %x)
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
+; CHECK-NEXT: %0 = add i32 %x, 1
+; CHECK-NEXT: ret i32 %0
+
 ; Check original function: my_func
 ; CHECK-LABEL: define dso_local i32 @my_func(i32 %x)
 ; CHECK-NEXT: entry:
@@ -83,19 +96,27 @@ entry:
 ; CHECK-LABEL: define dso_local i32 @func_inc_with_address_taken(i32 %x)
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
-; CHECK-NEXT: %0 = add i32 %x, 1
-; CHECK-NEXT: ret i32 %0
+; CHECK-NEXT: %call = call i32 @inc(i32 %x)
+; CHECK-NEXT: ret i32 %call
 
 ; ======================================================================
 ; Functions whose addresses are taken should not be cloned
 ; ======================================================================
-; Functions with their addresses taken should not be cloned. 
+; Functions with their addresses taken should not be cloned.
 ; `func_inc_with_address_taken` is used by pointer and thus remains unaltered.
 ; CHECK-NOT: define dso_local i32 @__yk_clone_func_inc_with_address_taken
 
 ; ======================================================================
 ; Cloned functions - should have no trace calls
 ; ======================================================================
+
+; Check cloned function: yk_clone_inc
+; CHECK-LABEL: define dso_local i32 @__yk_clone_inc(i32 %x)
+; CHECK-NEXT: entry:
+; CHECK-NOT: call void @yk_trace_basicblock({{.*}})
+; CHECK-NEXT: %0 = add i32 %x, 1
+; CHECK-NEXT: ret i32 %0
+
 ; Check cloned function: __yk_clone_my_func
 ; CHECK-LABEL: define dso_local i32 @__yk_clone_my_func(i32 %x)
 ; CHECK-NEXT: entry:
