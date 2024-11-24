@@ -209,7 +209,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        comiss	%xmm0, %xmm1
 # CHECK-NEXT:  2      8     1.00    *                   comiss	(%rax), %xmm1
 # CHECK-NEXT:  1      3     1.00                        cvtpi2ps	%mm0, %xmm2
-# CHECK-NEXT:  2      8     1.00    *                   cvtpi2ps	(%rax), %xmm2
+# CHECK-NEXT:  2      9     1.00    *                   cvtpi2ps	(%rax), %xmm2
 # CHECK-NEXT:  2      4     1.00                        cvtps2pi	%xmm0, %mm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtps2pi	(%rax), %mm2
 # CHECK-NEXT:  2      4     1.00                        cvtsi2ss	%ecx, %xmm2
