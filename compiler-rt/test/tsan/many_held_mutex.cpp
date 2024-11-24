@@ -2,18 +2,18 @@
 // RUN: %run %t 128
 
 #include <mutex>
-#include <vector>
 #include <string>
+#include <vector>
 
 int main(int argc, char *argv[]) {
   int num_of_mtx = std::atoi(argv[1]);
 
   std::vector<std::mutex> mutexes(num_of_mtx);
 
-  for (auto& mu : mutexes) {
+  for (auto &mu : mutexes) {
     mu.lock();
   }
-  for (auto& mu : mutexes) {
+  for (auto &mu : mutexes) {
     mu.unlock();
   }
 
