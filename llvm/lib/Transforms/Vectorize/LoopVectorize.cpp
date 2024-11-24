@@ -7862,7 +7862,7 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
   // Create induction resume values and ResumePhis for the inductions in the
   // epilogue loop in the VPlan for the epilogue vector loop.
   VPBasicBlock *ScalarPHVPBB = Plan.getScalarPreheader();
-  createInductionResumeVPValues(ExpandedSCEVs, LoopBypassBlocks);
+  createInductionResumeVPValues(ExpandedSCEVs);
 
   return {LoopVectorPreHeader, nullptr};
 }
