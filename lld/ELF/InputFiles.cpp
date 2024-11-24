@@ -903,9 +903,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // simply handle such sections as non-mergeable ones. Degrading like this
       // is acceptable because section merging is optional.
       if (auto *ms = dyn_cast<MergeInputSection>(s)) {
-        s = makeThreadLocal<InputSection>(
-            ms->file, ms->flags, ms->type, ms->addralign,
-            ms->contentMaybeDecompress(), ms->name);
+        s = makeThreadLocal<InputSection>(ms->file, ms->name, ms->type,
+                                          ms->flags, ms->addralign, ms->entsize,
+                                          ms->contentMaybeDecompress());
         sections[info] = s;
       }
 
@@ -1849,8 +1849,9 @@ void BitcodeFile::postParse() {
 
 void BinaryFile::parse() {
   ArrayRef<uint8_t> data = arrayRefFromStringRef(mb.getBuffer());
-  auto *section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                                     8, data, ".data");
+  auto *section =
+      make<InputSection>(this, ".data", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
+                         /*addralign=*/8, /*entsize=*/0, data);
   sections.push_back(section);
 
   // For each input file foo that is embedded to a result as a binary

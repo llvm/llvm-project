@@ -987,6 +987,10 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
+  /// Linearized radix tree of allocation contexts. See the description above
+  /// the CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
+  std::vector<uint64_t> RadixArray;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -1013,6 +1017,8 @@ private:
                                        TypeIdCompatibleVtableInfo &TypeId);
   std::vector<FunctionSummary::ParamAccess>
   parseParamAccesses(ArrayRef<uint64_t> Record);
+  SmallVector<unsigned> parseAllocInfoContext(ArrayRef<uint64_t> Record,
+                                              unsigned &I);
 
   template <bool AllowNullValueInfo = false>
   std::pair<ValueInfo, GlobalValue::GUID>
@@ -7544,6 +7550,48 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableSummaryRecord(
     parseTypeIdCompatibleVtableInfo(Record, Slot, TypeId);
 }
 
+SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
+    ArrayRef<uint64_t> Record, unsigned &I) {
+  SmallVector<unsigned> StackIdList;
+  // For backwards compatibility with old format before radix tree was
+  // used, simply see if we found a radix tree array record (and thus if
+  // the RadixArray is non-empty).
+  if (RadixArray.empty()) {
+    unsigned NumStackEntries = Record[I++];
+    assert(Record.size() - I >= NumStackEntries);
+    StackIdList.reserve(NumStackEntries);
+    for (unsigned J = 0; J < NumStackEntries; J++) {
+      assert(Record[I] < StackIds.size());
+      StackIdList.push_back(
+          TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
+    }
+  } else {
+    unsigned RadixIndex = Record[I++];
+    // See the comments above CallStackRadixTreeBuilder in ProfileData/MemProf.h
+    // for a detailed description of the radix tree array format. Briefly, the
+    // first entry will be the number of frames, any negative values are the
+    // negative of the offset of the next frame, and otherwise the frames are in
+    // increasing linear order.
+    assert(RadixIndex < RadixArray.size());
+    unsigned NumStackIds = RadixArray[RadixIndex++];
+    StackIdList.reserve(NumStackIds);
+    while (NumStackIds--) {
+      assert(RadixIndex < RadixArray.size());
+      unsigned Elem = RadixArray[RadixIndex];
+      if (static_cast<std::make_signed_t<unsigned>>(Elem) < 0) {
+        RadixIndex = RadixIndex - Elem;
+        assert(RadixIndex < RadixArray.size());
+        Elem = RadixArray[RadixIndex];
+        // We shouldn't encounter a second offset in a row.
+        assert(static_cast<std::make_signed_t<unsigned>>(Elem) >= 0);
+      }
+      RadixIndex++;
+      StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[Elem]));
+    }
+  }
+  return StackIdList;
+}
+
 static void setSpecialRefs(SmallVectorImpl<ValueInfo> &Refs, unsigned ROCnt,
                            unsigned WOCnt) {
   // Readonly and writeonly refs are in the end of the refs list.
@@ -8010,6 +8058,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
+    case bitc::FS_CONTEXT_RADIX_TREE_ARRAY: { // [n x entry]
+      RadixArray = ArrayRef<uint64_t>(Record);
+      break;
+    }
+
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
@@ -8065,14 +8118,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
              (Version < 10 && I < Record.size())) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        unsigned NumStackEntries = Record[I++];
-        assert(Record.size() - I >= NumStackEntries);
-        SmallVector<unsigned> StackIdList;
-        for (unsigned J = 0; J < NumStackEntries; J++) {
-          assert(Record[I] < StackIds.size());
-          StackIdList.push_back(
-              TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
-        }
+        auto StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       // We either have nothing left or at least NumMIBs context size info
@@ -8123,14 +8169,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       while (MIBsRead++ < NumMIBs) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        unsigned NumStackEntries = Record[I++];
-        assert(Record.size() - I >= NumStackEntries);
-        SmallVector<unsigned> StackIdList;
-        for (unsigned J = 0; J < NumStackEntries; J++) {
-          assert(Record[I] < StackIds.size());
-          StackIdList.push_back(
-              TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
-        }
+        auto StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       assert(Record.size() - I >= NumVersions);
