@@ -1486,19 +1486,19 @@ def ReduceMinimum : Builtin {
 
 def ReduceXor : Builtin {
   let Spellings = ["__builtin_reduce_xor"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceOr : Builtin {
   let Spellings = ["__builtin_reduce_or"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceAnd : Builtin {
   let Spellings = ["__builtin_reduce_and"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1510,7 +1510,7 @@ def ReduceAdd : Builtin {
 
 def ReduceMul : Builtin {
   let Spellings = ["__builtin_reduce_mul"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1993,6 +1993,12 @@ def AtomicThreadFence : Builtin {
   let Spellings = ["__atomic_thread_fence"];
   let Attributes = [NoThrow];
   let Prototype = "void(int)";
+}
+
+def ScopedAtomicThreadFence : Builtin {
+  let Spellings = ["__scoped_atomic_thread_fence"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(int, int)";
 }
 
 def AtomicSignalFence : Builtin {
@@ -4742,6 +4748,18 @@ def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_any"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(...)";
+}
+
+def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_asdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_any_true"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
 }
 
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {

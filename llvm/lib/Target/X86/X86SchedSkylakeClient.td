@@ -345,8 +345,8 @@ defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 defm : X86WriteRes<WriteVecLoad,         [SKLPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [SKLPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [SKLPort23], 7, [1], 1>;
-defm : X86WriteRes<WriteVecLoadNT,       [SKLPort23], 6, [1], 1>;
-defm : X86WriteRes<WriteVecLoadNTY,      [SKLPort23], 7, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [SKLPort23,SKLPort015], 7, [1,1], 2>;
+defm : X86WriteRes<WriteVecLoadNTY,      [SKLPort23,SKLPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [SKLPort23,SKLPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [SKLPort23,SKLPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecStore,        [SKLPort237,SKLPort4], 1, [1,1], 2>;
@@ -387,7 +387,7 @@ defm : SKLWriteResPair<WriteShuffle,  [SKLPort5], 1, [1], 1, 5>; // Vector shuff
 defm : SKLWriteResPair<WriteShuffleX, [SKLPort5], 1, [1], 1, 6>;
 defm : SKLWriteResPair<WriteShuffleY, [SKLPort5], 1, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
-defm : SKLWriteResPair<WriteVarShuffle,  [SKLPort5], 1, [1], 1, 5>; // Vector shuffles.
+defm : SKLWriteResPair<WriteVarShuffle,  [SKLPort0,SKLPort5], 1, [1,1], 2, 5>; // Vector shuffles.
 defm : SKLWriteResPair<WriteVarShuffleX, [SKLPort5], 1, [1], 1, 6>;
 defm : SKLWriteResPair<WriteVarShuffleY, [SKLPort5], 1, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;

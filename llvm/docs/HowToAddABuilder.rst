@@ -6,7 +6,7 @@ Introduction
 ============
 
 This document contains information about adding a build configuration and
-buildbot-worker to private worker builder to LLVM Buildbot Infrastructure.
+buildbot worker to the LLVM Buildbot Infrastructure.
 
 .. note:: The term "buildmaster" is used in this document to refer to the
   server that manages which builds are run and where. Though we would not
