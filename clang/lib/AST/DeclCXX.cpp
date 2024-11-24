@@ -2733,14 +2733,14 @@ int64_t CXXCtorInitializer::getID(const ASTContext &Context) const {
 
 TypeLoc CXXCtorInitializer::getBaseClassLoc() const {
   if (isBaseInitializer())
-    return Initializee.get<TypeSourceInfo*>()->getTypeLoc();
+    return cast<TypeSourceInfo *>(Initializee)->getTypeLoc();
   else
     return {};
 }
 
 const Type *CXXCtorInitializer::getBaseClass() const {
   if (isBaseInitializer())
-    return Initializee.get<TypeSourceInfo*>()->getType().getTypePtr();
+    return cast<TypeSourceInfo *>(Initializee)->getType().getTypePtr();
   else
     return nullptr;
 }
@@ -2752,7 +2752,7 @@ SourceLocation CXXCtorInitializer::getSourceLocation() const {
   if (isAnyMemberInitializer())
     return getMemberLocation();
 
-  if (const auto *TSInfo = Initializee.get<TypeSourceInfo *>())
+  if (const auto *TSInfo = cast<TypeSourceInfo *>(Initializee))
     return TSInfo->getTypeLoc().getBeginLoc();
 
   return {};
