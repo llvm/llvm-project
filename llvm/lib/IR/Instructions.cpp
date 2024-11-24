@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -329,6 +330,16 @@ Function *CallBase::getCaller() { return getParent()->getParent(); }
 unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
   assert(getOpcode() == Instruction::CallBr && "Unexpected opcode!");
   return cast<CallBrInst>(this)->getNumIndirectDests() + 1;
+}
+
+void CallBase::dropPoisonGeneratingAndUBImplyingParamAttrs(unsigned ArgNo) {
+  AttributeMask AM = AttributeFuncs::getUBImplyingAttributes();
+  // TODO: Add a helper AttributeFuncs::getPoisonGeneratingAttributes
+  AM.addAttribute(Attribute::NoFPClass);
+  AM.addAttribute(Attribute::Range);
+  AM.addAttribute(Attribute::Alignment);
+  AM.addAttribute(Attribute::NonNull);
+  removeParamAttrs(ArgNo, AM);
 }
 
 bool CallBase::isIndirectCall() const {

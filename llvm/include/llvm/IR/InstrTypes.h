@@ -1707,6 +1707,9 @@ public:
            paramHasAttr(ArgNo, Attribute::DereferenceableOrNull);
   }
 
+  /// Drop parameter attributes that may cause this instruction to cause UB.
+  void dropPoisonGeneratingAndUBImplyingParamAttrs(unsigned ArgNo);
+
   /// Determine if there are is an inalloca argument. Only the last argument can
   /// have the inalloca attribute.
   bool hasInAllocaArgument() const {
