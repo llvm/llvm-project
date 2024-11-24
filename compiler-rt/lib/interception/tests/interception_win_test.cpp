@@ -332,6 +332,7 @@ int InterceptorFunction(int x);
 u8 *AllocateCode2GBAway(u8 *Base) {
   // Find a 64K aligned location after Base plus 2GB.
   size_t TwoGB = 0x80000000;
+  TwoGB = sizeof(void*) == 4 ? 0x20000000 : TwoGB; // lower requirement with i686
   size_t AllocGranularity = 0x10000;
   Base = (u8 *)((((uptr)Base + TwoGB + AllocGranularity)) & ~(AllocGranularity - 1));
 
