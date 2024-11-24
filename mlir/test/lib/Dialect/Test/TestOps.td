@@ -3047,6 +3047,15 @@ def TestOpUsingPropertyInCustomAndOther
   );
 }
 
+def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
+    [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let arguments = (ins Variadic<I64>:$a1, Variadic<I64>:$a2);
+  let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
+  let assemblyFormat = [{
+    $a1 `:` $a2 `:` type($b1) `:` type($b2) prop-dict attr-dict `end`
+  }];
+}
+
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let assemblyFormat = "custom<IntProperty>($first) `+` custom<SumProperty>($second, ref($first)) attr-dict";
   let arguments = (ins IntProperty<"int64_t">:$first, IntProperty<"int64_t">:$second);
