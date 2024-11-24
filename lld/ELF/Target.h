@@ -292,7 +292,7 @@ inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
   if ((v & (n - 1)) != 0)
     Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
              << rel.type << ": 0x" << llvm::utohexstr(v)
-             << " is not aligned to " << Twine(n) << " bytes";
+             << " is not aligned to " << n << " bytes";
 }
 
 // Endianness-aware read/write.
