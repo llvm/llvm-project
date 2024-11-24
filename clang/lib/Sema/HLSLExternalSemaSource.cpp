@@ -571,8 +571,8 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor(S);
 }
 
-Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
-                                         TemplateTypeParmDecl *T) {
+static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
+                                                TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
 
   // Obtain the QualType for 'unsigned long'
@@ -592,7 +592,8 @@ Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
   return TypedResExpr;
 }
 
-ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
+static ConceptDecl *constructTypedBufferConceptDecl(Sema &S,
+                                                    NamespaceDecl *NSD) {
   ASTContext &Context = S.getASTContext();
   DeclContext *DC = NSD->getDeclContext();
   SourceLocation DeclLoc = SourceLocation();
