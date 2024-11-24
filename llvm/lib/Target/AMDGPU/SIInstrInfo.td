@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
+def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
-def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
+def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
@@ -805,6 +805,10 @@ defm atomic_load_fmax : SIAtomicM0Glue2 <"LOAD_FMAX", 0, SDTAtomic2_f32, 0>;
 
 def as_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
+}]>;
+
+def as_i1timm_zext : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i8imm : SDNodeXForm<imm, [{
@@ -2869,17 +2873,26 @@ def VOP_V4F32_I64_I64_V4F32       : VOPProfile <[v4f32,  i64,   i64,   v4f32]>;
 def VOP_V16F32_I64_I64_V16F32     : VOPProfile <[v16f32, i64,   i64,   v16f32]>;
 
 def VOP_V4F32_V4F16_V8F16_I32     : VOPProfile <[v4f32,  v4f16, v8f16, i32]>;
+def VOP_V4F32_V8F16_V16F16_I32    : VOPProfile <[v4f32,  v8f16, v16f16, i32]>;
+def VOP_V4F32_V8BF16_V16BF16_I32  : VOPProfile <[v4f32,  v8bf16, v16bf16, i32]>;
 def VOP_V16F32_V4F16_V8F16_I32    : VOPProfile <[v16f32, v4f16, v8f16, i32]>;
+def VOP_V16F32_V8F16_V16F16_I32   : VOPProfile <[v16f32, v8f16, v16f16, i32]>;
+def VOP_V16F32_V8BF16_V16BF16_I32 : VOPProfile <[v16f32, v8bf16, v16bf16, i32]>;
 def VOP_V4F32_V4I16_V8I16_I32     : VOPProfile <[v4f32,  v4i16, v8i16, i32]>;
 def VOP_V16F32_V4I16_V8I16_I32    : VOPProfile <[v16f32, v4i16, v8i16, i32]>;
 def VOP_V4I32_V2I32_V4I32_I32     : VOPProfile <[v4i32,  v2i32, v4i32, i32]>;
 def VOP_V16I32_V2I32_V4I32_I32    : VOPProfile <[v16i32, v2i32, v4i32, i32]>;
 def VOP_V4F32_V2I32_V4I32_I32     : VOPProfile <[v4f32,  v2i32, v4i32, i32]>;
 def VOP_V16F32_V2I32_V4I32_I32    : VOPProfile <[v16f32, v2i32, v4i32, i32]>;
+def VOP_V4I32_V4I32_V8I32_I32     : VOPProfile <[v4i32,  v4i32, v8i32, i32]>;
+def VOP_V16I32_V4I32_V8I32_I32    : VOPProfile <[v16i32, v4i32, v8i32, i32]>;
+def VOP_V4F32_V4I32_V8I32_I32     : VOPProfile <[v4f32, v4i32, v8i32, i32]>;
+def VOP_V16F32_V4I32_V8I32_I32    : VOPProfile <[v16f32, v4i32, v8i32, i32]>;
 
 def VOP_V4F32_V8F16_V8F16_V4F32   : VOPProfile <[v4f32,  v8f16, v8f16, v4f32]>;
 def VOP_V16F32_V8F16_V8F16_V16F32 : VOPProfile <[v16f32, v8f16, v8f16, v16f32]>;
 def VOP_V16F32_V8BF16_V8BF16_V16F32 : VOPProfile <[v16f32, v8bf16, v8bf16, v16f32]>;
+def VOP_V4F32_V8BF16_V8BF16_V4F32 : VOPProfile <[v4f32, v8bf16, v8bf16, v4f32]>;
 def VOP_V4F32_V8I32_V8I32_V4F32   : VOPProfile <[v4f32,  v8i32, v8i32, v4f32]>;
 
 def VOP_V4F32_V8I32_V6I32_V4F32   : VOPProfile <[v4f32,  v8i32, v6i32, v4f32]>;

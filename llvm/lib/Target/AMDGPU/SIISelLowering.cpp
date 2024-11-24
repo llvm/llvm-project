@@ -15462,9 +15462,8 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                                  AMDGPU::OpName::scale_src0);
         if (Src0Idx != -1) {
-          int Src1Idx = Src0Idx + 2;
-          assert(Src1Idx = AMDGPU::getNamedOperandIdx(
-                     MI.getOpcode(), AMDGPU::OpName::scale_src1));
+          int Src1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                   AMDGPU::OpName::scale_src1);
           if (TII->usesConstantBus(MRI, MI, Src0Idx) &&
               TII->usesConstantBus(MRI, MI, Src1Idx))
             TII->legalizeOpWithMove(MI, Src1Idx);
@@ -16678,8 +16677,8 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   const TargetRegisterClass *RC = TargetLoweringBase::getRegClassFor(VT, false);
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   if (RC == &AMDGPU::VReg_1RegClass && !isDivergent)
-    return Subtarget->getWavefrontSize() == 64 ? &AMDGPU::SReg_64RegClass
-                                               : &AMDGPU::SReg_32RegClass;
+    return Subtarget->isWave64() ? &AMDGPU::SReg_64RegClass
+                                 : &AMDGPU::SReg_32RegClass;
   if (!TRI->isSGPRClass(RC) && !isDivergent)
     return TRI->getEquivalentSGPRClass(RC);
   if (TRI->isSGPRClass(RC) && isDivergent)

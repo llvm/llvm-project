@@ -859,7 +859,9 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   if (getNumOperands() != 0) {
     assert(getNumOperands() == 1 && "can have at most 1 operand");
     O << " (extra operand: ";
-    printOperands(O, SlotTracker);
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    O << " from ";
+    getParent()->getPredecessors()[0]->printAsOperand(O);
     O << ")";
   }
 }

@@ -3697,6 +3697,41 @@ LegalizerHelper::bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
   return Legalized;
 }
 
+// This bitcasts a shuffle vector to a different type currently of the same
+// element size. Mostly used to legalize ptr vectors, where ptrtoint/inttoptr
+// will be used instead.
+//
+// <16 x p0> = G_CONCAT_VECTORS <4 x p0>, <4 x p0>, mask
+// ===>
+// <4 x s64> = G_PTRTOINT <4 x p0>
+// <4 x s64> = G_PTRTOINT <4 x p0>
+// <16 x s64> = G_CONCAT_VECTORS <4 x s64>, <4 x s64>, mask
+// <16 x p0> = G_INTTOPTR <16 x s64>
+LegalizerHelper::LegalizeResult
+LegalizerHelper::bitcastShuffleVector(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT CastTy) {
+  auto ShuffleMI = cast<GShuffleVector>(&MI);
+  LLT DstTy = MRI.getType(ShuffleMI->getReg(0));
+  LLT SrcTy = MRI.getType(ShuffleMI->getReg(1));
+
+  // We currently only handle vectors of the same size.
+  if (TypeIdx != 0 ||
+      CastTy.getScalarSizeInBits() != DstTy.getScalarSizeInBits() ||
+      CastTy.getElementCount() != DstTy.getElementCount())
+    return UnableToLegalize;
+
+  LLT NewSrcTy = SrcTy.changeElementType(CastTy.getScalarType());
+
+  auto Inp1 = MIRBuilder.buildCast(NewSrcTy, ShuffleMI->getReg(1));
+  auto Inp2 = MIRBuilder.buildCast(NewSrcTy, ShuffleMI->getReg(2));
+  auto Shuf =
+      MIRBuilder.buildShuffleVector(CastTy, Inp1, Inp2, ShuffleMI->getMask());
+  MIRBuilder.buildCast(ShuffleMI->getReg(0), Shuf);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 /// This attempts to bitcast G_EXTRACT_SUBVECTOR to CastTy.
 ///
 ///  <vscale x 8 x i1> = G_EXTRACT_SUBVECTOR <vscale x 16 x i1>, N
@@ -4133,6 +4168,8 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     return bitcastInsertVectorElt(MI, TypeIdx, CastTy);
   case TargetOpcode::G_CONCAT_VECTORS:
     return bitcastConcatVector(MI, TypeIdx, CastTy);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return bitcastShuffleVector(MI, TypeIdx, CastTy);
   case TargetOpcode::G_EXTRACT_SUBVECTOR:
     return bitcastExtractSubvector(MI, TypeIdx, CastTy);
   case TargetOpcode::G_INSERT_SUBVECTOR:

@@ -299,6 +299,8 @@ const TargetRegisterClass *
 ARMBaseRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &ARM::CCRRegClass)
     return &ARM::rGPRRegClass;  // Can't copy CCR registers.
+  if (RC == &ARM::cl_FPSCR_NZCVRegClass)
+    return &ARM::rGPRRegClass;
   return RC;
 }
 
