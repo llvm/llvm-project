@@ -61,6 +61,25 @@ func.func @acceptable_ir_has_cleanable_simple_op_with_unconditional_branch_op(%a
 
 // -----
 
+// Checking that iter_args are properly handled
+//
+func.func @cleanable_loop_iter_args_value(%arg0: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %non_live = arith.constant 0 : index
+  // CHECK-NOT: non_live
+  %result, %result_non_live = scf.for %i = %c0 to %c10 step %c1 iter_args(%live_arg = %arg0, %non_live_arg = %non_live) -> (index, index) {
+    %new_live = arith.addi %live_arg, %i : index
+  // CHECK-NOT: non_live_arg
+    scf.yield %new_live, %non_live_arg : index, index
+  }
+  // CHECK-NOT: result_non_live
+  return %result : index
+}
+
+// -----
+
 // Note that this cleanup cannot be done by the `canonicalize` pass.
 //
 // CHECK-LABEL: func.func private @clean_func_op_remove_argument_and_return_value() {
