@@ -577,8 +577,8 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
     return I;
   }
 
-  if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    assert(RMWI->getOperation() == AtomicRMWInst::Xchg &&
+  if (isa<AtomicRMWInst>(I)) {
+    assert(cast<AtomicRMWInst>(I)->getOperation() == AtomicRMWInst::Xchg &&
            "Only Xchg is allowed for pointer values");
     // A RMW Xchg is a combined atomic load and store, so we can treat the
     // loaded value as a base pointer.

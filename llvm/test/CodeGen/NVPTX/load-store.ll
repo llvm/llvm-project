@@ -175,7 +175,7 @@ define void @generic_4xi8(ptr %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -184,8 +184,8 @@ define void @generic_4xi8(ptr %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x i8>, ptr %a
@@ -519,7 +519,7 @@ define void @generic_volatile_4xi8(ptr %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -528,8 +528,8 @@ define void @generic_volatile_4xi8(ptr %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.volatile.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x i8>, ptr %a
@@ -1424,7 +1424,7 @@ define void @global_4xi8(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -1433,8 +1433,8 @@ define void @global_4xi8(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.global.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x i8>, ptr addrspace(1) %a
@@ -1749,7 +1749,7 @@ define void @global_volatile_4xi8(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -1758,8 +1758,8 @@ define void @global_volatile_4xi8(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.volatile.global.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x i8>, ptr addrspace(1) %a
@@ -2796,7 +2796,7 @@ define void @shared_4xi8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -2805,8 +2805,8 @@ define void @shared_4xi8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.shared.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x i8>, ptr addrspace(3) %a
@@ -3121,7 +3121,7 @@ define void @shared_volatile_4xi8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -3130,8 +3130,8 @@ define void @shared_volatile_4xi8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x i8>, ptr addrspace(3) %a
@@ -4026,7 +4026,7 @@ define void @local_4xi8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -4035,8 +4035,8 @@ define void @local_4xi8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.local.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x i8>, ptr addrspace(5) %a
@@ -4351,7 +4351,7 @@ define void @local_volatile_4xi8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
 ; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
-; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 13120;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r3, 0x3340U;
 ; CHECK-NEXT:    bfe.u32 %r7, %r1, 8, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
@@ -4360,8 +4360,8 @@ define void @local_volatile_4xi8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
 ; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    cvt.u32.u16 %r10, %rs8;
-; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 13120;
-; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 21520;
+; CHECK-NEXT:    prmt.b32 %r11, %r10, %r8, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r6, 0x5410U;
 ; CHECK-NEXT:    st.local.u32 [%rd1], %r12;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x i8>, ptr addrspace(5) %a

@@ -40,6 +40,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TypeSize.h"
@@ -1751,8 +1752,17 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (isa<UndefValue>(Mask) || isa<ConstantAggregateZero>(Mask))
     return true;
 
+  // NOTE: Through vector ConstantInt we have the potential to support more
+  // than just zero splat masks but that requires a LangRef change.
+  if (isa<ScalableVectorType>(MaskTy))
+    return false;
+
+  unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
+
+  if (const auto *CI = dyn_cast<ConstantInt>(Mask))
+    return !CI->uge(V1Size * 2);
+
   if (const auto *MV = dyn_cast<ConstantVector>(Mask)) {
-    unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (Value *Op : MV->operands()) {
       if (auto *CI = dyn_cast<ConstantInt>(Op)) {
         if (CI->uge(V1Size*2))
@@ -1765,7 +1775,6 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
-    unsigned V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (unsigned i = 0, e = cast<FixedVectorType>(MaskTy)->getNumElements();
          i != e; ++i)
       if (CDS->getElementAsInteger(i) >= V1Size*2)
@@ -3717,40 +3726,6 @@ CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
   llvm_unreachable("Unknown predicate!");
 }
 
-CmpInst::Predicate CmpInst::getSignedPredicate(Predicate pred) {
-  assert(CmpInst::isUnsigned(pred) && "Call only with unsigned predicates!");
-
-  switch (pred) {
-  default:
-    llvm_unreachable("Unknown predicate!");
-  case CmpInst::ICMP_ULT:
-    return CmpInst::ICMP_SLT;
-  case CmpInst::ICMP_ULE:
-    return CmpInst::ICMP_SLE;
-  case CmpInst::ICMP_UGT:
-    return CmpInst::ICMP_SGT;
-  case CmpInst::ICMP_UGE:
-    return CmpInst::ICMP_SGE;
-  }
-}
-
-CmpInst::Predicate CmpInst::getUnsignedPredicate(Predicate pred) {
-  assert(CmpInst::isSigned(pred) && "Call only with signed predicates!");
-
-  switch (pred) {
-  default:
-    llvm_unreachable("Unknown predicate!");
-  case CmpInst::ICMP_SLT:
-    return CmpInst::ICMP_ULT;
-  case CmpInst::ICMP_SLE:
-    return CmpInst::ICMP_ULE;
-  case CmpInst::ICMP_SGT:
-    return CmpInst::ICMP_UGT;
-  case CmpInst::ICMP_SGE:
-    return CmpInst::ICMP_UGE;
-  }
-}
-
 bool CmpInst::isUnsigned(Predicate predicate) {
   switch (predicate) {
     default: return false;
@@ -3837,7 +3812,36 @@ bool FCmpInst::compare(const APFloat &LHS, const APFloat &RHS,
   }
 }
 
-CmpInst::Predicate CmpInst::getFlippedSignednessPredicate(Predicate pred) {
+std::optional<bool> ICmpInst::compare(const KnownBits &LHS,
+                                      const KnownBits &RHS,
+                                      ICmpInst::Predicate Pred) {
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+    return KnownBits::eq(LHS, RHS);
+  case ICmpInst::ICMP_NE:
+    return KnownBits::ne(LHS, RHS);
+  case ICmpInst::ICMP_UGE:
+    return KnownBits::uge(LHS, RHS);
+  case ICmpInst::ICMP_UGT:
+    return KnownBits::ugt(LHS, RHS);
+  case ICmpInst::ICMP_ULE:
+    return KnownBits::ule(LHS, RHS);
+  case ICmpInst::ICMP_ULT:
+    return KnownBits::ult(LHS, RHS);
+  case ICmpInst::ICMP_SGE:
+    return KnownBits::sge(LHS, RHS);
+  case ICmpInst::ICMP_SGT:
+    return KnownBits::sgt(LHS, RHS);
+  case ICmpInst::ICMP_SLE:
+    return KnownBits::sle(LHS, RHS);
+  case ICmpInst::ICMP_SLT:
+    return KnownBits::slt(LHS, RHS);
+  default:
+    llvm_unreachable("Unexpected non-integer predicate.");
+  }
+}
+
+CmpInst::Predicate ICmpInst::getFlippedSignednessPredicate(Predicate pred) {
   assert(CmpInst::isRelational(pred) &&
          "Call only with non-equality predicates!");
 

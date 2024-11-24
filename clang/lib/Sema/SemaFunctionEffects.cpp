@@ -12,8 +12,10 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaInternal.h"
@@ -625,7 +627,7 @@ private:
           IsNoexcept = isNoexcept(FD);
         } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
           if (auto *TSI = BD->getSignatureAsWritten()) {
-            auto *FPT = TSI->getType()->getAs<FunctionProtoType>();
+            auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
             IsNoexcept = FPT->isNothrow() || BD->hasAttr<NoThrowAttr>();
           }
         }
@@ -805,7 +807,8 @@ private:
 
     auto MaybeAddTemplateNote = [&](const Decl *D) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-        while (FD != nullptr && FD->isTemplateInstantiation()) {
+        while (FD != nullptr && FD->isTemplateInstantiation() &&
+               FD->getPointOfInstantiation().isValid()) {
           S.Diag(FD->getPointOfInstantiation(),
                  diag::note_func_effect_from_template);
           FD = FD->getTemplateInstantiationPattern();
@@ -964,20 +967,22 @@ private:
   //      being checked for implicit conformance.
   //
   // Violations are always routed to a PendingFunctionAnalysis.
-  struct FunctionBodyASTVisitor : RecursiveASTVisitor<FunctionBodyASTVisitor> {
-    using Base = RecursiveASTVisitor<FunctionBodyASTVisitor>;
-
+  struct FunctionBodyASTVisitor : DynamicRecursiveASTVisitor {
     Analyzer &Outer;
     PendingFunctionAnalysis &CurrentFunction;
     CallableInfo &CurrentCaller;
     ViolationSite VSite;
     const Expr *TrailingRequiresClause = nullptr;
+    const Expr *NoexceptExpr = nullptr;
 
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
                            CallableInfo &CurrentCaller)
         : Outer(Outer), CurrentFunction(CurrentFunction),
-          CurrentCaller(CurrentCaller) {}
+          CurrentCaller(CurrentCaller) {
+      ShouldVisitImplicitCode = true;
+      ShouldWalkTypesOfTypeLocs = false;
+    }
 
     // -- Entry point --
     void run() {
@@ -986,8 +991,21 @@ private:
       if (auto *Dtor = dyn_cast<CXXDestructorDecl>(CurrentCaller.CDecl))
         followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
 
-      if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl))
+      if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl)) {
         TrailingRequiresClause = FD->getTrailingRequiresClause();
+
+        // Note that FD->getType->getAs<FunctionProtoType>() can yield a
+        // noexcept Expr which has been boiled down to a constant expression.
+        // Going through the TypeSourceInfo obtains the actual expression which
+        // will be traversed as part of the function -- unless we capture it
+        // here and have TraverseStmt skip it.
+        if (TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
+          if (FunctionProtoTypeLoc TL =
+                  TSI->getTypeLoc().getAs<FunctionProtoTypeLoc>())
+            if (const FunctionProtoType *FPT = TL.getTypePtr())
+              NoexceptExpr = FPT->getNoexceptExpr();
+        }
+      }
 
       // Do an AST traversal of the function/block body
       TraverseDecl(const_cast<Decl *>(CurrentCaller.CDecl));
@@ -1105,53 +1123,49 @@ private:
 
     // -- Methods for use of RecursiveASTVisitor --
 
-    bool shouldVisitImplicitCode() const { return true; }
-
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool VisitCXXThrowExpr(CXXThrowExpr *Throw) {
+    bool VisitCXXThrowExpr(CXXThrowExpr *Throw) override {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
                                 ViolationID::ThrowsOrCatchesExceptions,
                                 Throw->getThrowLoc());
       return true;
     }
 
-    bool VisitCXXCatchStmt(CXXCatchStmt *Catch) {
+    bool VisitCXXCatchStmt(CXXCatchStmt *Catch) override {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
                                 ViolationID::ThrowsOrCatchesExceptions,
                                 Catch->getCatchLoc());
       return true;
     }
 
-    bool VisitObjCAtThrowStmt(ObjCAtThrowStmt *Throw) {
+    bool VisitObjCAtThrowStmt(ObjCAtThrowStmt *Throw) override {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
                                 ViolationID::ThrowsOrCatchesExceptions,
                                 Throw->getThrowLoc());
       return true;
     }
 
-    bool VisitObjCAtCatchStmt(ObjCAtCatchStmt *Catch) {
+    bool VisitObjCAtCatchStmt(ObjCAtCatchStmt *Catch) override {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
                                 ViolationID::ThrowsOrCatchesExceptions,
                                 Catch->getAtCatchLoc());
       return true;
     }
 
-    bool VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *Finally) {
+    bool VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *Finally) override {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
                                 ViolationID::ThrowsOrCatchesExceptions,
                                 Finally->getAtFinallyLoc());
       return true;
     }
 
-    bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
+    bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) override {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 ViolationID::AccessesObjCMethodOrProperty,
                                 Msg->getBeginLoc());
       return true;
     }
 
-    bool VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *ARP) {
+    bool VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *ARP) override {
       // Under the hood, @autorelease (potentially?) allocates memory and
       // invokes ObjC methods. We don't currently have memory allocation as
       // a "language construct" but we do have ObjC messaging, so diagnose that.
@@ -1161,7 +1175,7 @@ private:
       return true;
     }
 
-    bool VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Sync) {
+    bool VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Sync) override {
       // Under the hood, this calls objc_sync_enter and objc_sync_exit, wrapped
       // in a @try/@finally block. Diagnose this generically as "ObjC
       // messaging".
@@ -1171,14 +1185,14 @@ private:
       return true;
     }
 
-    bool VisitSEHExceptStmt(SEHExceptStmt *Exc) {
+    bool VisitSEHExceptStmt(SEHExceptStmt *Exc) override {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
                                 ViolationID::ThrowsOrCatchesExceptions,
                                 Exc->getExceptLoc());
       return true;
     }
 
-    bool VisitCallExpr(CallExpr *Call) {
+    bool VisitCallExpr(CallExpr *Call) override {
       LLVM_DEBUG(llvm::dbgs()
                      << "VisitCallExpr : "
                      << Call->getBeginLoc().printToString(Outer.S.SourceMgr)
@@ -1202,7 +1216,7 @@ private:
       return true;
     }
 
-    bool VisitVarDecl(VarDecl *Var) {
+    bool VisitVarDecl(VarDecl *Var) override {
       LLVM_DEBUG(llvm::dbgs()
                      << "VisitVarDecl : "
                      << Var->getBeginLoc().printToString(Outer.S.SourceMgr)
@@ -1220,7 +1234,7 @@ private:
       return true;
     }
 
-    bool VisitCXXNewExpr(CXXNewExpr *New) {
+    bool VisitCXXNewExpr(CXXNewExpr *New) override {
       // RecursiveASTVisitor does not visit the implicit call to operator new.
       if (FunctionDecl *FD = New->getOperatorNew()) {
         CallableInfo CI(*FD, SpecialFuncType::OperatorNew);
@@ -1235,7 +1249,7 @@ private:
       return true;
     }
 
-    bool VisitCXXDeleteExpr(CXXDeleteExpr *Delete) {
+    bool VisitCXXDeleteExpr(CXXDeleteExpr *Delete) override {
       // RecursiveASTVisitor does not visit the implicit call to operator
       // delete.
       if (FunctionDecl *FD = Delete->getOperatorDelete()) {
@@ -1248,7 +1262,7 @@ private:
       return true;
     }
 
-    bool VisitCXXConstructExpr(CXXConstructExpr *Construct) {
+    bool VisitCXXConstructExpr(CXXConstructExpr *Construct) override {
       LLVM_DEBUG(llvm::dbgs() << "VisitCXXConstructExpr : "
                               << Construct->getBeginLoc().printToString(
                                      Outer.S.SourceMgr)
@@ -1263,27 +1277,28 @@ private:
       return true;
     }
 
-    bool TraverseStmt(Stmt *Statement) {
+    bool TraverseStmt(Stmt *Statement) override {
       // If this statement is a `requires` clause from the top-level function
       // being traversed, ignore it, since it's not generating runtime code.
       // We skip the traversal of lambdas (beyond their captures, see
       // TraverseLambdaExpr below), so just caching this from our constructor
       // should suffice.
-      if (Statement != TrailingRequiresClause)
-        return Base::TraverseStmt(Statement);
+      if (Statement != TrailingRequiresClause && Statement != NoexceptExpr)
+        return DynamicRecursiveASTVisitor::TraverseStmt(Statement);
       return true;
     }
 
-    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
       ViolationSite PrevVS = VSite;
       if (Init->isAnyMemberInitializer())
         VSite.setKind(ViolationSite::Kind::MemberInitializer);
-      bool Result = Base::TraverseConstructorInitializer(Init);
+      bool Result =
+          DynamicRecursiveASTVisitor::TraverseConstructorInitializer(Init);
       VSite = PrevVS;
       return Result;
     }
 
-    bool TraverseCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
+    bool TraverseCXXDefaultArgExpr(CXXDefaultArgExpr *E) override {
       LLVM_DEBUG(llvm::dbgs()
                      << "TraverseCXXDefaultArgExpr : "
                      << E->getUsedLocation().printToString(Outer.S.SourceMgr)
@@ -1293,12 +1308,12 @@ private:
       if (VSite.kind() == ViolationSite::Kind::Default)
         VSite = ViolationSite{E};
 
-      bool Result = Base::TraverseCXXDefaultArgExpr(E);
+      bool Result = DynamicRecursiveASTVisitor::TraverseCXXDefaultArgExpr(E);
       VSite = PrevVS;
       return Result;
     }
 
-    bool TraverseLambdaExpr(LambdaExpr *Lambda) {
+    bool TraverseLambdaExpr(LambdaExpr *Lambda) override {
       // We override this so as to be able to skip traversal of the lambda's
       // body. We have to explicitly traverse the captures. Why not return
       // false from shouldVisitLambdaBody()? Because we need to visit a lambda's
@@ -1311,13 +1326,13 @@ private:
       return true;
     }
 
-    bool TraverseBlockExpr(BlockExpr * /*unused*/) {
+    bool TraverseBlockExpr(BlockExpr * /*unused*/) override {
       // As with lambdas, don't traverse the block's body.
       // TODO: are the capture expressions (ctor call?) safe?
       return true;
     }
 
-    bool VisitDeclRefExpr(const DeclRefExpr *E) {
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
       const ValueDecl *Val = E->getDecl();
       if (const auto *Var = dyn_cast<VarDecl>(Val)) {
         if (Var->getTLSKind() != VarDecl::TLS_None) {
@@ -1331,23 +1346,30 @@ private:
       return true;
     }
 
-    bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) {
+    bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) override {
       return TraverseStmt(Node->getResultExpr());
     }
-    bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) {
+    bool
+    TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) override {
       return true;
     }
 
-    bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) { return true; }
+    bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+      return true;
+    }
 
-    bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) { return true; }
+    bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override { return true; }
 
-    bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) { return true; }
+    bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
+      return true;
+    }
 
-    bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) { return true; }
+    bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) override { return true; }
 
     // Skip concept requirements since they don't generate code.
-    bool TraverseConceptRequirement(concepts::Requirement *R) { return true; }
+    bool TraverseConceptRequirement(concepts::Requirement *R) override {
+      return true;
+    }
   };
 };
 

@@ -6,9 +6,9 @@
 #
 # ===----------------------------------------------------------------------===##
 
-import os, pathlib, functools
+import pathlib, functools
 
-libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+libcxx_root = pathlib.Path(__file__).resolve().parent.parent.parent
 libcxx_include = libcxx_root / "include"
 assert libcxx_root.exists()
 

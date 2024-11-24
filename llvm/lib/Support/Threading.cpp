@@ -16,10 +16,8 @@
 #include "llvm/Config/llvm-config.h"
 
 #include <cassert>
-#include <errno.h>
 #include <optional>
 #include <stdlib.h>
-#include <string.h>
 
 using namespace llvm;
 

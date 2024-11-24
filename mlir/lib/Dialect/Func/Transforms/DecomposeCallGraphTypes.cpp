@@ -141,47 +141,31 @@ struct DecomposeCallGraphTypesForCallOp : public OpConversionPattern<CallOp> {
                                         getTypeConverter()));
     }
 
-    // Create the new result types for the new `CallOp` and track the indices in
-    // the new call op's results that correspond to the old call op's results.
-    //
-    // expandedResultIndices[i] = "list of new result indices that old result i
-    // expanded to".
+    // Create the new result types for the new `CallOp` and track the number of
+    // replacement types for each original op result.
     SmallVector<Type, 2> newResultTypes;
-    SmallVector<SmallVector<unsigned, 2>, 4> expandedResultIndices;
+    SmallVector<unsigned> expandedResultSizes;
     for (Type resultType : op.getResultTypes()) {
       unsigned oldSize = newResultTypes.size();
       if (failed(typeConverter->convertType(resultType, newResultTypes)))
         return failure();
-      auto &resultMapping = expandedResultIndices.emplace_back();
-      for (unsigned i = oldSize, e = newResultTypes.size(); i < e; i++)
-        resultMapping.push_back(i);
+      expandedResultSizes.push_back(newResultTypes.size() - oldSize);
     }
 
     CallOp newCallOp = rewriter.create<CallOp>(op.getLoc(), op.getCalleeAttr(),
                                                newResultTypes, newOperands);
 
-    // Build a replacement value for each result to replace its uses. If a
-    // result has multiple mapping values, it needs to be materialized as a
-    // single value.
-    SmallVector<Value, 2> replacedValues;
+    // Build a replacement value for each result to replace its uses.
+    SmallVector<ValueRange> replacedValues;
     replacedValues.reserve(op.getNumResults());
+    unsigned startIdx = 0;
     for (unsigned i = 0, e = op.getNumResults(); i < e; ++i) {
-      auto decomposedValues = llvm::to_vector<6>(
-          llvm::map_range(expandedResultIndices[i],
-                          [&](unsigned i) { return newCallOp.getResult(i); }));
-      if (decomposedValues.empty()) {
-        // No replacement is required.
-        replacedValues.push_back(nullptr);
-      } else if (decomposedValues.size() == 1) {
-        replacedValues.push_back(decomposedValues.front());
-      } else {
-        // Materialize a single Value to replace the original Value.
-        Value materialized = getTypeConverter()->materializeArgumentConversion(
-            rewriter, op.getLoc(), op.getType(i), decomposedValues);
-        replacedValues.push_back(materialized);
-      }
+      ValueRange repl =
+          newCallOp.getResults().slice(startIdx, expandedResultSizes[i]);
+      replacedValues.push_back(repl);
+      startIdx += expandedResultSizes[i];
     }
-    rewriter.replaceOp(op, replacedValues);
+    rewriter.replaceOpWithMultiple(op, replacedValues);
     return success();
   }
 };

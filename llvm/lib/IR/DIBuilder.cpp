@@ -139,7 +139,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
     DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress,
     StringRef SysRoot, StringRef SDK) {
 
-  assert(((Lang <= dwarf::DW_LANG_Mojo && Lang >= dwarf::DW_LANG_C89) ||
+  assert(((Lang <= dwarf::DW_LANG_Metal && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
          "Invalid Language tag");
 
@@ -521,13 +521,13 @@ DICompositeType *DIBuilder::createStructType(
     DIScope *Context, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
-    DIType *VTableHolder, StringRef UniqueIdentifier,
+    DIType *VTableHolder, StringRef UniqueIdentifier, DIType *Specification,
     uint32_t NumExtraInhabitants) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
       Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier,
-      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Specification,
       NumExtraInhabitants);
   trackIfUnresolved(R);
   return R;
@@ -1033,8 +1033,8 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(Value *V,
   DbgInstPtr DVI = insertDbgValueIntrinsic(
       V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
       InsertBefore);
-  if (DVI.is<Instruction *>())
-    cast<CallInst>(DVI.get<Instruction *>())->setTailCall();
+  if (auto *Inst = dyn_cast<Instruction *>(DVI))
+    cast<CallInst>(Inst)->setTailCall();
   return DVI;
 }
 

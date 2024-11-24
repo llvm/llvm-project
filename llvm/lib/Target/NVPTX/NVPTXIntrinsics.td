@@ -605,6 +605,52 @@ foreach dim = [1, 2, 3, 4, 5] in {
   }
 }
 
+// TMA Prefetch from Global memory to L2 cache
+class PREFETCH_STRINGS<int dim, string mode, bit ch> {
+  string prefix = "cp.async.bulk.prefetch.tensor";
+  string dir = "L2.global";
+  string inst_name = prefix
+                     # "." # dim # "d"
+                     # "." # dir
+                     # "." # mode
+                     # !if(ch, ".L2::cache_hint", "");
+  string intr_name = "CP_ASYNC_BULK_TENSOR_PREFETCH_"
+                     # dim # "D"
+                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str_default = " [$tmap, {{" # dims_str # "}}]";
+
+  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
+  defvar im2col_dag = !if(!eq(mode, "im2col"),
+    !dag(ins, !listsplat(Int16Regs, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
+    (ins));
+  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
+  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
+
+  defvar asm_str = !if(!eq(mode, "im2col"),
+    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
+
+  def "": NVPTXInst<(outs),
+          !con((ins Int64Regs:$tmap), dims_dag, im2col_dag),
+          !strconcat(PREFETCH_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+  def _CH: NVPTXInst<(outs),
+           !con((ins Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+           !strconcat(PREFETCH_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    defm PREFETCH_STRINGS<dim, mode, 0>.intr_name :
+      CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>;
+  }
+}
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
