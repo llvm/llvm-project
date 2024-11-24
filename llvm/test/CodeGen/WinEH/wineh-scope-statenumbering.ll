@@ -19,13 +19,12 @@ entry:
 
 invoke.cont:
   store i32 1, ptr inttoptr (i32 1 to ptr), align 4
+  ; CHECK:  store i32 -1, ptr %10, align 4
+  ; CHECK-NEXT:  invoke void @llvm.seh.scope.end()
   invoke void @llvm.seh.scope.end()
           to label %invoke.cont1 unwind label %ehcleanup
 
 invoke.cont1:
-  ; CHECK: invoke.cont1:
-  ; CHECK-NEXT:%10 = getelementptr inbounds nuw %CXXExceptionRegistration, ptr %0, i32 0, i32 2
-  ; CHECK-NEXT:  store i32 -1, ptr %10, align 4
   call x86_thiscallcc void @"??1Destructor@@QAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %x) #1
   ret void
 

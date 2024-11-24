@@ -517,11 +517,28 @@ int WinEHStatePass::getBaseStateForBB(
   return BaseState;
 }
 
+static bool isIntrinsic(const CallBase &Call, Intrinsic::ID ID) {
+  const Function *CF = Call.getCalledFunction();
+  return CF && CF->isIntrinsic() && CF->getIntrinsicID() == ID;
+}
+
+static bool isSehScopeEnd(const CallBase &Call) {
+  return isIntrinsic(Call, Intrinsic::seh_scope_end);
+}
+
+static bool isSehScopeBegin(const CallBase &Call) {
+  return isIntrinsic(Call, Intrinsic::seh_scope_begin);
+}
+
 // Calculate the state a call-site is in.
 int WinEHStatePass::getStateForCall(
     DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
     CallBase &Call) {
   if (auto *II = dyn_cast<InvokeInst>(&Call)) {
+    if (isSehScopeEnd(*II)) {
+      return getBaseStateForBB(BlockColors, FuncInfo, II->getNormalDest());
+    }
+
     // Look up the state number of the EH pad this unwinds to.
     assert(FuncInfo.InvokeStateMap.count(II) && "invoke has no state!");
     return FuncInfo.InvokeStateMap[II];
@@ -608,22 +625,9 @@ static int getSuccState(DenseMap<BasicBlock *, int> &InitialStates, Function &F,
   return CommonState;
 }
 
-static bool isIntrinsic(const CallBase &Call, Intrinsic::ID ID) {
-  const Function *CF = Call.getCalledFunction();
-  return CF && CF->isIntrinsic() && CF->getIntrinsicID() == ID;
-}
-
-static bool isSehScopeEnd(const CallBase &Call) {
-  return isIntrinsic(Call, Intrinsic::seh_scope_end);
-}
-
-static bool isSehScopeBegin(const CallBase &Call) {
-  return isIntrinsic(Call, Intrinsic::seh_scope_begin);
-}
-
 bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
                                         CallBase &Call) {
-  if (isSehScopeBegin(Call)) {
+  if (isSehScopeBegin(Call) || isSehScopeEnd(Call)) {
     return true;
   }
 
@@ -663,8 +667,6 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   DenseMap<BasicBlock *, int> InitialStates;
   // FinalStates yields the state of the last call-site for a BasicBlock.
   DenseMap<BasicBlock *, int> FinalStates;
-  // SEH scope end target blocks
-  SmallPtrSet<BasicBlock *, 4> ScopeEndBlocks;
   // Worklist used to revisit BasicBlocks with indeterminate
   // Initial/Final-States.
   std::deque<BasicBlock *> Worklist;
@@ -676,15 +678,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
       InitialState = FinalState = ParentBaseState;
     for (Instruction &I : *BB) {
       auto *Call = dyn_cast<CallBase>(&I);
-      if (!Call)
-        continue;
-
-      if (isSehScopeEnd(*Call)) {
-        auto *Invoke = cast<InvokeInst>(Call);
-        ScopeEndBlocks.insert(Invoke->getNormalDest());
-      }
-
-      if (!isStateStoreNeeded(Personality, *Call))
+      if (!Call || !isStateStoreNeeded(Personality, *Call))
         continue;
 
       int State = getStateForCall(BlockColors, FuncInfo, *Call);
@@ -735,12 +729,6 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     // Update our FinalState to reflect the common InitialState of our
     // successors.
     FinalStates.insert({BB, SuccState});
-  }
-
-  // Insert state restores after SEH scope ends
-  for (BasicBlock *BB : ScopeEndBlocks) {
-    int state = getBaseStateForBB(BlockColors, FuncInfo, BB);
-    insertStateNumberStore(BB->getFirstNonPHI(), state);
   }
 
   // Finally, insert state stores before call-sites which transition us to a new
