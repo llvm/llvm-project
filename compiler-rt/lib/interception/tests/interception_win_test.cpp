@@ -410,8 +410,18 @@ int InterceptorFunction(int x) {
 
 }  // namespace
 
+struct DebugOutputPrinter {
+  static void Report(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stdout, format, args);
+    va_end(args);
+  }
+};
+
 // Tests for interception_win.h
 TEST(Interception, InternalGetProcAddress) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   HMODULE ntdll_handle = ::GetModuleHandle("ntdll");
   ASSERT_NE(nullptr, ntdll_handle);
   uptr DbgPrint_expected = (uptr)::GetProcAddress(ntdll_handle, "DbgPrint");
@@ -471,6 +481,7 @@ static void TestIdentityFunctionPatching(
 
 #    if !SANITIZER_WINDOWS64
 TEST(Interception, OverrideFunctionWithDetour) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithDetour;
   FunctionPrefixKind prefix = FunctionPrefixDetour;
   TestIdentityFunctionPatching(kIdentityCodeWithPrologue, override, prefix);
@@ -481,6 +492,7 @@ TEST(Interception, OverrideFunctionWithDetour) {
 #endif  // !SANITIZER_WINDOWS64
 
 TEST(Interception, OverrideFunctionWithRedirectJump) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithRedirectJump;
   TestIdentityFunctionPatching(kIdentityCodeWithJump, override);
   TestIdentityFunctionPatching(kIdentityCodeWithJumpBackwards, override,
@@ -489,12 +501,14 @@ TEST(Interception, OverrideFunctionWithRedirectJump) {
 }
 
 TEST(Interception, OverrideFunctionWithHotPatch) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithHotPatch;
   FunctionPrefixKind prefix = FunctionPrefixHotPatch;
   TestIdentityFunctionPatching(kIdentityCodeWithMov, override, prefix);
 }
 
 TEST(Interception, OverrideFunctionWithTrampoline) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithTrampoline;
   FunctionPrefixKind prefix = FunctionPrefixNone;
   TestIdentityFunctionPatching(kIdentityCodeWithPrologue, override, prefix);
@@ -506,6 +520,7 @@ TEST(Interception, OverrideFunctionWithTrampoline) {
 }
 
 TEST(Interception, OverrideFunction) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunction;
   FunctionPrefixKind prefix = FunctionPrefixNone;
   TestIdentityFunctionPatching(kIdentityCodeWithPrologue, override, prefix);
@@ -557,6 +572,7 @@ static void TestIdentityFunctionMultiplePatching(
 }
 
 TEST(Interception, OverrideFunctionMultiplePatchingIsFailing) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
 #if !SANITIZER_WINDOWS64
   TestIdentityFunctionMultiplePatching(kIdentityCodeWithPrologue,
                                        OverrideFunctionWithDetour,
@@ -573,6 +589,7 @@ TEST(Interception, OverrideFunctionMultiplePatchingIsFailing) {
 }
 
 TEST(Interception, OverrideFunctionTwice) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   uptr identity_address1;
   LoadActiveCode(kIdentityTwice, &identity_address1);
   uptr identity_address2 = identity_address1 + kIdentityTwiceOffset;
@@ -615,6 +632,7 @@ static bool TestFunctionPatching(
 }
 
 TEST(Interception, PatchableFunction) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunction;
   // Test without function padding.
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode1, override));
@@ -640,6 +658,7 @@ TEST(Interception, PatchableFunction) {
 
 #if !SANITIZER_WINDOWS64
 TEST(Interception, PatchableFunctionWithDetour) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithDetour;
   // Without the prefix, no function can be detoured.
   EXPECT_FALSE(TestFunctionPatching(kPatchableCode1, override));
@@ -669,6 +688,7 @@ TEST(Interception, PatchableFunctionWithDetour) {
 #endif  // !SANITIZER_WINDOWS64
 
 TEST(Interception, PatchableFunctionWithRedirectJump) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithRedirectJump;
   EXPECT_FALSE(TestFunctionPatching(kPatchableCode1, override));
   EXPECT_FALSE(TestFunctionPatching(kPatchableCode2, override));
@@ -683,6 +703,7 @@ TEST(Interception, PatchableFunctionWithRedirectJump) {
 }
 
 TEST(Interception, PatchableFunctionWithHotPatch) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithHotPatch;
   FunctionPrefixKind prefix = FunctionPrefixHotPatch;
 
@@ -704,6 +725,7 @@ TEST(Interception, PatchableFunctionWithHotPatch) {
 }
 
 TEST(Interception, PatchableFunctionWithTrampoline) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithTrampoline;
   FunctionPrefixKind prefix = FunctionPrefixPadding;
 
@@ -734,6 +756,7 @@ TEST(Interception, PatchableFunctionWithTrampoline) {
 }
 
 TEST(Interception, UnsupportedInstructionWithTrampoline) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunctionWithTrampoline;
   FunctionPrefixKind prefix = FunctionPrefixPadding;
 
@@ -764,13 +787,14 @@ TEST(Interception, UnsupportedInstructionWithTrampoline) {
 
   SetErrorReportCallback(Local::Report);
   EXPECT_FALSE(TestFunctionPatching(kUnsupportedCode1, override, prefix));
-  SetErrorReportCallback(nullptr);
+  SetErrorReportCallback(DebugOutputPrinter::Report);
 
   if (!reportCalled)
     ADD_FAILURE() << "Report not called";
 }
 
 TEST(Interception, PatchableFunctionPadding) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   TestOverrideFunction override = OverrideFunction;
   FunctionPrefixKind prefix = FunctionPrefixPadding;
 
@@ -1065,6 +1089,7 @@ std::string dumpInstruction(unsigned arrayIndex,
 }
 
 TEST(Interception, GetInstructionSize) {
+  SetErrorReportCallback(DebugOutputPrinter::Report);
   for (unsigned i = 0; i < sizeof(data) / sizeof(*data); i++) {
     size_t rel_offset = ~0L;
     size_t size = __interception::TestOnlyGetInstructionSize(
