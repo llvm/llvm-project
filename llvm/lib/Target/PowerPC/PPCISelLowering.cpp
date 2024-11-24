@@ -19166,20 +19166,3 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   return Builder.CreateOr(
       Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
 }
-
-bool PPCTargetLowering::isDesirableToCommuteWithShift(
-    const SDNode *N, CombineLevel Level) const {
-  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
-          N->getOpcode() == ISD::SRL) &&
-         "Expected shift op");
-
-  SDValue ShiftLHS = N->getOperand(0);
-  if (!ShiftLHS->hasOneUse())
-    return false;
-
-  if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
-      !ShiftLHS.getOperand(0)->hasOneUse())
-    return false;
-
-  return true;
-}

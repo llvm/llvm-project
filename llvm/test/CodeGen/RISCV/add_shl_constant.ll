@@ -40,9 +40,9 @@ define void @add_shl_moreOneUse_inStore_addexceedsign12(ptr %array1, i32 %a, i32
 ; RV32-LABEL: add_shl_moreOneUse_inStore_addexceedsign12:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi a3, a1, 2047
-; RV32-NEXT:    addi a3, a3, 1
 ; RV32-NEXT:    lui a4, 2
 ; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    addi a3, a3, 1
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a0, a4
 ; RV32-NEXT:    sw a2, 0(a0)
