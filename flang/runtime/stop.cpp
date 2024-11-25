@@ -15,6 +15,7 @@
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+#include <execinfo.h>
 
 extern "C" {
 
@@ -152,10 +153,28 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
   std::exit(status);
 }
 
+static void PrintBacktrace() {
+  // TODO: Need to parse DWARF information to print function line numbers
+  const int MAX_CALL_STACK = 999;
+  void *buffer[MAX_CALL_STACK];
+  int nptrs = backtrace(buffer, MAX_CALL_STACK);
+  char **symbols = backtrace_symbols(buffer, nptrs);
+  if (symbols == nullptr) {
+    Fortran::runtime::Terminator{}.Crash("no symbols");
+    std::exit(EXIT_FAILURE);
+  }
+  for (int i = 0; i < nptrs; i++) {
+    Fortran::runtime::Terminator{}.PrintCrashArgs("#%d %s\n", i, symbols[i]);
+  }
+  free(symbols);
+}
+
 [[noreturn]] void RTNAME(Abort)() {
-  // TODO: Add backtrace call, unless with `-fno-backtrace`.
+  PrintBacktrace();
   std::abort();
 }
+
+void RTNAME(Backtrace)() { PrintBacktrace(); }
 
 [[noreturn]] void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {
