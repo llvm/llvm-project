@@ -195,7 +195,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       const int64_t FixedOffset = NumOfVReg * VLENB;
       if (!isInt<32>(FixedOffset)) {
         report_fatal_error(
-          "Frame size outside of the signed 32-bit range not supported");
+            "Frame size outside of the signed 32-bit range not supported");
       }
       Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
     }
