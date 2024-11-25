@@ -2491,7 +2491,6 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
     if (!CI.isUserClass())
       continue;
 
-    OS << "  // '" << CI.ClassName << "' class\n";
     OS << "  case " << CI.Name << ": {\n";
     OS << "    DiagnosticPredicate DP(Operand." << CI.PredicateMethod
        << "());\n";
