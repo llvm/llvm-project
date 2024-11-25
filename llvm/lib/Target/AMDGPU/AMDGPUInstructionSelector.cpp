@@ -5742,6 +5742,18 @@ void AMDGPUInstructionSelector::renderRoundMode(MachineInstrBuilder &MIB,
   MIB.addImm((MI.getOperand(OpIdx).getImm() + 3) % 4);
 }
 
+/// Convert from 2-bit value to enum values used for op_sel* source modifiers.
+void AMDGPUInstructionSelector::renderScaledMAIIntrinsicOperand(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  unsigned Val = MI.getOperand(OpIdx).getImm();
+  unsigned New = 0;
+  if (Val & 0x1)
+    New |= SISrcMods::OP_SEL_0;
+  if (Val & 0x2)
+    New |= SISrcMods::OP_SEL_1;
+  MIB.addImm(New);
+}
+
 bool AMDGPUInstructionSelector::isInlineImmediate(const APInt &Imm) const {
   return TII.isInlineConstant(Imm);
 }
