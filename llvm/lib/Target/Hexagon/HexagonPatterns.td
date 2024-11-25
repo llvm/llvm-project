@@ -171,7 +171,7 @@ class IsUGT<int Width, int Arg>: PatLeaf<(i32 imm),
 
 def SDEC1: SDNodeXForm<imm, [{
   int32_t V = N->getSExtValue();
-  return CurDAG->getTargetConstant(V-1, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(V-1, SDLoc(N), MVT::i32);
 }]>;
 
 def UDEC1: SDNodeXForm<imm, [{
@@ -388,12 +388,12 @@ def Uitofp: pf1<uint_to_fp>;
 //
 
 def Imm64Lo: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int32_t (N->getSExtValue()),
-                                   SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(int32_t(N->getSExtValue()),
+                                         SDLoc(N), MVT::i32);
 }]>;
 def Imm64Hi: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int32_t (N->getSExtValue()>>32),
-                                   SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(int32_t(N->getSExtValue()>>32),
+                                         SDLoc(N), MVT::i32);
 }]>;
 
 
@@ -406,7 +406,7 @@ def HexagonCONST32:     SDNode<"HexagonISD::CONST32",     SDTHexagonCONST32>;
 def HexagonCONST32_GP:  SDNode<"HexagonISD::CONST32_GP",  SDTHexagonCONST32>;
 
 def TruncI64ToI32: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def: Pat<(s32_0ImmPred:$s16), (A2_tfrsi imm:$s16)>;
@@ -2597,14 +2597,14 @@ def IMM_BYTE : SDNodeXForm<imm, [{
   // -1 can be represented as 255, etc.
   // assigning to a byte restores our desired signed value.
   int8_t imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(imm, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(imm, SDLoc(N), MVT::i32);
 }]>;
 
 def IMM_HALF : SDNodeXForm<imm, [{
   // -1 can be represented as 65535, etc.
   // assigning to a short restores our desired signed value.
   int16_t imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(imm, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(imm, SDLoc(N), MVT::i32);
 }]>;
 
 def IMM_WORD : SDNodeXForm<imm, [{
@@ -2613,7 +2613,7 @@ def IMM_WORD : SDNodeXForm<imm, [{
   // might convert -1 to a large +ve number.
   // assigning to a word restores our desired signed value.
   int32_t imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(imm, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(imm, SDLoc(N), MVT::i32);
 }]>;
 
 def ToImmByte : OutPatFrag<(ops node:$R), (IMM_BYTE $R)>;
