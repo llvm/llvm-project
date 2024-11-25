@@ -117,7 +117,8 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
 }
 
 /// Returns true if we can prove that the object specified by V is smaller than
-/// Size.
+/// Size. Bails out early unless the root object is passed as the first
+/// parameter.
 static bool isObjectSmallerThan(const Value *V, TypeSize Size,
                                 const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
@@ -134,20 +135,14 @@ static bool isObjectSmallerThan(const Value *V, TypeSize Size,
   //     char *p = (char*)malloc(100)
   //     char *q = p+80;
   //
-  //  In the context of c1 and c2, the "object" pointed by q refers to the
+  // In the context of c1 and c2, the "object" pointed by q refers to the
   // stretch of memory of q[0:19]. So, getObjectSize(q) should return 20.
   //
-  //  However, in the context of c3, the "object" refers to the chunk of memory
-  // being allocated. So, the "object" has 100 bytes, and q points to the middle
-  // the "object". In case q is passed to isObjectSmallerThan() as the 1st
-  // parameter, before the llvm::getObjectSize() is called to get the size of
-  // entire object, we should:
-  //    - either rewind the pointer q to the base-address of the object in
-  //      question (in this case rewind to p), or
-  //    - just give up. It is up to caller to make sure the pointer is pointing
-  //      to the base address the object.
-  //
-  // We go for 2nd option for simplicity.
+  // In the context of c3, the "object" refers to the chunk of memory being
+  // allocated. So, the "object" has 100 bytes, and q points to the middle the
+  // "object". However, unless p, the root object, is passed as the first
+  // parameter, the call to isIdentifiedObject() makes isObjectSmallerThan()
+  // bail out early.
   if (!isIdentifiedObject(V))
     return false;
 
@@ -196,13 +191,14 @@ static bool areBothVScale(const Value *V1, const Value *V2) {
 }
 
 //===----------------------------------------------------------------------===//
-// CaptureInfo implementations
+// CaptureAnalysis implementations
 //===----------------------------------------------------------------------===//
 
-CaptureInfo::~CaptureInfo() = default;
+CaptureAnalysis::~CaptureAnalysis() = default;
 
-bool SimpleCaptureInfo::isNotCapturedBefore(const Value *Object,
-                                            const Instruction *I, bool OrAt) {
+bool SimpleCaptureAnalysis::isNotCapturedBefore(const Value *Object,
+                                                const Instruction *I,
+                                                bool OrAt) {
   return isNonEscapingLocalObject(Object, &IsCapturedCache);
 }
 
@@ -214,8 +210,9 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
          !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
-bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
-                                             const Instruction *I, bool OrAt) {
+bool EarliestEscapeAnalysis::isNotCapturedBefore(const Value *Object,
+                                                 const Instruction *I,
+                                                 bool OrAt) {
   if (!isIdentifiedFunctionLocal(Object))
     return false;
 
@@ -224,10 +221,8 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
     Instruction *EarliestCapture = FindEarliestCapture(
         Object, *const_cast<Function *>(DT.getRoot()->getParent()),
         /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
-    if (EarliestCapture) {
-      auto Ins = Inst2Obj.insert({EarliestCapture, {}});
-      Ins.first->second.push_back(Object);
-    }
+    if (EarliestCapture)
+      Inst2Obj[EarliestCapture].push_back(Object);
     Iter.first->second = EarliestCapture;
   }
 
@@ -248,7 +243,7 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   return !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
 }
 
-void EarliestEscapeInfo::removeInstruction(Instruction *I) {
+void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   auto Iter = Inst2Obj.find(I);
   if (Iter != Inst2Obj.end()) {
     for (const Value *Obj : Iter->second)
@@ -953,7 +948,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // Make sure the object has not escaped here, and then check that none of the
   // call arguments alias the object below.
   if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CI->isNotCapturedBefore(Object, Call, /*OrAt*/ false)) {
+      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false)) {
 
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
@@ -1628,10 +1623,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) && AAQI.CI->isNotCapturedBefore(
+    if (isEscapeSource(O1) && AAQI.CA->isNotCapturedBefore(
                                   O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) && AAQI.CI->isNotCapturedBefore(
+    if (isEscapeSource(O2) && AAQI.CA->isNotCapturedBefore(
                                   O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
       return AliasResult::NoAlias;
   }

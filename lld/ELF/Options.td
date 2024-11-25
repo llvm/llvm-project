@@ -720,7 +720,7 @@ def: J<"plugin-opt=opt-remarks-format=">,
   HelpText<"Alias for --opt-remarks-format">;
 def: F<"plugin-opt=opt-remarks-with-hotness">,
   Alias<opt_remarks_with_hotness>,
-  HelpText<"Alias for --opt-remarks-with_hotness">;
+  HelpText<"Alias for --opt-remarks-with-hotness">;
 def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
   Alias<opt_remarks_hotness_threshold>,
   HelpText<"Alias for --opt-remarks-hotness-threshold">;

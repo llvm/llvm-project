@@ -53,7 +53,6 @@
 ! CHECK:                 %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_18]], %[[VAL_19]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_14]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 
 ! CHECK-LABEL:   func.func @_QPreduction_min_real(
@@ -85,7 +84,6 @@
 ! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_14]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           omp.parallel {
@@ -112,7 +110,6 @@
 ! CHECK:                   hlfir.assign %[[VAL_47]] to %[[VAL_37]]#0 : f32, !fir.ref<f32>
 ! CHECK:                 }
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 
 

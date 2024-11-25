@@ -13,8 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyTargetTransformInfo.h"
-#include "llvm/CodeGen/CostTable.h"
-#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasmtti"
@@ -153,4 +151,28 @@ void WebAssemblyTTIImpl::getUnrollingPreferences(
 
 bool WebAssemblyTTIImpl::supportsTailCalls() const {
   return getST()->hasTailCall();
+}
+
+bool WebAssemblyTTIImpl::isProfitableToSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  using namespace llvm::PatternMatch;
+
+  if (!I->getType()->isVectorTy() || !I->isShift())
+    return false;
+
+  Value *V = I->getOperand(1);
+  // We dont need to sink constant splat.
+  if (dyn_cast<Constant>(V))
+    return false;
+
+  if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+                         m_Value(), m_ZeroMask()))) {
+    // Sink insert
+    Ops.push_back(&cast<Instruction>(V)->getOperandUse(0));
+    // Sink shuffle
+    Ops.push_back(&I->getOperandUse(1));
+    return true;
+  }
+
+  return false;
 }

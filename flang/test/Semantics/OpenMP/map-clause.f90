@@ -33,3 +33,11 @@ subroutine sb(arr)
    c = 2
  !$omp end target
 end subroutine
+
+subroutine sb1
+  integer :: xx
+  integer :: a
+  !ERROR: Name 'xx' should be a mapper name
+  !$omp target map(mapper(xx), from:a)
+  !$omp end target
+end subroutine sb1

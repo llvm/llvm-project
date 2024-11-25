@@ -38,6 +38,12 @@ svfloat32_t good6(svfloat32_t a, svfloat32_t b, svfloat32_t c) __arm_streaming_c
   return svclamp(a, b, c);
 }
 
+// Test that the +sve-b16b16 is not considered an SVE flag (it applies to both)
+__attribute__((target("+sme2,+sve2,+sve-b16b16")))
+svbfloat16_t good7(svbfloat16_t a, svbfloat16_t b, svbfloat16_t c) __arm_streaming {
+    return svclamp_bf16(a, b, c);
+}
+
 // Without '+sme2', the builtin is only valid in non-streaming mode.
 __attribute__((target("+sve2p1,+sme")))
 svfloat32_t bad1(svfloat32_t a, svfloat32_t b, svfloat32_t c) __arm_streaming {

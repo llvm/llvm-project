@@ -51,7 +51,6 @@
 ! CHECK:                 %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
 ! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -101,7 +100,6 @@ end subroutine
 ! CHECK:                 %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
 ! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -147,7 +145,7 @@ end subroutine
 ! CHECK:             %[[VAL_20:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_21:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(@neqv_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.logical<4>>, @neqv_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]] : !fir.ref<!fir.logical<4>>, @neqv_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK:             omp.wsloop reduction(@neqv_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]], @neqv_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]], @neqv_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_26:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
 ! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
@@ -184,7 +182,6 @@ end subroutine
 ! CHECK:                 %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (i1) -> !fir.logical<4>
 ! CHECK:                 hlfir.assign %[[VAL_56]] to %[[VAL_29]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 ! CHECK:         }

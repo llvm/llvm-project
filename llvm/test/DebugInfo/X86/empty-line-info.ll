@@ -9,7 +9,9 @@
 ; OPTS-LABEL: foo:
 ; OPTS-NEXT:   .Lfunc_begin0:
 ; OPTS-NEXT:   .file   0 "." "foobar.c"
-; OPTS-NEXT:   .loc    0 1 0
+; OPTS-NEXT:   .cfi_startproc
+; OPTS-NEXT:   # %bb.0:
+; OPTS-NEXT:   .loc    0 1 0 prologue_end
 ; OPTS-LABEL: bar:
 
 define dso_local noundef i32 @foo(ptr nocapture noundef writeonly %bar) local_unnamed_addr !dbg !10 {
@@ -19,18 +21,17 @@ entry:
 }
 
 ;; In a function with no source location, but multiple blocks, there will be
-;; an opening scope-line, but it'll be automagically terminated when we switch
-;; to a new block. Test for this behaviour, and preserve the unconditional
-;; branch by compiling -O0.
+;; an opening scope-line. Test for this behaviour, and preserve the
+;; unconditional branch by compiling -O0.
 
 ; UNOPT-LABEL: bar:
 ; UNOPT-NEXT:   .Lfunc_begin1:
-; UNOPT-NEXT:   .loc    0 11 0
+; UNOPT-NEXT:   .cfi_startproc
 ; UNOPT-LABEL: %bb.0:
+; UNOPT-NEXT:   .loc    0 11 0 prologue_end
 ; UNOPT-NEXT:    movq    %rdi, -8(%rsp)
 ; UNOPT-NEXT:    jmp     .LBB1_1
 ; UNOPT-LABEL: .LBB1_1:
-; UNOPT-NEXT:    .loc    1 0 0 is_stmt 0
 ; UNOPT-NEXT:    movq    -8(%rsp), %rax
 
 define dso_local noundef i32 @bar(ptr nocapture noundef writeonly %baz) local_unnamed_addr !dbg !20 {

@@ -117,7 +117,7 @@ endprogram
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_17:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(@add_reduction_f64 %[[VAL_8]]#0 -> %[[VAL_18:.*]] : !fir.ref<f64>, byref @add_reduction_byref_box_3x3xf64 %[[VAL_12]] -> %[[VAL_19:.*]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>) {
+! CHECK:             omp.wsloop reduction(@add_reduction_f64 %[[VAL_8]]#0 -> %[[VAL_18:.*]], byref @add_reduction_byref_box_3x3xf64 %[[VAL_12]] -> %[[VAL_19:.*]] : !fir.ref<f64>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>) {
 ! CHECK:               omp.loop_nest (%[[VAL_20:.*]]) : i32 = (%[[VAL_15]]) to (%[[VAL_16]]) inclusive step (%[[VAL_17]]) {
 ! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEscalar"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFEarray"} : (!fir.ref<!fir.box<!fir.array<3x3xf64>>>) -> (!fir.ref<!fir.box<!fir.array<3x3xf64>>>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
@@ -154,7 +154,6 @@ endprogram
 ! CHECK:                 hlfir.assign %[[VAL_44]] to %[[VAL_48]] : f64, !fir.ref<f64>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

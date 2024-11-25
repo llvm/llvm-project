@@ -9,15 +9,11 @@
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/StringSaver.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -83,7 +79,7 @@ namespace llvm::omp {
 ArrayRef<Directive> getLeafConstructs(Directive D) {
   auto Idx = static_cast<std::size_t>(D);
   if (Idx >= Directive_enumSize)
-    return std::nullopt;
+    return {};
   const auto *Row = LeafConstructTable[LeafConstructTableOrdering[Idx]];
   return ArrayRef(&Row[2], static_cast<int>(Row[1]));
 }
@@ -191,6 +187,11 @@ bool isCombinedConstruct(Directive D) {
   // OpenMP Spec 5.2: [17.3, 9-10]
   // Otherwise directive-name is a combined construct.
   return !getLeafConstructs(D).empty() && !isCompositeConstruct(D);
+}
+
+ArrayRef<unsigned> getOpenMPVersions() {
+  static unsigned Versions[]{45, 50, 51, 52, 60};
+  return Versions;
 }
 
 std::string prettifyFunctionName(StringRef FunctionName) {

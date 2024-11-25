@@ -23,10 +23,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/Support/TrailingObjects.h"
 #include <algorithm>
-#include <string>
-#include <utility>
 
 using namespace clang;
 

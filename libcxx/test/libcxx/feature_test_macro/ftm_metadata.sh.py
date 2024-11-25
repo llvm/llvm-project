@@ -29,8 +29,8 @@ test(
         },
         "__cpp_lib_barrier": {
             "headers": ["barrier"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         "__cpp_lib_format": {
             "headers": ["format"],
@@ -44,6 +44,11 @@ test(
         },
         "__cpp_lib_variant": {
             "headers": ["variant"],
+            "test_suite_guard": None,
+            "libcxx_guard": None,
+        },
+        "__cpp_lib_missing_FTM_in_older_standard": {
+            "headers": [],
             "test_suite_guard": None,
             "libcxx_guard": None,
         },

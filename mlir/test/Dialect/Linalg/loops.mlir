@@ -254,8 +254,6 @@ func.func @copy_view(%arg0: memref<?xf32, strided<[1], offset: ?>>, %arg1: memre
   affine_map<(i, j, k) -> (i, k, j)>
 ]
 #trait2 = {
-  args_in = 1,
-  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",
@@ -296,8 +294,6 @@ func.func @generic_region(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?>>, %a
 //       CHECKPARALLEL:   store %[[e]], %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>
 
 #trait4 = {
-  args_in = 1,
-  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",
@@ -366,8 +362,6 @@ func.func @generic_index_region(
 ]
 
 #trait_broadcast = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #broadcast_access,
   iterator_types = ["parallel", "parallel"],
   library_call = "some_broadcast_external_fn"
@@ -466,8 +460,6 @@ func.func @generic_index_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>
 ]
 
 #trait_reduce_1D = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #reduce_1D_access,
   iterator_types = ["reduction"],
   library_call = "some_reduce_external_fn"
@@ -510,8 +502,6 @@ func.func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
 ]
 
 #trait_reduce_init_1D = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = #reduce_init_1D_access,
   iterator_types = ["reduction"],
   library_call = "some_reduce_external_fn"
@@ -559,8 +549,6 @@ func.func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECKPARALLEL:   store %[[e]], %[[ARG2]][]
 
 #trait_const_fill = {
-  args_in = 0,
-  args_out = 1,
   indexing_maps = [affine_map<(i) -> (i)>],
   iterator_types = ["parallel"],
   library_call = "some_external_fn"
@@ -591,8 +579,6 @@ func.func @generic_const_init(%arg0: memref<?xf32>) {
   affine_map<() -> ()>
 ]
 #scalar_trait = {
-  args_in = 2,
-  args_out = 1,
   iterator_types = [],
   indexing_maps = #scalar_access,
   library_call = "some_external_fn"

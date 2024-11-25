@@ -26,6 +26,7 @@
 ; CHECK-NEXT:       Expand large div/rem
 ; CHECK-NEXT:       Expand large fp convert
 ; CHECK-NEXT:       Expand Atomic instructions
+; CHECK-NEXT:       RISC-V Zacas ABI fix 
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Canonicalize natural loops
@@ -67,13 +68,13 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       TLS Variable Hoist
 ; CHECK-NEXT:       Type Promotion
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:     A No-Op Barrier Pass
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Merge internal globals
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
@@ -195,6 +196,7 @@
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:     Machine Outliner
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Insert CFI remember/restore state instructions
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Stack Frame Layout Analysis

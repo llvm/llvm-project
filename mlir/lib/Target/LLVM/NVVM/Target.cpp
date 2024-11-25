@@ -30,6 +30,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
 
@@ -85,7 +86,11 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, NVVMTargetAttr target,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO()),
+                     target.getFeatures(), target.getO(),
+                     targetOptions.getInitialLlvmIRCallback(),
+                     targetOptions.getLinkedLlvmIRCallback(),
+                     targetOptions.getOptimizedLlvmIRCallback(),
+                     targetOptions.getISACallback()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       fileList(targetOptions.getLinkFiles()) {
 
@@ -401,6 +406,26 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
                                 /*MemoryLimit=*/0,
                                 /*ErrMsg=*/&message))
     return emitLogError("`ptxas`");
+#define DEBUG_TYPE "dump-sass"
+  LLVM_DEBUG({
+    std::optional<std::string> nvdisasm = findTool("nvdisasm");
+    SmallVector<StringRef> nvdisasmArgs(
+        {StringRef("nvdisasm"), StringRef(cubinFile.first)});
+    if (llvm::sys::ExecuteAndWait(nvdisasm.value(), nvdisasmArgs,
+                                  /*Env=*/std::nullopt,
+                                  /*Redirects=*/redirects,
+                                  /*SecondsToWait=*/0,
+                                  /*MemoryLimit=*/0,
+                                  /*ErrMsg=*/&message))
+      return emitLogError("`nvdisasm`");
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
+      llvm::dbgs().flush();
+    }
+  });
+#undef DEBUG_TYPE
 
   // Invoke `fatbin`.
   message.clear();
@@ -551,6 +576,9 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;
   }
+  if (isaCallback)
+    isaCallback(serializedISA.value());
+
 #define DEBUG_TYPE "serialize-to-isa"
   LLVM_DEBUG({
     llvm::dbgs() << "PTX for module: " << getOperation().getNameAttr() << "\n";

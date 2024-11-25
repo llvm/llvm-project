@@ -74,7 +74,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -1338,12 +1337,8 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
 void SlotTracker::CreateAttributeSetSlot(AttributeSet AS) {
   assert(AS.hasAttributes() && "Doesn't need a slot!");
 
-  as_iterator I = asMap.find(AS);
-  if (I != asMap.end())
-    return;
-
-  unsigned DestSlot = asNext++;
-  asMap[AS] = DestSlot;
+  if (asMap.try_emplace(AS, asNext).second)
+    ++asNext;
 }
 
 /// Create a new slot for the specified Module
@@ -1437,6 +1432,9 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
       Out << " nuw";
     if (TI->hasNoSignedWrap())
       Out << " nsw";
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(U)) {
+    if (ICmp->hasSameSign())
+      Out << " samesign";
   }
 }
 
@@ -1691,6 +1689,23 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
     auto *CVVTy = cast<FixedVectorType>(CV->getType());
     Type *ETy = CVVTy->getElementType();
+
+    // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
+    // permitted on IR input to reduce the output changes when enabling
+    // UseConstant{Int,FP}ForFixedLengthSplat.
+    // TODO: Remove this block when the UseConstant{Int,FP}ForFixedLengthSplat
+    // options are removed.
+    if (auto *SplatVal = CV->getSplatValue()) {
+      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+        Out << "splat (";
+        WriterCtx.TypePrinter->print(ETy, Out);
+        Out << ' ';
+        WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+        Out << ')';
+        return;
+      }
+    }
+
     Out << '<';
     WriterCtx.TypePrinter->print(ETy, Out);
     Out << ' ';
@@ -1726,6 +1741,24 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
+    // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
+    // permitted on IR input to reduce the output changes when enabling
+    // UseConstant{Int,FP}ForScalableSplat.
+    // TODO: Remove this block when the UseConstant{Int,FP}ForScalableSplat
+    // options are removed.
+    if (CE->getOpcode() == Instruction::ShuffleVector) {
+      if (auto *SplatVal = CE->getSplatValue()) {
+        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+          Out << "splat (";
+          WriterCtx.TypePrinter->print(SplatVal->getType(), Out);
+          Out << ' ';
+          WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+          Out << ')';
+          return;
+        }
+      }
+    }
+
     Out << CE->getOpcodeName();
     WriteOptimizationInfo(Out, CE);
     Out << " (";
@@ -2133,6 +2166,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
@@ -2201,6 +2235,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printInt("size", N->getSizeInBits());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("offset", N->getOffsetInBits());
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("elements", N->getRawElements());
   Printer.printDwarfEnum("runtimeLang", N->getRuntimeLang(),
@@ -2218,6 +2253,8 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   else
     Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto *Specification = N->getRawSpecification())
+    Printer.printMetadata("specification", Specification);
   Out << ")";
 }
 
@@ -3613,7 +3650,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
 
 void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
   Out << "^" << Slot << " = gv: (";
-  if (!VI.name().empty())
+  if (VI.hasName() && !VI.name().empty())
     Out << "name: \"" << VI.name() << "\"";
   else
     Out << "guid: " << VI.getGUID();
@@ -3627,7 +3664,7 @@ void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
     Out << ")";
   }
   Out << ")";
-  if (!VI.name().empty())
+  if (VI.hasName() && !VI.name().empty())
     Out << " ; guid = " << VI.getGUID();
   Out << "\n";
 }
@@ -4662,7 +4699,6 @@ void AssemblyWriter::printDbgMarker(const DbgMarker &Marker) {
   Out << "  DbgMarker -> { ";
   printInstruction(*Marker.MarkedInstr);
   Out << " }";
-  return;
 }
 
 void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {

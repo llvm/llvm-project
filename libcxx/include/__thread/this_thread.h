@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace this_thread {
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
 
 _LIBCPP_EXPORTED_FROM_ABI void sleep_for(const chrono::nanoseconds& __ns);
 
@@ -68,7 +68,7 @@ inline _LIBCPP_HIDE_FROM_ABI void sleep_until(const chrono::time_point<chrono::s
 
 inline _LIBCPP_HIDE_FROM_ABI void yield() _NOEXCEPT { __libcpp_thread_yield(); }
 
-#endif // !_LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 
 } // namespace this_thread
 

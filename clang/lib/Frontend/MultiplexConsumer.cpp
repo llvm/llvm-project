@@ -298,6 +298,13 @@ MultiplexConsumer::MultiplexConsumer(
   }
 }
 
+MultiplexConsumer::MultiplexConsumer(std::unique_ptr<ASTConsumer> C)
+    : MultiplexConsumer([](std::unique_ptr<ASTConsumer> Consumer) {
+        std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+        Consumers.push_back(std::move(Consumer));
+        return Consumers;
+      }(std::move(C))) {}
+
 MultiplexConsumer::~MultiplexConsumer() {}
 
 void MultiplexConsumer::Initialize(ASTContext &Context) {

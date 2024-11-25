@@ -152,7 +152,15 @@ bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
-bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
+/// \p TTI is used to consider target specific intrinsics, if no target specific
+/// intrinsics will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
+                                            const TargetTransformInfo *TTI);
+
+/// Identifies if the vector form of the intrinsic that returns a struct is
+/// overloaded at the struct element index \p RetIdx.
+bool isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                      int RetIdx);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns

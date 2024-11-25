@@ -45,6 +45,7 @@
 // CHECK-NEXT:     FEAT_SB                                                Enable Armv8.5-A Speculation Barrier
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
+// CHECK-NEXT:     FEAT_SPEv1p2                                           Enable extra register in the Statistical Profiling Extension
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension

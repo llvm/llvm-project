@@ -16,7 +16,6 @@
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -401,7 +400,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     assert(Builder.GetInsertPoint() != BB->end() &&
            "Cannot get the probing point");
     Function *ProbeFn =
-        llvm::Intrinsic::getDeclaration(M, Intrinsic::pseudoprobe);
+        llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::pseudoprobe);
     Value *Args[] = {Builder.getInt64(Guid), Builder.getInt64(Index),
                      Builder.getInt32(0),
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
@@ -380,7 +380,7 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
 
   LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
-    Value sliceInput = sliceOp.getInput();
+    Value sliceInput = sliceOp.getInput1();
     auto concatOp = sliceInput.getDefiningOp<tosa::ConcatOp>();
     if (!concatOp)
       return rewriter.notifyMatchFailure(
@@ -878,8 +878,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
 OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
   // If the pad is all zeros we can fold this operation away.
   if (adaptor.getPadding() && getInput1().getType() == getType()) {
-    auto densePad = llvm::cast<DenseElementsAttr>(adaptor.getPadding());
-    if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
+    auto densePad = llvm::dyn_cast<DenseElementsAttr>(adaptor.getPadding());
+    if (densePad && densePad.isSplat() &&
+        densePad.getSplatValue<APInt>().isZero()) {
       return getInput1();
     }
   }
@@ -919,11 +920,11 @@ OpFoldResult ResizeOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
-  auto operand = getInput();
+  auto operand = getInput1();
   auto operandTy = llvm::cast<ShapedType>(operand.getType());
   auto axis = getAxis();
   auto operandAttr =
-      llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getInput());
+      llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getInput1());
   if (operandAttr)
     return operandAttr;
 
@@ -936,16 +937,16 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
-  auto inputTy = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  auto inputTy = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
   auto outputTy = llvm::dyn_cast<RankedTensorType>(getType());
 
   if (!inputTy || !outputTy)
     return {};
 
   if (inputTy == outputTy && inputTy.hasStaticShape())
-    return getInput();
+    return getInput1();
 
-  if (!adaptor.getInput())
+  if (!adaptor.getInput1())
     return {};
 
   // Cannot create an ElementsAttr from non-int/float/index types
@@ -953,7 +954,7 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
       !outputTy.getElementType().isIntOrIndexOrFloat())
     return {};
 
-  auto operand = llvm::cast<ElementsAttr>(adaptor.getInput());
+  auto operand = llvm::cast<ElementsAttr>(adaptor.getInput1());
   if (operand.isSplat() && outputTy.hasStaticShape()) {
     return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
   }

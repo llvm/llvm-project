@@ -12,14 +12,12 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
@@ -556,12 +554,13 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     return false;
 
   const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
-  const MCSymbol &SA = A->getSymbol();
+  const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
   if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
     return false;
 
-  bool IsResolved = Asm.getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-      Asm, SA, *AUIPCDF, false, true);
+  bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&
+                    SA.getBinding() == ELF::STB_LOCAL &&
+                    SA.getType() != ELF::STT_GNU_IFUNC;
   if (!IsResolved)
     return false;
 

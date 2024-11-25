@@ -13,9 +13,6 @@
 #include "CodeGenModule.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Constants.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -27,7 +24,7 @@ static bool isAsanHwasanOrMemTag(const SanitizerSet &SS) {
                      SanitizerKind::HWAddress | SanitizerKind::MemTag);
 }
 
-SanitizerMask expandKernelSanitizerMasks(SanitizerMask Mask) {
+static SanitizerMask expandKernelSanitizerMasks(SanitizerMask Mask) {
   if (Mask & (SanitizerKind::Address | SanitizerKind::KernelAddress))
     Mask |= SanitizerKind::Address | SanitizerKind::KernelAddress;
   // Note: KHWASan doesn't support globals.

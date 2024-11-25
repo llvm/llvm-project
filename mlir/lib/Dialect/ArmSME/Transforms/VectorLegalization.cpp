@@ -921,7 +921,7 @@ struct VectorLegalizationPass
     : public arm_sme::impl::VectorLegalizationBase<VectorLegalizationPass> {
   void runOnOperation() override {
     auto *context = &getContext();
-    OneToNTypeConverter converter;
+    TypeConverter converter;
     RewritePatternSet patterns(context);
     converter.addConversion([](Type type) { return type; });
     converter.addConversion(

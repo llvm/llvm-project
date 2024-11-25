@@ -51,9 +51,7 @@ CXString CXStoredDiagnostic::getSpelling() const {
 
 CXString CXStoredDiagnostic::getDiagnosticOption(CXString *Disable) const {
   unsigned ID = Diag.getID();
-  if (DiagnosticIDs::IsCustomDiag(ID))
-    return cxstring::createEmpty();
-  StringRef Option = DiagnosticIDs{}.getWarningOptionForDiag(ID);
+  StringRef Option = DiagnosticIDs::getWarningOptionForDiag(ID);
   if (!Option.empty()) {
     if (Disable)
       *Disable = cxstring::createDup((Twine("-Wno-") + Option).str());

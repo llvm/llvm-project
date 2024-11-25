@@ -347,34 +347,58 @@ OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
   return success();
 }
 
+ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
+                                          const Token &tok, bool isNegative,
+                                          const llvm::fltSemantics &semantics) {
+  // Check for a floating point value.
+  if (tok.is(Token::floatliteral)) {
+    auto val = tok.getFloatingPointValue();
+    if (!val)
+      return emitError(tok.getLoc()) << "floating point value too large";
+
+    result.emplace(isNegative ? -*val : *val);
+    bool unused;
+    result->convert(semantics, APFloat::rmNearestTiesToEven, &unused);
+    return success();
+  }
+
+  // Check for a hexadecimal float value.
+  if (tok.is(Token::integer))
+    return parseFloatFromIntegerLiteral(result, tok, isNegative, semantics);
+
+  return emitError(tok.getLoc()) << "expected floating point literal";
+}
+
 /// Parse a floating point value from an integer literal token.
-ParseResult Parser::parseFloatFromIntegerLiteral(
-    std::optional<APFloat> &result, const Token &tok, bool isNegative,
-    const llvm::fltSemantics &semantics, size_t typeSizeInBits) {
-  SMLoc loc = tok.getLoc();
+ParseResult
+Parser::parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
+                                     const Token &tok, bool isNegative,
+                                     const llvm::fltSemantics &semantics) {
   StringRef spelling = tok.getSpelling();
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (!isHex) {
-    return emitError(loc, "unexpected decimal integer literal for a "
-                          "floating point value")
+    return emitError(tok.getLoc(), "unexpected decimal integer literal for a "
+                                   "floating point value")
                .attachNote()
            << "add a trailing dot to make the literal a float";
   }
   if (isNegative) {
-    return emitError(loc, "hexadecimal float literal should not have a "
-                          "leading minus");
+    return emitError(tok.getLoc(),
+                     "hexadecimal float literal should not have a "
+                     "leading minus");
   }
 
   APInt intValue;
   tok.getSpelling().getAsInteger(isHex ? 0 : 10, intValue);
-  if (intValue.getActiveBits() > typeSizeInBits)
-    return emitError(loc, "hexadecimal float constant out of range for type");
+  auto typeSizeInBits = APFloat::semanticsSizeInBits(semantics);
+  if (intValue.getActiveBits() > typeSizeInBits) {
+    return emitError(tok.getLoc(),
+                     "hexadecimal float constant out of range for type");
+  }
 
   APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
                        intValue.getRawData());
-
   result.emplace(semantics, truncatedValue);
-
   return success();
 }
 
@@ -631,7 +655,8 @@ public:
 
   /// Parse a location alias, that is a sequence looking like: #loc42
   /// The alias may have already be defined or may be defined later, in which
-  /// case an OpaqueLoc is used a placeholder.
+  /// case an OpaqueLoc is used a placeholder. The caller must ensure that the
+  /// token is actually an alias, which means it must not contain a dot.
   ParseResult parseLocationAlias(LocationAttr &loc);
 
   /// This is the structure of a result specifier in the assembly syntax,
@@ -1917,9 +1942,11 @@ public:
 
     Token tok = parser.getToken();
 
-    // Check to see if we are parsing a location alias.
-    // Otherwise, we parse the location directly.
-    if (tok.is(Token::hash_identifier)) {
+    // Check to see if we are parsing a location alias. We are parsing a
+    // location alias if the token is a hash identifier *without* a dot in it -
+    // the dot signifies a dialect attribute. Otherwise, we parse the location
+    // directly.
+    if (tok.is(Token::hash_identifier) && !tok.getSpelling().contains('.')) {
       if (parser.parseLocationAlias(directLoc))
         return failure();
     } else if (parser.parseLocationInstance(directLoc)) {
@@ -2086,11 +2113,9 @@ ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
   Token tok = getToken();
   consumeToken(Token::hash_identifier);
   StringRef identifier = tok.getSpelling().drop_front();
-  if (identifier.contains('.')) {
-    return emitError(tok.getLoc())
-           << "expected location, but found dialect attribute: '#" << identifier
-           << "'";
-  }
+  assert(!identifier.contains('.') &&
+         "unexpected dialect attribute token, expected alias");
+
   if (state.asmState)
     state.asmState->addAttrAliasUses(identifier, tok.getLocRange());
 
@@ -2120,10 +2145,11 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
     return failure();
   Token tok = getToken();
 
-  // Check to see if we are parsing a location alias.
-  // Otherwise, we parse the location directly.
+  // Check to see if we are parsing a location alias. We are parsing a location
+  // alias if the token is a hash identifier *without* a dot in it - the dot
+  // signifies a dialect attribute. Otherwise, we parse the location directly.
   LocationAttr directLoc;
-  if (tok.is(Token::hash_identifier)) {
+  if (tok.is(Token::hash_identifier) && !tok.getSpelling().contains('.')) {
     if (parseLocationAlias(directLoc))
       return failure();
   } else if (parseLocationInstance(directLoc)) {

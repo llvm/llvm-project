@@ -23,7 +23,7 @@
 
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -x c++ -fsyntax-only -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10-BE
@@ -218,30 +218,30 @@ test_cmp() {
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpord_ps
 // CHECK: call <4 x float> @vec_abs(float vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @vec_abs(float vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_and(unsigned int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpord_ss
 // CHECK: call <4 x float> @vec_abs(float vector[4])
 // CHECK: call <4 x float> @vec_abs(float vector[4])
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_and(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @vec_sel(float vector[4], float vector[4], unsigned int vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 -1, i32 0, i32 0, i32 0>)
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpunord_ps
 // CHECK: call <4 x float> @vec_abs(float vector[4])
 // CHECK: call <4 x float> @vec_abs(float vector[4])
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
 // CHECK: call <4 x i32> @vec_or(unsigned int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpunord_ss
 // CHECK: call <4 x float> @vec_abs(float vector[4])
 // CHECK: call <4 x float> @vec_abs(float vector[4])
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
 // CHECK: call <4 x i32> @vec_or(unsigned int vector[4], unsigned int vector[4])
 // CHECK: call <4 x float> @vec_sel(float vector[4], float vector[4], unsigned int vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 -1, i32 0, i32 0, i32 0>)
 

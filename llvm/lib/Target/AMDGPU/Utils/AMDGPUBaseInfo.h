@@ -46,6 +46,7 @@ struct IsaVersion;
 /// within a generic family.
 namespace GenericVersion {
 static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX9_4 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
@@ -580,6 +581,18 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc);
 
+struct MFMA_F8F6F4_Info {
+  unsigned Opcode;
+  unsigned F8F8Opcode;
+  uint8_t NumRegsSrcA;
+  uint8_t NumRegsSrcB;
+};
+
+LLVM_READONLY
+const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
+                                                      unsigned BLGP,
+                                                      unsigned F8F8Opcode);
+
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
@@ -870,6 +883,8 @@ bool isInvalidSingleUseConsumerInst(unsigned Opc);
 LLVM_READONLY
 bool isInvalidSingleUseProducerInst(unsigned Opc);
 
+bool isDPMACCInstruction(unsigned Opc);
+
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
@@ -917,7 +932,8 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 ///
 /// \returns false if any error occurs.
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size);
+                                             unsigned Size,
+                                             unsigned DefaultVal = 0);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1314,18 +1330,18 @@ unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
 /// Is Reg - scalar register
-bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
+bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
 
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
-unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
+MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI);
 
 /// Convert hardware register \p Reg to a pseudo register
 LLVM_READNONE
-unsigned mc2PseudoReg(unsigned Reg);
+MCRegister mc2PseudoReg(MCRegister Reg);
 
 LLVM_READNONE
 bool isInlineValue(unsigned Reg);

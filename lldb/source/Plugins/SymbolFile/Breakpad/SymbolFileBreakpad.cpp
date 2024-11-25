@@ -255,7 +255,7 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
           section_sp, address - section_sp->GetFileAddress(), record->Size);
       // Use the CU's id because every CU has only one function inside.
       func_sp = std::make_shared<Function>(&comp_unit, id, 0, func_name,
-                                           nullptr, func_range);
+                                           nullptr, AddressRanges{func_range});
       comp_unit.AddFunction(func_sp);
     }
   }
@@ -614,7 +614,7 @@ bool SymbolFileBreakpad::ParseCFIUnwindRow(llvm::StringRef unwind_rules,
       row.GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
     } else if (const RegisterInfo *info =
                    ResolveRegisterOrRA(triple, resolver, lhs)) {
-      UnwindPlan::Row::RegisterLocation loc;
+      UnwindPlan::Row::AbstractRegisterLocation loc;
       loc.SetIsDWARFExpression(saved.data(), saved.size());
       row.SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
     } else
@@ -766,7 +766,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
     }
 
     llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*it->second);
-    UnwindPlan::Row::RegisterLocation loc;
+    UnwindPlan::Row::AbstractRegisterLocation loc;
     loc.SetIsDWARFExpression(saved.data(), saved.size());
     row_sp->SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
   }

@@ -1090,6 +1090,62 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
   ret <8 x i16> %shift
 }
 
+define <8 x i16> @constant_shift_v8i16_pairs(<8 x i16> %a) nounwind {
+; SSE-LABEL: constant_shift_v8i16_pairs:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [32,32,4,4,2,2,16,16]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: constant_shift_v8i16_pairs:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32,32,4,4,2,2,16,16]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: constant_shift_v8i16_pairs:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; XOP-LABEL: constant_shift_v8i16_pairs:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpshlw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512DQ-LABEL: constant_shift_v8i16_pairs:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: constant_shift_v8i16_pairs:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} xmm1 = [5,5,2,2,1,1,4,4]
+; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQVL-LABEL: constant_shift_v8i16_pairs:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512DQVL-NEXT:    retq
+;
+; AVX512BWVL-LABEL: constant_shift_v8i16_pairs:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BWVL-NEXT:    retq
+;
+; X86-SSE-LABEL: constant_shift_v8i16_pairs:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [32,32,4,4,2,2,16,16]
+; X86-SSE-NEXT:    retl
+  %shift = shl <8 x i16> %a, <i16 5, i16 5, i16 2, i16 2, i16 1, i16 1, i16 4, i16 4>
+  ret <8 x i16> %shift
+}
+
 define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: constant_shift_v16i8:
 ; SSE2:       # %bb.0:
@@ -1239,6 +1295,51 @@ define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
   %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 7, i8 7, i8 6, i8 6, i8 2, i8 2, i8 7, i8 7, i8 0, i8 0, i8 7, i8 7, i8 1, i8 1>
+  ret <16 x i8> %shift
+}
+
+define <16 x i8> @constant_shift_v16i8_quads(<16 x i8> %a) nounwind {
+; SSE-LABEL: constant_shift_v16i8_quads:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,4,8,8,1,1,2,2]
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: constant_shift_v16i8_quads:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,4,8,8,1,1,2,2]
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: constant_shift_v16i8_quads:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; XOP-LABEL: constant_shift_v16i8_quads:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpshlb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: constant_shift_v16i8_quads:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: constant_shift_v16i8_quads:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; X86-SSE-LABEL: constant_shift_v16i8_quads:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,4,8,8,1,1,2,2]
+; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    retl
+  %shift = shl <16 x i8> %a, <i8 2, i8 2, i8 2, i8 2, i8 3, i8 3, i8 3, i8 3, i8 0, i8 0, i8 0, i8 0, i8 1, i8 1, i8 1, i8 1>
   ret <16 x i8> %shift
 }
 

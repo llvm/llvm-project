@@ -422,7 +422,7 @@ define <2 x float> @basic_fract_v2f32_nonans(<2 x float> nofpclass(nan) %x) {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x float> @llvm.floor.v2f32(<2 x float> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x float> [[X]], [[FLOOR]]
-; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x float> @llvm.minnum.v2f32(<2 x float> [[SUB]], <2 x float> <float 0x3FEFFFFFE0000000, float 0x3FEFFFFFE0000000>)
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x float> @llvm.minnum.v2f32(<2 x float> [[SUB]], <2 x float> splat (float 0x3FEFFFFFE0000000))
 ; GFX6-IR-NEXT:    ret <2 x float> [[MIN]]
 ;
 ; IR-FRACT-LABEL: define <2 x float> @basic_fract_v2f32_nonans
@@ -1244,7 +1244,7 @@ define <2 x half> @basic_fract_v2f16_nonan(<2 x half> nofpclass(nan) %x) {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x half> @llvm.floor.v2f16(<2 x half> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[X]], [[FLOOR]]
-; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> <half 0xH3BFF, half 0xH3BFF>)
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> splat (half 0xH3BFF))
 ; GFX6-IR-NEXT:    ret <2 x half> [[MIN]]
 ;
 ; GFX7-IR-LABEL: define <2 x half> @basic_fract_v2f16_nonan
@@ -1252,7 +1252,7 @@ define <2 x half> @basic_fract_v2f16_nonan(<2 x half> nofpclass(nan) %x) {
 ; GFX7-IR-NEXT:  entry:
 ; GFX7-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x half> @llvm.floor.v2f16(<2 x half> [[X]])
 ; GFX7-IR-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[X]], [[FLOOR]]
-; GFX7-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> <half 0xH3BFF, half 0xH3BFF>)
+; GFX7-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> splat (half 0xH3BFF))
 ; GFX7-IR-NEXT:    ret <2 x half> [[MIN]]
 ;
 ; IR-LEGALF16-LABEL: define <2 x half> @basic_fract_v2f16_nonan
@@ -1668,11 +1668,11 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x float> @llvm.floor.v2f32(<2 x float> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x float> [[X]], [[FLOOR]]
-; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x float> @llvm.minnum.v2f32(<2 x float> [[SUB]], <2 x float> <float 0x3FEFFFFFE0000000, float 0x3FEFFFFFE0000000>)
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x float> @llvm.minnum.v2f32(<2 x float> [[SUB]], <2 x float> splat (float 0x3FEFFFFFE0000000))
 ; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp uno <2 x float> [[X]], zeroinitializer
 ; GFX6-IR-NEXT:    [[COND:%.*]] = select <2 x i1> [[UNO]], <2 x float> [[X]], <2 x float> [[MIN]]
 ; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
-; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x float> [[FABS]], <float 0x7FF0000000000000, float 0x7FF0000000000000>
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x float> [[FABS]], splat (float 0x7FF0000000000000)
 ; GFX6-IR-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x float> zeroinitializer, <2 x float> [[COND]]
 ; GFX6-IR-NEXT:    store <2 x float> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
 ; GFX6-IR-NEXT:    ret <2 x float> [[COND6]]
@@ -1688,7 +1688,7 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ; IR-FRACT-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
 ; IR-FRACT-NEXT:    [[COND:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP3]], i64 1
 ; IR-FRACT-NEXT:    [[FABS:%.*]] = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
-; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x float> [[FABS]], <float 0x7FF0000000000000, float 0x7FF0000000000000>
+; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x float> [[FABS]], splat (float 0x7FF0000000000000)
 ; IR-FRACT-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x float> zeroinitializer, <2 x float> [[COND]]
 ; IR-FRACT-NEXT:    store <2 x float> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
 ; IR-FRACT-NEXT:    ret <2 x float> [[COND6]]
@@ -2021,11 +2021,11 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x half> @llvm.floor.v2f16(<2 x half> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[X]], [[FLOOR]]
-; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> <half 0xH3BFF, half 0xH3BFF>)
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> splat (half 0xH3BFF))
 ; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp uno <2 x half> [[X]], zeroinitializer
 ; GFX6-IR-NEXT:    [[COND:%.*]] = select <2 x i1> [[UNO]], <2 x half> [[X]], <2 x half> [[MIN]]
 ; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X]])
-; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x half> [[FABS]], splat (half 0xH7C00)
 ; GFX6-IR-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x half> zeroinitializer, <2 x half> [[COND]]
 ; GFX6-IR-NEXT:    store <2 x half> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
 ; GFX6-IR-NEXT:    ret <2 x half> [[COND6]]
@@ -2035,11 +2035,11 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; GFX7-IR-NEXT:  entry:
 ; GFX7-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x half> @llvm.floor.v2f16(<2 x half> [[X]])
 ; GFX7-IR-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[X]], [[FLOOR]]
-; GFX7-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> <half 0xH3BFF, half 0xH3BFF>)
+; GFX7-IR-NEXT:    [[MIN:%.*]] = tail call <2 x half> @llvm.minnum.v2f16(<2 x half> [[SUB]], <2 x half> splat (half 0xH3BFF))
 ; GFX7-IR-NEXT:    [[UNO:%.*]] = fcmp uno <2 x half> [[X]], zeroinitializer
 ; GFX7-IR-NEXT:    [[COND:%.*]] = select <2 x i1> [[UNO]], <2 x half> [[X]], <2 x half> [[MIN]]
 ; GFX7-IR-NEXT:    [[FABS:%.*]] = tail call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X]])
-; GFX7-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; GFX7-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x half> [[FABS]], splat (half 0xH7C00)
 ; GFX7-IR-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x half> zeroinitializer, <2 x half> [[COND]]
 ; GFX7-IR-NEXT:    store <2 x half> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
 ; GFX7-IR-NEXT:    ret <2 x half> [[COND6]]
@@ -2055,7 +2055,7 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; IR-LEGALF16-NEXT:    [[TMP4:%.*]] = insertelement <2 x half> poison, half [[TMP2]], i64 0
 ; IR-LEGALF16-NEXT:    [[COND:%.*]] = insertelement <2 x half> [[TMP4]], half [[TMP3]], i64 1
 ; IR-LEGALF16-NEXT:    [[FABS:%.*]] = tail call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X]])
-; IR-LEGALF16-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; IR-LEGALF16-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x half> [[FABS]], splat (half 0xH7C00)
 ; IR-LEGALF16-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x half> zeroinitializer, <2 x half> [[COND]]
 ; IR-LEGALF16-NEXT:    store <2 x half> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
 ; IR-LEGALF16-NEXT:    ret <2 x half> [[COND6]]
@@ -2187,11 +2187,11 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x double> @llvm.floor.v2f64(<2 x double> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x double> [[X]], [[FLOOR]]
-; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x double> @llvm.minnum.v2f64(<2 x double> [[SUB]], <2 x double> <double 0x3FEFFFFFFFFFFFFF, double 0x3FEFFFFFFFFFFFFF>)
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call <2 x double> @llvm.minnum.v2f64(<2 x double> [[SUB]], <2 x double> splat (double 0x3FEFFFFFFFFFFFFF))
 ; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp uno <2 x double> [[X]], zeroinitializer
 ; GFX6-IR-NEXT:    [[COND:%.*]] = select <2 x i1> [[UNO]], <2 x double> [[X]], <2 x double> [[MIN]]
 ; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> [[X]])
-; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x double> [[FABS]], <double 0x7FF0000000000000, double 0x7FF0000000000000>
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x double> [[FABS]], splat (double 0x7FF0000000000000)
 ; GFX6-IR-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x double> zeroinitializer, <2 x double> [[COND]]
 ; GFX6-IR-NEXT:    store <2 x double> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
 ; GFX6-IR-NEXT:    ret <2 x double> [[COND6]]
@@ -2207,7 +2207,7 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ; IR-FRACT-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i64 0
 ; IR-FRACT-NEXT:    [[COND:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP3]], i64 1
 ; IR-FRACT-NEXT:    [[FABS:%.*]] = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> [[X]])
-; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x double> [[FABS]], <double 0x7FF0000000000000, double 0x7FF0000000000000>
+; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq <2 x double> [[FABS]], splat (double 0x7FF0000000000000)
 ; IR-FRACT-NEXT:    [[COND6:%.*]] = select <2 x i1> [[CMPINF]], <2 x double> zeroinitializer, <2 x double> [[COND]]
 ; IR-FRACT-NEXT:    store <2 x double> [[FLOOR]], ptr addrspace(1) [[IP]], align 4
 ; IR-FRACT-NEXT:    ret <2 x double> [[COND6]]

@@ -137,6 +137,7 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/ScopifyEnumTests.cpp
   tweaks/ShowSelectionTreeTests.cpp
   tweaks/SpecialMembersTests.cpp
+  tweaks/SwapBinaryOperandsTests.cpp
   tweaks/SwapIfBranchesTests.cpp
   tweaks/TweakTesting.cpp
   tweaks/TweakTests.cpp

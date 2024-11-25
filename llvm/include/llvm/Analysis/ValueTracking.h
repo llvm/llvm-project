@@ -791,6 +791,14 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
+/// Return true if the instruction doesn't potentially cross vector lanes. This
+/// condition is weaker than checking that the instruction is lanewise: lanewise
+/// means that the same operation is splatted across all lanes, but we also
+/// include the case where there is a different operation on each lane, as long
+/// as the operation only uses data from that lane. An example of an operation
+/// that is not lanewise, but doesn't cross vector lanes is insertelement.
+bool isNotCrossLaneOperation(const Instruction *I);
+
 /// Return true if the instruction does not have any effects besides
 /// calculating the result and does not have undefined behavior.
 ///
@@ -805,7 +813,9 @@ bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 ///
 /// If the CtxI is specified this method performs context-sensitive analysis
 /// and returns true if it is safe to execute the instruction immediately
-/// before the CtxI.
+/// before the CtxI. If the instruction has (transitive) operands that don't
+/// dominate CtxI, the analysis is performed under the assumption that these
+/// operands will also be speculated to a point before CxtI.
 ///
 /// If the CtxI is NOT specified this method only looks at the instruction
 /// itself and its operands, so if this method returns true, it is safe to

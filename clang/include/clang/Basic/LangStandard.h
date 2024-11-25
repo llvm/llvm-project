@@ -39,7 +39,6 @@ enum class Language : uint8_t {
   OpenCL,
   OpenCLCXX,
   CUDA,
-  RenderScript,
   HIP,
   HLSL,
   ///@}

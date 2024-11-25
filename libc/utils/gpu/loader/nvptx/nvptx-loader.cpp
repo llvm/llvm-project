@@ -20,10 +20,12 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 #include <vector>
 
 using namespace llvm;
@@ -224,6 +226,16 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
   if (print_resource_usage)
     print_kernel_resources(binary, kernel_name);
 
+  std::atomic<bool> finished = false;
+  std::thread server(
+      [](std::atomic<bool> *finished, rpc_device_t device) {
+        while (!*finished) {
+          if (rpc_status_t err = rpc_handle_server(device))
+            handle_error(err);
+        }
+      },
+      &finished, rpc_device);
+
   // Call the kernel with the given arguments.
   if (CUresult err = cuLaunchKernel(
           function, params.num_blocks_x, params.num_blocks_y,
@@ -231,16 +243,12 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
           params.num_threads_z, 0, stream, nullptr, args_config))
     handle_error(err);
 
-  // Wait until the kernel has completed execution on the device. Periodically
-  // check the RPC client for work to be performed on the server.
-  while (cuStreamQuery(stream) == CUDA_ERROR_NOT_READY)
-    if (rpc_status_t err = rpc_handle_server(rpc_device))
-      handle_error(err);
-
-  // Handle the server one more time in case the kernel exited with a pending
-  // send still in flight.
-  if (rpc_status_t err = rpc_handle_server(rpc_device))
+  if (CUresult err = cuStreamSynchronize(stream))
     handle_error(err);
+
+  finished = true;
+  if (server.joinable())
+    server.join();
 
   return CUDA_SUCCESS;
 }

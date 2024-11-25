@@ -20,19 +20,19 @@
 ; The difference between test1 and test2 is test2 only set one loop metadata node for the second loop.
 
 ; CHECK-LABEL: test1:
-; ALIGN: .p2align 6, 0x90
+; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB0_2: # %for.body
-; ALIGN: .p2align 9, 0x90
+; ALIGN: .p2align 9
 ; ALIGN-NEXT: .LBB0_3: # %for.body
 
-; ALIGN32: .p2align 6, 0x90
+; ALIGN32: .p2align 6
 ; ALIGN32-NEXT: .LBB0_2: # %for.body
-; ALIGN32: .p2align 9, 0x90
+; ALIGN32: .p2align 9
 ; ALIGN32-NEXT: .LBB0_3: # %for.body
 
-; ALIGN256: .p2align 8, 0x90
+; ALIGN256: .p2align 8
 ; ALIGN256-NEXT: .LBB0_2: # %for.body
-; ALIGN256: .p2align 9, 0x90
+; ALIGN256: .p2align 9
 ; ALIGN256-NEXT: .LBB0_3: # %for.body
 
 define void @test1(i32 %a) nounwind {
@@ -59,19 +59,19 @@ for.body5:                                        ; preds = %for.body, %for.body
 }
 
 ; CHECK-LABEL: test2:
-; ALIGN: .p2align 4, 0x90
+; ALIGN: .p2align 4
 ; ALIGN-NEXT: .LBB1_2: # %for.body
-; ALIGN: .p2align 9, 0x90
+; ALIGN: .p2align 9
 ; ALIGN-NEXT: .LBB1_3: # %for.body
 
-; ALIGN32: .p2align 5, 0x90
+; ALIGN32: .p2align 5
 ; ALIGN32-NEXT: .LBB1_2: # %for.body
-; ALIGN32: .p2align 9, 0x90
+; ALIGN32: .p2align 9
 ; ALIGN32-NEXT: .LBB1_3: # %for.body
 
-; ALIGN256: .p2align 8, 0x90
+; ALIGN256: .p2align 8
 ; ALIGN256-NEXT: .LBB1_2: # %for.body
-; ALIGN256: .p2align 9, 0x90
+; ALIGN256: .p2align 9
 ; ALIGN256-NEXT: .LBB1_3: # %for.body
 define void @test2(i32 %a) nounwind {
 entry:
@@ -111,7 +111,7 @@ for.body5:                                        ; preds = %for.body, %for.body
 ;     }
 ; }
 ; CHECK-LABEL: test3_multilatch:
-; ALIGN: .p2align 6, 0x90
+; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB2_1: # %while.cond
 define dso_local i32 @test3_multilatch() #0 {
 entry:
@@ -147,7 +147,7 @@ while.end:                                        ; preds = %while.cond
 }
 
 ; CHECK-LABEL: test4_multilatch:
-; ALIGN: .p2align 6, 0x90
+; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB3_4: # %bb4
 define void @test4_multilatch(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 entry:

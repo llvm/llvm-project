@@ -30,7 +30,7 @@ define i1 @p0(i8 %x, i8 %y) {
 
 define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @p1_vec(
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i8> <i8 -1, i8 -1>, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i8> splat (i8 -1), [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <2 x i8> [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;

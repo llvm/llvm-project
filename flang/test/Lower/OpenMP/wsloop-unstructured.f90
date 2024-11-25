@@ -54,7 +54,6 @@ end subroutine sub
 ! CHECK:               ^bb7:
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

@@ -268,41 +268,6 @@ TEST(MemProf, PortableWrapper) {
   EXPECT_EQ(3UL, ReadBlock.getAllocCpuId());
 }
 
-// Version0 and Version1 serialize IndexedMemProfRecord in the same format, so
-// we share one test.
-TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
-  const auto Schema = llvm::memprof::getFullSchema();
-
-  MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
-                    /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
-
-  llvm::SmallVector<llvm::SmallVector<FrameId>> AllocCallStacks = {
-      {0x123, 0x345}, {0x123, 0x567}};
-
-  llvm::SmallVector<llvm::SmallVector<FrameId>> CallSites = {{0x333, 0x777}};
-
-  IndexedMemProfRecord Record;
-  for (const auto &ACS : AllocCallStacks) {
-    // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(ACS, llvm::memprof::hashCallStack(ACS),
-                                   Info);
-  }
-  Record.CallSites.assign(CallSites);
-  for (const auto &CS : CallSites)
-    Record.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS));
-
-  std::string Buffer;
-  llvm::raw_string_ostream OS(Buffer);
-  Record.serialize(Schema, OS, llvm::memprof::Version0);
-
-  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
-      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
-      llvm::memprof::Version0);
-
-  EXPECT_EQ(Record, GotRecord);
-}
-
 TEST(MemProf, RecordSerializationRoundTripVerion2) {
   const auto Schema = llvm::memprof::getFullSchema();
 
@@ -317,7 +282,7 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   IndexedMemProfRecord Record;
   for (const auto &CSId : CallStackIds) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info);
+    Record.AllocSites.emplace_back(CSId, Info);
   }
   Record.CallSiteIds.assign(CallSiteIds);
 
@@ -348,8 +313,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   IndexedMemProfRecord Record;
   for (const auto &CSId : CallStackIds) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info,
-                                   Schema);
+    Record.AllocSites.emplace_back(CSId, Info, Schema);
   }
   Record.CallSiteIds.assign(CallSiteIds);
 
@@ -457,26 +421,26 @@ TEST(MemProf, SymbolizationFilter) {
 }
 
 TEST(MemProf, BaseMemProfReader) {
-  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  llvm::memprof::IndexedMemProfData MemProfData;
   Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  FrameIdMap.insert({F1.hash(), F1});
-  FrameIdMap.insert({F2.hash(), F2});
+  MemProfData.Frames.insert({F1.hash(), F1});
+  MemProfData.Frames.insert({F2.hash(), F2});
 
-  llvm::MapVector<llvm::GlobalValue::GUID, IndexedMemProfRecord> ProfData;
+  llvm::SmallVector<FrameId> CallStack{F1.hash(), F2.hash()};
+  CallStackId CSId = llvm::memprof::hashCallStack(CallStack);
+  MemProfData.CallStacks.try_emplace(CSId, CallStack);
+
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
-  std::array<FrameId, 2> CallStack{F1.hash(), F2.hash()};
-  FakeRecord.AllocSites.emplace_back(
-      /*CS=*/CallStack, /*CSId=*/llvm::memprof::hashCallStack(CallStack),
-      /*MB=*/Block);
-  ProfData.insert({F1.hash(), FakeRecord});
+  FakeRecord.AllocSites.emplace_back(/*CSId=*/CSId, /*MB=*/Block);
+  MemProfData.Records.insert({F1.hash(), FakeRecord});
 
-  MemProfReader Reader(FrameIdMap, ProfData);
+  MemProfReader Reader(MemProfData);
 
   llvm::SmallVector<MemProfRecord, 1> Records;
   for (const auto &KeyRecordPair : Reader) {
@@ -493,31 +457,28 @@ TEST(MemProf, BaseMemProfReader) {
 }
 
 TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
-  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  llvm::memprof::IndexedMemProfData MemProfData;
   Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  FrameIdMap.insert({F1.hash(), F1});
-  FrameIdMap.insert({F2.hash(), F2});
+  MemProfData.Frames.insert({F1.hash(), F1});
+  MemProfData.Frames.insert({F2.hash(), F2});
 
-  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap;
   llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
   CallStackId CSId = llvm::memprof::hashCallStack(CallStack);
-  CSIdMap.insert({CSId, CallStack});
+  MemProfData.CallStacks.insert({CSId, CallStack});
 
-  llvm::MapVector<llvm::GlobalValue::GUID, IndexedMemProfRecord> ProfData;
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
   FakeRecord.AllocSites.emplace_back(
-      /*CS=*/llvm::SmallVector<FrameId>(),
       /*CSId=*/llvm::memprof::hashCallStack(CallStack),
       /*MB=*/Block);
-  ProfData.insert({F1.hash(), FakeRecord});
+  MemProfData.Records.insert({F1.hash(), FakeRecord});
 
-  MemProfReader Reader(FrameIdMap, CSIdMap, ProfData);
+  MemProfReader Reader(MemProfData);
 
   llvm::SmallVector<MemProfRecord, 1> Records;
   for (const auto &KeyRecordPair : Reader) {
@@ -612,7 +573,7 @@ MemInfoBlock makePartialMIB() {
 TEST(MemProf, MissingCallStackId) {
   // Use a non-existent CallStackId to trigger a mapping error in
   // toMemProfRecord.
-  llvm::memprof::IndexedAllocationInfo AI({}, 0xdeadbeefU, makePartialMIB(),
+  llvm::memprof::IndexedAllocationInfo AI(0xdeadbeefU, makePartialMIB(),
                                           llvm::memprof::getHotColdSchema());
 
   IndexedMemProfRecord IndexedMR;
@@ -635,7 +596,7 @@ TEST(MemProf, MissingCallStackId) {
 }
 
 TEST(MemProf, MissingFrameId) {
-  llvm::memprof::IndexedAllocationInfo AI({}, 0x222, makePartialMIB(),
+  llvm::memprof::IndexedAllocationInfo AI(0x222, makePartialMIB(),
                                           llvm::memprof::getHotColdSchema());
 
   IndexedMemProfRecord IndexedMR;
@@ -665,8 +626,8 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
@@ -683,8 +644,8 @@ TEST(MemProf, RadixTreeBuilderOne) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(), testing::ElementsAreArray({
@@ -710,8 +671,8 @@ TEST(MemProf, RadixTreeBuilderTwo) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS2), CS2});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
@@ -748,8 +709,8 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS4), CS4});
   llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
       FrameHistogram =
-          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
-  llvm::memprof::CallStackRadixTreeBuilder Builder;
+          llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),

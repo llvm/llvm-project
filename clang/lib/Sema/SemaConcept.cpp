@@ -15,14 +15,12 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -586,7 +584,7 @@ static bool CheckConstraintSatisfaction(
   ArrayRef<TemplateArgument> TemplateArgs =
       TemplateArgsLists.getNumSubstitutedLevels() > 0
           ? TemplateArgsLists.getOutermost()
-          : ArrayRef<TemplateArgument> {};
+          : ArrayRef<TemplateArgument>{};
   Sema::InstantiatingTemplate Inst(S, TemplateIDRange.getBegin(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
       const_cast<NamedDecl *>(Template), TemplateArgs, TemplateIDRange);
@@ -728,6 +726,7 @@ bool Sema::addInstantiatedCapturesToScope(
     ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
 
     if (!CapturedPattern->isInitCapture()) {
+      Instantiated++;
       continue;
     }
 
@@ -975,11 +974,14 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // parameters that the surrounding function hasn't been instantiated yet. Note
   // this may happen while we're comparing two templates' constraint
   // equivalence.
-  LocalInstantiationScope ScopeForParameters(S);
-  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
+  std::optional<LocalInstantiationScope> ScopeForParameters;
+  if (const NamedDecl *ND = DeclInfo.getDecl();
+      ND && ND->isFunctionOrFunctionTemplate()) {
+    ScopeForParameters.emplace(S, /*CombineWithOuterScope=*/true);
+    const FunctionDecl *FD = ND->getAsFunction();
     for (auto *PVD : FD->parameters()) {
       if (!PVD->isParameterPack()) {
-        ScopeForParameters.InstantiatedLocal(PVD, PVD);
+        ScopeForParameters->InstantiatedLocal(PVD, PVD);
         continue;
       }
       // This is hacky: we're mapping the parameter pack to a size-of-1 argument
@@ -998,9 +1000,10 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
       // that we can eliminate the Scope in the cases where the declarations are
       // not necessarily instantiated. It would also benefit the noexcept
       // specifier comparison.
-      ScopeForParameters.MakeInstantiatedLocalArgPack(PVD);
-      ScopeForParameters.InstantiatedLocalPackArg(PVD, PVD);
+      ScopeForParameters->MakeInstantiatedLocalArgPack(PVD);
+      ScopeForParameters->InstantiatedLocalPackArg(PVD, PVD);
     }
+  }
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
 

@@ -538,7 +538,7 @@ class MergeSarifTest(unittest.TestCase):
                         "test message 6-1 [link](sarif:/runs/4/results/0)",
                     ],
                 )
-                self.assertEquals(
+                self.assertEqual(
                     thread_flows,
                     [
                         "test message 1-2 [link](sarif:/runs/1/results/0)",

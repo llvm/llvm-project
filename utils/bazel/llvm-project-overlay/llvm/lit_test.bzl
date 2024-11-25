@@ -4,6 +4,7 @@
 """Rules for running lit tests."""
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_python//python:defs.bzl", "py_test")
 
 def lit_test(
         name,
@@ -29,8 +30,7 @@ def lit_test(
     args = args or []
     data = data or []
     deps = deps or []
-
-    native.py_test(
+    py_test(
         name = name,
         srcs = [Label("//llvm:lit")],
         main = Label("//llvm:utils/lit/lit.py"),

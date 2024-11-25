@@ -420,8 +420,18 @@ public:
   }
   /// Checks if the pointer points to an array.
   bool isArrayElement() const {
-    if (isBlockPointer())
-      return inArray() && asBlockPointer().Base != Offset;
+    if (!isBlockPointer())
+      return false;
+
+    const BlockPointer &BP = asBlockPointer();
+    if (inArray() && BP.Base != Offset)
+      return true;
+
+    // Might be a narrow()'ed element in a composite array.
+    // Check the inline descriptor.
+    if (BP.Base >= sizeof(InlineDescriptor) && getInlineDesc()->IsArrayElement)
+      return true;
+
     return false;
   }
   /// Pointer points directly to a block.
@@ -514,9 +524,7 @@ public:
       return false;
 
     assert(isBlockPointer());
-    if (const ValueDecl *VD = getDeclDesc()->asValueDecl())
-      return VD->isWeak();
-    return false;
+    return asBlockPointer().Pointee->isWeak();
   }
   /// Checks if an object was initialized.
   bool isInitialized() const;
@@ -643,15 +651,6 @@ public:
                                     asBlockPointer().Base + sizeof(InitMapPtr));
 
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
-  }
-
-  /// Dereferences a primitive element.
-  template <typename T> T &elem(unsigned I) const {
-    assert(I < getNumElems());
-    assert(isBlockPointer());
-    assert(asBlockPointer().Pointee);
-    return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
-                                 sizeof(InitMapPtr))[I];
   }
 
   /// Whether this block can be read from at all. This is only true for

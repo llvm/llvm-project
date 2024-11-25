@@ -15,7 +15,7 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    # implicit-def: $si
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %for.body612
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    testb %dl, %dl
@@ -37,7 +37,7 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X64-NEXT:    movl $23090, %eax # imm = 0x5A32
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    # implicit-def: $dx
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %for.body612
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    testb %cl, %cl

@@ -648,7 +648,16 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
   }
 
-  addGPULibraries(getToolChain(), Args, CmdArgs);
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
+  }
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());

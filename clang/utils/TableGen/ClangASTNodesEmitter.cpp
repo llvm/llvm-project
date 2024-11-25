@@ -1,4 +1,4 @@
-//=== ClangASTNodesEmitter.cpp - Generate Clang AST node tables -*- C++ -*-===//
+//===-- ClangASTNodesEmitter.cpp - Generate Clang AST node tables ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

@@ -44,7 +44,7 @@ ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
       "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31",
 
       // CSRs
-      "fflags", "frm", "vtype", "vl", "vxsat", "vxrm"
+      "fflags", "frm", "vtype", "vl", "vxsat", "vxrm", "sf.vcix_state"
     };
   // clang-format on
   return llvm::ArrayRef(GCCRegNames);
@@ -100,9 +100,21 @@ bool RISCVTargetInfo::validateAsmConstraint(
   case 'S': // A symbol or label reference with a constant offset
     Info.setAllowsRegister();
     return true;
+  case 'c':
+    // A RVC register - GPR or FPR
+    if (Name[1] == 'r' || Name[1] == 'f') {
+      Info.setAllowsRegister();
+      Name += 1;
+      return true;
+    }
+    return false;
+  case 'R':
+    // An even-odd GPR pair
+    Info.setAllowsRegister();
+    return true;
   case 'v':
     // A vector register.
-    if (Name[1] == 'r' || Name[1] == 'm') {
+    if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
       Info.setAllowsRegister();
       Name += 1;
       return true;
@@ -114,6 +126,8 @@ bool RISCVTargetInfo::validateAsmConstraint(
 std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
+  // c* and v* are two-letter constraints on RISC-V.
+  case 'c':
   case 'v':
     R = std::string("^") + std::string(Constraint, 2);
     Constraint += 1;
@@ -204,8 +218,8 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (ISAInfo->hasExtension("zve32x")) {
     Builder.defineMacro("__riscv_vector");
-    // Currently we support the v0.12 RISC-V V intrinsics.
-    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 12)));
+    // Currently we support the v1.0 RISC-V V intrinsics.
+    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
   }
 
   auto VScale = getVScaleRange(Opts);
@@ -485,4 +499,23 @@ bool RISCVTargetInfo::validateCpuSupports(StringRef Feature) const {
 
 bool RISCVTargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::RISCVISAInfo::isSupportedExtensionFeature(Name);
+}
+
+bool RISCVTargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  if (RegName == "ra" || RegName == "sp" || RegName == "gp" ||
+      RegName == "tp" || RegName.starts_with("x") || RegName.starts_with("a") ||
+      RegName.starts_with("s") || RegName.starts_with("t")) {
+    unsigned XLen = getTriple().isArch64Bit() ? 64 : 32;
+    HasSizeMismatch = RegSize != XLen;
+    return true;
+  }
+  return false;
+}
+
+bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
+  assert(getTriple().isOSLinux() &&
+         "__builtin_cpu_is() is only supported for Linux.");
+
+  return llvm::RISCV::hasValidCPUModel(CPUName);
 }

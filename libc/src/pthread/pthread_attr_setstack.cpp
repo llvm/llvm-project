@@ -12,8 +12,8 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h" // For STACK_ALIGNMENT
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
 

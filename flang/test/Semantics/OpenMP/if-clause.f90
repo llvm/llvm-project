@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 ! Check OpenMP 'if' clause validity for all directives that can have it
 
 program main

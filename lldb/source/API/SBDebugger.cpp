@@ -1483,6 +1483,12 @@ bool SBDebugger::GetUseColor() const {
   return (m_opaque_sp ? m_opaque_sp->GetUseColor() : false);
 }
 
+bool SBDebugger::SetShowInlineDiagnostics(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  return (m_opaque_sp ? m_opaque_sp->SetShowInlineDiagnostics(value) : false);
+}
+
 bool SBDebugger::SetUseSourceCache(bool value) {
   LLDB_INSTRUMENT_VA(this, value);
 
@@ -1659,6 +1665,12 @@ SBTypeSynthetic SBDebugger::GetSyntheticForType(SBTypeNameSpecifier type_name) {
     return SBTypeSynthetic();
   return SBTypeSynthetic(
       DataVisualization::GetSyntheticForType(type_name.GetSP()));
+}
+
+void SBDebugger::ResetStatistics() {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_sp)
+    DebuggerStats::ResetStatistics(*m_opaque_sp, nullptr);
 }
 
 static llvm::ArrayRef<const char *> GetCategoryArray(const char **categories) {

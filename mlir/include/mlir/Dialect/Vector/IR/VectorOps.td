@@ -13,20 +13,21 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 #define MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 
-include "mlir/Dialect/Vector/IR/Vector.td"
-include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"
 include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"
-include "mlir/IR/EnumAttr.td"
+include "mlir/Dialect/Vector/IR/Vector.td"
+include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
+include "mlir/IR/EnumAttr.td"
 
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
@@ -346,6 +347,7 @@ def Vector_MultiDimReductionOp :
 
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyType:$source)>,
@@ -627,6 +629,7 @@ def Vector_DeinterleaveOp :
 
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
                     "::llvm::cast<VectorType>($_self).getElementType()">]>,
@@ -673,6 +676,7 @@ def Vector_ExtractElementOp :
 
 def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      InferTypeOpAdaptorWithIsCompatible]> {
@@ -810,6 +814,7 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
 
 def Vector_InsertElementOp :
   Vector_Op<"insertelement", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      TypesMatchWith<"source operand type matches element type of result",
                     "result", "source",
                     "::llvm::cast<VectorType>($_self).getElementType()">,
@@ -858,6 +863,7 @@ def Vector_InsertElementOp :
 
 def Vector_InsertOp :
   Vector_Op<"insert", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      AllTypesMatch<["dest", "result"]>]> {
@@ -1240,6 +1246,7 @@ def Vector_TransferReadOp :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<ConditionallySpeculatable>,
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
     ]>,
@@ -1290,12 +1297,12 @@ def Vector_TransferReadOp :
     specifies if the transfer is guaranteed to be within the source bounds. If
     set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Non-vector and broadcast dimensions *must* always be in-bounds. The
-    `in_bounds` array length has to be equal to the vector rank. This attribute
-    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
-    textual IR, the default value is assumed. Similarly, the OP printer will
-    omit this attribute when all dimensions are out-of-bounds (i.e. the default
-    value is used).
+    Non-vector dimensions *must* always be in-bounds. The `in_bounds` array
+    length has to be equal to the vector rank. This attribute has a default
+    value: `false` (i.e. "out-of-bounds"). When skipped in the textual IR, the
+    default value is assumed. Similarly, the OP printer will omit this
+    attribute when all dimensions are out-of-bounds (i.e. the default value is
+    used).
 
     A `vector.transfer_read` can be lowered to a simple load if all dimensions
     are specified to be within bounds and no `mask` was specified.
@@ -1487,6 +1494,7 @@ def Vector_TransferWriteOp :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<ConditionallySpeculatable>,
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
   ]>,
@@ -1535,12 +1543,12 @@ def Vector_TransferWriteOp :
     specifies if the transfer is guaranteed to be within the source bounds. If
     set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Non-vector and broadcast dimensions *must* always be in-bounds. The
-    `in_bounds` array length has to be equal to the vector rank. This attribute
-    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
-    textual IR, the default value is assumed. Similarly, the OP printer will
-    omit this attribute when all dimensions are out-of-bounds (i.e. the default
-    value is used).
+    Non-vector dimensions *must* always be in-bounds. The `in_bounds` array
+    length has to be equal to the vector rank. This attribute has a default
+    value: `false` (i.e. "out-of-bounds"). When skipped in the textual IR, the
+    default value is assumed. Similarly, the OP printer will omit this
+    attribute when all dimensions are out-of-bounds (i.e. the default value is
+    used).
 
      A `vector.transfer_write` can be lowered to a simple store if all
      dimensions are specified to be within bounds and no `mask` was specified.
@@ -1652,9 +1660,10 @@ def Vector_LoadOp : Vector_Op<"load"> {
     based on the element type of the memref. The shape of the result vector
     type determines the shape of the slice read from the start memory address.
     The elements along each dimension of the slice are strided by the memref
-    strides. Only unit strides are allowed along the most minor memref
-    dimension. These constraints guarantee that elements read along the first
-    dimension of the slice are contiguous in memory.
+    strides. When loading more than 1 element, only unit strides are allowed
+    along the most minor memref dimension. These constraints guarantee that
+    elements read along the first dimension of the slice are contiguous in
+    memory.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the result
@@ -1736,9 +1745,10 @@ def Vector_StoreOp : Vector_Op<"store"> {
     memref dimension based on the element type of the memref. The shape of the
     vector value to store determines the shape of the slice written from the
     start memory address. The elements along each dimension of the slice are
-    strided by the memref strides. Only unit strides are allowed along the most
-    minor memref dimension. These constraints guarantee that elements written
-    along the first dimension of the slice are contiguous in memory.
+    strided by the memref strides. When storing more than 1 element, only unit
+    strides are allowed along the most minor memref dimension. These constraints
+    guarantee that elements written along the first dimension of the slice are
+    contiguous in memory.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the value
@@ -1815,17 +1825,17 @@ def Vector_MaskedLoadOp :
   Vector_Op<"maskedload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$pass_thru)>,
-    Results<(outs VectorOfRank<[1]>:$result)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$pass_thru)>,
+    Results<(outs AnyVector:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
 
   let description = [{
-    The masked load reads elements from memory into a 1-D vector as defined
-    by a base with indices and a 1-D mask vector. When the mask is set, the
+    The masked load reads elements from memory into a vector as defined
+    by a base with indices and a mask vector. When the mask is set, the
     element is read from memory. Otherwise, the corresponding element is taken
-    from a 1-D pass-through vector. Informally the semantics are:
+    from a pass-through vector. Informally the semantics are:
     ```
     result[0] := if mask[0] then base[i + 0] else pass_thru[0]
     result[1] := if mask[1] then base[i + 1] else pass_thru[1]
@@ -1878,14 +1888,14 @@ def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$valueToStore)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$valueToStore)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
   let description = [{
-    The masked store operation writes elements from a 1-D vector into memory
-    as defined by a base with indices and a 1-D mask vector. When the mask is
+    The masked store operation writes elements from a vector into memory
+    as defined by a base with indices and a mask vector. When the mask is
     set, the corresponding element from the vector is written to memory. Otherwise,
     no action is taken for the element. Informally the semantics are:
     ```
@@ -2072,23 +2082,26 @@ def Vector_ExpandLoadOp :
   Vector_Op<"expandload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$pass_thru)>,
-    Results<(outs VectorOfRank<[1]>:$result)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$pass_thru)>,
+    Results<(outs AnyVector:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
 
   let description = [{
-    The expand load reads elements from memory into a 1-D vector as defined
-    by a base with indices and a 1-D mask vector. When the mask is set, the
-    next element is read from memory. Otherwise, the corresponding element
-    is taken from a 1-D pass-through vector. Informally the semantics are:
+    The expand load reads elements from memory into a vector as defined by a
+    base with indices and a mask vector. Expansion only applies to the innermost
+    dimension. When the mask is set, the next element is read from memory.
+    Otherwise, the corresponding element is taken from a pass-through vector.
+    Informally the semantics are:
+
     ```
     index = i
     result[0] := if mask[0] then base[index++] else pass_thru[0]
     result[1] := if mask[1] then base[index++] else pass_thru[1]
     etc.
     ```
+
     Note that the index increment is done conditionally.
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
@@ -2136,22 +2149,25 @@ def Vector_CompressStoreOp :
   Vector_Op<"compressstore">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$valueToStore)> {
+               VectorOf<[I1]>:$mask,
+               AnyVector:$valueToStore)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
   let description = [{
-    The compress store operation writes elements from a 1-D vector into memory
-    as defined by a base with indices and a 1-D mask vector. When the mask is
-    set, the corresponding element from the vector is written next to memory.
-    Otherwise, no action is taken for the element. Informally the semantics are:
+    The compress store operation writes elements from a vector into memory as
+    defined by a base with indices and a mask vector. Compression only applies
+    to the innermost dimension. When the mask is set, the corresponding element
+    from the vector is written next to memory.  Otherwise, no action is taken
+    for the element. Informally the semantics are:
+
     ```
     index = i
     if (mask[0]) base[index++] = value[0]
     if (mask[1]) base[index++] = value[1]
     etc.
     ```
+
     Note that the index increment is done conditionally.
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
@@ -2194,7 +2210,9 @@ def Vector_CompressStoreOp :
 }
 
 def Vector_ShapeCastOp :
-  Vector_Op<"shape_cast", [Pure]>,
+  Vector_Op<"shape_cast", [Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
+  ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "shape_cast casts between vector shapes";
@@ -2457,7 +2475,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     should not. The `vector.mask` operation returns the value produced by the
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
-    argument, if provided, or left unmodified, otherwise.
+    argument, if provided, or left unmodified, otherwise. At this point, 0-D
+    vectors are not supported by `vector.mask`. They may be supported in the
+    future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking
@@ -2752,11 +2772,11 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(
       // TODO: tighten vector element types that make sense.
-      ins VectorOfRankAndType<[1],
+      ins FixedVectorOfRankAndType<[1],
             [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$matrix,
           I32Attr:$rows, I32Attr:$columns)>,
     Results<(
-      outs VectorOfRankAndType<[1],
+      outs FixedVectorOfRankAndType<[1],
              [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)> {
   let summary = "Vector matrix transposition on flattened 1-D MLIR vectors";
   let description = [{
@@ -2771,7 +2791,9 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
     a 2-D matrix with <rows> rows and <columns> columns, and returns the
     transposed matrix in flattened form in 'res'.
 
-    Also see:
+    Note, the corresponding LLVM intrinsic, `@llvm.matrix.transpose.*`, does not
+    support scalable vectors. Hence, this Op is only available for fixed-width
+    vectors. Also see:
 
     http://llvm.org/docs/LangRef.html#llvm-matrix-transpose-intrinsic
 
@@ -2791,6 +2813,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
 
 def Vector_SplatOp : Vector_Op<"splat", [
     Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",
                    "::llvm::cast<VectorType>($_self).getElementType()">
@@ -2804,7 +2827,7 @@ def Vector_SplatOp : Vector_Op<"splat", [
 
     ```mlir
     %s = arith.constant 10.1 : f32
-    %t = vector.splat %s : vector<8x16xi32>
+    %t = vector.splat %s : vector<8x16xf32>
     ```
   }];
 
@@ -2936,7 +2959,6 @@ def Vector_StepOp : Vector_Op<"step", [Pure]> {
     %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
     ```
   }];
-  let hasFolder = 1;
   let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
 }
@@ -2963,139 +2985,5 @@ def Vector_YieldOp : Vector_Op<"yield", [
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
-def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
-       SingleBlockImplicitTerminator<"vector::YieldOp">,
-       RecursiveMemoryEffects]> {
-  let summary = "Executes operations in the associated region on thread #0 of a"
-                "SPMD program";
-  let description = [{
-    `warp_execute_on_lane_0` is an operation used to bridge the gap between
-    vector programming and SPMD programming model like GPU SIMT. It allows to
-    trivially convert a region of vector code meant to run on a multiple threads
-    into a valid SPMD region and then allows incremental transformation to
-    distribute vector operations on the threads.
-
-    Any code present in the region would only be executed on first thread/lane
-    based on the `laneid` operand. The `laneid` operand is an integer ID between
-    [0, `warp_size`). The `warp_size` attribute indicates the number of lanes in
-    a warp.
-
-    Operands are vector values distributed on all lanes that may be used by
-    the single lane execution. The matching region argument is a vector of all
-    the values of those lanes available to the single active lane. The
-    distributed dimension is implicit based on the shape of the operand and
-    argument. the properties of the distribution may be described by extra
-    attributes (e.g. affine map).
-
-    Return values are distributed on all lanes using laneId as index. The
-    vector is distributed based on the shape ratio between the vector type of
-    the yield and the result type.
-    If the shapes are the same this means the value is broadcasted to all lanes.
-    In the future the distribution can be made more explicit using affine_maps
-    and will support having multiple Ids.
-
-    Therefore the `warp_execute_on_lane_0` operations allow to implicitly copy
-    between lane0 and the lanes of the warp. When distributing a vector
-    from lane0 to all the lanes, the data are distributed in a block cyclic way.
-    For exemple `vector<64xf32>` gets distributed on 32 threads and map to
-    `vector<2xf32>` where thread 0 contains vector[0] and vector[1].
-
-    During lowering values passed as operands and return value need to be
-    visible to different lanes within the warp. This would usually be done by
-    going through memory.
-
-    The region is *not* isolated from above. For values coming from the parent
-    region not going through operands only the lane 0 value will be accesible so
-    it generally only make sense for uniform values.
-
-    Example:
-    ```
-    // Execute in parallel on all threads/lanes.
-    vector.warp_execute_on_lane_0 (%laneid)[32] {
-      // Serial code running only on thread/lane 0.
-      ...
-    }
-    // Execute in parallel on all threads/lanes.
-    ```
-
-    This may be lowered to an scf.if region as below:
-    ```
-      // Execute in parallel on all threads/lanes.
-      %cnd = arith.cmpi eq, %laneid, %c0 : index
-      scf.if %cnd {
-        // Serial code running only on thread/lane 0.
-        ...
-      }
-      // Execute in parallel on all threads/lanes.
-    ```
-
-    When the region has operands and/or return values:
-    ```
-    // Execute in parallel on all threads/lanes.
-    %0 = vector.warp_execute_on_lane_0(%laneid)[32]
-    args(%v0 : vector<4xi32>) -> (vector<1xf32>) {
-    ^bb0(%arg0 : vector<128xi32>) :
-      // Serial code running only on thread/lane 0.
-      ...
-      vector.yield %1 : vector<32xf32>
-    }
-    // Execute in parallel on all threads/lanes.
-    ```
-
-    values at the region boundary would go through memory:
-    ```
-    // Execute in parallel on all threads/lanes.
-    ...
-    // Store the data from each thread into memory and Synchronization.
-    %tmp0 = memreg.alloc() : memref<128xf32>
-    %tmp1 = memreg.alloc() : memref<32xf32>
-    %cnd = arith.cmpi eq, %laneid, %c0 : index
-    vector.store %v0, %tmp0[%laneid] : memref<128xf32>, vector<4xf32>
-    some_synchronization_primitive
-    scf.if %cnd {
-      // Serialized code running only on thread 0.
-      // Load the data from all the threads into a register from thread 0. This
-      // allow threads 0 to access data from all the threads.
-      %arg0 = vector.load %tmp0[%c0] : memref<128xf32>, vector<128xf32>
-      ...
-      // Store the data from thread 0 into memory.
-      vector.store %1, %tmp1[%c0] : memref<32xf32>, vector<32xf32>
-    }
-    // Synchronization and load the data in a block cyclic way so that the
-    // vector is distributed on all threads.
-    some_synchronization_primitive
-    %0 = vector.load %tmp1[%laneid] : memref<32xf32>, vector<32xf32>
-    // Execute in parallel on all threads/lanes.
-    ```
-
-  }];
-
-  let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
-  let arguments = (ins Index:$laneid, I64Attr:$warp_size,
-                       Variadic<AnyType>:$args);
-  let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$warpRegion);
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins "Value":$laneid, "int64_t":$warpSize)>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
-                   "int64_t":$warpSize)>,
-    // `blockArgTypes` are different than `args` types as they are they
-    // represent all the `args` instances visibile to lane 0. Therefore we need
-    // to explicit pass the type.
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
-                   "int64_t":$warpSize, "ValueRange":$args,
-                   "TypeRange":$blockArgTypes)>
-  ];
-
-  let extraClassDeclaration = [{
-    bool isDefinedOutsideOfRegion(Value value) {
-      return !getRegion().isAncestor(value.getParentRegion());
-    }
-  }];
-}
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOR_OPS

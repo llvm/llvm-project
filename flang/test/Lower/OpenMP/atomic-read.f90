@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: bbc %openmp_flags -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc %openmp_flags -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic read
 
@@ -25,12 +25,12 @@
 !CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[Y_REF:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
 !CHECK:    %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    omp.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1   hint(uncontended) memory_order(acquire) : !fir.ref<i32>, i32
-!CHECK:    omp.atomic.read %[[A_DECL]]#1 = %[[B_DECL]]#1   memory_order(relaxed) : !fir.ref<i32>, i32
-!CHECK:    omp.atomic.read %[[C_DECL]]#1 = %[[D_DECL]]#1   hint(contended) memory_order(seq_cst) : !fir.ref<!fir.logical<4>>, !fir.logical<4>
-!CHECK:    omp.atomic.read %[[E_DECL]]#1 = %[[F_DECL]]#1   hint(speculative) : !fir.ref<i32>, i32
-!CHECK:    omp.atomic.read %[[G_DECL]]#1 = %[[H_DECL]]#1   hint(nonspeculative) : !fir.ref<f32>, f32
-!CHECK:    omp.atomic.read %[[G_DECL]]#1 = %[[H_DECL]]#1   : !fir.ref<f32>, f32
+!CHECK:    omp.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1   hint(uncontended) memory_order(acquire) : !fir.ref<i32>, !fir.ref<i32>, i32
+!CHECK:    omp.atomic.read %[[A_DECL]]#1 = %[[B_DECL]]#1   memory_order(relaxed) : !fir.ref<i32>, !fir.ref<i32>, i32
+!CHECK:    omp.atomic.read %[[C_DECL]]#1 = %[[D_DECL]]#1   hint(contended) memory_order(seq_cst) : !fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, !fir.logical<4>
+!CHECK:    omp.atomic.read %[[E_DECL]]#1 = %[[F_DECL]]#1   hint(speculative) : !fir.ref<i32>, !fir.ref<i32>, i32
+!CHECK:    omp.atomic.read %[[G_DECL]]#1 = %[[H_DECL]]#1   hint(nonspeculative) : !fir.ref<f32>, !fir.ref<f32>, f32
+!CHECK:    omp.atomic.read %[[G_DECL]]#1 = %[[H_DECL]]#1   : !fir.ref<f32>, !fir.ref<f32>, f32
 
 program OmpAtomic
 
@@ -68,7 +68,7 @@ end program OmpAtomic
 !CHECK:    %[[X_POINTEE_ADDR:.*]] = fir.box_addr %[[X_ADDR]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK:    %[[Y_ADDR:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK:    %[[Y_POINTEE_ADDR:.*]] = fir.box_addr %[[Y_ADDR]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-!CHECK:    omp.atomic.read %[[Y_POINTEE_ADDR]] = %[[X_POINTEE_ADDR]]   : !fir.ptr<i32>, i32
+!CHECK:    omp.atomic.read %[[Y_POINTEE_ADDR]] = %[[X_POINTEE_ADDR]]   : !fir.ptr<i32>, !fir.ptr<i32>, i32
 !CHECK:    %[[Y_ADDR:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK:    %[[Y_POINTEE_ADDR:.*]] = fir.box_addr %[[Y_ADDR]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK:    %[[Y_POINTEE_VAL:.*]] = fir.load %[[Y_POINTEE_ADDR]] : !fir.ptr<i32>

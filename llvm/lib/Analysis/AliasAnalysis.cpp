@@ -29,7 +29,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -47,7 +46,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -72,6 +70,8 @@ static cl::opt<bool> EnableAATrace("aa-trace", cl::Hidden, cl::init(false));
 #else
 static const bool EnableAATrace = false;
 #endif
+
+AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
 
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
@@ -890,7 +890,10 @@ bool llvm::isWritableObject(const Value *Object,
     return true;
 
   if (auto *A = dyn_cast<Argument>(Object)) {
-    if (A->hasAttribute(Attribute::Writable)) {
+    // Also require noalias, otherwise writability at function entry cannot be
+    // generalized to writability at other program points, even if the pointer
+    // does not escape.
+    if (A->hasAttribute(Attribute::Writable) && A->hasNoAliasAttr()) {
       ExplicitlyDereferenceableOnly = true;
       return true;
     }

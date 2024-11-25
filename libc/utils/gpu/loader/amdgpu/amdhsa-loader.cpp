@@ -28,9 +28,11 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 #include <tuple>
 #include <utility>
 
@@ -231,8 +233,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   std::memcpy(args, &kernel_args, sizeof(args_t));
 
   // Initialize the necessary implicit arguments to the proper values.
-  bool dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
-              (params.num_blocks_z * params.num_threads_z != 1);
+  int dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
+             (params.num_blocks_z * params.num_threads_z != 1);
   implicit_args_t *implicit_args = reinterpret_cast<implicit_args_t *>(
       reinterpret_cast<uint8_t *>(args) + sizeof(args_t));
   implicit_args->grid_dims = dims;
@@ -281,6 +283,7 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   // Initialize the packet header and set the doorbell signal to begin execution
   // by the HSA runtime.
   uint16_t header =
+      1u << HSA_PACKET_HEADER_BARRIER |
       (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
@@ -288,18 +291,26 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   __atomic_store_n((uint32_t *)&packet->header, header_word, __ATOMIC_RELEASE);
   hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
+  std::atomic<bool> finished = false;
+  std::thread server(
+      [](std::atomic<bool> *finished, rpc_device_t device) {
+        while (!*finished) {
+          if (rpc_status_t err = rpc_handle_server(device))
+            handle_error(err);
+        }
+      },
+      &finished, device);
+
   // Wait until the kernel has completed execution on the device. Periodically
   // check the RPC client for work to be performed on the server.
-  while (hsa_signal_wait_scacquire(
-             packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0,
-             /*timeout_hint=*/1024, HSA_WAIT_STATE_ACTIVE) != 0)
-    if (rpc_status_t err = rpc_handle_server(device))
-      handle_error(err);
+  while (hsa_signal_wait_scacquire(packet->completion_signal,
+                                   HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
+                                   HSA_WAIT_STATE_BLOCKED) != 0)
+    ;
 
-  // Handle the server one more time in case the kernel exited with a pending
-  // send still in flight.
-  if (rpc_status_t err = rpc_handle_server(device))
-    handle_error(err);
+  finished = true;
+  if (server.joinable())
+    server.join();
 
   // Destroy the resources acquired to launch the kernel and return.
   if (hsa_status_t err = hsa_amd_memory_pool_free(args))
@@ -360,8 +371,9 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
 
   // Load the code object's ISA information and executable data segments.
-  hsa_code_object_t object;
-  if (hsa_status_t err = hsa_code_object_deserialize(image, size, "", &object))
+  hsa_code_object_reader_t reader;
+  if (hsa_status_t err =
+          hsa_code_object_reader_create_from_memory(image, size, &reader))
     handle_error(err);
 
   hsa_executable_t executable;
@@ -370,8 +382,9 @@ int load(int argc, const char **argv, const char **envp, void *image,
           &executable))
     handle_error(err);
 
-  if (hsa_status_t err =
-          hsa_executable_load_code_object(executable, dev_agent, object, ""))
+  hsa_loaded_code_object_t object;
+  if (hsa_status_t err = hsa_executable_load_agent_code_object(
+          executable, dev_agent, reader, "", &object))
     handle_error(err);
 
   // No modifications to the executable are allowed  after this point.
@@ -385,6 +398,9 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
   if (result)
     handle_error(HSA_STATUS_ERROR);
+
+  if (hsa_status_t err = hsa_code_object_reader_destroy(reader))
+    handle_error(err);
 
   // Obtain memory pools to exchange data between the host and the device. The
   // fine-grained pool acts as pinned memory on the host for DMA transfers to
@@ -540,11 +556,11 @@ int load(int argc, const char **argv, const char **envp, void *image,
     }
   }
 
-  // Obtain a queue with the minimum (power of two) size, used to send commands
+  // Obtain a queue with the maximum (power of two) size, used to send commands
   // to the HSA runtime and launch execution on the device.
   uint64_t queue_size;
   if (hsa_status_t err = hsa_agent_get_info(
-          dev_agent, HSA_AGENT_INFO_QUEUE_MIN_SIZE, &queue_size))
+          dev_agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size))
     handle_error(err);
   hsa_queue_t *queue = nullptr;
   if (hsa_status_t err =
@@ -604,9 +620,6 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
 
   if (hsa_status_t err = hsa_executable_destroy(executable))
-    handle_error(err);
-
-  if (hsa_status_t err = hsa_code_object_destroy(object))
     handle_error(err);
 
   if (hsa_status_t err = hsa_shut_down())

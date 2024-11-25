@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.PointerSub -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=security.PointerSub -analyzer-output=text -verify %s
 
 void different_1() {
   int a[3]; // expected-note{{Array at the left-hand side of subtraction}}

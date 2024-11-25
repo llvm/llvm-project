@@ -1835,6 +1835,46 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
   return StateNotNull;
 }
 
+namespace {
+class StreamClosedVisitor final : public BugReporterVisitor {
+  const SymbolRef StreamSym;
+  bool Satisfied = false;
+
+public:
+  explicit StreamClosedVisitor(SymbolRef StreamSym) : StreamSym(StreamSym) {}
+
+  static void *getTag() {
+    static int Tag = 0;
+    return &Tag;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
+    ID.AddPointer(StreamSym);
+  }
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override {
+    if (Satisfied)
+      return nullptr;
+    const StreamState *PredSS =
+        N->getFirstPred()->getState()->get<StreamMap>(StreamSym);
+    if (PredSS && PredSS->isClosed())
+      return nullptr;
+
+    const Stmt *S = N->getStmtForDiagnostics();
+    if (!S)
+      return nullptr;
+    Satisfied = true;
+    PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
+                               N->getLocationContext());
+    llvm::StringLiteral Msg = "Stream is closed here";
+    return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg);
+  }
+};
+} // namespace
+
 ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
                                                   CheckerContext &C,
                                                   ProgramStateRef State) const {
@@ -1849,11 +1889,11 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
   if (SS->isClosed()) {
     // Using a stream pointer after 'fclose' causes undefined behavior
     // according to cppreference.com .
-    ExplodedNode *N = C.generateErrorNode();
-    if (N) {
-      C.emitReport(std::make_unique<PathSensitiveBugReport>(
-          BT_UseAfterClose,
-          "Stream might be already closed. Causes undefined behaviour.", N));
+    if (ExplodedNode *N = C.generateErrorNode()) {
+      auto R = std::make_unique<PathSensitiveBugReport>(
+          BT_UseAfterClose, "Use of a stream that might be already closed", N);
+      R->addVisitor<StreamClosedVisitor>(Sym);
+      C.emitReport(std::move(R));
       return nullptr;
     }
 

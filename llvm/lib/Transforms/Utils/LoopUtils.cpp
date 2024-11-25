@@ -445,21 +445,22 @@ TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
 }
 
 /// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of nodes includes the starting point.
-SmallVector<DomTreeNode *, 16>
-llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
-  SmallVector<DomTreeNode *, 16> Worklist;
+/// The returned vector of basic blocks includes the starting point.
+SmallVector<BasicBlock *, 16> llvm::collectChildrenInLoop(DominatorTree *DT,
+                                                          DomTreeNode *N,
+                                                          const Loop *CurLoop) {
+  SmallVector<BasicBlock *, 16> Worklist;
   auto AddRegionToWorklist = [&](DomTreeNode *DTN) {
     // Only include subregions in the top level loop.
     BasicBlock *BB = DTN->getBlock();
     if (CurLoop->contains(BB))
-      Worklist.push_back(DTN);
+      Worklist.push_back(DTN->getBlock());
   };
 
   AddRegionToWorklist(N);
 
   for (size_t I = 0; I < Worklist.size(); I++) {
-    for (DomTreeNode *Child : Worklist[I]->children())
+    for (DomTreeNode *Child : DT->getNode(Worklist[I])->children())
       AddRegionToWorklist(Child);
   }
 

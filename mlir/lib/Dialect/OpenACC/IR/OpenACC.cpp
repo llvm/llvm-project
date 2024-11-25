@@ -730,8 +730,8 @@ checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
 }
 
 unsigned ParallelOp::getNumDataOperands() {
-  return getReductionOperands().size() + getGangPrivateOperands().size() +
-         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
+  return getReductionOperands().size() + getPrivateOperands().size() +
+         getFirstprivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value ParallelOp::getDataOperand(unsigned i) {
@@ -759,20 +759,23 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
     Op op, OperandRange operands, DenseI32ArrayAttr segments,
     ArrayAttr deviceTypes, llvm::StringRef keyword, int32_t maxInSegment = 0) {
   std::size_t numOperandsInSegments = 0;
+  std::size_t nbOfSegments = 0;
 
-  if (!segments)
-    return success();
-
-  for (auto segCount : segments.asArrayRef()) {
-    if (maxInSegment != 0 && segCount > maxInSegment)
-      return op.emitOpError() << keyword << " expects a maximum of "
-                              << maxInSegment << " values per segment";
-    numOperandsInSegments += segCount;
+  if (segments) {
+    for (auto segCount : segments.asArrayRef()) {
+      if (maxInSegment != 0 && segCount > maxInSegment)
+        return op.emitOpError() << keyword << " expects a maximum of "
+                                << maxInSegment << " values per segment";
+      numOperandsInSegments += segCount;
+      ++nbOfSegments;
+    }
   }
-  if (numOperandsInSegments != operands.size())
+
+  if ((numOperandsInSegments != operands.size()) ||
+      (!deviceTypes && !operands.empty()))
     return op.emitOpError()
            << keyword << " operand count does not match count in segments";
-  if (deviceTypes.getValue().size() != (size_t)segments.size())
+  if (deviceTypes && deviceTypes.getValue().size() != nbOfSegments)
     return op.emitOpError()
            << keyword << " segment count does not match device_type count";
   return success();
@@ -780,8 +783,12 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getGangPrivateOperands(), "private",
+          *this, getPrivatizations(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
+    return failure();
+  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
@@ -1358,8 +1365,8 @@ printCombinedConstructsLoop(mlir::OpAsmPrinter &p, mlir::Operation *op,
 //===----------------------------------------------------------------------===//
 
 unsigned SerialOp::getNumDataOperands() {
-  return getReductionOperands().size() + getGangPrivateOperands().size() +
-         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
+  return getReductionOperands().size() + getPrivateOperands().size() +
+         getFirstprivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value SerialOp::getDataOperand(unsigned i) {
@@ -1417,8 +1424,12 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 
 LogicalResult acc::SerialOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getGangPrivateOperands(), "private",
+          *this, getPrivatizations(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
+    return failure();
+  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",

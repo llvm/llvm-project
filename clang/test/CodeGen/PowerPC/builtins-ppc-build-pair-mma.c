@@ -99,7 +99,7 @@ void test1(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc1, vec
 // CHECK-LE-NOOPT-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[VC1_ADDR]], align 16
 // CHECK-LE-NOOPT-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr [[VC2_ADDR]], align 16
 // CHECK-LE-NOOPT-NEXT:    [[TMP6:%.*]] = call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[TMP5]], <16 x i8> [[TMP4]])
-// CHECK-LE-NOOPT-NEXT:    store <256 x i1> [[TMP6]], ptr [[RES]], align 64
+// CHECK-LE-NOOPT-NEXT:    store <256 x i1> [[TMP6]], ptr [[RES]], align 32
 // CHECK-LE-NOOPT-NEXT:    [[TMP7:%.*]] = load <256 x i1>, ptr [[RES]], align 32
 // CHECK-LE-NOOPT-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[RESP_ADDR]], align 8
 // CHECK-LE-NOOPT-NEXT:    store <256 x i1> [[TMP7]], ptr [[TMP8]], align 32

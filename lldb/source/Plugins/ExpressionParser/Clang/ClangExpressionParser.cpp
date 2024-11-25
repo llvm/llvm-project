@@ -26,6 +26,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
@@ -43,6 +44,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -161,7 +163,8 @@ static void AddAllFixIts(ClangDiagnostic *diag, const clang::Diagnostic &Info) {
 
 class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer {
 public:
-  ClangDiagnosticManagerAdapter(DiagnosticOptions &opts) {
+  ClangDiagnosticManagerAdapter(DiagnosticOptions &opts, StringRef filename)
+      : m_filename(filename) {
     DiagnosticOptions *options = new DiagnosticOptions(opts);
     options->ShowPresumedLoc = true;
     options->ShowLevel = false;
@@ -174,15 +177,22 @@ public:
     m_manager = manager;
   }
 
-  /// Returns the last ClangDiagnostic message that the DiagnosticManager
-  /// received or a nullptr if the DiagnosticMangager hasn't seen any
-  /// Clang diagnostics yet.
+  /// Returns the last error ClangDiagnostic message that the
+  /// DiagnosticManager received or a nullptr.
   ClangDiagnostic *MaybeGetLastClangDiag() const {
     if (m_manager->Diagnostics().empty())
       return nullptr;
-    lldb_private::Diagnostic *diag = m_manager->Diagnostics().back().get();
-    ClangDiagnostic *clang_diag = dyn_cast<ClangDiagnostic>(diag);
-    return clang_diag;
+    auto &diags = m_manager->Diagnostics();
+    for (auto it = diags.rbegin(); it != diags.rend(); it++) {
+      lldb_private::Diagnostic *diag = it->get();
+      if (ClangDiagnostic *clang_diag = dyn_cast<ClangDiagnostic>(diag)) {
+        if (clang_diag->GetSeverity() == lldb::eSeverityWarning)
+          return nullptr;
+        if (clang_diag->GetSeverity() == lldb::eSeverityError)
+          return clang_diag;
+      }
+    }
+    return nullptr;
   }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
@@ -210,27 +220,21 @@ public:
     // Render diagnostic message to m_output.
     m_output.clear();
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
-    m_os->flush();
 
-    lldb::Severity severity;
-    bool make_new_diagnostic = true;
-
+    DiagnosticDetail detail;
     switch (DiagLevel) {
     case DiagnosticsEngine::Level::Fatal:
     case DiagnosticsEngine::Level::Error:
-      severity = lldb::eSeverityError;
+      detail.severity = lldb::eSeverityError;
       break;
     case DiagnosticsEngine::Level::Warning:
-      severity = lldb::eSeverityWarning;
+      detail.severity = lldb::eSeverityWarning;
       break;
     case DiagnosticsEngine::Level::Remark:
     case DiagnosticsEngine::Level::Ignored:
-      severity = lldb::eSeverityInfo;
+      detail.severity = lldb::eSeverityInfo;
       break;
     case DiagnosticsEngine::Level::Note:
-      m_manager->AppendMessageToDiagnostic(m_output);
-      make_new_diagnostic = false;
-
       // 'note:' diagnostics for errors and warnings can also contain Fix-Its.
       // We add these Fix-Its to the last error diagnostic to make sure
       // that we later have all Fix-Its related to an 'error' diagnostic when
@@ -248,24 +252,55 @@ public:
       AddAllFixIts(clang_diag, Info);
       break;
     }
-    if (make_new_diagnostic) {
       // ClangDiagnostic messages are expected to have no whitespace/newlines
       // around them.
       std::string stripped_output =
           std::string(llvm::StringRef(m_output).trim());
 
-      auto new_diagnostic = std::make_unique<ClangDiagnostic>(
-          stripped_output, severity, Info.getID());
+      // Translate the source location.
+      if (Info.hasSourceManager()) {
+        DiagnosticDetail::SourceLocation loc;
+        clang::SourceManager &sm = Info.getSourceManager();
+        const clang::SourceLocation sloc = Info.getLocation();
+        if (sloc.isValid()) {
+          const clang::FullSourceLoc fsloc(sloc, sm);
+          clang::PresumedLoc PLoc = fsloc.getPresumedLoc(true);
+          StringRef filename =
+              PLoc.isValid() ? PLoc.getFilename() : StringRef{};
+          loc.file = FileSpec(filename);
+          loc.line = fsloc.getSpellingLineNumber();
+          loc.column = fsloc.getSpellingColumnNumber();
+          loc.in_user_input = filename == m_filename;
+          loc.hidden = filename.starts_with("<lldb wrapper ");
+
+          // Find the range of the primary location.
+          for (const auto &range : Info.getRanges()) {
+            if (range.getBegin() == sloc) {
+              // FIXME: This is probably not handling wide characters correctly.
+              unsigned end_col = sm.getSpellingColumnNumber(range.getEnd());
+              if (end_col > loc.column)
+                loc.length = end_col - loc.column;
+              break;
+            }
+          }
+          detail.source_location = loc;
+        }
+      }
+      llvm::SmallString<0> msg;
+      Info.FormatDiagnostic(msg);
+      detail.message = msg.str();
+      detail.rendered = stripped_output;
+      auto new_diagnostic =
+          std::make_unique<ClangDiagnostic>(detail, Info.getID());
 
       // Don't store away warning fixits, since the compiler doesn't have
       // enough context in an expression for the warning to be useful.
       // FIXME: Should we try to filter out FixIts that apply to our generated
       // code, and not the user's expression?
-      if (severity == lldb::eSeverityError)
+      if (detail.severity == lldb::eSeverityError)
         AddAllFixIts(new_diagnostic.get(), Info);
 
       m_manager->AddDiagnostic(std::move(new_diagnostic));
-    }
   }
 
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
@@ -281,6 +316,7 @@ private:
   std::shared_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os.
   std::string m_output;
+  StringRef m_filename;
 };
 
 /// Returns true if the SDK for the specified triple supports
@@ -407,24 +443,63 @@ static void SetupDefaultClangDiagnostics(CompilerInstance &compiler) {
 /// \return
 ///     A string representing target ABI for the current architecture.
 static std::string GetClangTargetABI(const ArchSpec &target_arch) {
-  std::string abi;
-
   if (target_arch.IsMIPS()) {
     switch (target_arch.GetFlags() & ArchSpec::eMIPSABI_mask) {
     case ArchSpec::eMIPSABI_N64:
-      abi = "n64";
-      break;
+      return "n64";
     case ArchSpec::eMIPSABI_N32:
-      abi = "n32";
-      break;
+      return "n32";
     case ArchSpec::eMIPSABI_O32:
-      abi = "o32";
-      break;
+      return "o32";
     default:
-      break;
+      return {};
     }
   }
-  return abi;
+
+  if (target_arch.GetTriple().isRISCV64()) {
+    switch (target_arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask) {
+    case ArchSpec::eRISCV_float_abi_soft:
+      return "lp64";
+    case ArchSpec::eRISCV_float_abi_single:
+      return "lp64f";
+    case ArchSpec::eRISCV_float_abi_double:
+      return "lp64d";
+    case ArchSpec::eRISCV_float_abi_quad:
+      return "lp64q";
+    default:
+      return {};
+    }
+  }
+
+  if (target_arch.GetTriple().isRISCV32()) {
+    switch (target_arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask) {
+    case ArchSpec::eRISCV_float_abi_soft:
+      return "ilp32";
+    case ArchSpec::eRISCV_float_abi_single:
+      return "ilp32f";
+    case ArchSpec::eRISCV_float_abi_double:
+      return "ilp32d";
+    case ArchSpec::eRISCV_float_abi_soft | ArchSpec::eRISCV_rve:
+      return "ilp32e";
+    default:
+      return {};
+    }
+  }
+
+  if (target_arch.GetTriple().isLoongArch64()) {
+    switch (target_arch.GetFlags() & ArchSpec::eLoongArch_abi_mask) {
+    case ArchSpec::eLoongArch_abi_soft_float:
+      return "lp64s";
+    case ArchSpec::eLoongArch_abi_single_float:
+      return "lp64f";
+    case ArchSpec::eLoongArch_abi_double_float:
+      return "lp64d";
+    default:
+      return {};
+    }
+  }
+
+  return {};
 }
 
 static void SetupTargetOpts(CompilerInstance &compiler,
@@ -471,6 +546,26 @@ static void SetupTargetOpts(CompilerInstance &compiler,
   // Set the target ABI
   if (std::string abi = GetClangTargetABI(target_arch); !abi.empty())
     compiler.getTargetOpts().ABI = std::move(abi);
+
+  if ((target_machine == llvm::Triple::riscv64 &&
+       compiler.getTargetOpts().ABI == "lp64f") ||
+      (target_machine == llvm::Triple::riscv32 &&
+       compiler.getTargetOpts().ABI == "ilp32f"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+f");
+
+  if ((target_machine == llvm::Triple::riscv64 &&
+       compiler.getTargetOpts().ABI == "lp64d") ||
+      (target_machine == llvm::Triple::riscv32 &&
+       compiler.getTargetOpts().ABI == "ilp32d"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+d");
+
+  if ((target_machine == llvm::Triple::loongarch64 &&
+       compiler.getTargetOpts().ABI == "lp64f"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+f");
+
+  if ((target_machine == llvm::Triple::loongarch64 &&
+       compiler.getTargetOpts().ABI == "lp64d"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+d");
 }
 
 static void SetupLangOpts(CompilerInstance &compiler,
@@ -685,7 +780,7 @@ ClangExpressionParser::ClangExpressionParser(
   SetupTargetOpts(*m_compiler, *target_sp);
 
   // 3. Create and install the target on the compiler.
-  m_compiler->createDiagnostics();
+  m_compiler->createDiagnostics(m_compiler->getVirtualFileSystem());
   // Limit the number of error diagnostics we emit.
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
@@ -711,8 +806,8 @@ ClangExpressionParser::ClangExpressionParser(
 
   // 4. Set language options.
   SetupLangOpts(*m_compiler, *exe_scope, expr);
-  if (auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
-      clang_expr && clang_expr->DidImportCxxModules()) {
+  auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
+  if (clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
     SetupImportStdModuleLangOpts(*m_compiler, *target_sp);
     SetupModuleHeaderPaths(m_compiler.get(), m_include_directories, target_sp);
@@ -722,7 +817,7 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler->getCodeGenOpts().EmitDeclMetadata = true;
   m_compiler->getCodeGenOpts().InstrumentFunctions = false;
   m_compiler->getCodeGenOpts().setFramePointer(
-                                    CodeGenOptions::FramePointerKind::All);
+      CodeGenOptions::FramePointerKind::All);
   if (generate_debug_info)
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
   else
@@ -736,12 +831,12 @@ ClangExpressionParser::ClangExpressionParser(
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
   m_compiler->getTarget().adjust(m_compiler->getDiagnostics(),
-		                 m_compiler->getLangOpts());
+                                 m_compiler->getLangOpts());
 
   // 5. Set up the diagnostic buffer for reporting errors
-
   auto diag_mgr = new ClangDiagnosticManagerAdapter(
-      m_compiler->getDiagnostics().getDiagnosticOptions());
+      m_compiler->getDiagnostics().getDiagnosticOptions(),
+      clang_expr ? clang_expr->GetFilename() : StringRef());
   m_compiler->getDiagnostics().setClient(diag_mgr);
 
   // 6. Set up the source management objects inside the compiler
@@ -1156,8 +1251,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
           if (auto fileEntry = m_compiler->getFileManager().getOptionalFileRef(
                   result_path)) {
             source_mgr.setMainFileID(source_mgr.createFileID(
-                *fileEntry,
-                SourceLocation(), SrcMgr::C_User));
+                *fileEntry, SourceLocation(), SrcMgr::C_User));
             created_main_file = true;
           }
         }
@@ -1503,13 +1597,9 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
               new ClangDynamicCheckerFunctions();
 
           DiagnosticManager install_diags;
-          if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx)) {
-            std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
-            if (install_diags.Diagnostics().size())
-              ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
-            err = Status(ErrMsg);
-            return err;
-          }
+          if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx))
+            return Status::FromError(install_diags.GetAsError(
+                lldb::eExpressionSetupError, "couldn't install checkers:"));
 
           process->SetDynamicCheckers(dynamic_checkers);
 

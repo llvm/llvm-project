@@ -17,7 +17,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -88,15 +87,15 @@ static void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Adjusts the value of a relative branch target before fixup application.
 static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
                                  uint64_t &Value, MCContext *Ctx = nullptr) {
+  // Jumps are relative to the current instruction.
+  Value -= 2;
+
   // We have one extra bit of precision because the value is rightshifted by
   // one.
   signed_width(Size + 1, Value, std::string("branch target"), Fixup, Ctx);
 
   // Rightshifts the value by one.
   AVR::fixups::adjustBranchTarget(Value);
-
-  // Jumps are relative to the current instruction.
-  Value -= 1;
 }
 
 /// 22-bit absolute fixup.

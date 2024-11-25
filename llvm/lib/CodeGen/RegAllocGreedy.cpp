@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/EdgeBundles.h"
@@ -59,8 +58,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -162,9 +159,9 @@ INITIALIZE_PASS_DEPENDENCY(MachineScheduler)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
-INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
-INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(SpillPlacement)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_DEPENDENCY(RegAllocEvictionAdvisorAnalysis)
@@ -215,11 +212,11 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addRequired<VirtRegMap>();
-  AU.addPreserved<VirtRegMap>();
-  AU.addRequired<LiveRegMatrix>();
-  AU.addPreserved<LiveRegMatrix>();
-  AU.addRequired<EdgeBundles>();
+  AU.addRequired<VirtRegMapWrapperLegacy>();
+  AU.addPreserved<VirtRegMapWrapperLegacy>();
+  AU.addRequired<LiveRegMatrixWrapperLegacy>();
+  AU.addPreserved<LiveRegMatrixWrapperLegacy>();
+  AU.addRequired<EdgeBundlesWrapperLegacy>();
   AU.addRequired<SpillPlacement>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
@@ -1054,7 +1051,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
   }
 
   if (VerifyEnabled)
-    MF->verify(this, "After splitting live range around region");
+    MF->verify(this, "After splitting live range around region", &errs());
 }
 
 MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
@@ -1323,7 +1320,7 @@ unsigned RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
   }
 
   if (VerifyEnabled)
-    MF->verify(this, "After splitting live range around basic blocks");
+    MF->verify(this, "After splitting live range around basic blocks", &errs());
   return 0;
 }
 
@@ -2504,10 +2501,13 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
     // the new regs are kept in LDV (still mapping to the old register), until
     // we rewrite spilled locations in LDV at a later stage.
-    DebugVars->splitRegister(VirtReg.reg(), LRE.regs(), *LIS);
+    for (Register r : spiller().getSpilledRegs())
+      DebugVars->splitRegister(r, LRE.regs(), *LIS);
+    for (Register r : spiller().getReplacedRegs())
+      DebugVars->splitRegister(r, LRE.regs(), *LIS);
 
     if (VerifyEnabled)
-      MF->verify(this, "After spilling");
+      MF->verify(this, "After spilling", &errs());
   }
 
   // The live virtual register requesting allocation was spilled, so tell
@@ -2711,11 +2711,11 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   TII = MF->getSubtarget().getInstrInfo();
 
   if (VerifyEnabled)
-    MF->verify(this, "Before greedy register allocator");
+    MF->verify(this, "Before greedy register allocator", &errs());
 
-  RegAllocBase::init(getAnalysis<VirtRegMap>(),
+  RegAllocBase::init(getAnalysis<VirtRegMapWrapperLegacy>().getVRM(),
                      getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
-                     getAnalysis<LiveRegMatrix>());
+                     getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM());
 
   // Early return if there is no virtual register to be allocated to a
   // physical register.
@@ -2730,7 +2730,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  Bundles = &getAnalysis<EdgeBundles>();
+  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   SpillPlacer = &getAnalysis<SpillPlacement>();
   DebugVars = &getAnalysis<LiveDebugVariables>();
 
@@ -2770,7 +2770,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   tryHintsRecoloring();
 
   if (VerifyEnabled)
-    MF->verify(this, "Before post optimization");
+    MF->verify(this, "Before post optimization", &errs());
   postOptimization();
   reportStats();
 

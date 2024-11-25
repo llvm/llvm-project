@@ -708,7 +708,7 @@ defm "" : ReplaceLane<I64x2, 30>;
 defm "" : ReplaceLane<F32x4, 32>;
 defm "" : ReplaceLane<F64x2, 34>;
 
-// For now use an instrinsic for f16x8.replace_lane instead of ReplaceLane above
+// For now use an intrinsic for f16x8.replace_lane instead of ReplaceLane above
 // since LLVM IR generated with half type arguments is not well supported and
 // creates conversions from f16->f32.
 defm REPLACE_LANE_F16x8 :
@@ -1112,10 +1112,8 @@ defm ADD_SAT_U : SIMDBinaryIntSmall<uaddsat, "add_sat_u", 112>;
 
 // Integer subtraction: sub / sub_sat_s / sub_sat_u
 defm SUB : SIMDBinaryInt<sub, "sub", 113>;
-defm SUB_SAT_S :
-  SIMDBinaryIntSmall<int_wasm_sub_sat_signed, "sub_sat_s", 114>;
-defm SUB_SAT_U :
-  SIMDBinaryIntSmall<int_wasm_sub_sat_unsigned, "sub_sat_u", 115>;
+defm SUB_SAT_S : SIMDBinaryIntSmall<ssubsat, "sub_sat_s", 114>;
+defm SUB_SAT_U : SIMDBinaryIntSmall<usubsat, "sub_sat_u", 115>;
 
 // Integer multiplication: mul
 let isCommutable = 1 in

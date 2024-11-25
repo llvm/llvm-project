@@ -3548,8 +3548,7 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
   LHSVals.removeImplicitDefs();
   RHSVals.removeImplicitDefs();
 
-  LRange.verify();
-  RRange.verify();
+  assert(LRange.verify() && RRange.verify());
 
   // Join RRange into LHS.
   LRange.join(RRange, LHSVals.getAssignments(), RHSVals.getAssignments(),
@@ -4240,7 +4239,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   JoinSplitEdges = EnableJoinSplits;
 
   if (VerifyCoalescing)
-    MF->verify(this, "Before register coalescing");
+    MF->verify(this, "Before register coalescing", &errs());
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
@@ -4300,7 +4299,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 
   LLVM_DEBUG(dump());
   if (VerifyCoalescing)
-    MF->verify(this, "After register coalescing");
+    MF->verify(this, "After register coalescing", &errs());
   return true;
 }
 

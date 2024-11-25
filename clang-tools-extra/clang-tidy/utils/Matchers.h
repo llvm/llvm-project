@@ -85,15 +85,7 @@ public:
         NameList.begin(), NameList.end(), std::back_inserter(NameMatchers),
         [](const llvm::StringRef Name) { return NameMatcher(Name); });
   }
-  bool matches(
-      const NamedDecl &Node, ast_matchers::internal::ASTMatchFinder *Finder,
-      ast_matchers::internal::BoundNodesTreeBuilder *Builder) const override {
-    return llvm::any_of(NameMatchers, [&Node](const NameMatcher &NM) {
-      return NM.match(Node);
-    });
-  }
 
-private:
   class NameMatcher {
     llvm::Regex Regex;
     enum class MatchMode {
@@ -136,6 +128,15 @@ private:
     }
   };
 
+  bool matches(
+      const NamedDecl &Node, ast_matchers::internal::ASTMatchFinder *Finder,
+      ast_matchers::internal::BoundNodesTreeBuilder *Builder) const override {
+    return llvm::any_of(NameMatchers, [&Node](const NameMatcher &NM) {
+      return NM.match(Node);
+    });
+  }
+
+private:
   std::vector<NameMatcher> NameMatchers;
 };
 

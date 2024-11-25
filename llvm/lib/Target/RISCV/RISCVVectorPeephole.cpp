@@ -28,7 +28,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVISelDAGToDAG.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -85,20 +84,6 @@ char RISCVVectorPeephole::ID = 0;
 
 INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
                 false)
-
-/// Given two VL operands, do we know that LHS <= RHS?
-static bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
-  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
-      LHS.getReg() == RHS.getReg())
-    return true;
-  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
-    return true;
-  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
-    return false;
-  if (!LHS.isImm() || !RHS.isImm())
-    return false;
-  return LHS.getImm() <= RHS.getImm();
-}
 
 /// Given \p User that has an input operand with EEW=SEW, which uses the dest
 /// operand of \p Src with an unknown EEW, return true if their EEWs match.
@@ -191,7 +176,7 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
     return false;
 
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
-  if (VL.isIdenticalTo(SrcVL) || !isVLKnownLE(VL, SrcVL))
+  if (VL.isIdenticalTo(SrcVL) || !RISCV::isVLKnownLE(VL, SrcVL))
     return false;
 
   if (!ensureDominates(VL, *Src))
@@ -419,8 +404,8 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   if (!NewOpc)
     return false;
   MachineInstr *True = MRI->getVRegDef(MI.getOperand(3).getReg());
-  if (!True || !RISCV::getMaskedPseudoInfo(True->getOpcode()) ||
-      !hasSameEEW(MI, *True))
+  if (!True || True->getParent() != MI.getParent() ||
+      !RISCV::getMaskedPseudoInfo(True->getOpcode()) || !hasSameEEW(MI, *True))
     return false;
 
   const MachineInstr *TrueV0Def = V0Defs.lookup(True);
@@ -580,7 +565,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
     MachineOperand &SrcPolicy =
         Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc()));
 
-    if (isVLKnownLE(MIVL, SrcVL))
+    if (RISCV::isVLKnownLE(MIVL, SrcVL))
       SrcPolicy.setImm(SrcPolicy.getImm() | RISCVII::TAIL_AGNOSTIC);
   }
 
@@ -631,7 +616,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   // so we don't need to handle a smaller source VL here.  However, the
   // user's VL may be larger
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
-  if (!isVLKnownLE(SrcVL, MI.getOperand(3)))
+  if (!RISCV::isVLKnownLE(SrcVL, MI.getOperand(3)))
     return false;
 
   // If the new passthru doesn't dominate Src, try to move Src so it does.
@@ -650,7 +635,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   // If MI was tail agnostic and the VL didn't increase, preserve it.
   int64_t Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
   if ((MI.getOperand(5).getImm() & RISCVII::TAIL_AGNOSTIC) &&
-      isVLKnownLE(MI.getOperand(3), SrcVL))
+      RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
     Policy |= RISCVII::TAIL_AGNOSTIC;
   Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
 

@@ -451,10 +451,11 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isDstIdx() const {
     return !getMemIndexReg() && getMemScale() == 1 &&
-      (getMemSegReg() == 0 || getMemSegReg() == X86::ES) &&
-      (getMemBaseReg() == X86::RDI || getMemBaseReg() == X86::EDI ||
-       getMemBaseReg() == X86::DI) && isa<MCConstantExpr>(getMemDisp()) &&
-      cast<MCConstantExpr>(getMemDisp())->getValue() == 0;
+           (!getMemSegReg() || getMemSegReg() == X86::ES) &&
+           (getMemBaseReg() == X86::RDI || getMemBaseReg() == X86::EDI ||
+            getMemBaseReg() == X86::DI) &&
+           isa<MCConstantExpr>(getMemDisp()) &&
+           cast<MCConstantExpr>(getMemDisp())->getValue() == 0;
   }
   bool isDstIdx8() const {
     return isMem8() && isDstIdx();
@@ -617,6 +618,37 @@ struct X86Operand final : public MCParsedAsmOperand {
     case X86::K6:
     case X86::K7:
       Reg = X86::K6_K7;
+      break;
+    }
+    Inst.addOperand(MCOperand::createReg(Reg));
+  }
+
+  bool isTILEPair() const {
+    return Kind == Register &&
+           X86MCRegisterClasses[X86::TILERegClassID].contains(getReg());
+  }
+
+  void addTILEPairOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    unsigned Reg = getReg();
+    switch (Reg) {
+    default:
+      llvm_unreachable("Invalid tile register!");
+    case X86::TMM0:
+    case X86::TMM1:
+      Reg = X86::TMM0_TMM1;
+      break;
+    case X86::TMM2:
+    case X86::TMM3:
+      Reg = X86::TMM2_TMM3;
+      break;
+    case X86::TMM4:
+    case X86::TMM5:
+      Reg = X86::TMM4_TMM5;
+      break;
+    case X86::TMM6:
+    case X86::TMM7:
+      Reg = X86::TMM6_TMM7;
       break;
     }
     Inst.addOperand(MCOperand::createReg(Reg));

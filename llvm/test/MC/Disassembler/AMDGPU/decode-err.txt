@@ -1,15 +1,10 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding -filetype=null < %s 2>&1 | FileCheck -check-prefix=GCN-ERR %s
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=W32 %s
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=W64 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
 
 # GCN-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xdf,0x00,0x00,0x02
-
-# this is s_singleuse_vdst 0x1234, which is only valid on gfx1150
-# GFX11-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
-0x34,0x12,0x93,0xbf
 
 # this is s_waitcnt_vscnt exec_hi, 0x1234, which is valid on gfx11, but not on gfx12
 # GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding

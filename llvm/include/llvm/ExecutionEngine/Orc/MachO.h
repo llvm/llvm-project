@@ -28,6 +28,9 @@ class MachOUniversalBinary;
 
 namespace orc {
 
+class JITDylib;
+class ObjectLayer;
+
 /// Check that the given buffer contains a MachO object file compatible with the
 /// given triple.
 /// ObjIsSlice should be set to true if Obj is a slice of a universal binary
@@ -71,6 +74,20 @@ getMachOSliceRangeForTriple(object::MachOUniversalBinary &UB, const Triple &TT);
 /// binary.
 Expected<std::pair<size_t, size_t>>
 getMachOSliceRangeForTriple(MemoryBufferRef UBBuf, const Triple &TT);
+
+/// For use with StaticLibraryDefinitionGenerators.
+class ForceLoadMachOArchiveMembers {
+public:
+  ForceLoadMachOArchiveMembers(ObjectLayer &L, JITDylib &JD, bool ObjCOnly)
+      : L(L), JD(JD), ObjCOnly(ObjCOnly) {}
+
+  Error operator()(MemoryBufferRef MemberBuf);
+
+private:
+  ObjectLayer &L;
+  JITDylib &JD;
+  bool ObjCOnly;
+};
 
 } // namespace orc
 } // namespace llvm

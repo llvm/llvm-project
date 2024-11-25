@@ -12,12 +12,12 @@ define void @test() {
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP8:%.*]], %[[BB6]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, <2 x i32> [[TMP1]], i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 5, i32 4>
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <2 x i32> <i32 2, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP8]] = mul <2 x i32> zeroinitializer, [[TMP7]]
 ; CHECK-NEXT:    br i1 false, label %[[BB2]], label %[[BB6]]
 ;

@@ -41,7 +41,7 @@ void initLLVM() {
 /// Create a TargetMachine. As we lack a dedicated always available target for
 /// unittests, we go for "AMDGPU" to be able to test normal and subregister
 /// liveranges.
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   Triple TargetTriple("amdgcn--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -49,16 +49,15 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       T->createTargetMachine("AMDGPU", "gfx900", "", Options, std::nullopt,
-                             std::nullopt, CodeGenOptLevel::Aggressive)));
+                             std::nullopt, CodeGenOptLevel::Aggressive));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
                                  legacy::PassManagerBase &PM,
                                  std::unique_ptr<MIRParser> &MIR,
-                                 const LLVMTargetMachine &TM,
-                                 StringRef MIRCode) {
+                                 const TargetMachine &TM, StringRef MIRCode) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
@@ -101,7 +100,9 @@ struct TestPassT : public TestPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     AnalysisType &A = getAnalysis<AnalysisType>();
     T(MF, A);
-    EXPECT_EQ(MF.verify(this, /* Banner */ nullptr, /* AbortOnError */ false),
+    EXPECT_EQ(MF.verify(this, /* Banner=*/nullptr,
+                        /*OS=*/nullptr,
+                        /* AbortOnError=*/false),
               ShouldPass);
     return true;
   }
@@ -204,7 +205,7 @@ static void doTest(StringRef MIRFunc,
                    typename TestPassT<AnalysisType>::TestFx T,
                    bool ShouldPass = true) {
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   // This test is designed for the X86 backend; stop if it is not available.
   if (!TM)
     return;

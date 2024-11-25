@@ -66,8 +66,10 @@ public:
 static bool isFixupKindRIPRel(unsigned Kind) {
   return Kind == X86::reloc_riprel_4byte ||
          Kind == X86::reloc_riprel_4byte_movq_load ||
+         Kind == X86::reloc_riprel_4byte_movq_load_rex2 ||
          Kind == X86::reloc_riprel_4byte_relax ||
-         Kind == X86::reloc_riprel_4byte_relax_rex;
+         Kind == X86::reloc_riprel_4byte_relax_rex ||
+         Kind == X86::reloc_riprel_4byte_relax_rex2;
 }
 
 static unsigned getFixupKindLog2Size(unsigned Kind) {
@@ -83,7 +85,9 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
   case X86::reloc_riprel_4byte_relax_rex:
+  case X86::reloc_riprel_4byte_relax_rex2:
   case X86::reloc_riprel_4byte_movq_load:
+  case X86::reloc_riprel_4byte_movq_load_rex2:
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
   case X86::reloc_branch_4byte_pcrel:

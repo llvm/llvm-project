@@ -133,6 +133,10 @@ public:
   static TranslationUnitDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<TranslationUnitDecl *>(const_cast<DeclContext*>(DC));
   }
+
+  /// Retrieves the canonical declaration of this translation unit.
+  TranslationUnitDecl *getCanonicalDecl() override { return getFirstDecl(); }
+  const TranslationUnitDecl *getCanonicalDecl() const { return getFirstDecl(); }
 };
 
 /// Represents a `#pragma comment` line. Always a child of
@@ -733,7 +737,7 @@ class DeclaratorDecl : public ValueDecl {
   // qualifier, to be used for the (uncommon) case of out-of-line declarations
   // and constrained function decls.
   struct ExtInfo : public QualifierInfo {
-    TypeSourceInfo *TInfo;
+    TypeSourceInfo *TInfo = nullptr;
     Expr *TrailingRequiresClause = nullptr;
   };
 

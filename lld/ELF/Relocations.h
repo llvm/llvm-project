@@ -16,6 +16,8 @@
 #include <vector>
 
 namespace lld::elf {
+struct Ctx;
+class Defined;
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -23,7 +25,12 @@ class OutputSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
-using RelType = uint32_t;
+struct RelType {
+  uint32_t v = 0;
+  /*implicit*/ constexpr RelType(uint32_t v = 0) : v(v) {}
+  /*implicit*/ operator uint32_t() const { return v; }
+};
+
 using JumpModType = uint32_t;
 
 // List of target-independent relocation types. Relocations read
@@ -141,13 +148,13 @@ struct JumpInstrMod {
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations();
-template <class ELFT> void checkNoCrossRefs();
-void reportUndefinedSymbols();
-void postScanRelocations();
-void addGotEntry(Symbol &sym);
+template <class ELFT> void scanRelocations(Ctx &ctx);
+template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
+void reportUndefinedSymbols(Ctx &);
+void postScanRelocations(Ctx &ctx);
+void addGotEntry(Ctx &ctx, Symbol &sym);
 
-void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
+void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
 class ThunkSection;
@@ -156,6 +163,9 @@ class InputSectionDescription;
 
 class ThunkCreator {
 public:
+  // Thunk may be incomplete. Avoid inline ctor/dtor.
+  ThunkCreator(Ctx &ctx);
+  ~ThunkCreator();
   // Return true if Thunks have been added to OutputSections
   bool createThunks(uint32_t pass, ArrayRef<OutputSection *> outputSections);
 
@@ -173,10 +183,16 @@ private:
   std::pair<Thunk *, bool> getThunk(InputSection *isec, Relocation &rel,
                                     uint64_t src);
 
+  std::pair<Thunk *, bool> getSyntheticLandingPad(Defined &d, int64_t a);
+
   ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
                                 uint64_t off);
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
+
+  bool addSyntheticLandingPads();
+
+  Ctx &ctx;
 
   // Record all the available Thunks for a (Symbol, addend) pair, where Symbol
   // is represented as a (section, offset) pair. There may be multiple
@@ -185,9 +201,10 @@ private:
   // original addend, so we cannot fold offset + addend. A nested pair is used
   // because DenseMapInfo is not specialized for std::tuple.
   llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
-                 std::vector<Thunk *>>
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbolsBySectionAndAddend;
-  llvm::DenseMap<std::pair<Symbol *, int64_t>, std::vector<Thunk *>>
+  llvm::DenseMap<std::pair<Symbol *, int64_t>,
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbols;
 
   // Find a Thunk from the Thunks symbol definition, we can use this to find
@@ -197,8 +214,20 @@ private:
   // Track InputSections that have an inline ThunkSection placed in front
   // an inline ThunkSection may have control fall through to the section below
   // so we need to make sure that there is only one of them.
-  // The Mips LA25 Thunk is an example of an inline ThunkSection.
+  // The Mips LA25 Thunk is an example of an inline ThunkSection, as is
+  // the AArch64BTLandingPadThunk.
   llvm::DenseMap<InputSection *, ThunkSection *> thunkedSections;
+
+  // Record landing pads, generated for a section + offset destination.
+  // Landling pads are alternative entry points for destinations that need
+  // to be reached via thunks that use indirect branches. A destination
+  // needs at most one landing pad as that can be reused by all callers.
+  llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
+                 std::unique_ptr<Thunk>>
+      landingPadsBySectionAndAddend;
+
+  // All the nonLandingPad thunks that have been created, in order of creation.
+  std::vector<Thunk *> allThunks;
 
   // The number of completed passes of createThunks this permits us
   // to do one time initialization on Pass 0 and put a limit on the

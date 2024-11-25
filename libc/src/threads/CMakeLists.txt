@@ -22,6 +22,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.threads.thread
     libc.include.threads
+    libc.src.errno.errno
   COMPILE_OPTIONS
     -O3
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from

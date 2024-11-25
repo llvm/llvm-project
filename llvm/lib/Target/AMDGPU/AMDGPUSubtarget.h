@@ -51,6 +51,7 @@ protected:
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -166,6 +167,10 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
+  bool hasBF16ConversionInsts() const {
+    return HasBF16ConversionInsts;
+  }
+
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
   }
@@ -226,10 +231,18 @@ public:
     return WavefrontSizeLog2;
   }
 
+  /// Return the maximum number of bytes of LDS available for all workgroups
+  /// running on the same WGP or CU.
+  /// For GFX10-GFX12 in WGP mode this is 128k even though each workgroup is
+  /// limited to 64k.
   unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
 
+  /// Return the maximum number of bytes of LDS that can be allocated to a
+  /// single workgroup.
+  /// For GFX10-GFX12 in WGP mode this is limited to 64k even though the WGP has
+  /// 128k in total.
   unsigned getAddressableLocalMemorySize() const {
     return AddressableLocalMemorySize;
   }

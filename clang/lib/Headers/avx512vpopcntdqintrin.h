@@ -22,7 +22,7 @@
                  __min_vector_width__(512)))
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS _mm512_popcnt_epi64(__m512i __A) {
-  return (__m512i)__builtin_ia32_vpopcntq_512((__v8di)__A);
+  return (__m512i)__builtin_elementwise_popcount((__v8du)__A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -37,7 +37,7 @@ _mm512_maskz_popcnt_epi64(__mmask8 __U, __m512i __A) {
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS _mm512_popcnt_epi32(__m512i __A) {
-  return (__m512i)__builtin_ia32_vpopcntd_512((__v16si)__A);
+  return (__m512i)__builtin_elementwise_popcount((__v16su)__A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

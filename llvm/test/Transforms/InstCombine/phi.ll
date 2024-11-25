@@ -93,9 +93,10 @@ define i32 @test5_undef(i32 %A, i1 %cond) {
 ; CHECK-NEXT:  BB0:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[A:%.*]], [[BB0:%.*]] ], [ undef, [[LOOP]] ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
-; CHECK-NEXT:    ret i32 [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
 BB0:
   br label %Loop
@@ -2741,4 +2742,83 @@ loop.latch:
   %and = and i32 %phi, 1
   call void @use(i32 %and)
   br label %loop
+}
+
+define void @test_dead_phi_web(i64 %index, i1 %cond) {
+; CHECK-LABEL: @test_dead_phi_web(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB0:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    switch i64 [[INDEX:%.*]], label [[BB4:%.*]] [
+; CHECK-NEXT:      i64 0, label [[BB1:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       BB1:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2]], label [[BB4]]
+; CHECK:       BB2:
+; CHECK-NEXT:    br i1 [[COND]], label [[BB3]], label [[BB4]]
+; CHECK:       BB3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       BB4:
+; CHECK-NEXT:    br i1 [[COND]], label [[BB0]], label [[BB5:%.*]]
+; CHECK:       BB5:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %BB0
+
+BB0:                                              ; preds = %BB4, %entry
+  %a = phi float [ 0.0, %entry ], [ %x, %BB4 ]
+  switch i64 %index, label %BB4 [
+  i64 0, label %BB1
+  i64 1, label %BB2
+  i64 2, label %BB3
+  ]
+
+BB1:                                              ; preds = %BB0
+  br i1 %cond, label %BB2, label %BB4
+
+BB2:                                              ; preds = %BB1, %BB0
+  %b = phi float [ 2.0, %BB0 ], [ %a, %BB1 ]
+  br i1 %cond, label %BB3, label %BB4
+
+BB3:                                              ; preds = %BB2, %BB0
+  %c = phi float [ 3.0, %BB0 ], [ %b, %BB2 ]
+  br label %BB4
+
+BB4:                                             ; preds = %BB3, %BB2, %BB1, %BB0
+  %x = phi float [ %a, %BB0 ], [ %a, %BB1 ], [ %b, %BB2 ], [ %c, %BB3 ]
+  br i1 %cond, label %BB0, label %BB5
+
+BB5:                                             ; preds = %BB4
+  ret void
+}
+
+define i64 @wrong_gep_arg_into_phi(ptr noundef %ptr) {
+; CHECK-LABEL: @wrong_gep_arg_into_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[PTR_PN:%.*]] = phi ptr [ [[PTR:%.*]], [[ENTRY:%.*]] ], [ [[DOTPN:%.*]], [[FOR_COND]] ]
+; CHECK-NEXT:    [[DOTPN]] = getelementptr i8, ptr [[PTR_PN]], i64 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[DOTPN]], align 1
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i8 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[EXIT:%.*]], label [[FOR_COND]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %add.ptr = getelementptr i8, ptr %ptr, i64 1
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.cond, %entry
+  %.pn = phi ptr [ %add.ptr, %entry ], [ %incdec.ptr, %for.cond ]
+  %val = load i8, ptr %.pn, align 1
+  %cond = icmp ne i8 %val, 0
+  %incdec.ptr = getelementptr inbounds nuw i8, ptr %.pn, i64 1
+  br i1 %cond, label %for.cond, label %exit
+
+exit:                                             ; preds = %for.cond
+  ret i64 0
 }

@@ -24,10 +24,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
-#include <utility>
 #include <cassert>
+#include <utility>
 #include <vector>
 
 using namespace clang;
@@ -259,12 +258,10 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
             BaseRecord = TD->getTemplatedDecl();
         }
         if (BaseRecord) {
-          if (!BaseRecord->hasDefinition() ||
-              VisitedDependentRecords.count(BaseRecord)) {
+          if (!BaseRecord->hasDefinition())
             BaseRecord = nullptr;
-          } else {
-            VisitedDependentRecords.insert(BaseRecord);
-          }
+          else if (!VisitedDependentRecords.insert(BaseRecord).second)
+            BaseRecord = nullptr;
         }
       } else {
         BaseRecord = cast<CXXRecordDecl>(

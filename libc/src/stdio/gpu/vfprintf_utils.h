@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/FILE.h"
+#include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 #include "src/string/string_utils.h"
 
-#include <stdio.h>
+namespace LIBC_NAMESPACE_DECL {
 
-namespace LIBC_NAMESPACE {
-
-template <uint16_t opcode>
+template <uint32_t opcode>
 LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
                               const char *__restrict format, size_t format_size,
                               va_list vlist) {
@@ -24,14 +25,14 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
 
   if constexpr (opcode == RPC_PRINTF_TO_STREAM ||
                 opcode == RPC_PRINTF_TO_STREAM_PACKED) {
-    port.send([&](rpc::Buffer *buffer) {
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
     });
   }
 
   size_t args_size = 0;
   port.send_n(format, format_size);
-  port.recv([&](rpc::Buffer *buffer) {
+  port.recv([&](rpc::Buffer *buffer, uint32_t) {
     args_size = static_cast<size_t>(buffer->data[0]);
   });
   port.send_n(vlist, args_size);
@@ -39,7 +40,7 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
   uint32_t ret = 0;
   for (;;) {
     const char *str = nullptr;
-    port.recv([&](rpc::Buffer *buffer) {
+    port.recv([&](rpc::Buffer *buffer, uint32_t) {
       ret = static_cast<uint32_t>(buffer->data[0]);
       str = reinterpret_cast<const char *>(buffer->data[1]);
     });
@@ -83,4 +84,4 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

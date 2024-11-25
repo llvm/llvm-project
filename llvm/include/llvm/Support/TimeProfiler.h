@@ -83,6 +83,19 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
+// Type of the time trace event.
+enum class TimeTraceEventType {
+  // Complete events have a duration (start and end time points) and are marked
+  // by the "X" phase type.
+  CompleteEvent,
+  // Instant events don't have a duration, they happen at an instant in time.
+  // They are marked with "i" phase type. The field End is ignored for them.
+  InstantEvent,
+  // Async events mark asynchronous operations and are specified by the "b"
+  // (start) and "e" (end) phase types.
+  AsyncEvent
+};
+
 struct TimeTraceMetadata {
   std::string Detail;
   // Source file and line number information for the event.
@@ -151,6 +164,10 @@ timeTraceProfilerBegin(StringRef Name,
 /// for more details.
 TimeTraceProfilerEntry *timeTraceAsyncProfilerBegin(StringRef Name,
                                                     StringRef Detail);
+
+// Mark an instant event.
+void timeTraceAddInstantEvent(StringRef Name,
+                              llvm::function_ref<std::string()> Detail);
 
 /// Manually end the last time section.
 void timeTraceProfilerEnd();

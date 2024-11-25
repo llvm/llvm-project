@@ -32,7 +32,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -147,7 +146,7 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
   return false;
 }
 
-bool CXXTypeidExpr::isMostDerived(ASTContext &Context) const {
+bool CXXTypeidExpr::isMostDerived(const ASTContext &Context) const {
   assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
@@ -159,7 +158,7 @@ bool CXXTypeidExpr::isMostDerived(ASTContext &Context) const {
   return false;
 }
 
-QualType CXXTypeidExpr::getTypeOperand(ASTContext &Context) const {
+QualType CXXTypeidExpr::getTypeOperand(const ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
   Qualifiers Quals;
   return Context.getUnqualifiedArrayType(

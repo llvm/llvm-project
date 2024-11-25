@@ -360,6 +360,26 @@ define <32 x i16> @constant_shift_v32i16(<32 x i16> %a) nounwind {
   ret <32 x i16> %shift
 }
 
+define <32 x i16> @constant_shift_v32i16_pairs(<32 x i16> %a) nounwind {
+; AVX512DQ-LABEL: constant_shift_v32i16_pairs:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [128,128,128,128,64,64,64,64,32,32,32,32,16,16,16,16,8,8,8,8,4,4,4,4,2,2,2,2,1,1,1,1]
+; AVX512DQ-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
+; AVX512DQ-NEXT:    vpsubw %ymm1, %ymm0, %ymm1
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX512DQ-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: constant_shift_v32i16_pairs:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsravw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+  %shift = ashr <32 x i16> %a, <i16 8, i16 8, i16 8, i16 8, i16 9, i16 9, i16 9, i16 9, i16 10, i16 10, i16 10, i16 10, i16 11, i16 11, i16 11, i16 11, i16 12, i16 12, i16 12, i16 12, i16 13, i16 13, i16 13, i16 13, i16 14, i16 14, i16 14, i16 14, i16 15, i16 15, i16 15, i16 15>
+  ret <32 x i16> %shift
+}
+
 define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512DQ-LABEL: constant_shift_v64i8:
 ; AVX512DQ:       # %bb.0:
@@ -434,6 +454,29 @@ define <64 x i8> @constant_shift_v64i8_pairs(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %shift = ashr <64 x i8> %a, <i8 6, i8 6, i8 6, i8 6, i8 2, i8 2, i8 2, i8 2, i8 6, i8 6, i8 4, i8 4, i8 4, i8 4, i8 5, i8 5, i8 6, i8 6, i8 1, i8 1, i8 3, i8 3, i8 2, i8 2, i8 4, i8 4, i8 7, i8 7, i8 5, i8 5, i8 0, i8 0, i8 7, i8 7, i8 1, i8 1, i8 0, i8 0, i8 7, i8 7, i8 4, i8 4, i8 0, i8 0, i8 1, i8 1, i8 3, i8 3, i8 1, i8 1, i8 4, i8 4, i8 4, i8 4, i8 3, i8 3, i8 6, i8 6, i8 6, i8 6, i8 5, i8 5, i8 6, i8 6>
+  ret <64 x i8> %shift
+}
+
+define <64 x i8> @constant_shift_v64i8_quads(<64 x i8> %a) nounwind {
+; AVX512DQ-LABEL: constant_shift_v64i8_quads:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16,16,16,16,4,4,4,4,32,32,32,32,1,1,1,1,1,1,1,1,4,4,4,4,1,1,1,1,4,4,4,4,8,8,8,8,16,16,16,16,16,16,16,16,2,2,2,2,64,64,64,64,4,4,4,4,32,32,32,32,128,128,128,128]
+; AVX512DQ-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
+; AVX512DQ-NEXT:    vpsubb %ymm1, %ymm0, %ymm1
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX512DQ-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: constant_shift_v64i8_quads:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16,16,16,16,4,4,4,4,32,32,32,32,1,1,1,1,1,1,1,1,4,4,4,4,1,1,1,1,4,4,4,4,8,8,8,8,16,16,16,16,16,16,16,16,2,2,2,2,64,64,64,64,4,4,4,4,32,32,32,32,128,128,128,128]
+; AVX512BW-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
+; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+  %shift = ashr <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 5, i8 5, i8 5, i8 5, i8 2, i8 2, i8 2, i8 2, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 5, i8 5, i8 5, i8 5, i8 7, i8 7, i8 7, i8 7, i8 5, i8 5, i8 5, i8 5, i8 4, i8 4, i8 4, i8 4, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 6, i8 6, i8 6, i8 6, i8 1, i8 1, i8 1, i8 1, i8 5, i8 5, i8 5, i8 5, i8 2, i8 2, i8 2, i8 2, i8 0, i8 0, i8 0, i8 0>
   ret <64 x i8> %shift
 }
 

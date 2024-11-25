@@ -330,7 +330,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
   for (Operation *op : mappings.direct[opHandle])
     dropMappingEntry(mappings.reverse, op, opHandle);
   mappings.direct.erase(opHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(opHandle);
@@ -342,7 +342,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
     for (Value resultHandle : resultHandles) {
       Mappings &localMappings = getMapping(resultHandle);
       dropMappingEntry(localMappings.values, resultHandle, opResult);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(resultHandle);
@@ -358,7 +358,7 @@ void transform::TransformState::forgetValueMapping(
   for (Value payloadValue : mappings.reverseValues[valueHandle])
     dropMappingEntry(mappings.reverseValues, payloadValue, valueHandle);
   mappings.values.erase(valueHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(valueHandle);
@@ -372,7 +372,7 @@ void transform::TransformState::forgetValueMapping(
       dropMappingEntry(localMappings.direct, opHandle, payloadOp);
       dropMappingEntry(localMappings.reverse, payloadOp, opHandle);
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       localMappings.incrementTimestamp(opHandle);
@@ -452,7 +452,7 @@ transform::TransformState::replacePayloadValue(Value value, Value replacement) {
     // between the handles and the IR objects
     if (!replacement) {
       dropMappingEntry(mappings.values, handle, value);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(handle);
@@ -804,7 +804,7 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
     Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (llvm::find(mappings.direct[handle], nullptr) !=
         mappings.direct[handle].end())
       // Payload IR is removed from the mapping. This invalidates the respective

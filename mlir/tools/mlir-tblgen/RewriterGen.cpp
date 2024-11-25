@@ -268,7 +268,7 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &recordKeeper,
+  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &records,
                       RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
@@ -1886,9 +1886,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 }
 
 StaticMatcherHelper::StaticMatcherHelper(raw_ostream &os,
-                                         const RecordKeeper &recordKeeper,
+                                         const RecordKeeper &records,
                                          RecordOperatorMap &mapper)
-    : opMap(mapper), staticVerifierEmitter(os, recordKeeper) {}
+    : opMap(mapper), staticVerifierEmitter(os, records) {}
 
 void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
   // PatternEmitter will use the static matcher if there's one generated. To
@@ -1951,17 +1951,17 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
 
-static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Rewriters", os, recordKeeper);
+static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Rewriters", os, records);
 
-  auto patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
+  auto patterns = records.getAllDerivedDefinitions("Pattern");
 
   // We put the map here because it can be shared among multiple patterns.
   RecordOperatorMap recordOpMap;
 
   // Exam all the patterns and generate static matcher for the duplicated
   // DagNode.
-  StaticMatcherHelper staticMatcher(os, recordKeeper, recordOpMap);
+  StaticMatcherHelper staticMatcher(os, records, recordOpMap);
   for (const Record *p : patterns)
     staticMatcher.addPattern(p);
   staticMatcher.populateStaticConstraintFunctions(os);

@@ -172,8 +172,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   using namespace utils::fixit;
   if (VC == VariableCategory::Value && TransformValues) {
-    Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                  DeclSpec::TQ_const, QualifierTarget::Value,
+    Diag << addQualifierToVarDecl(*Variable, *Result.Context, Qualifiers::Const,
+                                  QualifierTarget::Value,
                                   QualifierPolicy::Right);
     // FIXME: Add '{}' for default initialization if no user-defined default
     // constructor exists and there is no initializer.
@@ -181,8 +181,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (VC == VariableCategory::Reference && TransformReferences) {
-    Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                  DeclSpec::TQ_const, QualifierTarget::Value,
+    Diag << addQualifierToVarDecl(*Variable, *Result.Context, Qualifiers::Const,
+                                  QualifierTarget::Value,
                                   QualifierPolicy::Right);
     return;
   }
@@ -190,7 +190,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   if (VC == VariableCategory::Pointer) {
     if (WarnPointersAsValues && TransformPointersAsValues) {
       Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                    DeclSpec::TQ_const, QualifierTarget::Value,
+                                    Qualifiers::Const, QualifierTarget::Value,
                                     QualifierPolicy::Right);
     }
     return;

@@ -188,6 +188,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << GuardArgs;
   }
 
+  if (Args.hasArg(options::OPT_fms_hotpatch))
+    CmdArgs.push_back("--functionpadmin");
+
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
   // GCC implicitly adds an .exe extension if it is given an output file name
@@ -251,7 +254,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  if (C.getDriver().IsFlangMode()) {
+  if (C.getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
     addFortranRuntimeLibs(TC, Args, CmdArgs);
   }

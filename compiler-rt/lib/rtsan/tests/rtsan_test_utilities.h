@@ -37,8 +37,8 @@ void ExpectRealtimeDeath(Function &&Func,
                : "";
   };
 
-  EXPECT_EXIT(RealtimeInvoke(std::forward<Function>(Func)),
-              ExitedWithCode(EXIT_FAILURE), GetExpectedErrorSubstring());
+  EXPECT_EXIT(RealtimeInvoke(std::forward<Function>(Func)), ExitedWithCode(43),
+              GetExpectedErrorSubstring());
 }
 
 template <typename Function> void ExpectNonRealtimeSurvival(Function &&Func) {

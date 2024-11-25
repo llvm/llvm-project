@@ -1,4 +1,4 @@
-# RUN: %PYTHON %s 2>&1 | FileCheck %s
+# RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
 from mlir.ir import *
@@ -7,6 +7,12 @@ from mlir.execution_engine import *
 from mlir.runtime import *
 from ml_dtypes import bfloat16, float8_e5m2
 
+MLIR_RUNNER_UTILS = os.getenv(
+    "MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so"
+)
+MLIR_C_RUNNER_UTILS = os.getenv(
+    "MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so"
+)
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -700,8 +706,8 @@ def testSharedLibLoad():
             ]
         else:
             shared_libs = [
-                "../../../../lib/libmlir_runner_utils.so",
-                "../../../../lib/libmlir_c_runner_utils.so",
+                MLIR_RUNNER_UTILS,
+                MLIR_C_RUNNER_UTILS,
             ]
 
         execution_engine = ExecutionEngine(
@@ -743,8 +749,8 @@ def testNanoTime():
             ]
         else:
             shared_libs = [
-                "../../../../lib/libmlir_runner_utils.so",
-                "../../../../lib/libmlir_c_runner_utils.so",
+                MLIR_RUNNER_UTILS,
+                MLIR_C_RUNNER_UTILS,
             ]
 
         execution_engine = ExecutionEngine(
