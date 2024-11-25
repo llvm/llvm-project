@@ -304,6 +304,19 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
+
+// Optimize v_mfma_scale* instructions to avoid the scale if the
+// scales are known 0.
+class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
+  (ops node:$srca, node:$srcb, node:$srcc,
+       node:$cbsz, node:$blgp),
+  (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
+          srcvalue, 0, srcvalue, 0)
+>;
+
+def mfma_f32_16x16x128_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
+def mfma_f32_32x32x64_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
+
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//
