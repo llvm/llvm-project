@@ -4423,18 +4423,17 @@ let Predicates = [HasSVE2, HasF8F16MM] in {
 
 let Predicates = [HasSSVE_FP8DOT2] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot">;
+defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-// TODO: Replace nxv16i8 by nxv16f8
-defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot">;
+defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot", nxv8f16, int_aarch64_sve_fp8_fdot>;
 }
 
 // TODO: Replace nxv16i8 by nxv16f8
 let Predicates = [HasSSVE_FP8DOT4] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot">;
+defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot">;
+defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot", nxv4f32, int_aarch64_sve_fp8_fdot>;
 }
 
 let Predicates = [HasSVE2orSME2, HasLUT] in {

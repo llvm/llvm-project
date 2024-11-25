@@ -105,6 +105,7 @@ include "arm_immcheck_incl.td"
 // N: svfloat64_t
 // $: svbfloat16_t
 // ~: svmfloat8_t
+// !: mfloat8_t (splat to svmfloat8_t)
 
 // J: Prefetch type (sv_prfop)
 
