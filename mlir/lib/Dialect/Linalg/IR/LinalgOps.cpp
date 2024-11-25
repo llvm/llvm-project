@@ -523,7 +523,7 @@ public:
         isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
     bool tailFloatingPoint =
         isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
-    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg1);
+    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg2);
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (ternaryFn) {
@@ -3460,7 +3460,7 @@ namespace linalg {
 /// Returns a list of AffineMap with the typical matmul indexing charactristic.
 SmallVector<AffineMap> MatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
   AffineExpr d0, d1, d2;
-  SmallVector<AffineMap, 3> indexingMaps;
+  SmallVector<AffineMap> indexingMaps;
   bindDims(context, d0, d1, d2);
   indexingMaps.push_back(AffineMap::get(3, 0, {d0, d2}, context));
   indexingMaps.push_back(AffineMap::get(3, 0, {d2, d1}, context));

@@ -2629,7 +2629,7 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
 
   // Finally, if this value fits in a 5 bit sext field, return it
   if (SignExtend32<5>(MaskVal) == MaskVal)
-    return DAG.getTargetConstant(MaskVal, SDLoc(N), MVT::i32);
+    return DAG.getSignedTargetConstant(MaskVal, SDLoc(N), MVT::i32);
   return SDValue();
 }
 
@@ -2817,7 +2817,7 @@ bool PPCTargetLowering::SelectAddressRegImm(
     int16_t imm = 0;
     if (isIntS16Immediate(N.getOperand(1), imm) &&
         (!EncodingAlignment || isAligned(*EncodingAlignment, imm))) {
-      Disp = DAG.getTargetConstant(imm, dl, N.getValueType());
+      Disp = DAG.getSignedTargetConstant(imm, dl, N.getValueType());
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0))) {
         Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
         fixupFuncForFI(DAG, FI->getIndex(), N.getValueType());
@@ -5181,7 +5181,7 @@ static SDNode *isBLACompatibleAddress(SDValue Op, SelectionDAG &DAG) {
     return nullptr;  // Top 6 bits have to be sext of immediate.
 
   return DAG
-      .getConstant(
+      .getSignedConstant(
           (int)C->getZExtValue() >> 2, SDLoc(Op),
           DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()))
       .getNode();
@@ -9358,7 +9358,11 @@ static SDValue getCanonicalConstSplat(uint64_t Val, unsigned SplatSize, EVT VT,
   EVT CanonicalVT = VTys[SplatSize-1];
 
   // Build a canonical splat for this value.
-  return DAG.getBitcast(ReqVT, DAG.getConstant(Val, dl, CanonicalVT));
+  // Explicitly truncate APInt here, as this API is used with a mix of
+  // signed and unsigned values.
+  return DAG.getBitcast(
+      ReqVT,
+      DAG.getConstant(APInt(64, Val).trunc(SplatSize * 8), dl, CanonicalVT));
 }
 
 /// BuildIntrinsicOp - Return a unary operator intrinsic node with the
@@ -9769,7 +9773,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // To avoid having these optimizations undone by constant folding,
     // we convert to a pseudo that will be expanded later into one of
     // the above forms.
-    SDValue Elt = DAG.getConstant(SextVal, dl, MVT::i32);
+    SDValue Elt = DAG.getSignedConstant(SextVal, dl, MVT::i32);
     EVT VT = (SplatSize == 1 ? MVT::v16i8 :
               (SplatSize == 2 ? MVT::v8i16 : MVT::v4i32));
     SDValue EltSize = DAG.getConstant(SplatSize, dl, MVT::i32);
@@ -18964,7 +18968,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
           (!Align || isAligned(*Align, CNImm))) {
         int32_t Addr = (int32_t)CNImm;
         // Otherwise, break this down into LIS + Disp.
-        Disp = DAG.getTargetConstant((int16_t)Addr, DL, MVT::i32);
+        Disp = DAG.getSignedTargetConstant((int16_t)Addr, DL, MVT::i32);
         Base =
             DAG.getTargetConstant((Addr - (int16_t)Addr) >> 16, DL, MVT::i32);
         uint32_t LIS = CNType == MVT::i32 ? PPC::LIS : PPC::LIS8;

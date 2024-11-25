@@ -155,8 +155,12 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   auto fTy = func.getFunctionType();
 
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  mlir::Value sourceLine;
+  if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>)
+    sourceLine = fir::factory::locationToLineNo(
+        builder, loc, op.getSource() ? fTy.getInput(5) : fTy.getInput(4));
+  else
+    sourceLine = fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
 
   mlir::Value hasStat = op.getHasStat() ? builder.createBool(loc, true)
                                         : builder.createBool(loc, false);
@@ -168,8 +172,21 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
     mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
     errmsg = builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
   }
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-      builder, loc, fTy, op.getBox(), hasStat, errmsg, sourceFile, sourceLine)};
+  llvm::SmallVector<mlir::Value> args;
+  if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>) {
+    if (op.getSource())
+      args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
+                                           op.getSource(), hasStat, errmsg,
+                                           sourceFile, sourceLine);
+    else
+      args =
+          fir::runtime::createArguments(builder, loc, fTy, op.getBox(), hasStat,
+                                        errmsg, sourceFile, sourceLine);
+  } else {
+    args =
+        fir::runtime::createArguments(builder, loc, fTy, op.getBox(), hasStat,
+                                      errmsg, sourceFile, sourceLine);
+  }
   auto callOp = builder.create<fir::CallOp>(loc, func, args);
   rewriter.replaceOp(op, callOp);
   return mlir::success();
@@ -182,10 +199,6 @@ struct CUFAllocateOpConversion
   mlir::LogicalResult
   matchAndRewrite(cuf::AllocateOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    // TODO: Allocation with source will need a new entry point in the runtime.
-    if (op.getSource())
-      return mlir::failure();
-
     // TODO: Allocation using different stream.
     if (op.getStream())
       return mlir::failure();
@@ -202,18 +215,28 @@ struct CUFAllocateOpConversion
     if (hasDoubleDescriptors(op)) {
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.
-      mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
-              loc, builder);
-      return convertOpToCall(op, rewriter, func);
+      mlir::func::FuncOp func;
+      if (op.getSource())
+        func = fir::runtime::getRuntimeFunc<mkRTKey(
+            CUFAllocatableAllocateSourceSync)>(loc, builder);
+      else
+        func = fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
+            loc, builder);
+      return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
     }
 
-    // Allocation for local descriptor falls back on the standard runtime
-    // AllocatableAllocate as the dedicated allocator is set in the descriptor
-    // before the call.
-    mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc,
-                                                                   builder);
+    mlir::func::FuncOp func;
+    if (op.getSource())
+      func =
+          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSource)>(
+              loc, builder);
+    else
+      // Allocation for local descriptor falls back on the standard runtime
+      // AllocatableAllocate as the dedicated allocator is set in the descriptor
+      // before the call.
+      func = fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(
+          loc, builder);
+
     return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
   }
 };
@@ -236,7 +259,7 @@ struct CUFDeallocateOpConversion
       mlir::func::FuncOp func =
           fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
               loc, builder);
-      return convertOpToCall(op, rewriter, func);
+      return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
     }
 
     // Deallocation for local descriptor falls back on the standard runtime
