@@ -26,6 +26,7 @@ define { i32, i32 } @v_permlane16_swap_b32_vi(i32 %vdst_old) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %vdst_old, i32 1, i1 false, i1 false)
@@ -37,6 +38,7 @@ define { i32, i32 } @v_permlane16_swap_b32_vl(i32 %vdst_old) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0xc1d1
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %vdst_old, i32 49617, i1 false, i1 false)
@@ -49,6 +51,7 @@ define { i32, i32 } @v_permlane16_swap_b32_iv(i32 %src0_old) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 1, i32 %src0_old, i1 false, i1 false)
@@ -61,6 +64,7 @@ define { i32, i32 } @v_permlane16_swap_b32_ss(i32 inreg %vdst_old, i32 inreg %sr
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %vdst_old, i32 %src0_old, i1 false, i1 false)
@@ -73,6 +77,7 @@ define { i32, i32 } @v_permlane16_swap_b32_sv(i32 inreg %vdst_old, i32 %src0_old
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %vdst_old, i32 %src0_old, i1 false, i1 false)
@@ -84,6 +89,7 @@ define { i32, i32 } @v_permlane16_swap_b32_vs(i32 %vdst_old, i32 inreg %src0_old
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %vdst_old, i32 %src0_old, i1 false, i1 false)
