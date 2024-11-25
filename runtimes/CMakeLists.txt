@@ -9,11 +9,9 @@ cmake_minimum_required(VERSION 3.20.0)
 # by checking for the HAVE_LLVM_LIT flag that is passed explicitly to
 # llvm_ExternalProject_Add().
 if (HAVE_LLVM_LIT)
-    message(STATUS "Performing bootstrapping runtimes build.")
-  set(RUNTIMES_STANDALONE_BUILD OFF)
+  message(STATUS "Performing bootstrapping runtimes build.")
 else()
   message(STATUS "Performing standalone runtimes build.")
-  set(RUNTIMES_STANDALONE_BUILD ON)
 endif()
 # Add path for custom and the LLVM build's modules to the CMake module path.
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
