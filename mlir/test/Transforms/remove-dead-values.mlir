@@ -54,8 +54,9 @@ func.func @acceptable_ir_has_cleanable_simple_op_with_unconditional_branch_op(%a
   cf.br ^bb1(%non_live : i32)
 ^bb1(%non_live_1 : i32):
   // CHECK-NOT: non_live_1
-  cf.br ^bb3
-^bb3:
+  cf.br ^bb3(%non_live_1 : i32)
+  // CHECK-NOT: non_live_2
+^bb3(%non_live_2 : i32):
   return
 }
 
