@@ -17,7 +17,6 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -26,6 +25,8 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/DILLexer.h"
+#include "lldb/ValueObject/DILLiteralParsers.h"
 
 namespace lldb_private {
 
@@ -41,11 +42,6 @@ GetFieldWithNameIndexPath(lldb::ValueObjectSP lhs_val_sp,
                           std::vector<uint32_t> *idx,
                           CompilerType empty_type,
                           bool use_synthetic, bool is_dynamic, bool is_arrow);
-
-/// Checks to see if the CompilerType is a Smart Pointer (shared, unique, weak)
-/// or not. Only applicable for C++, which is why this is here and not part of
-/// the CompilerType class.
-//bool IsSmartPtrType(CompilerType type);
 
 std::tuple<std::optional<MemberInfo>, std::vector<uint32_t>>
 GetMemberInfo(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
@@ -71,29 +67,6 @@ enum class ErrorCode : unsigned char {
 };
 
 void SetUbStatus(Status& error, ErrorCode code);
-
-// clang::SourceManager wrapper which takes ownership of the expression string.
-class DILSourceManager {
- public:
-  static std::shared_ptr<DILSourceManager> Create(std::string expr);
-
-  // This class cannot be safely moved because of the dependency between `m_expr`
-  // and `m_smff`. Users are supposed to pass around the shared pointer.
-  DILSourceManager(DILSourceManager&&) = delete;
-  DILSourceManager(const DILSourceManager&) = delete;
-  DILSourceManager& operator=(DILSourceManager const&) = delete;
-
-  clang::SourceManager& GetSourceManager() const { return m_smff->get(); }
-
- private:
-  explicit DILSourceManager(std::string expr);
-
- private:
-  // Store the expression, since SourceManagerForFile doesn't take the
-  // ownership.
-  std::string m_expr;
-  std::unique_ptr<clang::SourceManagerForFile> m_smff;
-};
 
 // TypeDeclaration builds information about the literal type definition as type
 // is being parsed. It doesn't perform semantic analysis for non-basic types --
@@ -174,7 +147,8 @@ class DILParser {
   explicit DILParser(std::shared_ptr<DILSourceManager> dil_sm,
                      std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
                      lldb::DynamicValueType use_dynamic,
-                     bool use_synthetic);
+                     bool use_synthetic, bool fragile_ivar,
+                     bool check_ptr_vs_member);
 
   DILASTNodeUP Run(Status& error);
 
@@ -184,7 +158,7 @@ class DILParser {
 
   lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
 
-  using PtrOperator = std::tuple<clang::tok::TokenKind, clang::SourceLocation>;
+  using PtrOperator = std::tuple<dil::TokenKind, uint32_t>;
 
  private:
   DILASTNodeUP ParseExpression();
@@ -218,9 +192,9 @@ class DILParser {
       CompilerType type,
       const std::vector<PtrOperator>& ptr_operators);
 
-  bool IsSimpleTypeSpecifierKeyword(clang::Token token) const;
-  bool IsCvQualifier(clang::Token token) const;
-  bool IsPtrOperator(clang::Token token) const;
+  bool IsSimpleTypeSpecifierKeyword(DILToken token) const;
+  bool IsCvQualifier(DILToken token) const;
+  bool IsPtrOperator(DILToken token) const;
   bool HandleSimpleTypeSpecifier(TypeDeclaration* type_decl);
 
   std::string ParseIdExpression();
@@ -230,12 +204,12 @@ class DILParser {
   DILASTNodeUP ParseCharLiteral();
   DILASTNodeUP ParseStringLiteral();
   DILASTNodeUP ParsePointerLiteral();
-  DILASTNodeUP ParseNumericConstant(clang::Token token);
-  DILASTNodeUP ParseFloatingLiteral(clang::NumericLiteralParser& literal,
-                                  clang::Token token);
-  DILASTNodeUP ParseIntegerLiteral(clang::NumericLiteralParser& literal,
-                                 clang::Token token);
-  DILASTNodeUP ParseBuiltinFunction(clang::SourceLocation loc,
+  DILASTNodeUP ParseNumericConstant(DILToken token);
+  DILASTNodeUP ParseFloatingLiteral(NumericLiteralParser& literal,
+                                  DILToken token);
+  DILASTNodeUP ParseIntegerLiteral(NumericLiteralParser& literal,
+                                 DILToken token);
+  DILASTNodeUP ParseBuiltinFunction(uint32_t loc,
                                   std::unique_ptr<BuiltinFunctionDef> func_def);
 
   bool ImplicitConversionIsAllowed(CompilerType src, CompilerType dst,
@@ -245,51 +219,54 @@ class DILParser {
   void ConsumeToken();
 
   void BailOut(ErrorCode error_code, const std::string& error,
-               clang::SourceLocation loc);
-  void Expect(clang::tok::TokenKind kind);
+               uint32_t loc);
 
-  std::string TokenDescription(const clang::Token& token);
+  void BailOut(Status error);
 
-  std::string FormatDiagnostics(clang::SourceManager& sm,
+  void Expect(dil::TokenKind kind);
+
+  std::string TokenDescription(const DILToken& token);
+
+  std::string FormatDiagnostics(DILSourceManager& sm,
                                 const std::string& message,
-                                clang::SourceLocation loc);
+                                uint32_t loc);
 
   template <typename... Ts>
-  void ExpectOneOf(clang::tok::TokenKind k, Ts... ks);
+  void ExpectOneOf(dil::TokenKind k, Ts... ks);
 
   DILASTNodeUP BuildCStyleCast(CompilerType type, DILASTNodeUP rhs,
-                             clang::SourceLocation location);
-  DILASTNodeUP BuildCxxCast(clang::tok::TokenKind kind, CompilerType type,
-                          DILASTNodeUP rhs, clang::SourceLocation location);
+                             uint32_t location);
+  DILASTNodeUP BuildCxxCast(dil::TokenKind kind, CompilerType type,
+                          DILASTNodeUP rhs, uint32_t location);
   DILASTNodeUP BuildCxxDynamicCast(CompilerType type, DILASTNodeUP rhs,
-                                 clang::SourceLocation location);
+                                 uint32_t location);
   DILASTNodeUP BuildCxxStaticCast(CompilerType type, DILASTNodeUP rhs,
-                                clang::SourceLocation location);
+                                uint32_t location);
   DILASTNodeUP BuildCxxStaticCastToScalar(CompilerType type, DILASTNodeUP rhs,
-                                        clang::SourceLocation location);
+                                        uint32_t location);
   DILASTNodeUP BuildCxxStaticCastToEnum(CompilerType type, DILASTNodeUP rhs,
-                                      clang::SourceLocation location);
+                                      uint32_t location);
   DILASTNodeUP BuildCxxStaticCastToPointer(CompilerType type, DILASTNodeUP rhs,
-                                         clang::SourceLocation location);
+                                         uint32_t location);
   DILASTNodeUP BuildCxxStaticCastToNullPtr(CompilerType type, DILASTNodeUP rhs,
-                                         clang::SourceLocation location);
+                                         uint32_t location);
   DILASTNodeUP BuildCxxStaticCastToReference(CompilerType type, DILASTNodeUP rhs,
-                                           clang::SourceLocation location);
+                                           uint32_t location);
   DILASTNodeUP BuildCxxStaticCastForInheritedTypes(
-      CompilerType type, DILASTNodeUP rhs, clang::SourceLocation location);
+      CompilerType type, DILASTNodeUP rhs, uint32_t location);
   DILASTNodeUP BuildCxxReinterpretCast(CompilerType type, DILASTNodeUP rhs,
-                                     clang::SourceLocation location);
+                                     uint32_t location);
   DILASTNodeUP BuildUnaryOp(UnaryOpKind kind, DILASTNodeUP rhs,
-                          clang::SourceLocation location);
+                          uint32_t location);
   DILASTNodeUP BuildIncrementDecrement(UnaryOpKind kind, DILASTNodeUP rhs,
-                                     clang::SourceLocation location);
+                                     uint32_t location);
   DILASTNodeUP BuildBinaryOp(BinaryOpKind kind, DILASTNodeUP lhs, DILASTNodeUP rhs,
-                           clang::SourceLocation location);
+                           uint32_t location);
   CompilerType PrepareBinaryAddition(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
-                                     clang::SourceLocation location,
+                                     uint32_t location,
                                      bool is_comp_assign);
   CompilerType PrepareBinarySubtraction(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
-                                        clang::SourceLocation location,
+                                        uint32_t location,
                                         bool is_comp_assign);
   CompilerType PrepareBinaryMulDiv(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
                                    bool is_comp_assign);
@@ -301,19 +278,19 @@ class DILParser {
                                   bool is_comp_assign);
   CompilerType PrepareBinaryComparison(BinaryOpKind kind, DILASTNodeUP& lhs,
                                  DILASTNodeUP& rhs,
-                                 clang::SourceLocation location);
+                                 uint32_t location);
   CompilerType PrepareBinaryLogical(const DILASTNodeUP& lhs,
                                     const DILASTNodeUP& rhs);
   DILASTNodeUP BuildBinarySubscript(DILASTNodeUP lhs, DILASTNodeUP rhs,
-                                  clang::SourceLocation location);
+                                  uint32_t location);
   CompilerType PrepareCompositeAssignment(CompilerType comp_assign_type,
                                           const DILASTNodeUP& lhs,
-                                          clang::SourceLocation location);
+                                          uint32_t location);
   DILASTNodeUP BuildTernaryOp(DILASTNodeUP cond, DILASTNodeUP lhs, DILASTNodeUP rhs,
-                            clang::SourceLocation location);
+                            uint32_t location);
   DILASTNodeUP BuildMemberOf(DILASTNodeUP lhs, std::string member_id,
                             bool is_arrow,
-                            clang::SourceLocation location);
+                            uint32_t location);
 
   bool AllowSideEffects() const { return m_allow_side_effects; }
 
@@ -338,6 +315,7 @@ class DILParser {
   std::shared_ptr<DILSourceManager> m_sm;
   // The token lexer is stopped at (aka "current token").
   clang::Token m_token;
+  DILToken m_dil_token;
   // Holds an error if it occures during parsing.
   Status m_error;
 
@@ -350,6 +328,9 @@ class DILParser {
   std::unique_ptr<clang::Preprocessor> m_pp;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
+  bool m_fragile_ivar;
+  bool m_check_ptr_vs_member;
+  DILLexer m_dil_lexer;
 }; // class DILParser
 
 
@@ -359,8 +340,8 @@ class DILParser {
 class TentativeParsingAction {
  public:
   TentativeParsingAction(DILParser* parser) : m_parser(parser) {
-    m_backtrack_token = m_parser->m_token;
-    m_parser->m_pp->EnableBacktrackAtThisPos();
+    m_backtrack_token = m_parser->m_dil_token;
+    m_parser->m_dil_lexer.EnableBacktrackAtThisPos();
     m_enabled = true;
   }
 
@@ -371,20 +352,20 @@ class TentativeParsingAction {
   }
 
   void Commit() {
-    m_parser->m_pp->CommitBacktrackedTokens();
+    m_parser->m_dil_lexer.CommitBacktrackedTokens();
     m_enabled = false;
   }
 
   void Rollback() {
-    m_parser->m_pp->Backtrack();
+    m_parser->m_dil_lexer.Backtrack();
     m_parser->m_error.Clear();
-    m_parser->m_token = m_backtrack_token;
+    m_parser->m_dil_token = m_backtrack_token;
     m_enabled = false;
   }
 
  private:
   DILParser* m_parser;
-  clang::Token m_backtrack_token;
+  DILToken m_backtrack_token;
   bool m_enabled;
 }; // class TentativeParsingAction
 

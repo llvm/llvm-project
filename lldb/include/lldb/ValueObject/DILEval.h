@@ -12,8 +12,6 @@
 #include <memory>
 #include <vector>
 
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TokenKinds.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 
@@ -44,16 +42,28 @@ class DILInterpreter : Visitor {
                  std::shared_ptr<DILSourceManager> sm,
                  lldb::DynamicValueType use_dynamic);
 
- public:
   lldb::ValueObjectSP DILEval(const DILASTNode* tree, lldb::TargetSP target_sp,
                               Status& error);
 
   void SetContextVars(
       std::unordered_map<std::string, lldb::ValueObjectSP> context_vars);
 
+ protected:
+  lldb::ValueObjectSP DILEvalNode(const DILASTNode* node,
+                                  FlowAnalysis* flow = nullptr);
+
+  bool Success() { return m_error.Success(); }
+
+  Status EvalError() { return std::move(m_error); };
+
+  lldb::ValueObjectSP EvaluateMemberOf(lldb::ValueObjectSP value,
+                                      const std::vector<uint32_t>& path,
+                                      bool use_synthetic,
+                                      bool is_dynamic);
+
  private:
   void SetError(ErrorCode error_code, std::string error,
-                clang::SourceLocation loc);
+                uint32_t loc);
 
   void Visit(const ErrorNode* node) override;
   void Visit(const ScalarLiteralNode* node) override;
@@ -69,10 +79,6 @@ class DILInterpreter : Visitor {
   void Visit(const BinaryOpNode* node) override;
   void Visit(const UnaryOpNode* node) override;
   void Visit(const TernaryOpNode* node) override;
-  // void Visit(const SmartPtrToPtrDecay* node) override;
-
-  lldb::ValueObjectSP DILEvalNode(const DILASTNode* node,
-                                  FlowAnalysis* flow = nullptr);
 
   lldb::ValueObjectSP EvaluateComparison(BinaryOpKind kind,
                                          lldb::ValueObjectSP lhs,

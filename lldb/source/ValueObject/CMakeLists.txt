@@ -1,6 +1,8 @@
 add_lldb_library(lldbValueObject
   DILAST.cpp
   DILEval.cpp
+  DILLexer.cpp
+  DILLiteralParsers.cpp
   DILParser.cpp
   ValueObject.cpp
   ValueObjectCast.cpp

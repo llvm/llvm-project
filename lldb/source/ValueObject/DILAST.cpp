@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/API/SBType.h"
 #include "lldb/ValueObject/DILAST.h"
-#include "lldb/ValueObject/ValueObjectRegister.h"
-#include "lldb/ValueObject/ValueObjectVariable.h"
+
+#include "lldb/API/SBType.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <vector>
@@ -59,67 +60,66 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
 }
 
 BinaryOpKind
-clang_token_kind_to_binary_op_kind(clang::tok::TokenKind token_kind) {
+dil_token_kind_to_binary_op_kind(dil::TokenKind token_kind) {
   switch (token_kind) {
-  case clang::tok::star:
+  case dil::TokenKind::star:
     return BinaryOpKind::Mul;
-  case clang::tok::slash:
-    return BinaryOpKind::Div;
-  case clang::tok::percent:
-    return BinaryOpKind::Rem;
-  case clang::tok::plus:
-    return BinaryOpKind::Add;
-  case clang::tok::minus:
-    return BinaryOpKind::Sub;
-  case clang::tok::lessless:
-    return BinaryOpKind::Shl;
-  case clang::tok::greatergreater:
-    return BinaryOpKind::Shr;
-  case clang::tok::less:
-    return BinaryOpKind::LT;
-  case clang::tok::greater:
-    return BinaryOpKind::GT;
-  case clang::tok::lessequal:
-    return BinaryOpKind::LE;
-  case clang::tok::greaterequal:
-    return BinaryOpKind::GE;
-  case clang::tok::equalequal:
-    return BinaryOpKind::EQ;
-  case clang::tok::exclaimequal:
-    return BinaryOpKind::NE;
-  case clang::tok::amp:
+  case dil::TokenKind::amp:
     return BinaryOpKind::And;
-  case clang::tok::caret:
+  case dil::TokenKind::minus:
+    return BinaryOpKind::Sub;
+  case dil::TokenKind::slash:
+    return BinaryOpKind::Div;
+  case dil::TokenKind::percent:
+    return BinaryOpKind::Rem;
+  case dil::TokenKind::plus:
+    return BinaryOpKind::Add;
+  case dil::TokenKind::lessless:
+    return BinaryOpKind::Shl;
+  case dil::TokenKind::greatergreater:
+    return BinaryOpKind::Shr;
+  case dil::TokenKind::less:
+    return BinaryOpKind::LT;
+  case dil::TokenKind::greater:
+    return BinaryOpKind::GT;
+  case dil::TokenKind::lessequal:
+    return BinaryOpKind::LE;
+  case dil::TokenKind::greaterequal:
+    return BinaryOpKind::GE;
+  case dil::TokenKind::equalequal:
+    return BinaryOpKind::EQ;
+  case dil::TokenKind::exclaimequal:
+    return BinaryOpKind::NE;
+  case dil::TokenKind::caret:
     return BinaryOpKind::Xor;
-  case clang::tok::pipe:
+  case dil::TokenKind::pipe:
     return BinaryOpKind::Or;
-  case clang::tok::ampamp:
+  case dil::TokenKind::ampamp:
     return BinaryOpKind::LAnd;
-  case clang::tok::pipepipe:
+  case dil::TokenKind::pipepipe:
     return BinaryOpKind::LOr;
-  case clang::tok::equal:
+  case dil::TokenKind::equal:
     return BinaryOpKind::Assign;
-  case clang::tok::starequal:
+  case dil::TokenKind::starequal:
     return BinaryOpKind::MulAssign;
-  case clang::tok::slashequal:
+  case dil::TokenKind::slashequal:
     return BinaryOpKind::DivAssign;
-  case clang::tok::percentequal:
+  case dil::TokenKind::percentequal:
     return BinaryOpKind::RemAssign;
-  case clang::tok::plusequal:
+  case dil::TokenKind::plusequal:
     return BinaryOpKind::AddAssign;
-  case clang::tok::minusequal:
+  case dil::TokenKind::minusequal:
     return BinaryOpKind::SubAssign;
-  case clang::tok::lesslessequal:
+  case dil::TokenKind::lesslessequal:
     return BinaryOpKind::ShlAssign;
-  case clang::tok::greatergreaterequal:
+  case dil::TokenKind::greatergreaterequal:
     return BinaryOpKind::ShrAssign;
-  case clang::tok::ampequal:
+  case dil::TokenKind::ampequal:
     return BinaryOpKind::AndAssign;
-  case clang::tok::caretequal:
+  case dil::TokenKind::caretequal:
     return BinaryOpKind::XorAssign;
-  case clang::tok::pipeequal:
+  case dil::TokenKind::pipeequal:
     return BinaryOpKind::OrAssign;
-
   default:
     break;
   }
@@ -187,7 +187,7 @@ GetFieldWithNameIndexPath(lldb::ValueObjectSP lhs_val_sp,
           lldb::ValueObjectSP child_valobj_sp =
               lhs_val_sp->GetChildMemberWithName(name);
           if (child_valobj_sp &&
-	      child_valobj_sp->GetName() == ConstString(name))
+              child_valobj_sp->GetName() == ConstString(name))
             field.val_obj_sp = child_valobj_sp;
         }
 
@@ -530,16 +530,6 @@ LookupIdentifier(const std::string &name,
         // Force static value, otherwise we can end up with the "real" type.
         return IdentifierInfo::FromValue(*(value_sp->GetStaticValue()));
 
-    } else {
-      // Lookup the variable as a member of the current scope value.
-      lldb::ValueObjectSP empty_sp;
-      bool use_synthetic = false;
-      auto [member, path] =
-          GetMemberInfo(empty_sp, *scope_ptr, name_ref.data(), use_synthetic,
-                        /* is_arrow */ false);
-      if (member)
-        return IdentifierInfo::FromMemberPath(member.value().type,
-                                              std::move(path));
     }
   }
 
@@ -644,8 +634,6 @@ void BinaryOpNode::Accept(Visitor *v) const { v->Visit(this); }
 void UnaryOpNode::Accept(Visitor *v) const { v->Visit(this); }
 
 void TernaryOpNode::Accept(Visitor *v) const { v->Visit(this); }
-
-//void SmartPtrToPtrDecay::Accept(Visitor *v) const { v->Visit(this); }
 
 }  // namespace dil
 

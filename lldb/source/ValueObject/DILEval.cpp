@@ -10,7 +10,6 @@
 
 #include <memory>
 
-#include "clang/Basic/TokenKinds.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -196,7 +195,7 @@ static bool IsInvalidDivisionByMinusOne(lldb::ValueObjectSP lhs_sp,
   return lhs_sp->GetValueAsSigned(0) + (1LLU << (bit_size - 1)) == 0;
 }
 
-static lldb::ValueObjectSP EvaluateMemberOf(lldb::ValueObjectSP value,
+lldb::ValueObjectSP DILInterpreter::EvaluateMemberOf(lldb::ValueObjectSP value,
                                             const std::vector<uint32_t>& path,
                                             bool use_synthetic,
                                             bool is_dynamic) {
@@ -238,9 +237,9 @@ static lldb::ValueObjectSP EvaluateMemberOf(lldb::ValueObjectSP value,
   return member_val_sp;
 }
 
-static std::string FormatDiagnostics(clang::SourceManager& sm,
+static std::string FormatDiagnostics(std::shared_ptr<DILSourceManager> sm,
                                      const std::string& message,
-                                     clang::SourceLocation loc,
+                                     uint32_t loc,
                                      ErrorCode code)
 {
   const char *ecode_names[7] = {
@@ -252,8 +251,8 @@ static std::string FormatDiagnostics(clang::SourceManager& sm,
   llvm::StringRef error_code = ecode_names[(int)code];
 
   // Get the source buffer and the location of the current token.
-  llvm::StringRef text = sm.getBufferData(sm.getFileID(loc));
-  size_t loc_offset = sm.getCharacterData(loc) - text.data();
+  llvm::StringRef text(sm->GetSource());
+  size_t loc_offset = (size_t) loc;
 
   // Look for the start of the line.
   size_t line_start = text.rfind('\n', loc_offset);
@@ -266,15 +265,14 @@ static std::string FormatDiagnostics(clang::SourceManager& sm,
   // Get a view of the current line in the source code and the position of the
   // diagnostics pointer.
   llvm::StringRef line = text.slice(line_start, line_end);
-  int32_t arrow = sm.getPresumedColumnNumber(loc);
+  int32_t arrow = loc;
 
   // Calculate the padding in case we point outside of the expression (this can
   // happen if the parser expected something, but got EOF).
   size_t expr_rpad = std::max(0, arrow - static_cast<int32_t>(line.size()));
   size_t arrow_rpad = std::max(0, static_cast<int32_t>(line.size()) - arrow);
 
-  return llvm::formatv("{0}: {1}:{2}\n{3}\n{4}", loc.printToString(sm),
-                       error_code, message,
+  return llvm::formatv("{0}: {1}\n{2}\n{3}", error_code, message,
                        llvm::fmt_pad(line, 0, expr_rpad),
                        llvm::fmt_pad("^", arrow - 1, arrow_rpad));
 }
@@ -308,8 +306,7 @@ void SetUbStatus(Status& error, ErrorCode code) {
       err_str ="Error: Unknown undefined behavior error.";
       break;
   }
-  error = Status((lldb::ValueType)code, lldb::ErrorType::eErrorTypeGeneric,
-                 err_str.str());
+  error = Status(err_str.str());
 }
 
 DILInterpreter::DILInterpreter(lldb::TargetSP target,
@@ -373,10 +370,9 @@ lldb::ValueObjectSP DILInterpreter::DILEvalNode(const DILASTNode* node,
 }
 
 void DILInterpreter::SetError(ErrorCode code, std::string error,
-                              clang::SourceLocation loc) {
+                              uint32_t loc) {
   assert(m_error.Success() && "interpreter can error only once");
-  m_error= Status(FormatDiagnostics(m_sm->GetSourceManager(), error, loc,
-                                    code));
+  m_error = Status(FormatDiagnostics(m_sm, error, loc, code));
 }
 
 void DILInterpreter::Visit(const ErrorNode* node) {
@@ -734,6 +730,8 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
                                                         /* do_deref */ false);
           return;
         }
+        case TypePromotionCastKind::eNone:
+          return;
       }
     }
   }
@@ -834,6 +832,8 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
                                                         /* do_deref */ false);
           return;
         }
+        case TypePromotionCastKind::eNone:
+          return;
       }
     }
   }
@@ -905,8 +905,6 @@ void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
 }
 
 void DILInterpreter::Visit(const MemberOfNode* node) {
-  assert(!node->member_index().empty() && "invalid ast: member index is empty");
-
   // TODO: Implement address-of elision for member-of:
   //
   //  &(*ptr).foo -> (ptr + foo_offset)
@@ -1261,17 +1259,6 @@ void DILInterpreter::Visit(const TernaryOpNode* node) {
       m_result = DILEvalNode(node->rhs(), flow_analysis());
   }
 }
-
-//void DILInterpreter::Visit(const SmartPtrToPtrDecay* node) {
-//  auto ptr = DILEvalNode(node->ptr());
-//  if (!ptr) {
-//    return;
-//  }
-//
-//  Status deref_error;
-//  m_result = ptr->Dereference(deref_error);
-//  return;
-//}
 
 lldb::ValueObjectSP DILInterpreter::EvaluateComparison(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
@@ -1740,10 +1727,8 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryAddAssign(
            && "invalid ast: lhs must be an arithmetic type");
     assert(rhs->GetCompilerType().IsBasicType() &&
            "invalid ast: rhs must be a basic type");
-    //ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(), m_error);
     ret = lhs->CastToBasicType(rhs->GetCompilerType());
     ret = EvaluateBinaryAddition(ret, rhs);
-    //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
     ret = ret->CastToBasicType(lhs->GetCompilerType());
   }
 
@@ -1769,10 +1754,8 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinarySubAssign(
            && "invalid ast: lhs must be an arithmetic type");
     assert(rhs->GetCompilerType().IsBasicType() &&
            "invalid ast: rhs must be a basic type");
-    //ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(), m_error);
     ret = lhs->CastToBasicType(rhs->GetCompilerType());
     ret = EvaluateBinarySubtraction(ret, rhs, ret->GetCompilerType());
-    //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
     ret = ret->CastToBasicType(lhs->GetCompilerType());
   }
 
@@ -1791,10 +1774,7 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryMulAssign(
          && "invalid ast: rhs must be a basic type");
 
   lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
-  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-  //                                                     m_error);
   ret = EvaluateBinaryMultiplication(ret, rhs);
-  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
   ret = ret->CastToBasicType(lhs->GetCompilerType());
 
   Status status;
@@ -1812,10 +1792,7 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryDivAssign(
          && "invalid ast: rhs must be a basic type");
 
   lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
-  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-  //                                                       m_error);
   ret = EvaluateBinaryDivision(ret, rhs);
-  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
   ret = ret->CastToBasicType(lhs->GetCompilerType());
 
   Status status;
@@ -1832,12 +1809,9 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryRemAssign(
   assert(rhs->GetCompilerType().IsBasicType()
          && "invalid ast: rhs must be a basic type");
 
-  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-  //                                                     m_error);
   lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
 
   ret = EvaluateBinaryRemainder(ret, rhs);
-  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
   ret = ret->CastToBasicType(lhs->GetCompilerType());
 
   Status status;
@@ -1870,10 +1844,7 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryBitwiseAssign(
          "invalid ast: rhs must be a basic type");
 
   lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
-  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-  //                                                     m_error);
   ret = EvaluateBinaryBitwise(kind, ret, rhs);
-  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
   ret = ret->CastToBasicType(lhs->GetCompilerType());
 
   Status status;
@@ -1907,11 +1878,8 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryShiftAssign(
   assert(comp_assign_type.IsInteger() &&
          "invalid ast: comp_assign_type must be an integer");
 
-  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(comp_assign_type,
-  //                                                     m_error);
   lldb::ValueObjectSP ret = lhs->CastToBasicType(comp_assign_type);
   ret = EvaluateBinaryShift(kind, ret, rhs);
-  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
   ret = ret->CastToBasicType(lhs->GetCompilerType());
 
   Status status;

@@ -19,9 +19,8 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/DILLexer.h"
 #include "lldb/ValueObject/ValueObject.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/Casting.h"
@@ -64,7 +63,6 @@ enum class NodeKind {
   eBinaryOpNode,
   eUnaryOpNode,
   eTernaryOpNode,
-  //eSmartPtrToPtrDecayNode
 };
 
 
@@ -86,9 +84,7 @@ enum class CStyleCastKind {
 /// The Cxx static casts allowed by DIL.
 enum class CxxStaticCastKind {
   eNoOp,
-  //eArithmetic,
   eEnumeration,
-  //ePointer,
   eNullptr,
   eBaseToDerived,
   eDerivedToBase,
@@ -144,9 +140,9 @@ enum class UnaryOpKind {
 
 /// Helper functions for DIL AST node parsing.
 
-/// Translates clang tokens to BinaryOpKind.
+/// Translates DIL tokens to BinaryOpKind.
 BinaryOpKind
-clang_token_kind_to_binary_op_kind(clang::tok::TokenKind token_kind);
+    dil_token_kind_to_binary_op_kind(dil::TokenKind token_kind);
 
 /// Returns bool indicating whether or not the input kind is an assignment.
 bool binary_op_kind_is_comp_assign(BinaryOpKind kind);
@@ -229,7 +225,7 @@ class Visitor;
 /// class.
 class DILASTNode {
 public:
-  DILASTNode(clang::SourceLocation location, NodeKind kind) :
+  DILASTNode(uint32_t location, NodeKind kind) :
       m_location(location), m_kind(kind) {}
   virtual ~DILASTNode() = default;
 
@@ -243,7 +239,7 @@ public:
   virtual CompilerType result_type() const = 0;
   virtual ValueObject *valobj() const { return nullptr; }
 
-  clang::SourceLocation GetLocation() const { return m_location; }
+  uint32_t GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
 
   // The expression result type, but dereferenced in case it's a reference. This
@@ -252,7 +248,7 @@ public:
   CompilerType GetDereferencedResultType() const;
 
 private:
-  clang::SourceLocation m_location;
+  uint32_t m_location;
   const NodeKind m_kind;
 };
 
@@ -261,7 +257,7 @@ using DILASTNodeUP = std::unique_ptr<DILASTNode>;
 class ErrorNode : public DILASTNode {
 public:
   ErrorNode(CompilerType empty_type)
-      : DILASTNode(clang::SourceLocation(), NodeKind::eErrorNode),
+      : DILASTNode(0, NodeKind::eErrorNode),
         m_empty_type(empty_type) {}
   void Accept(Visitor *v) const override;
   bool is_rvalue() const override { return false; }
@@ -278,7 +274,7 @@ private:
 
 class ScalarLiteralNode : public DILASTNode {
 public:
-  ScalarLiteralNode(clang::SourceLocation location, CompilerType type,
+  ScalarLiteralNode(uint32_t location, CompilerType type,
                     Scalar value)
       : DILASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
         m_value(value) {}
@@ -303,8 +299,8 @@ private:
 
 class StringLiteralNode : public DILASTNode {
 public:
-  StringLiteralNode(clang::SourceLocation location, CompilerType type,
-              std::string value)
+  StringLiteralNode(uint32_t location, CompilerType type,
+                    std::string value)
       : DILASTNode(location, NodeKind::eStringLiteralNode),
         m_type(type),
         m_value(value) {}
@@ -326,7 +322,7 @@ private:
 
 class IdentifierNode : public DILASTNode {
 public:
-  IdentifierNode(clang::SourceLocation location, std::string name,
+  IdentifierNode(uint32_t location, std::string name,
                  std::unique_ptr<IdentifierInfo> identifier, bool is_rvalue,
                  bool is_context_var)
       : DILASTNode(location, NodeKind::eIdentifierNode),
@@ -358,7 +354,7 @@ private:
 
 class SizeOfNode : public DILASTNode {
 public:
-  SizeOfNode(clang::SourceLocation location, CompilerType type,
+  SizeOfNode(uint32_t location, CompilerType type,
              CompilerType operand)
       : DILASTNode(location, NodeKind::eSizeOfNode),
         m_type(type), m_operand(operand) {}
@@ -380,7 +376,7 @@ private:
 
 class BuiltinFunctionCallNode : public DILASTNode {
 public:
-  BuiltinFunctionCallNode(clang::SourceLocation location,
+  BuiltinFunctionCallNode(uint32_t location,
                           CompilerType result_type, std::string name,
                           std::vector<DILASTNodeUP> arguments)
       : DILASTNode(location, NodeKind::eBuiltinFunctionCallNode),
@@ -406,13 +402,13 @@ private:
 
 class CStyleCastNode : public DILASTNode {
 public:
-  CStyleCastNode(clang::SourceLocation location, CompilerType type,
+  CStyleCastNode(uint32_t location, CompilerType type,
                  DILASTNodeUP operand, CStyleCastKind kind)
       : DILASTNode(location, NodeKind::eCStyleCastNode),
         m_type(type), m_operand(std::move(operand)),
         m_cast_kind(kind) { m_promo_kind = TypePromotionCastKind::eNone; }
 
-  CStyleCastNode(clang::SourceLocation location, CompilerType type,
+  CStyleCastNode(uint32_t location, CompilerType type,
                  DILASTNodeUP operand, TypePromotionCastKind kind)
       : DILASTNode(location, NodeKind::eCStyleCastNode),
         m_type(type), m_operand(std::move(operand)),
@@ -443,7 +439,7 @@ private:
 
 class CxxStaticCastNode : public DILASTNode {
 public:
-  CxxStaticCastNode(clang::SourceLocation location, CompilerType type,
+  CxxStaticCastNode(uint32_t location, CompilerType type,
                     DILASTNodeUP operand, CxxStaticCastKind kind,
                     bool is_rvalue)
       : DILASTNode(location, NodeKind::eCxxStaticCastNode),
@@ -455,7 +451,7 @@ public:
     m_promo_kind = TypePromotionCastKind::eNone;
   }
 
-  CxxStaticCastNode(clang::SourceLocation location, CompilerType type,
+  CxxStaticCastNode(uint32_t location, CompilerType type,
                     DILASTNodeUP operand, TypePromotionCastKind kind,
                     bool is_rvalue)
       : DILASTNode(location, NodeKind::eCxxStaticCastNode),
@@ -464,8 +460,9 @@ public:
     m_cast_kind = CxxStaticCastKind::eNone;
   }
 
-  CxxStaticCastNode(clang::SourceLocation location, CompilerType type,
-                    DILASTNodeUP operand, std::vector<uint32_t> idx, bool is_rvalue)
+  CxxStaticCastNode(uint32_t location, CompilerType type,
+                    DILASTNodeUP operand, std::vector<uint32_t> idx,
+                    bool is_rvalue)
       : DILASTNode(location, NodeKind::eCxxStaticCastNode),
         m_type(type), m_operand(std::move(operand)),
         m_idx(std::move(idx)), m_cast_kind(CxxStaticCastKind::eDerivedToBase),
@@ -473,7 +470,7 @@ public:
     m_promo_kind = TypePromotionCastKind::eNone;
   }
 
-  CxxStaticCastNode(clang::SourceLocation location, CompilerType type,
+  CxxStaticCastNode(uint32_t location, CompilerType type,
                     DILASTNodeUP operand, uint64_t offset, bool is_rvalue)
       : DILASTNode(location, NodeKind::eCxxStaticCastNode),
         m_type(type), m_operand(std::move(operand)),
@@ -510,7 +507,7 @@ private:
 
 class CxxReinterpretCastNode : public DILASTNode {
 public:
-  CxxReinterpretCastNode(clang::SourceLocation location, CompilerType type,
+  CxxReinterpretCastNode(uint32_t location, CompilerType type,
                          DILASTNodeUP operand, bool is_rvalue)
       : DILASTNode(location, NodeKind::eCxxReinterpretCastNode),
         m_type(type), m_operand(std::move(operand)),
@@ -536,7 +533,7 @@ private:
 
 class MemberOfNode : public DILASTNode {
 public:
-  MemberOfNode(clang::SourceLocation location, CompilerType result_type,
+  MemberOfNode(uint32_t location, CompilerType result_type,
                DILASTNodeUP base, std::optional<uint32_t> bitfield_size,
                std::vector<uint32_t> member_index, bool is_arrow,
                bool is_synthetic, bool is_dynamic, ConstString name,
@@ -582,7 +579,7 @@ private:
 
 class ArraySubscriptNode : public DILASTNode {
 public:
-  ArraySubscriptNode(clang::SourceLocation location, CompilerType result_type,
+  ArraySubscriptNode(uint32_t location, CompilerType result_type,
                      DILASTNodeUP base, DILASTNodeUP index)
       : DILASTNode(location, NodeKind::eArraySubscriptNode),
         m_result_type(result_type),
@@ -620,7 +617,7 @@ private:
 
 class BinaryOpNode : public DILASTNode {
 public:
-  BinaryOpNode(clang::SourceLocation location, CompilerType result_type,
+  BinaryOpNode(uint32_t location, CompilerType result_type,
                BinaryOpKind kind, DILASTNodeUP lhs, DILASTNodeUP rhs,
                CompilerType comp_assign_type,
                ValueObject *val_obj_ptr = nullptr)
@@ -669,7 +666,7 @@ private:
 
 class UnaryOpNode : public DILASTNode {
 public:
-  UnaryOpNode(clang::SourceLocation location, CompilerType result_type,
+  UnaryOpNode(uint32_t location, CompilerType result_type,
               UnaryOpKind kind, DILASTNodeUP rhs)
       : DILASTNode(location, NodeKind::eUnaryOpNode),
         m_result_type(result_type), m_kind(kind),
@@ -695,7 +692,7 @@ private:
 
 class TernaryOpNode : public DILASTNode {
 public:
-  TernaryOpNode(clang::SourceLocation location, CompilerType result_type,
+  TernaryOpNode(uint32_t location, CompilerType result_type,
                 DILASTNodeUP cond, DILASTNodeUP lhs, DILASTNodeUP rhs)
       : DILASTNode(location, NodeKind::eTernaryOpNode),
         m_result_type(result_type),
@@ -725,30 +722,6 @@ private:
   DILASTNodeUP m_rhs;
 };
 
-
-//class SmartPtrToPtrDecay : public DILASTNode {
-//public:
-//  SmartPtrToPtrDecay(clang::SourceLocation location, CompilerType result_type,
-//                     DILASTNodeUP ptr)
-//      : DILASTNode(location, NodeKind::eSmartPtrToPtrDecayNode),
-//        m_result_type(result_type),
-//        m_ptr(std::move(ptr)) {}
-//
-//  void Accept(Visitor *v) const override;
-//  bool is_rvalue() const override { return false; }
-//  CompilerType result_type() const override { return m_result_type; }
-//
-//  DILASTNode *ptr() const { return m_ptr.get(); }
-//
-//  static bool classof(const DILASTNode *node) {
-//    return node->GetKind() == NodeKind::eSmartPtrToPtrDecayNode;
-//  }
-//
-//private:
-//  CompilerType m_result_type;
-//  DILASTNodeUP m_ptr;
-//};
-
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -770,7 +743,6 @@ public:
   virtual void Visit(const BinaryOpNode *node) = 0;
   virtual void Visit(const UnaryOpNode *node) = 0;
   virtual void Visit(const TernaryOpNode *node) = 0;
-  // virtual void Visit(const SmartPtrToPtrDecay *node) = 0;
 };
 
 }  // namespace dil

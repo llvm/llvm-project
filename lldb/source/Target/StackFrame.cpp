@@ -538,7 +538,8 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
 
   // Parse the expression.
   Status parse_error, eval_error;
-  dil::DILParser parser(source, shared_from_this(), use_dynamic, !no_synth_child);
+  dil::DILParser parser(source, shared_from_this(), use_dynamic,
+                        !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
   dil::DILASTNodeUP tree = parser.Run(parse_error);
   if (parse_error.Fail()) {
     error = std::move(parse_error);
