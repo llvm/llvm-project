@@ -2432,12 +2432,13 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 /// entry. This is used when adjusting \p Plan during skeleton
 /// creation, i.e. adjusting the plan after introducing an initial runtime
 /// check.
-static void connectScalarPreheaderInVPlan(VPlan &Plan) {
+/// TODO: Connect scalar preheader during initial VPlan construction.
+static void connectScalarPreheaderAsBypassInVPlan(VPlan &Plan) {
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
-  VPBlockBase *PredVPB = Plan.getEntry();
-  VPBlockUtils::connectBlocks(PredVPB, ScalarPH, -1, 0);
-  VPBlockUtils::connectBlocks(PredVPB, VectorPH, 0, -1);
+  VPBlockBase *Entry = Plan.getEntry();
+  VPBlockUtils::connectBlocks(Entry, ScalarPH);
+  std::swap(Entry->getSuccessors()[0], Entry->getSuccessors()[1]);
 }
 
 /// Introduces a new VPIRBasicBlock for \p CheckIRBB to \p Plan between the
@@ -2447,6 +2448,7 @@ static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
+  assert(PreVectorPH->getSuccessors()[0] == ScalarPH && "Unexpected successor");
   VPIRBasicBlock *CheckVPIRBB = VPIRBasicBlock::fromBasicBlock(CheckIRBB);
   VPBlockUtils::connectBlocks(CheckVPIRBB, ScalarPH);
   VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckVPIRBB);
@@ -2534,7 +2536,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(TCCheckBlock);
 
   // TODO: Wrap LoopVectorPreHeader in VPIRBasicBlock here.
-  connectScalarPreheaderInVPlan(Plan);
+  connectScalarPreheaderAsBypassInVPlan(Plan);
 }
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
@@ -7712,10 +7714,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 0. Generate SCEV-dependent code into the preheader, including TripCount,
   // before making any changes to the CFG.
-  if (!BestVPlan.getEntry()->empty()) {
+  if (!BestVPlan.getPreheader()->empty()) {
     State.CFG.PrevBB = OrigLoop->getLoopPreheader();
     State.Builder.SetInsertPoint(OrigLoop->getLoopPreheader()->getTerminator());
-    BestVPlan.getEntry()->execute(&State);
+    BestVPlan.getPreheader()->execute(&State);
   }
   if (!ILV.getTripCount())
     ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
@@ -7937,10 +7939,11 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
-  VPBlockBase *VectorPH = Plan.getVectorPreheader();
-  VPBlockBase *PredVPB = VectorPH->getSinglePredecessor();
-  if (PredVPB->getNumSuccessors() == 1)
-    connectScalarPreheaderInVPlan(Plan);
+  // Connect the vector preheader to the scalar preheader when creating the trip
+  // count for the epilogue loop. Otherwise there is already a runtime check and
+  // connection to the scalar preheader, so we introduce it as new check block.
+  if (ForEpilogue)
+    connectScalarPreheaderAsBypassInVPlan(Plan);
   else
     introduceCheckBlockInVPlan(Plan, TCCheckBlock);
   return TCCheckBlock;
@@ -8093,14 +8096,9 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   VPBasicBlock *OldEntry = Plan.getEntry();
   VPBlockUtils::reassociateBlocks(OldEntry, NewEntry);
   Plan.setEntry(NewEntry);
-  for (auto &R : make_early_inc_range(*NewEntry)) {
-    auto *VPIR = dyn_cast<VPIRInstruction>(&R);
-    if (!VPIR || !isa<PHINode>(VPIR->getInstruction()))
-      break;
-    VPIR->eraseFromParent();
-  }
+  delete OldEntry;
 
-  connectScalarPreheaderInVPlan(Plan);
+  connectScalarPreheaderAsBypassInVPlan(Plan);
   return Insert;
 }
 
@@ -10317,7 +10315,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // should be removed once induction resume value creation is done
         // directly in VPlan.
         EpilogILV.setTripCount(MainILV.getTripCount());
-        for (auto &R : make_early_inc_range(*BestEpiPlan.getEntry())) {
+        for (auto &R : make_early_inc_range(*BestEpiPlan.getPreheader())) {
           auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
           if (!ExpandR)
             continue;

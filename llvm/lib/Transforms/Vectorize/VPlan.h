@@ -3715,8 +3715,9 @@ class VPlan {
   friend class VPlanPrinter;
   friend class VPSlotTracker;
 
-  /// Hold the single entry to the Hierarchical CFG of the VPlan, i.e. the
-  /// preheader of the vector loop.
+  /// VPBasicBlock corresponding to the original preheader. Used to place
+  /// VPExpandSCEV recipes for expressions used during skeleton creation and the
+  /// rest of VPlan execution.
   VPBasicBlock *Entry;
 
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
@@ -3763,11 +3764,20 @@ class VPlan {
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
 public:
-  /// Construct a VPlan with \p Entry entering the plan and trip count \p TC.
+  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
+  /// with \p ScalarHeader wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
       : VPlan(Entry, ScalarHeader) {
     TripCount = TC;
   }
+
+  /// Constructor variants that take disconnected preheader and entry blocks,
+  /// connecting them as part of construction. Only used to reduce the need of
+  /// code changes during transition.
+  VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry,
+        VPIRBasicBlock *ScalarHeader);
+  VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry,
+        VPIRBasicBlock *ScalarHeader);
 
   /// Construct a VPlan with \p Entry to the plan.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3967,6 +3977,10 @@ public:
     assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
     SCEVToExpansion[S] = V;
   }
+
+  /// \return The block corresponding to the original preheader.
+  VPBasicBlock *getPreheader() { return Entry; }
+  const VPBasicBlock *getPreheader() const { return Entry; }
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.

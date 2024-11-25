@@ -170,8 +170,7 @@ VPBasicBlock *VPBlockBase::getEntryBasicBlock() {
 }
 
 void VPBlockBase::setPlan(VPlan *ParentPlan) {
-  assert(ParentPlan->getEntry() == this &&
-         "Can only set plan on its entry or preheader block.");
+  assert(ParentPlan->getEntry() == this && "Can only set plan on its entry.");
   Plan = ParentPlan;
 }
 
@@ -822,6 +821,18 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+VPlan::VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry,
+             VPIRBasicBlock *ScalarHeader)
+    : VPlan(Preheader, TC, ScalarHeader) {
+  VPBlockUtils::connectBlocks(Preheader, Entry);
+}
+
+VPlan::VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry,
+             VPIRBasicBlock *ScalarHeader)
+    : VPlan(Preheader, ScalarHeader) {
+  VPBlockUtils::connectBlocks(Preheader, Entry);
+}
+
 VPlan::~VPlan() {
   if (Entry) {
     VPValue DummyValue;
@@ -851,6 +862,9 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPIRBasicBlock *Entry =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
+  // Connect entry only to vector preheader initially. Edges to the scalar
+  // preheader will be inserted later, during skeleton creation when runtime
+  // guards are added as needed.
   VPBlockUtils::connectBlocks(Entry, VecPreheader);
   VPIRBasicBlock *ScalarHeader =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getHeader());
@@ -997,20 +1011,21 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
 
-  replaceVPBBWithIRVPBB(
-      cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor()),
-      VectorPreHeader);
+  // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
+  cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
-  // Replace regular VPBB's for the middle and scalar preheader blocks with
-  // VPIRBasicBlocks wrapping their IR blocks. The IR blocks are created during
-  // skeleton creation, so we can only create the VPIRBasicBlocks now during
-  // VPlan execution rather than earlier during VPlan construction.
+  // Replace regular VPBB's for the vector preheader, middle and scalar
+  // preheader blocks with VPIRBasicBlocks wrapping their IR blocks. The IR
+  // blocks are created during skeleton creation, so we can only create the
+  // VPIRBasicBlocks now during VPlan execution rather than earlier during VPlan
+  // construction.
+  replaceVPBBWithIRVPBB(getVectorPreheader(), VectorPreHeader);
   BasicBlock *MiddleBB = State->CFG.ExitBB;
-  VPBasicBlock *MiddleVPBB = getMiddleBlock();
   BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
+  VPBasicBlock *MiddleVPBB = getMiddleBlock();
   replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
@@ -1033,8 +1048,9 @@ void VPlan::execute(VPTransformState *State) {
 
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
-  // Generate code in the loop pre-header and body.
-  for (VPBlockBase *Block : make_range(RPOT.begin(), RPOT.end()))
+  // Generate code for the VPlan, in parts of the vector skeleton, loop body and
+  // successor blocks including the middle, exit and scalar preheader blocks.
+  for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
   VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
@@ -1280,14 +1296,10 @@ VPlan *VPlan::duplicate() {
 VPBasicBlock *VPlan::getScalarPreheader() {
   auto *MiddleVPBB =
       cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
-  if (MiddleVPBB->getNumSuccessors() == 2) {
-    // Order is strict: first is the exit block, second is the scalar preheader.
-    return cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
-  }
-  if (auto *IRVPBB = dyn_cast<VPBasicBlock>(MiddleVPBB->getSingleSuccessor()))
-    return IRVPBB;
-
-  return nullptr;
+  auto *LastSucc = MiddleVPBB->getSuccessors().back();
+  // Order is strict: if the last successor is VPIRBasicBlock, it must be the
+  // single exit.
+  return isa<VPIRBasicBlock>(LastSucc) ? nullptr : cast<VPBasicBlock>(LastSucc);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
