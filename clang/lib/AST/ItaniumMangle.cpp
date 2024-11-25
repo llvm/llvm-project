@@ -3533,62 +3533,68 @@ void CXXNameMangler::mangleExtFunctionInfo(const FunctionType *T) {
   // FIXME: noreturn
 }
 
-unsigned getZAState(unsigned SMEAttrs) {
+enum SMEState {
+  Normal = 0,
+  SM_Enabled = 1 << 0,
+  SM_Compatible = 1 << 1,
+  ZA_Agnostic = 1 << 2,
+  ZA_Shift = 3,
+  ZT0_Shift = 6,
+  None = 0b000,
+  In = 0b001,
+  Out = 0b010,
+  InOut = 0b011,
+  Preserves = 0b100
+};
+
+unsigned encodeZAState(unsigned SMEAttrs) {
   switch (SMEAttrs) {
+  case FunctionType::ARM_None:
+    return SMEState::None;
   case FunctionType::ARM_In:
-    return 1;
+    return SMEState::In;
   case FunctionType::ARM_Out:
-    return 2;
+    return SMEState::Out;
   case FunctionType::ARM_InOut:
-    return 3;
+    return SMEState::InOut;
   case FunctionType::ARM_Preserves:
-    return 4;
-  default:
-    return 0;
+    return SMEState::Preserves;
   }
+  llvm_unreachable("Unrecognised SME attribute");
 }
 
-// The mangling scheme for function types which have SME attributes is implemented as
-// a "pseudo" template:
+// As described in the AArch64 ACLE, the mangling scheme for function types
+// which have SME attributes is implemented as a "pseudo" template:
 //
 //   '__SME_ATTRS<<normal_function_type>, <sme_state>>'
 //
-// Combining the function type with a bitmask representing the streaming and ZA properties
-// of the function's interface. The bits of sme_state are defined as follows:
-//    0:  Streaming Mode
-//    1:  Streaming Compatible
-//    2:  ZA Agnostic
-//  3-5:  ZA State
-//  6-8:  ZT0 State
-//  9-63: 0, reserved for future type attributes.
+// Combining the function type with a bitmask representing the streaming and ZA
+// properties of the function's interface.
 //
-// For example:
-//  void f(svint8_t (*fn)() __arm_streaming_compatible __arm_inout("za")) { fn(); }
-//
-// The function fn is described as '__SME_ATTRS<Fu10__SVInt8_tvE, 26u>' and mangled as:
-//
-//  "11__SME_ATTRSI" + function type mangling + "Lj" + bitmask + "EE"
-//
-//  i.e. "11__SME_ATTRSIFu10__SVInt8_tvELj26EE"
+// The mangling scheme is otherwise defined in the appendices to the Procedure
+// Call Standard for the Arm Architecture, see
+// https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#appendix-c-mangling
 //
 void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
   if (!SMEAttrs)
     return;
 
   // Streaming Mode
-  unsigned Bitmask = 0;
+  unsigned Bitmask = SMEState::Normal;
   if (SMEAttrs & FunctionType::SME_PStateSMEnabledMask)
-    Bitmask |= 1;
+    Bitmask |= SMEState::SM_Enabled;
   else if (SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)
-    Bitmask |= 1 << 1;
+    Bitmask |= SMEState::SM_Compatible;
 
   // TODO: Must represent __arm_agnostic("sme_za_state")
 
   // ZA-State
-  Bitmask |= getZAState(FunctionType::getArmZAState(SMEAttrs)) << 3;
+  Bitmask |= encodeZAState(FunctionType::getArmZAState(SMEAttrs))
+             << SMEState::ZA_Shift;
 
   // ZT0 State
-  Bitmask |= getZAState(FunctionType::getArmZT0State(SMEAttrs)) << 6;
+  Bitmask |= encodeZAState(FunctionType::getArmZT0State(SMEAttrs))
+             << SMEState::ZT0_Shift;
 
   Out << "Lj" << Bitmask << "EE";
 
