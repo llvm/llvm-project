@@ -2551,7 +2551,8 @@ static void emitIsSubclass(CodeGenTarget &Target,
     }
 
     if (SuperClasses.empty()) {
-      OS << "  static constexpr ArrayRef<uint16_t> " << A.Name << "_SuperClasses;\n";
+      OS << "  static constexpr ArrayRef<uint16_t> " << A.Name
+         << "_SuperClasses;\n";
       continue;
     }
 
