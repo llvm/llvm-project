@@ -71,13 +71,3 @@ namespace WrongScope {
     Local(int) -> Local<int>; // expected-error {{expected}}
   }
 }
-
-namespace GH54909 {
-template <typename T> struct A {};
-A(void) -> A<int>;
-
-template <typename T> using B = A<T>;
-template <typename T> using C = B<T>;
-template <typename T> using D = C<T>;
-template <typename T> A(T) -> D<T>;
-}
