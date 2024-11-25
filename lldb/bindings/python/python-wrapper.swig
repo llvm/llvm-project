@@ -5,6 +5,10 @@ public:
   PyErr_Cleaner(bool print = false) : m_print(print) {}
 
   ~PyErr_Cleaner() {
+    Clean();
+  }
+
+  void Clean() {
     if (PyErr_Occurred()) {
       if (m_print && !PyErr_ExceptionMatches(PyExc_SystemExit))
         PyErr_Print();
@@ -592,8 +596,6 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyOb
   return sb_ptr;
 }
 
-#include "lldb/Interpreter/CommandReturnObject.h"
-
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger, const char *args,
@@ -650,7 +652,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
 
   if (PyErr_Occurred()) {
-    py_err_cleaner.~PyErr_Cleaner();
+    py_err_cleaner.Clean();
     auto command_class = self.ResolveName("__class__");
     auto module_name = command_class.ResolveName<PythonString>("__module__");
     auto class_name = command_class.ResolveName<PythonString>("__name__");
@@ -776,7 +778,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
 
   if (PyErr_Occurred()) {
-    py_err_cleaner.~PyErr_Cleaner();
+    py_err_cleaner.Clean();
     auto command_class = self.ResolveName("__class__");
     auto module_name = command_class.ResolveName<PythonString>("__module__");
     auto class_name = command_class.ResolveName<PythonString>("__name__");
