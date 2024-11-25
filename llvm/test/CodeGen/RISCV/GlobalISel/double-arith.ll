@@ -186,8 +186,7 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ;
 ; CHECKIFD-LABEL: fsgnjn_d:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fneg.d fa5, fa1
-; CHECKIFD-NEXT:    fsgnj.d fa0, fa0, fa5
+; CHECKIFD-NEXT:    fsgnjn.d fa0, fa0, fa1
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnjn_d:
