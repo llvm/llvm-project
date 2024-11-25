@@ -246,8 +246,7 @@ private:
                             ArrayRef<Instruction *> SwitchTraceTargets,
                             Value *&FunctionGateCmp);
   bool InjectCoverage(Function &F, ArrayRef<BasicBlock *> AllBlocks,
-                      Value *&FunctionGateCmp,
-                      bool IsLeafFunc);
+                      Value *&FunctionGateCmp, bool IsLeafFunc);
   GlobalVariable *CreateFunctionLocalArrayInSection(size_t NumElements,
                                                     Function &F, Type *Ty,
                                                     const char *Section);
