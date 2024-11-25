@@ -20,7 +20,6 @@
 #if SANITIZER_APPLE
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
-#include <sys/types.h>
 #include <unistd.h>
 #endif
 
@@ -38,12 +37,16 @@
 #endif
 
 #include <fcntl.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 #include <netdb.h>
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/uio.h>
 
 #if _FILE_OFFSET_BITS == 64 && SANITIZER_GLIBC
@@ -245,7 +248,6 @@ TEST(TestRtsanInterceptors, SchedYieldDiesWhenRealtime) {
 /*
     Filesystem
 */
-
 TEST_F(RtsanFileTest, OpenDiesWhenRealtime) {
   auto Func = [this]() { open(GetTemporaryFilePath(), O_RDONLY); };
   ExpectRealtimeDeath(Func, MAYBE_APPEND_64("open"));
@@ -372,6 +374,57 @@ private:
   FILE *file = nullptr;
   int fd = -1;
 };
+
+TEST(TestRtsanInterceptors, IoctlDiesWhenRealtime) {
+  auto Func = []() { ioctl(0, FIONREAD); };
+  ExpectRealtimeDeath(Func, "ioctl");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, IoctlBehavesWithOutputArg) {
+  int arg{};
+  ioctl(GetOpenFd(), FIONREAD, &arg);
+
+  EXPECT_THAT(arg, Ge(0));
+}
+
+TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
+  // These initial checks just see if we CAN run these tests.
+  // If we can't (can't open a socket, or can't find an interface, just
+  // gracefully skip.
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == -1) {
+    perror("socket");
+    GTEST_SKIP();
+    return;
+  }
+
+  struct ifaddrs *ifaddr = nullptr;
+  if (getifaddrs(&ifaddr) == -1 || ifaddr == nullptr) {
+    perror("getifaddrs");
+    close(sock);
+    GTEST_SKIP();
+    return;
+  }
+
+  struct ifreq ifr {};
+  strncpy(ifr.ifr_name, ifaddr->ifa_name, IFNAMSIZ - 1);
+
+  int retval = ioctl(sock, SIOCGIFADDR, &ifr);
+  if (retval == -1) {
+    perror("ioctl");
+    close(sock);
+    freeifaddrs(ifaddr);
+    ASSERT_TRUE(false) << "ioctl failed";
+    return;
+  }
+
+  freeifaddrs(ifaddr);
+  close(sock);
+
+  ASSERT_THAT(ifr.ifr_addr.sa_data, NotNull());
+  ASSERT_THAT(ifr.ifr_addr.sa_family, Eq(AF_INET));
+}
 
 TEST_F(RtsanOpenedFileTest, LseekDiesWhenRealtime) {
   auto Func = [this]() { lseek(GetOpenFd(), 0, SEEK_SET); };
