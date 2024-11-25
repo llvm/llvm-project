@@ -1395,22 +1395,46 @@ public:
     return VectorizableTree.front()->Scalars;
   }
 
+  /// Returns the type/is-signed info for the root node in the graph without
+  /// casting.
+  std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
+    const TreeEntry &Root = *VectorizableTree.front().get();
+    if (Root.State != TreeEntry::Vectorize || Root.isAltShuffle() ||
+        !Root.Scalars.front()->getType()->isIntegerTy())
+      return std::nullopt;
+    auto It = MinBWs.find(&Root);
+    if (It != MinBWs.end())
+      return std::make_pair(IntegerType::get(Root.Scalars.front()->getContext(),
+                                             It->second.first),
+                            It->second.second);
+    if (Root.getOpcode() == Instruction::ZExt ||
+        Root.getOpcode() == Instruction::SExt)
+      return std::make_pair(cast<CastInst>(Root.getMainOp())->getSrcTy(),
+                            Root.getOpcode() == Instruction::SExt);
+    return std::nullopt;
+  }
+
   /// Checks if the root graph node can be emitted with narrower bitwidth at
   /// codegen and returns it signedness, if so.
   bool isSignedMinBitwidthRootNode() const {
     return MinBWs.at(VectorizableTree.front().get()).second;
   }
 
-  /// Returns reduction bitwidth and signedness, if it does not match the
-  /// original requested size.
-  std::optional<std::pair<unsigned, bool>> getReductionBitWidthAndSign() const {
+  /// Returns reduction type after minbitdth analysis.
+  FixedVectorType *getReductionType() const {
     if (ReductionBitWidth == 0 ||
+        !VectorizableTree.front()->Scalars.front()->getType()->isIntegerTy() ||
         ReductionBitWidth >=
             DL->getTypeSizeInBits(
                 VectorizableTree.front()->Scalars.front()->getType()))
-      return std::nullopt;
-    return std::make_pair(ReductionBitWidth,
-                          MinBWs.at(VectorizableTree.front().get()).second);
+      return getWidenedType(
+          VectorizableTree.front()->Scalars.front()->getType(),
+          VectorizableTree.front()->getVectorFactor());
+    return getWidenedType(
+        IntegerType::get(
+            VectorizableTree.front()->Scalars.front()->getContext(),
+            ReductionBitWidth),
+        VectorizableTree.front()->getVectorFactor());
   }
 
   /// Builds external uses of the vectorized scalars, i.e. the list of
@@ -11384,6 +11408,20 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         return CommonCost;
       auto *VI = VL0->getOpcode() == Opcode ? VL0 : nullptr;
       TTI::CastContextHint CCH = GetCastContextHint(VL0->getOperand(0));
+
+      bool IsArithmeticExtendedReduction =
+          E->Idx == 0 && UserIgnoreList &&
+          all_of(*UserIgnoreList, [](Value *V) {
+            auto *I = cast<Instruction>(V);
+            return is_contained({Instruction::Add, Instruction::FAdd,
+                                 Instruction::Mul, Instruction::FMul,
+                                 Instruction::And, Instruction::Or,
+                                 Instruction::Xor},
+                                I->getOpcode());
+          });
+      if (IsArithmeticExtendedReduction &&
+          (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
+        return CommonCost;
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -12748,32 +12786,48 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       unsigned SrcSize = It->second.first;
       unsigned DstSize = ReductionBitWidth;
       unsigned Opcode = Instruction::Trunc;
-      if (SrcSize < DstSize)
-        Opcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
-      auto *SrcVecTy =
-          getWidenedType(Builder.getIntNTy(SrcSize), E.getVectorFactor());
-      auto *DstVecTy =
-          getWidenedType(Builder.getIntNTy(DstSize), E.getVectorFactor());
-      TTI::CastContextHint CCH = getCastContextHint(E);
-      InstructionCost CastCost;
-      switch (E.getOpcode()) {
-      case Instruction::SExt:
-      case Instruction::ZExt:
-      case Instruction::Trunc: {
-        const TreeEntry *OpTE = getOperandEntry(&E, 0);
-        CCH = getCastContextHint(*OpTE);
-        break;
+      if (SrcSize < DstSize) {
+        bool IsArithmeticExtendedReduction =
+            all_of(*UserIgnoreList, [](Value *V) {
+              auto *I = cast<Instruction>(V);
+              return is_contained({Instruction::Add, Instruction::FAdd,
+                                   Instruction::Mul, Instruction::FMul,
+                                   Instruction::And, Instruction::Or,
+                                   Instruction::Xor},
+                                  I->getOpcode());
+            });
+        if (IsArithmeticExtendedReduction)
+          Opcode =
+              Instruction::BitCast; // Handle it by getExtendedReductionCost
+        else
+          Opcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
       }
-      default:
-        break;
+      if (Opcode != Instruction::BitCast) {
+        auto *SrcVecTy =
+            getWidenedType(Builder.getIntNTy(SrcSize), E.getVectorFactor());
+        auto *DstVecTy =
+            getWidenedType(Builder.getIntNTy(DstSize), E.getVectorFactor());
+        TTI::CastContextHint CCH = getCastContextHint(E);
+        InstructionCost CastCost;
+        switch (E.getOpcode()) {
+        case Instruction::SExt:
+        case Instruction::ZExt:
+        case Instruction::Trunc: {
+          const TreeEntry *OpTE = getOperandEntry(&E, 0);
+          CCH = getCastContextHint(*OpTE);
+          break;
+        }
+        default:
+          break;
+        }
+        CastCost += TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
+                                          TTI::TCK_RecipThroughput);
+        Cost += CastCost;
+        LLVM_DEBUG(dbgs() << "SLP: Adding cost " << CastCost
+                          << " for final resize for reduction from " << SrcVecTy
+                          << " to " << DstVecTy << "\n";
+                   dbgs() << "SLP: Current total cost = " << Cost << "\n");
       }
-      CastCost += TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
-                                        TTI::TCK_RecipThroughput);
-      Cost += CastCost;
-      LLVM_DEBUG(dbgs() << "SLP: Adding cost " << CastCost
-                        << " for final resize for reduction from " << SrcVecTy
-                        << " to " << DstVecTy << "\n";
-                 dbgs() << "SLP: Current total cost = " << Cost << "\n");
     }
   }
 
@@ -19951,8 +20005,8 @@ public:
 
         // Estimate cost.
         InstructionCost TreeCost = V.getTreeCost(VL);
-        InstructionCost ReductionCost = getReductionCost(
-            TTI, VL, IsCmpSelMinMax, RdxFMF, V.getReductionBitWidthAndSign());
+        InstructionCost ReductionCost =
+            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V);
         InstructionCost Cost = TreeCost + ReductionCost;
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
@@ -20243,14 +20297,14 @@ public:
 
 private:
   /// Calculate the cost of a reduction.
-  InstructionCost getReductionCost(
-      TargetTransformInfo *TTI, ArrayRef<Value *> ReducedVals,
-      bool IsCmpSelMinMax, FastMathFlags FMF,
-      const std::optional<std::pair<unsigned, bool>> BitwidthAndSign) {
+  InstructionCost getReductionCost(TargetTransformInfo *TTI,
+                                   ArrayRef<Value *> ReducedVals,
+                                   bool IsCmpSelMinMax, FastMathFlags FMF,
+                                   const BoUpSLP &R) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
-    FixedVectorType *VectorTy = getWidenedType(ScalarTy, ReduxWidth);
+    FixedVectorType *VectorTy = R.getReductionType();
     InstructionCost VectorCost = 0, ScalarCost;
     // If all of the reduced values are constant, the vector cost is 0, since
     // the reduction value can be calculated at the compile time.
@@ -20308,21 +20362,16 @@ private:
               VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
               /*Extract*/ false, TTI::TCK_RecipThroughput);
         } else {
-          auto [Bitwidth, IsSigned] =
-              BitwidthAndSign.value_or(std::make_pair(0u, false));
-          if (RdxKind == RecurKind::Add && Bitwidth == 1) {
-            // Represent vector_reduce_add(ZExt(<n x i1>)) to
-            // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
-            auto *IntTy = IntegerType::get(ScalarTy->getContext(), ReduxWidth);
-            IntrinsicCostAttributes ICA(Intrinsic::ctpop, IntTy, {IntTy}, FMF);
-            VectorCost =
-                TTI->getCastInstrCost(Instruction::BitCast, IntTy,
-                                      getWidenedType(ScalarTy, ReduxWidth),
-                                      TTI::CastContextHint::None, CostKind) +
-                TTI->getIntrinsicInstrCost(ICA, CostKind);
-          } else {
+          Type *RedTy = VectorTy->getElementType();
+          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+              std::make_pair(RedTy, true));
+          if (RType == RedTy) {
             VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
                                                          FMF, CostKind);
+          } else {
+            VectorCost = TTI->getExtendedReductionCost(
+                RdxOpcode, !IsSigned, RedTy, getWidenedType(RType, ReduxWidth),
+                FMF, CostKind);
           }
         }
       }
