@@ -11,9 +11,10 @@
 
 #include "utils/gpu/server/llvmlibc_rpc_server.h"
 
-#include "include/llvm-libc-types/rpc_opcodes_t.h"
 #include "include/llvm-libc-types/test_rpc_opcodes_t.h"
+
 #include "shared/rpc.h"
+#include "shared/rpc_opcodes.h"
 
 #include <cstddef>
 #include <cstdint>

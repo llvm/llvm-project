@@ -14,9 +14,9 @@
 
 // TODO: This should be included unconditionally and cleaned up.
 #if defined(LIBOMPTARGET_RPC_SUPPORT)
-#include "include/llvm-libc-types/rpc_opcodes_t.h"
 #include "llvmlibc_rpc_server.h"
 #include "shared/rpc.h"
+#include "shared/rpc_opcodes.h"
 #endif
 
 using namespace llvm;
