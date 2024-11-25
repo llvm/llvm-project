@@ -434,6 +434,12 @@ static cl::opt<bool> EnableMaxIlpSchedStrategy(
     cl::desc("Enable scheduling strategy to maximize ILP for a single wave."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> EnableMaxMemoryClauseSchedStrategy(
+    "amdgpu-enable-max-memory-clause-scheduling-strategy",
+    cl::desc("Enable scheduling strategy to maximize memory clause for a "
+             "single wave."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EnableRewritePartialRegUses(
     "amdgpu-enable-rewrite-partial-reg-uses",
     cl::desc("Enable rewrite partial reg uses pass"), cl::init(true),
@@ -562,6 +568,18 @@ createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
 }
 
 static ScheduleDAGInstrs *
+createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
+  ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
+      C, std::make_unique<GCNMaxMemoryClauseSchedStrategy>(C));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.shouldClusterStores())
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
+  return DAG;
+}
+
+static ScheduleDAGInstrs *
 createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto *DAG = new GCNIterativeScheduler(
@@ -600,6 +618,10 @@ GCNMaxOccupancySchedRegistry("gcn-max-occupancy",
 static MachineSchedRegistry
     GCNMaxILPSchedRegistry("gcn-max-ilp", "Run GCN scheduler to maximize ilp",
                            createGCNMaxILPMachineScheduler);
+
+static MachineSchedRegistry GCNMaxMemoryClauseSchedRegistry(
+    "gcn-max-memory-clause", "Run GCN scheduler to maximize memory clause",
+    createGCNMaxMemoryClauseMachineScheduler);
 
 static MachineSchedRegistry IterativeGCNMaxOccupancySchedRegistry(
     "gcn-iterative-max-occupancy-experimental",
@@ -1289,6 +1311,8 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
 
   if (EnableMaxIlpSchedStrategy)
     return createGCNMaxILPMachineScheduler(C);
+  if (EnableMaxMemoryClauseSchedStrategy)
+    return createGCNMaxMemoryClauseMachineScheduler(C);
 
   return createGCNMaxOccupancyMachineScheduler(C);
 }
