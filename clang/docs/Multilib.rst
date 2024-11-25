@@ -164,7 +164,7 @@ Custom flags can be declared in the YAML file under the *Flags* section.
     Default: no-multithreaded
 
 * Name: the name to categorize a flag.
-* Values: a list of flag *Value*s (defined below).
+* Values: a list of flag Values (defined below).
 * Default: it specifies the name of the value this flag should take if not
   specified in the command-line invocation. It must be one value from the Values
   field.
