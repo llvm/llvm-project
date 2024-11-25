@@ -2925,9 +2925,42 @@ bool RISCVInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
   return TargetInstrInfo::isMBBSafeToOutlineFrom(MBB, Flags);
 }
 
-// Enum values indicating how an outlined call should be constructed.
+/// Constants defining how certain sequences should be outlined.
+/// This encompasses how an outlined function should be called, and what kind of
+/// frame should be emitted for that outlined function.
+///
+/// \p MachineOutlinerCallViaX5 implies that the function should be called with
+/// using X5 as an alternative link register.
+///
+/// That is,
+///
+/// I1     Materialize addr in X5     OUTLINED_FUNCTION:
+/// I2 --> JAL X5                     I1
+/// I3                                I2
+///                                   I3
+///                                   RET X5
+///
+/// * Call construction overhead: 2 insns
+/// * Frame construction overhead: 1 (ret)
+/// * Requires stack fixups? No
+///
+/// \p MachineOutlinerTailCall implies that the function is being created from
+/// a sequence of instructions ending in a return.
+///
+/// That is,
+///
+/// I1                             OUTLINED_FUNCTION:
+/// I2 --> B OUTLINED_FUNCTION     I1
+/// RET                            I2
+///                                RET
+///
+/// * Call construction overhead: 2 insns
+/// * Frame construction overhead: 0 (Return included in sequence)
+/// * Requires stack fixups? No
+///
 enum MachineOutlinerConstructionID {
-  MachineOutlinerDefault
+  MachineOutlinerCallViaX5,
+  MachineOutlinerTailCall
 };
 
 bool RISCVInstrInfo::shouldOutlineFromFunctionByDefault(
@@ -2941,14 +2974,33 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs,
     unsigned MinRepeats) const {
 
-  // First we need to filter out candidates where the X5 register (IE t0) can't
-  // be used to setup the function call.
-  auto CannotInsertCall = [](outliner::Candidate &C) {
-    const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
-    return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI);
-  };
+  // If the last instruction in any candidate is a terminator, then we should
+  // tail call all of the candidates.
+  bool IsTailCall = RepeatedSequenceLocs[0].back().isTerminator();
 
-  llvm::erase_if(RepeatedSequenceLocs, CannotInsertCall);
+  if (!IsTailCall) {
+    // Filter out candidates where the X5 register (IE t0) can't
+    // be used to setup the function call.
+    auto CannotInsertCall = [](outliner::Candidate &C) {
+      const TargetRegisterInfo *TRI =
+          C.getMF()->getSubtarget().getRegisterInfo();
+      if (!C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI))
+        return true;
+
+      // Don't allow modifying the X5 register which we use for return addresses
+      // for these outlined functions.
+      for (const auto &MI : C) {
+        // FIXME: Why is this case not handled by isAvailableAcrossAndOutOfSeq
+        // above?
+        if (MI.modifiesRegister(RISCV::X5, TRI))
+          return true;
+      }
+
+      return false;
+    };
+
+    llvm::erase_if(RepeatedSequenceLocs, CannotInsertCall);
+  }
 
   // If the sequence doesn't have enough candidates left, then we're done.
   if (RepeatedSequenceLocs.size() < MinRepeats)
@@ -2961,8 +3013,12 @@ RISCVInstrInfo::getOutliningCandidateInfo(
 
   // call t0, function = 8 bytes.
   unsigned CallOverhead = 8;
+
+  MachineOutlinerConstructionID OutlinerType =
+      IsTailCall ? MachineOutlinerTailCall : MachineOutlinerCallViaX5;
+
   for (auto &C : RepeatedSequenceLocs)
-    C.setCallInfo(MachineOutlinerDefault, CallOverhead);
+    C.setCallInfo(OutlinerType, CallOverhead);
 
   // jr t0 = 4 bytes, 2 bytes if compressed instructions are enabled.
   unsigned FrameOverhead = 4;
@@ -2972,9 +3028,12 @@ RISCVInstrInfo::getOutliningCandidateInfo(
           .hasStdExtCOrZca())
     FrameOverhead = 2;
 
+  // There is no overhead in the frame when doing a tail call.
+  if (IsTailCall)
+    FrameOverhead = 0;
+
   return std::make_unique<outliner::OutlinedFunction>(
-      RepeatedSequenceLocs, SequenceSize, FrameOverhead,
-      MachineOutlinerDefault);
+      RepeatedSequenceLocs, SequenceSize, FrameOverhead, OutlinerType);
 }
 
 outliner::InstrType
@@ -2982,9 +3041,6 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                      MachineBasicBlock::iterator &MBBI,
                                      unsigned Flags) const {
   MachineInstr &MI = *MBBI;
-  MachineBasicBlock *MBB = MI.getParent();
-  const TargetRegisterInfo *TRI =
-      MBB->getParent()->getSubtarget().getRegisterInfo();
   const auto &F = MI.getMF()->getFunction();
 
   // We can manually strip out CFI instructions later.
@@ -2994,17 +3050,6 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // needed in unwinding.
     return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
                                      : outliner::InstrType::Invisible;
-
-  // We need support for tail calls to outlined functions before return
-  // statements can be allowed.
-  if (MI.isReturn())
-    return outliner::InstrType::Illegal;
-
-  // Don't allow modifying the X5 register which we use for return addresses for
-  // these outlined functions.
-  if (MI.modifiesRegister(RISCV::X5, TRI) ||
-      MI.getDesc().hasImplicitDefOfPhysReg(RISCV::X5))
-    return outliner::InstrType::Illegal;
 
   // Make sure the operands don't reference something unsafe.
   for (const auto &MO : MI.operands()) {
@@ -3041,6 +3086,9 @@ void RISCVInstrInfo::buildOutlinedFrame(
 
   MBB.addLiveIn(RISCV::X5);
 
+  if (OF.FrameConstructionID == MachineOutlinerTailCall)
+    return;
+
   // Add in a return instruction to the end of the outlined frame.
   MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR))
       .addReg(RISCV::X0, RegState::Define)
@@ -3051,6 +3099,13 @@ void RISCVInstrInfo::buildOutlinedFrame(
 MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
     Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
     MachineFunction &MF, outliner::Candidate &C) const {
+
+  if (C.CallConstructionID == MachineOutlinerTailCall) {
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(RISCV::PseudoTAIL))
+                            .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
+                                              RISCVII::MO_CALL));
+    return It;
+  }
 
   // Add in a call instruction to the outlined function at the given location.
   It = MBB.insert(It,
