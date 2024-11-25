@@ -84,7 +84,7 @@ struct ELFLinuxSigInfo {
   int32_t si_code;
   // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
   // builds. Slight modifications to ensure no 32b vs 64b differences.
-  struct {
+  struct alignas(8) {
     lldb::addr_t si_addr; /* faulting insn/memory ref. */
     int16_t si_addr_lsb;  /* Valid LSB of the reported address.  */
     union {
