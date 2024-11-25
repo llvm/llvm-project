@@ -1946,3 +1946,33 @@ func.func @affine_leading_zero_no_outer_bound(%arg0: index, %arg1: index) -> ind
   return %ret : index
 }
 
+// -----
+
+// CHECK-LABEL: @cst_value_to_cst_attr_basis_delinearize_index
+// CHECK-SAME:    (%[[ARG0:.*]]: index)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK:         %[[RET:.*]]:2 = affine.delinearize_index %[[ARG0]] into (3, 4) : index, index
+// CHECK:         return %[[RET]]#0, %[[RET]]#1, %[[C0]] : index, index, index
+func.func @cst_value_to_cst_attr_basis_delinearize_index(%arg0 : index) ->
+    (index, index, index) {
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c1 = arith.constant 1 : index
+  %0:3 = affine.delinearize_index %arg0 into (%c3, %c4, %c1)
+      : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: @cst_value_to_cst_attr_basis_linearize_index
+// CHECK-SAME:    (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+// CHECK:         %[[RET:.*]] = affine.linearize_index disjoint [%[[ARG1]], %[[ARG2]]] by (3, 4) : index
+// CHECK:         return %[[RET]] : index
+func.func @cst_value_to_cst_attr_basis_linearize_index(%arg0 : index, %arg1 : index, %arg2 : index) ->
+    (index) {
+  %c4 = arith.constant 4 : index
+  %c1 = arith.constant 1 : index
+  %1 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by  (%c1, 3, %c4) : index
+  return %1 : index
+}
