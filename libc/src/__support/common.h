@@ -27,8 +27,7 @@
 //
 // For examples:
 // #define LLVM_LIBC_FUNCTION_ATTR_memcpy LLVM_LIBC_EMPTY, [[gnu::weak]]
-// #define LLVM_LIBC_FUNCTION_ATTR_memchr LLVM_LIBC_EMPTY, [[gnu::weak]]       \
-//                                        [[gnu::visibility("default")]]
+// #define LLVM_LIBC_FUNCTION_ATTR_memchr LLVM_LIBC_EMPTY, [[gnu::weak]] [[gnu::visibility("default")]]
 #define LLVM_LIBC_EMPTY
 
 #define GET_SECOND(first, second, ...) second
