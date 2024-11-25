@@ -168,7 +168,11 @@ static bool isPermlane(const MachineInstr &MI) {
          Opcode == AMDGPU::V_PERMLANE64_B32 ||
          Opcode == AMDGPU::V_PERMLANEX16_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANE16_VAR_B32_e64 ||
-         Opcode == AMDGPU::V_PERMLANEX16_VAR_B32_e64;
+         Opcode == AMDGPU::V_PERMLANEX16_VAR_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE16_SWAP_B32_e32 ||
+         Opcode == AMDGPU::V_PERMLANE16_SWAP_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE32_SWAP_B32_e32 ||
+         Opcode == AMDGPU::V_PERMLANE32_SWAP_B32_e64;
 }
 
 static bool isLdsDma(const MachineInstr &MI) {
@@ -394,6 +398,9 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
       SIInstrInfo::isFLAT(*MI) ||
       SIInstrInfo::isDS(*MI))
     return std::max(WaitStates, checkMAILdStHazards(MI));
+
+  if (ST.hasGFX950Insts() && isPermlane(*MI))
+    return std::max(WaitStates, checkPermlaneHazards(MI));
 
   return WaitStates;
 }
@@ -1200,6 +1207,13 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixRequiredExportPriority(MI);
 }
 
+static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
+                              const MachineInstr &MI) {
+  return (TII.isVOPC(MI) ||
+          (MI.isCompare() && (TII.isVOP3(MI) || TII.isSDWA(MI)))) &&
+         MI.modifiesRegister(AMDGPU::EXEC, &TRI);
+}
+
 bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
   if (!ST.hasVcmpxPermlaneHazard() || !isPermlane(*MI))
     return false;
@@ -1207,9 +1221,7 @@ bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   auto IsHazardFn = [TII, TRI](const MachineInstr &MI) {
-    return (TII->isVOPC(MI) ||
-            ((TII->isVOP3(MI) || TII->isSDWA(MI)) && MI.isCompare())) &&
-           MI.modifiesRegister(AMDGPU::EXEC, TRI);
+    return isVCmpXWritesExec(*TII, *TRI, MI);
   };
 
   auto IsExpiredFn = [](const MachineInstr &MI, int) {
@@ -2545,6 +2557,46 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
   }
 
+  return WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkPermlaneHazards(MachineInstr *MI) {
+  assert(!ST.hasVcmpxPermlaneHazard() &&
+         "this is a different vcmpx+permlane hazard");
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  auto IsVCmpXWritesExecFn = [TII, TRI](const MachineInstr &MI) {
+    return isVCmpXWritesExec(*TII, *TRI, MI);
+  };
+
+  auto IsVALUFn = [](const MachineInstr &MI) {
+    return SIInstrInfo::isVALU(MI);
+  };
+
+  const int VCmpXWritesExecWaitStates = 4;
+  const int VALUWritesVDstWaitStates = 2;
+  int WaitStatesNeeded = 0;
+
+  for (const MachineOperand &Op : MI->explicit_uses()) {
+    if (!Op.isReg() || !TRI->isVGPR(MF.getRegInfo(), Op.getReg()))
+      continue;
+    Register Reg = Op.getReg();
+
+    int WaitStatesSinceDef =
+        VALUWritesVDstWaitStates -
+        getWaitStatesSinceDef(Reg, IsVALUFn,
+                              /*MaxWaitStates=*/VALUWritesVDstWaitStates);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesSinceDef);
+    if (WaitStatesNeeded >= VALUWritesVDstWaitStates)
+      break;
+  }
+
+  int VCmpXHazardWaits =
+      VCmpXWritesExecWaitStates -
+      getWaitStatesSince(IsVCmpXWritesExecFn, VCmpXWritesExecWaitStates);
+
+  WaitStatesNeeded = std::max(WaitStatesNeeded, VCmpXHazardWaits);
   return WaitStatesNeeded;
 }
 
