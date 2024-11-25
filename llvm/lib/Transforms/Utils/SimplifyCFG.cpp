@@ -1662,21 +1662,43 @@ static bool areIdenticalUpToCommutativity(const Instruction *I1,
 /// \endcode
 ///
 /// So we need to turn hoisted load/store into cload/cstore.
+///
+/// \param BI The branch instruction.
+/// \param SpeculatedConditionalLoadsStores The load/store instructions that
+///                                         will be speculated.
+/// \param Invert indicates if speculates FalseBB. Only used in triangle CFG.
 static void hoistConditionalLoadsStores(
     BranchInst *BI,
     SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
-    bool Invert) {
+    std::optional<bool> Invert) {
   auto &Context = BI->getParent()->getContext();
   auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
   auto *Cond = BI->getOperand(0);
   // Construct the condition if needed.
   BasicBlock *BB = BI->getParent();
-  IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
-  Value *Mask = Builder.CreateBitCast(
-      Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
-      VCondTy);
+  IRBuilder<> Builder(
+      Invert.has_value() ? SpeculatedConditionalLoadsStores.back() : BI);
+  Value *Mask = nullptr;
+  Value *MaskFalse = nullptr;
+  Value *MaskTrue = nullptr;
+  if (Invert.has_value()) {
+    Mask = Builder.CreateBitCast(
+        *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
+        VCondTy);
+  } else {
+    MaskFalse = Builder.CreateBitCast(
+        Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
+    MaskTrue = Builder.CreateBitCast(Cond, VCondTy);
+  }
+  auto PeekThroughBitcasts = [](Value *V) {
+    while (auto *BitCast = dyn_cast<BitCastInst>(V))
+      V = BitCast->getOperand(0);
+    return V;
+  };
   for (auto *I : SpeculatedConditionalLoadsStores) {
-    IRBuilder<> Builder(I);
+    IRBuilder<> Builder(Invert.has_value() ? I : BI);
+    if (!Invert.has_value())
+      Mask = I->getParent() == BI->getSuccessor(0) ? MaskTrue : MaskFalse;
     // We currently assume conditional faulting load/store is supported for
     // scalar types only when creating new instructions. This can be easily
     // extended for vector types in the future.
@@ -1688,12 +1710,14 @@ static void hoistConditionalLoadsStores(
       auto *Ty = I->getType();
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
-      for (User *U : I->users())
-        if ((PN = dyn_cast<PHINode>(U))) {
-          PassThru = Builder.CreateBitCast(PN->getIncomingValueForBlock(BB),
-                                           FixedVectorType::get(Ty, 1));
-          break;
-        }
+      if (Invert.has_value())
+        for (User *U : I->users())
+          if ((PN = dyn_cast<PHINode>(U))) {
+            PassThru = Builder.CreateBitCast(
+                PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
+                FixedVectorType::get(Ty, 1));
+            break;
+          }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
@@ -1702,8 +1726,8 @@ static void hoistConditionalLoadsStores(
       I->replaceAllUsesWith(NewLoadStore);
     } else {
       // Handle Store.
-      auto *StoredVal =
-          Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
+      auto *StoredVal = Builder.CreateBitCast(
+          PeekThroughBitcasts(Op0), FixedVectorType::get(Op0->getType(), 1));
       MaskedLoadStore = Builder.CreateMaskedStore(
           StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
     }
@@ -3155,7 +3179,8 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
   return HaveRewritablePHIs;
 }
 
-static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
+static bool isProfitableToSpeculate(const BranchInst *BI,
+                                    std::optional<bool> Invert,
                                     const TargetTransformInfo &TTI) {
   // If the branch is non-unpredictable, and is predicted to *not* branch to
   // the `then` block, then avoid speculating it.
@@ -3166,7 +3191,10 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
   if (!extractBranchWeights(*BI, TWeight, FWeight) || (TWeight + FWeight) == 0)
     return true;
 
-  uint64_t EndWeight = Invert ? TWeight : FWeight;
+  if (!Invert.has_value())
+    return false;
+
+  uint64_t EndWeight = *Invert ? TWeight : FWeight;
   BranchProbability BIEndProb =
       BranchProbability::getBranchProbability(EndWeight, TWeight + FWeight);
   BranchProbability Likely = TTI.getPredictableBranchThreshold();
@@ -8034,6 +8062,35 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       if (HoistCommon &&
           hoistCommonCodeFromSuccessors(BI, !Options.HoistCommonInsts))
         return requestResimplify();
+
+      if (BI && HoistLoadsStoresWithCondFaulting &&
+          Options.HoistLoadsStoresWithCondFaulting &&
+          isProfitableToSpeculate(BI, std::nullopt, TTI)) {
+        SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
+        auto CanSpeculateConditionalLoadsStores = [&]() {
+          for (auto *Succ : successors(BB)) {
+            for (Instruction &I : *Succ) {
+              if (I.isTerminator()) {
+                if (I.getNumSuccessors() > 1)
+                  return false;
+                continue;
+              } else if (!isSafeCheapLoadStore(&I, TTI) ||
+                         SpeculatedConditionalLoadsStores.size() ==
+                             HoistLoadsStoresWithCondFaultingThreshold) {
+                return false;
+              }
+              SpeculatedConditionalLoadsStores.push_back(&I);
+            }
+          }
+          return !SpeculatedConditionalLoadsStores.empty();
+        };
+
+        if (CanSpeculateConditionalLoadsStores()) {
+          hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
+                                      std::nullopt);
+          return requestResimplify();
+        }
+      }
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally
       // execute Successor #0 if it branches to Successor #1.
