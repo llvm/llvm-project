@@ -115,7 +115,12 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                              unsigned ScalarOpdIdx) {
+                                              unsigned ScalarOpdIdx,
+                                              const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::vp_abs:
@@ -142,7 +147,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   assert(ID != Intrinsic::not_intrinsic && "Not an intrinsic!");
 
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
-    return TTI->isVectorIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+    return TTI->isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
 
   if (VPCastIntrinsic::isVPCast(ID))
     return OpdIdx == -1 || OpdIdx == 0;
@@ -167,8 +172,12 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   }
 }
 
-bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
-                                                            int RetIdx) {
+bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
+
   switch (ID) {
   case Intrinsic::frexp:
     return RetIdx == 0 || RetIdx == 1;
