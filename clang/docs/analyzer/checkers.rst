@@ -1750,6 +1750,21 @@ Critical section handling functions modeled by this checker:
    }
  }
 
+.. _unix-Chroot:
+
+unix.Chroot (C)
+"""""""""""""""""""""
+Check improper use of chroot.
+
+.. code-block:: c
+
+ void f();
+
+ void test() {
+   chroot("/usr/local");
+   f(); // warn: no call of chdir("/") immediately after chroot
+ }
+
 .. _unix-Errno:
 
 unix.Errno (C)
@@ -3274,21 +3289,6 @@ SEI CERT checkers which tries to find errors based on their `C coding rules <htt
 
 alpha.unix
 ^^^^^^^^^^
-
-.. _alpha-unix-Chroot:
-
-alpha.unix.Chroot (C)
-"""""""""""""""""""""
-Check improper use of chroot.
-
-.. code-block:: c
-
- void f();
-
- void test() {
-   chroot("/usr/local");
-   f(); // warn: no call of chdir("/") immediately after chroot
- }
 
 .. _alpha-unix-PthreadLock:
 

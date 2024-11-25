@@ -985,6 +985,9 @@ Moved checkers
   original checkers were implemented only using AST matching and make more
   sense as a single clang-tidy check.
 
+- The checker ``alpha.unix.Chroot`` was modernized, improved and moved from
+  alpha to a main Unix family checker.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
