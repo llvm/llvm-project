@@ -256,6 +256,14 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       ExtraOpts.push_back("-z");
       ExtraOpts.push_back("max-page-size=16384");
     }
+    if (Triple.isAndroidVersionLT(29)) {
+      // https://github.com/android/ndk/issues/1196
+      // The unwinder used by the crash handler on versions of Android prior to
+      // API 29 did not correctly handle binaries built with rosegment, which is
+      // enabled by default for LLD. Android only supports LLD, so it's not an
+      // issue that this flag is not accepted by other linkers.
+      ExtraOpts.push_back("--no-rosegment");
+    }
   }
 
   if (GCCInstallation.getParentLibPath().contains("opt/rh/"))
