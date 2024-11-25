@@ -1406,16 +1406,37 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
     if (i != 0)
       BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset + 16 * i, MemSize);
 
-    B.buildInstr(AMDGPU::G_AMDGPU_BUFFER_LOAD)
-      .addDef(LoadParts[i])       // vdata
-      .addUse(RSrc)               // rsrc
-      .addUse(VIndex)             // vindex
-      .addUse(VOffset)            // voffset
-      .addUse(SOffset)            // soffset
-      .addImm(ImmOffset + 16 * i) // offset(imm)
-      .addImm(0)                  // cachepolicy, swizzled buffer(imm)
-      .addImm(0)                  // idxen(imm)
-      .addMemOperand(MMO);
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
+      break;
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
+      break;
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE;
+      break;
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
+      break;
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT;
+      break;
+    default:
+      llvm_unreachable("Unexpected opcode");
+    }
+
+    B.buildInstr(Opc)
+        .addDef(LoadParts[i])       // vdata
+        .addUse(RSrc)               // rsrc
+        .addUse(VIndex)             // vindex
+        .addUse(VOffset)            // voffset
+        .addUse(SOffset)            // soffset
+        .addImm(ImmOffset + 16 * i) // offset(imm)
+        .addImm(0)                  // cachepolicy, swizzled buffer(imm)
+        .addImm(0)                  // idxen(imm)
+        .addMemOperand(MMO);
   }
 
   // TODO: If only the resource is a VGPR, it may be better to execute the
