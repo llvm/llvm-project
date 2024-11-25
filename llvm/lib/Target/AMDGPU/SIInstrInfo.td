@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
+def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
-def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
+def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
@@ -816,27 +816,29 @@ def as_i8imm : SDNodeXForm<imm, [{
 }]>;
 
 def as_i8timm : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
 def as_i16imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
 def as_i16timm : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  // Explicit cast, as this is used with both signed and unsigned immediates.
+  return CurDAG->getSignedTargetConstant(int16_t(N->getSExtValue()), SDLoc(N),
+                                         MVT::i16);
 }]>;
 
 def as_i32imm: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i32timm: SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i64imm: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
 def cond_as_i32imm: SDNodeXForm<cond, [{
@@ -1268,6 +1270,9 @@ def WaitVMVSrc : NamedIntOperand<"wait_vm_vsrc"> {
 def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
+
+def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";

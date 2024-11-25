@@ -1696,7 +1696,7 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-bool CheckArgTypeIsCorrect(Sema *S, Expr *Arg, QualType ExpectedType) {
+static bool CheckArgTypeMatches(Sema *S, Expr *Arg, QualType ExpectedType) {
   QualType ArgType = Arg->getType();
   if (!S->getASTContext().hasSameUnqualifiedType(ArgType, ExpectedType)) {
     S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
@@ -1706,7 +1706,7 @@ bool CheckArgTypeIsCorrect(Sema *S, Expr *Arg, QualType ExpectedType) {
   return false;
 }
 
-bool CheckArgTypeIsCorrect(
+static bool CheckArgTypeIsCorrect(
     Sema *S, Expr *Arg, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   QualType PassedType = Arg->getType();
@@ -1721,7 +1721,7 @@ bool CheckArgTypeIsCorrect(
   return false;
 }
 
-bool CheckAllArgTypesAreCorrect(
+static bool CheckAllArgTypesAreCorrect(
     Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
@@ -2216,8 +2216,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     };
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy) ||
-        CheckArgTypeIsCorrect(&SemaRef, TheCall->getArg(1),
-                              SemaRef.getASTContext().IntTy))
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().IntTy))
       return true;
     Expr *OffsetExpr = TheCall->getArg(1);
     std::optional<llvm::APSInt> Offset =
