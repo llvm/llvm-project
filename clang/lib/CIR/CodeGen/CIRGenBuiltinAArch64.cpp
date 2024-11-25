@@ -2585,6 +2585,12 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
         vTy, true /* extended */, true /* signed */));
     break;
   }
+  case NEON::BI__builtin_neon_vrshl_v:
+  case NEON::BI__builtin_neon_vrshlq_v: {
+    intrincsName = (intrinicId != altLLVMIntrinsic) ? "aarch64.neon.urshl"
+                                                    : "aarch64.neon.srshl";
+    break;
+  }
   }
 
   if (intrincsName.empty())
