@@ -14,7 +14,7 @@
 namespace mlir {
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTTOEMITCPASS
+#define GEN_PASS_DECL_CONVERTTOEMITC
 #include "mlir/Conversion/Passes.h.inc"
 
 } // namespace mlir

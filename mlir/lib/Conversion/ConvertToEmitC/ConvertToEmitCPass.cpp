@@ -1,4 +1,4 @@
-//===- ConvertToEmitCPass.cpp - MLIR EmitC Conversion ---------------------===//
+//===- ConvertToEmitCPass.cpp - Conversion to EmitC pass --*- C++ -*-=========//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"
+
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitC.h"
-#include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
-#include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
-#include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
+#include "mlir/Conversion/ConvertToEmitC/ConvertToEmitC.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -22,10 +21,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#define DEBUG_TYPE "convert-to-emitc"
-
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTTOEMITCPASS
+#define GEN_PASS_DEF_CONVERTTOEMITC
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -33,26 +30,9 @@ using namespace mlir;
 
 namespace {
 
-void populateConvertToEmitCTypeConverter(TypeConverter &typeConverter) {
-  typeConverter.addConversion([](Type type) { return type; });
-  populateMemRefToEmitCTypeConversion(typeConverter);
-}
-
-/// Populate patterns for each dialect.
-void populateConvertToEmitCPatterns(TypeConverter &typeConverter,
-                                    RewritePatternSet &patterns) {
-  populateArithToEmitCPatterns(typeConverter, patterns);
-  populateFuncToEmitCPatterns(patterns);
-  populateMemRefToEmitCConversionPatterns(patterns, typeConverter);
-  populateSCFToEmitCConversionPatterns(patterns);
-  populateFunctionOpInterfaceTypeConversionPattern<emitc::FuncOp>(
-      patterns, typeConverter);
-}
-
 /// A pass to perform the EmitC conversion.
-struct ConvertToEmitCPass final
-    : impl::ConvertToEmitCPassBase<ConvertToEmitCPass> {
-  using ConvertToEmitCPassBase::ConvertToEmitCPassBase;
+struct ConvertToEmitC final : impl::ConvertToEmitCBase<ConvertToEmitC> {
+  using ConvertToEmitCBase::ConvertToEmitCBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();
