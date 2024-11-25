@@ -10875,9 +10875,10 @@ public:
           CommonMask[Idx] = Idx;
       // Add subvectors permutation cost.
       if (!SubVectorsMask.empty()) {
-        assert(SubVectorsMask.size() == CommonMask.size() &&
+        assert(SubVectorsMask.size() <= CommonMask.size() &&
                "Expected same size of masks for subvectors and common mask.");
-        SmallVector<int> SVMask(SubVectorsMask.begin(), SubVectorsMask.end());
+        SmallVector<int> SVMask(CommonMask.size(), PoisonMaskElem);
+        copy(SubVectorsMask, SVMask.begin());
         for (auto [I1, I2] : zip(SVMask, CommonMask)) {
           if (I2 != PoisonMaskElem) {
             assert(I1 == PoisonMaskElem && "Expected unused subvectors mask");
@@ -14372,7 +14373,8 @@ public:
       if (SubVectorsMask.empty()) {
         Vec = CreateSubVectors(Vec, CommonMask);
       } else {
-        SmallVector<int> SVMask(SubVectorsMask.begin(), SubVectorsMask.end());
+        SmallVector<int> SVMask(CommonMask.size(), PoisonMaskElem);
+        copy(SubVectorsMask, SVMask.begin());
         for (auto [I1, I2] : zip(SVMask, CommonMask)) {
           if (I2 != PoisonMaskElem) {
             assert(I1 == PoisonMaskElem && "Expected unused subvectors mask");
