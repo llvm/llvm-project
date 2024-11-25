@@ -58,8 +58,8 @@ int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, long stream,
 int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
     const Descriptor &source, long stream, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
-  int stat{RTNAME(AllocatableAllocate)(
-      alloc, hasStat, errMsg, sourceFile, sourceLine)};
+  int stat{RTNAME(CUFAllocatableAllocate)(
+      alloc, stream, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
     Fortran::runtime::DoFromSourceAssign(
