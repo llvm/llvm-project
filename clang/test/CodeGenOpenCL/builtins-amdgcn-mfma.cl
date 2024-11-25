@@ -454,4 +454,10 @@ v4i test_mfma_i32_16x16x64_i8(v4i a, v4i b, v4i c) {
   return __builtin_amdgcn_mfma_i32_16x16x64_i8(a, b, c, 1, 2, 3);
 }
 
+// CHECK-GFX950-LABEL: @test_mfma_i32_32x32x32_i8(
+// CHECK-GFX950: tail call <16 x i32> @llvm.amdgcn.mfma.i32.32x32x32.i8(<4 x i32> %a, <4 x i32> %b, <16 x i32> %c, i32 1, i32 2, i32 3)
+v16i test_mfma_i32_32x32x32_i8(v4i a, v4i b, v16i c) {
+  return __builtin_amdgcn_mfma_i32_32x32x32_i8(a, b, c, 1, 2, 3);
+}
+
 #endif
