@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
 # RUN:     --target=thumbv8m.main-none-eabi -mfpu=none --sysroot= \
 # RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
