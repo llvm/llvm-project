@@ -12,5 +12,5 @@ attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 ; CHECK-NEXT:     Size:            8
 ; CHECK-NEXT:     Flags:
 ; CHECK:       Doubles:         true
-; CHECK:            DX11_1_DoubleExtensions:         true
+; CHECK:       DX11_1_DoubleExtensions:         true
 
