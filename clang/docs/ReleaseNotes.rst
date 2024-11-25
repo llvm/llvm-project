@@ -583,7 +583,8 @@ Improvements to Clang's diagnostics
 - For an rvalue reference bound to a temporary struct with an integer member, Clang will detect constant integer overflow
   in the initializer for the integer member (#GH46755).
 
-- Clang now prevents errors for deduction guides with deduced type aliases (#GH54909).
+- Clang now supports using alias templates in deduction guides, aligning with the C++ standard,
+  which treats alias templates as synonyms for their underlying types (#GH54909).
 
 Improvements to Clang's time-trace
 ----------------------------------
