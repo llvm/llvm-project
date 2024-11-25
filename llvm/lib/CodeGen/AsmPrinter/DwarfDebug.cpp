@@ -2193,13 +2193,14 @@ findPrologueEndLoc(const MachineFunction *MF) {
   auto CurBlock = MF->begin();
   auto CurInst = CurBlock->begin();
 
-  // Find the initial instruction, we're guaranteed one by the caller.
+  // Find the initial instruction, we're guaranteed one by the caller, but not
+  // which block it's in.
   while (CurBlock->empty())
     CurInst = (++CurBlock)->begin();
+  assert(CurInst != CurBlock->end());
 
   // Helper function for stepping through the initial sequence of
-  // unconditionally executed instructions. The optimiser will also chuck in
-  // sequences of empty blocks alas.
+  // unconditionally executed instructions.
   auto getNextInst = [&CurBlock, &CurInst, MF]() -> bool {
     // We've reached the end of the block. Did we just look at a terminator?
     if (CurInst->isTerminator()) {
@@ -2217,7 +2218,9 @@ findPrologueEndLoc(const MachineFunction *MF) {
     // Fall-through from entry to the next block. This is common at -O0 when
     // there's no initialisation in the function. Bail if we're also at the
     // end of the function, or the remaining blocks have no instructions.
-    // Skip empty blocks, in rare cases the entry can be empty.
+    // Skip empty blocks, in rare cases the entry can be empty, and
+    // other optimisations may add empty blocks that the control flow falls
+    // through.
     do {
       ++CurBlock;
       if (CurBlock == MF->end())
