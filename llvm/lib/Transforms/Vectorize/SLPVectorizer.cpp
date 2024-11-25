@@ -1143,9 +1143,7 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
   assert(
       (!ExtendingManyInputs || SubMask.size() > Mask.size() ||
        // Check if input scalars were extended to match the size of other node.
-       (SubMask.size() == Mask.size() &&
-        std::all_of(std::next(Mask.begin(), Mask.size() / 2), Mask.end(),
-                    [](int Idx) { return Idx == PoisonMaskElem; }))) &&
+       (SubMask.size() == Mask.size() && Mask.back() == PoisonMaskElem)) &&
       "SubMask with many inputs support must be larger than the mask.");
   if (Mask.empty()) {
     Mask.append(SubMask.begin(), SubMask.end());
