@@ -1081,12 +1081,12 @@ public:
 
   /// Add new ref-recursive functions split/outlined from an existing function.
   ///
-  /// The new functions may only reference other functions that the original
-  /// function did. The new functions may reference (not call) the original
-  /// function.
+  /// The new functions may only reference the original function or other
+  /// functions that the original function did. New functions must not call
+  /// other new functions.
   ///
-  /// The original function must reference (not call) all new functions.
-  /// All new functions must reference (not call) each other.
+  /// Mark the original function as referencing all new functions.
+  /// Mark all new functions as referencing each other.
   void addSplitRefRecursiveFunctions(Function &OriginalFunction,
                                      ArrayRef<Function *> NewFunctions);
 
