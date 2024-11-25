@@ -2516,10 +2516,8 @@ define  <4 x float> @shuffle_mem_v4f32_0624(<4 x float> %a0, ptr %a1) {
 ;
 ; AVX512VL-LABEL: shuffle_mem_v4f32_0624:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovaps (%rdi), %xmm2
-; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [0,6,2,4]
-; AVX512VL-NEXT:    vpermi2ps %xmm0, %xmm2, %xmm1
-; AVX512VL-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [4,2,6,0]
+; AVX512VL-NEXT:    vpermt2ps (%rdi), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %1 = load <4 x float>, ptr %a1
   %2 = shufflevector <4 x float> %1, <4 x float> %a0, <4 x i32> <i32 0, i32 6, i32 2, i32 4>
