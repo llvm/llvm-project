@@ -2571,8 +2571,8 @@ static void emitIsSubclass(CodeGenTarget &Target,
     OS << "    " << A.Name << "_SuperClasses,\n";
   OS << "  };\n\n";
 
-  OS << "  ArrayRef<uint16_t> SuperClasses = SuperClassTable[(unsigned)A];\n";
-  OS << "  return binary_search(SuperClasses, (unsigned)B);\n";
+  OS << "  ArrayRef<uint16_t> SuperClasses = SuperClassTable[A];\n";
+  OS << "  return binary_search(SuperClasses, B);\n";
 
   OS << "}\n\n";
 }
