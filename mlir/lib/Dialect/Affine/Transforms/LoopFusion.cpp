@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
 #include "mlir/Dialect/Affine/Passes.h"
 
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
@@ -23,6 +24,8 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -177,13 +180,58 @@ gatherProducerConsumerMemrefs(unsigned srcId, unsigned dstId,
                                 producerConsumerMemrefs);
 }
 
+static bool containedWithin(Type loadType, Type storeType) {
+  ShapedType loadShapedType = cast<ShapedType>(loadType);
+  ShapedType storeShapedType = cast<ShapedType>(storeType);
+
+  for (int i = 0; i < loadShapedType.getRank(); ++i) {
+    auto loadDim = loadShapedType.getDimSize(i);
+    auto storeDim = storeShapedType.getDimSize(i);
+
+    if (loadDim > storeDim) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool
+verifyLoadStoreDomainContainment(unsigned srcId, unsigned dstId,
+                                 DenseSet<Value> &producerConsumerMemrefs,
+                                 MemRefDependenceGraph *mdg) {
+  SmallVector<Operation *> storeOps;
+  SmallVector<Operation *> loadOps;
+
+  auto *srcNode = mdg->getNode(srcId);
+  auto *dstNode = mdg->getNode(dstId);
+
+  for (Value memref : producerConsumerMemrefs) {
+    srcNode->getStoreOpsForMemref(memref, &storeOps);
+    dstNode->getLoadOpsForMemref(memref, &loadOps);
+
+    for (Operation *storeOp : storeOps) {
+      Value storeValue = cast<AffineWriteOpInterface>(storeOp).getValueStore();
+
+      for (Operation *loadOp : loadOps) {
+        Value loadValue = cast<AffineReadOpInterface>(loadOp).getValue();
+
+        if (!containedWithin(loadValue.getType(), storeValue.getType())) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
 /// A memref escapes in the context of the fusion pass if either:
 ///   1. it (or its alias) is a block argument, or
 ///   2. created by an op not known to guarantee alias freedom,
-///   3. it (or its alias) are used by ops other than affine dereferencing ops
-///   (e.g., by call op, memref load/store ops, alias creating ops, unknown ops,
-///   terminator ops, etc.); such ops do not deference the memref in an affine
-///   way.
+///   3. it (or its alias) are used by ops other than affine dereferencing
+///   ops (e.g., by call op, memref load/store ops, alias creating ops,
+///   unknown ops, terminator ops, etc.); such ops do not deference the
+///   memref in an affine way.
 static bool isEscapingMemref(Value memref, Block *block) {
   Operation *defOp = memref.getDefiningOp();
   // Check if 'memref' is a block argument.
@@ -858,10 +906,19 @@ public:
             }))
           continue;
 
-        // Gather memrefs in 'srcNode' that are written and escape out of the
-        // block (e.g., memref block arguments, returned memrefs,
-        // memrefs passed to function calls, etc.).
-        DenseSet<Value> srcEscapingMemRefs;
+        if (!verifyLoadStoreDomainContainment(srcId, dstId,
+                                              &producerConsumerMemrefs, mdg)) {
+          LLVM_DEBUG(llvm::dbgs() << "Can't fuse: load domain not contained "
+                                     "within store domain\n");
+          continue;
+        }
+
+        if (any_of(producerConsumerMemrefs, UnaryPredicate P))
+
+          // Gather memrefs in 'srcNode' that are written and escape out of
+          // the block (e.g., memref block arguments, returned memrefs,
+          // memrefs passed to function calls, etc.).
+          DenseSet<Value> srcEscapingMemRefs;
         gatherEscapingMemrefs(srcNode->id, mdg, srcEscapingMemRefs);
 
         // Skip if there are non-affine operations in between the 'srcNode'
