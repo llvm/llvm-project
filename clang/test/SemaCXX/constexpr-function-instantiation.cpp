@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=cxx23-26 %s
 // RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=cxx23-26 %s
 
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=cxx20    -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=cxx23-26 -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=cxx23-26 -fexperimental-new-constant-interpreter %s
+
 // cxx23-26-no-diagnostics
 
 namespace GH73232 {

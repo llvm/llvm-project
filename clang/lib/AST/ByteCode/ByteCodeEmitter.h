@@ -31,7 +31,7 @@ protected:
 
 public:
   /// Compiles the function into the module.
-  Function *compileFunc(const FunctionDecl *FuncDecl);
+  Function *compileFunc(const FunctionDecl *FuncDecl, SourceLocation Loc);
   Function *compileObjCBlock(const BlockExpr *BE);
 
 protected:
