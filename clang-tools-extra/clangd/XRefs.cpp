@@ -2340,14 +2340,14 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // Perform the lookup request and combine its results with CallsOut to
   // get complete CallHierarchyOutgoingCall objects.
   Index->lookup(CallsOutLookup, [&](const Symbol &Callee) {
-    // Filter references to only keep function calls
+    // The containedRefs request should only return symbols which are
+    // function-like, i.e. symbols for which references to them can be "calls".
     using SK = index::SymbolKind;
     auto Kind = Callee.SymInfo.Kind;
-    bool NotCall = (Kind != SK::Function && Kind != SK::InstanceMethod &&
-                    Kind != SK::ClassMethod && Kind != SK::StaticMethod &&
-                    Kind != SK::Constructor && Kind != SK::Destructor &&
-                    Kind != SK::ConversionFunction);
-    assert(!NotCall);
+    assert(Kind == SK::Function || Kind == SK::InstanceMethod ||
+           Kind == SK::ClassMethod || Kind == SK::StaticMethod ||
+           Kind == SK::Constructor || Kind == SK::Destructor ||
+           Kind == SK::ConversionFunction);
 
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
