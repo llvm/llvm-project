@@ -2312,15 +2312,14 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
   return T;
 }
 
-bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
-                            const BitIntType *BIT, bool ForMatrixType = false) {
+static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
+                                   const BitIntType *BIT,
+                                   bool ForMatrixType = false) {
   // Only support _BitInt elements with byte-sized power of 2 NumBits.
   unsigned NumBits = BIT->getNumBits();
-  if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
-    S.Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
-        << ForMatrixType << (NumBits < 8);
-    return true;
-  }
+  if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8)
+    return S.Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
+           << ForMatrixType << (NumBits < 8);
   return false;
 }
 
@@ -2457,7 +2456,8 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
   }
 
   if (const auto *BIT = ElementTy->getAs<BitIntType>();
-      BIT && CheckBitIntElementType(*this, AttrLoc, BIT, true))
+      BIT &&
+      CheckBitIntElementType(*this, AttrLoc, BIT, /*ForMatrixType=*/true))
     return QualType();
 
   if (NumRows->isTypeDependent() || NumCols->isTypeDependent() ||
