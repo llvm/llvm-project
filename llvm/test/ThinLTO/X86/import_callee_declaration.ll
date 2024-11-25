@@ -34,11 +34,15 @@
 ; RUN:   -r=main.bc,main,px \
 ; RUN:   -r=main.bc,small_func, \
 ; RUN:   -r=main.bc,large_func, \
+; RUN:   -r=main.bc,read_write_global_vars, \
+; RUN:   -r=main.bc,external_func, \
 ; RUN:   -r=lib.bc,callee,pl \
 ; RUN:   -r=lib.bc,large_indirect_callee,px \
 ; RUN:   -r=lib.bc,large_indirect_bar,px \
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
+; RUN:   -r=lib.bc,read_write_global_vars,px \
+; RUN:   -r=lib.bc,external_func, \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
 ; RUN:   -r=lib.bc,large_indirect_bar_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -r=lib.bc,calleeAddrs2,px -o summary main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
@@ -46,7 +50,7 @@
 ; RUN: llvm-lto -thinlto-action=thinlink -import-declaration -import-instr-limit=7 -import-instr-evolution-factor=1.0 -o combined.index.bc main.bc lib.bc
 ; RUN: llvm-lto -thinlto-action=distributedindexes -debug-only=function-import -import-declaration -import-instr-limit=7 -import-instr-evolution-factor=1.0 -thinlto-index combined.index.bc main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
 
-; DUMP: - 2 function definitions and 4 function declarations imported from lib.bc
+; DUMP: - 2 function definitions and 3 function declarations imported from lib.bc
 
 ; First disassemble per-module summary and find out the GUID for {large_func, large_indirect_callee}.
 ;
@@ -67,17 +71,25 @@
 ; MAIN-DIS: gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
 ; When alias is imported as a copy of the aliasee, but the aliasee is not being
 ; imported by itself, the aliasee should be null.
-; MAIN-DIS: gv: (guid: 13590951773474913315, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: null)))
+; MAIN-DIS-NOT: gv: (guid: 13590951773474913315, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: null)))
 ; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
 ; MAIN-DIS: gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
+
+; RUN: opt -passes=function-import -summary-file=main.bc.thinlto.bc main.bc -o main-after-import.bc
+; RUN: llvm-dis -o - main-after-import.bc | FileCheck %s --check-prefix=MAIN-IMPORT
+
+MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 
 ; Run in-process ThinLTO and tests that
 ; 1. `callee` remains internalized even if the symbols of its callers
 ; (large_func, large_indirect_callee, large_indirect_bar) are exported as
 ; declarations and visible to main module.
 ; 2. the debugging logs from `function-import` pass are expected.
+; Set relocation model to static so the dso_local attribute from a summary is
+; applied on the global variable declaration.
 
 ; RUN: llvm-lto2 run \
+; RUN:   -relocation-model=static \
 ; RUN:   -debug-only=function-import \
 ; RUN:   -save-temps \
 ; RUN:   -thinlto-threads=1 \
@@ -87,11 +99,15 @@
 ; RUN:   -r=main.bc,main,px \
 ; RUN:   -r=main.bc,small_func, \
 ; RUN:   -r=main.bc,large_func, \
+; RUN:   -r=main.bc,read_write_global_vars, \
+; RUN:   -r=main.bc,external_func, \
 ; RUN:   -r=lib.bc,callee,pl \
 ; RUN:   -r=lib.bc,large_indirect_callee,px \
 ; RUN:   -r=lib.bc,large_indirect_bar,px \
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
+; RUN:   -r=lib.bc,read_write_global_vars,px \
+; RUN:   -r=lib.bc,external_func, \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
 ; RUN:   -r=lib.bc,large_indirect_bar_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -r=lib.bc,calleeAddrs2,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
@@ -103,15 +119,16 @@
 ; IMPORTDUMP-DAG: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc
 ; IMPORTDUMP-DAG: Is importing function definition 6976996067367342685 small_func from lib.cc
 ; IMPORTDUMP-DAG: Is importing function declaration 2418497564662708935 large_func from lib.cc
-; IMPORTDUMP-DAG: Not importing global 7680325410415171624 calleeAddrs from lib.cc
+; IMPORTDUMP-DAG: Is importing global declaration 7680325410415171624 calleeAddrs from lib.cc
 ; IMPORTDUMP-DAG: Is importing alias declaration 16730173943625350469 large_indirect_callee_alias from lib.cc
-; IMPORTDUMP-DAG: Is importing alias declaration 13590951773474913315 large_indirect_bar_alias from lib.cc
+; IMPORTDUMP-DAG: Not importing alias 13590951773474913315 large_indirect_bar_alias from lib.cc
 ; IMPORTDUMP-DAG: Not importing function 13770917885399536773 large_indirect_bar
 
 ; RUN: llvm-dis in-process.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
 
 ; RUN: llvm-dis in-process.2.2.internalize.bc -o - | FileCheck %s --check-prefix=INTERNALIZE
 
+; IMPORT-DAG: @read_write_global_vars = external dso_local global [1 x ptr]
 ; IMPORT-DAG: define available_externally void @small_func
 ; IMPORT-DAG: define available_externally hidden void @small_indirect_callee
 ; IMPORT-DAG: declare void @large_func
@@ -126,9 +143,14 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+@read_write_global_vars = external global [1 x ptr]
+
 define i32 @main() {
   call void @small_func()
   call void @large_func()
+  %num = call ptr @external_func(ptr @read_write_global_vars)
+  store ptr %num, ptr getelementptr inbounds ([1 x ptr], ptr @read_write_global_vars, i64 0, i64 0)
+  %res1 = call i32 @external_func(ptr @read_write_global_vars)
   ret i32 0
 }
 
@@ -136,6 +158,8 @@ declare void @small_func()
 
 ; large_func without attributes
 declare void @large_func()
+
+declare ptr @external_func(ptr)
 
 ;--- lib.ll
 source_filename = "lib.cc"
@@ -148,6 +172,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; large_indirect_bar_alias is visible to main.ll but its aliasee isn't.
 @calleeAddrs2 = global [1 x ptr] [ptr @large_indirect_bar_alias]
+
+; @read_write_global_vars is not read-only nor write-only (in main.ll). It's not
+; a constant global var and has references, so it's not importable as a definition.
+@read_write_global_vars = dso_local global [1 x ptr] [ptr @large_indirect_callee]
 
 define void @callee() #1 {
   ret void
@@ -177,8 +205,12 @@ define void @large_indirect_bar()#2 {
 
 define internal void @small_indirect_callee() #0 {
 entry:
-  %0 = load ptr, ptr @calleeAddrs2
-  call void %0(), !prof !3
+  %0 = load ptr, ptr @calleeAddrs
+  ; The function-import pass crash (see pr/117584) when alias is imported but
+  ; aliasee isn't.
+  ; TODO: Update !prof to !3 (for @large_indirect_bar_alias) after alias/aliasee
+  ; import issue is handled.
+  call void %0(), !prof !0
   ret void
 }
 
@@ -196,6 +228,8 @@ entry:
   call void %2(), !prof !2
   ret void
 }
+
+declare void @external_func()
 
 define void @large_func() #0 {
 entry:
