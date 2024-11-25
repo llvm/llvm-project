@@ -4788,7 +4788,8 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
 
     if (elemsToSplit < 2)
       return rewriter.notifyMatchFailure(
-          delinearizeOp, "need at least two elements to form the basis product");
+          delinearizeOp,
+          "need at least two elements to form the basis product");
 
     Value linearizeWithoutBack =
         rewriter.create<affine::AffineLinearizeIndexOp>(
