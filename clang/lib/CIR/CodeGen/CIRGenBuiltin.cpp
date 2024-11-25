@@ -1711,7 +1711,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_sub_and_fetch_4:
   case Builtin::BI__sync_sub_and_fetch_8:
   case Builtin::BI__sync_sub_and_fetch_16:
-    llvm_unreachable("BI__sync_sub_and_fetch like NYI");
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Sub, E,
+                                cir::BinOpKind::Sub);
 
   case Builtin::BI__sync_and_and_fetch_1:
   case Builtin::BI__sync_and_and_fetch_2:
