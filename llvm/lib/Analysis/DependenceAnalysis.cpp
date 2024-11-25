@@ -216,7 +216,8 @@ void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
 
 PreservedAnalyses
 DependenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  OS << "'Dependence Analysis' for function '" << F.getName() << "':\n";
+  OS << "Printing analysis 'Dependence Analysis' for function '" << F.getName()
+     << "':\n";
   dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F),
                         FAM.getResult<ScalarEvolutionAnalysis>(F),
                         NormalizeResults);
