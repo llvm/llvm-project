@@ -16,7 +16,7 @@ Example:
 
   int v1; // can be marked as static
 
-  void fn1(); // can be marked as static
+  void fn1() {} // can be marked as static
 
   namespace {
     // already in anonymous namespace
@@ -25,6 +25,9 @@ Example:
   }
   // already declared as extern
   extern int v2;
+
+  void fn3(); // without function body in all declaration, maybe external linkage
+  void fn3();
 
 Options
 -------
