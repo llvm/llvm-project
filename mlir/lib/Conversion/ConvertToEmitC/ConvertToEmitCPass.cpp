@@ -33,19 +33,23 @@ using namespace mlir;
 
 namespace {
 
+void populateConvertToEmitCTypeConverter(TypeConverter &typeConverter) {
+  typeConverter.addConversion([](Type type) { return type; });
+  populateMemRefToEmitCTypeConversion(typeConverter);
+}
+
 /// Populate patterns for each dialect.
 void populateConvertToEmitCPatterns(TypeConverter &typeConverter,
                                     RewritePatternSet &patterns) {
   populateArithToEmitCPatterns(typeConverter, patterns);
   populateFuncToEmitCPatterns(patterns);
-  populateMemRefToEmitCTypeConversion(typeConverter);
   populateMemRefToEmitCConversionPatterns(patterns, typeConverter);
   populateSCFToEmitCConversionPatterns(patterns);
   populateFunctionOpInterfaceTypeConversionPattern<emitc::FuncOp>(
       patterns, typeConverter);
 }
 
-/// A pass to perform the SPIR-V conversion.
+/// A pass to perform the EmitC conversion.
 struct ConvertToEmitCPass final
     : impl::ConvertToEmitCPassBase<ConvertToEmitCPass> {
   using ConvertToEmitCPassBase::ConvertToEmitCPassBase;
@@ -56,7 +60,6 @@ struct ConvertToEmitCPass final
 
     RewritePatternSet patterns(context);
     TypeConverter typeConverter;
-    typeConverter.addConversion([](Type type) { return type; });
 
     ConversionTarget target(*context);
     target.addIllegalDialect<arith::ArithDialect, func::FuncDialect,
@@ -67,7 +70,9 @@ struct ConvertToEmitCPass final
           return typeConverter.isSignatureLegal(op.getFunctionType());
         });
 
+    populateConvertToEmitCTypeConverter(typeConverter);
     populateConvertToEmitCPatterns(typeConverter, patterns);
+
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       return signalPassFailure();
     return;
