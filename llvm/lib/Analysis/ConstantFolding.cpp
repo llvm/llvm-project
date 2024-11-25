@@ -3475,24 +3475,20 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
         [&](Constant *Op) -> std::pair<Constant *, Constant *> {
       Constant *SinResult =
           ConstantFoldScalarCall(Name, Intrinsic::sin, TyScalar, Op, TLI, Call);
-      if (!SinResult)
-        return {};
       Constant *CosResult =
           ConstantFoldScalarCall(Name, Intrinsic::cos, TyScalar, Op, TLI, Call);
-      if (!CosResult)
-        return {};
       return std::make_pair(SinResult, CosResult);
     };
 
     if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
-      SmallVector<Constant *, 4> SinResults(FVTy->getNumElements());
-      SmallVector<Constant *, 4> CosResults(FVTy->getNumElements());
+      SmallVector<Constant *> SinResults(FVTy->getNumElements());
+      SmallVector<Constant *> CosResults(FVTy->getNumElements());
 
       for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
         Constant *Lane = Operands[0]->getAggregateElement(I);
         std::tie(SinResults[I], CosResults[I]) =
             ConstantFoldScalarSincosCall(Lane);
-        if (!SinResults[I])
+        if (!SinResults[I] || !CosResults[I])
           return nullptr;
       }
 
@@ -3501,7 +3497,7 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     }
 
     auto [SinResult, CosResult] = ConstantFoldScalarSincosCall(Operands[0]);
-    if (!SinResult)
+    if (!SinResult || !CosResult)
       return nullptr;
     return ConstantStruct::get(StTy, SinResult, CosResult);
   }
