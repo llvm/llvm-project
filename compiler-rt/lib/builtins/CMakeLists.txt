@@ -296,6 +296,7 @@ endif ()
 # long double is not 80 bits on Android or MSVC.
 set(x86_80_BIT_SOURCES
   divxc3.c
+  extendhfxf2.c
   extendxftf2.c
   fixxfdi.c
   fixxfti.c
