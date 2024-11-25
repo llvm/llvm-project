@@ -52,13 +52,14 @@ static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
   return check(file.getObj().getSectionContents(hdr));
 }
 
-InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
-                                   uint32_t type, uint64_t entsize,
-                                   uint32_t link, uint32_t info,
-                                   uint32_t addralign, ArrayRef<uint8_t> data,
-                                   StringRef name, Kind sectionKind)
-    : SectionBase(sectionKind, file, name, flags, entsize, addralign, type,
-                  info, link),
+InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
+                                   uint32_t type, uint64_t flags, uint32_t link,
+                                   uint32_t info, uint32_t addralign,
+                                   uint32_t entsize, ArrayRef<uint8_t> data,
+                                   Kind sectionKind)
+    : SectionBase(sectionKind, file, name, type, flags, link, info, addralign,
+                  entsize),
+      bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
       content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
@@ -95,10 +96,10 @@ template <class ELFT>
 InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
                                    const typename ELFT::Shdr &hdr,
                                    StringRef name, Kind sectionKind)
-    : InputSectionBase(&file, getFlags(file.ctx, hdr.sh_flags), hdr.sh_type,
-                       hdr.sh_entsize, hdr.sh_link, hdr.sh_info,
-                       hdr.sh_addralign, getSectionContents(file, hdr), name,
-                       sectionKind) {
+    : InputSectionBase(&file, name, hdr.sh_type,
+                       getFlags(file.ctx, hdr.sh_flags), hdr.sh_link,
+                       hdr.sh_info, hdr.sh_addralign, hdr.sh_entsize,
+                       getSectionContents(file, hdr), sectionKind) {
   // We reject object files having insanely large alignments even though
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
@@ -273,7 +274,7 @@ void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
                         "not built with zstd support";
   } else {
     ErrAlways(ctx) << this << ": unsupported compression type ("
-                   << Twine(hdr->ch_type) << ")";
+                   << uint32_t(hdr->ch_type) << ")";
     return;
   }
 
@@ -355,18 +356,19 @@ std::string InputSectionBase::getObjMsg(uint64_t off) const {
 
 PotentialSpillSection::PotentialSpillSection(const InputSectionBase &source,
                                              InputSectionDescription &isd)
-    : InputSection(source.file, source.flags, source.type, source.addralign, {},
-                   source.name, SectionBase::Spill),
+    : InputSection(source.file, source.name, source.type, source.flags,
+                   source.addralign, source.addralign, {}, SectionBase::Spill),
       isd(&isd) {}
 
-InputSection InputSection::discarded(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
+InputSection InputSection::discarded(nullptr, "", 0, 0, 0, 0,
+                                     ArrayRef<uint8_t>());
 
-InputSection::InputSection(InputFile *f, uint64_t flags, uint32_t type,
-                           uint32_t addralign, ArrayRef<uint8_t> data,
-                           StringRef name, Kind k)
-    : InputSectionBase(f, flags, type,
-                       /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, addralign, data,
-                       name, k) {
+InputSection::InputSection(InputFile *f, StringRef name, uint32_t type,
+                           uint64_t flags, uint32_t addralign, uint32_t entsize,
+                           ArrayRef<uint8_t> data, Kind k)
+    : InputSectionBase(f, name, type, flags,
+                       /*link=*/0, /*info=*/0, addralign, /*entsize=*/entsize,
+                       data, k) {
   assert(f || this == &InputSection::discarded);
 }
 
@@ -1437,12 +1439,13 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> &f,
                                      StringRef name)
     : InputSectionBase(f, header, name, InputSectionBase::Merge) {}
 
-MergeInputSection::MergeInputSection(Ctx &ctx, uint64_t flags, uint32_t type,
-                                     uint64_t entsize, ArrayRef<uint8_t> data,
-                                     StringRef name)
-    : InputSectionBase(ctx.internalFile, flags, type, entsize, /*link=*/0,
+MergeInputSection::MergeInputSection(Ctx &ctx, StringRef name, uint32_t type,
+                                     uint64_t flags, uint64_t entsize,
+                                     ArrayRef<uint8_t> data)
+    : InputSectionBase(ctx.internalFile, name, type, flags, /*link=*/0,
                        /*info=*/0,
-                       /*alignment=*/entsize, data, name, SectionBase::Merge) {}
+                       /*addralign=*/entsize, entsize, data,
+                       SectionBase::Merge) {}
 
 // This function is called after we obtain a complete list of input sections
 // that need to be linked. This is responsible to split section contents
