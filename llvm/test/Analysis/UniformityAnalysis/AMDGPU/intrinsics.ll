@@ -404,6 +404,58 @@ define amdgpu_kernel void @smfmac_f32_16x16x128_fp8_fp8(<4 x i32> %arg0, <8 x i3
   ret void
 }
 
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.bf8.bf8(<4 x i32>, <8 x i32>, <16 x float>, i32, i32, i32)
+
+; CHECK: DIVERGENT:  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.bf8.bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+define amdgpu_kernel void @smfmac_f32_32x32x64_bf8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, ptr addrspace(1) %out) {
+  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.bf8.bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+  store <16 x float> %result, ptr addrspace(1) %out
+  ret void
+}
+
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.bf8.fp8(<4 x i32>, <8 x i32>, <16 x float>, i32, i32, i32)
+
+; CHECK: DIVERGENT:  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.bf8.fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+define amdgpu_kernel void @smfmac_f32_32x32x64_bf8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, ptr addrspace(1) %out) {
+  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.bf8.fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+  store <16 x float> %result, ptr addrspace(1) %out
+  ret void
+}
+
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.fp8.bf8(<4 x i32>, <8 x i32>, <16 x float>, i32, i32, i32)
+
+; CHECK: DIVERGENT:  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.fp8.bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+define amdgpu_kernel void @smfmac_f32_32x32x64_fp8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, ptr addrspace(1) %out) {
+  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.fp8.bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+  store <16 x float> %result, ptr addrspace(1) %out
+  ret void
+}
+
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.fp8.fp8(<4 x i32>, <8 x i32>, <16 x float>, i32, i32, i32)
+
+; CHECK: DIVERGENT:  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.fp8.fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+define amdgpu_kernel void @smfmac_f32_32x32x64_fp8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, ptr addrspace(1) %out) {
+  %result = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x64.fp8.fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3, i32 1, i32 2)
+  store <16 x float> %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT:   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+define amdgpu_kernel void @v_permlane16_swap(ptr addrspace(1) %out, i32 %src0, i32 %src1) #0 {
+  %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+  store { i32, i32 } %v, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT:   %v = call { i32, i32 } @llvm.amdgcn.permlane32.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+define amdgpu_kernel void @v_permlane32_swap(ptr addrspace(1) %out, i32 %src0, i32 %src1) #0 {
+  %v = call { i32, i32 } @llvm.amdgcn.permlane32.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+  store { i32, i32 } %v, ptr addrspace(1) %out
+  ret void
+}
+
+
+
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1, i1) #1

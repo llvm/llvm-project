@@ -471,6 +471,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       break;
     case GK_GFX950:
       Features["prng-inst"] = true;
+      Features["permlane16-swap"] = true;
+      Features["permlane32-swap"] = true;
       Features["gfx950-insts"] = true;
       [[fallthrough]];
     case GK_GFX942:

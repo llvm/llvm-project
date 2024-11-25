@@ -848,11 +848,21 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
                 },
                 c.u);
           },
+          [&](const parser::OpenMPLoopConstruct &c) {
+            const auto &beginLoopDir{
+                std::get<parser::OmpBeginLoopDirective>(c.t)};
+            const auto &beginDir{
+                std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
+            if (llvm::omp::allTargetSet.test(beginDir.v)) {
+              eligibleTarget = false;
+              ineligibleTargetDir = beginDir.v;
+            }
+          },
           [&](const auto &c) {},
       },
       c.u);
   if (!eligibleTarget) {
-    context_.Warn(common::UsageWarning::Portability,
+    context_.Warn(common::UsageWarning::OpenMPUsage,
         parser::FindSourceLocation(c),
         "If %s directive is nested inside TARGET region, the behaviour is unspecified"_port_en_US,
         parser::ToUpperCaseLetters(
@@ -1068,7 +1078,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
-  if (GetContext().directive == llvm::omp::Directive::OMPD_target) {
+  if (llvm::omp::allTargetSet.test(GetContext().directive)) {
     EnterDirectiveNest(TargetNest);
   }
 
@@ -1151,7 +1161,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
   }
-  if (GetContext().directive == llvm::omp::Directive::OMPD_target) {
+  if (llvm::omp::allTargetSet.test(GetContext().directive)) {
     ExitDirectiveNest(TargetNest);
   }
   dirContext_.pop_back();
@@ -2865,45 +2875,41 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
 
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
-  auto &modifiers{OmpGetModifiers(x.v)};
-  const auto *definedOp{
-      OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)};
-  if (!definedOp) {
-    return false;
-  }
   bool ok = false;
-  common::visit(
-      common::visitors{
-          [&](const parser::DefinedOperator &dOpr) {
-            if (const auto *intrinsicOp{
-                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
-                        &dOpr.u)}) {
-              ok = CheckIntrinsicOperator(*intrinsicOp);
-            } else {
-              context_.Say(GetContext().clauseSource,
-                  "Invalid reduction operator in REDUCTION clause."_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-          [&](const parser::ProcedureDesignator &procD) {
-            const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
-            if (name && name->symbol) {
-              const SourceName &realName{name->symbol->GetUltimate().name()};
-              if (realName == "max" || realName == "min" ||
-                  realName == "iand" || realName == "ior" ||
-                  realName == "ieor") {
-                ok = true;
-              }
-            }
-            if (!ok) {
-              context_.Say(GetContext().clauseSource,
-                  "Invalid reduction identifier in REDUCTION "
-                  "clause."_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-      },
-      definedOp->u);
+  auto &modifiers{OmpGetModifiers(x.v)};
+  if (const auto *ident{
+          OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)}) {
+
+    auto visitOperator{[&](const parser::DefinedOperator &dOpr) {
+      if (const auto *intrinsicOp{
+              std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                  &dOpr.u)}) {
+        ok = CheckIntrinsicOperator(*intrinsicOp);
+      } else {
+        context_.Say(GetContext().clauseSource,
+            "Invalid reduction operator in REDUCTION clause."_err_en_US,
+            ContextDirectiveAsFortran());
+      }
+    }};
+
+    auto visitDesignator{[&](const parser::ProcedureDesignator &procD) {
+      const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+      if (name && name->symbol) {
+        const SourceName &realName{name->symbol->GetUltimate().name()};
+        if (realName == "max" || realName == "min" || realName == "iand" ||
+            realName == "ior" || realName == "ieor") {
+          ok = true;
+        }
+      }
+      if (!ok) {
+        context_.Say(GetContext().clauseSource,
+            "Invalid reduction identifier in REDUCTION "
+            "clause."_err_en_US,
+            ContextDirectiveAsFortran());
+      }
+    }};
+    common::visit(common::visitors{visitOperator, visitDesignator}, ident->u);
+  }
 
   return ok;
 }
