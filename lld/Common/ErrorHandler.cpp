@@ -219,6 +219,7 @@ void ErrorHandler::reportDiagnostic(StringRef location, Colors c,
   }
   os << msg << '\n';
   errs() << buf;
+  sep = getSeparator(msg);
 }
 
 void ErrorHandler::log(const Twine &msg) {
@@ -247,7 +248,6 @@ void ErrorHandler::warn(const Twine &msg) {
 
   std::lock_guard<std::mutex> lock(mu);
   reportDiagnostic(getLocation(msg), Colors::MAGENTA, "warning", msg);
-  sep = getSeparator(msg);
 }
 
 void ErrorHandler::error(const Twine &msg) {
@@ -278,7 +278,6 @@ void ErrorHandler::error(const Twine &msg) {
       exit = exitEarly;
     }
 
-    sep = getSeparator(msg);
     ++errorCount;
   }
 
