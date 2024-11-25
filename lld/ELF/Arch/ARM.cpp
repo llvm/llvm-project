@@ -1219,22 +1219,20 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
     sym->stOther = eSym.st_other;
 
     if (eSym.st_shndx != SHN_ABS) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' in import library '" << this << "' is not absolute";
+      Err(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+               << this << "' is not absolute";
       continue;
     }
 
     if (!(eSym.st_value & 1) || (eSym.getType() != STT_FUNC)) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' in import library '" << this
-                     << "' is not a Thumb function definition";
+      Err(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+               << this << "' is not a Thumb function definition";
       continue;
     }
 
     if (ctx.symtab->cmseImportLib.count(sym->getName())) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' is multiply defined in import library '" << this
-                     << "'";
+      Err(ctx) << "CMSE symbol '" << sym->getName()
+               << "' is multiply defined in import library '" << this << "'";
       continue;
     }
 
@@ -1289,8 +1287,7 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
     if (!ctx.arg.armCMSESupport) {
-      ErrAlways(ctx)
-          << "CMSE is only supported by ARMv8-M architecture or later";
+      Err(ctx) << "CMSE is only supported by ARMv8-M architecture or later";
       ctx.arg.cmseImplib = false;
       break;
     }
@@ -1300,17 +1297,16 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
     Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
-      ErrAlways(ctx)
-          << acleSeSym->file << ": cmse special symbol '"
-          << acleSeSym->getName()
-          << "' detected, but no associated entry function definition '" << name
-          << "' with external linkage found";
+      Err(ctx) << acleSeSym->file << ": cmse special symbol '"
+               << acleSeSym->getName()
+               << "' detected, but no associated entry function definition '"
+               << name << "' with external linkage found";
       continue;
     }
 
     std::string errMsg = checkCmseSymAttributes(ctx, acleSeSym, sym);
     if (!errMsg.empty()) {
-      ErrAlways(ctx) << errMsg;
+      Err(ctx) << errMsg;
       continue;
     }
 
@@ -1496,8 +1492,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
-    ErrAlways(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
-                   << bufferOrErr.takeError();
+    Err(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
+             << bufferOrErr.takeError();
     return;
   }
 
