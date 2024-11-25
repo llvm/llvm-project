@@ -313,7 +313,7 @@ public:
     if (!callOp.getCleanup().empty()) {
       mlir::Block *cleanupBlock = &callOp.getCleanup().getBlocks().back();
       auto cleanupYield = cast<cir::YieldOp>(cleanupBlock->getTerminator());
-      cleanupYield->erase();
+      rewriter.eraseOp(cleanupYield);
       rewriter.mergeBlocks(cleanupBlock, landingPadBlock);
       rewriter.setInsertionPointToEnd(landingPadBlock);
     }
