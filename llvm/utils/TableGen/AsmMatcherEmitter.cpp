@@ -2572,8 +2572,7 @@ static void emitIsSubclass(CodeGenTarget &Target,
   OS << "  };\n\n";
 
   OS << "  ArrayRef<uint16_t> SuperClasses = SuperClassTable[(unsigned)A];\n";
-  OS << "  const uint16_t *It = lower_bound(SuperClasses, (unsigned)B);\n";
-  OS << "  return It != SuperClasses.end() && *It == (unsigned)B;\n";
+  OS << "  return binary_search(SuperClasses, (unsigned)B);\n";
 
   OS << "}\n\n";
 }
