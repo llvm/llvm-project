@@ -52,8 +52,8 @@ public:
   public:
     Completion(llvm::StringRef completion, llvm::StringRef description,
                CompletionMode mode)
-        : m_completion(completion.str()), m_descripton(description.str()),
-          m_mode(mode) {}
+        : m_completion(completion.rtrim().str()),
+          m_descripton(description.rtrim().str()), m_mode(mode) {}
     const std::string &GetCompletion() const { return m_completion; }
     const std::string &GetDescription() const { return m_descripton; }
     CompletionMode GetMode() const { return m_mode; }

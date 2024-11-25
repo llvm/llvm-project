@@ -55,11 +55,11 @@ define ptr @f1() nounwind {
 ; LA64LARGEPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(unspecified)
 ; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(unspecified)
 ; LA64LARGEPIC-NEXT:    add.d $a0, $a1, $a0
-; LA64LARGEPIC-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    add.d $ra, $ra, $a1
+; LA64LARGEPIC-NEXT:    pcalau12i $a1, %got_pc_hi20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %got_pc_lo12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu32i.d $ra, %got64_pc_lo20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    ldx.d $ra, $ra, $a1
 ; LA64LARGEPIC-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGEPIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, 16
@@ -168,11 +168,11 @@ define ptr @f2() nounwind {
 ; LA64LARGEPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(ld)
 ; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(ld)
 ; LA64LARGEPIC-NEXT:    add.d $a0, $a1, $a0
-; LA64LARGEPIC-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    add.d $ra, $ra, $a1
+; LA64LARGEPIC-NEXT:    pcalau12i $a1, %got_pc_hi20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %got_pc_lo12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu32i.d $ra, %got64_pc_lo20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    ldx.d $ra, $ra, $a1
 ; LA64LARGEPIC-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGEPIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, 16

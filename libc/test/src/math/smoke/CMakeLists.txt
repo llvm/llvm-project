@@ -3524,8 +3524,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmaf
     libc.src.__support.macros.properties.types
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(

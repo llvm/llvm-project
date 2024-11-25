@@ -1574,6 +1574,15 @@ def : Pat<(lasxsplati16 GPR:$rj), (XVREPLGR2VR_H GPR:$rj)>;
 def : Pat<(lasxsplati32 GPR:$rj), (XVREPLGR2VR_W GPR:$rj)>;
 def : Pat<(lasxsplati64 GPR:$rj), (XVREPLGR2VR_D GPR:$rj)>;
 
+def : Pat<(v32i8 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v32i8 (XVREPLGR2VR_B GRLenVT:$rj))>;
+def : Pat<(v16i16 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v16i16 (XVREPLGR2VR_H GRLenVT:$rj))>;
+def : Pat<(v8i32 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v8i32 (XVREPLGR2VR_W GRLenVT:$rj))>;
+def : Pat<(v4i64 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v4i64 (XVREPLGR2VR_D GRLenVT:$rj))>;
+
 // XVREPLVE_{B/H/W/D}
 def : Pat<(loongarch_vreplve v32i8:$xj, GRLenVT:$rk),
           (XVREPLVE_B v32i8:$xj, GRLenVT:$rk)>;
