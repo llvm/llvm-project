@@ -630,6 +630,15 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
   addAvailableCaps({Capability::Shader, Capability::Linkage, Capability::Int8,
                     Capability::Int16});
 
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    addAvailableCaps({Capability::GroupNonUniform,
+                      Capability::GroupNonUniformVote,
+                      Capability::GroupNonUniformArithmetic,
+                      Capability::GroupNonUniformBallot,
+                      Capability::GroupNonUniformClustered,
+                      Capability::GroupNonUniformShuffle,
+                      Capability::GroupNonUniformShuffleRelative});
+
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
                       Capability::DotProductInput4x8Bit,
@@ -676,14 +685,6 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 1)) &&
       ST.isAtLeastOpenCLVer(VersionTuple(2, 2)))
     addAvailableCaps({Capability::SubgroupDispatch, Capability::PipeStorage});
-  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-    addAvailableCaps({Capability::GroupNonUniform,
-                      Capability::GroupNonUniformVote,
-                      Capability::GroupNonUniformArithmetic,
-                      Capability::GroupNonUniformBallot,
-                      Capability::GroupNonUniformClustered,
-                      Capability::GroupNonUniformShuffle,
-                      Capability::GroupNonUniformShuffleRelative});
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 4)))
     addAvailableCaps({Capability::DenormPreserve, Capability::DenormFlushToZero,
                       Capability::SignedZeroInfNanPreserve,
@@ -1028,21 +1029,27 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   Reqs.addCapability(SPIRV::Capability::DotProduct);
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  const MachineInstr *InstrPtr = &MI;
-  assert(MI.getOperand(1).isReg() && "Unexpected operand in dot");
+  assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
+  // We do not consider what the previous instruction is. This is just used
+  // to get the input register and to check the type.
+  const MachineInstr *Input = MRI.getVRegDef(MI.getOperand(2).getReg());
+  assert(Input->getOperand(1).isReg() && "Unexpected operand in dot input");
+  Register InputReg = Input->getOperand(1).getReg();
 
-  Register TypeReg = InstrPtr->getOperand(1).getReg();
-  SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
+  SPIRVType *TypeDef = MRI.getVRegDef(InputReg);
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
   } else if (TypeDef->getOpcode() == SPIRV::OpTypeVector) {
     SPIRVType *ScalarTypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
-    auto Capability = ScalarTypeDef->getOperand(1).getImm() == 8
-                          ? SPIRV::Capability::DotProductInput4x8Bit
-                          : SPIRV::Capability::DotProductInputAll;
-    Reqs.addCapability(Capability);
+    if (ScalarTypeDef->getOperand(1).getImm() == 8) {
+      assert(TypeDef->getOperand(2).getImm() == 4 &&
+             "Dot operand of 8-bit integer type requires 4 components");
+      Reqs.addCapability(SPIRV::Capability::DotProductInput4x8Bit);
+    } else {
+      Reqs.addCapability(SPIRV::Capability::DotProductInputAll);
+    }
   }
 }
 

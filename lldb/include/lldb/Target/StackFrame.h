@@ -412,7 +412,7 @@ public:
   /// Language plugins can use this API to report language-specific
   /// runtime information about this compile unit, such as additional
   /// language version details or feature flags.
-  StructuredData::ObjectSP GetLanguageInfo();
+  StructuredData::ObjectSP GetLanguageSpecificData();
 
   /// Get the frame's demangled name.
   ///

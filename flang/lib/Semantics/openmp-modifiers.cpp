@@ -56,6 +56,22 @@ const OmpClauses &OmpModifierDescriptor::clauses(unsigned version) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"chunk-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"dependence-type",
@@ -109,6 +125,38 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"order-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_order}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"ordering-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &
 OmpGetDescriptor<parser::OmpReductionIdentifier>() {
   static const OmpModifierDescriptor desc{
@@ -129,6 +177,22 @@ OmpGetDescriptor<parser::OmpReductionIdentifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"reduction-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_reduction}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"task-dependence-type",
@@ -139,6 +203,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       /*clauses=*/
       {
           {52, {Clause::OMPC_depend, Clause::OMPC_update}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpVariableCategory>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"variable-category",
+      /*props=*/
+      {
+          {45, {OmpProperty::Required, OmpProperty::Unique}},
+          {50, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_defaultmap}},
       },
   };
   return desc;

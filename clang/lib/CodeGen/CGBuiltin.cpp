@@ -19052,8 +19052,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "cross operands must have a float representation");
     // make sure each vector has exactly 3 elements
     assert(
-        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
-        E->getArg(1)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        E->getArg(0)->getType()->castAs<VectorType>()->getNumElements() == 3 &&
+        E->getArg(1)->getType()->castAs<VectorType>()->getNumElements() == 3 &&
         "input vectors must have 3 elements each");
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getCrossIntrinsic(),
@@ -19281,6 +19281,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getStepIntrinsic(),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_any_true: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(Op->getType()->isIntegerTy(1) &&
+           "Intrinsic WaveActiveAnyTrue operand must be a bool");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));

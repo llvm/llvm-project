@@ -628,11 +628,11 @@ void CoroCloner::replaceRetconOrAsyncSuspendUses() {
     return;
 
   // Otherwise, we need to create an aggregate.
-  Value *Agg = PoisonValue::get(NewS->getType());
-  for (auto Arg : llvm::enumerate(Args))
-    Agg = Builder.CreateInsertValue(Agg, Arg.value(), Arg.index());
+  Value *Aggr = PoisonValue::get(NewS->getType());
+  for (auto [Idx, Arg] : llvm::enumerate(Args))
+    Aggr = Builder.CreateInsertValue(Aggr, Arg, Idx);
 
-  NewS->replaceAllUsesWith(Agg);
+  NewS->replaceAllUsesWith(Aggr);
 }
 
 void CoroCloner::replaceCoroSuspends() {
@@ -1834,8 +1834,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   // Create a continuation function for each of the suspend points.
   Clones.reserve(Shape.CoroSuspends.size());
-  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
-    auto *Suspend = cast<CoroSuspendAsyncInst>(CS.value());
+  for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
+    auto *Suspend = cast<CoroSuspendAsyncInst>(CS);
 
     // Create the clone declaration.
     auto ResumeNameSuffix = ".resume.";
@@ -1851,8 +1851,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     }
     auto *Continuation = createCloneDeclaration(
         F, Shape,
-        UseSwiftMangling ? ResumeNameSuffix + Twine(CS.index()) + "_"
-                         : ResumeNameSuffix + Twine(CS.index()),
+        UseSwiftMangling ? ResumeNameSuffix + Twine(Idx) + "_"
+                         : ResumeNameSuffix + Twine(Idx),
         NextF, Suspend);
     Clones.push_back(Continuation);
 
@@ -1885,12 +1885,12 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
-  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
-    auto *Suspend = CS.value();
-    auto *Clone = Clones[CS.index()];
+  for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
+    auto *Suspend = CS;
+    auto *Clone = Clones[Idx];
 
-    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone,
-                            Suspend, TTI);
+    CoroCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone, Suspend,
+                            TTI);
   }
 }
 
@@ -1947,12 +1947,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   // Create a continuation function for each of the suspend points.
   Clones.reserve(Shape.CoroSuspends.size());
-  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
-    auto Suspend = cast<CoroSuspendRetconInst>(CS.value());
+  for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
+    auto Suspend = cast<CoroSuspendRetconInst>(CS);
 
     // Create the clone declaration.
     auto Continuation = createCloneDeclaration(
-        F, Shape, ".resume." + Twine(CS.index()), NextF, nullptr);
+        F, Shape, ".resume." + Twine(Idx), NextF, nullptr);
     Clones.push_back(Continuation);
 
     // Insert a branch to the unified return block immediately before
@@ -2016,12 +2016,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
-  for (auto CS : llvm::enumerate(Shape.CoroSuspends)) {
-    auto Suspend = CS.value();
-    auto Clone = Clones[CS.index()];
+  for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
+    auto Suspend = CS;
+    auto Clone = Clones[Idx];
 
-    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone,
-                            Suspend, TTI);
+    CoroCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone, Suspend,
+                            TTI);
   }
 }
 

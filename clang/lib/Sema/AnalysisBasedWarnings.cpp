@@ -2257,7 +2257,7 @@ public:
       } else if (isa<MemberExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
-        auto ME = dyn_cast<MemberExpr>(Operation);
+        auto *ME = cast<MemberExpr>(Operation);
         D = ME->getMemberDecl();
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {

@@ -5211,8 +5211,10 @@ static bool isConstantPowerOf2(SDValue V, unsigned EltSizeInBIts,
 // Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
 // Match not(extract_subvector(xor X, -1)) -> extract_subvector(X).
 // Match not(concat_vectors(xor X, -1, xor Y, -1)) -> concat_vectors(X, Y).
+// Match or(not(X),not(Y)) -> and(X, Y).
 static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   V = peekThroughBitcasts(V);
+  EVT VT = V.getValueType();
   if (V.getOpcode() == ISD::XOR &&
       (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
        isAllOnesConstant(V.getOperand(1))))
@@ -5221,8 +5223,8 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
       (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
     if (SDValue Not = IsNOT(V.getOperand(0), DAG)) {
       Not = DAG.getBitcast(V.getOperand(0).getValueType(), Not);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), V.getValueType(),
-                         Not, V.getOperand(1));
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Not), VT, Not,
+                         V.getOperand(1));
     }
   }
   if (V.getOpcode() == X86ISD::PCMPGT &&
@@ -5255,7 +5257,15 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
       if (!NotCat) return SDValue();
       CatOp = DAG.getBitcast(CatOp.getValueType(), NotCat);
     }
-    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), V.getValueType(), CatOps);
+    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), VT, CatOps);
+  }
+  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
+    // TODO: Handle cases with single NOT operand -> ANDNP
+    if (SDValue Op1 = IsNOT(V.getOperand(1), DAG))
+      if (SDValue Op0 = IsNOT(V.getOperand(0), DAG))
+        return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
+                           DAG.getBitcast(VT, Op1));
   }
   return SDValue();
 }
@@ -5362,7 +5372,7 @@ static bool getTargetShuffleMask(SDValue N, bool AllowSentinelZero,
     assert(N.getOperand(0).getValueType() == VT && "Unexpected value type");
     assert(N.getOperand(1).getValueType() == VT && "Unexpected value type");
     ImmN = N.getConstantOperandVal(N.getNumOperands() - 1);
-    DecodeINSERTPSMask(ImmN, Mask);
+    DecodeINSERTPSMask(ImmN, Mask, /*SrcIsMem=*/false);
     IsUnary = IsFakeUnary = N.getOperand(0) == N.getOperand(1);
     break;
   case X86ISD::EXTRQI:
@@ -59149,8 +59159,11 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
     // notrack prefix to the indirect branch.
     // In order to do that we create NT_BRIND SDNode.
     // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
-    SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
-    return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, JTInfo, Addr);
+    SDValue Chain = Value;
+    // Jump table debug info is only needed if CodeView is enabled.
+    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+      Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
+    return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Chain, Addr);
   }
 
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);

@@ -164,13 +164,13 @@ define double @f7(double %a, double %b) {
 ; CHECK-VFP-LABEL: f7:
 ; CHECK-VFP:       @ %bb.0:
 ; CHECK-VFP-NEXT:    vldr d17, .LCPI6_0
-; CHECK-VFP-NEXT:    vmov d18, r0, r1
+; CHECK-VFP-NEXT:    vmov d19, r0, r1
 ; CHECK-VFP-NEXT:    vmov.f64 d16, #-1.000000e+00
-; CHECK-VFP-NEXT:    vcmp.f64 d18, d17
+; CHECK-VFP-NEXT:    vcmp.f64 d19, d17
 ; CHECK-VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-VFP-NEXT:    vmov d19, r2, r3
-; CHECK-VFP-NEXT:    vmovmi.f64 d19, d16
-; CHECK-VFP-NEXT:    vmov r0, r1, d19
+; CHECK-VFP-NEXT:    vmov d18, r2, r3
+; CHECK-VFP-NEXT:    vmovmi.f64 d18, d16
+; CHECK-VFP-NEXT:    vmov r0, r1, d18
 ; CHECK-VFP-NEXT:    bx lr
 ; CHECK-VFP-NEXT:    .p2align 3
 ; CHECK-VFP-NEXT:  @ %bb.1:
@@ -181,14 +181,14 @@ define double @f7(double %a, double %b) {
 ; CHECK-NEON-LABEL: f7:
 ; CHECK-NEON:       @ %bb.0:
 ; CHECK-NEON-NEXT:    vldr d17, LCPI6_0
-; CHECK-NEON-NEXT:    vmov d18, r0, r1
-; CHECK-NEON-NEXT:    vmov d19, r2, r3
-; CHECK-NEON-NEXT:    vcmp.f64 d18, d17
+; CHECK-NEON-NEXT:    vmov d19, r0, r1
+; CHECK-NEON-NEXT:    vmov d18, r2, r3
+; CHECK-NEON-NEXT:    vcmp.f64 d19, d17
 ; CHECK-NEON-NEXT:    vmov.f64 d16, #-1.000000e+00
 ; CHECK-NEON-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEON-NEXT:    it mi
-; CHECK-NEON-NEXT:    vmovmi.f64 d19, d16
-; CHECK-NEON-NEXT:    vmov r0, r1, d19
+; CHECK-NEON-NEXT:    vmovmi.f64 d18, d16
+; CHECK-NEON-NEXT:    vmov r0, r1, d18
 ; CHECK-NEON-NEXT:    bx lr
 ; CHECK-NEON-NEXT:    .p2align 3
 ; CHECK-NEON-NEXT:  @ %bb.1:

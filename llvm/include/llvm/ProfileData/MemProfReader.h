@@ -117,6 +117,8 @@ public:
   virtual ~MemProfReader() = default;
 
   // Initialize the MemProfReader with the frame mappings and profile contents.
+  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
+                  "MemProfReader")
   MemProfReader(
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
       llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
