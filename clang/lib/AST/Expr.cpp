@@ -695,7 +695,8 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
           GD = GlobalDecl(CD, Ctor_Base);
         else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
           GD = GlobalDecl(DD, Dtor_Base);
-        else if (ND->hasAttr<CUDAGlobalAttr>())
+        else if (ND->hasAttr<CUDAGlobalAttr>() ||
+                 ND->hasAttr<OpenCLKernelAttr>())
           GD = GlobalDecl(cast<FunctionDecl>(ND));
         else
           GD = GlobalDecl(ND);

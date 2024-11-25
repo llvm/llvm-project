@@ -11,8 +11,8 @@ kernel void foo(global int *A)
   // CHECK: %{{[a-z0-9_]+}} = tail call spir_func i32 @get_dummy_id(i32 noundef 0)
   A[id] = id;
   bar(A);
-  // CHECK: tail call spir_kernel void @bar(ptr addrspace(1) noundef align 4 %A)
+  // CHECK: tail call void @__clang_ocl_kern_imp_bar(ptr addrspace(1) noundef align 4 %A)
 }
 
 // CHECK: declare spir_func i32 @get_dummy_id(i32 noundef)
-// CHECK: declare spir_kernel void @bar(ptr addrspace(1) noundef align 4)
+// CHECK: declare void @__clang_ocl_kern_imp_bar(ptr addrspace(1) noundef align 4)

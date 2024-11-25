@@ -5765,7 +5765,10 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-      return EmitDirectCallee(*this, FD);
+      auto CalleeDecl = FD->hasAttr<OpenCLKernelAttr>()
+                            ? GlobalDecl(FD, KernelReferenceKind::Stub)
+                            : FD;
+      return EmitDirectCallee(*this, CalleeDecl);
     }
   } else if (auto ME = dyn_cast<MemberExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {

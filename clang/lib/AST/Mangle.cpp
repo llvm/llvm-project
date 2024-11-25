@@ -540,7 +540,7 @@ private:
         GD = GlobalDecl(CtorD, Ctor_Complete);
       else if (const auto *DtorD = dyn_cast<CXXDestructorDecl>(D))
         GD = GlobalDecl(DtorD, Dtor_Complete);
-      else if (D->hasAttr<CUDAGlobalAttr>())
+      else if (D->hasAttr<CUDAGlobalAttr>() || D->hasAttr<OpenCLKernelAttr>())
         GD = GlobalDecl(cast<FunctionDecl>(D));
       else
         GD = GlobalDecl(D);

@@ -71,6 +71,10 @@ public:
   GlobalDecl(const FunctionDecl *D, unsigned MVIndex = 0)
       : MultiVersionIndex(MVIndex) {
     if (!D->hasAttr<CUDAGlobalAttr>()) {
+      if (D->hasAttr<OpenCLKernelAttr>()) {
+        Value.setPointerAndInt(D, unsigned(KernelReferenceKind::Kernel));
+        return;
+      }
       Init(D);
       return;
     }
@@ -78,7 +82,8 @@ public:
   }
   GlobalDecl(const FunctionDecl *D, KernelReferenceKind Kind)
       : Value(D, unsigned(Kind)) {
-    assert(D->hasAttr<CUDAGlobalAttr>() && "Decl is not a GPU kernel!");
+    assert((D->hasAttr<CUDAGlobalAttr>() && "Decl is not a GPU kernel!") ||
+           (D->hasAttr<OpenCLKernelAttr>() && "Decl is not a OpenCL kernel!"));
   }
   GlobalDecl(const NamedDecl *D) { Init(D); }
   GlobalDecl(const BlockDecl *D) { Init(D); }
@@ -130,13 +135,15 @@ public:
   }
 
   KernelReferenceKind getKernelReferenceKind() const {
-    assert(((isa<FunctionDecl>(getDecl()) &&
-             cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>()) ||
-            (isa<FunctionTemplateDecl>(getDecl()) &&
-             cast<FunctionTemplateDecl>(getDecl())
-                 ->getTemplatedDecl()
-                 ->hasAttr<CUDAGlobalAttr>())) &&
-           "Decl is not a GPU kernel!");
+    assert((((isa<FunctionDecl>(getDecl()) &&
+              cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>()) ||
+             (isa<FunctionTemplateDecl>(getDecl()) &&
+              cast<FunctionTemplateDecl>(getDecl())
+                  ->getTemplatedDecl()
+                  ->hasAttr<CUDAGlobalAttr>())) &&
+            "Decl is not a GPU kernel!") ||
+           (isDeclOpenCLKernel() && "Decl is not a OpenCL kernel!"));
+
     return static_cast<KernelReferenceKind>(Value.getInt());
   }
 
@@ -196,12 +203,20 @@ public:
   }
 
   GlobalDecl getWithKernelReferenceKind(KernelReferenceKind Kind) {
-    assert(isa<FunctionDecl>(getDecl()) &&
-           cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>() &&
-           "Decl is not a GPU kernel!");
+    assert((isa<FunctionDecl>(getDecl()) &&
+            cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>() &&
+            "Decl is not a GPU kernel!") ||
+           (isDeclOpenCLKernel() && "Decl is not a OpenCL kernel!"));
     GlobalDecl Result(*this);
     Result.Value.setInt(unsigned(Kind));
     return Result;
+  }
+
+  bool isDeclOpenCLKernel() const {
+    auto FD = dyn_cast<FunctionDecl>(getDecl());
+    if (FD)
+      return FD->hasAttr<OpenCLKernelAttr>();
+    return FD;
   }
 };
 
