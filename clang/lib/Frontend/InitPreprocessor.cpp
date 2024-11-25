@@ -1108,7 +1108,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // getBoolWidth() will return. The bool/_Bool data type is only ever one bit
   // wide. See C23 6.2.6.2p2 for the rules in C. Note that
   // C++23 [basic.fundamental]p10 allows an implementation-defined value
-  // representation for bool; when lowing to LLVM, Clang represents bool as an
+  // representation for bool; when lowering to LLVM, Clang represents bool as an
   // i8 in memory but as an i1 when the value is needed, so '1' is also correct
   // for C++.
   Builder.defineMacro("__BOOL_WIDTH__", "1");
