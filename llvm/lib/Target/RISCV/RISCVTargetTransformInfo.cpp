@@ -1026,7 +1026,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ST->hasVInstructions() && LT.second.isVector()) {
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
-      return LT.first * 2;
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VRSUB_VI, RISCV::VMAX_VV},
+                                     LT.second, CostKind);
     }
     break;
   }
