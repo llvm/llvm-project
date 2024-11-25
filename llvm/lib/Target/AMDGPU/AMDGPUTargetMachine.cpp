@@ -501,6 +501,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUReserveWWMRegsPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
+  initializeAMDGPUAnnotateVaryingBranchWeightsLegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
@@ -1315,6 +1316,7 @@ bool GCNPassConfig::addPreISel() {
   // analysis. This depends on stopping SIAnnotateControlFlow from making
   // control flow modifications.
   addPass(createAMDGPURewriteUndefForPHILegacyPass());
+  addPass(createAMDGPUAnnotateVaryingBranchWeightsLegacyPass());
 
   addPass(createLCSSAPass());
 
@@ -2002,6 +2004,8 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // analysis. This depends on stopping SIAnnotateControlFlow from making
   // control flow modifications.
   addPass(AMDGPURewriteUndefForPHIPass());
+
+  addPass(AMDGPUAnnotateVaryingBranchWeightsPass(TM));
 
   addPass(LCSSAPass());
 

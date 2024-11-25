@@ -65,6 +65,9 @@ FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
 FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
+FUNCTION_PASS("amdgpu-annotate-varying-branch-weights",
+              AMDGPUAnnotateVaryingBranchWeightsPass(
+                  *static_cast<const GCNTargetMachine *>(this)))
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_ANALYSIS
