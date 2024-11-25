@@ -234,3 +234,20 @@ S_PAD ret_s_pad() {
   S_PAD s;
   return s;
 }
+
+typedef struct {
+  int a[42];
+} CAT;
+
+// CHECK: cir.func @pass_cat(%arg0: !cir.ptr<!ty_CAT>
+// CHECK: %[[#V0:]]  = cir.alloca !cir.ptr<!ty_CAT>, !cir.ptr<!cir.ptr<!ty_CAT>>, [""] {alignment = 8 : i64}
+// CHECK: cir.store %arg0, %[[#V0]]  : !cir.ptr<!ty_CAT>, !cir.ptr<!cir.ptr<!ty_CAT>>
+// CHECK: %[[#V1:]]  = cir.load %[[#V0]]  : !cir.ptr<!cir.ptr<!ty_CAT>>, !cir.ptr<!ty_CAT>
+// CHECK: cir.return
+
+// LLVM: void @pass_cat(ptr %[[#V0:]])
+// LLVM: %[[#V2:]] = alloca ptr, i64 1, align 8
+// LLVM: store ptr %[[#V0]], ptr %[[#V2]], align 8
+// LLVM: %[[#V3:]] = load ptr, ptr %[[#V2]], align 8
+// LLVM: ret void
+void pass_cat(CAT a) {}

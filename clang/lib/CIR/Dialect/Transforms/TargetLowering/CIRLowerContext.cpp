@@ -94,6 +94,11 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const mlir::Type T) const {
       Align = Target->getDoubleAlign();
       break;
     }
+    if (mlir::isa<PointerType>(T)) {
+      Width = Target->getPointerWidth(clang::LangAS::Default);
+      Align = Target->getPointerAlign(clang::LangAS::Default);
+      break;
+    }
     cir_cconv_unreachable("Unknown builtin type!");
     break;
   }
@@ -167,9 +172,28 @@ int64_t CIRLowerContext::toBits(clang::CharUnits CharSize) const {
   return CharSize.getQuantity() * getCharWidth();
 }
 
+/// Performing the computation in CharUnits
+/// instead of in bits prevents overflowing the uint64_t for some large arrays.
+clang::TypeInfoChars getConstantArrayInfoInChars(const CIRLowerContext &ctx,
+                                                 cir::ArrayType arrTy) {
+  clang::TypeInfoChars eltInfo = ctx.getTypeInfoInChars(arrTy.getEltType());
+  uint64_t tySize = arrTy.getSize();
+  assert((tySize == 0 || static_cast<uint64_t>(eltInfo.Width.getQuantity()) <=
+                             (uint64_t)(-1) / tySize) &&
+         "Overflow in array type char size evaluation");
+  uint64_t width = eltInfo.Width.getQuantity() * tySize;
+  unsigned align = eltInfo.Align.getQuantity();
+  if (!ctx.getTargetInfo().getCXXABI().isMicrosoft() ||
+      ctx.getTargetInfo().getPointerWidth(clang::LangAS::Default) == 64)
+    width = llvm::alignTo(width, align);
+  return clang::TypeInfoChars(clang::CharUnits::fromQuantity(width),
+                              clang::CharUnits::fromQuantity(align),
+                              eltInfo.AlignRequirement);
+}
+
 clang::TypeInfoChars CIRLowerContext::getTypeInfoInChars(mlir::Type T) const {
   if (auto arrTy = mlir::dyn_cast<ArrayType>(T))
-    cir_cconv_unreachable("NYI");
+    return getConstantArrayInfoInChars(*this, arrTy);
   clang::TypeInfo Info = getTypeInfo(T);
   return clang::TypeInfoChars(toCharUnitsFromBits(Info.Width),
                               toCharUnitsFromBits(Info.Align),
