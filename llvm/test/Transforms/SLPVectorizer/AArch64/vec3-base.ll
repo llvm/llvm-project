@@ -279,10 +279,13 @@ define void @phi_store3(ptr %dst) {
 ; POW2-ONLY:       invoke.cont8.loopexit:
 ; POW2-ONLY-NEXT:    br label [[EXIT]]
 ; POW2-ONLY:       exit:
-; POW2-ONLY-NEXT:    [[P_2:%.*]] = phi i32 [ 3, [[ENTRY:%.*]] ], [ 0, [[INVOKE_CONT8_LOOPEXIT:%.*]] ]
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 1, i32 2>, [[ENTRY]] ], [ poison, [[INVOKE_CONT8_LOOPEXIT]] ]
-; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 2
-; POW2-ONLY-NEXT:    store <2 x i32> [[TMP0]], ptr [[DST]], align 4
+; POW2-ONLY-NEXT:    [[P_0:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 0, [[INVOKE_CONT8_LOOPEXIT:%.*]] ]
+; POW2-ONLY-NEXT:    [[P_1:%.*]] = phi i32 [ 2, [[ENTRY]] ], [ 0, [[INVOKE_CONT8_LOOPEXIT]] ]
+; POW2-ONLY-NEXT:    [[P_2:%.*]] = phi i32 [ 3, [[ENTRY]] ], [ 0, [[INVOKE_CONT8_LOOPEXIT]] ]
+; POW2-ONLY-NEXT:    [[DST_1:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 1
+; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
+; POW2-ONLY-NEXT:    store i32 [[P_0]], ptr [[DST]], align 4
+; POW2-ONLY-NEXT:    store i32 [[P_1]], ptr [[DST_1]], align 4
 ; POW2-ONLY-NEXT:    store i32 [[P_2]], ptr [[DST_2]], align 4
 ; POW2-ONLY-NEXT:    ret void
 ;

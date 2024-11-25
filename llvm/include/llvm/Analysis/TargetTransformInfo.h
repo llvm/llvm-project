@@ -1449,6 +1449,14 @@ public:
                                             const APInt &DemandedDstElts,
                                             TTI::TargetCostKind CostKind) const;
 
+  /// \return Cost of materializing a constant.
+  InstructionCost getConstantMaterializationCost(
+      ArrayRef<Constant *> VL, Type *SrcTy,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      ArrayRef<SmallVector<Constant *>> ConstVectsPerTree = {},
+      ArrayRef<SmallVector<Constant *>> MaterializedConstVectsPerFunc = {})
+      const;
+
   /// \return The cost of Load and Store instructions.
   InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
@@ -2146,6 +2154,12 @@ public:
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,
                             TTI::TargetCostKind CostKind) = 0;
+
+  virtual InstructionCost getConstantMaterializationCost(
+      ArrayRef<Constant *> VL, Type *SrcTy,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      ArrayRef<SmallVector<Constant *>> ConstVectsPerTree = {},
+      ArrayRef<SmallVector<Constant *>> MaterializedConstVectsPerFunc = {}) = 0;
 
   virtual InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
@@ -2849,6 +2863,15 @@ public:
                             TTI::TargetCostKind CostKind) override {
     return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
                                           DemandedDstElts, CostKind);
+  }
+  InstructionCost getConstantMaterializationCost(
+      ArrayRef<Constant *> VL, Type *SrcTy,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      ArrayRef<SmallVector<Constant *>> ConstVectsPerTree = {},
+      ArrayRef<SmallVector<Constant *>> MaterializedConstVectsPerFunc = {})
+      override {
+    return Impl.getConstantMaterializationCost(
+        VL, SrcTy, CostKind, ConstVectsPerTree, MaterializedConstVectsPerFunc);
   }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
