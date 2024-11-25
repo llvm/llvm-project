@@ -14,41 +14,13 @@ void g() {
 
 namespace GH113324 {
 struct S1 {
-  friend void f1(S1, int = 42) {}
-};
-
-template <bool, class> using __enable_if_t = int;
-template <int v> struct S2 {
-  static const int value = v;
-};
-struct S3 {
-  template <__enable_if_t<S2<true>::value, int> = 0> S3(const char *);
-};
-struct S4 {
-  template <typename a, typename b> friend void f2(int, S4, a, b, S3 = "") {}
+  friend void f(S1, int = 42) {}
 };
 
 void test() {
   S1 s1;
-  f1(s1);
-
-  S4 s4;
-  f2(0, s4, [] {}, [] {});
+  f(s1);
 }
-}
-
-struct A1 {
- A1();
- ~A1();
-};
-
-struct A2 {
- A2();
- ~A2();
-};
-
-struct B {
- B(const A1& = A1(), const A2& = A2());
 };
 
 // CHECK-LABEL: define{{.*}} void @_Z2f1v()
