@@ -110,45 +110,45 @@ vplzcntq          (%rax){1to8}, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 243.50  -     8.00   8.00    -     297.50  -      -      -      -      -     8.00    -
+# CHECK-NEXT: 243.50  -     8.00   8.00    -     297.50  -      -      -      -     8.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastmb2q	%k0, %zmm16
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastmw2d	%k0, %zmm16
 # CHECK-NEXT: 15.50   -      -      -      -     21.50   -      -      -      -      -      -      -     vpconflictd	%zmm16, %zmm19
-# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -      -     0.33    -     vpconflictd	(%rax), %zmm19
-# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -      -     0.33    -     vpconflictd	(%rax){1to16}, %zmm19
+# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -     0.33    -      -     vpconflictd	(%rax), %zmm19
+# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -     0.33    -      -     vpconflictd	(%rax){1to16}, %zmm19
 # CHECK-NEXT: 15.50   -      -      -      -     21.50   -      -      -      -      -      -      -     vpconflictd	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -      -     0.33    -     vpconflictd	(%rax), %zmm19 {%k1}
-# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -      -     0.33    -     vpconflictd	(%rax){1to16}, %zmm19 {%k1}
+# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -     0.33    -      -     vpconflictd	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -     0.33    -      -     vpconflictd	(%rax){1to16}, %zmm19 {%k1}
 # CHECK-NEXT: 15.50   -      -      -      -     21.50   -      -      -      -      -      -      -     vpconflictd	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -      -     0.33    -     vpconflictd	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -      -     0.33    -     vpconflictd	(%rax){1to16}, %zmm19 {%k1} {z}
+# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -     0.33    -      -     vpconflictd	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 15.00   -     0.33   0.33    -     21.00   -      -      -      -     0.33    -      -     vpconflictd	(%rax){1to16}, %zmm19 {%k1} {z}
 # CHECK-NEXT: 10.00   -      -      -      -     12.00   -      -      -      -      -      -      -     vpconflictq	%zmm16, %zmm19
-# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -      -     0.33    -     vpconflictq	(%rax), %zmm19
-# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -      -     0.33    -     vpconflictq	(%rax){1to8}, %zmm19
+# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -     0.33    -      -     vpconflictq	(%rax), %zmm19
+# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -     0.33    -      -     vpconflictq	(%rax){1to8}, %zmm19
 # CHECK-NEXT: 10.00   -      -      -      -     12.00   -      -      -      -      -      -      -     vpconflictq	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -      -     0.33    -     vpconflictq	(%rax), %zmm19 {%k1}
-# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -      -     0.33    -     vpconflictq	(%rax){1to8}, %zmm19 {%k1}
+# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -     0.33    -      -     vpconflictq	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -     0.33    -      -     vpconflictq	(%rax){1to8}, %zmm19 {%k1}
 # CHECK-NEXT: 10.00   -      -      -      -     12.00   -      -      -      -      -      -      -     vpconflictq	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -      -     0.33    -     vpconflictq	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -      -     0.33    -     vpconflictq	(%rax){1to8}, %zmm19 {%k1} {z}
+# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -     0.33    -      -     vpconflictq	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 9.50    -     0.33   0.33    -     11.50   -      -      -      -     0.33    -      -     vpconflictq	(%rax){1to8}, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vplzcntd	%zmm16, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntd	(%rax), %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntd	(%rax){1to16}, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntd	(%rax), %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntd	(%rax){1to16}, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vplzcntd	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntd	(%rax), %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntd	(%rax){1to16}, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntd	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntd	(%rax){1to16}, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vplzcntd	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntd	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntd	(%rax){1to16}, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntd	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntd	(%rax){1to16}, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vplzcntq	%zmm16, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntq	(%rax), %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntq	(%rax){1to8}, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntq	(%rax), %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntq	(%rax){1to8}, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vplzcntq	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntq	(%rax), %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntq	(%rax){1to8}, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntq	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntq	(%rax){1to8}, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vplzcntq	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntq	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vplzcntq	(%rax){1to8}, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntq	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vplzcntq	(%rax){1to8}, %zmm19 {%k1} {z}

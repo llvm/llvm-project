@@ -54,6 +54,16 @@ BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_string, std::vector<std::string>
 
 BENCHMARK_CAPTURE(BM_Pushback_no_grow, vector_int, std::vector<int>{})->Arg(TestNumInputs);
 
+BENCHMARK_CAPTURE(BM_erase_iter_in_middle, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+BENCHMARK_CAPTURE(BM_erase_iter_in_middle, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+
+BENCHMARK_CAPTURE(BM_erase_iter_at_start, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+BENCHMARK_CAPTURE(BM_erase_iter_at_start, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+
 template <class T>
 void bm_grow(benchmark::State& state) {
   for (auto _ : state) {

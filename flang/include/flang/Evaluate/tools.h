@@ -1103,8 +1103,7 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 bool HasVectorSubscript(const Expr<SomeType> &);
 
 // Utilities for attaching the location of the declaration of a symbol
-// of interest to a message, if both pointers are non-null.  Handles
-// the case of USE association gracefully.
+// of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
 parser::Message *AttachDeclaration(parser::Message *, const Symbol &);
 template <typename MESSAGES, typename... A>
@@ -1416,6 +1415,8 @@ bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
 common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
+
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
 
 } // namespace Fortran::semantics
 

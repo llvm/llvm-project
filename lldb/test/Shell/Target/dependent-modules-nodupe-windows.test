@@ -1,4 +1,4 @@
-# REQUIRES: system-windows
+# REQUIRES: target-windows
 
 # Checks that dependent modules preloaded by LLDB are not duplicated when the
 # process actually loads the DLL.

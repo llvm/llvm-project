@@ -486,6 +486,13 @@ public:
   /// \param AddrSpace address space of pointee in source language.
   virtual uint64_t getNullPointerValue(LangAS AddrSpace) const { return 0; }
 
+  /// Returns true if an address space can be safely converted to another.
+  /// \param A address space of target in source language.
+  /// \param B address space of source in source language.
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const {
+    return A == B;
+  }
+
   /// Return the size of '_Bool' and C++ 'bool' for this target, in bits.
   unsigned getBoolWidth() const { return BoolWidth; }
 
@@ -1497,6 +1504,10 @@ public:
   bool supportsIFunc() const {
     if (getTriple().isOSBinFormatMachO())
       return true;
+    if (getTriple().isOSWindows() && getTriple().isAArch64())
+      return true;
+    if (getTriple().getArch() == llvm::Triple::ArchType::avr)
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
@@ -1859,6 +1870,11 @@ private:
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+namespace targets {
+std::unique_ptr<clang::TargetInfo>
+AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
+} // namespace targets
 
 }  // end namespace clang
 

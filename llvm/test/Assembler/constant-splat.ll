@@ -51,13 +51,13 @@ define <4 x i32> @ret_fixed_lenth_vector_splat_i32() {
 }
 
 define void @add_fixed_lenth_vector_splat_double(<vscale x 2 x double> %a) {
-; CHECK: %add = fadd <vscale x 2 x double> %a, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 5.700000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK: %add = fadd <vscale x 2 x double> %a, splat (double 5.700000e+00)
   %add = fadd <vscale x 2 x double> %a, splat (double 5.700000e+00)
   ret void
 }
 
 define <vscale x 4 x i32> @ret_scalable_vector_splat_i32() {
-; CHECK: ret <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 78, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK: ret <vscale x 4 x i32> splat (i32 78)
   ret <vscale x 4 x i32> splat (i32 78)
 }
 

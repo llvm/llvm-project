@@ -15,6 +15,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <thread>
 
 #include "make_test_thread.h"

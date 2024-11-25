@@ -4,6 +4,10 @@
 tbx z0.b, z1.b, z2.b
 // CHECK: tbx z0.b, z1.b, z2.b
 
+.arch armv9-a+sve-aes
+aesd z23.b, z23.b, z13.b
+// CHECK: aesd z23.b, z23.b, z13.b
+
 .arch armv9-a+sve2-aes
 aesd z23.b, z23.b, z13.b
 // CHECK: aesd z23.b, z23.b, z13.b
