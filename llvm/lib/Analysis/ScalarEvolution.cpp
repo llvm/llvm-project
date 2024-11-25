@@ -6030,21 +6030,20 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
 /// scev(%phi) => scev(%add)
 const SCEV *
 ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
-  BinaryOperator *CommonInst = nullptr;
+  const SCEV *CommonSCEV = nullptr;
   for (Value *Incoming : PN->incoming_values()) {
-    BinaryOperator *IncomingInst = dyn_cast<BinaryOperator>(Incoming);
-    if (CommonInst) {
-      if (!(IncomingInst && CommonInst->isIdenticalTo(IncomingInst)))
-        return nullptr; // Not identical, give up
-    } else if (IncomingInst) {
-      // Remember binary operator
-      CommonInst = IncomingInst;
-    } else {
-      // Not a binary operator, give up
+    auto *IncomingInst = dyn_cast<BinaryOperator>(Incoming);
+    if (!IncomingInst)
       return nullptr;
+    if (CommonSCEV) {
+      if (CommonSCEV != getSCEV(IncomingInst))
+        return nullptr; // Not identical, give up
+    } else {
+      // Remember binary operator
+      CommonSCEV = getSCEV(IncomingInst);
     }
   }
-  return CommonInst ? getSCEV(CommonInst) : nullptr;
+  return CommonSCEV;
 }
 
 const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
