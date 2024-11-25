@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wall -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wall -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++20 -verify %s
 
 // definitions for std::move
 namespace std {
@@ -1514,10 +1515,11 @@ void aggregate() {
   };
 
   struct C {
-    [[clang::requires_explicit_initialization]] int c1; // #FIELD_C1
-#if 201703L <= __cplusplus && __cplusplus < 202002L
-    // expected-warning@#FIELD_C1 {{explicit initialization of field 'c1' will not be enforced in C++20 and later because 'C' has a user-declared constructor, making the type no longer an aggregate}}
+#if __cplusplus < 202002L
+    // expected-warning@+1 {{explicit initialization of field 'c1' will not be enforced in C++20 and later because 'C' has a user-declared constructor, making the type no longer an aggregate}}
+    [[clang::requires_explicit_initialization]]
 #endif
+    int c1; // #FIELD_C1
     C() = default;  // Test pre-C++20 aggregates
   };
 
@@ -1555,11 +1557,41 @@ void aggregate() {
   delete ptr2;
 
 #if __cplusplus >= 202002L
-  // expected-warning@+2 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
-  // expected-warning {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
-  D a({}, 0);
-  (void)a;
-#else
+  // expected-warning@+3 {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  // expected-warning@+2 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  D a1({}, 0);
+  (void)a1;
+
+  // expected-warning@+3 {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  // expected-warning@+2 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  D a2(S{}, 0);
+  (void)a2;
+
+  // expected-warning@+2 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  D a3(S{.s1 = 0}, 0);
+  (void)a3;
+
+  // expected-warning@+3 {{field 's1' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S1 {{'s1' declared here}}
+  // expected-warning@+2 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  D a4(S(), 0);
+  (void)a4;
+
+  // expected-warning@+2 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  D a5(S(0), 0);
+  (void)a5;
+
+  // expected-warning@+2 {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+  // expected-warning@+1 {{field 'd2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_D2 {{'d2' declared here}}
+  D a6 = {S(0), 0};
+  (void)a6;
+#endif
+
+#if 201103L <= __cplusplus && __cplusplus < 202002L
   C a; // expected-warning {{field in 'C' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_C1 {{'c1' declared here}}
   (void)a;
 #endif

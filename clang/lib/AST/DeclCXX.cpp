@@ -2211,7 +2211,7 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
         Context.getDiagnostics().Report(
             AT->getLocation(),
             diag::warn_cxx20_compat_requires_explicit_init_non_aggregate)
-            << AT << Context.getRecordType(this);
+            << AT << FD << Context.getRecordType(this);
     }
   }
 

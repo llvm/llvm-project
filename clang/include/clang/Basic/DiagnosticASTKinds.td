@@ -395,8 +395,8 @@ def warn_attribute_needs_aggregate : Warning<
   InGroup<IgnoredAttributes>;
 
 def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
-  "explicit initialization of field %0 will not be enforced in C++20 and later "
-  "because %1 has a user-declared constructor, making the type no longer an "
+  "explicit initialization of field %1 will not be enforced in C++20 and later "
+  "because %2 has a user-declared constructor, making the type no longer an "
   "aggregate">,
   DefaultIgnore, InGroup<CXX20Compat>;
 
