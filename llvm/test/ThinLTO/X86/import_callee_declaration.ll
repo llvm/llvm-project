@@ -78,6 +78,7 @@
 ; RUN: opt -passes=function-import -summary-file=main.bc.thinlto.bc main.bc -o main-after-import.bc
 ; RUN: llvm-dis -o - main-after-import.bc | FileCheck %s --check-prefix=MAIN-IMPORT
 
+; Tests that dso_local attribute is applied on a global var from its summary.
 MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 
 ; Run in-process ThinLTO and tests that
@@ -128,10 +129,11 @@ MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 
 ; RUN: llvm-dis in-process.2.2.internalize.bc -o - | FileCheck %s --check-prefix=INTERNALIZE
 
-; IMPORT-DAG: @read_write_global_vars = external dso_local global [1 x ptr]
 ; IMPORT-DAG: define available_externally void @small_func
 ; IMPORT-DAG: define available_externally hidden void @small_indirect_callee
 ; IMPORT-DAG: declare void @large_func
+; Tests that dso_local attribute is applied on a global var from its summary.
+; IMPORT-DAG: @read_write_global_vars = external dso_local global [1 x ptr]
 ; IMPORT-NOT: large_indirect_callee
 ; IMPORT-NOT: large_indirect_callee_alias
 ; IMPORT-NOT: large_indirect_bar
