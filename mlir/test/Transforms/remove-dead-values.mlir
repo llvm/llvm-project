@@ -71,7 +71,7 @@ func.func @cleanable_loop_iter_args_value(%arg0: index) -> index {
   // CHECK-NOT: non_live
   %result, %result_non_live = scf.for %i = %c0 to %c10 step %c1 iter_args(%live_arg = %arg0, %non_live_arg = %non_live) -> (index, index) {
     %new_live = arith.addi %live_arg, %i : index
-  // CHECK-NOT: non_live_arg
+    // CHECK: scf.for %[[ARG_0:.*]] = %c0 to %c10 step %c1 iter_args(%[[ARG_1:.*]] = %arg0)
     scf.yield %new_live, %non_live_arg : index, index
   }
   // CHECK-NOT: result_non_live
