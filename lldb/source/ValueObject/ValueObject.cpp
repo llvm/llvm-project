@@ -3348,8 +3348,8 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   }
 
   Status error = Status::FromErrorString("Unable to perform requested cast");
-  return ValueObjectConstResult::Create(
-      exe_ctx.GetBestExecutionContextScope(), error.Clone());
+  return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
+                                        error.Clone());
 }
 
 lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
@@ -3416,8 +3416,8 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
     }
   }
   Status error = Status::FromErrorString("Cannot perform requested cast");
-  return ValueObjectConstResult::Create(
-      exe_ctx.GetBestExecutionContextScope(), error.Clone());
+  return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
+                                        error.Clone());
 }
 
 ValueObject::EvaluationPoint::EvaluationPoint() : m_mod_id(), m_exe_ctx_ref() {}
