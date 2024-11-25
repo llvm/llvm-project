@@ -739,3 +739,146 @@ uint64x2_t test_vpaddlq_u32(uint32x4_t a) {
   // LLVM:   [[VPADDL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.uaddlp.v2i64.v4i32(<4 x i32> [[A]])
   // LLVM:   ret <2 x i64> [[VPADDL1_I]]
 }
+
+int8x8_t test_vabs_s8(int8x8_t a) {
+  return vabs_s8(a);
+
+  // CIR-LABEL: vabs_s8
+  // CIR: cir.abs {{%.*}} : !cir.vector<!s8i x 8>
+
+  // LLVM: {{.*}}test_vabs_s8(<8 x i8>{{.*}}[[a:%.*]])
+  // LLVM: [[VABS_I:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[a]], i1 false)
+  // LLVM: ret <8 x i8> [[VABS_I]]
+}
+
+int8x16_t test_vabsq_s8(int8x16_t a) {
+  return vabsq_s8(a);
+
+  // CIR-LABEL: vabsq_s8
+  // CIR: cir.abs {{%.*}} : !cir.vector<!s8i x 16>
+
+  // LLVM: {{.*}}test_vabsq_s8(<16 x i8>{{.*}}[[a:%.*]])
+  // LLVM: [[VABS_I:%.*]] = call <16 x i8> @llvm.abs.v16i8(<16 x i8> [[a]], i1 false)
+  // LLVM: ret <16 x i8> [[VABS_I]]
+}
+
+int16x4_t test_vabs_s16(int16x4_t a) {
+  return vabs_s16(a);
+
+  // CIR-LABEL: vabs_s16
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s16i x 4>
+  // CIR: cir.abs [[TMP0]] : !cir.vector<!s16i x 4>
+
+  // LLVM: {{.*}}test_vabs_s16(<4 x i16>{{.*}}[[a:%.*]])
+  // LLVM:   [[VABS1_I:%.*]] = call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[a]], i1 false)
+  // LLVM:   ret <4 x i16> [[VABS1_I]]
+}
+
+int16x8_t test_vabsq_s16(int16x8_t a) {
+  return vabsq_s16(a);
+
+  // CIR-LABEL: vabsq_s16
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s16i x 8>
+  // CIR: cir.abs [[TMP0]] : !cir.vector<!s16i x 8>
+
+  // LLVM: {{.*}}test_vabsq_s16(<8 x i16>{{.*}}[[a:%.*]])
+  // LLVM:   [[VABS1_I:%.*]] = call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[a]], i1 false)
+  // LLVM:   ret <8 x i16> [[VABS1_I]]
+}
+
+int32x2_t test_vabs_s32(int32x2_t a) {
+  return vabs_s32(a);
+
+  // CIR-LABEL: vabs_s32
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s32i x 2>
+  // CIR: cir.abs [[TMP0]] : !cir.vector<!s32i x 2>
+
+  // LLVM: {{.*}}test_vabs_s32(<2 x i32>{{.*}}[[a:%.*]])
+  // LLVM:   [[VABS1_I:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[a]], i1 false)
+  // LLVM:   ret <2 x i32> [[VABS1_I]]
+}
+
+int32x4_t test_vabsq_s32(int32x4_t a) {
+  return vabsq_s32(a);
+
+  // CIR-LABEL: vabsq_s32
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s32i x 4>
+  // CIR: cir.abs [[TMP0]] : !cir.vector<!s32i x 4>
+
+  // LLVM: {{.*}}test_vabsq_s32(<4 x i32>{{.*}}[[a:%.*]])
+  // LLVM:   [[VABS1_I:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[a]], i1 false)
+  // LLVM:   ret <4 x i32> [[VABS1_I]]
+}
+
+int64x1_t test_vabs_s64(int64x1_t a) {
+  return vabs_s64(a);
+
+  // CIR-LABEL: vabs_s64
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s64i x 1>
+  // CIR: cir.abs [[TMP0]] : !cir.vector<!s64i x 1>
+
+  // LLVM: {{.*}}test_vabs_s64(<1 x i64>{{.*}}[[a:%.*]])
+  // LLVM:   [[VABS1_I:%.*]] = call <1 x i64> @llvm.abs.v1i64(<1 x i64> [[a]], i1 false)
+  // LLVM:   ret <1 x i64> [[VABS1_I]]
+}
+
+int64x2_t test_vabsq_s64(int64x2_t a) {
+  return vabsq_s64(a);
+
+  // CIR-LABEL: vabsq_s64
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s64i x 2>
+  // CIR: cir.abs [[TMP0]] : !cir.vector<!s64i x 2>
+
+  // LLVM: {{.*}}test_vabsq_s64(<2 x i64>{{.*}}[[a:%.*]])
+  // LLVM:   [[VABS1_I:%.*]] = call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[a]], i1 false)
+  // LLVM:   ret <2 x i64> [[VABS1_I]]
+}
+
+
+float32x2_t test_vabs_f32(float32x2_t a) {
+  return vabs_f32(a);
+
+  // CIR-LABEL: vabs_f32
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!cir.float x 2>
+  // CIR: cir.fabs [[TMP0]] : !cir.vector<!cir.float x 2>
+
+  // LLVM: {{.*}}test_vabs_f32(<2 x float>{{.*}}[[a:%.*]])
+  // LLVM: [[VABS_F:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[a]])
+  // LLVM: ret <2 x float> [[VABS_F]]
+}
+
+float32x4_t test_vabsq_f32(float32x4_t a) {
+  return vabsq_f32(a);
+
+  // CIR-LABEL: vabsq_f32
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!cir.float x 4>
+  // CIR: cir.fabs [[TMP0]] : !cir.vector<!cir.float x 4>
+
+  // LLVM: {{.*}}test_vabsq_f32(<4 x float>{{.*}}[[a:%.*]])
+  // LLVM: [[VABS_F:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[a]])
+  // LLVM: ret <4 x float> [[VABS_F]]
+}
+
+float64x1_t test_vabs_f64(float64x1_t a) {
+  return vabs_f64(a);
+
+  // CIR-LABEL: vabs_f64
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!cir.double x 1>
+  // CIR: cir.fabs [[TMP0]] : !cir.vector<!cir.double x 1>
+
+  // LLVM: {{.*}}test_vabs_f64(<1 x double>{{.*}}[[a:%.*]])
+  // LLVM: [[VABS_F:%.*]] = call <1 x double> @llvm.fabs.v1f64(<1 x double> [[a]])
+  // LLVM: ret <1 x double> [[VABS_F]]
+}
+
+float64x2_t test_vabsq_f64(float64x2_t a) {
+  return vabsq_f64(a);
+
+  // CIR-LABEL: vabsq_f64
+  // CIR: [[TMP0:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!cir.double x 2>
+  // CIR: cir.fabs [[TMP0]] : !cir.vector<!cir.double x 2>
+
+  // LLVM: {{.*}}test_vabsq_f64(<2 x double>{{.*}}[[a:%.*]])
+  // LLVM: [[VABS_F:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[a]])
+  // LLVM: ret <2 x double> [[VABS_F]]
+}
