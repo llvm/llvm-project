@@ -15,7 +15,10 @@
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+
+#ifdef __linux__
 #include <execinfo.h>
+#endif
 
 extern "C" {
 
@@ -154,19 +157,29 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
 }
 
 static void PrintBacktrace() {
+#ifdef __linux__
   // TODO: Need to parse DWARF information to print function line numbers
-  const int MAX_CALL_STACK = 999;
+  constexpr int MAX_CALL_STACK{999};
   void *buffer[MAX_CALL_STACK];
-  int nptrs = backtrace(buffer, MAX_CALL_STACK);
-  char **symbols = backtrace_symbols(buffer, nptrs);
+  int nptrs{backtrace(buffer, MAX_CALL_STACK)};
+  char **symbols{backtrace_symbols(buffer, nptrs)};
+
   if (symbols == nullptr) {
     Fortran::runtime::Terminator{}.Crash("no symbols");
     std::exit(EXIT_FAILURE);
   }
+
   for (int i = 0; i < nptrs; i++) {
     Fortran::runtime::Terminator{}.PrintCrashArgs("#%d %s\n", i, symbols[i]);
   }
+
   free(symbols);
+
+#else
+
+  // TODO: Windows platform implemention
+
+#endif
 }
 
 [[noreturn]] void RTNAME(Abort)() {
