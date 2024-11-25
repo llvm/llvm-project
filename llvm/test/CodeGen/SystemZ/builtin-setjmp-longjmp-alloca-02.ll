@@ -9,7 +9,7 @@
 ; Return address in slot 2.
 ; Stack Pointer in slot 4.
 
-; RUN: llc -O2 < %s | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -O2 | FileCheck %s
 
 @buf3 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf2 = dso_local global [10 x ptr] zeroinitializer, align 8

@@ -3,8 +3,7 @@
 ; Test assembly for store/load to/from for nested setjmp for alloca for 
 ; setjmp/longjmp respectively.
 
-; RUN: llc -O2 < %s | FileCheck %s
-
+; RUN: llc < %s -mtriple=s390x-linux-gnu -O2 | FileCheck %s
 
 @buf3 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf2 = dso_local global [10 x ptr] zeroinitializer, align 8

@@ -4,7 +4,8 @@
 ; Stack Pointer from Slot 4.
 ; Literal Pool Pointer from Slot 5.
 
-; RUN: llc -O1 < %s | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -O2 | FileCheck %s
+
 ; CHECK:        stmg    %r11, %r15, 88(%r15)
 ; CHECK:       aghi    %r15, -160
 ; CHECK:        lgrl    %r2, .Lstr@GOT

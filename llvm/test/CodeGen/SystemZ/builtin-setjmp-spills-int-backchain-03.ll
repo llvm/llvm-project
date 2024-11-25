@@ -9,7 +9,7 @@
 ; Stack Pointer in slot 4.
 ; Clobber %r6-%r15, %f8-%f15.
 
-; RUN: llc -O2 < %s | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -O2 | FileCheck %s
 
 @buf = dso_local global [10 x ptr] zeroinitializer, align 8
 @t = dso_local global i32 0, align 4
