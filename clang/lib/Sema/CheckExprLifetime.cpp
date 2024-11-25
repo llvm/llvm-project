@@ -498,7 +498,7 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
   return false;
 }
 
-static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;
