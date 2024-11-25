@@ -1192,6 +1192,8 @@ Value *InstCombinerImpl::foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd) {
   CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
   auto GetMatchPart = [&](Value *CmpV,
                           unsigned OpNo) -> std::optional<IntPart> {
+    assert(CmpV->getType()->isIntOrIntVectorTy(1) && "Must be bool");
+
     Value *X, *Y;
     // icmp ne (and x, 1), (and y, 1) <=> trunc (xor x, y) to i1
     // icmp eq (and x, 1), (and y, 1) <=> not (trunc (xor x, y) to i1)
