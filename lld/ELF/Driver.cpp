@@ -1327,15 +1327,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                    OPT_no_lto_validate_all_vtables_have_type_infos, false);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
-    ErrAlways(ctx) << "invalid optimization level for LTO: "
-                   << Twine(ctx.arg.ltoo);
+    ErrAlways(ctx) << "invalid optimization level for LTO: " << ctx.arg.ltoo;
   unsigned ltoCgo =
       args::getInteger(args, OPT_lto_CGO, args::getCGOptLevel(ctx.arg.ltoo));
   if (auto level = CodeGenOpt::getLevel(ltoCgo))
     ctx.arg.ltoCgo = *level;
   else
-    ErrAlways(ctx) << "invalid codegen optimization level for LTO: "
-                   << Twine(ltoCgo);
+    ErrAlways(ctx) << "invalid codegen optimization level for LTO: " << ltoCgo;
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   ctx.arg.ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
