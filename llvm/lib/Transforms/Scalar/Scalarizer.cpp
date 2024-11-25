@@ -743,7 +743,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       // will only scalarize when the struct elements have the same bitness.
       if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
         return false;
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I))
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I, TTI))
         Tys.push_back(CurrVS->SplitTy);
     }
   }
@@ -794,8 +794,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       Tys[0] = VS->RemainderTy;
 
     for (unsigned J = 0; J != NumArgs; ++J) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, J) ||
-          TTI->isTargetIntrinsicWithScalarOpAtArg(ID, J)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI)) {
         ScalarCallOps.push_back(ScalarOperands[J]);
       } else {
         ScalarCallOps.push_back(Scattered[J][I]);
