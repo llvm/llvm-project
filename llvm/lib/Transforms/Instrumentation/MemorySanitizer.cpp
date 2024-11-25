@@ -6159,8 +6159,10 @@ struct VarArgGenericHelper : public VarArgHelperBase {
     unsigned VAArgOffset = 0;
     const DataLayout &DL = F.getDataLayout();
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
-    for (Value *A :
-         llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
+      bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
+      if (IsFixed)
+        continue;
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
       if (DL.isBigEndian()) {
         // Adjusting the shadow for argument with size < IntptrSize to match the
