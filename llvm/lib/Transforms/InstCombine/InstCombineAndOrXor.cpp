@@ -1470,9 +1470,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
       IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      FastMathFlags FMF = LHS->getFastMathFlags();
-      FMF &= RHS->getFastMathFlags();
-      Builder.setFastMathFlags(FMF);
+      Builder.setFastMathFlags(LHS->getFastMathFlags() &
+                               RHS->getFastMathFlags());
       return Builder.CreateFCmp(PredL, LHS0, RHS0);
     }
   }
