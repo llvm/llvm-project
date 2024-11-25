@@ -476,6 +476,11 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
+  NODE(parser, OmpMapper)
+  NODE(parser, OmpMapType)
+  NODE_ENUM(OmpMapType, Value)
+  NODE(parser, OmpMapTypeModifier)
+  NODE_ENUM(OmpMapTypeModifier, Value)
   NODE(parser, OmpIteratorSpecifier)
   NODE(parser, OmpIterator)
   NODE(parser, OmpAffinityClause)
@@ -536,7 +541,9 @@ public:
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
   NODE(parser, OmpFromClause)
-  NODE_ENUM(OmpFromClause, Expectation)
+  NODE(OmpFromClause, Modifier)
+  NODE(parser, OmpExpectation)
+  NODE_ENUM(OmpExpectation, Value)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
   NODE_ENUM(OmpLastprivateClause, LastprivateModifier)
@@ -548,9 +555,7 @@ public:
   NODE_ENUM(OmpLinearModifier, Value)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
-  NODE(parser, OmpMapperIdentifier)
-  NODE_ENUM(OmpMapClause, TypeModifier)
-  NODE_ENUM(OmpMapClause, Type)
+  NODE(OmpMapClause, Modifier)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
@@ -601,8 +606,7 @@ public:
   NODE(parser, OmpSectionsDirective)
   NODE(parser, OmpSimpleStandaloneDirective)
   NODE(parser, OmpToClause)
-  // No NODE_ENUM for OmpToClause::Expectation, because it's an alias
-  // for OmpFromClause::Expectation.
+  NODE(OmpToClause, Modifier)
   NODE(parser, Only)
   NODE(parser, OpenACCAtomicConstruct)
   NODE(parser, OpenACCBlockConstruct)

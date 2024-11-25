@@ -1716,7 +1716,8 @@ template <typename T0, typename T1, unsigned Opcode> struct TwoOps_match {
 };
 
 /// Matches instructions with Opcode and three operands.
-template <typename T0, typename T1, typename T2, unsigned Opcode>
+template <typename T0, typename T1, typename T2, unsigned Opcode,
+          bool CommutableOp2Op3 = false>
 struct ThreeOps_match {
   T0 Op1;
   T1 Op2;
@@ -1728,8 +1729,12 @@ struct ThreeOps_match {
   template <typename OpTy> bool match(OpTy *V) {
     if (V->getValueID() == Value::InstructionVal + Opcode) {
       auto *I = cast<Instruction>(V);
-      return Op1.match(I->getOperand(0)) && Op2.match(I->getOperand(1)) &&
-             Op3.match(I->getOperand(2));
+      if (!Op1.match(I->getOperand(0)))
+        return false;
+      if (Op2.match(I->getOperand(1)) && Op3.match(I->getOperand(2)))
+        return true;
+      return CommutableOp2Op3 && Op2.match(I->getOperand(2)) &&
+             Op3.match(I->getOperand(1));
     }
     return false;
   }
@@ -1779,6 +1784,14 @@ inline ThreeOps_match<Cond, constantint_match<L>, constantint_match<R>,
                       Instruction::Select>
 m_SelectCst(const Cond &C) {
   return m_Select(C, m_ConstantInt<L>(), m_ConstantInt<R>());
+}
+
+/// Match Select(C, LHS, RHS) or Select(C, RHS, LHS)
+template <typename LHS, typename RHS>
+inline ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select, true>
+m_c_Select(const LHS &L, const RHS &R) {
+  return ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select,
+                        true>(m_Value(), L, R);
 }
 
 /// Matches FreezeInst.
