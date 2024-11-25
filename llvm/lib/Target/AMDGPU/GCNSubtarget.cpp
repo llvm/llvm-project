@@ -51,6 +51,11 @@ static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
                            cl::desc("Enable the use of AA during codegen."),
                            cl::init(true));
 
+static cl::opt<bool> UseGFX12SubwordSBufferLoad(
+    "amdgpu-use-gfx12-subword-sbuffer-load",
+    cl::desc("Enable the use of s_buffer_load_(i/u)(8/16) instructions."),
+    cl::init(false));
+
 static cl::opt<unsigned>
     NSAThreshold("amdgpu-nsa-threshold",
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
