@@ -1103,14 +1103,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   assert(TI.getCharWidth() == 8 && "Only support 8-bit char so far");
   Builder.defineMacro("__CHAR_BIT__", Twine(TI.getCharWidth()));
 
-  // The macro is specifying the number of bits in the value representation,
-  // not the number of bits in the object representation, which is what
-  // getBoolWidth() will return. For the bool/_Bool data type, there is only
-  // ever one bit in the value representation. See C23 6.2.6.2p2 for the rules
-  // in C. Note that [basic.fundamental]p10 allows an implementation-defined
-  // value representation for bool; Clang represents bool as an i1 when
-  // lowering to LLVM, so this value is also correct for C++ for our
-  // implementation.
+  // The macro is specifying the number of bits in the width, not the number of
+  // bits the object requires for its in-memory representation, which is what
+  // getBoolWidth() will return. The bool/_Bool data type is only ever one bit
+  // wide. See C23 6.2.6.2p2 for the rules in C. Note that
+  // C++23 [basic.fundamental]p10 allows an implementation-defined value
+  // representation for bool; when lowing to LLVM, Clang represents bool as an
+  // i8 in memory but as an i1 needing the value, so '1' is also correct for
+  // C++ for our implementation.
   Builder.defineMacro("__BOOL_WIDTH__", "1");
   Builder.defineMacro("__SHRT_WIDTH__", Twine(TI.getShortWidth()));
   Builder.defineMacro("__INT_WIDTH__", Twine(TI.getIntWidth()));
