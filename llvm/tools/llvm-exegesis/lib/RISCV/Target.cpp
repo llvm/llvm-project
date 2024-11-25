@@ -91,6 +91,7 @@ static std::vector<MCInst> loadIntReg(const MCSubtargetInfo &STI, unsigned Reg,
   MCRegister DestReg = Reg;
 
   RISCVMatInt::generateMCInstSeq(Value.getSExtValue(), STI, DestReg, MCInstSeq);
+  MatIntInstrs.resize(MCInstSeq.size());
   std::copy(MCInstSeq.begin(), MCInstSeq.end(), MatIntInstrs.begin());
 
   return MatIntInstrs;
