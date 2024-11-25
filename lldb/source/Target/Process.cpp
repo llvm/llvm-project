@@ -6270,6 +6270,10 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
+lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
+  return lldb_private::UUID();
+}
+
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
   ThreadCollectionSP threads;
 
