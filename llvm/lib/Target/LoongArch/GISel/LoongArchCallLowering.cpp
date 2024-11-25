@@ -28,18 +28,14 @@ bool LoongArchCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   if (Val != nullptr)
     return false;
 
-  MachineInstrBuilder Ret = MIRBuilder.buildInstrNoInsert(LoongArch::PseudoRET);
-  MIRBuilder.insertInstr(Ret);
+  MIRBuilder.buildInstr(LoongArch::PseudoRET);
   return true;
 }
 
 bool LoongArchCallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs, FunctionLoweringInfo &FLI) const {
-  if (F.arg_empty())
-    return true;
-
-  return false;
+  return F.arg_empty();
 }
 
 bool LoongArchCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
