@@ -798,6 +798,8 @@ static_assert(__builtin_reduce_xor((vector4long){(long long)0x1111111111111111L,
 static_assert(__builtin_reduce_xor((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0xFFFFFFFFU);
 static_assert(__builtin_reduce_xor((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0xFFFFFFFFFFFFFFFFUL);
 
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_popcount((vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x01020101 : 0x01010201));
+static_assert(__builtin_bit_cast(unsigned long, __builtin_elementwise_popcount((vector4short){0, 0x0F0F, ~0, ~0x0F0F})) == (LITTLE_END ? 0x0008001000080000 : 0x0000000800100008));
 static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4int){1, 2, 3, 4})) == 5);
 static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4int){0, 0xF0F0, ~0, ~0xF0F0})) == 16 * sizeof(int));
 static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4long){1L, 2L, 3L, 4L})) == 5L);

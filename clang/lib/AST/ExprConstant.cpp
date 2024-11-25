@@ -11315,7 +11315,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateAsRValue(Info, E->getArg(0), Source))
       return false;
 
-    QualType DestTy = E->getType()->castAs<VectorType>()->getElementType();
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
     unsigned SourceLen = Source.getVectorLength();
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);
@@ -11323,8 +11323,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
       APSInt Elt = Source.getVectorElt(EltNum).getInt();
       ResultElements.push_back(
-          APValue(APSInt(APInt(Info.Ctx.getIntWidth(DestTy), Elt.popcount()),
-                         DestTy->isUnsignedIntegerOrEnumerationType())));
+          APValue(APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), Elt.popcount()),
+                         DestEltTy->isUnsignedIntegerOrEnumerationType())));
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
