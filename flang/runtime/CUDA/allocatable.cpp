@@ -22,8 +22,9 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, long stream, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t stream,
+    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
+    int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocate)(
       desc, stream, hasStat, errMsg, sourceFile, sourceLine)};
 #ifndef RT_DEVICE_COMPILATION
@@ -39,7 +40,7 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, long stream, bool hasStat,
   return stat;
 }
 
-int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, long stream,
+int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t stream,
     bool hasStat, const Descriptor *errMsg, const char *sourceFile,
     int sourceLine) {
   if (desc.HasAddendum()) {
@@ -56,7 +57,7 @@ int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, long stream,
 }
 
 int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
-    const Descriptor &source, long stream, bool hasStat,
+    const Descriptor &source, int64_t stream, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocate)(
       alloc, stream, hasStat, errMsg, sourceFile, sourceLine)};
@@ -69,10 +70,10 @@ int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
 }
 
 int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
-    const Descriptor &source, long stream, bool hasStat,
+    const Descriptor &source, int64_t stream, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
-  int stat{RTNAME(AllocatableAllocate)(
-      alloc, hasStat, errMsg, sourceFile, sourceLine)};
+  int stat{RTNAME(CUFAllocatableAllocateSync)(
+      alloc, stream, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
     Fortran::runtime::DoFromSourceAssign(
