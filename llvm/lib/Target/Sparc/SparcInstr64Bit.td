@@ -67,7 +67,7 @@ def : Pat<(i64 0), (COPY (i64 G0))>,
 // The ALU instructions want their simm13 operands as i32 immediates.
 // FIXME: This is no longer true, they are now pointer-sized.
 def as_i32imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 def : Pat<(i64 simm13:$val), (ORri (i64 G0), (as_i32imm $val))>;
 def : Pat<(i64 SETHIimm:$val), (SETHIi (HI22 $val))>;
@@ -91,8 +91,8 @@ def HIX22 : SDNodeXForm<imm, [{
 }]>;
 // Bits 0-9 with ones in bits 10-31. Same as assembler's %lox.
 def LOX10 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(~(~N->getZExtValue() & 0x3ff), SDLoc(N),
-                                   MVT::i32);
+  return CurDAG->getSignedTargetConstant(~(~N->getZExtValue() & 0x3ff),
+                                         SDLoc(N), MVT::i32);
 }]>;
 def : Pat<(i64 nimm33:$val), (XORri (SETHIi (HIX22 $val)), (LOX10 $val))>,
       Requires<[Is64Bit]>;

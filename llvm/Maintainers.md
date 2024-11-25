@@ -121,8 +121,8 @@ david.trevelyan@gmail.com (email), [davidtrevelyan](https://github.com/davidtrev
 
 #### Parts of code generator not covered by someone else
 
-Evan Cheng \
-evan.cheng@apple.com (email)
+Matt Arsenault \
+Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
 
 #### SelectionDAG
 
@@ -469,6 +469,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 ### Inactive or former component maintainers
 
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
+Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 
 ### Former maintainers of removed components

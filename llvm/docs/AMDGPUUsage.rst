@@ -1419,7 +1419,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4       Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
 
-
   llvm.amdgcn.permlane16.swap                      Provide direct access to `v_permlane16_swap_b32` instruction on supported targets.
                                                    Swaps the values across lanes of first 2 operands. Odd rows of the first operand are
                                                    swapped with even rows of the second operand (one row is 16 lanes).
