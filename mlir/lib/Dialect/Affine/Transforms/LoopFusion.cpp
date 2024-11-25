@@ -220,6 +220,9 @@ verifyLoadStoreDomainContainment(unsigned srcId, unsigned dstId,
         }
       }
     }
+
+    storeOps.clear();
+    loadOps.clear();
   }
 
   return true;
