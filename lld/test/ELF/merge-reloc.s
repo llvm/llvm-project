@@ -12,9 +12,9 @@
 # CHECK-NEXT:  [ 1] .text             PROGBITS        0000000000000000 000040 000000 00  AX  0   0  4
 # CHECK-NEXT:  [ 2] .rodata.1         PROGBITS        0000000000000000 000040 000004 04  AM  0   0  4
 # CHECK-NEXT:  [ 3] .rodata.2         PROGBITS        0000000000000000 000048 000008 08  AM  0   0  8
-# CHECK-NEXT:  [ 4] .rodata.cst8      PROGBITS        0000000000000000 000050 000010 00  AM  0   0  1
+# CHECK-NEXT:  [ 4] .rodata.cst8      PROGBITS        0000000000000000 000050 000010 08  AM  0   0  1
 # CHECK-NEXT:  [ 5] .rela.rodata.cst8 RELA            0000000000000000 000068 000030 18   I  9   4  8
-# CHECK-NEXT:  [ 6] .cst4             PROGBITS        0000000000000000 000060 000008 00  AM  0   0  1
+# CHECK-NEXT:  [ 6] .cst4             PROGBITS        0000000000000000 000060 000008 04  AM  0   0  1
 # CHECK-NEXT:  [ 7] .rela.cst4        RELA            0000000000000000 000098 000030 18   I  9   6  8
 
 # OBJDUMP:      Contents of section .rodata.1:
@@ -26,7 +26,7 @@
 # OBJDUMP:      Contents of section .cst4:
 # OBJDUMP-NEXT:  0000 00000000 00000000                    ........
 
-# CHECK-PDE: [ 2] .cst4             PROGBITS        0000000000200140 000140 000008 00  AM  0   0  1
+# CHECK-PDE: [ 2] .cst4             PROGBITS        0000000000200140 000140 000008 04  AM  0   0  1
 
 foo:
 
