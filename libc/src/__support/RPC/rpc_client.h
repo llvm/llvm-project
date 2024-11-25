@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_CLIENT_H
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_CLIENT_H
 
-#include "rpc.h"
+#include "shared/rpc.h"
 
 #include "include/llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/CPP/type_traits.h"
@@ -17,6 +17,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
+
+using ::rpc::Buffer;
+using ::rpc::Client;
+using ::rpc::Port;
+using ::rpc::Process;
+using ::rpc::Server;
 
 static_assert(cpp::is_trivially_copyable<Client>::value &&
                   sizeof(Process<true>) == sizeof(Process<false>),

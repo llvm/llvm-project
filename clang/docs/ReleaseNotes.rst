@@ -471,6 +471,8 @@ Attribute Changes in Clang
 - Clang now supports ``[[clang::lifetime_capture_by(X)]]``. Similar to lifetimebound, this can be
   used to specify when a reference to a function parameter is captured by another capturing entity ``X``.
 
+- The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -714,6 +716,7 @@ Bug Fixes to C++ Support
   assumption if they also occur inside of a dependent lambda. (#GH114787)
 - Clang now uses valid deduced type locations when diagnosing functions with trailing return type
   missing placeholder return type. (#GH78694)
+- Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -852,6 +855,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - The option ``-mcmodel=large`` for the large code model is supported.
+- Bump RVV intrinsic to version 1.0, the spec: https://github.com/riscv-non-isa/rvv-intrinsic-doc/releases/tag/v1.0.0-rc4
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

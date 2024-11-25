@@ -75,10 +75,13 @@ MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerRunOnOp(MlirPassManager passManager, MlirOperation op);
 
 /// Enable IR printing.
+/// The treePrintingPath argument is an optional path to a directory
+/// where the dumps will be produced. If it isn't provided then dumps
+/// are produced to stderr.
 MLIR_CAPI_EXPORTED void mlirPassManagerEnableIRPrinting(
     MlirPassManager passManager, bool printBeforeAll, bool printAfterAll,
     bool printModuleScope, bool printAfterOnlyOnChange,
-    bool printAfterOnlyOnFailure);
+    bool printAfterOnlyOnFailure, MlirStringRef treePrintingPath);
 
 /// Enable / disable verify-each.
 MLIR_CAPI_EXPORTED void

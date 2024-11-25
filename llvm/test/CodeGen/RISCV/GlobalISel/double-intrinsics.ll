@@ -5,6 +5,10 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -global-isel -mattr=+d \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d \
 ; RUN:   | FileCheck -check-prefixes=CHECKIFD,RV64IFD %s
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -global-isel  \
+; RUN:   -verify-machineinstrs | FileCheck -check-prefix=RV32I %s
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -global-isel  \
+; RUN:   -verify-machineinstrs | FileCheck -check-prefix=RV64I %s
 
 declare double @llvm.sqrt.f64(double)
 
@@ -13,6 +17,24 @@ define double @sqrt_f64(double %a) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fsqrt.d fa0, fa0
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: sqrt_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call sqrt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sqrt_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call sqrt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.sqrt.f64(double %a)
   ret double %1
 }
@@ -24,6 +46,24 @@ define double @fma_f64(double %a, double %b, double %c) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fmadd.d fa0, fa0, fa1, fa2
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: fma_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fma
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fma_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fma
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.fma.f64(double %a, double %b, double %c)
   ret double %1
 }
@@ -35,6 +75,38 @@ define double @fmuladd_f64(double %a, double %b, double %c) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fmadd.d fa0, fa0, fa1, fa2
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: fmuladd_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a4
+; RV32I-NEXT:    mv s1, a5
+; RV32I-NEXT:    call __muldf3
+; RV32I-NEXT:    mv a2, s0
+; RV32I-NEXT:    mv a3, s1
+; RV32I-NEXT:    call __adddf3
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fmuladd_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a2
+; RV64I-NEXT:    call __muldf3
+; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call __adddf3
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.fmuladd.f64(double %a, double %b, double %c)
   ret double %1
 }
@@ -46,6 +118,20 @@ define double @fabs_f64(double %a) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fabs.d fa0, fa0
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: fabs_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fabs_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    srli a1, a1, 1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
   %1 = call double @llvm.fabs.f64(double %a)
   ret double %1
 }
@@ -57,6 +143,24 @@ define double @minnum_f64(double %a, double %b) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fmin.d fa0, fa0, fa1
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: minnum_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fmin
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: minnum_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fmin
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.minnum.f64(double %a, double %b)
   ret double %1
 }
@@ -68,6 +172,24 @@ define double @maxnum_f64(double %a, double %b) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fmax.d fa0, fa0, fa1
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: maxnum_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fmax
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: maxnum_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fmax
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.maxnum.f64(double %a, double %b)
   ret double %1
 }
@@ -79,6 +201,25 @@ define double @copysign_f64(double %a, double %b) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fsgnj.d fa0, fa0, fa1
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: copysign_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    addi a4, a2, -1
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    and a2, a3, a2
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: copysign_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, -1
+; RV64I-NEXT:    slli a3, a2, 63
+; RV64I-NEXT:    srli a2, a2, 1
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    and a1, a1, a3
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
   %1 = call double @llvm.copysign.f64(double %a, double %b)
   ret double %1
 }
@@ -103,6 +244,24 @@ define double @floor_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: floor_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call floor
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: floor_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call floor
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.floor.f64(double %a)
   ret double %1
 }
@@ -127,6 +286,24 @@ define double @ceil_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: ceil_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call ceil
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: ceil_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call ceil
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.ceil.f64(double %a)
   ret double %1
 }
@@ -151,6 +328,24 @@ define double @trunc_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: trunc_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call trunc
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: trunc_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call trunc
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.trunc.f64(double %a)
   ret double %1
 }
@@ -175,6 +370,24 @@ define double @rint_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: rint_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call rint
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: rint_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call rint
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.rint.f64(double %a)
   ret double %1
 }
@@ -199,6 +412,24 @@ define double @nearbyint_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: nearbyint_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call nearbyint
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: nearbyint_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call nearbyint
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.nearbyint.f64(double %a)
   ret double %1
 }
@@ -223,6 +454,24 @@ define double @round_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: round_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call round
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: round_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call round
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.round.f64(double %a)
   ret double %1
 }
@@ -247,6 +496,24 @@ define double @roundeven_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: roundeven_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call roundeven
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: roundeven_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call roundeven
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call double @llvm.roundeven.f64(double %a)
   ret double %1
 }
@@ -259,6 +526,30 @@ define i1 @isnan_d_fpclass(double %x) {
 ; CHECKIFD-NEXT:    andi a0, a0, 768
 ; CHECKIFD-NEXT:    snez a0, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: isnan_d_fpclass:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    addi a3, a2, -1
+; RV32I-NEXT:    lui a2, 524032
+; RV32I-NEXT:    and a1, a1, a3
+; RV32I-NEXT:    beq a1, a2, .LBB14_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sltu a0, a2, a1
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB14_2:
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: isnan_d_fpclass:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    li a2, 2047
+; RV64I-NEXT:    srli a1, a1, 1
+; RV64I-NEXT:    slli a2, a2, 52
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    sltu a0, a2, a0
+; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; nan
   ret i1 %1
 }

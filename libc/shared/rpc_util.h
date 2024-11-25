@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
-#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
-
-#include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
+#ifndef LLVM_LIBC_SHARED_RPC_UTIL_H
+#define LLVM_LIBC_SHARED_RPC_UTIL_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -20,7 +17,10 @@
 #define RPC_TARGET_IS_GPU
 #endif
 
-namespace LIBC_NAMESPACE_DECL {
+#ifndef RPC_INLINE
+#define RPC_INLINE inline
+#endif
+
 namespace rpc {
 
 template <typename T> struct type_identity {
@@ -40,26 +40,26 @@ template <class T> struct is_const<const T> : type_constant<bool, true> {};
 
 /// Freestanding implementation of std::move.
 template <class T>
-LIBC_INLINE constexpr typename remove_reference<T>::type &&move(T &&t) {
+RPC_INLINE constexpr typename remove_reference<T>::type &&move(T &&t) {
   return static_cast<typename remove_reference<T>::type &&>(t);
 }
 
 /// Freestanding implementation of std::forward.
 template <typename T>
-LIBC_INLINE constexpr T &&forward(typename remove_reference<T>::type &value) {
+RPC_INLINE constexpr T &&forward(typename remove_reference<T>::type &value) {
   return static_cast<T &&>(value);
 }
 template <typename T>
-LIBC_INLINE constexpr T &&forward(typename remove_reference<T>::type &&value) {
+RPC_INLINE constexpr T &&forward(typename remove_reference<T>::type &&value) {
   return static_cast<T &&>(value);
 }
 
 struct in_place_t {
-  LIBC_INLINE explicit in_place_t() = default;
+  RPC_INLINE explicit in_place_t() = default;
 };
 
 struct nullopt_t {
-  LIBC_INLINE constexpr explicit nullopt_t() = default;
+  RPC_INLINE constexpr explicit nullopt_t() = default;
 };
 
 constexpr inline in_place_t in_place{};
@@ -75,15 +75,15 @@ template <typename T> class optional {
 
     bool in_use = false;
 
-    LIBC_INLINE ~OptionalStorage() { reset(); }
+    RPC_INLINE ~OptionalStorage() { reset(); }
 
-    LIBC_INLINE constexpr OptionalStorage() : empty() {}
+    RPC_INLINE constexpr OptionalStorage() : empty() {}
 
     template <typename... Args>
-    LIBC_INLINE constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+    RPC_INLINE constexpr explicit OptionalStorage(in_place_t, Args &&...args)
         : stored_value(forward<Args>(args)...) {}
 
-    LIBC_INLINE constexpr void reset() {
+    RPC_INLINE constexpr void reset() {
       if (in_use)
         stored_value.~U();
       in_use = false;
@@ -93,60 +93,54 @@ template <typename T> class optional {
   OptionalStorage<T> storage;
 
 public:
-  LIBC_INLINE constexpr optional() = default;
-  LIBC_INLINE constexpr optional(nullopt_t) {}
+  RPC_INLINE constexpr optional() = default;
+  RPC_INLINE constexpr optional(nullopt_t) {}
 
-  LIBC_INLINE constexpr optional(const T &t) : storage(in_place, t) {
+  RPC_INLINE constexpr optional(const T &t) : storage(in_place, t) {
     storage.in_use = true;
   }
-  LIBC_INLINE constexpr optional(const optional &) = default;
+  RPC_INLINE constexpr optional(const optional &) = default;
 
-  LIBC_INLINE constexpr optional(T &&t) : storage(in_place, move(t)) {
+  RPC_INLINE constexpr optional(T &&t) : storage(in_place, move(t)) {
     storage.in_use = true;
   }
-  LIBC_INLINE constexpr optional(optional &&O) = default;
+  RPC_INLINE constexpr optional(optional &&O) = default;
 
-  LIBC_INLINE constexpr optional &operator=(T &&t) {
+  RPC_INLINE constexpr optional &operator=(T &&t) {
     storage = move(t);
     return *this;
   }
-  LIBC_INLINE constexpr optional &operator=(optional &&) = default;
+  RPC_INLINE constexpr optional &operator=(optional &&) = default;
 
-  LIBC_INLINE constexpr optional &operator=(const T &t) {
+  RPC_INLINE constexpr optional &operator=(const T &t) {
     storage = t;
     return *this;
   }
-  LIBC_INLINE constexpr optional &operator=(const optional &) = default;
+  RPC_INLINE constexpr optional &operator=(const optional &) = default;
 
-  LIBC_INLINE constexpr void reset() { storage.reset(); }
+  RPC_INLINE constexpr void reset() { storage.reset(); }
 
-  LIBC_INLINE constexpr const T &value() const & {
-    return storage.stored_value;
-  }
+  RPC_INLINE constexpr const T &value() const & { return storage.stored_value; }
 
-  LIBC_INLINE constexpr T &value() & { return storage.stored_value; }
+  RPC_INLINE constexpr T &value() & { return storage.stored_value; }
 
-  LIBC_INLINE constexpr explicit operator bool() const {
-    return storage.in_use;
-  }
-  LIBC_INLINE constexpr bool has_value() const { return storage.in_use; }
-  LIBC_INLINE constexpr const T *operator->() const {
+  RPC_INLINE constexpr explicit operator bool() const { return storage.in_use; }
+  RPC_INLINE constexpr bool has_value() const { return storage.in_use; }
+  RPC_INLINE constexpr const T *operator->() const {
     return &storage.stored_value;
   }
-  LIBC_INLINE constexpr T *operator->() { return &storage.stored_value; }
-  LIBC_INLINE constexpr const T &operator*() const & {
+  RPC_INLINE constexpr T *operator->() { return &storage.stored_value; }
+  RPC_INLINE constexpr const T &operator*() const & {
     return storage.stored_value;
   }
-  LIBC_INLINE constexpr T &operator*() & { return storage.stored_value; }
+  RPC_INLINE constexpr T &operator*() & { return storage.stored_value; }
 
-  LIBC_INLINE constexpr T &&value() && { return move(storage.stored_value); }
-  LIBC_INLINE constexpr T &&operator*() && {
-    return move(storage.stored_value);
-  }
+  RPC_INLINE constexpr T &&value() && { return move(storage.stored_value); }
+  RPC_INLINE constexpr T &&operator*() && { return move(storage.stored_value); }
 };
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
-LIBC_INLINE void sleep_briefly() {
+RPC_INLINE void sleep_briefly() {
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700)
     asm("nanosleep.u32 64;" ::: "memory");
@@ -164,7 +158,7 @@ LIBC_INLINE void sleep_briefly() {
 }
 
 /// Conditional to indicate if this process is running on the GPU.
-LIBC_INLINE constexpr bool is_process_gpu() {
+RPC_INLINE constexpr bool is_process_gpu() {
 #ifdef RPC_TARGET_IS_GPU
   return true;
 #else
@@ -173,14 +167,14 @@ LIBC_INLINE constexpr bool is_process_gpu() {
 }
 
 /// Wait for all lanes in the group to complete.
-LIBC_INLINE void sync_lane(uint64_t lane_mask) {
+RPC_INLINE void sync_lane(uint64_t lane_mask) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_sync_lane(lane_mask);
 #endif
 }
 
 /// Copies the value from the first active thread to the rest.
-LIBC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
+RPC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_read_first_lane_u32(lane_mask, x);
 #else
@@ -189,7 +183,7 @@ LIBC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
 }
 
 /// Returns the number lanes that participate in the RPC interface.
-LIBC_INLINE uint32_t get_num_lanes() {
+RPC_INLINE uint32_t get_num_lanes() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_num_lanes();
 #else
@@ -198,7 +192,7 @@ LIBC_INLINE uint32_t get_num_lanes() {
 }
 
 /// Returns the id of the thread inside of an AMD wavefront executing together.
-LIBC_INLINE uint64_t get_lane_mask() {
+RPC_INLINE uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_mask();
 #else
@@ -207,7 +201,7 @@ LIBC_INLINE uint64_t get_lane_mask() {
 }
 
 /// Returns the id of the thread inside of an AMD wavefront executing together.
-LIBC_INLINE uint32_t get_lane_id() {
+RPC_INLINE uint32_t get_lane_id() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_id();
 #else
@@ -216,7 +210,7 @@ LIBC_INLINE uint32_t get_lane_id() {
 }
 
 /// Conditional that is only true for a single thread in a lane.
-LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
+RPC_INLINE bool is_first_lane(uint64_t lane_mask) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_is_first_in_lane(lane_mask);
 #else
@@ -225,7 +219,7 @@ LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
 }
 
 /// Returns a bitmask of threads in the current lane for which \p x is true.
-LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
+RPC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_ballot(lane_mask, x);
 #else
@@ -235,7 +229,7 @@ LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
 
 /// Return \p val aligned "upwards" according to \p align.
 template <typename V, typename A>
-LIBC_INLINE constexpr V align_up(V val, A align) {
+RPC_INLINE constexpr V align_up(V val, A align) {
   return ((val + V(align) - 1) / V(align)) * V(align);
 }
 
@@ -243,14 +237,14 @@ LIBC_INLINE constexpr V align_up(V val, A align) {
 /// model. On the GPU stack variables are always private to a lane so we can
 /// simply use the variable passed in. On the CPU we need to allocate enough
 /// space for the whole lane and index into it.
-template <typename V> LIBC_INLINE V &lane_value(V *val, uint32_t id) {
+template <typename V> RPC_INLINE V &lane_value(V *val, uint32_t id) {
   if constexpr (is_process_gpu())
     return *val;
   return val[id];
 }
 
 /// Advance the \p p by \p bytes.
-template <typename T, typename U> LIBC_INLINE T *advance(T *ptr, U bytes) {
+template <typename T, typename U> RPC_INLINE T *advance(T *ptr, U bytes) {
   if constexpr (is_const<T>::value)
     return reinterpret_cast<T *>(reinterpret_cast<const uint8_t *>(ptr) +
                                  bytes);
@@ -259,15 +253,14 @@ template <typename T, typename U> LIBC_INLINE T *advance(T *ptr, U bytes) {
 }
 
 /// Wrapper around the optimal memory copy implementation for the target.
-LIBC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
+RPC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
   __builtin_memcpy(dst, src, count);
 }
 
-template <class T> LIBC_INLINE constexpr const T &max(const T &a, const T &b) {
+template <class T> RPC_INLINE constexpr const T &max(const T &a, const T &b) {
   return (a < b) ? b : a;
 }
 
 } // namespace rpc
-} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTIL_H
+#endif // LLVM_LIBC_SHARED_RPC_UTIL_H
