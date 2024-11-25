@@ -477,10 +477,10 @@ public:
     return VT != MVT::f64;
   }
   MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
-                                        MachineBasicBlock *MBB) const;
+                                      MachineBasicBlock *MBB) const;
 
   MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
-                                         MachineBasicBlock *MBB) const;
+                                       MachineBasicBlock *MBB) const;
 
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
@@ -728,7 +728,6 @@ private:
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
-
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,

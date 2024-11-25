@@ -751,8 +751,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
-  // We're not using SJLJ for exception handling, but they're implemented 
-  // solely to support use of __builtin_setjmp / __builtin_longjmp. 
+  // We're not using SJLJ for exception handling, but they're implemented
+  // solely to support use of __builtin_setjmp / __builtin_longjmp.
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
 
@@ -945,11 +945,9 @@ bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return SystemZVectorConstantInfo(Imm).isVectorConstantLegal(Subtarget);
 }
 
-
 MachineBasicBlock *
 SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const {
-
+                                        MachineBasicBlock *MBB) const {
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const SystemZRegisterInfo *TRI = Subtarget.getRegisterInfo();
@@ -967,8 +965,7 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   Register restoreDstReg = MRI.createVirtualRegister(RC);
 
   MVT PVT = getPointerTy(MF->getDataLayout());
-  assert((PVT == MVT::i64 || PVT == MVT::i32) &&
-         "Invalid Pointer Size!");
+  assert((PVT == MVT::i64 || PVT == MVT::i32) && "Invalid Pointer Size!");
   // For v = setjmp(buf), we generate.
   // Algorithm:
   //
@@ -1019,13 +1016,12 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   sinkMBB->splice(sinkMBB->begin(), MBB,
                   std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   sinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
-  
 
   // thisMBB:
   const int64_t FPOffset = 0;                         // Slot 1.
   const int64_t LabelOffset = 1 * PVT.getStoreSize(); // Slot 2.
   const int64_t BCOffset = 2 * PVT.getStoreSize();    // Slot 3.
-  const int64_t SPOffset = 3 * PVT.getStoreSize(); // Slot 4.
+  const int64_t SPOffset = 3 * PVT.getStoreSize();    // Slot 4.
 
   // Buf address.
   Register BufReg = MI.getOperand(1).getReg();
@@ -1035,14 +1031,13 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
 
   // Prepare IP for longjmp.
   BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LARL), LabelReg)
-          .addMBB(restoreMBB);
-
+      .addMBB(restoreMBB);
   // Store IP for return from jmp, slot 2, offset = 1.
   BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
-          .addReg(LabelReg)
-          .addReg(BufReg)
-          .addImm(LabelOffset)
-          .addReg(0);
+      .addReg(LabelReg)
+      .addReg(BufReg)
+      .addImm(LabelOffset)
+      .addReg(0);
 
   auto *SpecialRegs = Subtarget.getSpecialRegisters();
   bool HasFP = Subtarget.getFrameLowering()->hasFP(*MF);
@@ -1065,9 +1060,10 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   bool BackChain = MF->getSubtarget<SystemZSubtarget>().hasBackChain();
   if (BackChain) {
     Register BCReg = MRI.createVirtualRegister(RC);
+    auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
     MIB = BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LG), BCReg)
               .addReg(SpecialRegs->getStackPointerRegister())
-              .addImm(0)
+              .addImm(TFL->getBackchainOffset(*MF))
               .addReg(0);
 
     BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::STG))
@@ -1077,9 +1073,9 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
         .addReg(0);
   }
 
-  // Setup.  
+  // Setup.
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::EH_SjLj_Setup))
-          .addMBB(restoreMBB);
+            .addMBB(restoreMBB);
 
   const SystemZRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   MIB.addRegMask(RegInfo->getNoPreservedMask());
@@ -1093,10 +1089,10 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
 
   // sinkMBB:
   BuildMI(*sinkMBB, sinkMBB->begin(), DL, TII->get(SystemZ::PHI), DstReg)
-    .addReg(mainDstReg)
-    .addMBB(mainMBB)
-    .addReg(restoreDstReg)
-    .addMBB(restoreMBB);
+      .addReg(mainDstReg)
+      .addMBB(mainMBB)
+      .addReg(restoreDstReg)
+      .addMBB(restoreMBB);
 
   // restoreMBB.
   BuildMI(restoreMBB, DL, TII->get(SystemZ::LHI), restoreDstReg).addImm(1);
@@ -1110,7 +1106,7 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
 
 MachineBasicBlock *
 SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const {
+                                         MachineBasicBlock *MBB) const {
 
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -1119,8 +1115,7 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
   MVT PVT = getPointerTy(MF->getDataLayout());
-  assert((PVT == MVT::i64 || PVT == MVT::i32) &&
-         "Invalid Pointer Size!");
+  assert((PVT == MVT::i64 || PVT == MVT::i32) && "Invalid Pointer Size!");
   Register BufReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC = MRI.getRegClass(BufReg);
   auto *SpecialRegs = Subtarget.getSpecialRegisters();
@@ -1130,15 +1125,16 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   MachineInstrBuilder MIB;
 
-  const int64_t FPOffset    = 0; 
+  const int64_t FPOffset = 0;
   const int64_t LabelOffset = 1 * PVT.getStoreSize();
-  const int64_t SPOffset   = 3 * PVT.getStoreSize();
-  const int64_t LPOffset    = 4 * PVT.getStoreSize();
+  const int64_t BCOffset = 2 * PVT.getStoreSize();
+  const int64_t SPOffset = 3 * PVT.getStoreSize();
+  const int64_t LPOffset = 4 * PVT.getStoreSize();
 
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), Tmp)
-             .addReg(BufReg)
-             .addImm(LabelOffset)
-             .addReg(0);
+            .addReg(BufReg)
+            .addImm(LabelOffset)
+            .addReg(0);
 
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG),
                 SpecialRegs->getFramePointerRegister())
@@ -1147,20 +1143,19 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
             .addReg(0);
 
   // We are restoring R13 even though we never stored in setjmp from llvm,
-  // as gcc always stores R13 in builtin_setjmp. We could have mixed code 
+  // as gcc always stores R13 in builtin_setjmp. We could have mixed code
   // gcc setjmp and llvm longjmp.
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), SystemZ::R13D)
-             .addReg(BufReg)
-             .addImm(LPOffset)
-             .addReg(0);
+            .addReg(BufReg)
+            .addImm(LPOffset)
+            .addReg(0);
 
   bool BackChain = MF->getSubtarget<SystemZSubtarget>().hasBackChain();
   if (BackChain) {
-     const int64_t BCOffset    = 2 * PVT.getStoreSize();
-     MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), BCReg)
-             .addReg(BufReg)
-             .addImm(BCOffset)
-             .addReg(0);
+    MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG), BCReg)
+              .addReg(BufReg)
+              .addImm(BCOffset)
+              .addReg(0);
   }
 
   MIB = BuildMI(*MBB, MI, DL, TII->get(SystemZ::LG),
@@ -1170,10 +1165,11 @@ SystemZTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
             .addReg(0);
 
   if (BackChain) {
+    auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
     BuildMI(*MBB, MI, DL, TII->get(SystemZ::STG))
         .addReg(BCReg)
         .addReg(SpecialRegs->getStackPointerRegister())
-        .addImm(0)
+        .addImm(TFL->getBackchainOffset(*MF))
         .addReg(0);
   }
 
@@ -9975,7 +9971,6 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
 
   case SystemZ::PROBED_ALLOCA:
     return emitProbedAlloca(MI, MBB);
-  
   case SystemZ::EH_SjLj_SetJmp:
     return emitEHSjLjSetJmp(MI, MBB);
   case SystemZ::EH_SjLj_LongJmp:
