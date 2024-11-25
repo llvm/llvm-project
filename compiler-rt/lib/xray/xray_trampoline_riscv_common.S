@@ -25,7 +25,7 @@ ASM_SYMBOL(__xray_FunctionEntry):
 
 	// Load the handler function pointer into a2
 	la	a2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-	ld	a2, 0(a2)
+        LOAD_XLEN   a2, 0(a2)
 
 	// Handler address will be null if it is not set
 	beq	a2, x0, 1f
@@ -52,7 +52,7 @@ ASM_SYMBOL(__xray_FunctionExit):
 
 	// Load the handler function pointer into a2
 	la	a2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-	ld	a2, 0(a2)
+        LOAD_XLEN   a2, 0(a2)
 
 	// Handler address will be null if it is not set
 	beq	a2, x0, 1f
@@ -79,7 +79,7 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 
 	// Load the handler function pointer into a2
 	la	a2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-	ld	a2, 0(a2)
+        LOAD_XLEN   a2, 0(a2)
 
 	// Handler address will be null if it is not set
 	beq	a2, x0, 1f
