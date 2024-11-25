@@ -1728,9 +1728,9 @@ def err_introducing_special_friend : Error<
 def err_tagless_friend_type_template : Error<
   "friend type templates must use an elaborated type">;
 def err_no_matching_local_friend : Error<
-  "no matching function found in local scope">;
+  "cannot define friend function in a local class definition">;
 def err_no_matching_local_friend_suggest : Error<
-  "no matching function %0 found in local scope; did you mean %3?">;
+  "cannot define friend function %0 in a local class definition; did you mean %3?">;
 def err_partial_specialization_friend : Error<
   "partial specialization cannot be declared as a friend">;
 def err_qualified_friend_def : Error<
@@ -11396,7 +11396,7 @@ def err_omp_atomic_weak_no_equality : Error<"expected '==' operator for 'weak' c
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
-  "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', 'relaxed', |}1'acq_rel', 'acquire' or 'release' clause">;
+  "directive '#pragma omp %0' cannot contain more than one 'seq_cst',%select{ 'relaxed',|}1 'acq_rel', 'acquire' or 'release' clause">;
 def err_omp_atomic_incompatible_mem_order_clause : Error<
   "directive '#pragma omp atomic%select{ %0|}1' cannot be used with '%2' clause">;
 def note_omp_previous_mem_order_clause : Note<
