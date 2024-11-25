@@ -1637,3 +1637,56 @@ define double @minimumnum_double(double %x, double %y) {
   %z = call double @llvm.minimumnum.f64(double %x, double %y)
   ret double %z
 }
+
+define double @ldexp_double(double %x, i32 signext %y) nounwind {
+; RV32IFD-LABEL: ldexp_double:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    tail ldexp
+;
+; RV64IFD-LABEL: ldexp_double:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addi sp, sp, -16
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    call ldexp
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: ldexp_double:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call ldexp
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: ldexp_double:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    call ldexp
+; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32I-LABEL: ldexp_double:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call ldexp
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: ldexp_double:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call ldexp
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %z = call double @llvm.ldexp.f64.i32(double %x, i32 %y)
+  ret double %z
+}
