@@ -393,11 +393,11 @@ defm : BWWriteResPair<WriteCvtPD2PS,  [BWPort1,BWPort5], 4, [1,1], 2, 5>;
 defm : BWWriteResPair<WriteCvtPD2PSY, [BWPort1,BWPort5], 6, [1,1], 2, 6>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2PSZ>;
 
-defm : X86WriteRes<WriteCvtPH2PS,     [BWPort0,BWPort5], 2, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSY,    [BWPort0,BWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PS,     [BWPort1,BWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSY,    [BWPort1,BWPort5], 2, [1,1], 2>;
 defm : X86WriteResUnsupported<WriteCvtPH2PSZ>;
-defm : X86WriteRes<WriteCvtPH2PSLd,  [BWPort0,BWPort23], 6, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSYLd, [BWPort0,BWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSLd,  [BWPort1,BWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSYLd, [BWPort1,BWPort23], 6, [1,1], 2>;
 defm : X86WriteResUnsupported<WriteCvtPH2PSZLd>;
 
 defm : X86WriteRes<WriteCvtPS2PH,    [BWPort1,BWPort5], 4, [1,1], 2>;
