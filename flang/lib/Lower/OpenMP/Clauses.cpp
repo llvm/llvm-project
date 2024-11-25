@@ -384,11 +384,12 @@ Absent make(const parser::OmpClause::Absent &inp,
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAffinityClause
-  auto &t0 = std::get<std::optional<parser::OmpIterator>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
   auto &&maybeIter =
-      maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+      m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
 
   return Affinity{{/*Iterator=*/std::move(maybeIter),
                    /*LocatorList=*/makeObjects(t1, semaCtx)}};
@@ -403,11 +404,12 @@ Align make(const parser::OmpClause::Align &inp,
 Aligned make(const parser::OmpClause::Aligned &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAlignedClause
+  auto &mods = semantics::OmpGetModifiers(inp.v);
   auto &t0 = std::get<parser::OmpObjectList>(inp.v.t);
-  auto &t1 = std::get<std::optional<parser::ScalarIntConstantExpr>>(inp.v.t);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpAlignment>(mods);
 
   return Aligned{{
-      /*Alignment=*/maybeApply(makeExprFn(semaCtx), t1),
+      /*Alignment=*/maybeApplyToV(makeExprFn(semaCtx), m1),
       /*List=*/makeObjects(t0, semaCtx),
   }};
 }
@@ -659,18 +661,18 @@ Detach make(const parser::OmpClause::Detach &inp,
 Device make(const parser::OmpClause::Device &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDeviceClause
-  using wrapped = parser::OmpDeviceClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpDeviceClause::DeviceModifier, Device::DeviceModifier,
+      convert, parser::OmpDeviceModifier::Value, Device::DeviceModifier,
       // clang-format off
       MS(Ancestor,   Ancestor)
       MS(Device_Num, DeviceNum)
       // clang-format on
   );
-  auto &t0 = std::get<std::optional<wrapped::DeviceModifier>>(inp.v.t);
+
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpDeviceModifier>(mods);
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
-  return Device{{/*DeviceModifier=*/maybeApply(convert, t0),
+  return Device{{/*DeviceModifier=*/maybeApplyToV(convert, m0),
                  /*DeviceDescription=*/makeExpr(t1, semaCtx)}};
 }
 
