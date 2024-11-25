@@ -632,8 +632,10 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
       // id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
-        Function.addCFIInstruction(
-            Offset, MCCFIInstruction::createNegateRAState(nullptr));
+        // Fix: not adding OpNegateRAState since the location they are needed
+        // depends on the order of BasicBlocks, which changes during
+        // optimizations. They are generated in InsertNegateRAStatePass after
+        // optimizations instead.
         break;
       }
       if (opts::Verbosity >= 1)
