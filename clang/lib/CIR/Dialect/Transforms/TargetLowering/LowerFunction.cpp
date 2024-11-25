@@ -1282,12 +1282,14 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
           mlir::cast<StructType>(RetTy).getNumElements() != 0) {
         RetVal = newCallOp.getResult();
 
-        for (auto user : Caller.getOperation()->getUsers()) {
-          if (auto storeOp = mlir::dyn_cast<StoreOp>(user)) {
-            auto DestPtr = createCoercedBitcast(storeOp.getAddr(),
-                                                RetVal.getType(), *this);
-            rewriter.replaceOpWithNewOp<StoreOp>(storeOp, RetVal, DestPtr);
-          }
+        llvm::SmallVector<StoreOp, 8> workList;
+        for (auto *user : Caller->getUsers())
+          if (auto storeOp = mlir::dyn_cast<StoreOp>(user))
+            workList.push_back(storeOp);
+        for (StoreOp storeOp : workList) {
+          auto destPtr =
+              createCoercedBitcast(storeOp.getAddr(), RetVal.getType(), *this);
+          rewriter.replaceOpWithNewOp<StoreOp>(storeOp, RetVal, destPtr);
         }
       }
 
