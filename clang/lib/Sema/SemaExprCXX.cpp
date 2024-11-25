@@ -5720,8 +5720,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
            "typed resource element compatible types are an HLSL-only feature");
-    if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
-                                 diag::err_incomplete_type))
+    if (T->isIncompleteType())
       return false;
 
     return Self.HLSL().IsTypedResourceElementCompatible(T);
