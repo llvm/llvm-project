@@ -1432,7 +1432,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 bool WebAssemblyTargetLowering::CanLowerReturn(
     CallingConv::ID /*CallConv*/, MachineFunction & /*MF*/, bool /*IsVarArg*/,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    LLVMContext & /*Context*/) const {
+    LLVMContext & /*Context*/,
+    const Type *RetTy) const {
   // WebAssembly can only handle returning tuples with multivalue enabled
   return WebAssembly::canLowerReturn(Outs.size(), Subtarget);
 }

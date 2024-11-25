@@ -2172,7 +2172,8 @@ bool SystemZTargetLowering::
 CanLowerReturn(CallingConv::ID CallConv,
                MachineFunction &MF, bool isVarArg,
                const SmallVectorImpl<ISD::OutputArg> &Outs,
-               LLVMContext &Context) const {
+               LLVMContext &Context,
+               const Type *RetTy) const {
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)

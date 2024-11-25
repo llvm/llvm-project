@@ -207,7 +207,7 @@ def RetCC_MipsN : CallingConv<[
       CCIfType<[i8, i16, i32, i64],
           CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
 
-  // i64 are returned in registers V0_64, V1_64
+  // i64 are returned in registers V0_64, V1_64, A0_64
   CCIfType<[i64], CCAssignToReg<[V0_64, V1_64]>>,
 
   // f32 are returned in registers F0, F2

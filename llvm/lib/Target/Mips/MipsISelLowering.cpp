@@ -3865,12 +3865,11 @@ bool
 MipsTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                    MachineFunction &MF, bool IsVarArg,
                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                   LLVMContext &Context) const {
+                                   LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   MipsCCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, RetCC_Mips);
+  return CCInfo.CheckCallReturn(Outs, RetCC_Mips, RetTy);
 }
-
 bool MipsTargetLowering::shouldSignExtendTypeInLibCall(EVT Type,
                                                        bool IsSigned) const {
   if ((ABI.IsN32() || ABI.IsN64()) && Type == MVT::i32)
