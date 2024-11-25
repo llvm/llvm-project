@@ -12034,7 +12034,14 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (VectorizableTree.back()->isGather() &&
       VectorizableTree.back()->isAltShuffle() &&
       VectorizableTree.back()->getVectorFactor() > 2 &&
-      allSameBlock(VectorizableTree.back()->Scalars))
+      allSameBlock(VectorizableTree.back()->Scalars) &&
+      !VectorizableTree.back()->Scalars.front()->getType()->isVectorTy() &&
+      TTI->getScalarizationOverhead(
+          getWidenedType(VectorizableTree.back()->Scalars.front()->getType(),
+                         VectorizableTree.back()->getVectorFactor()),
+          APInt::getAllOnes(VectorizableTree.back()->getVectorFactor()),
+          /*Insert=*/true, /*Extract=*/false,
+          TTI::TCK_RecipThroughput) > -SLPCostThreshold)
     return false;
 
   // Otherwise, we can't vectorize the tree. It is both tiny and not fully
