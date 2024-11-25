@@ -348,20 +348,23 @@ static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
   }
 }
 
-void CompilerInstance::createDiagnostics(llvm::vfs::FileSystem &VFS,
-                                         DiagnosticConsumer *Client,
+void CompilerInstance::createDiagnostics(DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
-  Diagnostics = createDiagnostics(VFS, &getDiagnosticOpts(), Client,
-                                  ShouldOwnClient, &getCodeGenOpts());
+  Diagnostics = createDiagnostics(
+      &getDiagnosticOpts(), Client, ShouldOwnClient, &getCodeGenOpts(),
+      FileMgr ? FileMgr->getVirtualFileSystemPtr() : nullptr);
 }
 
 IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
-    llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
-    DiagnosticConsumer *Client, bool ShouldOwnClient,
-    const CodeGenOptions *CodeGenOpts) {
+    DiagnosticOptions *Opts, DiagnosticConsumer *Client, bool ShouldOwnClient,
+    const CodeGenOptions *CodeGenOpts,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, Opts));
+  IntrusiveRefCntPtr<DiagnosticsEngine>
+      Diags(new DiagnosticsEngine(DiagID, Opts));
+
+  if (!VFS)
+    VFS = llvm::vfs::getRealFileSystem();
 
   // Create the diagnostic client for reporting errors or for
   // implementing -verify.
@@ -385,7 +388,7 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
                                Opts->DiagnosticSerializationFile);
 
   // Configure our handling of diagnostics.
-  ProcessWarningOptions(*Diags, *Opts, VFS);
+  ProcessWarningOptions(*Diags, *Opts, *VFS);
 
   return Diags;
 }
@@ -1398,10 +1401,9 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
-  Instance.createDiagnostics(
-      ImportingInstance.getVirtualFileSystem(),
-      new ForwardingDiagnosticConsumer(ImportingInstance.getDiagnosticClient()),
-      /*ShouldOwnClient=*/true);
+  Instance.createDiagnostics(new ForwardingDiagnosticConsumer(
+                                   ImportingInstance.getDiagnosticClient()),
+                             /*ShouldOwnClient=*/true);
 
   if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
     Instance.getDiagnostics().setSuppressSystemWarnings(false);

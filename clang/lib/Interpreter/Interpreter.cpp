@@ -15,7 +15,6 @@
 #include "IncrementalExecutor.h"
 #include "IncrementalParser.h"
 #include "InterpreterUtils.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #ifdef __EMSCRIPTEN__
 #include "Wasm.h"
 #endif // __EMSCRIPTEN__
@@ -107,7 +106,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
         CompilerInvocation::GetResourcesPath(Argv[0], nullptr);
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Clang->createDiagnostics();
   if (!Clang->hasDiagnostics())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
