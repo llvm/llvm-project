@@ -34,6 +34,7 @@ elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
     # We may need to get the headers directly from the 'libc' source directory.
     target_include_directories(PluginCommon PRIVATE
                                ${CMAKE_SOURCE_DIR}/../libc/utils/gpu/server
+                               ${CMAKE_SOURCE_DIR}/../libc/
                                ${CMAKE_SOURCE_DIR}/../libc/include)
   endif()
 endif()

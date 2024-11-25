@@ -42,6 +42,13 @@ namespace rpc {
 #define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
 #endif
 
+/// Generic codes that can be used whem implementing the server.
+enum Status {
+  SUCCESS = 0x0,
+  ERROR = 0x1000,
+  UNHANDLED_OPCODE = 0x1001,
+};
+
 /// A fixed size channel used to communicate between the RPC client and server.
 struct Buffer {
   uint64_t data[8];
