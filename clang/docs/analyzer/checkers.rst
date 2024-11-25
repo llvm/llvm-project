@@ -1914,7 +1914,7 @@ is missing.
 .. code-block:: c
 
  void test1() {
-   int l = strlen((char *)&test); // warn
+   int l = strlen((char *)&test1); // warn
  }
 
  void test2() {
