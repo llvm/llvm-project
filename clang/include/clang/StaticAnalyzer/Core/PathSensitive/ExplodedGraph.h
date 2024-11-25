@@ -278,7 +278,9 @@ public:
   /// Useful for explaining control flow that follows the current node.
   /// If the statement belongs to a body-farmed definition, retrieve the
   /// call site for that definition.
-  const Stmt *getNextStmtForDiagnostics() const;
+  /// If skipPurge is true, skip the purge-dead-symbols nodes (that are often
+  /// inserted out-of-order by the endinge).
+  const Stmt *getNextStmtForDiagnostics(bool skipPurge) const;
 
   /// Find the statement that was executed immediately before this node.
   /// Useful when the node corresponds to a CFG block entrance.

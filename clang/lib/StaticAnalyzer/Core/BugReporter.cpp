@@ -589,7 +589,8 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
 
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     const PathDiagnosticConstruct &C) const {
-  if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
+  if (const Stmt *S =
+          C.getCurrentNode()->getNextStmtForDiagnostics(/*skipPurge=*/true))
     return PathDiagnosticLocation(S, getSourceManager(),
                                   C.getCurrLocationContext());
 
@@ -882,7 +883,8 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
   case Stmt::GotoStmtClass:
   case Stmt::IndirectGotoStmtClass: {
-    if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
+    if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics(
+            /*skipPurge=*/false))
       C.getActivePath().push_front(generateDiagForGotoOP(C, S, Start));
     break;
   }
@@ -2416,6 +2418,28 @@ PathSensitiveBugReport::getRanges() const {
   return Ranges;
 }
 
+static bool exitingDestructor(const ExplodedNode *N) {
+  // Need to loop here, as some times the Error node is already outside of the
+  // destructor context, and the previous node is an edge that is also outside.
+  while (N && !N->getLocation().getAs<StmtPoint>()) {
+    N = N->getFirstPred();
+  }
+  return N && isa<CXXDestructorDecl>(N->getLocationContext()->getDecl());
+}
+
+static const Stmt *
+findReasonableStmtCloseToFunctionExit(const ExplodedNode *N) {
+  if (exitingDestructor(N)) {
+    // If we are exiting a destructor call, it is more useful to point to
+    // the next stmt which is usually the temporary declaration.
+    if (const Stmt *S = N->getNextStmtForDiagnostics(/*skipPurge=*/false))
+      return S;
+    // If next stmt is not found, it is likely the end of a top-level
+    // function analysis. find the last execution statement then.
+  }
+  return N->getPreviousStmtForDiagnostics();
+}
+
 PathDiagnosticLocation
 PathSensitiveBugReport::getLocation() const {
   assert(ErrorNode && "Cannot create a location with a null node.");
@@ -2433,18 +2457,10 @@ PathSensitiveBugReport::getLocation() const {
       if (const ReturnStmt *RS = FE->getStmt())
         return PathDiagnosticLocation::createBegin(RS, SM, LC);
 
-      // If we are exiting a destructor call, it is more useful to point to the
-      // next stmt which is usually the temporary declaration.
-      // For non-destructor and non-top-level calls, the next stmt will still
-      // refer to the last executed stmt of the body.
-      S = ErrorNode->getNextStmtForDiagnostics();
-      // If next stmt is not found, it is likely the end of a top-level function
-      // analysis. find the last execution statement then.
-      if (!S)
-        S = ErrorNode->getPreviousStmtForDiagnostics();
+      S = findReasonableStmtCloseToFunctionExit(ErrorNode);
     }
     if (!S)
-      S = ErrorNode->getNextStmtForDiagnostics();
+      S = ErrorNode->getNextStmtForDiagnostics(/*skipPurge=*/false);
   }
 
   if (S) {
