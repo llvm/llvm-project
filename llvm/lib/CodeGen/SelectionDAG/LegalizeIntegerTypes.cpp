@@ -2585,7 +2585,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
                              : RTLIB::getLDEXP(N->getValueType(0));
 
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
-    SmallVector<SDValue, 4> NewOps(N->ops());
+    SmallVector<SDValue, 3> NewOps(N->ops());
     NewOps[1 + OpOffset] = SExtPromotedInteger(N->getOperand(1 + OpOffset));
     return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
   }
