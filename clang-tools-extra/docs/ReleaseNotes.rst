@@ -207,6 +207,10 @@ Changes in existing checks
   fix false positive that floating point variable is only used in increment
   expression.
 
+- Improved :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
+  <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check to
+  avoid false positives when detecting a templated class with inheritance.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers.
