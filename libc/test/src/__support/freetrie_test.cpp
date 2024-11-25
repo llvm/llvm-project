@@ -21,9 +21,9 @@ TEST(LlvmLibcFreeTrie, FindBestFitRoot) {
   EXPECT_EQ(trie.find_best_fit(123), static_cast<FreeTrie::Node *>(nullptr));
 
   byte mem[1024];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *block = *maybeBlock;
+  Block *block = *maybeBlock;
   trie.push(block);
 
   FreeTrie::Node *root = trie.find_best_fit(0);
@@ -37,12 +37,12 @@ TEST(LlvmLibcFreeTrie, FindBestFitRoot) {
 
 TEST(LlvmLibcFreeTrie, FindBestFitLower) {
   byte mem[4096];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *lower = *maybeBlock;
+  Block *lower = *maybeBlock;
   maybeBlock = lower->split(512);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *root = *maybeBlock;
+  Block *root = *maybeBlock;
 
   FreeTrie trie({0, 4096});
   trie.push(root);
@@ -53,12 +53,12 @@ TEST(LlvmLibcFreeTrie, FindBestFitLower) {
 
 TEST(LlvmLibcFreeTrie, FindBestFitUpper) {
   byte mem[4096];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *root = *maybeBlock;
+  Block *root = *maybeBlock;
   maybeBlock = root->split(512);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *upper = *maybeBlock;
+  Block *upper = *maybeBlock;
 
   FreeTrie trie({0, 4096});
   trie.push(root);
@@ -71,15 +71,15 @@ TEST(LlvmLibcFreeTrie, FindBestFitUpper) {
 
 TEST(LlvmLibcFreeTrie, FindBestFitLowerAndUpper) {
   byte mem[4096];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *root = *maybeBlock;
+  Block *root = *maybeBlock;
   maybeBlock = root->split(1024);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *lower = *maybeBlock;
+  Block *lower = *maybeBlock;
   maybeBlock = lower->split(128);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *upper = *maybeBlock;
+  Block *upper = *maybeBlock;
 
   FreeTrie trie({0, 4096});
   trie.push(root);
@@ -95,16 +95,16 @@ TEST(LlvmLibcFreeTrie, FindBestFitLowerAndUpper) {
 
 TEST(LlvmLibcFreeTrie, Remove) {
   byte mem[4096];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *small1 = *maybeBlock;
+  Block *small1 = *maybeBlock;
   maybeBlock = small1->split(512);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *small2 = *maybeBlock;
+  Block *small2 = *maybeBlock;
   maybeBlock = small2->split(512);
   ASSERT_TRUE(maybeBlock.has_value());
   ASSERT_EQ(small1->inner_size(), small2->inner_size());
-  Block<> *large = *maybeBlock;
+  Block *large = *maybeBlock;
 
   // Removing the root empties the trie.
   FreeTrie trie({0, 4096});
