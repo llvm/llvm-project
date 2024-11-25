@@ -52,7 +52,7 @@ private:
   const ABIInfo &getABIInfo() const { return TheABIInfo; }
 
 public:
-  LowerTypes(LowerModule &LM, llvm::StringRef DLString);
+  LowerTypes(LowerModule &LM);
   ~LowerTypes() = default;
 
   const cir::CIRDataLayout &getDataLayout() const { return DL; }

@@ -43,7 +43,7 @@ class LowerModule {
 
 public:
   LowerModule(clang::LangOptions opts, mlir::ModuleOp &module,
-              mlir::StringAttr DL, std::unique_ptr<clang::TargetInfo> target,
+              std::unique_ptr<clang::TargetInfo> target,
               mlir::PatternRewriter &rewriter);
   ~LowerModule() = default;
 

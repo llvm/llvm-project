@@ -87,12 +87,10 @@ createTargetLoweringInfo(LowerModule &LM) {
 }
 
 LowerModule::LowerModule(clang::LangOptions opts, mlir::ModuleOp &module,
-                         mlir::StringAttr DL,
                          std::unique_ptr<clang::TargetInfo> target,
                          mlir::PatternRewriter &rewriter)
     : context(module, opts), module(module), Target(std::move(target)),
-      ABI(createCXXABI(*this)), types(*this, DL.getValue()),
-      rewriter(rewriter) {
+      ABI(createCXXABI(*this)), types(*this), rewriter(rewriter) {
   context.initBuiltinTypes(*Target);
 }
 
@@ -226,13 +224,6 @@ llvm::LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp,
 // TODO: not to create it every time
 std::unique_ptr<LowerModule>
 createLowerModule(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
-  assert(module->getAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName()) &&
-         "Missing data layout attribute");
-
-  // Fetch the LLVM data layout string.
-  auto dataLayoutStr = mlir::cast<mlir::StringAttr>(
-      module->getAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName()));
-
   // Fetch target information.
   llvm::Triple triple(mlir::cast<mlir::StringAttr>(
                           module->getAttr(cir::CIRDialect::getTripleAttrName()))
@@ -247,8 +238,8 @@ createLowerModule(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
   cir_cconv_assert(!cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
 
-  return std::make_unique<LowerModule>(langOpts, module, dataLayoutStr,
-                                       std::move(targetInfo), rewriter);
+  return std::make_unique<LowerModule>(langOpts, module, std::move(targetInfo),
+                                       rewriter);
 }
 
 } // namespace cir

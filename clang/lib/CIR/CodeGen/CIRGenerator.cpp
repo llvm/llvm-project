@@ -42,8 +42,6 @@ CIRGenerator::~CIRGenerator() {
 
 static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
   auto *context = mod.getContext();
-  mod->setAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
-               mlir::StringAttr::get(context, dl.getStringRepresentation()));
   mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
   mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }

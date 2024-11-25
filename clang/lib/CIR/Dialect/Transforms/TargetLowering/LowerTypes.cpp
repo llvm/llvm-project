@@ -33,7 +33,7 @@ unsigned LowerTypes::clangCallConvToLLVMCallConv(clang::CallingConv CC) {
   }
 }
 
-LowerTypes::LowerTypes(LowerModule &LM, llvm::StringRef DLString)
+LowerTypes::LowerTypes(LowerModule &LM)
     : LM(LM), context(LM.getContext()), Target(LM.getTarget()),
       CXXABI(LM.getCXXABI()),
       TheABIInfo(LM.getTargetLoweringInfo().getABIInfo()),
