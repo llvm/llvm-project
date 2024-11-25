@@ -101,3 +101,27 @@ v_cvt_scalef32_pk_fp4_f32 v1, v1, v2, v3 div:2
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
 v_cvt_scalef32_pk_fp4_f32 v1, v1, v2, v3 clamp div:2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk_f16_fp4 v1, v2, v3 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
+v_cvt_scalef32_pk_f16_fp4 v1, v2, v3 mul:2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
+v_cvt_scalef32_pk_f16_fp4 v1, v2, v3 div:2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
+v_cvt_scalef32_pk_f16_fp4 v1, v2, v3 clamp div:2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk_bf16_fp4 v1, v2, v3 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
+v_cvt_scalef32_pk_bf16_fp4 v1, v2, v3 mul:2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
+v_cvt_scalef32_pk_bf16_fp4 v1, v2, v3 div:2
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand
+v_cvt_scalef32_pk_bf16_fp4 v1, v2, v3 clamp div:2
