@@ -14300,9 +14300,17 @@ static SDValue lowerV8F16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 // sub-512-bit shuffles are padded to 512-bits for the shuffle and then
 // the active subvector is extracted.
 static SDValue lowerShuffleWithPERMV(const SDLoc &DL, MVT VT,
-                                     ArrayRef<int> Mask, SDValue V1, SDValue V2,
-                                     const X86Subtarget &Subtarget,
+                                     ArrayRef<int> OriginalMask, SDValue V1,
+                                     SDValue V2, const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
+  // Commute binary inputs so V2 is a load to simplify VPERMI2/T2 folds.
+  SmallVector<int, 32> Mask(OriginalMask);
+  if (!V2.isUndef() && isShuffleFoldableLoad(V1) &&
+      !isShuffleFoldableLoad(V2)) {
+    ShuffleVectorSDNode::commuteMask(Mask);
+    std::swap(V1, V2);
+  }
+
   MVT MaskVT = VT.changeTypeToInteger();
   SDValue MaskNode;
   MVT ShuffleVT = VT;
@@ -42243,6 +42251,17 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
                            DAG.getIntPtrConstant(0, DL));
       }
+    }
+    SmallVector<SDValue, 2> Ops;
+    SmallVector<int, 32> Mask;
+    if (isShuffleFoldableLoad(N.getOperand(0)) &&
+        !isShuffleFoldableLoad(N.getOperand(2)) &&
+        getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
+      ShuffleVectorSDNode::commuteMask(Mask);
+      SDValue NewMask = getConstVector(
+          Mask, N.getOperand(1).getSimpleValueType(), DAG, DL, /*IsMask=*/true);
+      return DAG.getNode(X86ISD::VPERMV3, DL, VT, N.getOperand(2), NewMask,
+                         N.getOperand(0));
     }
     return SDValue();
   }

@@ -259,6 +259,33 @@ private:
     return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
   }
 
+  /// Checks if the provided mask \p is a splat mask, i.e. it contains only -1
+  /// or same non -1 index value and this index value contained at least twice.
+  /// So, mask <0, -1,-1, -1> is not considered splat (it is just identity),
+  /// same for <-1, 0, -1, -1> (just a slide), while <2, -1, 2, -1> is a splat
+  /// with \p Index=2.
+  static bool isSplatMask(ArrayRef<int> Mask, unsigned NumSrcElts, int &Index) {
+    // Check that the broadcast index meets at least twice.
+    bool IsCompared = false;
+    if (int SplatIdx = PoisonMaskElem;
+        all_of(enumerate(Mask), [&](const auto &P) {
+          if (P.value() == PoisonMaskElem)
+            return P.index() != Mask.size() - 1 || IsCompared;
+          if (static_cast<unsigned>(P.value()) >= NumSrcElts * 2)
+            return false;
+          if (SplatIdx == PoisonMaskElem) {
+            SplatIdx = P.value();
+            return P.index() != Mask.size() - 1;
+          }
+          IsCompared = true;
+          return SplatIdx == P.value();
+        })) {
+      Index = SplatIdx;
+      return true;
+    }
+    return false;
+  }
+
 protected:
   explicit BasicTTIImplBase(const TargetMachine *TM, const DataLayout &DL)
       : BaseT(DL) {}
@@ -275,6 +302,20 @@ public:
     EVT E = EVT::getIntegerVT(Context, BitWidth);
     return getTLI()->allowsMisalignedMemoryAccesses(
         E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);
+  }
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const {
+    const TargetMachine &TM = getTLI()->getTargetMachine();
+
+    const FeatureBitset &CallerBits =
+        TM.getSubtargetImpl(*Caller)->getFeatureBits();
+    const FeatureBitset &CalleeBits =
+        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+    // Inline a callee if its target-features are a subset of the callers
+    // target-features.
+    return (CallerBits & CalleeBits) == CalleeBits;
   }
 
   bool hasBranchDivergence(const Function *F = nullptr) { return false; }
@@ -996,22 +1037,8 @@ public:
         return TTI::SK_Reverse;
       if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
         return TTI::SK_Broadcast;
-      // Check that the broadcast index meets at least twice.
-      bool IsCompared = false;
-      if (int SplatIdx = PoisonMaskElem;
-          all_of(enumerate(Mask), [&](const auto &P) {
-            if (P.value() == PoisonMaskElem)
-              return P.index() != Mask.size() - 1 || IsCompared;
-            if (SplatIdx == PoisonMaskElem) {
-              SplatIdx = P.value();
-              return P.index() != Mask.size() - 1;
-            }
-            IsCompared = true;
-            return SplatIdx == P.value();
-          })) {
-        Index = SplatIdx;
+      if (isSplatMask(Mask, NumSrcElts, Index))
         return TTI::SK_Broadcast;
-      }
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
           (Index + Mask.size()) <= (size_t)NumSrcElts) {
         SubTy = FixedVectorType::get(Ty->getElementType(), Mask.size());

@@ -767,7 +767,6 @@ if(LIBC_TARGET_OS_IS_GPU)
     gpu/rpc.h
     DEPENDS
       .llvm_libc_common_h
-      .llvm-libc-types.rpc_opcodes_t
   )
 endif()
 

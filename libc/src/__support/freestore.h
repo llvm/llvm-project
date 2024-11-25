@@ -29,40 +29,40 @@ public:
 
   /// Insert a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void insert(Block<> *block);
+  void insert(Block *block);
 
   /// Remove a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void remove(Block<> *block);
+  void remove(Block *block);
 
   /// Remove a best-fit free block that can contain the given size when
   /// allocated. Returns nullptr if there is no such block.
-  Block<> *remove_best_fit(size_t size);
+  Block *remove_best_fit(size_t size);
 
 private:
   static constexpr size_t ALIGNMENT = alignof(max_align_t);
   static constexpr size_t MIN_OUTER_SIZE =
-      align_up(Block<>::BLOCK_OVERHEAD + sizeof(FreeList::Node), ALIGNMENT);
+      align_up(Block::BLOCK_OVERHEAD + sizeof(FreeList::Node), ALIGNMENT);
   static constexpr size_t MIN_LARGE_OUTER_SIZE =
-      align_up(Block<>::BLOCK_OVERHEAD + sizeof(FreeTrie::Node), ALIGNMENT);
+      align_up(Block::BLOCK_OVERHEAD + sizeof(FreeTrie::Node), ALIGNMENT);
   static constexpr size_t NUM_SMALL_SIZES =
       (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / ALIGNMENT;
 
-  LIBC_INLINE static bool too_small(Block<> *block) {
+  LIBC_INLINE static bool too_small(Block *block) {
     return block->outer_size() < MIN_OUTER_SIZE;
   }
-  LIBC_INLINE static bool is_small(Block<> *block) {
+  LIBC_INLINE static bool is_small(Block *block) {
     return block->outer_size() < MIN_LARGE_OUTER_SIZE;
   }
 
-  FreeList &small_list(Block<> *block);
+  FreeList &small_list(Block *block);
   FreeList *find_best_small_fit(size_t size);
 
   cpp::array<FreeList, NUM_SMALL_SIZES> small_lists;
   FreeTrie large_trie;
 };
 
-LIBC_INLINE void FreeStore::insert(Block<> *block) {
+LIBC_INLINE void FreeStore::insert(Block *block) {
   if (too_small(block))
     return;
   if (is_small(block))
@@ -71,7 +71,7 @@ LIBC_INLINE void FreeStore::insert(Block<> *block) {
     large_trie.push(block);
 }
 
-LIBC_INLINE void FreeStore::remove(Block<> *block) {
+LIBC_INLINE void FreeStore::remove(Block *block) {
   if (too_small(block))
     return;
   if (is_small(block)) {
@@ -83,21 +83,21 @@ LIBC_INLINE void FreeStore::remove(Block<> *block) {
   }
 }
 
-LIBC_INLINE Block<> *FreeStore::remove_best_fit(size_t size) {
+LIBC_INLINE Block *FreeStore::remove_best_fit(size_t size) {
   if (FreeList *list = find_best_small_fit(size)) {
-    Block<> *block = list->front();
+    Block *block = list->front();
     list->pop();
     return block;
   }
   if (FreeTrie::Node *best_fit = large_trie.find_best_fit(size)) {
-    Block<> *block = best_fit->block();
+    Block *block = best_fit->block();
     large_trie.remove(best_fit);
     return block;
   }
   return nullptr;
 }
 
-LIBC_INLINE FreeList &FreeStore::small_list(Block<> *block) {
+LIBC_INLINE FreeList &FreeStore::small_list(Block *block) {
   LIBC_ASSERT(is_small(block) && "only legal for small blocks");
   return small_lists[(block->outer_size() - MIN_OUTER_SIZE) / ALIGNMENT];
 }

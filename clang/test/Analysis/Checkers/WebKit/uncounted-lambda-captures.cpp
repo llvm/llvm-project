@@ -125,7 +125,7 @@ void noescape_lambda() {
 }
 
 void lambda_capture_param(RefCountable* obj) {
-  auto someLambda = [&] {
+  auto someLambda = [&]() {
     obj->method();
   };
   someLambda();
@@ -177,4 +177,11 @@ void trivial_lambda() {
     return ref_countable->trivial();
   };
   trivial_lambda();
+}
+
+void lambda_with_args(RefCountable* obj) {
+  auto trivial_lambda = [&](int v) {
+    obj->method();
+  };
+  trivial_lambda(1);
 }

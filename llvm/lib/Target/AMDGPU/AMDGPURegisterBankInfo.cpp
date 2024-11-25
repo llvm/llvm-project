@@ -3146,6 +3146,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_interp_inreg_p2_f16:
     case Intrinsic::amdgcn_interp_p10_rtz_f16:
     case Intrinsic::amdgcn_interp_p2_rtz_f16:
+    case Intrinsic::amdgcn_permlane16_swap:
+    case Intrinsic::amdgcn_permlane32_swap:
       applyDefaultMapping(OpdMapper);
       return;
     case Intrinsic::amdgcn_permlane16:
@@ -4860,6 +4862,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       break;
     }
+    case Intrinsic::amdgcn_permlane16_swap:
+    case Intrinsic::amdgcn_permlane32_swap: {
+      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      OpdsMapping[0] = OpdsMapping[1] = OpdsMapping[3] = OpdsMapping[4] =
+          AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
+      break;
+    }
     case Intrinsic::amdgcn_ballot: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       unsigned SrcSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
@@ -4958,6 +4967,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128:
+    case Intrinsic::amdgcn_ds_read_tr4_b64:
+    case Intrinsic::amdgcn_ds_read_tr6_b96:
+    case Intrinsic::amdgcn_ds_read_tr8_b64:
+    case Intrinsic::amdgcn_ds_read_tr16_b64:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {

@@ -2330,10 +2330,10 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
   const int Precision = APFloat::semanticsPrecision(FltSem);
 
-  const SDValue MaxExp = DAG.getConstant(MaxExpVal, dl, ExpVT);
-  const SDValue MinExp = DAG.getConstant(MinExpVal, dl, ExpVT);
+  const SDValue MaxExp = DAG.getSignedConstant(MaxExpVal, dl, ExpVT);
+  const SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
 
-  const SDValue DoubleMaxExp = DAG.getConstant(2 * MaxExpVal, dl, ExpVT);
+  const SDValue DoubleMaxExp = DAG.getSignedConstant(2 * MaxExpVal, dl, ExpVT);
 
   const APFloat One(FltSem, "1.0");
   APFloat ScaleUpK = scalbn(One, MaxExpVal, APFloat::rmNearestTiesToEven);
@@ -2375,7 +2375,7 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   SDValue IncN0 = DAG.getNode(ISD::ADD, dl, ExpVT, N, Increment0, NUW_NSW);
 
   SDValue ClampMinVal =
-      DAG.getConstant(3 * MinExpVal + 2 * Precision, dl, ExpVT);
+      DAG.getSignedConstant(3 * MinExpVal + 2 * Precision, dl, ExpVT);
   SDValue ClampN_Small = DAG.getNode(ISD::SMAX, dl, ExpVT, N, ClampMinVal);
   SDValue IncN1 =
       DAG.getNode(ISD::ADD, dl, ExpVT, ClampN_Small, Increment1, NSW);
@@ -2385,8 +2385,8 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   SDValue ScaleDown1 = DAG.getNode(ISD::FMUL, dl, VT, ScaleDown0, ScaleDownVal);
 
   SDValue ScaleDownTwice = DAG.getSetCC(
-      dl, SetCCVT, N, DAG.getConstant(2 * MinExpVal + Precision, dl, ExpVT),
-      ISD::SETULT);
+      dl, SetCCVT, N,
+      DAG.getSignedConstant(2 * MinExpVal + Precision, dl, ExpVT), ISD::SETULT);
 
   SDValue SelectN_Small =
       DAG.getNode(ISD::SELECT, dl, ExpVT, ScaleDownTwice, IncN1, IncN0);
