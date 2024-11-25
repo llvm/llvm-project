@@ -42,7 +42,7 @@ hcreate                      |check|
 hdestroy                     |check|
 hsearch                      |check|
 insque                       |check|
-lfind
+lfind                        |check|
 lsearch
 remque                       |check|
 tdelete

@@ -53,6 +53,18 @@ def NVVM_Dialect : Dialect {
     static StringRef getReqntidYName() { return "reqntidy"; }
     static StringRef getReqntidZName() { return "reqntidz"; }
 
+    /// Get the name of the attribute used to annotate exact CTAs required
+    /// per cluster for kernel functions.
+    static StringRef getClusterDimAttrName() { return "nvvm.cluster_dim"; }
+    /// Get the name of the metadata names for each dimension
+    static StringRef getClusterDimXName() { return "cluster_dim_x"; }
+    static StringRef getClusterDimYName() { return "cluster_dim_y"; }
+    static StringRef getClusterDimZName() { return "cluster_dim_z"; }
+
+    /// Get the name of the attribute used to annotate maximum number of
+    /// CTAs per cluster for kernel functions.
+    static StringRef getClusterMaxBlocksAttrName() {  return "nvvm.cluster_max_blocks"; }
+
     /// Get the name of the attribute used to annotate min CTA required
     /// per SM for kernel functions.
     static StringRef getMinctasmAttrName() { return "nvvm.minctasm"; }
@@ -783,24 +795,27 @@ def NVVM_SyncWarpOp :
   let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 
-
-def NVVM_ElectSyncOp : NVVM_Op<"elect.sync", 
-                  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>
+def NVVM_ElectSyncOp : NVVM_Op<"elect.sync">
 {  
+  let summary = "Elect one leader thread";
+  let description = [{
+    The `elect.sync` instruction elects one predicated active leader
+    thread from among a set of threads specified in membermask.
+    The membermask is set to `0xFFFFFFFF` for the current version
+    of this Op. The predicate result is set to `True` for the
+    leader thread, and `False` for all other threads.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync)
+  }];
+
   let results = (outs I1:$pred);
   let assemblyFormat = "attr-dict `->` type(results)";  
-  let extraClassDefinition = [{        
-    std::string $cppClass::getPtx() { 
-      return std::string(
-        "{                                  \n"
-        ".reg .u32 rx;                      \n"
-        ".reg .pred px;                     \n"
-        " mov.pred %0, 0;                   \n"
-        "    elect.sync rx | px, 0xFFFFFFFF;\n"
-        "@px mov.pred %0, 1;                \n"
-        "}\n"
-      ); 
-    }
+  string llvmBuilder = [{
+    auto *resultTuple = createIntrinsicCall(builder,
+        llvm::Intrinsic::nvvm_elect_sync, {builder.getInt32(0xFFFFFFFF)});
+    // Extract the second value into $pred
+    $pred = builder.CreateExtractValue(resultTuple, 1);
   }];
 }
 
@@ -1943,6 +1958,74 @@ def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
     std::string $cppClass::getPtx() { 
       return std::string("prefetch.tensormap [%0];");
     }
+  }];
+}
+
+def NVVM_CpAsyncBulkTensorPrefetchOp :
+  NVVM_Op<"cp.async.bulk.tensor.prefetch", [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    LLVM_AnyPointer:$tmaDescriptor,
+    Variadic<I32>:$coordinates,
+    Variadic<I16>:$im2colOffsets,
+    Optional<I64>:$l2CacheHint);
+
+  let description = [{
+    Initiates an asynchronous prefetch operation on the tensor data from global
+    memory to L2 cache.
+
+    The Op has two modes:
+    1) Tiled Mode: It's the default mode. The source multi-dimensional tensor
+    layout is preserved at the destination.
+
+    2) Im2col Mode: This mode is used when `im2colOffsets` operands are present.
+    the elements in the Bounding Box of the source tensor are rearranged into
+    columns at the destination. In this mode, the tensor has to be at least
+    3-dimensional.
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache
+    eviction policy that may be used during the memory access.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor)
+  }];
+
+  let assemblyFormat = [{
+    $tmaDescriptor `,`
+    `box` `[`$coordinates `]`
+    (`im2col` `[` $im2colOffsets^ `]` )?
+    (`l2_cache_hint` `=` $l2CacheHint^ )?
+    attr-dict  `:` type($tmaDescriptor)
+  }];
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(int tensorDims, bool isIm2Col);
+  }];
+
+  let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    // Arguments to the intrinsic:
+    // tmaDesc, tensorDims, im2colOffsets
+    // cache_hint(if applicable) and flag(boolean)
+    llvm::SmallVector<llvm::Value *> translatedOperands;
+    translatedOperands.push_back($tmaDescriptor);
+
+    for (auto v : op.getCoordinates())
+      translatedOperands.push_back(moduleTranslation.lookupValue(v));
+
+    for (auto v : op.getIm2colOffsets())
+      translatedOperands.push_back(moduleTranslation.lookupValue(v));
+
+    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
+    auto *i64Undef = llvm::UndefValue::get(llvm::IntegerType::get(ctx, 64));
+
+    bool isCacheHint = op.getL2CacheHint() ? true : false;
+    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Undef);
+    translatedOperands.push_back(builder.getInt1(isCacheHint));
+
+    auto intId = NVVM::CpAsyncBulkTensorPrefetchOp::getIntrinsicID(
+        op.getCoordinates().size(), op.getIm2colOffsets().size() > 0);
+    createIntrinsicCall(builder, intId, translatedOperands);
   }];
 }
 

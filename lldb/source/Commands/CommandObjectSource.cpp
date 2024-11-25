@@ -784,9 +784,7 @@ protected:
 
       if (sc.block == nullptr) {
         // Not an inlined function
-        FileSpec function_file_spec;
-        sc.function->GetStartLineSourceInfo(function_file_spec, start_line);
-        start_file = std::make_shared<SupportFile>(function_file_spec);
+        sc.function->GetStartLineSourceInfo(start_file, start_line);
         if (start_line == 0) {
           result.AppendErrorWithFormat("Could not find line information for "
                                        "start of function: \"%s\".\n",

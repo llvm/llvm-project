@@ -98,8 +98,9 @@ inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
     while (offset + K_TWO_CACHELINES + 32 <= count) {
       inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
       inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
-      builtin::Memcpy<K_TWO_CACHELINES>::block_offset(dst, src, offset);
-      offset += K_TWO_CACHELINES;
+      // Copy one cache line at a time to prevent the use of `rep;movsb`.
+      for (size_t i = 0; i < 2; ++i, offset += K_ONE_CACHELINE)
+        builtin::Memcpy<K_ONE_CACHELINE>::block_offset(dst, src, offset);
     }
   } else {
     // Three cache lines at a time.
@@ -107,10 +108,9 @@ inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
       inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
       inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
       inline_memcpy_prefetch(dst, src, offset + K_THREE_CACHELINES);
-      // It is likely that this copy will be turned into a 'rep;movsb' on
-      // non-AVX machines.
-      builtin::Memcpy<K_THREE_CACHELINES>::block_offset(dst, src, offset);
-      offset += K_THREE_CACHELINES;
+      // Copy one cache line at a time to prevent the use of `rep;movsb`.
+      for (size_t i = 0; i < 3; ++i, offset += K_ONE_CACHELINE)
+        builtin::Memcpy<K_ONE_CACHELINE>::block_offset(dst, src, offset);
     }
   }
   // We don't use 'loop_and_tail_offset' because it assumes at least one
@@ -148,8 +148,9 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
     inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
     inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
     inline_memcpy_prefetch(dst, src, offset + K_THREE_CACHELINES);
-    builtin::Memcpy<K_THREE_CACHELINES>::block_offset(dst, src, offset);
-    offset += K_THREE_CACHELINES;
+    // Copy one cache line at a time to prevent the use of `rep;movsb`.
+    for (size_t i = 0; i < 3; ++i, offset += K_ONE_CACHELINE)
+      builtin::Memcpy<K_ONE_CACHELINE>::block_offset(dst, src, offset);
   }
   // We don't use 'loop_and_tail_offset' because it assumes at least one
   // iteration of the loop.

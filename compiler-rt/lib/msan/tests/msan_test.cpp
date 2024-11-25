@@ -4882,7 +4882,7 @@ TEST(MemorySanitizer, throw_catch) {
   }
 }
 
-#if defined(__linux__)
+#if defined(__GLIBC__)
 TEST(MemorySanitizer, timer_create) {
   timer_t timer;
   EXPECT_POISONED(timer);
@@ -4894,6 +4894,11 @@ TEST(MemorySanitizer, timer_create) {
   struct itimerspec cur_value {};
   cur_value.it_value.tv_sec = 1;
   EXPECT_EQ(0, timer_settime(timer, 0, &cur_value, nullptr));
+
+  struct itimerspec read_value;
+  EXPECT_POISONED(read_value);
+  EXPECT_EQ(0, timer_gettime(timer, &read_value));
+  EXPECT_NOT_POISONED(read_value);
 
   timer_t timer2;
   EXPECT_POISONED(timer2);

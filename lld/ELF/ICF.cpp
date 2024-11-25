@@ -461,7 +461,7 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
 
 static void print(Ctx &ctx, const Twine &s) {
   if (ctx.arg.printIcfSections)
-    message(s);
+    Msg(ctx) << s;
 }
 
 // The main function of ICF.
@@ -542,15 +542,15 @@ template <class ELFT> void ICF<ELFT>::run() {
     });
   } while (repeat);
 
-  log("ICF needed " + Twine(cnt) + " iterations");
+  Log(ctx) << "ICF needed " << cnt << " iterations";
 
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
-    print(ctx, "selected section " + toString(sections[begin]));
+    print(ctx, "selected section " + toStr(ctx, sections[begin]));
     for (size_t i = begin + 1; i < end; ++i) {
-      print(ctx, "  removing identical section " + toString(sections[i]));
+      print(ctx, "  removing identical section " + toStr(ctx, sections[i]));
       sections[begin]->replace(sections[i]);
 
       // At this point we know sections merged are fully identical and hence

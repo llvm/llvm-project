@@ -643,6 +643,17 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
+  }
+
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
@@ -845,8 +856,9 @@ void CudaToolChain::addClangTargetOptions(
           DeviceOffloadingKind == Action::OFK_Cuda) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  CC1Args.append(
-      {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
+  CC1Args.append({"-fcuda-is-device", "-mllvm",
+                  "-enable-memcpyopt-without-libcalls",
+                  "-fno-threadsafe-statics"});
 
   // Unsized function arguments used for variadics were introduced in CUDA-9.0
   // We still do not support generating code that actually uses variadic

@@ -31,6 +31,11 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-isel"
 #define PASS_NAME "AArch64 Instruction Selection"
 
+// https://github.com/llvm/llvm-project/issues/114425
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
+#pragma inline_depth(0)
+#endif
+
 //===--------------------------------------------------------------------===//
 /// AArch64DAGToDAGISel - AArch64 specific code to select AArch64 machine
 /// instructions for SelectionDAG operations.
@@ -915,8 +920,7 @@ bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
   if ((MulImm % std::abs(Scale)) == 0) {
     int64_t RDVLImm = MulImm / Scale;
     if ((RDVLImm >= Low) && (RDVLImm <= High)) {
-      Imm = CurDAG->getSignedConstant(RDVLImm, SDLoc(N), MVT::i32,
-                                      /*isTarget=*/true);
+      Imm = CurDAG->getSignedTargetConstant(RDVLImm, SDLoc(N), MVT::i32);
       return true;
     }
   }
@@ -1528,7 +1532,6 @@ void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
 
   SDNode *AUT = CurDAG->getMachineNode(AArch64::AUT, DL, MVT::i64, Ops);
   ReplaceNode(N, AUT);
-  return;
 }
 
 void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
@@ -1562,7 +1565,6 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
 
   SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
   ReplaceNode(N, AUTPAC);
-  return;
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
@@ -2792,7 +2794,9 @@ static bool isBitfieldDstMask(uint64_t DstMask, const APInt &BitsToBeInserted,
          "i32 or i64 mask type expected!");
   unsigned BitWidth = VT.getSizeInBits() - NumberOfIgnoredHighBits;
 
-  APInt SignificantDstMask = APInt(BitWidth, DstMask);
+  // Enable implicitTrunc as we're intentionally ignoring high bits.
+  APInt SignificantDstMask =
+      APInt(BitWidth, DstMask, /*isSigned=*/false, /*implicitTrunc=*/true);
   APInt SignificantBitsToBeInserted = BitsToBeInserted.zextOrTrunc(BitWidth);
 
   return (SignificantDstMask & SignificantBitsToBeInserted) == 0 &&
@@ -4278,7 +4282,7 @@ bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {
     int64_t ImmVal = CNode->getSExtValue();
     SDLoc DL(N);
     if (ImmVal >= -128 && ImmVal < 128) {
-      Imm = CurDAG->getSignedConstant(ImmVal, DL, MVT::i32, /*isTarget=*/true);
+      Imm = CurDAG->getSignedTargetConstant(ImmVal, DL, MVT::i32);
       return true;
     }
   }
@@ -7418,7 +7422,7 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
                                              SDValue &Base, SDValue &Offset,
                                              unsigned Scale) {
   // Try to untangle an ADD node into a 'reg + offset'
-  if (N.getOpcode() == ISD::ADD)
+  if (CurDAG->isBaseWithConstantOffset(N))
     if (auto C = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
       int64_t ImmOff = C->getSExtValue();
       if ((ImmOff > 0 && ImmOff <= MaxSize && (ImmOff % Scale == 0))) {

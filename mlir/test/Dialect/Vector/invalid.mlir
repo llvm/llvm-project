@@ -1356,7 +1356,7 @@ func.func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16x
 
 func.func @maskedload_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %pass: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedload' op expected result dim to match mask dim}}
+  // expected-error@+1 {{'vector.maskedload' op expected result shape to match mask shape}}
   %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<15xi1>, vector<16xf32> into vector<16xf32>
 }
 
@@ -1387,7 +1387,7 @@ func.func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16
 
 func.func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore dim to match mask dim}}
+  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore shape to match mask shape}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<15xi1>, vector<16xf32>
 }
 
@@ -1611,92 +1611,6 @@ func.func @invalid_splat(%v : f32) {
 
 // -----
 
-func.func @warp_wrong_num_outputs(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected same number of yield operands and return values.}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
-  }
-  return
-}
-
-// -----
-
-func.func @warp_wrong_num_inputs(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected same number op arguments and block arguments.}}
-  vector.warp_execute_on_lane_0(%laneid)[64] {
-  ^bb0(%arg0 : vector<128xi32>) :
-  }
-  return
-}
-
-// -----
-
-func.func @warp_wrong_return_distribution(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
-    %0 = arith.constant dense<2>: vector<128xi32>
-    vector.yield %0 : vector<128xi32>
-  }
-  return
-}
-
-
-// -----
-
-func.func @warp_wrong_arg_distribution(%laneid: index, %v0 : vector<4xi32>) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
-  vector.warp_execute_on_lane_0(%laneid)[64]
-  args(%v0 : vector<4xi32>) {
-   ^bb0(%arg0 : vector<128xi32>) :
-  }
-  return
-}
-
-// -----
-
-func.func @warp_2_distributed_dims(%laneid: index) {
-  // expected-error@+1 {{incompatible distribution dimensions from 'vector<128x128xi32>' to 'vector<4x4xi32>' with warp size = 32}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
-    %0 = arith.constant dense<2>: vector<128x128xi32>
-    vector.yield %0 : vector<128x128xi32>
-  }
-  return
-}
-
-// -----
-
-func.func @warp_2_distributed_dims(%laneid: index) {
-  // expected-error@+1 {{expected expanded vector dimension #1 (8) to be a multipler of the distributed vector dimension (3)}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x3xi32>) {
-    %0 = arith.constant dense<2>: vector<4x8xi32>
-    vector.yield %0 : vector<4x8xi32>
-  }
-  return
-}
-
-// -----
-
-func.func @warp_mismatch_rank(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected distributed vectors to have same rank and element type.}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
-    %0 = arith.constant dense<2>: vector<128xi32>
-    vector.yield %0 : vector<128xi32>
-  }
-  return
-}
-
-// -----
-
-func.func @warp_mismatch_rank(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected vector type for distributed operands.}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
-    %0 = arith.constant dense<2>: vector<128xi32>
-    vector.yield %0 : vector<128xi32>
-  }
-  return
-}
-
-// -----
-
 func.func @vector_mask_multiple_ops(%t0: tensor<?xf32>, %t1: tensor<?xf32>, %idx: index, %val: vector<16xf32>, %m0: vector<16xi1>) {
   %ft0 = arith.constant 0.0 : f32
   // expected-error@+1 {{'vector.mask' op expects only one operation to mask}}
@@ -1713,6 +1627,15 @@ func.func @vector_mask_shape_mismatch(%a: vector<8xi32>, %m0: vector<16xi1>) -> 
   // expected-error@+1 {{'vector.mask' op expects a 'vector<8xi1>' mask for the maskable operation}}
   %0 = vector.mask %m0 { vector.reduction <add>, %a : vector<8xi32> into i32 } : vector<16xi1> -> i32
   return %0 : i32
+}
+
+// -----
+
+func.func @vector_mask_passthru_type_mismatch(%t0: tensor<f32>, %m0: vector<i1>) -> vector<f32> {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op operand #0 must be vector of 1-bit signless integer values, but got 'vector<i1>'}}
+  %0 = vector.mask %m0 { vector.transfer_read %t0[], %ft0 : tensor<f32>, vector<f32> } : vector<i1> -> vector<f32>
+  return %0 : vector<f32>
 }
 
 // -----
@@ -1739,6 +1662,21 @@ func.func @vector_mask_non_maskable_op(%a : vector<3x4xf32>) -> vector<3x4xf32> 
   // expected-error@+1 {{'vector.mask' op expects a MaskableOpInterface within the mask region}}
    %0 = vector.mask %m0 { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
    return %0 : vector<3x4xf32>
+}
+
+// -----
+
+func.func @vector_mask_0d_mask(%arg0: tensor<2x4xi32>,
+                               %idx0: index, %idx1: index,
+                               %m0: vector<i1>) -> vector<1x1x4xi32> {
+  %cst = arith.constant 0 : i32
+  // expected-error@+1 {{'vector.mask' op operand #0 must be vector of 1-bit signless integer values, but got 'vector<i1>'}}
+  %res = vector.mask %m0 {
+    %0 = vector.transfer_read %arg0[%idx0, %idx1], %cst {permutation_map = affine_map<(d0, d1) -> (0, 0, 0)>}
+      : tensor<2x4xi32>, vector<1x1x4xi32>
+    vector.yield %0 : vector<1x1x4xi32>
+  } : vector<i1> -> vector<1x1x4xi32>
+  return %res : vector<1x1x4xi32>
 }
 
 // -----
@@ -1890,4 +1828,13 @@ func.func @matrix_multiply_scalable(%a: vector<[4]xf64>, %b: vector<4xf64>) {
   : (vector<[4]xf64>, vector<4xf64>) -> vector<4xf64>
 
   return
+}
+
+// -----
+
+func.func @flat_transpose_scalable(%arg0: vector<[16]xf32>) -> vector<[16]xf32> {
+  // expected-error @+1 {{'vector.flat_transpose' op operand #0 must be fixed-length vector of signless integer or signed integer or index or floating-point values of ranks 1, but got 'vector<[16]xf32>'}}
+  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
+     : vector<[16]xf32> -> vector<[16]xf32>
+  return %0 : vector<[16]xf32>
 }

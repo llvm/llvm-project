@@ -55,19 +55,19 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN3Foo3barEv.default(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN3Foo3barEv._Mmops(
-// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_ZN4Name3fooEv.default(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 0
 //

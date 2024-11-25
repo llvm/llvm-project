@@ -6,7 +6,6 @@ add_mlir_dialect_library(MLIRArithTransforms
   EmulateWideInt.cpp
   EmulateNarrowType.cpp
   ExpandOps.cpp
-  IntNarrowing.cpp
   IntRangeOptimizations.cpp
   ReifyValueBounds.cpp
   UnsignedWhenEquivalent.cpp
@@ -20,6 +19,8 @@ add_mlir_dialect_library(MLIRArithTransforms
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRArithDialect
+  MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRInferIntRangeInterface

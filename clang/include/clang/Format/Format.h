@@ -1569,7 +1569,7 @@ struct FormatStyle {
 
   /// Control of individual brace wrapping cases.
   ///
-  /// If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
+  /// If ``BreakBeforeBraces`` is set to ``Custom``, use this to specify how
   /// each individual brace case should be handled. Otherwise, this is ignored.
   /// \code{.yaml}
   ///   # Example of usage:
@@ -3206,6 +3206,13 @@ struct FormatStyle {
   /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
   /// \version 3.7
   // bool KeepEmptyLinesAtTheStartOfBlocks;
+
+  /// Keep the form feed character if it's immediately preceded and followed by
+  /// a newline. Multiple form feeds and newlines within a whitespace range are
+  /// replaced with a single newline and form feed followed by the remaining
+  /// newlines.
+  /// \version 20
+  bool KeepFormFeed;
 
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
@@ -4963,12 +4970,11 @@ struct FormatStyle {
   /// \version 12
   std::vector<std::string> StatementAttributeLikeMacros;
 
-  /// A vector of macros that should be interpreted as complete
-  /// statements.
+  /// A vector of macros that should be interpreted as complete statements.
   ///
-  /// Typical macros are expressions, and require a semi-colon to be
-  /// added; sometimes this is not the case, and this allows to make
-  /// clang-format aware of such cases.
+  /// Typical macros are expressions and require a semicolon to be added.
+  /// Sometimes this is not the case, and this allows to make clang-format aware
+  /// of such cases.
   ///
   /// For example: Q_UNUSED
   /// \version 8
@@ -5222,7 +5228,8 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines &&
+           KeepFormFeed == R.KeepFormFeed && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
@@ -5300,8 +5307,8 @@ struct FormatStyle {
                R.TableGenBreakingDAGArgOperators &&
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
-           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
-           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
+           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
+           UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

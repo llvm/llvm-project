@@ -653,6 +653,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasDisjoint())
     OS << " disjoint";
 
+  if (getFlags().hasSameSign())
+    OS << " samesign";
+
   if (getFlags().hasNonNeg())
     OS << " nneg";
 

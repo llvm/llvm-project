@@ -216,52 +216,7 @@ def add_function_to_yaml(yaml_file, function_details):
     print(f"Added function {new_function.name} to {yaml_file}")
 
 
-def main(
-    yaml_file,
-    output_dir=None,
-    h_def_file=None,
-    add_function=None,
-    entry_points=None,
-    export_decls=False,
-):
-    """
-    Main function to generate header files from YAML and .h.def templates.
-
-    Args:
-        yaml_file: Path to the YAML file containing header specification.
-        h_def_file: Path to the .h.def template file.
-        output_dir: Directory to output the generated header file.
-        add_function: Details of the function to be added to the YAML file (if any).
-        entry_points: A list of specific function names to include in the header.
-        export_decls: Flag to use GpuHeader for exporting declarations.
-    """
-    if add_function:
-        add_function_to_yaml(yaml_file, add_function)
-
-    header_class = GpuHeader if export_decls else HeaderFile
-    header = load_yaml_file(yaml_file, header_class, entry_points)
-
-    header_str = str(header)
-
-    if output_dir:
-        output_file_path = Path(output_dir)
-        if output_file_path.is_dir():
-            output_file_path /= f"{Path(yaml_file).stem}.h"
-    else:
-        output_file_path = Path(f"{Path(yaml_file).stem}.h")
-
-    if not export_decls and h_def_file:
-        with open(h_def_file, "r") as f:
-            h_def_content = f.read()
-        final_header_content = fill_public_api(header_str, h_def_content)
-        with open(output_file_path, "w") as f:
-            f.write(final_header_content)
-    else:
-        with open(output_file_path, "w") as f:
-            f.write(header_str)
-
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Generate header files from YAML")
     parser.add_argument(
         "yaml_file", help="Path to the YAML file containing header specification"
@@ -297,11 +252,31 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(
-        args.yaml_file,
-        args.output_dir,
-        args.h_def_file,
-        args.add_function,
-        args.entry_points,
-        args.export_decls,
-    )
+    if args.add_function:
+        add_function_to_yaml(args.yaml_file, args.add_function)
+
+    header_class = GpuHeader if args.export_decls else HeaderFile
+    header = load_yaml_file(args.yaml_file, header_class, args.entry_points)
+
+    header_str = str(header)
+
+    if args.output_dir:
+        output_file_path = Path(args.output_dir)
+        if output_file_path.is_dir():
+            output_file_path /= f"{Path(args.yaml_file).stem}.h"
+    else:
+        output_file_path = Path(f"{Path(args.yaml_file).stem}.h")
+
+    if not args.export_decls and args.h_def_file:
+        with open(args.h_def_file, "r") as f:
+            h_def_content = f.read()
+        final_header_content = fill_public_api(header_str, h_def_content)
+        with open(output_file_path, "w") as f:
+            f.write(final_header_content)
+    else:
+        with open(output_file_path, "w") as f:
+            f.write(header_str)
+
+
+if __name__ == "__main__":
+    main()
