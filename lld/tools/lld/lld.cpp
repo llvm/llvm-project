@@ -35,7 +35,6 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
