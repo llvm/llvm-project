@@ -765,8 +765,7 @@ void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-bool SemaHLSL::isLegalTypeForHLSLSV_ThreadOrGroupID(QualType T,
-                                                    const ParsedAttr &AL) {
+bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
   const auto *VT = T->getAs<VectorType>();
 
   if (!T->hasUnsignedIntegerRepresentation() ||
@@ -781,7 +780,7 @@ bool SemaHLSL::isLegalTypeForHLSLSV_ThreadOrGroupID(QualType T,
 
 void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
   auto *VD = cast<ValueDecl>(D);
-  if (!isLegalTypeForHLSLSV_ThreadOrGroupID(VD->getType(), AL))
+  if (!diagnoseInputIDType(VD->getType(), AL))
     return;
 
   D->addAttr(::new (getASTContext())
@@ -790,7 +789,7 @@ void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
 
 void SemaHLSL::handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL) {
   auto *VD = cast<ValueDecl>(D);
-  if (!isLegalTypeForHLSLSV_ThreadOrGroupID(VD->getType(), AL))
+  if (!diagnoseInputIDType(VD->getType(), AL))
     return;
 
   D->addAttr(::new (getASTContext()) HLSLSV_GroupIDAttr(getASTContext(), AL));

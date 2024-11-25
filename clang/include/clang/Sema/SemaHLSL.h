@@ -137,7 +137,8 @@ public:
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 
-  bool isLegalTypeForHLSLSV_ThreadOrGroupID(QualType T, const ParsedAttr &AL);
+  // Diagnose whether the input ID is uint/unit2/uint3 type.
+  bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
 
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
