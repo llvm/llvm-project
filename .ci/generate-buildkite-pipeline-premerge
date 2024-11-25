@@ -272,7 +272,7 @@ if [[ "${linux_projects}" != "" ]]; then
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results.xml'
+  - 'build/test-results.*.xml'
   agents: ${LINUX_AGENTS}
   retry:
     automatic:
@@ -295,7 +295,7 @@ if [[ "${windows_projects}" != "" ]]; then
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results.xml'
+  - 'build/test-results.*.xml'
   agents: ${WINDOWS_AGENTS}
   retry:
     automatic:

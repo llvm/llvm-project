@@ -36,7 +36,7 @@ def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmRV32Zdinx">;
 def GPRPairAsFPR : AsmOperandClass {
   let Name = "GPRPairAsFPR";
   let ParserMethod = "parseGPRPairAsFPR64";
-  let PredicateMethod = "isGPRPairAsFPR";
+  let PredicateMethod = "isGPRPairAsFPR64";
   let RenderMethod = "addRegOperands";
 }
 
@@ -325,7 +325,7 @@ def : PatFprFpr<riscv_fsgnjx, FSGNJX_D_INX, FPR64INX, f64>;
 def : Pat<(fcopysign FPR64INX:$rs1, (fneg FPR64INX:$rs2)),
           (FSGNJN_D_INX $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR32INX:$rs2),
-          (FSGNJ_D_INX $rs1, (FCVT_D_S_INX $rs2, FRM_RNE))>;
+          (FSGNJ_D_INX $rs1, (f64 (FCVT_D_S_INX $rs2, FRM_RNE)))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64INX:$rs2),
           (FSGNJ_S_INX $rs1, (FCVT_S_D_INX $rs2, FRM_DYN))>;
 
@@ -457,16 +457,16 @@ def : PatSetCC<FPR64INX, any_fsetccs, SETOLE, FLE_D_INX, f64>;
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
 // Match signaling FEQ_D
-def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETEQ)),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64IN32X:$rs1), FPR64IN32X:$rs2, SETEQ)),
           (AND (XLenVT (FLE_D_IN32X $rs1, $rs2)),
                (XLenVT (FLE_D_IN32X $rs2, $rs1)))>;
-def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETOEQ)),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64IN32X:$rs1), FPR64IN32X:$rs2, SETOEQ)),
           (AND (XLenVT (FLE_D_IN32X $rs1, $rs2)),
                (XLenVT (FLE_D_IN32X $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs1, SETEQ)),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64IN32X:$rs1), FPR64IN32X:$rs1, SETEQ)),
           (FLE_D_IN32X $rs1, $rs1)>;
-def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs1, SETOEQ)),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64IN32X:$rs1), FPR64IN32X:$rs1, SETOEQ)),
           (FLE_D_IN32X $rs1, $rs1)>;
 
 def : PatSetCC<FPR64IN32X, any_fsetccs, SETLT,  FLT_D_IN32X, f64>;

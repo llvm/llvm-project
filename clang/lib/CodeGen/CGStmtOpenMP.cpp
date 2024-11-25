@@ -5556,12 +5556,14 @@ void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
   const auto *DO = S.getSingleClause<OMPDepobjClause>();
   LValue DOLVal = EmitLValue(DO->getDepobj());
   if (const auto *DC = S.getSingleClause<OMPDependClause>()) {
-    OMPTaskDataTy::DependData Dependencies(DC->getDependencyKind(),
-                                           DC->getModifier());
-    Dependencies.DepExprs.append(DC->varlist_begin(), DC->varlist_end());
-    Address DepAddr = CGM.getOpenMPRuntime().emitDepobjDependClause(
-        *this, Dependencies, DC->getBeginLoc());
-    EmitStoreOfScalar(DepAddr.emitRawPointer(*this), DOLVal);
+    // Build list and emit dependences
+    OMPTaskDataTy Data;
+    buildDependences(S, Data);
+    for (auto &Dep : Data.Dependences) {
+      Address DepAddr = CGM.getOpenMPRuntime().emitDepobjDependClause(
+          *this, Dep, DC->getBeginLoc());
+      EmitStoreOfScalar(DepAddr.emitRawPointer(*this), DOLVal);
+    }
     return;
   }
   if (const auto *DC = S.getSingleClause<OMPDestroyClause>()) {

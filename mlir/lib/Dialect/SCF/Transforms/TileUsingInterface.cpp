@@ -1710,7 +1710,8 @@ static FailureOr<OpOperand *> getConsumerFromLoopUses(RewriterBase &rewriter,
   for (OpOperand &opOperand : val.getUses()) {
     Operation *consumerOp = opOperand.getOwner();
     // Step 1. Check if the user is tilable.
-    if (!isa<TilingInterface, DestinationStyleOpInterface>(consumerOp)) {
+    if (!isa<TilingInterface>(consumerOp) ||
+        !isa<DestinationStyleOpInterface>(consumerOp)) {
       // TODO: We have to init result of consumer before scf.for, use
       // DestinationStyleOpInterface to get result shape from init for now. Add
       // support for other op such as op has InferTypeOpInterface.
@@ -1995,13 +1996,17 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
           candidateSliceOp, "containingOp's result yield with stride");
     }
 
-    // 10. Try to get iter domain position from input position.
+    // 10. Try to get iter domain position from input position. Use
+    // clonedConsumerOp instead of tiledConsumerOp, because the iteration domain
+    // may require index computation based on the result size. The sizes and
+    // offsets should be the same either way, but using tiledConsumerOp could
+    // lead to some chained unnecessary extra index computation.
     SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
-    if (failed(tiledConsumerOp.getIterationDomainTileFromOperandTile(
+    if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTile(
             rewriter, operandNumber, offsets, sizes, iterDomainOffsets,
             iterDomainSizes))) {
       return rewriter.notifyMatchFailure(
-          tiledConsumerOp,
+          clonedConsumerOp,
           "can't get iter domain position from input position");
     }
 

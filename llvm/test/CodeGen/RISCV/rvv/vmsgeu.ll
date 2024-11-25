@@ -1990,6 +1990,27 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
+define <vscale x 4 x i1> @intrinsic_vmsgeu_mask_vi_nxv4i8_i8_1(<vscale x 4 x i1> %0, <vscale x 4 x i8> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vmsgeu_mask_vi_nxv4i8_i8_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmv1r.v v10, v0
+; CHECK-NEXT:    li a1, 99
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vmsgtu.vx v10, v8, a1, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsgeu.mask.nxv4i8.i8(
+    <vscale x 4 x i1> %0,
+    <vscale x 4 x i8> %1,
+    i8 100,
+    <vscale x 4 x i1> %2,
+    iXLen %3)
+
+  ret <vscale x 4 x i1> %a
+}
+
 define <vscale x 8 x i1> @intrinsic_vmsgeu_vi_nxv8i8_i8(<vscale x 8 x i8> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vmsgeu_vi_nxv8i8_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -2187,6 +2208,22 @@ entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmsgeu.nxv4i16.i16(
     <vscale x 4 x i16> %0,
     i16 0,
+    iXLen %1)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmsgeu_vi_nxv4i16_i16_1(<vscale x 4 x i16> %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vmsgeu_vi_nxv4i16_i16_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 99
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vmsgtu.vx v0, v8, a1
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsgeu.nxv4i16.i16(
+    <vscale x 4 x i16> %0,
+    i16 100,
     iXLen %1)
 
   ret <vscale x 4 x i1> %a

@@ -63,7 +63,6 @@
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugMacro.h"
-#include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
 #include "DWARFTypeUnit.h"
@@ -737,19 +736,6 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
   return llvm::cast_or_null<DWARFCompileUnit>(dwarf_cu);
 }
 
-DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
-  if (!m_ranges) {
-    LLDB_SCOPED_TIMER();
-
-    if (m_context.getOrLoadRangesData().GetByteSize() > 0)
-      m_ranges = std::make_unique<DWARFDebugRanges>();
-
-    if (m_ranges)
-      m_ranges->Extract(m_context);
-  }
-  return m_ranges.get();
-}
-
 /// Make an absolute path out of \p file_spec and remap it using the
 /// module's source remapping dictionary.
 static void MakeAbsoluteAndRemap(FileSpec &file_spec, DWARFUnit &dwarf_cu,
@@ -918,32 +904,20 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!dwarf_ast)
     return nullptr;
 
-  DWARFRangeList ranges = die.GetDIE()->GetAttributeAddressRanges(
-      die.GetCU(), /*check_hi_lo_pc=*/true);
-  if (ranges.IsEmpty())
-    return nullptr;
-
-  // Union of all ranges in the function DIE (if the function is
-  // discontiguous)
-  lldb::addr_t lowest_func_addr = ranges.GetMinRangeBase(0);
-  lldb::addr_t highest_func_addr = ranges.GetMaxRangeEnd(0);
-  if (lowest_func_addr == LLDB_INVALID_ADDRESS ||
-      lowest_func_addr >= highest_func_addr ||
-      lowest_func_addr < m_first_code_address)
-    return nullptr;
-
+  AddressRanges ranges;
   ModuleSP module_sp(die.GetModule());
-  AddressRange func_range;
-  func_range.GetBaseAddress().ResolveAddressUsingFileSections(
-      lowest_func_addr, module_sp->GetSectionList());
-  if (!func_range.GetBaseAddress().IsValid())
+  for (const auto &range : die.GetDIE()->GetAttributeAddressRanges(
+           die.GetCU(), /*check_hi_lo_pc=*/true)) {
+    if (range.base < m_first_code_address)
+      continue;
+    if (Address base_addr(range.base, module_sp->GetSectionList());
+        base_addr.IsValid() && FixupAddress(base_addr))
+      ranges.emplace_back(std::move(base_addr), range.size);
+  }
+  if (ranges.empty())
     return nullptr;
 
-  func_range.SetByteSize(highest_func_addr - lowest_func_addr);
-  if (!FixupAddress(func_range.GetBaseAddress()))
-    return nullptr;
-
-  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, func_range);
+  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, std::move(ranges));
 }
 
 ConstString
@@ -4477,6 +4451,12 @@ StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {
   if (m_index)
     return m_index->GetIndexTime();
   return {};
+}
+
+void SymbolFileDWARF::ResetStatistics() {
+  m_parse_time.reset();
+  if (m_index)
+    return m_index->ResetStatistics();
 }
 
 Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {

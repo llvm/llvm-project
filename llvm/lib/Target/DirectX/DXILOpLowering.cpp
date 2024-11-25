@@ -204,6 +204,25 @@ public:
     CleanupCasts.clear();
   }
 
+  // Remove the resource global associated with the handleFromBinding call
+  // instruction and their uses as they aren't needed anymore.
+  // TODO: We should verify that all the globals get removed.
+  // It's expected we'll need a custom pass in the future that will eliminate
+  // the need for this here.
+  void removeResourceGlobals(CallInst *CI) {
+    for (User *User : make_early_inc_range(CI->users())) {
+      if (StoreInst *Store = dyn_cast<StoreInst>(User)) {
+        Value *V = Store->getOperand(1);
+        Store->eraseFromParent();
+        if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+          if (GV->use_empty()) {
+            GV->removeDeadConstantUsers();
+            GV->eraseFromParent();
+          }
+      }
+    }
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -227,6 +246,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -271,6 +292,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -465,6 +488,7 @@ public:
 
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -474,12 +498,13 @@ public:
 
       std::array<Value *, 2> Args{Handle, Op1};
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::UpdateCounter, Args, CI->getName());
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
 
       if (Error E = OpCall.takeError())
         return E;
 
+      CI->replaceAllUsesWith(*OpCall);
       CI->eraseFromParent();
       return Error::success();
     });

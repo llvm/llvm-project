@@ -133,9 +133,12 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   }
 }
 
-bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                  int OpdIdx) {
+bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
+    Intrinsic::ID ID, int OpdIdx, const TargetTransformInfo *TTI) {
   assert(ID != Intrinsic::not_intrinsic && "Not an intrinsic!");
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isVectorIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
 
   switch (ID) {
   case Intrinsic::fptosi_sat:

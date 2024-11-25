@@ -156,7 +156,7 @@ struct llvm::GVNPass::Expression {
       return false;
     if (varargs != other.varargs)
       return false;
-    if (!attrs.isEmpty() && !other.attrs.isEmpty() &&
+    if ((!attrs.isEmpty() || !other.attrs.isEmpty()) &&
         !attrs.intersectWith(type->getContext(), other.attrs).has_value())
       return false;
     return true;
@@ -1129,6 +1129,9 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     assert(V1 && V2 && "both value operands of the select must be present");
     Res =
         SelectInst::Create(Sel->getCondition(), V1, V2, "", Sel->getIterator());
+    // We use the DebugLoc from the original load here, as this instruction
+    // materializes the value that would previously have been loaded.
+    cast<SelectInst>(Res)->setDebugLoc(Load->getDebugLoc());
   } else {
     llvm_unreachable("Should not materialize value from dead block");
   }

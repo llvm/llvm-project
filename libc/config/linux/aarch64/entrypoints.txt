@@ -960,6 +960,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch
     libc.src.search.hsearch_r
     libc.src.search.insque
+    libc.src.search.lfind
     libc.src.search.remque
 
     # threads.h entrypoints

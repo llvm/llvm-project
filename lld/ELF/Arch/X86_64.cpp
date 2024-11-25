@@ -394,7 +394,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
@@ -407,7 +407,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -738,7 +738,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
   case R_X86_64_PLT32:
@@ -768,8 +768,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
@@ -822,7 +821,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
     if (rel.expr != R_GOT_PC) {
       relaxGot(loc, rel, val);
     } else {
@@ -874,13 +873,13 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
 RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
                                 const uint8_t *loc) const {
-  // Only R_X86_64_[REX_]|[REX2_]GOTPCRELX can be relaxed. GNU as may emit
+  // Only R_X86_64_[REX_]|[CODE_4_]GOTPCRELX can be relaxed. GNU as may emit
   // GOTPCRELX with addend != -4. Such an instruction does not load the full GOT
   // entry, so we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip),
   // %rax (addend=0) loads the high 32 bits of the GOT entry.
   if (!ctx.arg.relax || addend != -4 ||
       (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX &&
-       type != R_X86_64_REX2_GOTPCRELX))
+       type != R_X86_64_CODE_4_GOTPCRELX))
     return R_GOT_PC;
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
@@ -1002,8 +1001,9 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (op != 0xff) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
-    assert(!ctx.arg.isPic);
-    relaxGotNoPic(loc, val + 4, op, modRm, rel.type == R_X86_64_REX2_GOTPCRELX);
+    assert(!rel.sym->file || !rel.sym->file->ctx.arg.isPic);
+    relaxGotNoPic(loc, val + 4, op, modRm,
+                  rel.type == R_X86_64_CODE_4_GOTPCRELX);
     return;
   }
 

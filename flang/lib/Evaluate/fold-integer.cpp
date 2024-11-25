@@ -873,7 +873,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     } else {
       DIE("first argument must be CHARACTER");
     }
-  } else if (name == "int") {
+  } else if (name == "int" || name == "int2" || name == "int8") {
     if (auto *expr{UnwrapExpr<Expr<SomeType>>(args[0])}) {
       return common::visit(
           [&](auto &&x) -> Expr<T> {
