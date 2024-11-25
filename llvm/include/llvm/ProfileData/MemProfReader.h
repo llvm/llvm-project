@@ -46,26 +46,6 @@ public:
     return Iterator(this);
   }
 
-  // Return a const reference to the internal Id to Frame mappings.
-  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
-  const llvm::DenseMap<FrameId, Frame> &getFrameMapping() const {
-    return IdToFrame;
-  }
-
-  // Return a const reference to the internal Id to call stacks.
-  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
-  const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
-  getCallStacks() const {
-    return CSIdToCallStack;
-  }
-
-  // Return a const reference to the internal function profile data.
-  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
-  const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
-  getProfileData() const {
-    return FunctionProfileData;
-  }
-
   // Take the complete profile data.
   IndexedMemProfData takeMemProfData() {
     // TODO: Once we replace the three member variables, namely IdToFrame,
@@ -115,24 +95,6 @@ public:
   // contents after construction.
   MemProfReader() = default;
   virtual ~MemProfReader() = default;
-
-  // Initialize the MemProfReader with the frame mappings and profile contents.
-  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
-                  "MemProfReader")
-  MemProfReader(
-      llvm::DenseMap<FrameId, Frame> FrameIdMap,
-      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
-
-  // Initialize the MemProfReader with the frame mappings, call stack mappings,
-  // and profile contents.
-  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
-                  "MemProfReader")
-  MemProfReader(
-      llvm::DenseMap<FrameId, Frame> FrameIdMap,
-      llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap,
-      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-      : IdToFrame(std::move(FrameIdMap)), CSIdToCallStack(std::move(CSIdMap)),
-        FunctionProfileData(std::move(ProfData)) {}
 
   // Initialize the MemProfReader with the given MemProf profile.
   MemProfReader(IndexedMemProfData MemProfData) {
