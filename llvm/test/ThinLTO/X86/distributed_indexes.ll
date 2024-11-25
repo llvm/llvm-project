@@ -48,6 +48,10 @@
 ; RUN: llvm-dis %t1.bc.thinlto.bc -o - | FileCheck %s --check-prefix=DIS
 ; DIS: aliasee: null
 
+; function-import pass crashed when alias is imported but aliasee doesn't.
+; TODO: Import both alias and aliasee, or neither of them.
+; RUN: not --crash opt -passes=function-import -summary-file=%t1.bc.thinlto.bc %t1.bc -o /dev/null 2>&1
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 declare void @g(...)

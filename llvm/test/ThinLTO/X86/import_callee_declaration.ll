@@ -62,6 +62,10 @@
 ; these two GUIDs are declaration.
 ;
 ; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
+
+; function-import pass crashed when alias is imported but aliasee doesn't.
+; TODO: Import both alias and aliasee, or neither of them.
+; RUN: not --crash opt -passes=function-import -summary-file=main.bc.thinlto.bc main.bc -o /dev/null 2>&1
 ;
 ; MAIN-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
 ; MAIN-DIS: gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
