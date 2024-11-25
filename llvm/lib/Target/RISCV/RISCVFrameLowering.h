@@ -78,6 +78,9 @@ public:
     return StackId != TargetStackID::ScalableVector;
   }
 
+  void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     StackOffset Offset, bool EmitCFI, unsigned CFIIndex) const;
+
 protected:
   const RISCVSubtarget &STI;
 
