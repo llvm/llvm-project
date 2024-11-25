@@ -221,8 +221,6 @@ add_entrypoint_object(
   HDRS
     ../process_mrelease.h
   DEPENDS
-    libc.include.signal
-    libc.src.signal.kill
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno)

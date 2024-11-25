@@ -194,6 +194,8 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sys.mman.process_mrelease
     libc.src.unistd.close
+    libc.src.signal.kill
+    libc.include.signal
     libc.src.stdlib.exit
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.sleep)
