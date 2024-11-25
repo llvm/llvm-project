@@ -2781,16 +2781,15 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   if (VecTy->isScalableTy()) {
     unsigned InterleaveFactor = Vals.size();
     SmallVector<Value *> InterleavingValues(Vals);
-    // As we are interleaving, the values sz will be shrinked until we have the
+    // When interleaving, the number of values will be shrunk until we have the
     // single final interleaved value.
+    VectorType *InterleaveTy =
+        cast<VectorType>(InterleavingValues[0]->getType());
     for (unsigned Midpoint = Factor / 2; Midpoint > 0; Midpoint /= 2) {
-      VectorType *InterleaveTy =
-          cast<VectorType>(InterleavingValues[0]->getType());
-      VectorType *WideVecTy =
-          VectorType::getDoubleElementsVectorType(InterleaveTy);
+      InterleaveTy = VectorType::getDoubleElementsVectorType(InterleaveTy);
       for (unsigned I = 0; I < Midpoint; ++I)
         InterleavingValues[I] = Builder.CreateIntrinsic(
-            WideVecTy, Intrinsic::vector_interleave2,
+            InterleaveTy, Intrinsic::vector_interleave2,
             {InterleavingValues[I], InterleavingValues[Midpoint + I]},
             /*FMFSource=*/nullptr, Name);
     }
@@ -2883,8 +2882,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       assert(isPowerOf2_32(InterleaveFactor) &&
              "Unsupported deinterleave factor for scalable vectors");
       auto *ResBlockInMask = State.get(BlockInMask);
-      SmallVector<Value *> Ops;
-      Ops.resize(InterleaveFactor, ResBlockInMask);
+      SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
       return interleaveVectors(State.Builder, Ops, "interleaved.mask");
     }
 
@@ -2937,8 +2935,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       // deinterleaving, because the current available deinterleave intrinsic
       // supports only Factor of 2, otherwise it will bailout after first
       // iteration.
-      // As we are deinterleaving, the values will be doubled until reachingt
-      // to the InterleaveFactor.
+      // When deinterleaving, the number of values will double until we
+      // have "InterleaveFactor".
       for (int NumVectors = 1; NumVectors < InterleaveFactor; NumVectors *= 2) {
         // deinterleave the elements within the vector
         std::vector<Value *> TempDeinterleavedValues(NumVectors);
