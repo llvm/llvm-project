@@ -499,7 +499,9 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
 /// Arrange the argument and result information for the declaration or
 /// definition of the given function.
 const CGFunctionInfo &
-CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
+CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
+  const FunctionDecl *FD = dyn_cast<FunctionDecl>(GD.getDecl());
+  assert(FD && "GD must contain FunctionDecl");
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
     if (MD->isImplicitObjectMemberFunction())
       return arrangeCXXMethodDeclaration(MD);
@@ -508,6 +510,13 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
 
   assert(isa<FunctionType>(FTy));
   setCUDAKernelCallingConvention(FTy, CGM, FD);
+
+  if (FD->hasAttr<OpenCLKernelAttr>() &&
+      GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+    const FunctionType *FT = FTy->getAs<FunctionType>();
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
+    FTy = FT->getCanonicalTypeUnqualified();
+  }
 
   // When declaring a function without a prototype, always use a
   // non-variadic type.
@@ -581,13 +590,11 @@ CodeGenTypes::arrangeUnprototypedObjCMessageSend(QualType returnType,
 const CGFunctionInfo &
 CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
   // FIXME: Do we need to handle ObjCMethodDecl?
-  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-
   if (isa<CXXConstructorDecl>(GD.getDecl()) ||
       isa<CXXDestructorDecl>(GD.getDecl()))
     return arrangeCXXStructorDeclaration(GD);
 
-  return arrangeFunctionDeclaration(FD);
+  return arrangeFunctionDeclaration(GD);
 }
 
 /// Arrange a thunk that takes 'this' as the first parameter followed by
@@ -2392,7 +2399,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Collect function IR attributes from the callee prototype if we have one.
   AddAttributesFromFunctionProtoType(getContext(), FuncAttrs,
                                      CalleeInfo.getCalleeFunctionProtoType());
-
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
 
   // Attach assumption attributes to the declaration. If this is a call
