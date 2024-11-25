@@ -351,9 +351,14 @@ bool InstrProfWriter::addMemProfCallStack(
 
 bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
                                      function_ref<void(Error)> Warn) {
-  // TODO: Once we remove support for MemProf format Version V1, assert that
-  // the three components (frames, call stacks, and records) are either all
-  // empty or populated.
+  // Return immediately if everything is empty.
+  if (Incoming.Frames.empty() && Incoming.CallStacks.empty() &&
+      Incoming.Records.empty())
+    return true;
+
+  // Otherwise, every component must be non-empty.
+  assert(!Incoming.Frames.empty() && !Incoming.CallStacks.empty() &&
+         !Incoming.Records.empty());
 
   if (MemProfData.Frames.empty())
     MemProfData.Frames = std::move(Incoming.Frames);
@@ -636,7 +641,7 @@ writeMemProfCallStackArray(
       MemProfCallStackIndexes;
 
   memprof::CallStackRadixTreeBuilder<memprof::FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
   for (auto I : Builder.getRadixArray())
     OS.write32(I);
