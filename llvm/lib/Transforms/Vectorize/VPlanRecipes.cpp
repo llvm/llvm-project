@@ -2202,20 +2202,16 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
          "Inferred type and recurrence type mismatch.");
 
-  // BaseCost = Reduction cost + BinOp cost
-  InstructionCost BaseCost =
-      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, CostKind);
+  // Note that TTI should model the cost of moving result to the scalar register
+  // and the binOp cost in the getReductionCost().
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    BaseCost += Ctx.TTI.getMinMaxReductionCost(
-        Id, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
-  } else {
-    BaseCost += Ctx.TTI.getArithmeticReductionCost(
-        Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+    return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy,
+                                          RdxDesc.getFastMathFlags(), CostKind);
   }
 
-  // Default cost.
-  return BaseCost;
+  return Ctx.TTI.getArithmeticReductionCost(
+      Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
 }
 
 InstructionCost
@@ -2238,15 +2234,13 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
   assert(ExtendedRedCost.isValid() && "VPExtendedReductionRecipe should not be "
                                       "created if the cost is invalid.");
 
-  // BaseCost = Reduction cost + BinOp cost
-  InstructionCost ReductionCost =
-      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, CostKind);
+  InstructionCost ReductionCost;
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    ReductionCost += Ctx.TTI.getMinMaxReductionCost(
+    ReductionCost = Ctx.TTI.getMinMaxReductionCost(
         Id, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
   } else {
-    ReductionCost += Ctx.TTI.getArithmeticReductionCost(
+    ReductionCost = Ctx.TTI.getArithmeticReductionCost(
         Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
   }
 
@@ -2287,9 +2281,7 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
                                  "created if the cost is invalid.");
 
   // BaseCost = Reduction cost + BinOp cost
-  InstructionCost ReductionCost =
-      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, CostKind);
-  ReductionCost += Ctx.TTI.getArithmeticReductionCost(
+  InstructionCost ReductionCost = Ctx.TTI.getArithmeticReductionCost(
       Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
 
   // Extended cost
