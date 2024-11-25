@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___TUPLE_TUPLE_ELEMENT_H
 #define _LIBCPP___TUPLE_TUPLE_ELEMENT_H
 
-#include <__config>
-#include <__tuple/tuple_indices.h>
-#include <__tuple/tuple_types.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__tuple/tuple_indices.h>
+#include <__cxx03/__tuple/tuple_types.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -45,7 +45,7 @@ int timespec_get( struct timespec *ts, int base); // C++17
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 // <time.h> is not provided by libc++
 #if __has_include(<time.h>)

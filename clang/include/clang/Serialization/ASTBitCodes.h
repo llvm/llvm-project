@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 32;
+const unsigned VERSION_MAJOR = 34;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -350,9 +350,8 @@ enum ControlRecordTypes {
   /// and information about the compiler used to build this AST file.
   METADATA = 1,
 
-  /// Record code for the list of other AST files imported by
-  /// this AST file.
-  IMPORTS,
+  /// Record code for another AST file imported by this AST file.
+  IMPORT,
 
   /// Record code for the original file that was used to
   /// generate the AST file, including both its file ID and its
@@ -2005,6 +2004,7 @@ enum StmtCode {
   // OpenACC Constructs/Exprs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
   STMT_OPENACC_LOOP_CONSTRUCT,
+  STMT_OPENACC_COMBINED_CONSTRUCT,
   EXPR_OPENACC_ASTERISK_SIZE,
 
   // HLSL Constructs

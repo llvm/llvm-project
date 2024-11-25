@@ -2,6 +2,10 @@
 ; RUN: llc < %s -mtriple=aarch64-- | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for v16i4
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i1
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v2i128
+
 declare <1 x i8> @llvm.sadd.sat.v1i8(<1 x i8>, <1 x i8>)
 declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>)
 declare <4 x i8> @llvm.sadd.sat.v4i8(<4 x i8>, <4 x i8>)
@@ -332,9 +336,9 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    ldrsb w9, [x1]
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    asr w10, w9, #7
-; CHECK-GI-NEXT:    cmp w8, w9
+; CHECK-GI-NEXT:    sbfx w10, w8, #7, #1
 ; CHECK-GI-NEXT:    sub w10, w10, #128
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w8, w10, w8, ne
 ; CHECK-GI-NEXT:    strb w8, [x2]
 ; CHECK-GI-NEXT:    ret
@@ -360,9 +364,9 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    ldrsh w9, [x1]
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    sxth w9, w8
-; CHECK-GI-NEXT:    asr w10, w9, #15
-; CHECK-GI-NEXT:    cmp w8, w9
+; CHECK-GI-NEXT:    sbfx w10, w8, #15, #1
 ; CHECK-GI-NEXT:    sub w10, w10, #8, lsl #12 // =32768
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w8, w10, w8, ne
 ; CHECK-GI-NEXT:    strh w8, [x2]
 ; CHECK-GI-NEXT:    ret

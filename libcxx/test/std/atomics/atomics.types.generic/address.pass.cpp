@@ -65,9 +65,10 @@
 // };
 
 #include <atomic>
+#include <cassert>
+#include <cstddef>
 #include <new>
 #include <type_traits>
-#include <cassert>
 
 #include <cmpxchg_loop.h>
 

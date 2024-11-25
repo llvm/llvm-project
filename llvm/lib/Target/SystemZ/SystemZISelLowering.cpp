@@ -1444,15 +1444,15 @@ void SystemZTargetLowering::LowerAsmOperandForConstraint(
     case 'K': // Signed 16-bit constant
       if (auto *C = dyn_cast<ConstantSDNode>(Op))
         if (isInt<16>(C->getSExtValue()))
-          Ops.push_back(DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                              Op.getValueType()));
+          Ops.push_back(DAG.getSignedTargetConstant(
+              C->getSExtValue(), SDLoc(Op), Op.getValueType()));
       return;
 
     case 'L': // Signed 20-bit displacement (on all targets we support)
       if (auto *C = dyn_cast<ConstantSDNode>(Op))
         if (isInt<20>(C->getSExtValue()))
-          Ops.push_back(DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                              Op.getValueType()));
+          Ops.push_back(DAG.getSignedTargetConstant(
+              C->getSExtValue(), SDLoc(Op), Op.getValueType()));
       return;
 
     case 'M': // 0x7fffffff
@@ -2578,7 +2578,7 @@ static void adjustSubwordCmp(SelectionDAG &DAG, const SDLoc &DL,
   // Make sure that the second operand is an i32 with the right value.
   if (C.Op1.getValueType() != MVT::i32 ||
       Value != ConstOp1->getZExtValue())
-    C.Op1 = DAG.getConstant(Value, DL, MVT::i32);
+    C.Op1 = DAG.getConstant((uint32_t)Value, DL, MVT::i32);
 }
 
 // Return true if Op is either an unextended load, or a load suitable
@@ -2676,10 +2676,7 @@ static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
            (N->getOperand(0) == C.Op1 && N->getOperand(1) == C.Op0))) {
         // Disable the nsw and nuw flags: the backend needs to handle
         // overflow as well during comparison elimination.
-        SDNodeFlags Flags = N->getFlags();
-        Flags.setNoSignedWrap(false);
-        Flags.setNoUnsignedWrap(false);
-        N->setFlags(Flags);
+        N->dropFlags(SDNodeFlags::NoWrap);
         C.Op0 = SDValue(N, 0);
         C.Op1 = DAG.getConstant(0, DL, N->getValueType(0));
         return;
@@ -3413,7 +3410,7 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
   }
   if (Invert) {
     SDValue Mask =
-      DAG.getSplatBuildVector(VT, DL, DAG.getConstant(-1, DL, MVT::i64));
+        DAG.getSplatBuildVector(VT, DL, DAG.getAllOnesConstant(DL, MVT::i64));
     Cmp = DAG.getNode(ISD::XOR, DL, VT, Cmp, Mask);
   }
   if (Chain && Chain.getNode() != Cmp.getNode()) {
@@ -3574,7 +3571,7 @@ SDValue SystemZTargetLowering::lowerGlobalAddress(GlobalAddressSDNode *Node,
   // addition for it.
   if (Offset != 0)
     Result = DAG.getNode(ISD::ADD, DL, PtrVT, Result,
-                         DAG.getConstant(Offset, DL, PtrVT));
+                         DAG.getSignedConstant(Offset, DL, PtrVT));
 
   return Result;
 }
@@ -3837,7 +3834,7 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
     const auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
     int Offset = TFL->getReturnAddressOffset(MF);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, FrameAddr,
-                              DAG.getConstant(Offset, DL, PtrVT));
+                              DAG.getSignedConstant(Offset, DL, PtrVT));
     return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Ptr,
                        MachinePointerInfo());
   }
@@ -4587,7 +4584,7 @@ static void getCSAddressAndShifts(SDValue Addr, SelectionDAG &DAG, SDLoc DL,
 
   // Get the address of the containing word.
   AlignedAddr = DAG.getNode(ISD::AND, DL, PtrVT, Addr,
-                            DAG.getConstant(-4, DL, PtrVT));
+                            DAG.getSignedConstant(-4, DL, PtrVT));
 
   // Get the number of bits that the word must be rotated left in order
   // to bring the field to the top bits of a GR32.
@@ -4626,7 +4623,8 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   if (Opcode == SystemZISD::ATOMIC_LOADW_SUB)
     if (auto *Const = dyn_cast<ConstantSDNode>(Src2)) {
       Opcode = SystemZISD::ATOMIC_LOADW_ADD;
-      Src2 = DAG.getConstant(-Const->getSExtValue(), DL, Src2.getValueType());
+      Src2 = DAG.getSignedConstant(-Const->getSExtValue(), DL,
+                                   Src2.getValueType());
     }
 
   SDValue AlignedAddr, BitShift, NegBitShift;
@@ -7226,7 +7224,16 @@ SDValue SystemZTargetLowering::combineSTORE(
       if (C->getAPIntValue().getBitWidth() > 64 || C->isAllOnes() ||
           isInt<16>(C->getSExtValue()) || MemVT.getStoreSize() <= 2)
         return;
-      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, C->getZExtValue()));
+
+      APInt Val = C->getAPIntValue();
+      // Truncate Val in case of a truncating store.
+      if (!llvm::isUIntN(TotBytes * 8, Val.getZExtValue())) {
+        assert(SN->isTruncatingStore() &&
+               "Non-truncating store and immediate value does not fit?");
+        Val = Val.trunc(TotBytes * 8);
+      }
+
+      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, Val.getZExtValue()));
       if (VCI.isVectorConstantLegal(Subtarget) &&
           VCI.Opcode == SystemZISD::REPLICATE) {
         Word = DAG.getConstant(VCI.OpVals[0], SDLoc(SN), MVT::i32);

@@ -132,22 +132,6 @@ static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   return filteredAttrs;
 }
 
-static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
-                                    NamedAttrList &result) {
-  return parser.parseOptionalAttrDict(result);
-}
-
-static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
-                             DictionaryAttr attrs) {
-  auto filteredAttrs = processFMFAttr(attrs.getValue());
-  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op)) {
-    printer.printOptionalAttrDict(
-        filteredAttrs, /*elidedAttrs=*/{iface.getOverflowFlagsAttrName()});
-  } else {
-    printer.printOptionalAttrDict(filteredAttrs);
-  }
-}
-
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
 /// fully defined llvm.func.
 static LogicalResult verifySymbolAttrUse(FlatSymbolRefAttr symbol,
@@ -949,11 +933,11 @@ LogicalResult LoadOp::verify() {
 
 void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
-                   bool isNonTemporal, bool isInvariant,
+                   bool isNonTemporal, bool isInvariant, bool isInvariantGroup,
                    AtomicOrdering ordering, StringRef syncscope) {
   build(builder, state, type, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
-        isNonTemporal, isInvariant, ordering,
+        isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
@@ -988,11 +972,11 @@ LogicalResult StoreOp::verify() {
 
 void StoreOp::build(OpBuilder &builder, OperationState &state, Value value,
                     Value addr, unsigned alignment, bool isVolatile,
-                    bool isNonTemporal, AtomicOrdering ordering,
-                    StringRef syncscope) {
+                    bool isNonTemporal, bool isInvariantGroup,
+                    AtomicOrdering ordering, StringRef syncscope) {
   build(builder, state, value, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
-        isNonTemporal, ordering,
+        isNonTemporal, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
@@ -3526,8 +3510,7 @@ void LLVMDialect::initialize() {
            LLVMPPCFP128Type,
            LLVMTokenType,
            LLVMLabelType,
-           LLVMMetadataType,
-           LLVMStructType>();
+           LLVMMetadataType>();
   // clang-format on
   registerTypes();
 

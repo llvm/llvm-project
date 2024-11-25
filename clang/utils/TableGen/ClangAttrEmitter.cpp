@@ -1,4 +1,4 @@
-//===- ClangAttrEmitter.cpp - Generate Clang attribute handling =-*- C++ -*--=//
+//===-- ClangAttrEmitter.cpp - Generate Clang attribute handling ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,16 +21,13 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -39,7 +36,6 @@
 #include <memory>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1825,9 +1821,9 @@ CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
   return Ret;
 }
 
-void WriteSemanticSpellingSwitch(StringRef VarName,
-                                 const SemanticSpellingMap &Map,
-                                 raw_ostream &OS) {
+static void WriteSemanticSpellingSwitch(StringRef VarName,
+                                        const SemanticSpellingMap &Map,
+                                        raw_ostream &OS) {
   OS << "  switch (" << VarName << ") {\n    default: "
     << "llvm_unreachable(\"Unknown spelling list index\");\n";
   for (const auto &I : Map)
@@ -2371,12 +2367,12 @@ template <typename Fn> static void forEachSpelling(const Record &Attr, Fn &&F) {
   }
 }
 
-std::map<StringRef, std::vector<const Record *>> NameToAttrsMap;
+static std::map<StringRef, std::vector<const Record *>> NameToAttrsMap;
 
 /// Build a map from the attribute name to the Attrs that use that name. If more
 /// than one Attr use a name, the arguments could be different so a more complex
 /// check is needed in the generated switch.
-void generateNameToAttrsMap(const RecordKeeper &Records) {
+static void generateNameToAttrsMap(const RecordKeeper &Records) {
   for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
     for (const FlattenedSpelling &S : GetFlattenedSpellings(*A)) {
       auto [It, Inserted] = NameToAttrsMap.try_emplace(S.name());
@@ -2727,7 +2723,8 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     }
 
     if (Header)
-      OS << "class " << R.getName() << "Attr : public " << SuperName << " {\n";
+      OS << "class CLANG_ABI " << R.getName() << "Attr : public " << SuperName
+         << " {\n";
     else
       OS << "\n// " << R.getName() << "Attr implementation\n\n";
 
@@ -3185,7 +3182,8 @@ void clang::EmitClangAttrClass(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' definitions", OS, Records);
 
   OS << "#ifndef LLVM_CLANG_ATTR_CLASSES_INC\n";
-  OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n\n";
+  OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n";
+  OS << "#include \"clang/Support/Compiler.h\"\n\n";
 
   emitAttributes(Records, OS, true);
 
@@ -3841,19 +3839,60 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
     const Record &R = *I.second;
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
     OS << "  case AT_" << I.first << ": {\n";
-    for (unsigned I = 0; I < Spellings.size(); ++ I) {
-      OS << "    if (Name == \"" << Spellings[I].name() << "\" && "
-         << "getSyntax() == AttributeCommonInfo::AS_" << Spellings[I].variety()
-         << " && Scope == \"" << Spellings[I].nameSpace() << "\")\n"
-         << "        return " << I << ";\n";
+
+    // If there are none or one spelling to check, resort to the default
+    // behavior of returning index as 0.
+    if (Spellings.size() <= 1) {
+      OS << "    return 0;\n"
+         << "    break;\n"
+         << "  }\n";
+      continue;
     }
 
-    OS << "    break;\n";
-    OS << "  }\n";
+    std::vector<StringRef> Names;
+    llvm::transform(Spellings, std::back_inserter(Names),
+                    [](const FlattenedSpelling &FS) { return FS.name(); });
+    llvm::sort(Names);
+    Names.erase(llvm::unique(Names), Names.end());
+
+    for (const auto &[Idx, FS] : enumerate(Spellings)) {
+      OS << "    if (";
+      if (Names.size() > 1) {
+        SmallVector<StringRef, 6> SameLenNames;
+        StringRef FSName = FS.name();
+        llvm::copy_if(
+            Names, std::back_inserter(SameLenNames),
+            [&](StringRef N) { return N.size() == FSName.size(); });
+
+        if (SameLenNames.size() == 1) {
+          OS << "Name.size() == " << FS.name().size() << " && ";
+        } else {
+          // FIXME: We currently fall back to comparing entire strings if there
+          // are 2 or more spelling names with the same length. This can be
+          // optimized to check only for the the first differing character
+          // between them instead.
+          OS << "Name == \"" << FS.name() << "\""
+             << " && ";
+        }
+      }
+
+      OS << "getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
+         << " && ComputedScope == ";
+      if (FS.nameSpace() == "")
+        OS << "AttributeCommonInfo::Scope::NONE";
+      else
+        OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
+
+      OS << ")\n"
+         << "      return " << Idx << ";\n";
+    }
+
+    OS << "    break;\n"
+       << "  }\n";
   }
 
-  OS << "  }\n";
-  OS << "  return 0;\n";
+  OS << "  }\n"
+     << "  return 0;\n";
 }
 
 // Emits code used by RecursiveASTVisitor to visit attributes
@@ -3926,9 +3965,9 @@ void EmitClangAttrASTVisitor(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif  // ATTR_VISITOR_DECLS_ONLY\n";
 }
 
-void EmitClangAttrTemplateInstantiateHelper(ArrayRef<const Record *> Attrs,
-                                            raw_ostream &OS,
-                                            bool AppliesToDecl) {
+static void
+EmitClangAttrTemplateInstantiateHelper(ArrayRef<const Record *> Attrs,
+                                       raw_ostream &OS, bool AppliesToDecl) {
 
   OS << "  switch (At->getKind()) {\n";
   for (const auto *Attr : Attrs) {
@@ -4583,7 +4622,7 @@ static bool isParamExpr(const Record *Arg) {
              .Default(false);
 }
 
-void GenerateIsParamExpr(const Record &Attr, raw_ostream &OS) {
+static void GenerateIsParamExpr(const Record &Attr, raw_ostream &OS) {
   OS << "bool isParamExpr(size_t N) const override {\n";
   OS << "  return ";
   auto Args = Attr.getValueAsListOfDefs("Args");
@@ -4594,8 +4633,8 @@ void GenerateIsParamExpr(const Record &Attr, raw_ostream &OS) {
   OS << "}\n\n";
 }
 
-void GenerateHandleAttrWithDelayedArgs(const RecordKeeper &Records,
-                                       raw_ostream &OS) {
+static void GenerateHandleAttrWithDelayedArgs(const RecordKeeper &Records,
+                                              raw_ostream &OS) {
   OS << "static void handleAttrWithDelayedArgs(Sema &S, Decl *D, ";
   OS << "const ParsedAttr &Attr) {\n";
   OS << "  SmallVector<Expr *, 4> ArgExprs;\n";

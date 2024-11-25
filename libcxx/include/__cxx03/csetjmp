@@ -30,7 +30,7 @@ void longjmp(jmp_buf env, int val);
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 // <setjmp.h> is not provided by libc++
 #if __has_include(<setjmp.h>)

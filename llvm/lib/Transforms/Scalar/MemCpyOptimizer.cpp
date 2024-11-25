@@ -52,7 +52,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
@@ -284,7 +283,7 @@ static bool mayBeVisibleThroughUnwinding(Value *V, Instruction *Start,
 
 void MemCpyOptPass::eraseInstruction(Instruction *I) {
   MSSAU->removeMemoryAccess(I);
-  EEI->removeInstruction(I);
+  EEA->removeInstruction(I);
   I->eraseFromParent();
 }
 
@@ -639,7 +638,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
   if (!LI->isSimple() || !LI->hasOneUse() || LI->getParent() != SI->getParent())
     return false;
 
-  BatchAAResults BAA(*AA, EEI);
+  BatchAAResults BAA(*AA, EEA);
   auto *T = LI->getType();
   // Don't introduce calls to memcpy/memmove intrinsics out of thin air if
   // the corresponding libcalls are not available.
@@ -1752,7 +1751,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         return true;
       }
 
-  BatchAAResults BAA(*AA, EEI);
+  BatchAAResults BAA(*AA, EEA);
   // FIXME: Not using getClobberingMemoryAccess() here due to PR54682.
   MemoryAccess *AnyClobber = MA->getDefiningAccess();
   MemoryLocation DestLoc = MemoryLocation::getForDest(M);
@@ -1877,7 +1876,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   if (!CallAccess)
     return false;
   MemCpyInst *MDep = nullptr;
-  BatchAAResults BAA(*AA, EEI);
+  BatchAAResults BAA(*AA, EEA);
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       CallAccess->getDefiningAccess(), Loc, BAA);
   if (auto *MD = dyn_cast<MemoryDef>(Clobber))
@@ -1950,7 +1949,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 /// 4. The memcpy src is not modified during the call. (ModRef check shows no
 /// Mod.)
 bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
-  BatchAAResults BAA(*AA, EEI);
+  BatchAAResults BAA(*AA, EEA);
   Value *ImmutArg = CB.getArgOperand(ArgNo);
 
   // 1. Ensure passed argument is immutable during call.
@@ -2118,8 +2117,8 @@ bool MemCpyOptPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
   MSSA = MSSA_;
   MemorySSAUpdater MSSAU_(MSSA_);
   MSSAU = &MSSAU_;
-  EarliestEscapeInfo EEI_(*DT);
-  EEI = &EEI_;
+  EarliestEscapeAnalysis EEA_(*DT);
+  EEA = &EEA_;
 
   while (true) {
     if (!iterateOnFunction(F))

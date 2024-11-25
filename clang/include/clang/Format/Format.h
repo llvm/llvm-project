@@ -1569,7 +1569,7 @@ struct FormatStyle {
 
   /// Control of individual brace wrapping cases.
   ///
-  /// If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
+  /// If ``BreakBeforeBraces`` is set to ``Custom``, use this to specify how
   /// each individual brace case should be handled. Otherwise, this is ignored.
   /// \code{.yaml}
   ///   # Example of usage:
@@ -4970,12 +4970,11 @@ struct FormatStyle {
   /// \version 12
   std::vector<std::string> StatementAttributeLikeMacros;
 
-  /// A vector of macros that should be interpreted as complete
-  /// statements.
+  /// A vector of macros that should be interpreted as complete statements.
   ///
-  /// Typical macros are expressions, and require a semi-colon to be
-  /// added; sometimes this is not the case, and this allows to make
-  /// clang-format aware of such cases.
+  /// Typical macros are expressions and require a semicolon to be added.
+  /// Sometimes this is not the case, and this allows to make clang-format aware
+  /// of such cases.
   ///
   /// For example: Q_UNUSED
   /// \version 8

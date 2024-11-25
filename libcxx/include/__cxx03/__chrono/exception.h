@@ -12,19 +12,19 @@
 #ifndef _LIBCPP___CHRONO_EXCEPTION_H
 #define _LIBCPP___CHRONO_EXCEPTION_H
 
-#include <version>
+#include <__cxx03/version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
-#  include <__chrono/calendar.h>
-#  include <__chrono/local_info.h>
-#  include <__chrono/time_point.h>
-#  include <__config>
-#  include <__configuration/availability.h>
-#  include <__verbose_abort>
-#  include <format>
-#  include <stdexcept>
-#  include <string>
+#  include <__cxx03/__chrono/calendar.h>
+#  include <__cxx03/__chrono/local_info.h>
+#  include <__cxx03/__chrono/time_point.h>
+#  include <__cxx03/__config>
+#  include <__cxx03/__configuration/availability.h>
+#  include <__cxx03/__verbose_abort>
+#  include <__cxx03/format>
+#  include <__cxx03/stdexcept>
+#  include <__cxx03/string>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

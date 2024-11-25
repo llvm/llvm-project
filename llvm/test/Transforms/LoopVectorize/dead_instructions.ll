@@ -46,16 +46,16 @@ define i64 @dead_instructions_01(ptr %a, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP4:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2]] = add i64 [[TMP1]], [[R]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP2]], [[R]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ [[TMP4]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
 entry:
   br label %for.body
@@ -155,8 +155,8 @@ define void @dead_load_and_vector_pointer(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 8, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP5]], align 8, !alias.scope [[META6]], !noalias [[META9]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD2]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD2]], splat (i32 1)
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP4]], align 4, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP5]], align 4, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

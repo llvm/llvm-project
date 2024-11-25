@@ -230,7 +230,7 @@ Block *Block::GetContainingInlinedBlockWithCallSite(
     const auto *function_info = inlined_block->GetInlinedFunctionInfo();
 
     if (function_info &&
-        function_info->GetCallSite().FileAndLineEqual(find_call_site))
+        function_info->GetCallSite().FileAndLineEqual(find_call_site, true))
       return inlined_block;
     inlined_block = inlined_block->GetInlinedParent();
   }
@@ -252,19 +252,20 @@ bool Block::GetRangeContainingAddress(const Address &addr,
   Function *function = CalculateSymbolContextFunction();
   if (function) {
     const AddressRange &func_range = function->GetAddressRange();
-    if (addr.GetSection() == func_range.GetBaseAddress().GetSection()) {
-      const addr_t addr_offset = addr.GetOffset();
-      const addr_t func_offset = func_range.GetBaseAddress().GetOffset();
-      if (addr_offset >= func_offset &&
-          addr_offset < func_offset + func_range.GetByteSize()) {
-        addr_t offset = addr_offset - func_offset;
+    if (addr.GetModule() == func_range.GetBaseAddress().GetModule()) {
+      const addr_t file_addr = addr.GetFileAddress();
+      const addr_t func_file_addr =
+          func_range.GetBaseAddress().GetFileAddress();
+      if (file_addr >= func_file_addr &&
+          file_addr < func_file_addr + func_range.GetByteSize()) {
+        addr_t offset = file_addr - func_file_addr;
 
         const Range *range_ptr = m_ranges.FindEntryThatContains(offset);
 
         if (range_ptr) {
-          range.GetBaseAddress() = func_range.GetBaseAddress();
-          range.GetBaseAddress().SetOffset(func_offset +
-                                           range_ptr->GetRangeBase());
+          range.GetBaseAddress() =
+              Address(func_file_addr + range_ptr->GetRangeBase(),
+                      addr.GetModule()->GetSectionList());
           range.SetByteSize(range_ptr->GetByteSize());
           return true;
         }

@@ -9,15 +9,15 @@
 #ifndef _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 #define _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 
-#include <__config>
-#include <__exception/operations.h>
-#include <__memory/addressof.h>
-#include <__memory/construct_at.h>
-#include <__type_traits/decay.h>
-#include <cstddef>
-#include <cstdlib>
-#include <new>
-#include <typeinfo>
+#include <__cxx03/__config>
+#include <__cxx03/__exception/operations.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdlib>
+#include <__cxx03/new>
+#include <__cxx03/typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

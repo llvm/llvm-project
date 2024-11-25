@@ -14,16 +14,38 @@ add_header_library(
     libc.src.__support.CPP.type_traits
 )
 
-add_header_library(
+add_object_library(
   freelist
   HDRS
     freelist.h
+  SRCS
+    freelist.cpp
   DEPENDS
+    .block
     libc.src.__support.fixedvector
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
+)
+
+add_object_library(
+  freetrie
+  HDRS
+    freetrie.h
+  SRCS
+    freetrie.cpp
+  DEPENDS
+    .block
+    .freelist
+)
+
+add_header_library(
+  freestore
+  HDRS
+    freestore.h
+  DEPENDS
+    .freetrie
 )
 
 add_header_library(
@@ -32,7 +54,7 @@ add_header_library(
     freelist_heap.h
   DEPENDS
     .block
-    .freelist
+    .freestore
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.array
     libc.src.__support.CPP.optional
@@ -55,7 +77,7 @@ add_header_library(
   common
   HDRS
     common.h
-    endian.h
+    endian_internal.h
     macros/properties/architectures.h
     macros/attributes.h
     macros/properties/cpu_features.h
@@ -210,6 +232,12 @@ add_header_library(
 )
 
 add_header_library(
+  complex_type
+  HDRS
+    complex_type.h
+)
+
+add_header_library(
   integer_operations
   HDRS
     integer_operations.h
@@ -236,6 +264,9 @@ add_header_library(
   HDRS
     char_vector.h
   DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
     libc.src.__support.common
 )
 

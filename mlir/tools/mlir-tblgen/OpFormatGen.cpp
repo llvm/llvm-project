@@ -229,10 +229,9 @@ public:
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
-    function_ref<LiteralElement *(FormatElement * el)>
-        literalElementCastConverter =
-            [](FormatElement *el) { return cast<LiteralElement>(el); };
-    return llvm::map_range(literalElements, literalElementCastConverter);
+    return llvm::map_range(literalElements, [](FormatElement *el) {
+      return cast<LiteralElement>(el);
+    });
   }
 
   /// Returns a range to iterate over the parsing elements corresponding to the
@@ -2009,10 +2008,26 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
        << "() != " << propElement.getVar()->prop.getDefaultValue();
 }
 
+/// Elide the variadic segment size attributes if necessary.
+/// This pushes elided attribute names in `elidedStorage`.
+static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
+                                      MethodBody &body,
+                                      const char *elidedStorage) {
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    body << "  " << elidedStorage << ".push_back(\"operandSegmentSizes\");\n";
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
+}
+
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedProps");
+
   for (const NamedProperty *namedProperty : fmt.usedProperties)
     body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
@@ -2058,13 +2073,9 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
-  // Elide the variadic segment size attributes if necessary.
-  if (!fmt.allOperands &&
-      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
-  if (!fmt.allResultTypes &&
-      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
+
   for (const StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)

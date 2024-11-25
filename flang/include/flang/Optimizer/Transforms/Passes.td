@@ -424,7 +424,7 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
-    "fir::FIROpsDialect"
+    "fir::FIROpsDialect", "mlir::gpu::GPUDialect"
   ];
 }
 
@@ -432,7 +432,7 @@ def CUFDeviceGlobal :
     Pass<"cuf-device-global", "mlir::ModuleOp"> {
   let summary = "Flag globals used in device function with data attribute";
   let dependentDialects = [
-    "cuf::CUFDialect"
+    "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
   ];
 }
 

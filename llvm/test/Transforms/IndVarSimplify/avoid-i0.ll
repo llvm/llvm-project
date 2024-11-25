@@ -4,19 +4,19 @@
 
 ; Don't treat an and with 0 as a mask (trunc+zext).
 
-define i32 @int80(i8 signext %p_71) nounwind {
+define i32 @int80(i8 signext %p_71, i1 %arg) nounwind {
 entry:
 	br label %bb
 
 bb:		; preds = %bb6, %entry
 	%p_71_addr.0 = phi i8 [ %p_71, %entry ], [ %0, %bb6 ]		; <i8> [#uses=0]
-	br i1 undef, label %bb4, label %bb1
+	br i1 %arg, label %bb4, label %bb1
 
 bb1:		; preds = %bb
 	ret i32 0
 
 bb4:		; preds = %bb4, %bb
-	br i1 undef, label %bb6, label %bb4
+	br i1 %arg, label %bb6, label %bb4
 
 bb6:		; preds = %bb4
 	%0 = and i8 0, 0		; <i8> [#uses=1]

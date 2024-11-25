@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
 #define _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
 
-#include <__config>
-#include <__type_traits/conditional.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/nat.h>
-#include <__type_traits/type_list.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/nat.h>
+#include <__cxx03/__type_traits/type_list.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

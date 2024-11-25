@@ -375,6 +375,14 @@ bool APFloatBase::semanticsHasSignedRepr(const fltSemantics &semantics) {
   return semantics.hasSignedRepr;
 }
 
+bool APFloatBase::semanticsHasInf(const fltSemantics &semantics) {
+  return semantics.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754;
+}
+
+bool APFloatBase::semanticsHasNaN(const fltSemantics &semantics) {
+  return semantics.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
+}
+
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
                                             const fltSemantics &Dst) {
   // Exponent range must be larger.
@@ -3947,7 +3955,6 @@ void IEEEFloat::initFromFloat8E8M0FNUAPInt(const APInt &api) {
   // Handle fcNormal...
   category = fcNormal;
   exponent = myexponent - 127; // 127 is bias
-  return;
 }
 template <const fltSemantics &S>
 void IEEEFloat::initFromIEEEAPInt(const APInt &api) {

@@ -394,7 +394,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
@@ -407,8 +407,8 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -490,9 +490,9 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, loc - 3)
+               << "R_X86_64_GOTPC32_TLSDESC must be used "
+                  "in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-3] = 0x48 | ((loc[-3] >> 2) & 1);
@@ -532,9 +532,9 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, loc - 3)
+               << "R_X86_64_GOTPC32_TLSDESC must be used "
+                  "in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-2] = 0x8b;
@@ -582,8 +582,9 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     memcpy(inst, "\x48\xc7", 2);
     *regSlot = 0xc0 | reg;
   } else {
-    error(getErrorLoc(ctx, loc - 3) +
-          "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
+    ErrAlways(ctx)
+        << getErrorLoc(ctx, loc - 3)
+        << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
   }
 
   // The original code used a PC relative relocation.
@@ -627,8 +628,9 @@ void X86_64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     return;
   }
 
-  error(getErrorLoc(ctx, loc - 3) +
-        "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD");
+  ErrAlways(ctx)
+      << getErrorLoc(ctx, loc - 3)
+      << "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD";
 }
 
 // A JumpInstrMod at a specific offset indicates that the jump instruction
@@ -736,7 +738,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
   case R_X86_64_PLT32:
@@ -766,8 +768,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
@@ -820,7 +821,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
     if (rel.expr != R_GOT_PC) {
       relaxGot(loc, rel, val);
     } else {
@@ -872,13 +873,13 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
 RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
                                 const uint8_t *loc) const {
-  // Only R_X86_64_[REX_]|[REX2_]GOTPCRELX can be relaxed. GNU as may emit
+  // Only R_X86_64_[REX_]|[CODE_4_]GOTPCRELX can be relaxed. GNU as may emit
   // GOTPCRELX with addend != -4. Such an instruction does not load the full GOT
   // entry, so we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip),
   // %rax (addend=0) loads the high 32 bits of the GOT entry.
   if (!ctx.arg.relax || addend != -4 ||
       (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX &&
-       type != R_X86_64_REX2_GOTPCRELX))
+       type != R_X86_64_CODE_4_GOTPCRELX))
     return R_GOT_PC;
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
@@ -1000,8 +1001,9 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (op != 0xff) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
-    assert(!ctx.arg.isPic);
-    relaxGotNoPic(loc, val + 4, op, modRm, rel.type == R_X86_64_REX2_GOTPCRELX);
+    assert(!rel.sym->file || !rel.sym->file->ctx.arg.isPic);
+    relaxGotNoPic(loc, val + 4, op, modRm,
+                  rel.type == R_X86_64_CODE_4_GOTPCRELX);
     return;
   }
 
@@ -1031,7 +1033,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
   if (!ctx.arg.is64) {
-    error("target doesn't support split stacks");
+    ErrAlways(ctx) << "target doesn't support split stacks";
     return false;
   }
 

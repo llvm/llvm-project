@@ -11,8 +11,8 @@
 #define _LIBCPP___CONFIGURATION_ABI_H
 
 #include <__config_site>
-#include <__configuration/compiler.h>
-#include <__configuration/platform.h>
+#include <__cxx03/__configuration/compiler.h>
+#include <__cxx03/__configuration/platform.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header

@@ -7,9 +7,9 @@
 
 // avoid inlines for SPIR-V related targets since we'll optimise later in the
 // chain
-#if defined(CLC_SPIRV) || defined(CLC_SPIRV64)
+#if defined(CLC_SPIRV)
 #define _CLC_DEF
-#elif defined(CLC_CLSPV) || defined(CLC_CLSPV64)
+#elif defined(CLC_CLSPV)
 #define _CLC_DEF __attribute__((noinline)) __attribute__((clspv_libclc_builtin))
 #else
 #define _CLC_DEF __attribute__((always_inline))
