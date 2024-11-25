@@ -52,6 +52,15 @@ define void @f(ptr %x) {
   ; CHECK: atomicrmw volatile usub_sat ptr %x, i32 10 syncscope("agent") monotonic
   atomicrmw volatile usub_sat ptr %x, i32 10 syncscope("agent") monotonic
 
+  ; CHECK : load atomic <1 x i32>, ptr %x unordered, align 4
+  load atomic <1 x i32>, ptr %x unordered, align 4
+  ; CHECK : store atomic <1 x i32> splat (i32 3), ptr %x release, align 4
+  store atomic <1 x i32> <i32 3>, ptr %x release, align 4
+  ; CHECK : load atomic <2 x i32>, ptr %x unordered, align 4
+  load atomic <2 x i32>, ptr %x unordered, align 4
+  ; CHECK : store atomic <2 x i32> <i32 3, i32 4>, ptr %x release, align 4
+  store atomic <2 x i32> <i32 3, i32 4>, ptr %x release, align 4
+
   ; CHECK: fence syncscope("singlethread") release
   fence syncscope("singlethread") release
   ; CHECK: fence seq_cst
