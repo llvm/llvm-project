@@ -3011,8 +3011,8 @@ entry:
   ret <4 x double> %log2
 }
 
-define <1 x float> @constrained_vector_rint_v1f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_rint_v1f32:
+define <1 x float> @constrained_vector_rint_v1f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_rint_v1f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -3022,7 +3022,7 @@ define <1 x float> @constrained_vector_rint_v1f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_rint_v1f32:
+; AVX-LABEL: constrained_vector_rint_v1f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
@@ -3096,8 +3096,8 @@ entry:
   ret <2 x double> %rint
 }
 
-define <3 x float> @constrained_vector_rint_v3f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_rint_v3f32:
+define <3 x float> @constrained_vector_rint_v3f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_rint_v3f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
@@ -3120,7 +3120,7 @@ define <3 x float> @constrained_vector_rint_v3f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_rint_v3f32:
+; AVX-LABEL: constrained_vector_rint_v3f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
@@ -3307,8 +3307,8 @@ entry:
   ret <4 x double> %rint
 }
 
-define <1 x float> @constrained_vector_nearbyint_v1f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_nearbyint_v1f32:
+define <1 x float> @constrained_vector_nearbyint_v1f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_nearbyint_v1f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -3318,7 +3318,7 @@ define <1 x float> @constrained_vector_nearbyint_v1f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_nearbyint_v1f32:
+; AVX-LABEL: constrained_vector_nearbyint_v1f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
@@ -3392,8 +3392,8 @@ entry:
   ret <2 x double> %nearby
 }
 
-define <3 x float> @constrained_vector_nearbyint_v3f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_nearbyint_v3f32:
+define <3 x float> @constrained_vector_nearbyint_v3f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_nearbyint_v3f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
@@ -3416,7 +3416,7 @@ define <3 x float> @constrained_vector_nearbyint_v3f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_nearbyint_v3f32:
+; AVX-LABEL: constrained_vector_nearbyint_v3f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
@@ -5870,8 +5870,8 @@ entry:
   ret <4 x double> %result
 }
 
-define <1 x float> @constrained_vector_ceil_v1f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_ceil_v1f32:
+define <1 x float> @constrained_vector_ceil_v1f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_ceil_v1f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -5881,7 +5881,7 @@ define <1 x float> @constrained_vector_ceil_v1f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_ceil_v1f32:
+; AVX-LABEL: constrained_vector_ceil_v1f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
@@ -5894,8 +5894,8 @@ entry:
   ret <1 x float> %ceil
 }
 
-define <2 x double> @constrained_vector_ceil_v2f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_ceil_v2f64:
+define <2 x double> @constrained_vector_ceil_v2f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_ceil_v2f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -5913,7 +5913,7 @@ define <2 x double> @constrained_vector_ceil_v2f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_ceil_v2f64:
+; AVX-LABEL: constrained_vector_ceil_v2f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vroundpd $10, (%rdi), %xmm0
 ; AVX-NEXT:    retq
@@ -5925,8 +5925,8 @@ entry:
   ret <2 x double> %ceil
 }
 
-define <3 x float> @constrained_vector_ceil_v3f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_ceil_v3f32:
+define <3 x float> @constrained_vector_ceil_v3f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_ceil_v3f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
@@ -5949,7 +5949,7 @@ define <3 x float> @constrained_vector_ceil_v3f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_ceil_v3f32:
+; AVX-LABEL: constrained_vector_ceil_v3f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
@@ -5968,8 +5968,8 @@ entry:
   ret <3 x float> %ceil
 }
 
-define <3 x double> @constrained_vector_ceil_v3f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_ceil_v3f64:
+define <3 x double> @constrained_vector_ceil_v3f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_ceil_v3f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -5997,7 +5997,7 @@ define <3 x double> @constrained_vector_ceil_v3f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_ceil_v3f64:
+; AVX-LABEL: constrained_vector_ceil_v3f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
@@ -6012,8 +6012,8 @@ entry:
   ret <3 x double> %ceil
 }
 
-define <1 x float> @constrained_vector_floor_v1f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_floor_v1f32:
+define <1 x float> @constrained_vector_floor_v1f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_floor_v1f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -6023,7 +6023,7 @@ define <1 x float> @constrained_vector_floor_v1f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_floor_v1f32:
+; AVX-LABEL: constrained_vector_floor_v1f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
@@ -6037,8 +6037,8 @@ entry:
 }
 
 
-define <2 x double> @constrained_vector_floor_v2f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_floor_v2f64:
+define <2 x double> @constrained_vector_floor_v2f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_floor_v2f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -6056,7 +6056,7 @@ define <2 x double> @constrained_vector_floor_v2f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_floor_v2f64:
+; AVX-LABEL: constrained_vector_floor_v2f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vroundpd $9, (%rdi), %xmm0
 ; AVX-NEXT:    retq
@@ -6068,8 +6068,8 @@ entry:
   ret <2 x double> %floor
 }
 
-define <3 x float> @constrained_vector_floor_v3f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_floor_v3f32:
+define <3 x float> @constrained_vector_floor_v3f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_floor_v3f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
@@ -6092,7 +6092,7 @@ define <3 x float> @constrained_vector_floor_v3f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_floor_v3f32:
+; AVX-LABEL: constrained_vector_floor_v3f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
@@ -6111,8 +6111,8 @@ entry:
   ret <3 x float> %floor
 }
 
-define <3 x double> @constrained_vector_floor_v3f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_floor_v3f64:
+define <3 x double> @constrained_vector_floor_v3f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_floor_v3f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -6140,7 +6140,7 @@ define <3 x double> @constrained_vector_floor_v3f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_floor_v3f64:
+; AVX-LABEL: constrained_vector_floor_v3f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
@@ -6155,8 +6155,8 @@ entry:
   ret <3 x double> %floor
 }
 
-define <1 x float> @constrained_vector_round_v1f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_round_v1f32:
+define <1 x float> @constrained_vector_round_v1f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_round_v1f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -6166,7 +6166,7 @@ define <1 x float> @constrained_vector_round_v1f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_round_v1f32:
+; AVX-LABEL: constrained_vector_round_v1f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
@@ -6183,8 +6183,8 @@ entry:
   ret <1 x float> %round
 }
 
-define <2 x double> @constrained_vector_round_v2f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_round_v2f64:
+define <2 x double> @constrained_vector_round_v2f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_round_v2f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -6202,7 +6202,7 @@ define <2 x double> @constrained_vector_round_v2f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_round_v2f64:
+; AVX-LABEL: constrained_vector_round_v2f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    subq $40, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 48
@@ -6227,8 +6227,8 @@ entry:
   ret <2 x double> %round
 }
 
-define <3 x float> @constrained_vector_round_v3f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_round_v3f32:
+define <3 x float> @constrained_vector_round_v3f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_round_v3f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
@@ -6251,7 +6251,7 @@ define <3 x float> @constrained_vector_round_v3f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_round_v3f32:
+; AVX-LABEL: constrained_vector_round_v3f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rbx
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
@@ -6288,8 +6288,8 @@ entry:
 }
 
 
-define <3 x double> @constrained_vector_round_v3f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_round_v3f64:
+define <3 x double> @constrained_vector_round_v3f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_round_v3f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -6317,7 +6317,7 @@ define <3 x double> @constrained_vector_round_v3f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_round_v3f64:
+; AVX-LABEL: constrained_vector_round_v3f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rbx
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
@@ -6354,8 +6354,8 @@ entry:
   ret <3 x double> %round
 }
 
-define <1 x float> @constrained_vector_trunc_v1f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_trunc_v1f32:
+define <1 x float> @constrained_vector_trunc_v1f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_trunc_v1f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -6365,7 +6365,7 @@ define <1 x float> @constrained_vector_trunc_v1f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_trunc_v1f32:
+; AVX-LABEL: constrained_vector_trunc_v1f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
@@ -6378,8 +6378,8 @@ entry:
   ret <1 x float> %trunc
 }
 
-define <2 x double> @constrained_vector_trunc_v2f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_trunc_v2f64:
+define <2 x double> @constrained_vector_trunc_v2f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_trunc_v2f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -6397,7 +6397,7 @@ define <2 x double> @constrained_vector_trunc_v2f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_trunc_v2f64:
+; AVX-LABEL: constrained_vector_trunc_v2f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vroundpd $11, (%rdi), %xmm0
 ; AVX-NEXT:    retq
@@ -6409,8 +6409,8 @@ entry:
   ret <2 x double> %trunc
 }
 
-define <3 x float> @constrained_vector_trunc_v3f32(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_trunc_v3f32:
+define <3 x float> @constrained_vector_trunc_v3f32_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_trunc_v3f32_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
@@ -6433,7 +6433,7 @@ define <3 x float> @constrained_vector_trunc_v3f32(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_trunc_v3f32:
+; AVX-LABEL: constrained_vector_trunc_v3f32_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
@@ -6452,8 +6452,8 @@ entry:
   ret <3 x float> %trunc
 }
 
-define <3 x double> @constrained_vector_trunc_v3f64(ptr %a) #0 {
-; CHECK-LABEL: constrained_vector_trunc_v3f64:
+define <3 x double> @constrained_vector_trunc_v3f64_var(ptr %a) #0 {
+; CHECK-LABEL: constrained_vector_trunc_v3f64_var:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -6481,7 +6481,7 @@ define <3 x double> @constrained_vector_trunc_v3f64(ptr %a) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_trunc_v3f64:
+; AVX-LABEL: constrained_vector_trunc_v3f64_var:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
