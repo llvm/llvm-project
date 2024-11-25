@@ -1521,28 +1521,6 @@ bool hasTrailingZeros(cir::ConstArrayAttr attr) {
           }));
 }
 
-static mlir::Attribute
-lowerDataMemberAttr(mlir::ModuleOp moduleOp, cir::DataMemberAttr attr,
-                    const mlir::TypeConverter &typeConverter) {
-  mlir::DataLayout layout{moduleOp};
-
-  uint64_t memberOffset;
-  if (attr.isNullPtr()) {
-    // TODO(cir): the numerical value of a null data member pointer is
-    // ABI-specific and should be queried through ABI.
-    assert(!MissingFeatures::targetCodeGenInfoGetNullPointer());
-    memberOffset = -1ull;
-  } else {
-    auto memberIndex = attr.getMemberIndex().value();
-    memberOffset =
-        attr.getType().getClsTy().getElementOffset(layout, memberIndex);
-  }
-
-  auto underlyingIntTy = mlir::IntegerType::get(
-      moduleOp->getContext(), layout.getTypeSizeInBits(attr.getType()));
-  return mlir::IntegerAttr::get(underlyingIntTy, memberOffset);
-}
-
 mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1602,9 +1580,13 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     }
     attr = op.getValue();
   } else if (mlir::isa<cir::DataMemberType>(op.getType())) {
+    assert(lowerMod && "lower module is not available");
     auto dataMember = mlir::cast<cir::DataMemberAttr>(op.getValue());
-    attr = lowerDataMemberAttr(op->getParentOfType<mlir::ModuleOp>(),
-                               dataMember, *typeConverter);
+    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+    mlir::TypedAttr abiValue = lowerMod->getCXXABI().lowerDataMemberConstant(
+        dataMember, layout, *typeConverter);
+    rewriter.replaceOpWithNewOp<ConstantOp>(op, abiValue);
+    return mlir::success();
   }
   // TODO(cir): constant arrays are currently just pushed into the stack using
   // the store instruction, instead of being stored as global variables and
@@ -2208,8 +2190,15 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     return mlir::success();
   } else if (auto dataMemberAttr =
                  mlir::dyn_cast<cir::DataMemberAttr>(init.value())) {
-    init = lowerDataMemberAttr(op->getParentOfType<mlir::ModuleOp>(),
-                               dataMemberAttr, *typeConverter);
+    assert(lowerMod && "lower module is not available");
+    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+    mlir::TypedAttr abiValue = lowerMod->getCXXABI().lowerDataMemberConstant(
+        dataMemberAttr, layout, *typeConverter);
+    auto abiOp = mlir::cast<GlobalOp>(rewriter.clone(*op.getOperation()));
+    abiOp.setInitialValueAttr(abiValue);
+    abiOp.setSymType(abiValue.getType());
+    rewriter.replaceOp(op, abiOp);
+    return mlir::success();
   } else if (const auto structAttr =
                  mlir::dyn_cast<cir::ConstStructAttr>(init.value())) {
     setupRegionInitializedLLVMGlobalOp(op, rewriter);
@@ -3237,11 +3226,11 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMGetRuntimeMemberOpLowering::matchAndRewrite(
     cir::GetRuntimeMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto llvmResTy = getTypeConverter()->convertType(op.getType());
-  auto llvmElementTy = mlir::IntegerType::get(op.getContext(), 8);
-
-  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
-      op, llvmResTy, llvmElementTy, adaptor.getAddr(), adaptor.getMember());
+  assert(lowerMod && "lowering module is not available");
+  mlir::Type llvmResTy = getTypeConverter()->convertType(op.getType());
+  mlir::Operation *llvmOp = lowerMod->getCXXABI().lowerGetRuntimeMember(
+      op, llvmResTy, adaptor.getAddr(), adaptor.getMember(), rewriter);
+  rewriter.replaceOp(op, llvmOp);
   return mlir::success();
 }
 
@@ -3850,7 +3839,7 @@ mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
 
 void populateCIRToLLVMConversionPatterns(
     mlir::RewritePatternSet &patterns, mlir::TypeConverter &converter,
-    mlir::DataLayout &dataLayout,
+    mlir::DataLayout &dataLayout, cir::LowerModule *lowerModule,
     llvm::StringMap<mlir::LLVM::GlobalOp> &stringGlobalsMap,
     llvm::StringMap<mlir::LLVM::GlobalOp> &argStringGlobalsMap,
     llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> &argsVarMap) {
@@ -3858,6 +3847,9 @@ void populateCIRToLLVMConversionPatterns(
   patterns.add<CIRToLLVMAllocaOpLowering>(converter, dataLayout,
                                           stringGlobalsMap, argStringGlobalsMap,
                                           argsVarMap, patterns.getContext());
+  patterns.add<CIRToLLVMConstantOpLowering, CIRToLLVMGlobalOpLowering,
+               CIRToLLVMGetRuntimeMemberOpLowering>(
+      converter, patterns.getContext(), lowerModule);
   patterns.add<
       // clang-format off
       CIRToLLVMAbsOpLowering,
@@ -3891,7 +3883,6 @@ void populateCIRToLLVMConversionPatterns(
       CIRToLLVMComplexImagPtrOpLowering,
       CIRToLLVMComplexRealOpLowering,
       CIRToLLVMComplexRealPtrOpLowering,
-      CIRToLLVMConstantOpLowering,
       CIRToLLVMCopyOpLowering,
       CIRToLLVMDerivedClassAddrOpLowering,
       CIRToLLVMEhInflightOpLowering,
@@ -3902,8 +3893,6 @@ void populateCIRToLLVMConversionPatterns(
       CIRToLLVMGetBitfieldOpLowering,
       CIRToLLVMGetGlobalOpLowering,
       CIRToLLVMGetMemberOpLowering,
-      CIRToLLVMGetRuntimeMemberOpLowering,
-      CIRToLLVMGlobalOpLowering,
       CIRToLLVMInlineAsmOpLowering,
       CIRToLLVMIsConstantOpLowering,
       CIRToLLVMIsFPClassOpLowering,
@@ -3990,10 +3979,13 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
 
         return mlir::LLVM::LLVMPointerType::get(type.getContext(), targetAS);
       });
-  converter.addConversion([&](cir::DataMemberType type) -> mlir::Type {
-    return mlir::IntegerType::get(type.getContext(),
-                                  dataLayout.getTypeSizeInBits(type));
-  });
+  converter.addConversion(
+      [&, lowerModule](cir::DataMemberType type) -> mlir::Type {
+        assert(lowerModule && "CXXABI is not available");
+        mlir::Type abiType =
+            lowerModule->getCXXABI().lowerDataMemberType(type, converter);
+        return converter.convertType(abiType);
+      });
   converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
     auto ty = converter.convertType(type.getEltType());
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
@@ -4328,8 +4320,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::MapVector<mlir::ArrayAttr, mlir::LLVM::GlobalOp> argsVarMap;
 
   populateCIRToLLVMConversionPatterns(patterns, converter, dataLayout,
-                                      stringGlobalsMap, argStringGlobalsMap,
-                                      argsVarMap);
+                                      lowerModule.get(), stringGlobalsMap,
+                                      argStringGlobalsMap, argsVarMap);
   mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
 
   mlir::ConversionTarget target(getContext());

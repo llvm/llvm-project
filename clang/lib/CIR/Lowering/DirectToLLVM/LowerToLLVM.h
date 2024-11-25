@@ -291,8 +291,15 @@ public:
 
 class CIRToLLVMConstantOpLowering
     : public mlir::OpConversionPattern<cir::ConstantOp> {
+  cir::LowerModule *lowerMod;
+
 public:
-  using mlir::OpConversionPattern<cir::ConstantOp>::OpConversionPattern;
+  CIRToLLVMConstantOpLowering(const mlir::TypeConverter &typeConverter,
+                              mlir::MLIRContext *context,
+                              cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {
+    setHasBoundedRewriteRecursion();
+  }
 
   mlir::LogicalResult
   matchAndRewrite(cir::ConstantOp op, OpAdaptor,
@@ -490,8 +497,15 @@ public:
 
 class CIRToLLVMGlobalOpLowering
     : public mlir::OpConversionPattern<cir::GlobalOp> {
+  cir::LowerModule *lowerMod;
+
 public:
-  using mlir::OpConversionPattern<cir::GlobalOp>::OpConversionPattern;
+  CIRToLLVMGlobalOpLowering(const mlir::TypeConverter &typeConverter,
+                            mlir::MLIRContext *context,
+                            cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {
+    setHasBoundedRewriteRecursion();
+  }
 
   mlir::LogicalResult
   matchAndRewrite(cir::GlobalOp op, OpAdaptor,
@@ -774,8 +788,13 @@ public:
 
 class CIRToLLVMGetRuntimeMemberOpLowering
     : public mlir::OpConversionPattern<cir::GetRuntimeMemberOp> {
+  cir::LowerModule *lowerMod;
+
 public:
-  using mlir::OpConversionPattern<cir::GetRuntimeMemberOp>::OpConversionPattern;
+  CIRToLLVMGetRuntimeMemberOpLowering(const mlir::TypeConverter &typeConverter,
+                                      mlir::MLIRContext *context,
+                                      cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
 
   mlir::LogicalResult
   matchAndRewrite(cir::GetRuntimeMemberOp op, OpAdaptor,

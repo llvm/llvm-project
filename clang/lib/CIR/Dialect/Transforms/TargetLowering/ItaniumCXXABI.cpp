@@ -23,6 +23,7 @@
 #include "../LoweringPrepareCXXABI.h"
 #include "CIRCXXABI.h"
 #include "LowerModule.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
@@ -51,6 +52,19 @@ public:
     cir_cconv_assert(!cir::MissingFeatures::recordDeclCanPassInRegisters());
     return RAA_Default;
   }
+
+  mlir::Type
+  lowerDataMemberType(cir::DataMemberType type,
+                      const mlir::TypeConverter &typeConverter) const override;
+
+  mlir::TypedAttr lowerDataMemberConstant(
+      cir::DataMemberAttr attr, const mlir::DataLayout &layout,
+      const mlir::TypeConverter &typeConverter) const override;
+
+  mlir::Operation *
+  lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+                        mlir::Value loweredAddr, mlir::Value loweredMember,
+                        mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -65,6 +79,54 @@ bool ItaniumCXXABI::classifyReturnType(LowerFunctionInfo &FI) const {
     cir_cconv_unreachable("NYI");
 
   return false;
+}
+
+mlir::Type ItaniumCXXABI::lowerDataMemberType(
+    cir::DataMemberType type, const mlir::TypeConverter &typeConverter) const {
+  // Itanium C++ ABI 2.3:
+  //   A pointer to data member is an offset from the base address of
+  //   the class object containing it, represented as a ptrdiff_t
+  const clang::TargetInfo &target = LM.getTarget();
+  clang::TargetInfo::IntType ptrdiffTy =
+      target.getPtrDiffType(clang::LangAS::Default);
+  return cir::IntType::get(type.getContext(), target.getTypeWidth(ptrdiffTy),
+                           target.isTypeSigned(ptrdiffTy));
+}
+
+mlir::TypedAttr ItaniumCXXABI::lowerDataMemberConstant(
+    cir::DataMemberAttr attr, const mlir::DataLayout &layout,
+    const mlir::TypeConverter &typeConverter) const {
+  uint64_t memberOffset;
+  if (attr.isNullPtr()) {
+    // Itanium C++ ABI 2.3:
+    //   A NULL pointer is represented as -1.
+    memberOffset = -1ull;
+  } else {
+    // Itanium C++ ABI 2.3:
+    //   A pointer to data member is an offset from the base address of
+    //   the class object containing it, represented as a ptrdiff_t
+    auto memberIndex = attr.getMemberIndex().value();
+    memberOffset =
+        attr.getType().getClsTy().getElementOffset(layout, memberIndex);
+  }
+
+  mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
+  return cir::IntAttr::get(abiTy, memberOffset);
+}
+
+mlir::Operation *ItaniumCXXABI::lowerGetRuntimeMember(
+    cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+    mlir::Value loweredAddr, mlir::Value loweredMember,
+    mlir::OpBuilder &builder) const {
+  auto byteTy = IntType::get(op.getContext(), 8, true);
+  auto bytePtrTy = PointerType::get(
+      byteTy, mlir::cast<PointerType>(op.getAddr().getType()).getAddrSpace());
+  auto objectBytesPtr = builder.create<CastOp>(op.getLoc(), bytePtrTy,
+                                               CastKind::bitcast, op.getAddr());
+  auto memberBytesPtr = builder.create<PtrStrideOp>(
+      op.getLoc(), bytePtrTy, objectBytesPtr, loweredMember);
+  return builder.create<CastOp>(op.getLoc(), op.getType(), CastKind::bitcast,
+                                memberBytesPtr);
 }
 
 CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {

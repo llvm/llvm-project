@@ -5,7 +5,10 @@
 !s64i = !cir.int<s, 64>
 !structT = !cir.struct<struct "Point" {!cir.int<s, 32>, !cir.int<s, 32>, !cir.int<s, 32>}>
 
-module @test {
+module @test attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+} {
   cir.global external @pt_member = #cir.data_member<1> : !cir.data_member<!s32i in !structT>
   // MLIR: llvm.mlir.global external @pt_member(4 : i64) {addr_space = 0 : i32} : i64
   // LLVM: @pt_member = global i64 4
@@ -15,8 +18,8 @@ module @test {
     cir.return %0 : !cir.data_member<!s32i in !structT>
   }
   //      MLIR: llvm.func @constant() -> i64
-  // MLIR-NEXT:   %0 = llvm.mlir.constant(4 : i64) : i64
-  // MLIR-NEXT:   llvm.return %0 : i64
+  // MLIR-NEXT:   %[[#VAL:]] = llvm.mlir.constant(4 : i64) : i64
+  // MLIR-NEXT:   llvm.return %[[#VAL]] : i64
   // MLIR-NEXT: }
 
   //      LLVM: define i64 @constant()
@@ -28,8 +31,8 @@ module @test {
     cir.return %0 : !cir.data_member<!s32i in !structT>
   }
   //      MLIR: llvm.func @null_constant() -> i64
-  // MLIR-NEXT:   %0 = llvm.mlir.constant(-1 : i64) : i64
-  // MLIR-NEXT:   llvm.return %0 : i64
+  // MLIR-NEXT:   %[[#VAL:]] = llvm.mlir.constant(-1 : i64) : i64
+  // MLIR-NEXT:   llvm.return %[[#VAL]] : i64
   // MLIR-NEXT: }
 
   //      LLVM: define i64 @null_constant() !dbg !7 {
@@ -40,13 +43,15 @@ module @test {
     %0 = cir.get_runtime_member %arg0[%arg1 : !cir.data_member<!s32i in !structT>] : !cir.ptr<!structT> -> !cir.ptr<!s32i>
     cir.return %0 : !cir.ptr<!s32i>
   }
-  //      MLIR: llvm.func @get_runtime_member(%arg0: !llvm.ptr, %arg1: i64) -> !llvm.ptr
-  // MLIR-NEXT:   %0 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-  // MLIR-NEXT:   llvm.return %0 : !llvm.ptr
+  //      MLIR: llvm.func @get_runtime_member(%[[ARG0:.+]]: !llvm.ptr, %[[ARG1:.+]]: i64) -> !llvm.ptr
+  // MLIR-NEXT:   %[[#PTR:]] = llvm.bitcast %[[ARG0]] : !llvm.ptr to !llvm.ptr
+  // MLIR-NEXT:   %[[#VAL:]] = llvm.getelementptr %[[#PTR]][%[[ARG1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // MLIR-NEXT:   %[[#RET:]] = llvm.bitcast %[[#VAL]] : !llvm.ptr to !llvm.ptr
+  // MLIR-NEXT:   llvm.return %[[#RET]] : !llvm.ptr
   // MLIR-NEXT: }
 
-  //      LLVM: define ptr @get_runtime_member(ptr %0, i64 %1)
-  // LLVM-NEXT:   %3 = getelementptr i8, ptr %0, i64 %1
-  // LLVM-NEXT:   ret ptr %3
+  //      LLVM: define ptr @get_runtime_member(ptr %[[ARG0:.+]], i64 %[[ARG1:.+]])
+  // LLVM-NEXT:   %[[#VAL:]] = getelementptr i8, ptr %[[ARG0]], i64 %[[ARG1]]
+  // LLVM-NEXT:   ret ptr %[[#VAL]]
   // LLVM-NEXT: }
 }

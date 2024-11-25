@@ -15,9 +15,15 @@
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRCXXABI_H
 
 #include "LowerFunctionInfo.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Target/AArch64.h"
 
 namespace cir {
@@ -59,6 +65,26 @@ public:
   /// Returns how an argument of the given record type should be passed.
   /// FIXME(cir): This expects a CXXRecordDecl! Not any record type.
   virtual RecordArgABI getRecordArgABI(const StructType RD) const = 0;
+
+  /// Lower the given data member pointer type to its ABI type. The returned
+  /// type is also a CIR type.
+  virtual mlir::Type
+  lowerDataMemberType(cir::DataMemberType type,
+                      const mlir::TypeConverter &typeConverter) const = 0;
+
+  /// Lower the given data member pointer constant to a constant of the ABI
+  /// type. The returned constant is represented as an attribute as well.
+  virtual mlir::TypedAttr
+  lowerDataMemberConstant(cir::DataMemberAttr attr,
+                          const mlir::DataLayout &layout,
+                          const mlir::TypeConverter &typeConverter) const = 0;
+
+  /// Lower the given cir.get_runtime_member op to a sequence of more
+  /// "primitive" CIR operations that act on the ABI types.
+  virtual mlir::Operation *
+  lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+                        mlir::Value loweredAddr, mlir::Value loweredMember,
+                        mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.
