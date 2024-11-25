@@ -1117,21 +1117,20 @@ template <typename FrameIdTy> class CallStackRadixTreeBuilder {
 
   // Encode a call stack into RadixArray.  Return the starting index within
   // RadixArray.
-  LinearCallStackId
-  encodeCallStack(const llvm::SmallVector<FrameIdTy> *CallStack,
-                  const llvm::SmallVector<FrameIdTy> *Prev,
-                  std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
-                      MemProfFrameIndexes);
+  LinearCallStackId encodeCallStack(
+      const llvm::SmallVector<FrameIdTy> *CallStack,
+      const llvm::SmallVector<FrameIdTy> *Prev,
+      const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes);
 
 public:
   CallStackRadixTreeBuilder() = default;
 
   // Build a radix tree array.
-  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
-                 &&MemProfCallStackData,
-             std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
-                 MemProfFrameIndexes,
-             llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram);
+  void
+  build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
+            &&MemProfCallStackData,
+        const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes,
+        llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram);
 
   ArrayRef<LinearFrameId> getRadixArray() const { return RadixArray; }
 
