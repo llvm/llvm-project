@@ -1642,22 +1642,8 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
   if (QT->isIncompleteArrayType())
     return true;
 
-  if (QT->isArrayType()) {
-    const ArrayType *AT = QT->getAsArrayTypeUnsafe();
-    assert(AT);
-    const auto *CAT = cast<ConstantArrayType>(AT);
-    size_t NumElems = CAT->getZExtSize();
-    PrimType ElemT = classifyPrim(CAT->getElementType());
-
-    for (size_t I = 0; I != NumElems; ++I) {
-      if (!this->visitZeroInitializer(ElemT, CAT->getElementType(), E))
-        return false;
-      if (!this->emitInitElem(ElemT, I, E))
-        return false;
-    }
-
-    return true;
-  }
+  if (QT->isArrayType())
+    return this->visitZeroArrayInitializer(QT, E);
 
   if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
     assert(Initializing);
@@ -3916,18 +3902,9 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
           return false;
       }
     } else if (D->isCompositeArray()) {
-      const Record *ElemRecord = D->ElemDesc->ElemRecord;
-      assert(D->ElemDesc->ElemRecord);
-      for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
-        if (!this->emitConstUint32(I, E))
-          return false;
-        if (!this->emitArrayElemPtr(PT_Uint32, E))
-          return false;
-        if (!this->visitZeroRecordInitializer(ElemRecord, E))
-          return false;
-        if (!this->emitPopPtr(E))
-          return false;
-      }
+      // Can't be a vector or complex field.
+      if (!this->visitZeroArrayInitializer(D->getType(), E))
+        return false;
     } else if (D->isRecord()) {
       if (!this->visitZeroRecordInitializer(D->ElemRecord, E))
         return false;
@@ -3956,6 +3933,52 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   // FIXME: Virtual bases.
 
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
+  assert(T->isArrayType() || T->isAnyComplexType() || T->isVectorType());
+  const ArrayType *AT = T->getAsArrayTypeUnsafe();
+  QualType ElemType = AT->getElementType();
+  size_t NumElems = cast<ConstantArrayType>(AT)->getZExtSize();
+
+  if (std::optional<PrimType> ElemT = classify(ElemType)) {
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->visitZeroInitializer(*ElemT, ElemType, E))
+        return false;
+      if (!this->emitInitElem(*ElemT, I, E))
+        return false;
+    }
+    return true;
+  } else if (ElemType->isRecordType()) {
+    const Record *R = getRecord(ElemType);
+
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->emitConstUint32(I, E))
+        return false;
+      if (!this->emitArrayElemPtr(PT_Uint32, E))
+        return false;
+      if (!this->visitZeroRecordInitializer(R, E))
+        return false;
+      if (!this->emitPopPtr(E))
+        return false;
+    }
+    return true;
+  } else if (ElemType->isArrayType()) {
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->emitConstUint32(I, E))
+        return false;
+      if (!this->emitArrayElemPtr(PT_Uint32, E))
+        return false;
+      if (!this->visitZeroArrayInitializer(ElemType, E))
+        return false;
+      if (!this->emitPopPtr(E))
+        return false;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 template <class Emitter>
