@@ -912,7 +912,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
 
-  setMinCmpXchgSizeInBits(STI.hasAtomCas16() ? 16 : 32);
+  // PTX support for 16-bit CAS is emulated. Only use 32+
+  setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
 }

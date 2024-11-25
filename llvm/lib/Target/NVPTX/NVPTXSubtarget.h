@@ -123,6 +123,8 @@ public:
   //  set of equivalent memory operations with a scalar data-type, executed in
   //  an unspecified order on the elements in the vector.
   unsigned getMaxRequiredAlignment() const { return 8; }
+  // Get the smallest cmpxchg word size that the hardware supports.
+  unsigned getMinCmpXchgSizeInBits() const { return 32; }
 
   unsigned getPTXVersion() const { return PTXVersion; }
 
