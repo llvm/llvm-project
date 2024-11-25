@@ -1886,8 +1886,8 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   bool static_member = false;
   Variable::RangeList scope_ranges;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope,
-      block, scope_ranges, &decl, var_info.location, external, artificial,
+      toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope, block,
+      scope_ranges, &decl, var_info.location, external, artificial,
       location_is_constant_data, static_member);
   if (!is_param) {
     auto ts_or_err = GetTypeSystemForLanguage(comp_unit_sp->GetLanguage());
