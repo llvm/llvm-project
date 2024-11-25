@@ -1637,9 +1637,8 @@ SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                                   bool isT, bool isO) {
-  EVT EltVT = VT.getScalarType();
-  return getConstant(APInt(EltVT.getSizeInBits(), Val, /*isSigned=*/false), DL,
-                     VT, isT, isO);
+  return getConstant(APInt(VT.getScalarSizeInBits(), Val, /*isSigned=*/false),
+                     DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
