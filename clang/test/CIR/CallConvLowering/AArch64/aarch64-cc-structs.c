@@ -206,6 +206,31 @@ GT_128 call_and_get_gt_128() {
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[#V1]], ptr %[[#V2]], i64 12, i1 false)
 void passS(S s) {}
 
+// CHECK: @callS()
+// CHECK: %[[#V0:]] = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["s"] {alignment = 4 : i64}
+// CHECK: %[[#V1:]] = cir.alloca !cir.array<!u64i x 2>, !cir.ptr<!cir.array<!u64i x 2>>, ["tmp"] {alignment = 8 : i64}
+// CHECK: %[[#V2:]] = cir.load %[[#V0]] : !cir.ptr<!ty_S>, !ty_S
+// CHECK: %[[#V3:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_S>), !cir.ptr<!void>
+// CHECK: %[[#V4:]] = cir.cast(bitcast, %[[#V1]] : !cir.ptr<!cir.array<!u64i x 2>>), !cir.ptr<!void>
+// CHECK: %[[#V5:]] = cir.const #cir.int<12> : !u64i
+// CHECK: cir.libc.memcpy %[[#V5]] bytes from %[[#V3]] to %[[#V4]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+// CHECK: %[[#V6:]] = cir.load %[[#V1]] : !cir.ptr<!cir.array<!u64i x 2>>, !cir.array<!u64i x 2>
+// CHECK: cir.call @passS(%[[#V6]]) : (!cir.array<!u64i x 2>) -> ()
+// CHECK: cir.return
+
+// LLVM: @callS()
+// LLVM: %[[#V1:]] = alloca %struct.S, i64 1, align 4
+// LLVM: %[[#V2:]] = alloca [2 x i64], i64 1, align 8
+// LLVM: %[[#V3:]] = load %struct.S, ptr %[[#V1]], align 4
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[#V2]], ptr %[[#V1]], i64 12, i1 false)
+// LLVM: %[[#V4:]] = load [2 x i64], ptr %[[#V2]], align 8
+// LLVM: call void @passS([2 x i64] %[[#V4]])
+// LLVM: ret void
+void callS() {
+  S s;
+  passS(s);
+}
+
 typedef struct {
   uint8_t a;
   uint16_t b;

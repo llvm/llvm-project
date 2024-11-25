@@ -336,6 +336,13 @@ mlir::Value createCoercedValue(mlir::Value Src, mlir::Type Ty,
     return CGF.buildAggregateBitcast(Src, Ty);
   }
 
+  if (auto alloca = findAlloca(Src.getDefiningOp())) {
+    auto tmpAlloca = createTmpAlloca(CGF, alloca.getLoc(), Ty);
+    createMemCpy(CGF, tmpAlloca, alloca, SrcSize.getFixedValue());
+    return CGF.getRewriter().create<LoadOp>(alloca.getLoc(),
+                                            tmpAlloca.getResult());
+  }
+
   cir_cconv_unreachable("NYI");
 }
 
