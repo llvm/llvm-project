@@ -21,14 +21,14 @@ public:
 };
 
 class EqDefaultCompareOutOfClass {
-  int used;
+  int used; // no warning
   bool operator==(const EqDefaultCompareOutOfClass &) const;
 };
 
 bool EqDefaultCompareOutOfClass::operator==(const EqDefaultCompareOutOfClass &) const = default;
 
 class FriendEqDefaultCompareOutOfClass {
-  int used;
+  int used; // no warning
   friend bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &);
 };
 
