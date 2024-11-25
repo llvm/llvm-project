@@ -50,31 +50,30 @@ TEST(TypesTest, TargetExtType) {
   // only show the struct name, not the struct body
   Type *Int32Type = Type::getInt32Ty(Context);
   Type *FloatType = Type::getFloatTy(Context);
-  std::vector<Type *> OriginalElements = {Int32Type, FloatType};
-  StructType *Struct = llvm::StructType::create(Context, "MyStruct");
-  Struct->setBody(OriginalElements);
+  std::array<Type *, 2> Elements = {Int32Type, FloatType};
 
-  // the other struct is different only in that it's an anonymous struct,
-  // without a name
-  StructType *OtherStruct =
-      StructType::get(Context, Struct->elements(), /*isPacked=*/false);
-
+  StructType *Struct = llvm::StructType::create(Context, Elements, "MyStruct",
+                                                /*isPacked=*/false);
+  SmallVector<char, 50> TETV;
+  llvm::raw_svector_ostream TETStream(TETV);
   Type *TargetExtensionType =
       TargetExtType::get(Context, "structTET", {Struct}, {0, 1});
-  Type *OtherTargetExtensionType =
-      TargetExtType::get(Context, "structTET", {OtherStruct}, {0, 1});
-
-  SmallVector<char, 50> TETV;
-  SmallVector<char, 50> OtherTETV;
-
-  llvm::raw_svector_ostream TETStream(TETV);
   TargetExtensionType->print(TETStream);
-
-  llvm::raw_svector_ostream OtherTETStream(OtherTETV);
-  OtherTargetExtensionType->print(OtherTETStream);
 
   EXPECT_STREQ(TETStream.str().str().data(),
                "target(\"structTET\", %MyStruct, 0, 1)");
+
+  // ensure that literal structs in the target extension type print the struct
+  // body
+  StructType *OtherStruct =
+      StructType::get(Context, Struct->elements(), /*isPacked=*/false);
+
+  Type *OtherTargetExtensionType =
+      TargetExtType::get(Context, "structTET", {OtherStruct}, {0, 1});
+  SmallVector<char, 50> OtherTETV;
+  llvm::raw_svector_ostream OtherTETStream(OtherTETV);
+  OtherTargetExtensionType->print(OtherTETStream);
+
   EXPECT_STREQ(OtherTETStream.str().str().data(),
                "target(\"structTET\", { i32, float }, 0, 1)");
 }
