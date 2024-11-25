@@ -16,7 +16,7 @@ include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 // ToEmitC
 //===----------------------------------------------------------------------===//
 
-def ConvertToEmitCPass : Pass<"convert-to-emitc"> {
+def ConvertToEmitC : Pass<"convert-to-emitc"> {
   let summary = "Convert to EmitC dialect";
   let description = [{
     This is a generic pass to convert to the EmitC dialect.
