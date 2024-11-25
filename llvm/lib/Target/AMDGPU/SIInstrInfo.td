@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
+def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
-def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
+def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
@@ -303,6 +303,19 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   SDTypeProfile<0 ,1, [SDTCisInt<0>]>,
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
+
+
+// Optimize v_mfma_scale* instructions to avoid the scale if the
+// scales are known 0.
+class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
+  (ops node:$srca, node:$srcb, node:$srcc,
+       node:$cbsz, node:$blgp),
+  (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
+          srcvalue, 0, srcvalue, 0)
+>;
+
+def mfma_f32_16x16x128_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
+def mfma_f32_32x32x64_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
 
 //===----------------------------------------------------------------------===//
 // ValueType helpers
@@ -794,6 +807,10 @@ def as_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
 }]>;
 
+def as_i1timm_zext : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
 def as_i8imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i8);
 }]>;
@@ -912,6 +929,16 @@ def ShiftAmt32Imm : ImmLeaf <i32, [{
 
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
+}]>;
+
+def MFMALdScaleXForm : SDNodeXForm<timm, [{
+  unsigned Val = N->getZExtValue();
+  unsigned New = 0;
+  if (Val & 0x1)
+    New |= SISrcMods::OP_SEL_0;
+  if (Val & 0x2)
+    New |= SISrcMods::OP_SEL_1;
+  return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
 }]>;
 
 def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
@@ -1514,6 +1541,10 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
+
+def MFMALdScaleModifierOp : TImmLeaf<i32, [{
+  return isUInt<2>(Imm);
+}], MFMALdScaleXForm>;
 
 //===----------------------------------------------------------------------===//
 // Complex patterns
@@ -2655,6 +2686,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
   field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
   field string TieRegDPP = "$old";
+  field bit IsSMFMAC = false;
+  field bit HasAbid = !and(IsMAI, HasSrc1);
 }
 
   class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
@@ -2840,17 +2873,51 @@ def VOP_V4F32_I64_I64_V4F32       : VOPProfile <[v4f32,  i64,   i64,   v4f32]>;
 def VOP_V16F32_I64_I64_V16F32     : VOPProfile <[v16f32, i64,   i64,   v16f32]>;
 
 def VOP_V4F32_V4F16_V8F16_I32     : VOPProfile <[v4f32,  v4f16, v8f16, i32]>;
+def VOP_V4F32_V8F16_V16F16_I32    : VOPProfile <[v4f32,  v8f16, v16f16, i32]>;
+def VOP_V4F32_V8BF16_V16BF16_I32  : VOPProfile <[v4f32,  v8bf16, v16bf16, i32]>;
 def VOP_V16F32_V4F16_V8F16_I32    : VOPProfile <[v16f32, v4f16, v8f16, i32]>;
+def VOP_V16F32_V8F16_V16F16_I32   : VOPProfile <[v16f32, v8f16, v16f16, i32]>;
+def VOP_V16F32_V8BF16_V16BF16_I32 : VOPProfile <[v16f32, v8bf16, v16bf16, i32]>;
 def VOP_V4F32_V4I16_V8I16_I32     : VOPProfile <[v4f32,  v4i16, v8i16, i32]>;
 def VOP_V16F32_V4I16_V8I16_I32    : VOPProfile <[v16f32, v4i16, v8i16, i32]>;
 def VOP_V4I32_V2I32_V4I32_I32     : VOPProfile <[v4i32,  v2i32, v4i32, i32]>;
 def VOP_V16I32_V2I32_V4I32_I32    : VOPProfile <[v16i32, v2i32, v4i32, i32]>;
 def VOP_V4F32_V2I32_V4I32_I32     : VOPProfile <[v4f32,  v2i32, v4i32, i32]>;
 def VOP_V16F32_V2I32_V4I32_I32    : VOPProfile <[v16f32, v2i32, v4i32, i32]>;
+def VOP_V4I32_V4I32_V8I32_I32     : VOPProfile <[v4i32,  v4i32, v8i32, i32]>;
+def VOP_V16I32_V4I32_V8I32_I32    : VOPProfile <[v16i32, v4i32, v8i32, i32]>;
+def VOP_V4F32_V4I32_V8I32_I32     : VOPProfile <[v4f32, v4i32, v8i32, i32]>;
+def VOP_V16F32_V4I32_V8I32_I32    : VOPProfile <[v16f32, v4i32, v8i32, i32]>;
 
 def VOP_V4F32_V8F16_V8F16_V4F32   : VOPProfile <[v4f32,  v8f16, v8f16, v4f32]>;
 def VOP_V16F32_V8F16_V8F16_V16F32 : VOPProfile <[v16f32, v8f16, v8f16, v16f32]>;
 def VOP_V16F32_V8BF16_V8BF16_V16F32 : VOPProfile <[v16f32, v8bf16, v8bf16, v16f32]>;
+def VOP_V4F32_V8BF16_V8BF16_V4F32 : VOPProfile <[v4f32, v8bf16, v8bf16, v4f32]>;
+def VOP_V4F32_V8I32_V8I32_V4F32   : VOPProfile <[v4f32,  v8i32, v8i32, v4f32]>;
+
+def VOP_V4F32_V8I32_V6I32_V4F32   : VOPProfile <[v4f32,  v8i32, v6i32, v4f32]>;
+def VOP_V4F32_V6I32_V8I32_V4F32   : VOPProfile <[v4f32,  v6i32, v8i32, v4f32]>;
+def VOP_V4F32_V6I32_V6I32_V4F32   : VOPProfile <[v4f32,  v6i32, v6i32, v4f32]>;
+
+def VOP_V4F32_V8I32_V4I32_V4F32   : VOPProfile <[v4f32,  v8i32, v4i32, v4f32]>;
+def VOP_V4F32_V4I32_V8I32_V4F32   : VOPProfile <[v4f32,  v4i32, v8i32, v4f32]>;
+def VOP_V4F32_V6I32_V4I32_V4F32   : VOPProfile <[v4f32,  v6i32, v4i32, v4f32]>;
+def VOP_V4F32_V4I32_V6I32_V4F32   : VOPProfile <[v4f32,  v4i32, v6i32, v4f32]>;
+def VOP_V4F32_V4I32_V4I32_V4F32   : VOPProfile <[v4f32,  v4i32, v4i32, v4f32]>;
+
+def VOP_V16F32_V8I32_V8I32_V16F32   : VOPProfile <[v16f32, v8i32, v8i32, v16f32]>;
+def VOP_V16F32_V8I32_V6I32_V16F32   : VOPProfile <[v16f32, v8i32, v6i32, v16f32]>;
+def VOP_V16F32_V6I32_V8I32_V16F32   : VOPProfile <[v16f32, v6i32, v8i32, v16f32]>;
+def VOP_V16F32_V6I32_V6I32_V16F32   : VOPProfile <[v16f32, v6i32, v6i32, v16f32]>;
+
+def VOP_V16F32_V8I32_V4I32_V16F32   : VOPProfile <[v16f32, v8i32, v4i32, v16f32]>;
+def VOP_V16F32_V4I32_V8I32_V16F32   : VOPProfile <[v16f32, v4i32, v8i32, v16f32]>;
+def VOP_V16F32_V6I32_V4I32_V16F32   : VOPProfile <[v16f32, v6i32, v4i32, v16f32]>;
+def VOP_V16F32_V4I32_V6I32_V16F32   : VOPProfile <[v16f32, v4i32, v6i32, v16f32]>;
+def VOP_V16F32_V4I32_V4I32_V16F32   : VOPProfile <[v16f32, v4i32, v4i32, v16f32]>;
+
+def VOP_V4I32_V4I32_V4I32_V4I32     : VOPProfile <[v4i32,  v4i32, v4i32, v4i32]>;
+def VOP_V16I32_V4I32_V4I32_V16I32   : VOPProfile <[v16i32,  v4i32, v4i32, v16i32]>;
 
 
 class Commutable_REV <string revOp, bit isOrig> {
@@ -3112,6 +3179,16 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ColFields = ["IsVCMPX"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+// Map encoded mfma(_scale)?_f8f6f4 instructions depending on the
+// number of registers required for the used format.
+def getMFMA_F8F6F4_WithSize : GenericTable {
+  let FilterClass = "MFMA_F8F6F4_WithSizeTable";
+  let CppTypeName = "MFMA_F8F6F4_Info";
+  let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
+  let PrimaryKey = [ "NumRegsSrcA", "NumRegsSrcB", "F8F8Opcode" ];
+  let PrimaryKeyName = "getMFMA_F8F6F4_InstWithNumRegs" ;
 }
 
 def FP8DstByteSelTable : GenericTable {

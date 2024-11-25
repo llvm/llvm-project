@@ -74,13 +74,12 @@ static std::optional<std::string> getLinkerScriptLocation(Ctx &ctx,
   return std::nullopt;
 }
 
-static std::string getDefinedLocation(Ctx &ctx, const Symbol &sym) {
-  const char msg[] = "\n>>> defined in ";
+static void printDefinedLocation(ELFSyncStream &s, const Symbol &sym) {
+  s << "\n>>> defined in ";
   if (sym.file)
-    return msg + toStr(ctx, sym.file);
-  if (std::optional<std::string> loc = getLinkerScriptLocation(ctx, sym))
-    return msg + *loc;
-  return "";
+    return void(s << sym.file);
+  if (std::optional<std::string> loc = getLinkerScriptLocation(s.ctx, sym))
+    return void(s << *loc);
 }
 
 // Construct a message in the following format.
@@ -88,13 +87,14 @@ static std::string getDefinedLocation(Ctx &ctx, const Symbol &sym) {
 // >>> defined in /home/alice/src/foo.o
 // >>> referenced by bar.c:12 (/home/alice/src/bar.c:12)
 // >>>               /home/alice/src/bar.o:(.text+0x1)
-static std::string getLocation(Ctx &ctx, InputSectionBase &s, const Symbol &sym,
-                               uint64_t off) {
-  std::string msg = getDefinedLocation(ctx, sym) + "\n>>> referenced by ";
-  std::string src = s.getSrcMsg(sym, off);
+static void printLocation(ELFSyncStream &s, InputSectionBase &sec,
+                          const Symbol &sym, uint64_t off) {
+  printDefinedLocation(s, sym);
+  s << "\n>>> referenced by ";
+  std::string src = sec.getSrcMsg(sym, off);
   if (!src.empty())
-    msg += src + "\n>>>               ";
-  return msg + s.getObjMsg(off);
+    s << src << "\n>>>               ";
+  s << sec.getObjMsg(off);
 }
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
@@ -121,7 +121,7 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
   if (!errPlace.srcLoc.empty())
     diag << "\n>>> referenced by " << errPlace.srcLoc;
   if (rel.sym && !rel.sym->isSection())
-    diag << getDefinedLocation(ctx, *rel.sym);
+    printDefinedLocation(diag, *rel.sym);
 
   if (errPlace.isec && errPlace.isec->name.starts_with(".debug"))
     diag << "; consider recompiling with -fdebug-types-section to reduce size "
@@ -133,8 +133,10 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
   auto diag = Err(ctx);
   diag << getErrorPlace(ctx, loc).loc << msg << " is out of range: " << v
        << " is not in [" << llvm::minIntN(n) << ", " << llvm::maxIntN(n) << "]";
-  if (!sym.getName().empty())
-    diag << "; references '" << &sym << '\'' << getDefinedLocation(ctx, sym);
+  if (!sym.getName().empty()) {
+    diag << "; references '" << &sym << '\'';
+    printDefinedLocation(diag, sym);
+  }
 }
 
 // Build a bitmask with one bit set for each 64 subset of RelExpr.
@@ -522,42 +524,39 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
 // Custom error message if Sym is defined in a discarded section.
 template <class ELFT>
-static std::string maybeReportDiscarded(Ctx &ctx, Undefined &sym) {
+static void maybeReportDiscarded(Ctx &ctx, ELFSyncStream &msg, Undefined &sym) {
   auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
   if (!file || !sym.discardedSecIdx)
-    return "";
+    return;
   ArrayRef<typename ELFT::Shdr> objSections =
       file->template getELFShdrs<ELFT>();
 
-  std::string msg;
   if (sym.type == ELF::STT_SECTION) {
-    msg = "relocation refers to a discarded section: ";
-    msg += CHECK2(
+    msg << "relocation refers to a discarded section: ";
+    msg << CHECK2(
         file->getObj().getSectionName(objSections[sym.discardedSecIdx]), file);
   } else {
-    msg = "relocation refers to a symbol in a discarded section: " +
-          toStr(ctx, sym);
+    msg << "relocation refers to a symbol in a discarded section: " << &sym;
   }
-  msg += "\n>>> defined in " + toStr(ctx, file);
+  msg << "\n>>> defined in " << file;
 
   Elf_Shdr_Impl<ELFT> elfSec = objSections[sym.discardedSecIdx - 1];
   if (elfSec.sh_type != SHT_GROUP)
-    return msg;
+    return;
 
   // If the discarded section is a COMDAT.
   StringRef signature = file->getShtGroupSignature(objSections, elfSec);
   if (const InputFile *prevailing =
           ctx.symtab->comdatGroups.lookup(CachedHashStringRef(signature))) {
-    msg += "\n>>> section group signature: " + signature.str() +
-           "\n>>> prevailing definition is in " + toStr(ctx, prevailing);
+    msg << "\n>>> section group signature: " << signature
+        << "\n>>> prevailing definition is in " << prevailing;
     if (sym.nonPrevailing) {
-      msg += "\n>>> or the symbol in the prevailing group had STB_WEAK "
+      msg << "\n>>> or the symbol in the prevailing group had STB_WEAK "
              "binding and the symbol in a non-prevailing group had STB_GLOBAL "
              "binding. Mixing groups with STB_WEAK and STB_GLOBAL binding "
              "signature is not supported";
     }
   }
-  return msg;
 }
 
 // Check whether the definition name def is a mangled function name that matches
@@ -695,8 +694,9 @@ static const Symbol *getAlternativeSpelling(Ctx &ctx, const Undefined &sym,
 static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
                                   bool correctSpelling) {
   Undefined &sym = *undef.sym;
+  ELFSyncStream msg(ctx, DiagLevel::None);
 
-  auto visibility = [&]() -> std::string {
+  auto visibility = [&]() {
     switch (sym.visibility()) {
     case STV_INTERNAL:
       return "internal ";
@@ -709,75 +709,70 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     }
   };
 
-  std::string msg;
   switch (ctx.arg.ekind) {
   case ELF32LEKind:
-    msg = maybeReportDiscarded<ELF32LE>(ctx, sym);
+    maybeReportDiscarded<ELF32LE>(ctx, msg, sym);
     break;
   case ELF32BEKind:
-    msg = maybeReportDiscarded<ELF32BE>(ctx, sym);
+    maybeReportDiscarded<ELF32BE>(ctx, msg, sym);
     break;
   case ELF64LEKind:
-    msg = maybeReportDiscarded<ELF64LE>(ctx, sym);
+    maybeReportDiscarded<ELF64LE>(ctx, msg, sym);
     break;
   case ELF64BEKind:
-    msg = maybeReportDiscarded<ELF64BE>(ctx, sym);
+    maybeReportDiscarded<ELF64BE>(ctx, msg, sym);
     break;
   default:
     llvm_unreachable("");
   }
-  if (msg.empty())
-    msg = "undefined " + visibility() + "symbol: " + toStr(ctx, sym);
+  if (msg.str().empty())
+    msg << "undefined " << visibility() << "symbol: " << &sym;
 
   const size_t maxUndefReferences = 3;
-  size_t i = 0;
-  for (UndefinedDiag::Loc l : undef.locs) {
-    if (i >= maxUndefReferences)
-      break;
+  for (UndefinedDiag::Loc l :
+       ArrayRef(undef.locs).take_front(maxUndefReferences)) {
     InputSectionBase &sec = *l.sec;
     uint64_t offset = l.offset;
 
-    msg += "\n>>> referenced by ";
+    msg << "\n>>> referenced by ";
     // In the absence of line number information, utilize DW_TAG_variable (if
     // present) for the enclosing symbol (e.g. var in `int *a[] = {&undef};`).
     Symbol *enclosing = sec.getEnclosingSymbol(offset);
     std::string src = sec.getSrcMsg(enclosing ? *enclosing : sym, offset);
     if (!src.empty())
-      msg += src + "\n>>>               ";
-    msg += sec.getObjMsg(offset);
-    i++;
+      msg << src << "\n>>>               ";
+    msg << sec.getObjMsg(offset);
   }
 
-  if (i < undef.locs.size())
-    msg += ("\n>>> referenced " + Twine(undef.locs.size() - i) + " more times")
-               .str();
+  if (maxUndefReferences < undef.locs.size())
+    msg << "\n>>> referenced " << (undef.locs.size() - maxUndefReferences)
+        << " more times";
 
   if (correctSpelling) {
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
             getAlternativeSpelling(ctx, sym, pre_hint, post_hint)) {
-      msg +=
-          "\n>>> did you mean" + pre_hint + toStr(ctx, *corrected) + post_hint;
+      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint;
       if (corrected->file)
-        msg += "\n>>> defined in: " + toStr(ctx, corrected->file);
+        msg << "\n>>> defined in: " << corrected->file;
     }
   }
 
   if (sym.getName().starts_with("_ZTV"))
-    msg +=
-        "\n>>> the vtable symbol may be undefined because the class is missing "
-        "its key function (see https://lld.llvm.org/missingkeyfunction)";
+    msg << "\n>>> the vtable symbol may be undefined because the class is "
+           "missing its key function "
+           "(see https://lld.llvm.org/missingkeyfunction)";
   if (ctx.arg.gcSections && ctx.arg.zStartStopGC &&
       sym.getName().starts_with("__start_")) {
-    msg += "\n>>> the encapsulation symbol needs to be retained under "
+    msg << "\n>>> the encapsulation symbol needs to be retained under "
            "--gc-sections properly; consider -z nostart-stop-gc "
            "(see https://lld.llvm.org/ELF/start-stop-gc)";
   }
 
   if (undef.isWarning)
-    Warn(ctx) << msg;
+    Warn(ctx) << msg.str();
   else
-    ctx.e.error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
+    ctx.e.error(msg.str(), ErrorTag::SymbolNotFound, {sym.getName()});
 }
 
 void elf::reportUndefinedSymbols(Ctx &ctx) {
@@ -1020,9 +1015,9 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (sym.scriptDefined)
       return true;
 
-  Err(ctx) << "relocation " << type
-           << " cannot refer to absolute symbol: " << &sym
-           << getLocation(ctx, *sec, sym, relOff);
+  auto diag = Err(ctx);
+  diag << "relocation " << type << " cannot refer to absolute symbol: " << &sym;
+  printLocation(diag, *sec, sym, relOff);
   return true;
 }
 
@@ -1188,18 +1183,21 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   if (!ctx.arg.shared && sym.isShared() &&
       !(ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(ctx, sym)) {
-      Err(ctx) << "cannot preempt symbol: " << &sym
-               << getLocation(ctx, *sec, sym, offset);
+      auto diag = Err(ctx);
+      diag << "cannot preempt symbol: " << &sym;
+      printLocation(diag, *sec, sym, offset);
       return;
     }
 
     if (sym.isObject()) {
       // Produce a copy relocation.
       if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
-        if (!ctx.arg.zCopyreloc)
-          Err(ctx) << "unresolvable relocation " << type << " against symbol '"
-                   << ss << "'; recompile with -fPIC or remove '-z nocopyreloc'"
-                   << getLocation(ctx, *sec, sym, offset);
+        if (!ctx.arg.zCopyreloc) {
+          auto diag = Err(ctx);
+          diag << "unresolvable relocation " << type << " against symbol '"
+               << ss << "'; recompile with -fPIC or remove '-z nocopyreloc'";
+          printLocation(diag, *sec, sym, offset);
+        }
         sym.setFlags(NEEDS_COPY);
       }
       sec->addReloc({expr, type, offset, addend, &sym});
@@ -1234,20 +1232,26 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     // * If a library definition gets preempted to the executable, it will have
     //   the wrong ebx value.
     if (sym.isFunc()) {
-      if (ctx.arg.pie && ctx.arg.emachine == EM_386)
-        Err(ctx) << "symbol '" << &sym
-                 << "' cannot be preempted; recompile with -fPIE"
-                 << getLocation(ctx, *sec, sym, offset);
+      if (ctx.arg.pie && ctx.arg.emachine == EM_386) {
+        auto diag = Err(ctx);
+        diag << "symbol '" << &sym
+             << "' cannot be preempted; recompile with -fPIE";
+        printLocation(diag, *sec, sym, offset);
+      }
       sym.setFlags(NEEDS_COPY | NEEDS_PLT);
       sec->addReloc({expr, type, offset, addend, &sym});
       return;
     }
   }
 
-  Err(ctx) << "relocation " << type << " cannot be used against "
-           << (sym.getName().empty() ? "local symbol"
-                                     : ("symbol '" + toStr(ctx, sym) + "'"))
-           << "; recompile with -fPIC" << getLocation(ctx, *sec, sym, offset);
+  auto diag = Err(ctx);
+  diag << "relocation " << type << " cannot be used against ";
+  if (sym.getName().empty())
+    diag << "local symbol";
+  else
+    diag << "symbol '" << &sym << "'";
+  diag << "; recompile with -fPIC";
+  printLocation(diag, *sec, sym, offset);
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
@@ -1284,9 +1288,10 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
                                                 int64_t addend) {
   if (expr == R_TPREL || expr == R_TPREL_NEG) {
     if (ctx.arg.shared) {
-      Err(ctx) << "relocation " << type << " against " << &sym
-               << " cannot be used with -shared"
-               << getLocation(ctx, *sec, sym, offset);
+      auto diag = Err(ctx);
+      diag << "relocation " << type << " against " << &sym
+           << " cannot be used with -shared";
+      printLocation(diag, *sec, sym, offset);
       return 1;
     }
     return 0;
@@ -1493,9 +1498,10 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
       // Skip the error check for CREL, which does not set `end`.
       if constexpr (!RelTy::IsCrel) {
         if (i == end) {
-          Err(ctx) << "R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
-                      "relocation"
-                   << getLocation(ctx, *sec, sym, offset);
+          auto diag = Err(ctx);
+          diag << "R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
+                  "relocation";
+          printLocation(diag, *sec, sym, offset);
           return;
         }
       }

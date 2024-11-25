@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -572,7 +573,8 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert2, wrapped::VariableCategory, Defaultmap::VariableCategory,
+      convert2, parser::OmpVariableCategory::Value,
+      Defaultmap::VariableCategory,
       // clang-format off
       MS(Aggregate,    Aggregate)
       MS(All,          All)
@@ -582,10 +584,11 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
       // clang-format on
   );
 
+  auto &mods{semantics::OmpGetModifiers(inp.v)};
   auto &t0 = std::get<wrapped::ImplicitBehavior>(inp.v.t);
-  auto &t1 = std::get<std::optional<wrapped::VariableCategory>>(inp.v.t);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpVariableCategory>(mods);
 
-  auto category = t1 ? convert2(*t1) : Defaultmap::VariableCategory::All;
+  auto category = t1 ? convert2(t1->v) : Defaultmap::VariableCategory::All;
   return Defaultmap{{/*ImplicitBehavior=*/convert1(t0),
                      /*VariableCategory=*/category}};
 }
@@ -1106,7 +1109,7 @@ Order make(const parser::OmpClause::Order &inp,
   using wrapped = parser::OmpOrderClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert1, parser::OmpOrderModifier::Kind, Order::OrderModifier,
+      convert1, parser::OmpOrderModifier::Value, Order::OrderModifier,
       // clang-format off
       MS(Reproducible,   Reproducible)
       MS(Unconstrained,  Unconstrained)
@@ -1114,20 +1117,18 @@ Order make(const parser::OmpClause::Order &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert2, wrapped::Type, Order::Ordering,
+      convert2, wrapped::Ordering, Order::Ordering,
       // clang-format off
       MS(Concurrent, Concurrent)
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<parser::OmpOrderModifier>>(inp.v.t);
-  auto &t1 = std::get<wrapped::Type>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpOrderModifier>(mods);
+  auto &t1 = std::get<wrapped::Ordering>(inp.v.t);
 
-  auto convert3 = [&](const parser::OmpOrderModifier &s) {
-    return convert1(s.v);
-  };
-  return Order{
-      {/*OrderModifier=*/maybeApply(convert3, t0), /*Ordering=*/convert2(t1)}};
+  return Order{{/*OrderModifier=*/maybeApplyToV(convert1, t0),
+                /*Ordering=*/convert2(t1)}};
 }
 
 Ordered make(const parser::OmpClause::Ordered &inp,
@@ -1178,10 +1179,9 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
 Reduction make(const parser::OmpClause::Reduction &inp,
                semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
-  using wrapped = parser::OmpReductionClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::ReductionModifier, Reduction::ReductionModifier,
+      convert, parser::OmpReductionModifier::Value,
+      Reduction::ReductionModifier,
       // clang-format off
       MS(Inscan,  Inscan)
       MS(Task,    Task)
@@ -1189,16 +1189,17 @@ Reduction make(const parser::OmpClause::Reduction &inp,
       // clang-format on
   );
 
-  auto &t0 =
-      std::get<std::optional<parser::OmpReductionClause::ReductionModifier>>(
-          inp.v.t);
-  auto &t1 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionModifier>(mods);
+  auto *t1 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(t1 && "OmpReductionIdentifier is required");
+
   return Reduction{
-      {/*ReductionModifier=*/t0
-           ? std::make_optional<Reduction::ReductionModifier>(convert(*t0))
-           : std::nullopt,
-       /*ReductionIdentifiers=*/{makeReductionOperator(t1, semaCtx)},
+      {/*ReductionModifier=*/maybeApplyToV(convert, t0),
+       /*ReductionIdentifiers=*/{makeReductionOperator(*t1, semaCtx)},
        /*List=*/makeObjects(t2, semaCtx)}};
 }
 
@@ -1218,7 +1219,7 @@ Schedule make(const parser::OmpClause::Schedule &inp,
   using wrapped = parser::OmpScheduleClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert1, wrapped::ScheduleType, Schedule::Kind,
+      convert1, wrapped::Kind, Schedule::Kind,
       // clang-format off
       MS(Static,   Static)
       MS(Dynamic,  Dynamic)
@@ -1229,8 +1230,7 @@ Schedule make(const parser::OmpClause::Schedule &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert2, parser::OmpScheduleModifierType::ModType,
-      Schedule::OrderingModifier,
+      convert2, parser::OmpOrderingModifier::Value, Schedule::OrderingModifier,
       // clang-format off
       MS(Monotonic,    Monotonic)
       MS(Nonmonotonic, Nonmonotonic)
@@ -1238,48 +1238,22 @@ Schedule make(const parser::OmpClause::Schedule &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert3, parser::OmpScheduleModifierType::ModType,
-      Schedule::ChunkModifier,
+      convert3, parser::OmpChunkModifier::Value, Schedule::ChunkModifier,
       // clang-format off
       MS(Simd, Simd)
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<parser::OmpScheduleModifier>>(inp.v.t);
-  auto &t1 = std::get<wrapped::ScheduleType>(inp.v.t);
-  auto &t2 = std::get<std::optional<parser::ScalarIntExpr>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpOrderingModifier>(mods);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpChunkModifier>(mods);
+  auto &t2 = std::get<wrapped::Kind>(inp.v.t);
+  auto &t3 = std::get<std::optional<parser::ScalarIntExpr>>(inp.v.t);
 
-  if (!t0) {
-    return Schedule{{/*Kind=*/convert1(t1), /*OrderingModifier=*/std::nullopt,
-                     /*ChunkModifier=*/std::nullopt,
-                     /*ChunkSize=*/maybeApply(makeExprFn(semaCtx), t2)}};
-  }
-
-  // The members of parser::OmpScheduleModifier correspond to OrderingModifier,
-  // and ChunkModifier, but they can appear in any order.
-  auto &m1 = std::get<parser::OmpScheduleModifier::Modifier1>(t0->t);
-  auto &m2 =
-      std::get<std::optional<parser::OmpScheduleModifier::Modifier2>>(t0->t);
-
-  std::optional<Schedule::OrderingModifier> omod;
-  std::optional<Schedule::ChunkModifier> cmod;
-
-  if (m1.v.v == parser::OmpScheduleModifierType::ModType::Simd) {
-    // m1 is chunk-modifier
-    cmod = convert3(m1.v.v);
-    if (m2)
-      omod = convert2(m2->v.v);
-  } else {
-    // m1 is ordering-modifier
-    omod = convert2(m1.v.v);
-    if (m2)
-      cmod = convert3(m2->v.v);
-  }
-
-  return Schedule{{/*Kind=*/convert1(t1),
-                   /*OrderingModifier=*/omod,
-                   /*ChunkModifier=*/cmod,
-                   /*ChunkSize=*/maybeApply(makeExprFn(semaCtx), t2)}};
+  return Schedule{{/*Kind=*/convert1(t2),
+                   /*OrderingModifier=*/maybeApplyToV(convert2, t0),
+                   /*ChunkModifier=*/maybeApplyToV(convert3, t1),
+                   /*ChunkSize=*/maybeApply(makeExprFn(semaCtx), t3)}};
 }
 
 // SeqCst: empty
@@ -1319,10 +1293,14 @@ Permutation make(const parser::OmpClause::Permutation &inp,
 TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
-  auto &t0 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(t0 && "OmpReductionIdentifier is required");
+
   return TaskReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*t0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 
