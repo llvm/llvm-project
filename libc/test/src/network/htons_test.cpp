@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/endian.h"
+#include "src/__support/endian_internal.h"
 #include "src/network/htons.h"
 #include "src/network/ntohs.h"
 #include "test/UnitTest/Test.h"

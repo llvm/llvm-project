@@ -361,7 +361,8 @@ function(add_libclc_builtin_set)
       DEPENDS prepare-${obj_suffix} )
     add_custom_target( alias-${alias_suffix} ALL DEPENDS ${alias_suffix} )
     set_target_properties( alias-${alias_suffix} PROPERTIES FOLDER "libclc/Device IR/Aliases" )
-    install( FILES ${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
+    install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix}
+             DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
   endforeach( a )
 endfunction(add_libclc_builtin_set)
 

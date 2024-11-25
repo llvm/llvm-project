@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
@@ -22,7 +23,6 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/QualTypeNames.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
@@ -42,14 +42,12 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -1246,7 +1244,8 @@ enum class OverloadCompare { BothViable, Dominates, Dominated };
 static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
                                         const CXXMethodDecl &Incumbent,
                                         const Qualifiers &ObjectQuals,
-                                        ExprValueKind ObjectKind) {
+                                        ExprValueKind ObjectKind,
+                                        const ASTContext &Ctx) {
   // Base/derived shadowing is handled elsewhere.
   if (Candidate.getDeclContext() != Incumbent.getDeclContext())
     return OverloadCompare::BothViable;
@@ -1280,8 +1279,8 @@ static OverloadCompare compareOverloads(const CXXMethodDecl &Candidate,
   // So make some decision based on the qualifiers.
   Qualifiers CandidateQual = Candidate.getMethodQualifiers();
   Qualifiers IncumbentQual = Incumbent.getMethodQualifiers();
-  bool CandidateSuperset = CandidateQual.compatiblyIncludes(IncumbentQual);
-  bool IncumbentSuperset = IncumbentQual.compatiblyIncludes(CandidateQual);
+  bool CandidateSuperset = CandidateQual.compatiblyIncludes(IncumbentQual, Ctx);
+  bool IncumbentSuperset = IncumbentQual.compatiblyIncludes(CandidateQual, Ctx);
   if (CandidateSuperset == IncumbentSuperset)
     return OverloadCompare::BothViable;
   return IncumbentSuperset ? OverloadCompare::Dominates
@@ -1452,7 +1451,8 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           Result &Incumbent = Results[Entry.second];
           switch (compareOverloads(*Method,
                                    *cast<CXXMethodDecl>(Incumbent.Declaration),
-                                   ObjectTypeQualifiers, ObjectKind)) {
+                                   ObjectTypeQualifiers, ObjectKind,
+                                   CurContext->getParentASTContext())) {
           case OverloadCompare::Dominates:
             // Replace the dominated overload with this one.
             // FIXME: if the overload dominates multiple incumbents then we
@@ -5422,7 +5422,7 @@ private:
 
   // This visitor infers members of T based on traversing expressions/types
   // that involve T. It is invoked with code known to be valid for T.
-  class ValidVisitor : public RecursiveASTVisitor<ValidVisitor> {
+  class ValidVisitor : public DynamicRecursiveASTVisitor {
     ConceptInfo *Outer;
     const TemplateTypeParmType *T;
 
@@ -5440,7 +5440,8 @@ private:
     }
 
     // In T.foo or T->foo, `foo` is a member function/variable.
-    bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
+    bool
+    VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) override {
       const Type *Base = E->getBaseType().getTypePtr();
       bool IsArrow = E->isArrow();
       if (Base->isPointerType() && IsArrow) {
@@ -5453,14 +5454,14 @@ private:
     }
 
     // In T::foo, `foo` is a static member function/variable.
-    bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
+    bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) override {
       if (E->getQualifier() && isApprox(E->getQualifier()->getAsType(), T))
         addValue(E, E->getDeclName(), Member::Colons);
       return true;
     }
 
     // In T::typename foo, `foo` is a type.
-    bool VisitDependentNameType(DependentNameType *DNT) {
+    bool VisitDependentNameType(DependentNameType *DNT) override {
       const auto *Q = DNT->getQualifier();
       if (Q && isApprox(Q->getAsType(), T))
         addType(DNT->getIdentifier());
@@ -5469,7 +5470,7 @@ private:
 
     // In T::foo::bar, `foo` must be a type.
     // VisitNNS() doesn't exist, and TraverseNNS isn't always called :-(
-    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) {
+    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) override {
       if (NNSL) {
         NestedNameSpecifier *NNS = NNSL.getNestedNameSpecifier();
         const auto *Q = NNS->getPrefix();
@@ -5477,14 +5478,14 @@ private:
           addType(NNS->getAsIdentifier());
       }
       // FIXME: also handle T::foo<X>::bar
-      return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSL);
+      return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSL);
     }
 
     // FIXME also handle T::foo<X>
 
     // Track the innermost caller/callee relationship so we can tell if a
     // nested expr is being called as a function.
-    bool VisitCallExpr(CallExpr *CE) {
+    bool VisitCallExpr(CallExpr *CE) override {
       Caller = CE;
       Callee = CE->getCallee();
       return true;

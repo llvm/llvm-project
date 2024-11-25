@@ -1024,6 +1024,15 @@ llvm.func @invariant(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant_group
+llvm.func @invariant_group(%p: !llvm.ptr) {
+  // CHECK: call ptr @llvm.launder.invariant.group
+  %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
+  // CHECK: call ptr @llvm.strip.invariant.group
+  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @ssa_copy
 llvm.func @ssa_copy(%arg: f32) -> f32 {
   // CHECK: call float @llvm.ssa.copy

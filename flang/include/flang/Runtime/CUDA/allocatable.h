@@ -22,6 +22,20 @@ int RTDECL(CUFAllocatableAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
+/// Perform allocation of the descriptor without synchronization. Assign data
+/// from source.
+int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
+    const Descriptor &source, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
+
+/// Perform allocation of the descriptor with synchronization of it when
+/// necessary. Assign data from source.
+int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
+    const Descriptor &source, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
+
 /// Perform deallocation of the descriptor with synchronization of it when
 /// necessary.
 int RTDECL(CUFAllocatableDeallocate)(Descriptor &, bool hasStat = false,

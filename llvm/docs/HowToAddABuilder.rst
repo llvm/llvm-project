@@ -6,7 +6,7 @@ Introduction
 ============
 
 This document contains information about adding a build configuration and
-buildbot-worker to private worker builder to LLVM Buildbot Infrastructure.
+buildbot worker to the LLVM Buildbot Infrastructure.
 
 .. note:: The term "buildmaster" is used in this document to refer to the
   server that manages which builds are run and where. Though we would not
@@ -192,6 +192,7 @@ It is possible to test a builder running against a local version of LLVM's
 buildmaster setup. This allows you to test changes to builder, worker, and
 buildmaster configuration. A buildmaster launched in this "local testing" mode
 will:
+
 * Bind only to local interfaces.
 * Use SQLite as the database.
 * Use a single fixed password for workers.

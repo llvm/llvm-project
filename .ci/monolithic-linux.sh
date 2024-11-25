@@ -28,11 +28,16 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
   ccache --clear
 fi
 
-function show-stats {
+function at-exit {
   mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
+
+  # If building fails there will be no results files.
+  shopt -s nullglob
+  python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
+    "linux-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
 }
-trap show-stats EXIT
+trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
@@ -42,6 +47,7 @@ lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-outpu
 echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \

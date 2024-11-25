@@ -665,15 +665,12 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
   return true;
 }
 
-std::vector<char> CFIReaderWriter::generateEHFrameHeader(
-    const DWARFDebugFrame &OldEHFrame, const DWARFDebugFrame &NewEHFrame,
-    uint64_t EHFrameHeaderAddress,
-    std::vector<uint64_t> &FailedAddresses) const {
+std::vector<char>
+CFIReaderWriter::generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
+                                       const DWARFDebugFrame &NewEHFrame,
+                                       uint64_t EHFrameHeaderAddress) const {
   // Common PC -> FDE map to be written into .eh_frame_hdr.
   std::map<uint64_t, uint64_t> PCToFDE;
-
-  // Presort array for binary search.
-  llvm::sort(FailedAddresses);
 
   // Initialize PCToFDE using NewEHFrame.
   for (dwarf::FrameEntry &Entry : NewEHFrame.entries()) {
@@ -689,13 +686,7 @@ std::vector<char> CFIReaderWriter::generateEHFrameHeader(
       continue;
 
     // Add the address to the map unless we failed to write it.
-    if (!std::binary_search(FailedAddresses.begin(), FailedAddresses.end(),
-                            FuncAddress)) {
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: FDE for function at 0x"
-                        << Twine::utohexstr(FuncAddress) << " is at 0x"
-                        << Twine::utohexstr(FDEAddress) << '\n');
-      PCToFDE[FuncAddress] = FDEAddress;
-    }
+    PCToFDE[FuncAddress] = FDEAddress;
   };
 
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: new .eh_frame contains "

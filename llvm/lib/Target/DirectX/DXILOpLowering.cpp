@@ -236,9 +236,14 @@ public:
       dxil::ResourceInfo &RI = *It;
       const auto &Binding = RI.getBinding();
 
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
-          ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
+          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -257,6 +262,7 @@ public:
 
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -266,6 +272,12 @@ public:
       dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
+
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
@@ -276,8 +288,7 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(
           Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
-      std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
-                                      CI->getArgOperand(4)};
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -488,6 +499,7 @@ public:
 
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -497,12 +509,13 @@ public:
 
       std::array<Value *, 2> Args{Handle, Op1};
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::UpdateCounter, Args, CI->getName());
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
 
       if (Error E = OpCall.takeError())
         return E;
 
+      CI->replaceAllUsesWith(*OpCall);
       CI->eraseFromParent();
       return Error::success();
     });

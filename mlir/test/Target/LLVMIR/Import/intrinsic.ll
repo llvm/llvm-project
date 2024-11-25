@@ -806,6 +806,15 @@ define void @invariant(ptr %0) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @invariant_group
+define void @invariant_group(ptr %0) {
+  ; CHECK: %{{.+}} = llvm.intr.launder.invariant.group %{{.*}} : !llvm.ptr
+  %2 = call ptr @llvm.launder.invariant.group.p0(ptr %0)
+  ; CHECK: %{{.+}} = llvm.intr.strip.invariant.group %{{.*}} : !llvm.ptr
+  %3 = call ptr @llvm.strip.invariant.group.p0(ptr %0)
+  ret void
+}
+
 ; CHECK-LABEL: llvm.func @vector_insert
 define void @vector_insert(<vscale x 4 x float> %0, <4 x float> %1) {
   ; CHECK: llvm.intr.vector.insert %{{.*}}, %{{.*}}[4] : vector<4xf32> into !llvm.vec<? x 4 x  f32>
@@ -1195,6 +1204,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+declare ptr @llvm.launder.invariant.group.p0(ptr nocapture)
+declare ptr @llvm.strip.invariant.group.p0(ptr nocapture)
 
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)
