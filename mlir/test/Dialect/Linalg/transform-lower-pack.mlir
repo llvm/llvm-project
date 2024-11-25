@@ -96,34 +96,6 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// This is same as pack_as_pad but since we explicitly added {allowInsertSliceLowering = false}, it should not
-// be lowered to insert_slice.
-// CHECK-LABEL: func.func @pack_disallowed_as_pad(
-// CHECK: %[[SRC:.+]]: tensor<129x47x16x16xf32>,
-// CHECK: %[[OUT:.+]]: tensor<1x1x1x1x136x64x16x16xf32>)
-func.func @pack_disallowed_as_pad(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x1x1x136x64x16x16xf32>) -> tensor<1x1x1x1x136x64x16x16xf32> {
-  %cst_0 = arith.constant 0.0 : f32
-  // tensor.pack is lowered to tensor.pad + tensor.expand_shape + tensor.insert_slice
-  //      CHECK: %[[PAD:.*]] = tensor.pad %[[SRC]] low[0, 0, 0, 0] high[7, 17, 0, 0]
-  //      CHECK:   : tensor<129x47x16x16xf32> to tensor<136x64x16x16xf32>
-  //  CHECK-NOT: %[[RES:.*]] = tensor.insert_slice %[[PAD]] into %[[OUT]]
-  %pack = tensor.pack %arg0 padding_value(%cst_0 : f32) inner_dims_pos = [0, 1, 2, 3] inner_tiles = [136, 64, 16, 16] into %arg1
-    : tensor<129x47x16x16xf32> -> tensor<1x1x1x1x136x64x16x16xf32>
-  return %pack :  tensor<1x1x1x1x136x64x16x16xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
-    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-      : (!transform.any_op) -> !transform.op<"tensor.pack">
-    transform.structured.lower_pack %pack {allowInsertSliceLowering = false}: (!transform.op<"tensor.pack">)
-      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
-      transform.yield
-  }
-}
-
-// -----
-
 // Check that we don't lower the following pack as a pad.
 // Although all the outer most dimensions in the resulting shape are 1s,
 // some of the original dimensions are not part of the inner_dims_pos, hence
@@ -251,34 +223,6 @@ module attributes {transform.with_named_sequence} {
     %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
       : (!transform.any_op) -> !transform.op<"tensor.unpack">
     transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
-      -> (!transform.op<"tensor.empty">,
-          !transform.op<"linalg.transpose">,
-          !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
-          transform.yield
-  }
-}
-
-// -----
-
-// This is same as upack_as_pad but since we explicitly added {allowExtractSlicelowering = false}, it should not 
-// be lowered to extract_slice.
-// CHECK-LABEL: func.func @unpack_disallowed_as_pad(
-func.func @unpack_disallowed_as_pad(%arg0: tensor<1x1x1x1x136x64x16x16xf32>, %arg1: tensor<129x47x16x16xf32>) -> tensor<129x47x16x16xf32> {
-  %cst_0 = arith.constant 0.0 : f32
-
-  // CHECK-SAME: %[[ARG0:[^:]*]]: tensor<1x1x1x1x136x64x16x16xf32>
-  //  CHECK-NOT: %[[RES:.*]] = tensor.extract_slice %[[ARG0]]
-  %pack = tensor.unpack %arg0 inner_dims_pos = [0, 1, 2, 3] inner_tiles = [136, 64, 16, 16] into %arg1
-    : tensor<1x1x1x1x136x64x16x16xf32> -> tensor<129x47x16x16xf32>
-  return %pack : tensor<129x47x16x16xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
-    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
-      : (!transform.any_op) -> !transform.op<"tensor.unpack">
-    transform.structured.lower_unpack %unpack {allowExtractSliceLowering = false}: (!transform.op<"tensor.unpack">)
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,

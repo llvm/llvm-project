@@ -218,7 +218,7 @@ private:
 
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              tensor::PackOp packOp,
-                                             bool allowInsertSliceLowering) {
+                                             bool lowerPadLikeWithInsertSlice) {
   // 1. Filter out NYI cases.
   auto packedTensorType =
       cast<RankedTensorType>(packOp->getResultTypes().front());
@@ -296,7 +296,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       llvm::interleaveComma(stripMinedShape, DBGS() << "stripMinedShape: ");
       DBGSNL(); DBGS() << "collapsed type: " << collapsed; DBGSNL(););
 
-  if (allowInsertSliceLowering && packOp.isLikePad()) {
+  if (lowerPadLikeWithInsertSlice && packOp.isLikePad()) {
     // Pack ops which operate as simple pads may not produce legal
     // tensor.insert_slice operations when the packed type does not rank reduce
     // to the padded type.
@@ -354,7 +354,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 
 FailureOr<LowerUnPackOpResult>
 linalg::lowerUnPack(RewriterBase &rewriter, tensor::UnPackOp unPackOp,
-                    bool allowExtractSliceLowering) {
+                    bool lowerUnpadLikeWithExtractSlice) {
   Location loc = unPackOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unPackOp);
@@ -364,7 +364,7 @@ linalg::lowerUnPack(RewriterBase &rewriter, tensor::UnPackOp unPackOp,
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
   auto destTensorType = cast<RankedTensorType>(unPackOp.getDest().getType());
-  if (allowExtractSliceLowering && unPackOp.isLikeUnPad()) {
+  if (lowerUnpadLikeWithExtractSlice && unPackOp.isLikeUnPad()) {
     // This unpack is just a plain unpad.
     // Just extract the slice from the higher ranked tensor.
     ArrayRef<int64_t> destShape = destTensorType.getShape();

@@ -549,7 +549,7 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
   }];
 
   let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target,
-                       DefaultValuedAttr<BoolAttr, "true">:$allowInsertSliceLowering);
+                       DefaultValuedAttr<BoolAttr, "true">:$lowerPadLikeWithInsertSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.pad">:$pad_op,
                       Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op);
@@ -590,7 +590,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
   }];
 
   let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target,
-                       DefaultValuedAttr<BoolAttr, "true">:$allowExtractSliceLowering);
+                       DefaultValuedAttr<BoolAttr, "true">:$lowerUnpadLikeWithExtractSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
                       Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
