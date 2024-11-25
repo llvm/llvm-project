@@ -143,6 +143,15 @@ const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
   return cast<BoolValue>(Env.getValue(D))->formula();
 }
 
+const BindingDecl *findBindingDecl(const char *Name, ASTContext &ASTCtx) {
+  using ast_matchers::bindingDecl;
+  using ast_matchers::hasName;
+  auto TargetNodes =
+      ast_matchers::match(bindingDecl(hasName(Name)).bind("v"), ASTCtx);
+  assert(TargetNodes.size() == 1 && "Name must be unique");
+  return ast_matchers::selectFirst<BindingDecl>("v", TargetNodes);
+}
+
 TEST(TransferTest, CNotSupported) {
   TestInputs Inputs("void target() {}");
   Inputs.Language = TestLanguage::Lang_C89;
@@ -5515,10 +5524,10 @@ TEST(TransferTest, StructuredBindingAssignFromTupleLikeType) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
 
-        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        const ValueDecl *BoundFooDecl = findBindingDecl("BoundFoo", ASTCtx);
         ASSERT_THAT(BoundFooDecl, NotNull());
 
-        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        const ValueDecl *BoundBarDecl = findBindingDecl("BoundBar", ASTCtx);
         ASSERT_THAT(BoundBarDecl, NotNull());
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
@@ -5596,10 +5605,10 @@ TEST(TransferTest, StructuredBindingAssignRefFromTupleLikeType) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
 
-        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        const ValueDecl *BoundFooDecl = findBindingDecl("BoundFoo", ASTCtx);
         ASSERT_THAT(BoundFooDecl, NotNull());
 
-        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        const ValueDecl *BoundBarDecl = findBindingDecl("BoundBar", ASTCtx);
         ASSERT_THAT(BoundBarDecl, NotNull());
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
