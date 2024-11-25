@@ -1157,10 +1157,12 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
   return Res;
 }
 
-ExprResult
-Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
-                            Expr *IndexExpr, SourceLocation RSquareLoc,
-                            ArrayRef<Expr *> ExpandedExprs, bool EmptyPack) {
+ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
+                                       SourceLocation EllipsisLoc,
+                                       Expr *IndexExpr,
+                                       SourceLocation RSquareLoc,
+                                       ArrayRef<Expr *> ExpandedExprs,
+                                       bool FullySubstituted) {
 
   std::optional<int64_t> Index;
   if (!IndexExpr->isInstantiationDependent()) {
@@ -1174,8 +1176,8 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
     IndexExpr = Res.get();
   }
 
-  if (Index && (!ExpandedExprs.empty() || EmptyPack)) {
-    if (*Index < 0 || EmptyPack || *Index >= int64_t(ExpandedExprs.size())) {
+  if (Index && FullySubstituted) {
+    if (*Index < 0 || *Index >= int64_t(ExpandedExprs.size())) {
       Diag(PackExpression->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << *Index << PackExpression << ExpandedExprs.size();
       return ExprError();
@@ -1184,7 +1186,7 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
 
   return PackIndexingExpr::Create(getASTContext(), EllipsisLoc, RSquareLoc,
                                   PackExpression, IndexExpr, Index,
-                                  ExpandedExprs, EmptyPack);
+                                  ExpandedExprs, FullySubstituted);
 }
 
 TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(

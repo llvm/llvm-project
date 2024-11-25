@@ -3670,10 +3670,10 @@ public:
                                      SourceLocation RSquareLoc,
                                      Expr *PackIdExpression, Expr *IndexExpr,
                                      ArrayRef<Expr *> ExpandedExprs,
-                                     bool EmptyPack = false) {
+                                     bool FullySubstituted = false) {
     return getSema().BuildPackIndexingExpr(PackIdExpression, EllipsisLoc,
                                            IndexExpr, RSquareLoc, ExpandedExprs,
-                                           EmptyPack);
+                                           FullySubstituted);
   }
 
   /// Build a new expression representing a call to a source location
@@ -6769,6 +6769,7 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
       if (Out.isNull())
         return QualType();
       SubtitutedTypes.push_back(Out);
+      FullySubstituted &= !Out->containsUnexpandedParameterPack();
     }
     // If we're supposed to retain a pack expansion, do so by temporarily
     // forgetting the partially-substituted parameter pack.
@@ -15581,6 +15582,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
   }
 
   SmallVector<Expr *, 5> ExpandedExprs;
+  bool FullySubstituted = true;
   if (!E->expandsToEmptyPack() && E->getExpressions().empty()) {
     Expr *Pattern = E->getPackIdExpression();
     SmallVector<UnexpandedParameterPack, 2> Unexpanded;
@@ -15605,7 +15607,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
         return ExprError();
       return getDerived().RebuildPackIndexingExpr(
           E->getEllipsisLoc(), E->getRSquareLoc(), Pack.get(), IndexExpr.get(),
-          {});
+          {}, /*FullySubstituted=*/false);
     }
     for (unsigned I = 0; I != *NumExpansions; ++I) {
       Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
@@ -15617,6 +15619,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
                                                 OrigNumExpansions);
         if (Out.isInvalid())
           return true;
+        FullySubstituted = false;
       }
       ExpandedExprs.push_back(Out.get());
     }
@@ -15633,6 +15636,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
                                               OrigNumExpansions);
       if (Out.isInvalid())
         return true;
+      FullySubstituted = false;
       ExpandedExprs.push_back(Out.get());
     }
   } else if (!E->expandsToEmptyPack()) {
@@ -15644,8 +15648,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
 
   return getDerived().RebuildPackIndexingExpr(
       E->getEllipsisLoc(), E->getRSquareLoc(), E->getPackIdExpression(),
-      IndexExpr.get(), ExpandedExprs,
-      /*EmptyPack=*/ExpandedExprs.size() == 0);
+      IndexExpr.get(), ExpandedExprs, FullySubstituted);
 }
 
 template<typename Derived>

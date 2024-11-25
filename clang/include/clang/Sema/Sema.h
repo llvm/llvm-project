@@ -14257,7 +14257,7 @@ public:
                                    SourceLocation EllipsisLoc, Expr *IndexExpr,
                                    SourceLocation RSquareLoc,
                                    ArrayRef<Expr *> ExpandedExprs = {},
-                                   bool EmptyPack = false);
+                                   bool FullySubstituted = false);
 
   /// Handle a C++1z fold-expression: ( expr op ... op expr ).
   ExprResult ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
