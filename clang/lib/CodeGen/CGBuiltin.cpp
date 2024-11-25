@@ -19284,8 +19284,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
   }
   case Builtin::BI__builtin_hlsl_wave_active_any_true: {
     Value *Op = EmitScalarExpr(E->getArg(0));
-    llvm::Type *Ty = Op->getType();
-    assert(Ty->isIntegerTy(1) &&
+    assert(Op->getType()->isIntegerTy(1) &&
            "Intrinsic WaveActiveAnyTrue operand must be a bool");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic();
