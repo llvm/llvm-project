@@ -2375,8 +2375,9 @@ static void markAddrsig(bool icfSafe, Symbol *s) {
   // We don't need to keep text sections unique under --icf=all even if they
   // are address-significant.
   if (auto *d = dyn_cast_or_null<Defined>(s))
-    if (d->section && (icfSafe || !(d->section->flags & SHF_EXECINSTR)))
-      d->section->keepUnique = true;
+    if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
+      if (icfSafe || !(sec->flags & SHF_EXECINSTR))
+        sec->keepUnique = true;
 }
 
 // Record sections that define symbols mentioned in --keep-unique <symbol>
@@ -2391,7 +2392,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
       Warn(ctx) << "could not find symbol " << name << " to keep unique";
       continue;
     }
-    d->section->keepUnique = true;
+    if (auto *sec = dyn_cast<InputSectionBase>(d->section))
+      sec->keepUnique = true;
   }
 
   // --icf=all --ignore-data-address-equality means that we can ignore
