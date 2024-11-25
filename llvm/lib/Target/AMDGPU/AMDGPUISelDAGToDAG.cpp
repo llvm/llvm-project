@@ -408,7 +408,8 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0LDSInit(SDNode *N) const {
   unsigned AS = cast<MemSDNode>(N)->getAddressSpace();
   if (AS == AMDGPUAS::LOCAL_ADDRESS) {
     if (Subtarget->ldsRequiresM0Init())
-      return glueCopyToM0(N, CurDAG->getTargetConstant(-1, SDLoc(N), MVT::i32));
+      return glueCopyToM0(
+          N, CurDAG->getSignedTargetConstant(-1, SDLoc(N), MVT::i32));
   } else if (AS == AMDGPUAS::REGION_ADDRESS) {
     MachineFunction &MF = CurDAG->getMachineFunction();
     unsigned Value = MF.getInfo<SIMachineFunctionInfo>()->getGDSSize();
@@ -1724,7 +1725,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
   }
 
   VAddr = Addr;
-  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i32);
+  Offset = CurDAG->getSignedTargetConstant(OffsetVal, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -1832,7 +1833,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     }
 
     if (SAddr) {
-      Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+      Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
       return true;
     }
   }
@@ -1848,7 +1849,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
       CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, SDLoc(Addr), MVT::i32,
                              CurDAG->getTargetConstant(0, SDLoc(), MVT::i32));
   VOffset = SDValue(VMov, 0);
-  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+  Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -1903,13 +1904,13 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
     SDValue AddOffset =
         SAddr.getOpcode() == ISD::TargetFrameIndex
             ? getMaterializedScalarImm32(Lo_32(RemainderOffset), DL)
-            : CurDAG->getTargetConstant(RemainderOffset, DL, MVT::i32);
+            : CurDAG->getSignedTargetConstant(RemainderOffset, DL, MVT::i32);
     SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_I32, DL, MVT::i32,
                                            SAddr, AddOffset),
                     0);
   }
 
-  Offset = CurDAG->getTargetConstant(COffsetVal, DL, MVT::i32);
+  Offset = CurDAG->getSignedTargetConstant(COffsetVal, DL, MVT::i32);
 
   return true;
 }
@@ -2058,7 +2059,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
   std::optional<int64_t> EncodedOffset = AMDGPU::getSMRDEncodedOffset(
       *Subtarget, ByteOffset, IsBuffer, HasSOffset);
   if (EncodedOffset && Offset && !Imm32Only) {
-    *Offset = CurDAG->getTargetConstant(*EncodedOffset, SL, MVT::i32);
+    *Offset = CurDAG->getSignedTargetConstant(*EncodedOffset, SL, MVT::i32);
     return true;
   }
 
