@@ -385,11 +385,10 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   // element. But in CIR, the union has the information for all members. So if
   // we only pass a single init element, we may be in trouble. We solve the
   // problem by appending placeholder attribute for the uninitialized fields.
+  llvm::SmallVector<mlir::Attribute, 32> UnionElemsStorage;
   if (auto desired = dyn_cast<cir::StructType>(DesiredTy);
       desired && desired.isUnion() &&
       Elems.size() != desired.getNumElements()) {
-    llvm::SmallVector<mlir::Attribute, 32> UnionElemsStorage;
-
     for (auto elemTy : desired.getMembers()) {
       if (auto Ty = mlir::dyn_cast<mlir::TypedAttr>(Elems.back());
           Ty && Ty.getType() == elemTy)
@@ -400,8 +399,9 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
     }
 
     UnpackedElems = UnionElemsStorage;
-  } else
+  } else {
     UnpackedElems = Elems;
+  }
 
   llvm::SmallVector<mlir::Attribute, 32> UnpackedElemStorage;
   if (DesiredSize < AlignedSize || DesiredSize.alignTo(Align) != DesiredSize) {
