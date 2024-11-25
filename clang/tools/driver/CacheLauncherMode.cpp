@@ -44,8 +44,9 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
   CreateInvocationOptions Opts;
   // Ignore diagnostic parsing diagnostics; if they are real issues they will be
   // seen when compiling. Just fallback to disabling caching here.
-  Opts.Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                                   new IgnoringDiagConsumer);
+  Opts.Diags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions,
+      new IgnoringDiagConsumer);
   // This enables picking the first invocation in a multi-arch build.
   Opts.RecoverOnError = true;
   std::shared_ptr<CompilerInvocation> CInvok =
