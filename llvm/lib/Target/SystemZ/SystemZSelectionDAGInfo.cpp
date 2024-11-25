@@ -53,7 +53,7 @@ static SDValue emitMemMemReg(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
   int64_t Adj = getMemMemLenAdj(Op);
   SDValue LenAdj = DAG.getNode(ISD::ADD, DL, MVT::i64,
                                DAG.getZExtOrTrunc(Size, DL, MVT::i64),
-                               DAG.getConstant(0 - Adj, DL, MVT::i64));
+                               DAG.getSignedConstant(0 - Adj, DL, MVT::i64));
   return createMemMemNode(DAG, DL, Op, Chain, Dst, Src, LenAdj, Byte);
 }
 

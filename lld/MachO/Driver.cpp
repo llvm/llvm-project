@@ -1741,6 +1741,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->umbrella = arg->getValue();
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
+  config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
@@ -2109,6 +2110,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(arg->getValue(), arg->getSpelling());
       config->mllvmOpts.emplace_back(arg->getValue());
     }
+
+    config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
     createSyntheticSections();
     createSyntheticSymbols();

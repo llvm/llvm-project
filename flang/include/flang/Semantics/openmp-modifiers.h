@@ -62,15 +62,25 @@ struct OmpModifierDescriptor {
 template <typename SpecificTy> const OmpModifierDescriptor &OmpGetDescriptor();
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>();
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>();
 template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpIterator>();
 template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>();
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderModifier>();
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>();
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionIdentifier>();
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionModifier>();
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>();
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpVariableCategory>();
 
 // Explanation of terminology:
 //

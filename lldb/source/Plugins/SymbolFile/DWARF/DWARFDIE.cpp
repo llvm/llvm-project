@@ -572,43 +572,6 @@ bool DWARFDIE::GetDIENamesAndRanges(
     return false;
 }
 
-// The following methods use LLVM naming convension in order to be are used by
-// LLVM libraries.
 llvm::iterator_range<DWARFDIE::child_iterator> DWARFDIE::children() const {
   return llvm::make_range(child_iterator(*this), child_iterator());
-}
-
-DWARFDIE::child_iterator DWARFDIE::begin() const {
-  return child_iterator(*this);
-}
-
-DWARFDIE::child_iterator DWARFDIE::end() const { return child_iterator(); }
-
-std::optional<DWARFFormValue> DWARFDIE::find(const dw_attr_t attr) const {
-  DWARFFormValue form_value;
-  if (m_die->GetAttributeValue(m_cu, attr, form_value, nullptr, false))
-    return form_value;
-  return std::nullopt;
-}
-
-std::optional<uint64_t> DWARFDIE::getLanguage() const {
-  if (IsValid())
-    return m_cu->GetDWARFLanguageType();
-  return std::nullopt;
-}
-
-DWARFDIE DWARFDIE::resolveReferencedType(dw_attr_t attr) const {
-  return GetReferencedDIE(attr);
-}
-
-DWARFDIE DWARFDIE::resolveReferencedType(DWARFFormValue v) const {
-  if (IsValid())
-    return v.Reference();
-  return {};
-}
-
-DWARFDIE DWARFDIE::resolveTypeUnitReference() const {
-  if (DWARFDIE reference = GetReferencedDIE(DW_AT_signature))
-    return reference;
-  return *this;
 }

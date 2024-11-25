@@ -90,6 +90,19 @@ define half @fptrunc_select_true_val_extra_use(half %x, float %y, i1 %cond) {
   ret half %r
 }
 
+define half @fptrunc_max(half %arg) {
+; CHECK-LABEL: @fptrunc_max(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[ARG:%.*]], 0xH0000
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[CMP]], half 0xH0000, half [[ARG]]
+; CHECK-NEXT:    ret half [[NARROW_SEL]]
+;
+  %ext = fpext half %arg to double
+  %cmp = fcmp olt double %ext, 0.000000e+00
+  %max = select i1 %cmp, double 0.000000e+00, double %ext
+  %trunc = fptrunc double %max to half
+  ret half %trunc
+}
+
 ; Negative test - this would require an extra instruction.
 
 define half @fptrunc_select_true_val_extra_use_2(half %x, float %y, i1 %cond) {

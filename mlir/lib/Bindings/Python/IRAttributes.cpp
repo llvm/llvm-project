@@ -1102,11 +1102,11 @@ private:
     unpackedBooleans = unpackedBooleans[py::slice(0, numBooleans, 1)];
     unpackedBooleans = equalFunc(unpackedBooleans, 1);
 
-    std::vector<intptr_t> shape;
     MlirType shapedType = mlirAttributeGetType(*this);
     intptr_t rank = mlirShapedTypeGetRank(shapedType);
+    std::vector<intptr_t> shape(rank);
     for (intptr_t i = 0; i < rank; ++i) {
-      shape.push_back(mlirShapedTypeGetDimSize(shapedType, i));
+      shape[i] = mlirShapedTypeGetDimSize(shapedType, i);
     }
     unpackedBooleans = reshapeFunc(unpackedBooleans, shape);
 
