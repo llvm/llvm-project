@@ -8329,7 +8329,8 @@ public:
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
-    if (!Definition && FD->getTemplateInstantiationPattern()) {
+    if (Info.getLangOpts().CPlusPlus23 && !Definition &&
+        FD->getTemplateInstantiationPattern()) {
       Info.getSemaProxy().InstantiateFunctionDefinition(
           E->getExprLoc(), const_cast<FunctionDecl *>(FD));
       Body = FD->getBody(Definition);

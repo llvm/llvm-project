@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=cxx20-23 %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=cxx20-23 %s
-// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=cxx26 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=cxx23-26 %s
+// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=cxx23-26 %s
 
-// cxx26-no-diagnostics
+// cxx23-26-no-diagnostics
 
 namespace GH73232 {
 namespace ex1 {
@@ -18,10 +18,10 @@ template <typename T>
 constexpr void g(T) {}
 
 constexpr auto z = f(); // #ex1-z-defn
-// cxx20-23-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
-//   cxx20-23-note@#ex1-g-call {{undefined function 'g<int>' cannot be used in a constant expression}}
-//   cxx20-23-note@#ex1-z-defn {{in call to 'f()'}}
-//   cxx20-23-note@#ex1-g-decl {{declared here}}
+// cxx20-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
+//   cxx20-note@#ex1-g-call {{undefined function 'g<int>' cannot be used in a constant expression}}
+//   cxx20-note@#ex1-z-defn {{in call to 'f()'}}
+//   cxx20-note@#ex1-g-decl {{declared here}}
 } // namespace ex1
 
 namespace ex2 {
