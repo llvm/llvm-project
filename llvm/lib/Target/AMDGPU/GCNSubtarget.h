@@ -220,6 +220,7 @@ protected:
   bool HasSALUFloatInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
+  bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
@@ -1321,6 +1322,8 @@ public:
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
 
+  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
+
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
 
@@ -1567,6 +1570,14 @@ public:
 
   bool isWave64() const {
     return getWavefrontSize() == 64;
+  }
+
+  /// Returns if the wavesize of this subtarget is known reliable. This is false
+  /// only for the a default target-cpu that does not have an explicit
+  /// +wavefrontsize target feature.
+  bool isWaveSizeKnown() const {
+    return hasFeature(AMDGPU::FeatureWavefrontSize32) ||
+           hasFeature(AMDGPU::FeatureWavefrontSize64);
   }
 
   const TargetRegisterClass *getBoolRC() const {

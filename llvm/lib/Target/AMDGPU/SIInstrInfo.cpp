@@ -7703,8 +7703,8 @@ void SIInstrInfo::lowerSelect(SIInstrWorklist &Worklist, MachineInstr &Inst,
       // Insert a trivial select instead of creating a copy, because a copy from
       // SCC would semantically mean just copying a single bit, but we may need
       // the result to be a vector condition mask that needs preserving.
-      unsigned Opcode = (ST.getWavefrontSize() == 64) ? AMDGPU::S_CSELECT_B64
-                                                      : AMDGPU::S_CSELECT_B32;
+      unsigned Opcode =
+          ST.isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
       auto NewSelect =
           BuildMI(MBB, MII, DL, get(Opcode), NewCondReg).addImm(-1).addImm(0);
       NewSelect->getOperand(3).setIsUndef(Cond.isUndef());
@@ -8716,7 +8716,7 @@ uint64_t SIInstrInfo::getScratchRsrcWords23() const {
   }
 
   // IndexStride = 64 / 32.
-  uint64_t IndexStride = ST.getWavefrontSize() == 64 ? 3 : 2;
+  uint64_t IndexStride = ST.isWave64() ? 3 : 2;
   Rsrc23 |= IndexStride << AMDGPU::RSRC_INDEX_STRIDE_SHIFT;
 
   // If TID_ENABLE is set, DATA_FORMAT specifies stride bits [14:17].

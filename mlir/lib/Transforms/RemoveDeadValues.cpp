@@ -577,10 +577,8 @@ void RemoveDeadValues::runOnOperation() {
   WalkResult acceptableIR = module->walk([&](Operation *op) {
     if (op == module)
       return WalkResult::advance();
-    if (isa<BranchOpInterface>(op) ||
-        (isa<SymbolUserOpInterface>(op) && !isa<CallOpInterface>(op))) {
-      op->emitError() << "cannot optimize an IR with "
-                         "non-call symbol user ops or branch ops\n";
+    if (isa<BranchOpInterface>(op)) {
+      op->emitError() << "cannot optimize an IR with branch ops\n";
       return WalkResult::interrupt();
     }
     return WalkResult::advance();
