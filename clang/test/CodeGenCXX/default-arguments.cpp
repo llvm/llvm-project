@@ -23,6 +23,20 @@ void test() {
 }
 };
 
+struct A1 {
+ A1();
+ ~A1();
+};
+
+struct A2 {
+ A2();
+ ~A2();
+};
+
+struct B {
+ B(const A1& = A1(), const A2& = A2());
+};
+
 // CHECK-LABEL: define{{.*}} void @_Z2f1v()
 void f1() {
 
