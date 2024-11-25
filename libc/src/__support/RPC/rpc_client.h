@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_CLIENT_H
 
 #include "shared/rpc.h"
+#include "shared/rpc_opcodes.h"
 
-#include "include/llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 
