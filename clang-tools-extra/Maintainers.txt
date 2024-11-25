@@ -26,6 +26,9 @@ clang-tidy
 | Julian Schmidt
 | git.julian.schmidt@gmail.com (email), 5chmidti (GitHub), 5chmidti (Discourse), 5chmidti (Discord)
 
+| Piotr Zegar
+| me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)
+
 
 clang-query
 -----------
