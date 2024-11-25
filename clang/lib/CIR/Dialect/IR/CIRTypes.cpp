@@ -745,7 +745,7 @@ const llvm::fltSemantics &FP80Type::getFloatSemantics() const {
 llvm::TypeSize
 FP80Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                             mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(16);
+  return llvm::TypeSize::getFixed(128);
 }
 
 uint64_t FP80Type::getABIAlignment(const mlir::DataLayout &dataLayout,
@@ -766,6 +766,7 @@ const llvm::fltSemantics &FP128Type::getFloatSemantics() const {
 llvm::TypeSize
 FP128Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                              mlir::DataLayoutEntryListRef params) const {
+  // FIXME: We probably want it to return 128. But we're lacking a test now.
   return llvm::TypeSize::getFixed(16);
 }
 

@@ -76,3 +76,55 @@ double f1(int n, ...) {
 // CIR: [[CASTED_ARG_P:%.+]] = cir.cast(bitcast, [[ARG]]
 // CIR: [[CASTED_ARG:%.+]] = cir.load align(16) [[CASTED_ARG_P]]
 // CIR: store [[CASTED_ARG]], [[RES]]
+long double f2(int n, ...) {
+  va_list valist;
+  va_start(valist, n);
+  long double res = va_arg(valist, long double);
+  va_end(valist);
+  return res;
+}
+
+// CHECK: define {{.*}}@f2
+// CHECK: [[RESULT:%.+]] = alloca x86_fp80
+// CHECK: [[VA_LIST_ALLOCA:%.+]] = alloca {{.*}}[[VA_LIST_TYPE]]
+// CHECK: [[RES:%.+]] = alloca x86_fp80
+// CHECK: [[VA_LIST:%.+]] = getelementptr {{.*}} [[VA_LIST_ALLOCA]], i32 0
+// CHECK: call {{.*}}@llvm.va_start.p0(ptr [[VA_LIST]])
+// CHECK: [[VA_LIST2:%.+]] = getelementptr {{.*}} [[VA_LIST_ALLOCA]], i32 0
+// CHECK: [[OVERFLOW_AREA_P:%.+]] = getelementptr {{.*}} [[VA_LIST2]], i32 0, i32 2
+// CHECK: [[OVERFLOW_AREA:%.+]] = load ptr, ptr [[OVERFLOW_AREA_P]]
+// Ptr Mask Operations
+// CHECK: [[OVERFLOW_AREA_OFFSET_ALIGNED:%.+]] = getelementptr i8, ptr [[OVERFLOW_AREA]], i64 15
+// CHECK: [[OVERFLOW_AREA_OFFSET_ALIGNED_P:%.+]] = ptrtoint ptr [[OVERFLOW_AREA_OFFSET_ALIGNED]] to i32
+// CHECK: [[MASKED:%.+]] = and i32 [[OVERFLOW_AREA_OFFSET_ALIGNED_P]], -16
+// CHECK: [[DIFF:%.+]] = sub i32 [[OVERFLOW_AREA_OFFSET_ALIGNED_P]], [[MASKED]]
+// CHECK: [[PTR_MASKED:%.+]] = getelementptr i8, ptr [[OVERFLOW_AREA_OFFSET_ALIGNED]], i32 [[DIFF]]
+// CHECK: [[OVERFLOW_AREA_NEXT:%.+]] = getelementptr i8, ptr [[PTR_MASKED]], i64 16
+// CHECK: store ptr [[OVERFLOW_AREA_NEXT]], ptr [[OVERFLOW_AREA_P]]
+// CHECK: [[VALUE:%.+]] = load x86_fp80, ptr [[PTR_MASKED]]
+// CHECK: store x86_fp80 [[VALUE]], ptr [[RES]]
+// CHECK: [[VA_LIST2:%.+]] = getelementptr {{.*}} [[VA_LIST_ALLOCA]], i32 0
+// CHECK: call {{.*}}@llvm.va_end.p0(ptr [[VA_LIST2]])
+// CHECK: [[VALUE2:%.+]] = load x86_fp80, ptr [[RES]]
+// CHECK: store x86_fp80 [[VALUE2]], ptr [[RESULT]]
+// CHECK: [[RETURN_VALUE:%.+]] = load x86_fp80, ptr [[RESULT]]
+// CHECK: ret x86_fp80 [[RETURN_VALUE]]
+
+// CIR: cir.func @f2
+// CIR: [[VA_LIST_ALLOCA:%.+]] = cir.alloca !cir.array<!ty___va_list_tag x 1>, !cir.ptr<!cir.array<!ty___va_list_tag x 1>>, ["valist"]
+// CIR: [[RES:%.+]] = cir.alloca !cir.long_double<!cir.f80>, !cir.ptr<!cir.long_double<!cir.f80>>, ["res"
+// CIR: [[VASTED_VA_LIST:%.+]] = cir.cast(array_to_ptrdecay, [[VA_LIST_ALLOCA]] 
+// CIR: cir.va.start [[VASTED_VA_LIST]]
+// CIR: [[VASTED_VA_LIST:%.+]] = cir.cast(array_to_ptrdecay, [[VA_LIST_ALLOCA]] 
+// CIR: [[OVERFLOW_AREA_P:%.+]] = cir.get_member [[VASTED_VA_LIST]][2] {name = "overflow_arg_area"}
+// CIR-DAG: [[OVERFLOW_AREA:%.+]] = cir.load [[OVERFLOW_AREA_P]]
+// CIR-DAG: [[CASTED:%.+]] = cir.cast(bitcast, [[OVERFLOW_AREA]] : !cir.ptr<!void>)
+// CIR-DAG: [[CONSTANT:%.+]] = cir.const #cir.int<15>
+// CIR-DAG: [[PTR_STRIDE:%.+]] = cir.ptr_stride([[CASTED]] {{.*}}[[CONSTANT]]
+// CIR-DAG: [[MINUS_ALIGN:%.+]] = cir.const #cir.int<-16>
+// CIR-DAG: [[ALIGNED:%.+]] = cir.ptr_mask([[PTR_STRIDE]], [[MINUS_ALIGN]]
+// CIR: [[ALIGN:%.+]] = cir.const #cir.int<16>
+// CIR: [[CAST_ALIGNED:%.+]] = cir.cast(bitcast, [[ALIGNED]] : !cir.ptr<!u8i>), !cir.ptr<!cir.long_double<!cir.f80>>
+// CIR: [[CAST_ALIGNED_VALUE:%.+]] = cir.load [[CAST_ALIGNED]]
+// CIR: cir.store [[CAST_ALIGNED_VALUE]], [[RES]]
+// CIR. cir.via.end

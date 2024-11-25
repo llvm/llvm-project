@@ -33,6 +33,7 @@ mlir::Value emitRoundPointerUpToAlignment(cir::CIRBaseBuilderTy &builder,
 mlir::Type useFirstFieldIfTransparentUnion(mlir::Type Ty);
 
 CIRCXXABI::RecordArgABI getRecordArgABI(const StructType RT, CIRCXXABI &CXXABI);
+CIRCXXABI::RecordArgABI getRecordArgABI(mlir::Type ty, CIRCXXABI &CXXABI);
 
 } // namespace cir
 

@@ -46,7 +46,6 @@ std::unique_ptr<cir::LowerModule> getLowerModule(cir::VAArgOp op) {
   mlir::ModuleOp mo = op->getParentOfType<mlir::ModuleOp>();
   if (!mo)
     return nullptr;
-
   mlir::PatternRewriter rewriter(mo.getContext());
   return cir::createLowerModule(mo, rewriter);
 }
@@ -92,7 +91,7 @@ mlir::Value LoweringPrepareX86CXXABI::lowerVAArgX86_64(
   // Let's hope LLVM's va_arg instruction can take care of it.
   // Remove this when X86_64ABIInfo::classify can take care of every type.
   if (!mlir::isa<VoidType, IntType, SingleType, DoubleType, BoolType,
-                 StructType>(op.getType()))
+                 StructType, LongDoubleType>(op.getType()))
     return nullptr;
 
   // Assume that va_list type is correct; should be pointer to LLVM type:
@@ -107,7 +106,6 @@ mlir::Value LoweringPrepareX86CXXABI::lowerVAArgX86_64(
   std::unique_ptr<cir::LowerModule> lowerModule = getLowerModule(op);
   if (!lowerModule)
     return nullptr;
-
   mlir::Type ty = op.getType();
 
   // FIXME: How should we access the X86AVXABILevel?
@@ -167,7 +165,6 @@ mlir::Value LoweringPrepareX86CXXABI::lowerVAArgX86_64(
   mlir::Block *contBlock = currentBlock->splitBlock(op);
   mlir::Block *inRegBlock = builder.createBlock(contBlock);
   mlir::Block *inMemBlock = builder.createBlock(contBlock);
-
   builder.setInsertionPointToEnd(currentBlock);
   builder.create<BrCondOp>(loc, inRegs, inRegBlock, inMemBlock);
 

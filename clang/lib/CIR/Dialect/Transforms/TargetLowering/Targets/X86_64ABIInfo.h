@@ -69,6 +69,14 @@ class X86_64ABIInfo : public cir::ABIInfo {
                                     mlir::Type SourceTy,
                                     unsigned SourceOffset) const;
 
+  /// getIndirectResult - Give a source type \arg Ty, return a suitable result
+  /// such that the argument will be passed in memory.
+  ///
+  /// \param freeIntRegs - The number of free integer registers remaining
+  /// available.
+  ::cir::ABIArgInfo getIndirectResult(mlir::Type ty,
+                                      unsigned freeIntRegs) const;
+
   /// The 0.98 ABI revision clarified a lot of ambiguities,
   /// unfortunately in ways that were not always consistent with
   /// certain previous compilers.  In particular, platforms which

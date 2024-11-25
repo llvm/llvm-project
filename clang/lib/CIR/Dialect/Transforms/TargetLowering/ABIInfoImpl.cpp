@@ -65,4 +65,11 @@ CIRCXXABI::RecordArgABI getRecordArgABI(const StructType RT,
   return CXXABI.getRecordArgABI(RT);
 }
 
+CIRCXXABI::RecordArgABI getRecordArgABI(mlir::Type ty, CIRCXXABI &CXXABI) {
+  auto st = mlir::dyn_cast<StructType>(ty);
+  if (!st)
+    return CIRCXXABI::RAA_Default;
+  return getRecordArgABI(st, CXXABI);
+}
+
 } // namespace cir

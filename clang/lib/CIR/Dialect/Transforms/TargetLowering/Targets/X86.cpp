@@ -165,6 +165,21 @@ void X86_64ABIInfo::classify(mlir::Type Ty, uint64_t OffsetBase, Class &Lo,
       Current = Class::SSE;
       return;
 
+    } else if (mlir::isa<LongDoubleType>(Ty)) {
+      const llvm::fltSemantics *LDF =
+          &getContext().getTargetInfo().getLongDoubleFormat();
+      if (LDF == &llvm::APFloat::IEEEquad()) {
+        Lo = Class::SSE;
+        Hi = Class::SSEUp;
+      } else if (LDF == &llvm::APFloat::x87DoubleExtended()) {
+        Lo = Class::X87;
+        Hi = Class::X87Up;
+      } else if (LDF == &llvm::APFloat::IEEEdouble()) {
+        Current = Class::SSE;
+      } else {
+        llvm_unreachable("unexpected long double representation!");
+      }
+      return;
     } else if (mlir::isa<BoolType>(Ty)) {
       Current = Class::Integer;
     } else if (const auto RT = mlir::dyn_cast<StructType>(Ty)) {
@@ -267,6 +282,65 @@ void X86_64ABIInfo::classify(mlir::Type Ty, uint64_t OffsetBase, Class &Lo,
   cir_cconv_unreachable("NYI");
 }
 
+ABIArgInfo X86_64ABIInfo::getIndirectResult(mlir::Type ty,
+                                            unsigned freeIntRegs) const {
+  // If this is a scalar LLVM value then assume LLVM will pass it in the right
+  // place naturally.
+  //
+  // This assumption is optimistic, as there could be free registers available
+  // when we need to pass this argument in memory, and LLVM could try to pass
+  // the argument in the free register. This does not seem to happen currently,
+  // but this code would be much safer if we could mark the argument with
+  // 'onstack'. See PR12193.
+  if (!isAggregateTypeForABI(ty) /* && IsIllegalVectorType(Ty) &&*/
+      /*!Ty->isBitIntType()*/) {
+    // FIXME: Handling enum type?
+
+    return (isPromotableIntegerTypeForABI(ty) ? ABIArgInfo::getExtend(ty)
+                                              : ABIArgInfo::getDirect());
+  }
+
+  if (CIRCXXABI::RecordArgABI RAA = getRecordArgABI(ty, getCXXABI()))
+    return getNaturalAlignIndirect(ty, RAA == CIRCXXABI::RAA_DirectInMemory);
+
+  // Compute the byval alignment. We specify the alignment of the byval in all
+  // cases so that the mid-level optimizer knows the alignment of the byval.
+  unsigned align = std::max(getContext().getTypeAlign(ty) / 8, 8U);
+
+  // Attempt to avoid passing indirect results using byval when possible. This
+  // is important for good codegen.
+  //
+  // We do this by coercing the value into a scalar type which the backend can
+  // handle naturally (i.e., without using byval).
+  //
+  // For simplicity, we currently only do this when we have exhausted all of the
+  // free integer registers. Doing this when there are free integer registers
+  // would require more care, as we would have to ensure that the coerced value
+  // did not claim the unused register. That would require either reording the
+  // arguments to the function (so that any subsequent inreg values came first),
+  // or only doing this optimization when there were no following arguments that
+  // might be inreg.
+  //
+  // We currently expect it to be rare (particularly in well written code) for
+  // arguments to be passed on the stack when there are still free integer
+  // registers available (this would typically imply large structs being passed
+  // by value), so this seems like a fair tradeoff for now.
+  //
+  // We can revisit this if the backend grows support for 'onstack' parameter
+  // attributes. See PR12193.
+  if (freeIntRegs == 0) {
+    uint64_t size = getContext().getTypeSize(ty);
+
+    // If this type fits in an eightbyte, coerce it into the matching integral
+    // type, which will end up on the stack (with alignment 8).
+    if (align == 8 && size <= 64)
+      return ABIArgInfo::getDirect(
+          cir::IntType::get(LT.getMLIRContext(), size, false));
+  }
+
+  return ABIArgInfo::getIndirect(align);
+}
+
 /// Return a type that will be passed by the backend in the low 8 bytes of an
 /// XMM register, corresponding to the SSE class.
 mlir::Type X86_64ABIInfo::GetSSETypeAtOffset(mlir::Type IRType,
@@ -278,7 +352,7 @@ mlir::Type X86_64ABIInfo::GetSSETypeAtOffset(mlir::Type IRType,
       (unsigned)getContext().getTypeSize(SourceTy) / 8 - SourceOffset;
   mlir::Type T0 = getFPTypeAtOffset(IRType, IROffset, TD);
   if (!T0 || mlir::isa<mlir::Float64Type>(T0))
-    return T0; // NOTE(cir): Not sure if this is correct.
+    return cir::DoubleType::get(LT.getMLIRContext());
 
   mlir::Type T1 = {};
   unsigned T0Size = TD.getTypeAllocSize(T0);
@@ -295,6 +369,8 @@ mlir::Type X86_64ABIInfo::GetSSETypeAtOffset(mlir::Type IRType,
     if (T1 == nullptr)
       return T0;
   }
+
+  return cir::DoubleType::get(LT.getMLIRContext());
 
   cir_cconv_unreachable("NYI");
 }
@@ -539,6 +615,22 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(
     ++neededSSE;
     break;
   }
+  // AMD64-ABI 3.2.3p3: Rule 1. If the class is MEMORY, pass the argument
+  // on the stack.
+  case Class::Memory:
+
+  // AMD64-ABI 3.2.3p3: Rule 5. If the class is X87, X87UP or
+  // COMPLEX_X87, it is passed in memory.
+  case Class::X87:
+  case Class::ComplexX87:
+    if (getRecordArgABI(Ty, getCXXABI()) == CIRCXXABI::RAA_Indirect)
+      ++neededInt;
+    return getIndirectResult(Ty, freeIntRegs);
+
+  case Class::SSEUp:
+  case Class::X87Up:
+    llvm_unreachable("Invalid classification for lo word.");
+
   default:
     cir_cconv_assert_or_abort(!cir::MissingFeatures::X86ArgTypeClassification(),
                               "NYI");
@@ -546,6 +638,11 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(
 
   mlir::Type HighPart = {};
   switch (Hi) {
+  case Class::Memory:
+  case Class::X87:
+  case Class::ComplexX87:
+    llvm_unreachable("Invalid classification for hi word.");
+
   case Class::NoClass:
     break;
 
@@ -558,8 +655,23 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(
       return ABIArgInfo::getDirect(HighPart, 8);
     break;
 
-  default:
-    cir_cconv_unreachable("NYI");
+  // X87Up generally doesn't occur here (long double is passed in
+  // memory), except in situations involving unions.
+  case Class::X87Up:
+  case Class::SSE:
+    ++neededSSE;
+    HighPart = GetSSETypeAtOffset(Ty, 8, Ty, 8);
+
+    if (Lo == Class::NoClass) // Pass HighPart at offset 8 in memory.
+      return ABIArgInfo::getDirect(HighPart, 8);
+    break;
+
+  // AMD64-ABI 3.2.3p3: Rule 4. If the class is SSEUP, the
+  // eightbyte is passed in the upper half of the last used SSE
+  // register.  This only happens when 128-bit vectors are passed.
+  case Class::SSEUp:
+    llvm_unreachable("NYI && We need to implement GetByteVectorType");
+    break;
   }
 
   // If a high part was specified, merge it together with the low part.  It is
