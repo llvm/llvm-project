@@ -229,10 +229,7 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
   let IssueCounters = [
     PfmIssueCounter<"SPRPort00", "uops_dispatched:port_0">,
     PfmIssueCounter<"SPRPort01", "uops_dispatched:port_1">,
-    // The perfmon documentation and thus libpfm seems to incorrectly label
-    // this performance counter, as ports 2,3, and 11 are actually grouped
-    // according to most documentation. See #113941 for additional details.
-    PfmIssueCounter<"SPRPort02_03_11", "uops_dispatched:port_2_3_10">,
+    PfmIssueCounter<"SPRPort02_03_10", "uops_dispatched:port_2_3_10">,
     PfmIssueCounter<"SPRPort04_09", "uops_dispatched:port_4_9">,
     PfmIssueCounter<"SPRPort05_11", "uops_dispatched:port_5_11">,
     PfmIssueCounter<"SPRPort06", "uops_dispatched:port_6">,
