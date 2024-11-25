@@ -936,6 +936,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMFrameAddrOpLowering
+    : public mlir::OpConversionPattern<cir::FrameAddrOp> {
+public:
+  using mlir::OpConversionPattern<cir::FrameAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::FrameAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMClearCacheOpLowering
     : public mlir::OpConversionPattern<cir::ClearCacheOp> {
 public:

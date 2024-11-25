@@ -3612,6 +3612,15 @@ mlir::LogicalResult CIRToLLVMReturnAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMFrameAddrOpLowering::matchAndRewrite(
+    cir::FrameAddrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.frameaddress", llvmPtrTy,
+                                   adaptor.getOperands());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMClearCacheOpLowering::matchAndRewrite(
     cir::ClearCacheOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -3888,6 +3897,7 @@ void populateCIRToLLVMConversionPatterns(
       CIRToLLVMEhInflightOpLowering,
       CIRToLLVMEhTypeIdOpLowering,
       CIRToLLVMExpectOpLowering,
+      CIRToLLVMFrameAddrOpLowering,
       CIRToLLVMFreeExceptionOpLowering,
       CIRToLLVMFuncOpLowering,
       CIRToLLVMGetBitfieldOpLowering,

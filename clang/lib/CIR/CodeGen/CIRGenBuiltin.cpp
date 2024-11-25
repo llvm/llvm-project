@@ -1592,18 +1592,21 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__builtin_wmemcmp NYI");
   case Builtin::BI__builtin_dwarf_cfa:
     llvm_unreachable("BI__builtin_dwarf_cfa NYI");
-  case Builtin::BI__builtin_return_address: {
+  case Builtin::BI__builtin_return_address:
+  case Builtin::BI__builtin_frame_address: {
     mlir::Location loc = getLoc(E->getExprLoc());
     mlir::Attribute levelAttr = ConstantEmitter(*this).emitAbstract(
         E->getArg(0), E->getArg(0)->getType());
-    int64_t level = mlir::cast<cir::IntAttr>(levelAttr).getSInt();
+    uint64_t level = mlir::cast<cir::IntAttr>(levelAttr).getUInt();
+    if (BuiltinID == Builtin::BI__builtin_return_address) {
+      return RValue::get(builder.create<cir::ReturnAddrOp>(
+          loc, builder.getUInt32(level, loc)));
+    }
     return RValue::get(
-        builder.create<cir::ReturnAddrOp>(loc, builder.getUInt32(level, loc)));
+        builder.create<cir::FrameAddrOp>(loc, builder.getUInt32(level, loc)));
   }
   case Builtin::BI_ReturnAddress:
     llvm_unreachable("BI_ReturnAddress NYI");
-  case Builtin::BI__builtin_frame_address:
-    llvm_unreachable("BI__builtin_frame_address NYI");
   case Builtin::BI__builtin_extract_return_addr:
     llvm_unreachable("BI__builtin_extract_return_addr NYI");
   case Builtin::BI__builtin_frob_return_addr:
