@@ -3300,7 +3300,7 @@ bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
   // Assume target opcodes can't be scalarized.
   // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END)
+  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
     return false;
 
   // If the vector op is not supported, try to convert to scalar.
@@ -5207,18 +5207,19 @@ static bool isConstantPowerOf2(SDValue V, unsigned EltSizeInBIts,
   return IsPow2OrUndef;
 }
 
-// Match not(xor X, -1) -> X.
-// Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
-// Match not(extract_subvector(xor X, -1)) -> extract_subvector(X).
-// Match not(concat_vectors(xor X, -1, xor Y, -1)) -> concat_vectors(X, Y).
-// Match or(not(X),not(Y)) -> and(X, Y).
+// Helper to attempt to return a cheaper, bit-inverted version of \p V.
 static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
+  // TODO: don't always ignore oneuse constraints.
   V = peekThroughBitcasts(V);
   EVT VT = V.getValueType();
+
+  // Match not(xor X, -1) -> X.
   if (V.getOpcode() == ISD::XOR &&
       (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
        isAllOnesConstant(V.getOperand(1))))
     return V.getOperand(0);
+
+  // Match not(extract_subvector(not(X)) -> extract_subvector(X).
   if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
     if (SDValue Not = IsNOT(V.getOperand(0), DAG)) {
@@ -5227,6 +5228,8 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
                          V.getOperand(1));
     }
   }
+
+  // Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
   if (V.getOpcode() == X86ISD::PCMPGT &&
       !ISD::isBuildVectorAllZeros(V.getOperand(0).getNode()) &&
       !ISD::isBuildVectorAllOnes(V.getOperand(0).getNode()) &&
@@ -5250,15 +5253,20 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
       }
     }
   }
+
+  // Match not(concat_vectors(not(X), not(Y))) -> concat_vectors(X, Y).
   SmallVector<SDValue, 2> CatOps;
   if (collectConcatOps(V.getNode(), CatOps, DAG)) {
     for (SDValue &CatOp : CatOps) {
       SDValue NotCat = IsNOT(CatOp, DAG);
-      if (!NotCat) return SDValue();
+      if (!NotCat)
+        return SDValue();
       CatOp = DAG.getBitcast(CatOp.getValueType(), NotCat);
     }
     return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(V), VT, CatOps);
   }
+
+  // Match not(or(not(X),not(Y))) -> and(X, Y).
   if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
       V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
     // TODO: Handle cases with single NOT operand -> ANDNP
@@ -5267,6 +5275,7 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
         return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
                            DAG.getBitcast(VT, Op1));
   }
+
   return SDValue();
 }
 
@@ -14291,9 +14300,17 @@ static SDValue lowerV8F16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 // sub-512-bit shuffles are padded to 512-bits for the shuffle and then
 // the active subvector is extracted.
 static SDValue lowerShuffleWithPERMV(const SDLoc &DL, MVT VT,
-                                     ArrayRef<int> Mask, SDValue V1, SDValue V2,
-                                     const X86Subtarget &Subtarget,
+                                     ArrayRef<int> OriginalMask, SDValue V1,
+                                     SDValue V2, const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
+  // Commute binary inputs so V2 is a load to simplify VPERMI2/T2 folds.
+  SmallVector<int, 32> Mask(OriginalMask);
+  if (!V2.isUndef() && isShuffleFoldableLoad(V1) &&
+      !isShuffleFoldableLoad(V2)) {
+    ShuffleVectorSDNode::commuteMask(Mask);
+    std::swap(V1, V2);
+  }
+
   MVT MaskVT = VT.changeTypeToInteger();
   SDValue MaskNode;
   MVT ShuffleVT = VT;
@@ -42235,6 +42252,17 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                            DAG.getIntPtrConstant(0, DL));
       }
     }
+    SmallVector<SDValue, 2> Ops;
+    SmallVector<int, 32> Mask;
+    if (isShuffleFoldableLoad(N.getOperand(0)) &&
+        !isShuffleFoldableLoad(N.getOperand(2)) &&
+        getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
+      ShuffleVectorSDNode::commuteMask(Mask);
+      SDValue NewMask = getConstVector(
+          Mask, N.getOperand(1).getSimpleValueType(), DAG, DL, /*IsMask=*/true);
+      return DAG.getNode(X86ISD::VPERMV3, DL, VT, N.getOperand(2), NewMask,
+                         N.getOperand(0));
+    }
     return SDValue();
   }
   default:
@@ -59159,8 +59187,11 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
     // notrack prefix to the indirect branch.
     // In order to do that we create NT_BRIND SDNode.
     // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
-    SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
-    return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, JTInfo, Addr);
+    SDValue Chain = Value;
+    // Jump table debug info is only needed if CodeView is enabled.
+    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+      Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
+    return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Chain, Addr);
   }
 
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);

@@ -215,6 +215,12 @@ public:
   containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
   bool containsNonGlobalTargetExtType() const;
 
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a local.
+  bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  bool containsNonLocalTargetExtType() const;
+
   /// Return true if this is a FP type or a vector of FP.
   bool isFPOrFPVectorTy() const { return getScalarType()->isFloatingPointTy(); }
 

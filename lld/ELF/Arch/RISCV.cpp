@@ -156,14 +156,13 @@ uint32_t RISCV::calcEFlags() const {
       target |= EF_RISCV_RVC;
 
     if ((eflags & EF_RISCV_FLOAT_ABI) != (target & EF_RISCV_FLOAT_ABI))
-      ErrAlways(ctx) << f
-                     << ": cannot link object files with different "
-                        "floating-point ABI from "
-                     << ctx.objectFiles[0];
+      Err(ctx) << f
+               << ": cannot link object files with different "
+                  "floating-point ABI from "
+               << ctx.objectFiles[0];
 
     if ((eflags & EF_RISCV_RVE) != (target & EF_RISCV_RVE))
-      ErrAlways(ctx)
-          << f << ": cannot link object files with different EF_RISCV_RVE";
+      Err(ctx) << f << ": cannot link object files with different EF_RISCV_RVE";
   }
 
   return target;
@@ -659,9 +658,9 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           auto val = rel.sym->getVA(ctx, rel.addend) -
                      rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
-            Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value "
-                     << Twine(val) << " exceeds available space; references '"
-                     << rel.sym << "'";
+            Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value " << val
+                     << " exceeds available space; references '" << rel.sym
+                     << "'";
           ++i;
           continue;
         }
@@ -833,10 +832,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
                  << "insufficient padding bytes for " << r.type << ": "
-                 << Twine(r.addend)
+                 << r.addend
                  << " bytes available "
                     "for requested alignment of "
-                 << Twine(align) << " bytes";
+                 << align << " bytes";
         remove = 0;
       }
       break;
@@ -900,7 +899,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    Fatal(ctx) << "section size decrease is too large: " << Twine(delta);
+    Fatal(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }
@@ -933,7 +932,7 @@ bool RISCV::relaxOnce(int pass) const {
 
 void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
-  Log(ctx) << "relaxation passes: " << Twine(passes);
+  Log(ctx) << "relaxation passes: " << passes;
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -1045,7 +1044,7 @@ namespace {
 class RISCVAttributesSection final : public SyntheticSection {
 public:
   RISCVAttributesSection(Ctx &ctx)
-      : SyntheticSection(ctx, 0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {
+      : SyntheticSection(ctx, ".riscv.attributes", SHT_RISCV_ATTRIBUTES, 0, 1) {
   }
 
   size_t getSize() const override { return size; }
@@ -1096,10 +1095,9 @@ static void mergeAtomic(Ctx &ctx, DenseMap<unsigned, unsigned>::iterator it,
 
   auto reportAbiError = [&]() {
     Err(ctx) << "atomic abi mismatch for " << oldSection->name << "\n>>> "
-             << oldSection
-             << ": atomic_abi=" << Twine(static_cast<unsigned>(oldTag))
+             << oldSection << ": atomic_abi=" << static_cast<unsigned>(oldTag)
              << "\n>>> " << newSection
-             << ": atomic_abi=" << Twine(static_cast<unsigned>(newTag));
+             << ": atomic_abi=" << static_cast<unsigned>(newTag);
   };
 
   auto reportUnknownAbiError = [&](const InputSectionBase *section,
@@ -1112,7 +1110,7 @@ static void mergeAtomic(Ctx &ctx, DenseMap<unsigned, unsigned>::iterator it,
       return;
     };
     Err(ctx) << "unknown atomic abi for " << section->name << "\n>>> "
-             << section << ": atomic_abi=" << Twine(static_cast<unsigned>(tag));
+             << section << ": atomic_abi=" << static_cast<unsigned>(tag);
   };
   switch (oldTag) {
   case RISCVAtomicAbiTag::UNKNOWN:

@@ -992,7 +992,7 @@ ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
-  return SpecializedTemplate.get<ClassTemplateDecl*>();
+  return cast<ClassTemplateDecl *>(SpecializedTemplate);
 }
 
 SourceRange
@@ -1008,7 +1008,7 @@ ClassTemplateSpecializationDecl::getSourceRange() const {
     if (const auto *CTPSD =
             Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
       return CTPSD->getSourceRange();
-    return Pattern.get<ClassTemplateDecl *>()->getSourceRange();
+    return cast<ClassTemplateDecl *>(Pattern)->getSourceRange();
   }
   case TSK_ExplicitSpecialization: {
     SourceRange Range = CXXRecordDecl::getSourceRange();
@@ -1404,7 +1404,7 @@ VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
-  return SpecializedTemplate.get<VarTemplateDecl *>();
+  return cast<VarTemplateDecl *>(SpecializedTemplate);
 }
 
 SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
@@ -1419,7 +1419,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
     if (const auto *VTPSD =
             Pattern.dyn_cast<VarTemplatePartialSpecializationDecl *>())
       return VTPSD->getSourceRange();
-    VarTemplateDecl *VTD = Pattern.get<VarTemplateDecl *>();
+    VarTemplateDecl *VTD = cast<VarTemplateDecl *>(Pattern);
     if (hasInit()) {
       if (VarTemplateDecl *Definition = VTD->getDefinition())
         return Definition->getSourceRange();
