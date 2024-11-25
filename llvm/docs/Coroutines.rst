@@ -815,7 +815,7 @@ Parameter Attributes
 Some parameter attributes, used to communicate additional information about the result or parameters of a function, require special handling.
 
 ByVal
------dd
+-----
 A ByVal parameter on an argument indicates that the pointer parameter should really be passed by value to the function.
 Prior to the coroutine transforms loads and stores to/from the pointer are generated where the value is needed.
 Consequently, a ByVal argument is treated much like an alloca.
