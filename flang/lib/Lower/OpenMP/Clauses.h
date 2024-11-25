@@ -168,6 +168,7 @@ std::optional<Object> getBaseObject(const Object &object,
 
 namespace clause {
 using Range = tomp::type::RangeT<ExprTy>;
+using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
 using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
