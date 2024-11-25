@@ -5164,6 +5164,13 @@ defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
           "for certain memory destinations. (AMDGPU only)">,
   NegFlag<SetFalse>>;
 
+defm opencl_def_is_generic_addrspace: BoolMOption<"opencl-def-is-generic-addrspace",
+  TargetOpts<"OpenCLDefIsGenericAddrSpace">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable overriding of OpenCL's default address space: from private "
+          "to generic (AMDGPU only).">,
+  NegFlag<SetFalse>>;
+
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
 let Flags = [TargetSpecific] in {

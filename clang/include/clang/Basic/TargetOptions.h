@@ -78,6 +78,10 @@ public:
   /// \brief If enabled, allow AMDGPU unsafe floating point atomics.
   bool AllowAMDGPUUnsafeFPAtomics = false;
 
+  /// \brief If enabled, allow overriding of the default address space (from
+  /// private to generic).
+  bool OpenCLDefIsGenericAddrSpace = false;
+
   /// \brief Code object version for AMDGPU.
   llvm::CodeObjectVersionKind CodeObjectVersion =
       llvm::CodeObjectVersionKind::COV_None;

@@ -272,6 +272,9 @@ protected:
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
 
   LLVM_PREFERRED_TYPE(bool)
+  unsigned OpenCLDefIsGenericAddrSpace : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasUnalignedAccess : 1;
 
   unsigned ARMCDECoprocMask : 8;
