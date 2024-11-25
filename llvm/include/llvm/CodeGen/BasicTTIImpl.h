@@ -277,6 +277,20 @@ public:
         E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);
   }
 
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const {
+    const TargetMachine &TM = getTLI()->getTargetMachine();
+
+    const FeatureBitset &CallerBits =
+        TM.getSubtargetImpl(*Caller)->getFeatureBits();
+    const FeatureBitset &CalleeBits =
+        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+    // Inline a callee if its target-features are a subset of the callers
+    // target-features.
+    return (CallerBits & CalleeBits) == CalleeBits;
+  }
+
   bool hasBranchDivergence(const Function *F = nullptr) { return false; }
 
   bool isSourceOfDivergence(const Value *V) { return false; }
