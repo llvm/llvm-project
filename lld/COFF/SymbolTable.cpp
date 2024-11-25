@@ -46,6 +46,8 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
     return COFF::isArm64EC(mt) || mt == AMD64;
   case ARM64X:
     return COFF::isAnyArm64(mt) || mt == AMD64;
+  case IMAGE_FILE_MACHINE_UNKNOWN:
+    return true;
   default:
     return ctx.config.machine == mt;
   }
@@ -74,13 +76,25 @@ void SymbolTable::addFile(InputFile *file) {
   }
 
   MachineTypes mt = file->getMachineType();
-  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-    ctx.config.machine = mt;
-    ctx.driver.addWinSysRootLibSearchPaths();
-  } else if (!compatibleMachineType(ctx, mt)) {
+  // The ARM64EC target must be explicitly specified and cannot be inferred.
+  if (mt == ARM64EC &&
+      (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
+       (ctx.config.machineInferred &&
+        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
+    error(toString(file) + ": machine type arm64ec is ambiguous and cannot be "
+                           "inferred, use /machine:arm64ec or /machine:arm64x");
+    return;
+  }
+  if (!compatibleMachineType(ctx, mt)) {
     error(toString(file) + ": machine type " + machineToStr(mt) +
           " conflicts with " + machineToStr(ctx.config.machine));
     return;
+  }
+  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
+      mt != IMAGE_FILE_MACHINE_UNKNOWN) {
+    ctx.config.machineInferred = true;
+    ctx.config.machine = mt;
+    ctx.driver.addWinSysRootLibSearchPaths();
   }
 
   ctx.driver.parseDirectives(file);
@@ -669,8 +683,11 @@ bool checkLazyECPair(SymbolTable *symtab, StringRef name, InputFile *f) {
   if (std::optional<std::string> mangledName =
           getArm64ECMangledFunctionName(name))
     pairName = std::move(*mangledName);
+  else if (std::optional<std::string> demangledName =
+               getArm64ECDemangledFunctionName(name))
+    pairName = std::move(*demangledName);
   else
-    pairName = *getArm64ECDemangledFunctionName(name);
+    return true;
 
   Symbol *sym = symtab->find(pairName);
   if (!sym)

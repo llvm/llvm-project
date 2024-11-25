@@ -1727,3 +1727,27 @@ def CLWB       : I<0xAE, MRM6m, (outs), (ins i8mem:$src), "clwb\t$src",
 let Predicates = [HasCLDEMOTE], SchedRW = [WriteLoad] in
 def CLDEMOTE : I<0x1C, MRM0m, (outs), (ins i8mem:$src), "cldemote\t$src",
                    [(int_x86_cldemote addr:$src)]>, TB;
+
+//===----------------------------------------------------------------------===//
+// MOVRS Instructions
+//
+
+let SchedRW = [WriteLoad] in {
+let Predicates = [HasMOVRS, NoEGPR] in {
+def MOVRS8rm     : I<0x8A, MRMSrcMem, (outs GR8 :$dst), (ins i8mem :$src),
+                   "movrs{b}\t{$src, $dst|$dst, $src}",
+                   [(set GR8:$dst, (int_x86_movrsqi addr:$src))]>, T8;
+def MOVRS16rm    : I<0x8B, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
+                   "movrs{w}\t{$src, $dst|$dst, $src}",
+                   [(set GR16:$dst, (int_x86_movrshi addr:$src))]>, OpSize16, T8;
+def MOVRS32rm    : I<0x8B, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
+                   "movrs{l}\t{$src, $dst|$dst, $src}",
+                   [(set GR32:$dst, (int_x86_movrssi addr:$src))]>, OpSize32, T8;
+def MOVRS64rm    : RI<0x8B, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
+                   "movrs{q}\t{$src, $dst|$dst, $src}",
+                   [(set GR64:$dst, (int_x86_movrsdi addr:$src))]>, T8;
+def PREFETCHRST2 : I<0x18, MRM4m, (outs), (ins i8mem:$src),
+                   "prefetchrst2\t$src",
+                   [(int_x86_prefetchrs addr:$src)]>, TB;
+}
+}

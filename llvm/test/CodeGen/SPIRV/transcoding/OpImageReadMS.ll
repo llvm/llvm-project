@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
+; CHECK-SPIRV: OpCapability StorageImageReadWithoutFormat
 ; CHECK-SPIRV: %[[#]] = OpImageRead %[[#]] %[[#]] %[[#]] Sample %[[#]]
 
 define spir_kernel void @sample_test(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source, i32 %sampler, <4 x float> addrspace(1)* nocapture %results) {

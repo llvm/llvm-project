@@ -114,6 +114,7 @@ struct Configuration {
   bool is64() const { return llvm::COFF::is64Bit(machine); }
 
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+  bool machineInferred = false;
   size_t wordsize;
   bool verbose = false;
   WindowsSubsystem subsystem = llvm::COFF::IMAGE_SUBSYSTEM_UNKNOWN;
@@ -166,7 +167,7 @@ struct Configuration {
   Symbol *delayLoadHelper = nullptr;
   Symbol *arm64ECIcallHelper = nullptr;
 
-  bool saveTemps = false;
+  llvm::DenseSet<llvm::StringRef> saveTempsArgs;
 
   // /guard:cf
   int guardCF = GuardCFLevel::Off;

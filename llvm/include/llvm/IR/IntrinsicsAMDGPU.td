@@ -594,6 +594,10 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
+def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]
+>, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics
@@ -1148,8 +1152,8 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
 // Note that in the cachepolicy for all these intrinsics, bit 31 is not preserved
 // through to final assembly selection and is used to signal that the buffer
 // operation is volatile.
-class AMDGPURawBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
-  [data_ty],
+class AMDGPURawBufferLoad : DefaultAttrsIntrinsic <
+  [llvm_any_ty],
   [llvm_v4i32_ty,    // rsrc(SGPR)
    llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1162,7 +1166,7 @@ class AMDGPURawBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsi
                      //           all: volatile op (bit 31, stripped at lowering)
   [IntrReadMem, ImmArg<ArgIndex<3>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_buffer_load_format : AMDGPURawBufferLoad<llvm_anyfloat_ty>;
+def int_amdgcn_raw_buffer_load_format : AMDGPURawBufferLoad;
 def int_amdgcn_raw_buffer_load : AMDGPURawBufferLoad;
 
 class AMDGPURawAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
@@ -1670,7 +1674,7 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
   [],
   [llvm_v4i32_ty,             // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
@@ -1689,7 +1693,7 @@ class AMDGPURawPtrBufferLoadLDS : Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
@@ -1711,7 +1715,7 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
   [],
   [llvm_v4i32_ty,             // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // vindex(VGPR)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1731,7 +1735,7 @@ class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
-   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // vindex(VGPR)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
    llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -2448,7 +2452,7 @@ class AMDGPUGlobalLoadLDS :
     [],
     [LLVMQualPointerType<1>,            // Base global pointer to load from
      LLVMQualPointerType<3>,            // LDS base pointer to store to
-     llvm_i32_ty,                       // Data byte size: 1/2/4
+     llvm_i32_ty,                       // Data byte size: 1/2/4 (/12/16 for gfx950)
      llvm_i32_ty,                       // imm offset (applied to both global and LDS address)
      llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
                                         //                                   bit 1 = sc1,
@@ -2964,6 +2968,33 @@ class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
             [IntrConvergent, IntrNoMem,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
+
+// srcA's format is determined by cbsz. srcB's format is determined by
+// blgp.
+//
+// These should be <8 x i32> for f8 formats, <6 x i32> for f6 formats,
+// and <4 x i32> for f4 formats. It is invalid to use a format that
+// requires more registers than the corresponding vector type (e.g. it
+// is illegal to use <6 x i32> in operand 0 if cbsz specifies an f8
+// format that requires 8 registers).
+class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
+  DefaultAttrsIntrinsic<[DestTy],
+            [llvm_anyvector_ty, llvm_anyvector_ty, DestTy,
+             llvm_i32_ty, // cbsz
+             llvm_i32_ty, // blgp
+             // llvm_i1_ty, // TODO: neg_src2
+             // llvm_i1_ty, // TODO: abs_src2
+             // llvm_i1_ty, // TODO: clamp
+             llvm_i32_ty, // op_sel (A matrix scale, 2-bits) // TODO: Make i2?
+             llvm_i32_ty, // v_mfma_ld_scale_b32 src0 (A matrix scale)
+             llvm_i32_ty, // op_sel (B matrix scale, 2-bits) // TODO: Make i2?
+             llvm_i32_ty  // v_mfma_ld_scale_b32 src1 (B matrix scale)
+            ],
+            [IntrConvergent, IntrNoMem,
+             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
+             ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<7>>
+             ]>;
+
 defset list<Intrinsic> AMDGPUMFMAIntrinsics908 = {
 def int_amdgcn_mfma_f32_32x32x1f32  : AMDGPUMfmaIntrinsic<llvm_v32f32_ty, llvm_float_ty>;
 def int_amdgcn_mfma_f32_16x16x1f32  : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_float_ty>;
@@ -3105,6 +3136,49 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
   DefaultAttrsIntrinsic<[llvm_i32_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+//===----------------------------------------------------------------------===//
+// gfx950 intrinsics
+//===----------------------------------------------------------------------===//
+
+defset list<Intrinsic> AMDGPUMFMAIntrinsics950 = {
+def int_amdgcn_mfma_f32_16x16x32_f16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty, llvm_v8f16_ty>;
+def int_amdgcn_mfma_f32_32x32x16_f16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty>;
+def int_amdgcn_mfma_i32_16x16x64_i8 : AMDGPUMfmaIntrinsic<llvm_v4i32_ty, llvm_v4i32_ty>;
+def int_amdgcn_mfma_i32_32x32x32_i8 : AMDGPUMfmaIntrinsic<llvm_v16i32_ty, llvm_v4i32_ty>;
+def int_amdgcn_mfma_f32_16x16x32_bf16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty, llvm_v8bf16_ty>;
+def int_amdgcn_mfma_f32_32x32x16_bf16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty>;
+def int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v4f32_ty>;
+def int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v16f32_ty>;
+def int_amdgcn_smfmac_f32_16x16x64_f16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
+def int_amdgcn_smfmac_f32_32x32x32_f16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
+def int_amdgcn_smfmac_f32_16x16x64_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8bf16_ty, llvm_v16bf16_ty>;
+def int_amdgcn_smfmac_f32_32x32x32_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty, llvm_v16bf16_ty>;
+def int_amdgcn_smfmac_i32_16x16x128_i8 : AMDGPUMSmfmacIntrinsic<llvm_v4i32_ty,  llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_i32_32x32x64_i8 : AMDGPUMSmfmacIntrinsic<llvm_v16i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_bf8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_bf8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_fp8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_16x16x128_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_bf8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_bf8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_fp8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_smfmac_f32_32x32x64_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+}
+
+// { vdst_new, vsrc_new } llvm.amdgcn.permlane16.swap <vdst_old> <vsrc_old> <fi> <bound_control>
+def int_amdgcn_permlane16_swap :
+  Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty,
+                                         llvm_i1_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent, IntrWillReturn,
+             ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrNoCallback, IntrNoFree]>;
+
+// { vdst_new, vsrc_new } llvm.amdgcn.permlane32.swap <vdst_old> <vsrc_old> <fi> <bound_control>
+def int_amdgcn_permlane32_swap :
+  Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty,
+                                         llvm_i1_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent, IntrWillReturn,
+             ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrNoCallback, IntrNoFree]>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

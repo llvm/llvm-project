@@ -2109,8 +2109,6 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     for (DbgVariableRecord &DVR : filterDbgVars(DVRRange))
       RetargetDbgVariableRecordIfPossible(&DVR);
   }
-
-  return;
 }
 
 /// Attempt to thread through two successive basic blocks.

@@ -145,6 +145,28 @@ namespace Fail {
                                                 // both-note {{initializer of 'a' is not a constant expression}}
 }
 
+namespace ToPtr {
+  struct S {
+    const int *p = nullptr;
+  };
+  struct P {
+    const int *p; // both-note {{invalid type 'const int *' is a member of 'ToPtr::P'}}
+  };
+  constexpr P p = __builtin_bit_cast(P, S{}); // both-error {{must be initialized by a constant expression}} \
+                                              // both-note {{bit_cast to a pointer type is not allowed in a constant expression}}
+}
+
+namespace Invalid {
+  struct S {
+    int a;
+  };
+  constexpr S s = S{1/0}; // both-error {{must be initialized by a constant expression}} \
+                          // both-note {{division by zero}} \
+                          // both-note {{declared here}}
+  constexpr S s2 = __builtin_bit_cast(S, s); // both-error {{must be initialized by a constant expression}} \
+                                             // both-note {{initializer of 's' is not a constant expression}}
+}
+
 namespace NullPtr {
   constexpr nullptr_t N = __builtin_bit_cast(nullptr_t, (intptr_t)1u);
   static_assert(N == nullptr);
@@ -496,7 +518,7 @@ typedef bool bool32 __attribute__((ext_vector_type(32)));
 typedef bool bool128 __attribute__((ext_vector_type(128)));
 
 static_assert(bit_cast<unsigned char>(bool8{1,0,1,0,1,0,1,0}) == (LITTLE_END ? 0x55 : 0xAA), "");
-constexpr bool8 b8 = __builtin_bit_cast(bool8, 0x55); // both-error {{__builtin_bit_cast source size does not equal destination size (4 vs 1)}}
+constexpr bool8 b8 = __builtin_bit_cast(bool8, 0x55); // both-error {{'__builtin_bit_cast' source type 'int' does not match destination type 'bool8' (vector of 8 'bool' values) (4 vs 1 bytes)}}
 #if 0
 static_assert(check_round_trip<bool8>(static_cast<unsigned char>(0)), "");
 static_assert(check_round_trip<bool8>(static_cast<unsigned char>(1)), "");
@@ -535,5 +557,5 @@ namespace test_complex {
   static_assert(TF.A == 1.0f && TF.B == 2.0f);
 
   constexpr double D = __builtin_bit_cast(double, test_float_complex);
-  constexpr int M = __builtin_bit_cast(int, test_int_complex); // both-error {{__builtin_bit_cast source size does not equal destination size}}
+  constexpr int M = __builtin_bit_cast(int, test_int_complex); // both-error {{size of '__builtin_bit_cast' source type 'const _Complex unsigned int' does not match destination type 'int' (8 vs 4 bytes)}}
 }

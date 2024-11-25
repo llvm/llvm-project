@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/allocatable.h"
+#include "../assign-impl.h"
 #include "../stat.h"
 #include "../terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
+#include "flang/Runtime/CUDA/memmove-function.h"
 #include "flang/Runtime/allocatable.h"
 
 #include "cuda_runtime.h"
@@ -42,6 +44,32 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, bool hasStat,
     ((Descriptor *)deviceAddr, &desc, sourceFile, sourceLine);
   }
 #endif
+  return stat;
+}
+
+int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
+    const Descriptor &source, bool hasStat, const Descriptor *errMsg,
+    const char *sourceFile, int sourceLine) {
+  int stat{RTNAME(AllocatableAllocate)(
+      alloc, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    Terminator terminator{sourceFile, sourceLine};
+    Fortran::runtime::DoFromSourceAssign(
+        alloc, source, terminator, &MemmoveHostToDevice);
+  }
+  return stat;
+}
+
+int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
+    const Descriptor &source, bool hasStat, const Descriptor *errMsg,
+    const char *sourceFile, int sourceLine) {
+  int stat{RTNAME(AllocatableAllocate)(
+      alloc, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    Terminator terminator{sourceFile, sourceLine};
+    Fortran::runtime::DoFromSourceAssign(
+        alloc, source, terminator, &MemmoveHostToDevice);
+  }
   return stat;
 }
 

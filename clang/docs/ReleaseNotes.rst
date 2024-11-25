@@ -148,6 +148,17 @@ C++ Specific Potentially Breaking Changes
     // Now diagnoses with an error.
     void f(int& i [[clang::lifetimebound]]);
 
+- Clang now rejects all field accesses on null pointers in constant expressions. The following code
+  used to work but will now be rejected:
+
+  .. code-block:: c++
+
+    struct S { int a; int b; };
+    constexpr const int *p = &((S*)nullptr)->b;
+
+  Previously, this code was erroneously accepted.
+
+
 ABI Changes in This Version
 ---------------------------
 
@@ -271,6 +282,8 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Extend clang's ``<limits.h>`` to define ``LONG_LONG_*`` macros for Android's bionic.
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -278,7 +291,7 @@ C2y Feature Support
   which adds the ``i`` and ``j`` suffixes for the creation of a ``_Complex``
   constant value. Clang has always supported these suffixes as a GNU extension,
   so ``-Wgnu-imaginary-constant`` no longer has effect in C modes, as this is
-  not a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
+  now a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
   modes.
 
 - Clang updated conformance for `N3370 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3370.htm>`_
@@ -318,6 +331,7 @@ C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
 - Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
+- Clang now officially supports `N3030 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_ Enhancements to Enumerations. Clang already supported it as an extension, so there were no changes to compiler behavior.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -351,6 +365,11 @@ Non-comprehensive list of changes in this release
 
   The flexible array member (FAM) can now be accessed immediately without causing
   issues with the sanitizer because the counter is automatically set.
+
+- ``__builtin_reduce_add`` function can now be used in constant expressions.
+- ``__builtin_reduce_mul`` function can now be used in constant expressions.
+- ``__builtin_reduce_and`` function can now be used in constant expressions.
+- ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -449,6 +468,9 @@ Attribute Changes in Clang
 - Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
   ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
 
+- Clang now supports ``[[clang::lifetime_capture_by(X)]]``. Similar to lifetimebound, this can be
+  used to specify when a reference to a function parameter is captured by another capturing entity ``X``.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -527,6 +549,40 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
+
+- Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
+
+- When diagnosing an unused return value of a type declared ``[[nodiscard]]``, the type
+  itself is now included in the diagnostic.
+
+- Clang will now prefer the ``[[nodiscard]]`` declaration on function declarations over ``[[nodiscard]]``
+  declaration on the return type of a function. Previously, when both have a ``[[nodiscard]]`` declaration attached,
+  the one on the return type would be preferred. This may affect the generated warning message:
+
+  .. code-block:: c++
+
+    struct [[nodiscard("Reason 1")]] S {};
+    [[nodiscard("Reason 2")]] S getS();
+    void use()
+    {
+      getS(); // Now diagnoses "Reason 2", previously diagnoses "Reason 1"
+    }
+
+- Clang now diagnoses ``= delete("reason")`` extension warnings only in pedantic mode rather than on by default. (#GH109311).
+
+- Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
+
+- Clang now correctly recognises code after a call to a ``[[noreturn]]`` constructor
+  as unreachable (#GH63009).
+
+- Clang now omits shadowing warnings for parameter names in explicit object member functions (#GH95707).
+
+- Improved error recovery for function call arguments with trailing commas (#GH100921).
+
+- For an rvalue reference bound to a temporary struct with an integer member, Clang will detect constant integer overflow
+  in the initializer for the integer member (#GH46755).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -547,6 +603,8 @@ Bug Fixes in This Version
   the unsupported type instead of the ``register`` keyword (#GH109776).
 - Fixed a crash when emit ctor for global variant with flexible array init (#GH113187).
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
+- Fixed a failed assertion when using ``__attribute__((noderef))`` on an
+  ``_Atomic``-qualified type (#GH116124).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -652,6 +710,10 @@ Bug Fixes to C++ Support
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Fixed expression transformation for ``[[assume(...)]]``, allowing using pack indexing expressions within the
+  assumption if they also occur inside of a dependent lambda. (#GH114787)
+- Clang now uses valid deduced type locations when diagnosing functions with trailing return type
+  missing placeholder return type. (#GH78694)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -659,6 +721,8 @@ Bug Fixes to AST Handling
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
 - Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
   sometimes incorrectly return null even if a comment was present. (#GH108145)
+- Clang now correctly parses the argument of the ``relates``, ``related``, ``relatesalso``,
+  and ``relatedalso`` comment commands.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -695,6 +759,19 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+
+- Initial support for gfx950
+
+- Added headers ``gpuintrin.h`` and ``amdgpuintrin.h`` that contains common
+  definitions for GPU builtin functions. This header can be included for OpenMP,
+  CUDA, HIP, OpenCL, and C/C++.
+
+NVPTX Support
+^^^^^^^^^^^^^^
+
+- Added headers ``gpuintrin.h`` and ``nvptxintrin.h`` that contains common
+  definitions for GPU builtin functions. This header can be included for OpenMP,
+  CUDA, HIP, OpenCL, and C/C++.
 
 X86 Support
 ^^^^^^^^^^^
@@ -739,7 +816,12 @@ X86 Support
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
 - Support ISA of ``AMX-TRANSPOSE``.
+- Support ISA of ``AMX-MOVRS``.
 - Support ISA of ``AMX-AVX512``.
+- Support ISA of ``AMX-TF32``.
+- Support ISA of ``MOVRS``.
+
+- Supported ``-march/tune=diamondrapids``
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -770,6 +852,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - The option ``-mcmodel=large`` for the large code model is supported.
+- Bump RVV intrinsic to version 1.0, the spec: https://github.com/riscv-non-isa/rvv-intrinsic-doc/releases/tag/v1.0.0-rc4
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -864,6 +947,9 @@ New features
   attributes, are now verified. For example, for functions declared with the ``nonblocking``
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
+
+- Introduced ``-warning-suppression-mappings`` flag to control diagnostic
+  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>_` for details.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

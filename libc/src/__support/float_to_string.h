@@ -373,23 +373,12 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative_df(int exponent, size_t i) {
   return result;
 }
 
-LIBC_INLINE uint32_t fast_uint_mod_1e9(const UInt<MID_INT_SIZE> &val) {
-  // The formula for mult_const is:
-  //  1 + floor((2^(bits in target integer size + log_2(divider))) / divider)
-  // Where divider is 10^9 and target integer size is 128.
-  const UInt<MID_INT_SIZE> mult_const(
-      {0x31680A88F8953031u, 0x89705F4136B4A597u, 0});
-  const auto middle = (mult_const * val);
-  const uint64_t result = static_cast<uint64_t>(middle[2]);
-  const uint64_t shifted = result >> 29;
-  return static_cast<uint32_t>(static_cast<uint32_t>(val) -
-                               (EXP10_9 * shifted));
-}
-
 LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
                                        const UInt<MID_INT_SIZE> &large,
                                        const int32_t shift_amount) {
-  UInt<MID_INT_SIZE + FPBits::STORAGE_LEN> val(large);
+  // make sure the number of bits is always divisible by 64
+  UInt<internal::div_ceil(MID_INT_SIZE + FPBits::STORAGE_LEN, 64) * 64> val(
+      large);
   val = (val * mantissa) >> shift_amount;
   return static_cast<uint32_t>(
       val.div_uint_half_times_pow_2(static_cast<uint32_t>(EXP10_9), 0).value());

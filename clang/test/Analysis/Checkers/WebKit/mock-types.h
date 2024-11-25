@@ -66,11 +66,10 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
     t = o.t;
     o.t = tmp;
   }
-  T &get() { return *PtrTraits::unwrap(t); }
-  T *ptr() { return PtrTraits::unwrap(t); }
-  T *operator->() { return PtrTraits::unwrap(t); }
-  operator const T &() const { return *PtrTraits::unwrap(t); }
-  operator T &() { return *PtrTraits::unwrap(t); }
+  T &get() const { return *PtrTraits::unwrap(t); }
+  T *ptr() const { return PtrTraits::unwrap(t); }
+  T *operator->() const { return PtrTraits::unwrap(t); }
+  operator T &() const { return *PtrTraits::unwrap(t); }
   T* leakRef() { return PtrTraits::exchange(t, nullptr); }
 };
 
@@ -102,9 +101,8 @@ template <typename T> struct RefPtr {
     t = o.t;
     o.t = tmp;
   }
-  T *get() { return t; }
-  T *operator->() { return t; }
-  const T *operator->() const { return t; }
+  T *get() const { return t; }
+  T *operator->() const { return t; }
   T &operator*() { return *t; }
   RefPtr &operator=(T *t) {
     RefPtr o(t);
@@ -135,7 +133,9 @@ struct RefCountable {
   void ref() {}
   void deref() {}
   void method();
+  void constMethod() const;
   int trivial() { return 123; }
+  RefCountable* next();
 };
 
 template <typename T> T *downcast(T *t) { return t; }
@@ -149,9 +149,9 @@ public:
   CheckedRef(T &t) : t(&t) { t.incrementCheckedPtrCount(); }
   CheckedRef(const CheckedRef &o) : t(o.t) { if (t) t->incrementCheckedPtrCount(); }
   ~CheckedRef() { if (t) t->decrementCheckedPtrCount(); }
-  T &get() { return *t; }
-  T *ptr() { return t; }
-  T *operator->() { return t; }
+  T &get() const { return *t; }
+  T *ptr() const { return t; }
+  T *operator->() const { return t; }
   operator const T &() const { return *t; }
   operator T &() { return *t; }
 };
@@ -174,9 +174,8 @@ public:
     if (t)
       t->decrementCheckedPtrCount();
   }
-  T *get() { return t; }
-  T *operator->() { return t; }
-  const T *operator->() const { return t; }
+  T *get() const { return t; }
+  T *operator->() const { return t; }
   T &operator*() { return *t; }
   CheckedPtr &operator=(T *) { return *this; }
   operator bool() const { return t; }
@@ -198,6 +197,54 @@ public:
   void deref() const;
   void method();
   int trivial() { return 0; }
+};
+
+template <typename T>
+class UniqueRef {
+private:
+  T *t;
+
+public:
+  UniqueRef(T &t) : t(&t) { }
+  ~UniqueRef() {
+    if (t)
+      delete t;
+  }
+  template <typename U> UniqueRef(UniqueRef<U>&& u)
+    : t(u.t)
+  {
+    u.t = nullptr;
+  }
+  T &get() const { return *t; }
+  T *operator->() const { return t; }
+  UniqueRef &operator=(T &) { return *this; }
+};
+
+namespace std {
+
+template <typename T>
+class unique_ptr {
+private:
+  T *t;
+
+public:
+  unique_ptr() : t(nullptr) { }
+  unique_ptr(T *t) : t(t) { }
+  ~unique_ptr() {
+    if (t)
+      delete t;
+  }
+  template <typename U> unique_ptr(unique_ptr<U>&& u)
+    : t(u.t)
+  {
+    u.t = nullptr;
+  }
+  T *get() const { return t; }
+  T *operator->() const { return t; }
+  T &operator*() { return *t; }
+  unique_ptr &operator=(T *) { return *this; }
+};
+
 };
 
 #endif

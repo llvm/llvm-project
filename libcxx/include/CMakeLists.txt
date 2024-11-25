@@ -205,7 +205,6 @@ set(files
   __assert
   __atomic/aliases.h
   __atomic/atomic.h
-  __atomic/atomic_base.h
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
@@ -495,16 +494,18 @@ set(files
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
-  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
-  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
+  __locale_dir/pad_and_output.h
+  __locale_dir/support/apple.h
+  __locale_dir/support/bsd_like.h
+  __locale_dir/support/freebsd.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -556,6 +557,7 @@ set(files
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
+  __memory/shared_count.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
   __memory/temp_value.h
@@ -594,6 +596,7 @@ set(files
   __numeric/transform_reduce.h
   __ostream/basic_ostream.h
   __ostream/print.h
+  __ostream/put_character_sequence.h
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
@@ -714,6 +717,7 @@ set(files
   __system_error/error_code.h
   __system_error/error_condition.h
   __system_error/system_error.h
+  __system_error/throw_system_error.h
   __thread/formatter.h
   __thread/id.h
   __thread/jthread.h
@@ -879,6 +883,7 @@ set(files
   __utility/priority_tag.h
   __utility/private_constructor_tag.h
   __utility/rel_ops.h
+  __utility/scope_guard.h
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
@@ -1041,8 +1046,17 @@ set(files
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
-set(_generated_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                        "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
+set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
+foreach(f ${files})
+  set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
+  set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
+  add_custom_command(OUTPUT ${dst}
+    DEPENDS ${src}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+    COMMENT "Copying CXX header ${f}")
+  list(APPEND _all_includes "${dst}")
+endforeach()
 
 # Generate the IWYU mapping. This depends on all header files but it's also considered as an
 # "include" for dependency tracking.
@@ -1051,9 +1065,9 @@ add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
   DEPENDS "${LIBCXX_SOURCE_DIR}/utils/libcxx/header_information.py"
   COMMENT "Generate the mapping file for include-what-you-use"
 )
-list(APPEND _generated_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
+list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 
-add_custom_target(generate-cxx-headers ALL DEPENDS ${_generated_includes})
+add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
 target_link_libraries(cxx-headers INTERFACE libcxx-libc-headers libcxx-abi-headers)
@@ -1061,8 +1075,7 @@ add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.
 target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
-                                                 ${LIBCXX_GENERATED_INCLUDE_DIR}
-                                                 ${CMAKE_CURRENT_SOURCE_DIR})
+                                                 ${LIBCXX_GENERATED_INCLUDE_DIR})
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})

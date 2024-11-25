@@ -380,6 +380,33 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
+template <typename OMPTypeOp, typename DeclTypeOp>
+static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                           OMPTypeOp &op, DeclTypeOp &declOp) {
+  Value privateArg;
+  if (!op.getPrivateSyms().has_value())
+    return privateArg;
+  for (auto [opSym, blockArg] :
+       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
+    if (blockArg == declOp.getMemref()) {
+      omp::PrivateClauseOp privateOp =
+          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
+              op, cast<SymbolRefAttr>(opSym));
+      privateOp.walk([&](omp::YieldOp yieldOp) {
+        // TODO Extend alias analysis if omp.yield points to
+        // block argument value
+        if (!yieldOp.getResults()[0].getDefiningOp())
+          return;
+        llvm::TypeSwitch<Operation *>(yieldOp.getResults()[0].getDefiningOp())
+            .template Case<fir::DeclareOp, hlfir::DeclareOp>(
+                [&](auto declOp) { privateArg = declOp.getMemref(); });
+      });
+      return privateArg;
+    }
+  }
+  return privateArg;
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getInstantiationPoint) {
   auto *defOp = v.getDefiningOp();
@@ -478,20 +505,37 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
-          // If declare operation is inside omp target region,
-          // continue alias analysis outside the target region
-          if (auto targetOp =
-                  llvm::dyn_cast<omp::TargetOp>(op->getParentOp())) {
-            auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
-            for (auto [opArg, blockArg] : llvm::zip_equal(
-                     targetOp.getMapVars(), argIface.getMapBlockArgs())) {
-              if (blockArg == op.getMemref()) {
-                omp::MapInfoOp mapInfo =
-                    llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
-                v = mapInfo.getVarPtr();
-                defOp = v.getDefiningOp();
-                return;
-              }
+          if (omp::BlockArgOpenMPOpInterface argIface =
+                  dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
+            Value ompValArg;
+            llvm::TypeSwitch<Operation *>(op->getParentOp())
+                .template Case<omp::TargetOp>([&](auto targetOp) {
+                  // If declare operation is inside omp target region,
+                  // continue alias analysis outside the target region
+                  for (auto [opArg, blockArg] : llvm::zip_equal(
+                           targetOp.getMapVars(), argIface.getMapBlockArgs())) {
+                    if (blockArg == op.getMemref()) {
+                      omp::MapInfoOp mapInfo =
+                          llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
+                      ompValArg = mapInfo.getVarPtr();
+                      break;
+                    }
+                  }
+                  // If given operation does not reflect mapping item,
+                  // check private clause
+                  if (!ompValArg)
+                    ompValArg = getPrivateArg(argIface, targetOp, op);
+                })
+                .template Case<omp::DistributeOp, omp::ParallelOp,
+                               omp::SectionsOp, omp::SimdOp, omp::SingleOp,
+                               omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
+                    [&](auto privateOp) {
+                      ompValArg = getPrivateArg(argIface, privateOp, op);
+                    });
+            if (ompValArg) {
+              v = ompValArg;
+              defOp = ompValArg.getDefiningOp();
+              return;
             }
           }
           auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);

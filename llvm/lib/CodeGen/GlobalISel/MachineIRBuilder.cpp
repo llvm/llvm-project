@@ -600,12 +600,13 @@ MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,
     return buildCopy(Dst, Src);
 
   unsigned Opcode;
-  if (SrcTy.isPointer() && DstTy.isScalar())
+  if (SrcTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_PTRTOINT;
-  else if (DstTy.isPointer() && SrcTy.isScalar())
+  else if (DstTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_INTTOPTR;
   else {
-    assert(!SrcTy.isPointer() && !DstTy.isPointer() && "n G_ADDRCAST yet");
+    assert(!SrcTy.isPointerOrPointerVector() &&
+           !DstTy.isPointerOrPointerVector() && "no G_ADDRCAST yet");
     Opcode = TargetOpcode::G_BITCAST;
   }
 
@@ -807,6 +808,18 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   }
 
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildStepVector(const DstOp &Res,
+                                                      unsigned Step) {
+  unsigned Bitwidth = Res.getLLTTy(*getMRI()).getElementType().getSizeInBits();
+  ConstantInt *CI = ConstantInt::get(getMF().getFunction().getContext(),
+                                     APInt(Bitwidth, Step));
+  auto StepVector = buildInstr(TargetOpcode::G_STEP_VECTOR);
+  StepVector->setDebugLoc(DebugLoc());
+  Res.addDefToMIB(*getMRI(), StepVector);
+  StepVector.addCImm(CI);
+  return StepVector;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,

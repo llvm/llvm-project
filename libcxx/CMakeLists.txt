@@ -47,6 +47,10 @@ include(HandleCompilerRT)
 # Basic options ---------------------------------------------------------------
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
+option(LIBCXX_ENABLE_EXCEPTIONS "Enable exceptions in the built library." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
   "Whether to include support for parts of the library that rely on a filesystem being
    available on the platform. This includes things like most parts of <filesystem> and
@@ -97,6 +101,10 @@ option(LIBCXX_ENABLE_WIDE_CHARACTERS
    support the C functionality for wide characters. When wide characters are
    not supported, several parts of the library will be disabled, notably the
    wide character specializations of std::basic_string." ON)
+option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
+option(LIBCXX_ENABLE_MONOTONIC_CLOCK
+  "Build libc++ with support for a monotonic clock.
+  This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 
 # To use time zone support in libc++ the platform needs to have the IANA
 # database installed. Libc++ will fail to build if this is enabled on a
@@ -284,14 +292,6 @@ if (LIBCXX_BUILD_32_BITS)
 endif()
 
 # Feature options -------------------------------------------------------------
-option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI
-  "Use runtime type information.
-   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
-option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
-option(LIBCXX_ENABLE_MONOTONIC_CLOCK
-  "Build libc++ with support for a monotonic clock.
-   This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
 option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)
@@ -414,16 +414,15 @@ set(LIBCXX_INSTALL_MODULES_DIR "share/libc++/v1" CACHE STRING
 set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
-set(LIBCXX_GENERATED_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++/v1")
-set(LIBCXX_GENERATED_MODULE_DIR "${LIBCXX_BINARY_DIR}/modules/c++/v1")
-
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
   endif()
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXX_TARGET_SUBDIR})
-  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_BINARY_DIR}/include/${LIBCXX_TARGET_SUBDIR}/c++/v1")
+  set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
+  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LIBCXX_TARGET_SUBDIR}/c++/v1")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXX_TARGET_SUBDIR} CACHE STRING
       "Path where built libc++ libraries should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LIBCXX_TARGET_SUBDIR}/c++/v1" CACHE STRING
@@ -432,8 +431,12 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+    set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+    set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
   else()
     set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+    set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+    set(LIBCXX_GENERATED_MODULE_DIR "${CMAKE_BINARY_DIR}/modules/c++/v1")
   endif()
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE STRING
