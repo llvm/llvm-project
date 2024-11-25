@@ -74,6 +74,10 @@ function (add_flangrt_library name)
     target_compile_options(${name} PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
       )
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+    target_compile_options(${name} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
+      )
   endif ()
 
   # Flang-rt's public headers
