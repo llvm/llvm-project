@@ -60,6 +60,13 @@
 #   sum += ptr->func(b, a) + ptr2->func(b, a);
 #   return 0;
 # }
+# clang++ -c helper.cpp -o helper.o
+# int FooVar = 1;
+# int BarVar = 2;
+#
+# int fooGlobalFuncHelper(int a, int b) {
+#   return 5;
+# }
 # Manually modified to remove "extra" assembly.
   .text
 	.file	"main.cpp"
@@ -78,6 +85,35 @@ _Z10createTypei:                        # @_Z10createTypei
 	.size	_Z10createTypei, .Lfunc_end0-_Z10createTypei
 	.cfi_endproc
                                         # -- End function
+
+	.globl	_Z10returnFivev                 # -- Begin function _Z10returnFivev
+	.p2align	4, 0x90
+	.type	_Z10returnFivev,@function
+_Z10returnFivev:                        # @_Z10returnFivev
+	.cfi_startproc
+# %bb.0:                                # %entry
+	movl	$5, %eax
+	retq
+.Lfunc_end01:
+	.size	_Z10returnFivev, .Lfunc_end01-_Z10returnFivev
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z16returnFourOrFivei           # -- Begin function _Z16returnFourOrFivei
+	.p2align	4, 0x90
+	.type	_Z16returnFourOrFivei,@function
+_Z16returnFourOrFivei:                  # @_Z16returnFourOrFivei
+	.cfi_startproc
+# %bb.0:                                # %entry
+	xorl	%eax, %eax
+	cmpl	$1, %edi
+	sete	%al
+	xorl	$5, %eax
+	retq
+.Lfunc_end11:
+	.size	_Z16returnFourOrFivei, .Lfunc_end11-_Z16returnFourOrFivei
+	.cfi_endproc
+
+
 	.globl	main                            # -- Begin function main
 	.p2align	4, 0x90
 	.type	main,@function

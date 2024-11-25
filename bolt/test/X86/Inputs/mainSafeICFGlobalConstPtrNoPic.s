@@ -39,6 +39,10 @@
 #   MY_PRINTF("val: %d", temp);
 #   return temp;
 # }
+# clang++ helper.cpp -c -o
+# #define MY_CONST const
+# int FooVar = 1;
+# int BarVar = 2;
 # Manually modified to remove "extra" assembly.
 	.text
 	.file	"main.cpp"
@@ -136,11 +140,27 @@ main:                                   # @main
 .Lfunc_end6:
 	.size	main, .Lfunc_end6-main
 	.cfi_endproc
+
+	.type	FooVar,@object                  # @FooVar
+	.data
+	.globl	FooVar
+	.p2align	2, 0x0
+FooVar:
+	.long	1                               # 0x1
+	.size	FooVar, 4
+
+	.type	BarVar,@object                  # @BarVar
+	.globl	BarVar
+	.p2align	2, 0x0
+BarVar:
+	.long	2                               # 0x2
+	.size	BarVar, 4
                                         # -- End function
 	.type	.L.str,@object                  # @.str
 	.section	.rodata.str1.1,"aMS",@progbits,1
 .L.str:
 	.asciz	"val: %d\n"
 	.size	.L.str, 9
+
 
 	.ident	"clang version 20.0.0git"

@@ -3,8 +3,7 @@
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %p/Inputs/mainSafeICFGlobalConstPtrPicExtFuncRef.s -o %t1.o
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %p/Inputs/helperSafeICFGlobalConstPtrPicExtFuncRef.s    -o %t2.o
-# RUN: %clang %cflags %t1.o %t2.o -o %t.exe -Wl,-q
+# RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt --no-threads %t.exe --icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
 # RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
 
