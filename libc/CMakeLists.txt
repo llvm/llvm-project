@@ -412,6 +412,12 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
 
+if(MSVC AND NOT MSYS)
+  set(libc_opt_high_flag "/O2")
+else()
+  set(libc_opt_high_flag "-O3")
+endif()
+
 add_subdirectory(include)
 add_subdirectory(config)
 add_subdirectory(hdr)
