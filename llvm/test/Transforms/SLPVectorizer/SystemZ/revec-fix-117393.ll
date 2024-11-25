@@ -2,6 +2,19 @@
 ; RUN: opt -mtriple=systemz-unknown -mcpu=z15 -passes=slp-vectorizer -S -slp-revec %s | FileCheck %s
 
 define void @h() {
+; CHECK-LABEL: @h(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> splat (i32 1), zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> zeroinitializer, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP7]])
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = shl <4 x i32> zeroinitializer, zeroinitializer
   %1 = or <4 x i32> %0, zeroinitializer
