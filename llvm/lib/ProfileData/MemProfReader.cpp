@@ -549,8 +549,6 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     }
   }
 
-  verifyFunctionProfileData(FunctionProfileData);
-
   return Error::success();
 }
 

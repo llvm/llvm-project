@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=51
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
@@ -507,7 +507,6 @@ use omp_lib
   !$omp flush acquire
   !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
-  !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
   !$omp flush seq_cst
   !ERROR: RELAXED clause is not allowed on the FLUSH directive
   !$omp flush relaxed

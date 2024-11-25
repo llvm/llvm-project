@@ -448,7 +448,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      4     1.00                        cvtsi2sd	%rcx, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtsi2sdl	(%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   cvtsi2sdq	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        cvtss2sd	%xmm0, %xmm2
+# CHECK-NEXT:  2      1     1.00                        cvtss2sd	%xmm0, %xmm2
 # CHECK-NEXT:  2      7     1.00    *                   cvtss2sd	(%rax), %xmm2
 # CHECK-NEXT:  2      4     1.00                        cvttpd2dq	%xmm0, %xmm2
 # CHECK-NEXT:  3      10    1.00    *                   cvttpd2dq	(%rax), %xmm2
@@ -687,7 +687,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     172.00 75.83  117.33 17.00  101.83 67.00  67.00
+# CHECK-NEXT:  -     172.00 75.83  117.33 17.00  102.83 67.00  67.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -732,7 +732,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     cvtsi2sd	%rcx, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   cvtsi2sdl	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   cvtsi2sdq	(%rax), %xmm2
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     cvtss2sd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -     1.00    -      -     1.00    -      -     cvtss2sd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   cvtss2sd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     cvttpd2dq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00   0.50   0.50   cvttpd2dq	(%rax), %xmm2

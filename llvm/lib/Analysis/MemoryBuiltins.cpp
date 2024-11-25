@@ -565,10 +565,7 @@ static APInt getSizeWithOverflow(const SizeOffsetAPInt &Data) {
   APInt Size = Data.Size;
   APInt Offset = Data.Offset;
 
-  assert(!Offset.isNegative() &&
-         "size for a pointer before the allocated object is ambiguous");
-
-  if (Size.ult(Offset))
+  if (Offset.isNegative() || Size.ult(Offset))
     return APInt::getZero(Size.getBitWidth());
 
   return Size - Offset;
@@ -756,10 +753,14 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   }
 
   // We end up pointing on a location that's outside of the original object.
-  // This is UB, and we'd rather return an empty location then.
   if (ORT.knownBefore() && ORT.Before.isNegative()) {
-    ORT.Before = APInt::getZero(ORT.Before.getBitWidth());
-    ORT.After = APInt::getZero(ORT.Before.getBitWidth());
+    // This is UB, and we'd rather return an empty location then.
+    if (Options.EvalMode == ObjectSizeOpts::Mode::Min ||
+        Options.EvalMode == ObjectSizeOpts::Mode::Max) {
+      ORT.Before = APInt::getZero(ORT.Before.getBitWidth());
+      ORT.After = APInt::getZero(ORT.Before.getBitWidth());
+    }
+    // Otherwise it's fine, caller can handle negative offset.
   }
   return ORT;
 }

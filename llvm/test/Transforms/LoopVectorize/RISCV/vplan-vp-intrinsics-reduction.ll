@@ -60,7 +60,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: ir-bb<for.end>:
-; IF-EVL-OUTLOOP-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]>)
+; IF-EVL-OUTLOOP-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]> from middle.block)
 ; IF-EVL-OUTLOOP-NEXT: No successors
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: scalar.ph:
@@ -110,7 +110,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT: ir-bb<for.end>:
-; IF-EVL-INLOOP-NEXT:  IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]>)
+; IF-EVL-INLOOP-NEXT:  IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]> from middle.block)
 ; IF-EVL-INLOOP-NEXT: No successors
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT: scalar.ph:
@@ -156,7 +156,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: ir-bb<for.end>:
-; NO-VP-OUTLOOP-NEXT:  IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]>)
+; NO-VP-OUTLOOP-NEXT:  IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]> from middle.block)
 ; NO-VP-OUTLOOP-NEXT: No successors
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: scalar.ph:
@@ -202,7 +202,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: ir-bb<for.end>:
-; NO-VP-INLOOP-NEXT:   IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]>)
+; NO-VP-INLOOP-NEXT:   IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]> from middle.block)
 ; NO-VP-INLOOP-NEXT: No successors
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: scalar.ph:
