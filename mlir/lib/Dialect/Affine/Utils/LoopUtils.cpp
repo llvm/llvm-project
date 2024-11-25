@@ -1941,8 +1941,8 @@ static LogicalResult generateCopy(
   *nBegin = begin;
   *nEnd = end;
 
-  func::FuncOp f = begin->getParentOfType<func::FuncOp>();
-  OpBuilder topBuilder(f.getBody());
+  auto f = begin->getParentOfType<FunctionOpInterface>();
+  OpBuilder topBuilder(f.getFunctionBody());
   Value zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 
   *sizeInBytes = 0;
@@ -1961,8 +1961,9 @@ static LogicalResult generateCopy(
   OpBuilder &b = region.isWrite() ? epilogue : prologue;
 
   // Builder to create constants at the top level.
-  auto func = copyPlacementBlock->getParent()->getParentOfType<func::FuncOp>();
-  OpBuilder top(func.getBody());
+  auto func =
+      copyPlacementBlock->getParent()->getParentOfType<FunctionOpInterface>();
+  OpBuilder top(func.getFunctionBody());
 
   auto loc = region.loc;
   auto memref = region.memref;
