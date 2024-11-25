@@ -3939,7 +3939,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
          SInt32Ty},
         Ops, "aarch64.neon.rshrn", ty, getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vqrshrn_n_v:
-    llvm_unreachable("NEON::BI__builtin_neon_vqrshrn_n_v NYI");
+    return emitNeonCall(
+        builder,
+        {builder.getExtendedOrTruncatedElementVectorType(
+             vTy, true /* extend */,
+             mlir::cast<cir::IntType>(vTy.getEltType()).isSigned()),
+         SInt32Ty},
+        Ops, usgn ? "aarch64.neon.uqrshrn" : "aarch64.neon.sqrshrn", ty,
+        getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vrndah_f16: {
     llvm_unreachable("NEON::BI__builtin_neon_vrndah_f16 NYI");
   }
