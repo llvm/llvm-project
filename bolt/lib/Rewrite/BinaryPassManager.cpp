@@ -20,6 +20,7 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
+#include "bolt/Passes/InsertNegateRAStatePass.h"
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Passes/JTFootprintReduction.h"
 #include "bolt/Passes/LongJmp.h"
@@ -499,6 +500,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     // targets. No extra instructions after this pass, otherwise we may have
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+
+    Manager.registerPass(std::make_unique<InsertNegateRAState>());
   }
 
   // This pass should always run last.*

@@ -37,6 +37,11 @@ class JumpTable;
 
 class BinaryBasicBlock {
 public:
+  enum class RAStateEnum : char {
+    Unknown, /// Not discovered yet
+    Signed,
+    Unsigned,
+  };
   /// Profile execution information for a given edge in CFG.
   ///
   /// If MispredictedCount equals COUNT_INFERRED, then we have a profile
@@ -348,6 +353,17 @@ public:
   inline iterator_range<const_branch_info_iterator> branch_info() const {
     return iterator_range<const_branch_info_iterator>(BranchInfo.begin(),
                                                       BranchInfo.end());
+  }
+
+  RAStateEnum RAState{RAStateEnum::Unknown};
+  void setRASigned() { RAState = RAStateEnum::Signed; }
+  bool isRAStateUnknown() { return RAState == RAStateEnum::Unknown; }
+  bool isRAStateSigned() { return RAState == RAStateEnum::Signed; }
+  /// Unsigned should only overwrite Unknown state, and not Signed
+  void setRAUnsigned() {
+    if (RAState == RAStateEnum::Unknown) {
+      RAState = RAStateEnum::Unsigned;
+    }
   }
 
   /// Get instruction at given index.
