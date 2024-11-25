@@ -298,11 +298,13 @@ inline Type *applyWrappers(Type *Ty) {
 }
 
 inline Type *getPointeeType(Type *Ty) {
-  if (auto PType = dyn_cast<TypedPointerType>(Ty))
-    return PType->getElementType();
-  else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
-    if (isTypedPointerWrapper(ExtTy))
-      return applyWrappers(ExtTy->getTypeParameter(0));
+  if (Ty) {
+    if (auto PType = dyn_cast<TypedPointerType>(Ty))
+      return PType->getElementType();
+    else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
+      if (isTypedPointerWrapper(ExtTy))
+        return applyWrappers(ExtTy->getTypeParameter(0));
+  }
   return nullptr;
 }
 
