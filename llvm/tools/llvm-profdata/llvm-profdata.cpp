@@ -2967,8 +2967,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
   OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
-  if (IsIR)
+  if (IsIR) {
     OS << "  entry_first = " << Reader->instrEntryBBEnabled();
+    OS << "  instrument_loop_entries = " << Reader->instrLoopEntriesEnabled();
+  }
   OS << "\n";
   if (ShowAllFunctions || !FuncNameFilter.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";

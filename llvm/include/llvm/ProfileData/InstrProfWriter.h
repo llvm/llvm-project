@@ -190,7 +190,9 @@ public:
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::FunctionEntryInstrumentation)) {
+                         InstrProfKind::FunctionEntryInstrumentation) ||
+        testIncompatible(InstrProfKind::FunctionEntryOnly,
+                         InstrProfKind::LoopEntriesInstrumentation)) {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
