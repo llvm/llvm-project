@@ -816,27 +816,29 @@ def as_i8imm : SDNodeXForm<imm, [{
 }]>;
 
 def as_i8timm : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
 def as_i16imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
 def as_i16timm : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  // Explicit cast, as this is used with both signed and unsigned immediates.
+  return CurDAG->getSignedTargetConstant(int16_t(N->getSExtValue()), SDLoc(N),
+                                         MVT::i16);
 }]>;
 
 def as_i32imm: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i32timm: SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i64imm: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
 def cond_as_i32imm: SDNodeXForm<cond, [{
