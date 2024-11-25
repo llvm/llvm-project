@@ -1,6 +1,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck -check-prefix=GFX950 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck -check-prefix=ERR %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 // cbsz = SrcA
 // blgp = SrcB
@@ -1050,3 +1051,44 @@ v_mfma_f32_16x16x32_bf16 a[0:3], v[0:3], v[0:3], a[4:7]
 // GFX950: v_mfma_f32_16x16x32_bf16 v[0:3], a[0:3], a[0:3], v[4:7] ; encoding: [0x00,0x00,0xb5,0xd3,0x00,0x01,0x12,0x1c]
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 v_mfma_f32_16x16x32_bf16 v[0:3], a[0:3], a[0:3], v[4:7]
+
+
+//===----------------------------------------------------------------------===//
+// SMFMAC opcodes.
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// v_smfmac_f32_16x16x64_f16
+//===----------------------------------------------------------------------===//
+
+// GFX950: v_smfmac_f32_16x16x64_f16 v[10:13], a[2:5], v[4:11], v3 cbsz:3 abid:1 ; encoding: [0x0a,0x0b,0xda,0xd3,0x02,0x09,0x0e,0x0c]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64_f16 v[10:13], a[2:5], v[4:11], v3 cbsz:3 abid:1
+
+// GFX950: v_smfmac_f32_16x16x64_f16 v[10:13], a[2:5], v[4:11], v3 cbsz:3 abid:1 ; encoding: [0x0a,0x0b,0xda,0xd3,0x02,0x09,0x0e,0x0c]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64f16 v[10:13], a[2:5], v[4:11], v3 cbsz:3 abid:1
+
+// GFX950: v_smfmac_f32_16x16x64_f16 a[10:13], v[2:5], a[4:11], v1 ; encoding: [0x0a,0x80,0xda,0xd3,0x02,0x09,0x06,0x14]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64_f16 a[10:13], v[2:5], a[4:11], v1
+
+// GFX950: v_smfmac_f32_16x16x64_f16 v[10:13], a[2:5], v[4:11], v2 cbsz:3 abid:1 ; encoding: [0x0a,0x0b,0xda,0xd3,0x02,0x09,0x0a,0x0c]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64_f16 v[10:13], a[2:5], v[4:11], v2 cbsz:3 abid:1
+
+// GFX950: v_smfmac_f32_16x16x64_f16 a[10:13], v[2:5], a[4:11], v3 ; encoding: [0x0a,0x80,0xda,0xd3,0x02,0x09,0x0e,0x14]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64_f16 a[10:13], v[2:5], a[4:11], v3
+
+// GFX950: v_smfmac_f32_16x16x64_f16 v[10:13], v[2:5], v[6:13], v2 cbsz:3 abid:1 ; encoding: [0x0a,0x0b,0xda,0xd3,0x02,0x0d,0x0a,0x04]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64_f16 v[10:13], v[2:5], v[6:13], v2 cbsz:3 abid:1
+
+// GFX950: v_smfmac_f32_16x16x64_f16 a[10:13], a[2:5], a[6:13], v2 cbsz:3 abid:1 ; encoding: [0x0a,0x8b,0xda,0xd3,0x02,0x0d,0x0a,0x1c]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64_f16 a[10:13], a[2:5], a[6:13], v2 cbsz:3 abid:1
+
+// GFX950: v_smfmac_f32_16x16x64_f16 a[10:13], a[2:5], a[6:13], v3 cbsz:1 abid:3 ; encoding: [0x0a,0x99,0xda,0xd3,0x02,0x0d,0x0e,0x1c]
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+v_smfmac_f32_16x16x64_f16 a[10:13], a[2:5], a[6:13], v3 cbsz:1 abid:3
