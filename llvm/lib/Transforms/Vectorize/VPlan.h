@@ -1412,7 +1412,7 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  Instruction &getInstruction() { return I; }
+  Instruction &getInstruction() const { return I; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
