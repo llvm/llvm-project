@@ -567,11 +567,11 @@ struct Ctx : CommonLinkerContext {
   struct OutSections {
     std::unique_ptr<OutputSection> elfHeader;
     std::unique_ptr<OutputSection> programHeaders;
-    OutputSection *preinitArray;
-    OutputSection *initArray;
-    OutputSection *finiArray;
+    OutputSection *preinitArray = nullptr;
+    OutputSection *initArray = nullptr;
+    OutputSection *finiArray = nullptr;
   };
-  OutSections out{};
+  OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
   std::vector<Partition> partitions;
 

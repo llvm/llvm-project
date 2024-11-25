@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXISelDAGToDAG.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -20,10 +19,8 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 
 using namespace llvm;
@@ -3939,8 +3936,8 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       if (!CN->getAPIntValue().isSignedIntN(32))
         return false;
 
-      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(OpNode),
-                                         MVT::i32);
+      Offset = CurDAG->getSignedTargetConstant(CN->getSExtValue(),
+                                               SDLoc(OpNode), MVT::i32);
       return true;
     }
   }

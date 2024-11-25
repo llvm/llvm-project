@@ -234,9 +234,11 @@ public:
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
-                   DominatorTree *DT, IRBuilderBase &Builder,
+  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
+                   LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan);
+  /// Target Transform Info.
+  const TargetTransformInfo *TTI;
 
   /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
@@ -641,7 +643,7 @@ public:
   virtual void dropAllReferences(VPValue *NewValue) = 0;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void printAsOperand(raw_ostream &OS, bool PrintType) const {
+  void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
     OS << getName();
   }
 
@@ -3299,19 +3301,23 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
+  /// Name to use for the generated IR instruction for the derived IV.
+  std::string Name;
+
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
+                    const Twine &Name = "")
       : VPDerivedIVRecipe(
             IndDesc.getKind(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
-            Start, CanonicalIV, Step) {}
+            Start, CanonicalIV, Step, Name) {}
 
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
-                    VPValue *Step)
+                    VPValue *Step, const Twine &Name = "")
       : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, IV, Step}), Kind(Kind),
-        FPBinOp(FPBinOp) {}
+        FPBinOp(FPBinOp), Name(Name.str()) {}
 
   ~VPDerivedIVRecipe() override = default;
 
@@ -3836,6 +3842,12 @@ public:
   VPBasicBlock *getMiddleBlock() {
     return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
   }
+
+  /// Return an iterator range over the VPIRBasicBlock wrapping the exit blocks
+  /// of the VPlan, that is leaf nodes except the scalar header. Defined in
+  /// VPlanHCFG, as the definition of the type needs access to the definitions
+  /// of VPBlockShallowTraversalWrapper.
+  auto getExitBlocks();
 
   /// The trip count of the original loop.
   VPValue *getTripCount() const {

@@ -330,6 +330,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-build-id");
   }
 
+  if (auto *a = args.getLastArg(OPT_functionpadmin)) {
+    StringRef v = a->getValue();
+    if (v.empty())
+      add("-functionpadmin");
+    else
+      add("-functionpadmin:" + v);
+  }
+
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");
   else
