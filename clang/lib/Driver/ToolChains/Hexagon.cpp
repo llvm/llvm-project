@@ -379,9 +379,9 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
-      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))
