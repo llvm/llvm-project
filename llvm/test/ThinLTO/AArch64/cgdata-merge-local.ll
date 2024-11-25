@@ -2,7 +2,7 @@
 ; while parameterizing a difference in their global variables, g1 and g2.
 ; To achieve this, we create two instances of the global merging function, f1.Tgm and f2.Tgm,
 ; which are tail-called from thunks f1 and f2 respectively.
-; These identical functions, f1.Tgm and f2.Tgm, will be folded by the linker via Identical Code Folding (ICF).
+; These identical functions, f1.Tgm and f2.Tgm, will be folded by the linker via Identical Code Folding (IFC).
 
 ; RUN: opt -S --passes=global-merge-func %s | FileCheck %s
 
