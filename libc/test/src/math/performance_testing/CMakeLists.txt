@@ -475,6 +475,18 @@ add_perf_binary(
     libc.src.math.fminimum_numf16
   COMPILE_OPTIONS
     -fno-builtin
+    )
+
+add_perf_binary(
+  fadd_perf
+  SRCS
+    fadd_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fadd
+    libc.src.__support.FPUtil.fp_bits
+  COMPILE_OPTIONS
+    -fno-builtin
 )
 
 add_perf_binary(
