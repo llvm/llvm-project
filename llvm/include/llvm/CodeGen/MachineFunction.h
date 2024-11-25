@@ -1010,7 +1010,7 @@ public:
   /// into \p MBB before \p InsertBefore.
   ///
   /// Note: Does not perform target specific adjustments; consider using
-  /// TargetInstrInfo::duplicate() intead.
+  /// TargetInstrInfo::duplicate() instead.
   MachineInstr &
   cloneMachineInstrBundle(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertBefore,
