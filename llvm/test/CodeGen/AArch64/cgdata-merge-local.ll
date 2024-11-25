@@ -2,9 +2,9 @@
 ; while parameterizing a difference in their global variables, g1 and g2.
 ; To achieve this, we create two instances of the global merging function, f1.Tgm and f2.Tgm,
 ; which are tail-called from thunks f1 and f2 respectively.
-; These identical functions, f1.Tgm and f2.Tgm, will be folded by the linker via Identical Code Folding (IFC).
+; These identical functions, f1.Tgm and f2.Tgm, will be folded by the linker via Identical Code Folding (ICF).
 
-; RUN: opt -S --passes=global-merge-func %s | FileCheck %s
+; RUN: opt -mtriple=arm64-apple-darwin -S --passes=global-merge-func %s | FileCheck %s
 
 ; A merging instance is created with additional parameter.
 ; CHECK: define internal i32 @f1.Tgm(i32 %0, ptr %1)
@@ -38,17 +38,14 @@
 ; CHECK-NEXT:  %1 = tail call i32 @f2.Tgm(i32 %a, ptr @g2)
 ; CHECK-NEXT:  ret i32 %1
 
-; RUN: llc -enable-global-merge-func=true < %s | FileCheck %s --check-prefix=MERGE
-; RUN: llc -enable-global-merge-func=false < %s | FileCheck %s --check-prefix=NOMERGE
+; RUN: llc -mtriple=arm64-apple-darwin -enable-global-merge-func=true < %s | FileCheck %s --check-prefix=MERGE
+; RUN: llc -mtriple=arm64-apple-darwin -enable-global-merge-func=false < %s | FileCheck %s --check-prefix=NOMERGE
 
 ; MERGE: _f1.Tgm
 ; MERGE: _f2.Tgm
 
 ; NOMERGE-NOT: _f1.Tgm
 ; NOMERGE-NOT: _f2.Tgm
-
-target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "arm64-unknown-ios12.0.0"
 
 @g = external local_unnamed_addr global [0 x i32], align 4
 @g1 = external global i32, align 4
