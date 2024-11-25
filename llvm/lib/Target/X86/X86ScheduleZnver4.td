@@ -1658,7 +1658,7 @@ def Zn4MOVSZ: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVSZ], (instregex
-        "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)(Z?)(rr|rrk|rrkz)"
+        "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)Z(rr|rrk|rrkz)"
 	)>;
 
 def Zn4MOVSrr: SchedWriteRes<[Zn4FPFMisc12]> {
@@ -1667,7 +1667,7 @@ def Zn4MOVSrr: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVSrr], (instregex
-        "(V?)PMOV(DB|QB|QW|SDB|SQB|SQW|USDB|USQB|USQW)(Z?)(rr|rrk|rrkz)"
+        "(V?)PMOV(DB|QB|QW|SDB|SQB|SQW|USDB|USQB|USQW)Z(rr|rrk|rrkz)"
 	)>;
 
 
