@@ -11452,7 +11452,7 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     if (auto RetTST =
             TSI->getTypeLoc().getAsAdjusted<TemplateSpecializationTypeLoc>()) {
       const TemplateSpecializationType *TST = RetTST.getTypePtr();
-      while (TST->isTypeAlias())
+      while (TST && TST->isTypeAlias())
         TST = TST->getAliasedType()->getAs<TemplateSpecializationType>();
 
       TemplateName SpecifiedName = TST->getTemplateName();
