@@ -757,8 +757,9 @@ if.true:
   ret i32 %res
 }
 
-define i32 @multi_successors(i1 %c1, i32 %c2, ptr %p) {
-; CHECK-LABEL: @multi_successors(
+;; Not transform if either BB has multiple successors.
+define i32 @not_multi_successors(i1 %c1, i32 %c2, ptr %p) {
+; CHECK-LABEL: @not_multi_successors(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[ENTRY_IF:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       entry.if:
