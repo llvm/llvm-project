@@ -2301,14 +2301,14 @@ define <64 x i32> @umulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k3} {z} = -1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k2} {z} = -1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm6 = ymm6[0],zero,ymm6[1],zero,ymm6[2],zero,ymm6[3],zero,ymm6[4],zero,ymm6[5],zero,ymm6[6],zero,ymm6[7],zero,ymm6[8],zero,ymm6[9],zero,ymm6[10],zero,ymm6[11],zero,ymm6[12],zero,ymm6[13],zero,ymm6[14],zero,ymm6[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm6, 16(%rdi)
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm6 = ymm7[0],zero,ymm7[1],zero,ymm7[2],zero,ymm7[3],zero,ymm7[4],zero,ymm7[5],zero,ymm7[6],zero,ymm7[7],zero,ymm7[8],zero,ymm7[9],zero,ymm7[10],zero,ymm7[11],zero,ymm7[12],zero,ymm7[13],zero,ymm7[14],zero,ymm7[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm6, (%rdi)
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm4[0],zero,ymm4[1],zero,ymm4[2],zero,ymm4[3],zero,ymm4[4],zero,ymm4[5],zero,ymm4[6],zero,ymm4[7],zero,ymm4[8],zero,ymm4[9],zero,ymm4[10],zero,ymm4[11],zero,ymm4[12],zero,ymm4[13],zero,ymm4[14],zero,ymm4[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm4, 48(%rdi)
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm5[0],zero,ymm5[1],zero,ymm5[2],zero,ymm5[3],zero,ymm5[4],zero,ymm5[5],zero,ymm5[6],zero,ymm5[7],zero,ymm5[8],zero,ymm5[9],zero,ymm5[10],zero,ymm5[11],zero,ymm5[12],zero,ymm5[13],zero,ymm5[14],zero,ymm5[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm4, 32(%rdi)
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm6[0],zero,ymm6[1],zero,ymm6[2],zero,ymm6[3],zero,ymm6[4],zero,ymm6[5],zero,ymm6[6],zero,ymm6[7],zero,ymm6[8],zero,ymm6[9],zero,ymm6[10],zero,ymm6[11],zero,ymm6[12],zero,ymm6[13],zero,ymm6[14],zero,ymm6[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm4, 16(%rdi)
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm7[0],zero,ymm7[1],zero,ymm7[2],zero,ymm7[3],zero,ymm7[4],zero,ymm7[5],zero,ymm7[6],zero,ymm7[7],zero,ymm7[8],zero,ymm7[9],zero,ymm7[10],zero,ymm7[11],zero,ymm7[12],zero,ymm7[13],zero,ymm7[14],zero,ymm7[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm4, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: umulo_v64i8:

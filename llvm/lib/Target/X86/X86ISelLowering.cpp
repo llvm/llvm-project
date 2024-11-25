@@ -15952,6 +15952,54 @@ static SDValue lowerShuffleAsVTRUNCAndUnpack(const SDLoc &DL, MVT VT,
                      DAG.getIntPtrConstant(0, DL));
 }
 
+// Match truncation of both 512-bit operands and concat results together.
+// TODO: Similar to lowerShuffleAsVTRUNC - merge or share matching code?
+static SDValue lowerShuffleAsVTRUNCAndConcat(
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    const APInt &Zeroable, const X86Subtarget &Subtarget, SelectionDAG &DAG) {
+  assert(VT.is512BitVector() && VT.getScalarSizeInBits() < 64 &&
+         "Unexpected type!");
+  if (!Subtarget.hasAVX512())
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned DstSizeInBits = VT.getScalarSizeInBits();
+  unsigned SrcSizeInBits = DstSizeInBits * 2;
+
+  // TODO: Support non-BWI VPMOVWB truncations?
+  if (SrcSizeInBits < 32 && !Subtarget.hasBWI())
+    return SDValue();
+
+  // Match shuffle <Ofs,Ofs+2,Ofs+4,..>
+  // TODO: Handle general Scale factors with undef/zero upper elements.
+  for (unsigned Offset = 0; Offset != 2; ++Offset) {
+    if (!isSequentialOrUndefInRange(Mask, 0, NumElts, Offset, 2))
+      continue;
+
+    MVT DstVT = MVT::getVectorVT(VT.getScalarType(), NumElts / 2);
+    MVT SrcSVT = MVT::getIntegerVT(SrcSizeInBits);
+    MVT SrcVT = MVT::getVectorVT(SrcSVT, NumElts / 2);
+
+    V1 = DAG.getBitcast(SrcVT, V1);
+    V2 = DAG.getBitcast(SrcVT, V2);
+
+    if (Offset) {
+      V1 = DAG.getNode(
+          X86ISD::VSRLI, DL, SrcVT, V1,
+          DAG.getTargetConstant(Offset * DstSizeInBits, DL, MVT::i8));
+      V2 = DAG.getNode(
+          X86ISD::VSRLI, DL, SrcVT, V2,
+          DAG.getTargetConstant(Offset * DstSizeInBits, DL, MVT::i8));
+    }
+
+    V1 = DAG.getNode(ISD::TRUNCATE, DL, DstVT, V1);
+    V2 = DAG.getNode(ISD::TRUNCATE, DL, DstVT, V2);
+    return concatSubVectors(V1, V2, DAG, DL);
+  }
+
+  return SDValue();
+}
+
 // a = shuffle v1, v2, mask1    ; interleaving lower lanes of v1 and v2
 // b = shuffle v1, v2, mask2    ; interleaving higher lanes of v1 and v2
 //     =>
@@ -17312,6 +17360,10 @@ static SDValue lowerV32I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
     return PSHUFB;
 
+  if (SDValue Trunc = lowerShuffleAsVTRUNCAndConcat(
+          DL, MVT::v32i16, V1, V2, Mask, Zeroable, Subtarget, DAG))
+    return Trunc;
+
   return lowerShuffleWithPERMV(DL, MVT::v32i16, Mask, V1, V2, Subtarget, DAG);
 }
 
@@ -17366,6 +17418,10 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue PSHUFB = lowerShuffleWithPSHUFB(DL, MVT::v64i8, Mask, V1, V2,
                                               Zeroable, Subtarget, DAG))
     return PSHUFB;
+
+  if (SDValue Trunc = lowerShuffleAsVTRUNCAndConcat(
+          DL, MVT::v64i8, V1, V2, Mask, Zeroable, Subtarget, DAG))
+    return Trunc;
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
   // results into the target lanes.
@@ -52613,6 +52669,17 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     return splitVectorStore(St, DAG);
+  }
+
+  // Split a concatenation of truncations to fold to truncating stores.
+  if (VT.is512BitVector() && Subtarget.hasAVX512() && StVT == VT &&
+      StoredVal.hasOneUse()) {
+    SmallVector<SDValue> Ops;
+    if (collectConcatOps(StoredVal.getNode(), Ops, DAG) &&
+        all_of(Ops, [&](SDValue Op) {
+          return Op.getOpcode() == ISD::TRUNCATE && Op.hasOneUse();
+        }))
+      return splitVectorStore(St, DAG);
   }
 
   // Split under-aligned vector non-temporal stores.
