@@ -298,7 +298,7 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
 
 // TODO: We might need to refactor this to be more generic,
 // in case we need more metadata to be replaced.
-static void replaceMetadata(Module &M) {
+static void translateBranchMetadata(Module &M) {
   for (auto &F : M) {
     for (auto &BB : F) {
       auto *BBTerminatorInst = BB.getTerminator();
@@ -395,7 +395,7 @@ PreservedAnalyses DXILTranslateMetadata::run(Module &M,
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
   translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
-  replaceMetadata(M);
+  translateBranchMetadata(M);
 
   return PreservedAnalyses::all();
 }
@@ -429,7 +429,7 @@ public:
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
     translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
-    replaceMetadata(M);
+    translateBranchMetadata(M);
     return true;
   }
 };
