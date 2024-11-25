@@ -120,23 +120,20 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     sec->markDead();
     create = true;
 
-    std::string filename = toStr(ctx, sec->file);
     const size_t size = sec->content().size();
     // Older version of BFD (such as the default FreeBSD linker) concatenate
     // .MIPS.abiflags instead of merging. To allow for this case (or potential
     // zero padding) we ignore everything after the first Elf_Mips_ABIFlags
     if (size < sizeof(Elf_Mips_ABIFlags)) {
-      ErrAlways(ctx) << filename
-                     << ": invalid size of .MIPS.abiflags section: got "
-                     << Twine(size) << " instead of "
-                     << Twine(sizeof(Elf_Mips_ABIFlags));
+      Err(ctx) << sec->file << ": invalid size of .MIPS.abiflags section: got "
+               << size << " instead of " << sizeof(Elf_Mips_ABIFlags);
       return nullptr;
     }
     auto *s =
         reinterpret_cast<const Elf_Mips_ABIFlags *>(sec->content().data());
     if (s->version != 0) {
-      ErrAlways(ctx) << filename << ": unexpected .MIPS.abiflags version "
-                     << Twine(s->version);
+      Err(ctx) << sec->file << ": unexpected .MIPS.abiflags version "
+               << s->version;
       return nullptr;
     }
 
@@ -152,7 +149,7 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     flags.flags1 |= s->flags1;
     flags.flags2 |= s->flags2;
     flags.fp_abi =
-        elf::getMipsFpAbiFlag(ctx, flags.fp_abi, s->fp_abi, filename);
+        elf::getMipsFpAbiFlag(ctx, sec->file, flags.fp_abi, s->fp_abi);
   };
 
   if (create)
@@ -197,12 +194,10 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
   for (InputSectionBase *sec : sections) {
     sec->markDead();
 
-    std::string filename = toStr(ctx, sec->file);
     ArrayRef<uint8_t> d = sec->content();
-
     while (!d.empty()) {
       if (d.size() < sizeof(Elf_Mips_Options)) {
-        ErrAlways(ctx) << filename << ": invalid size of .MIPS.options section";
+        Err(ctx) << sec->file << ": invalid size of .MIPS.options section";
         break;
       }
 
@@ -213,8 +208,10 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
         break;
       }
 
-      if (!opt->size)
-        Fatal(ctx) << filename << ": zero option descriptor size";
+      if (!opt->size) {
+        Err(ctx) << sec->file << ": zero option descriptor size";
+        break;
+      }
       d = d.slice(opt->size);
     }
   };
@@ -256,7 +253,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
     sec->markDead();
 
     if (sec->content().size() != sizeof(Elf_Mips_RegInfo)) {
-      ErrAlways(ctx) << sec->file << ": invalid size of .reginfo section";
+      Err(ctx) << sec->file << ": invalid size of .reginfo section";
       return nullptr;
     }
 
@@ -2119,8 +2116,8 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // Don't allow the section to shrink; otherwise the size of the section can
   // oscillate infinitely. Trailing 1s do not decode to more relocations.
   if (relrRelocs.size() < oldSize) {
-    Log(ctx) << ".relr.dyn needs " << Twine(oldSize - relrRelocs.size()) <<
-        " padding word(s)";
+    Log(ctx) << ".relr.dyn needs " << (oldSize - relrRelocs.size())
+             << " padding word(s)";
     relrRelocs.resize(oldSize, Elf_Relr(1));
   }
 
@@ -2873,7 +2870,7 @@ void DebugNamesBaseSection::parseDebugNames(
     nd.hdr = ni.getHeader();
     if (nd.hdr.Format != DwarfFormat::DWARF32) {
       Err(ctx) << namesSec.sec
-               << Twine(": found DWARF64, which is currently unsupported");
+               << ": found DWARF64, which is currently unsupported";
       return;
     }
     if (nd.hdr.Version != 5) {
@@ -2883,8 +2880,7 @@ void DebugNamesBaseSection::parseDebugNames(
     uint32_t dwarfSize = dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
     DWARFDebugNames::DWARFDebugNamesOffsets locs = ni.getOffsets();
     if (locs.EntriesBase > namesExtractor.getData().size()) {
-      Err(ctx) << namesSec.sec
-               << Twine(": entry pool start is beyond end of section");
+      Err(ctx) << namesSec.sec << ": entry pool start is beyond end of section";
       return;
     }
 
@@ -2965,7 +2961,7 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
       // ForeignTypeUnitCount are left as 0.
       if (nd.hdr.LocalTypeUnitCount || nd.hdr.ForeignTypeUnitCount)
         Warn(ctx) << inputChunk.section.sec
-                  << Twine(": type units are not implemented");
+                  << ": type units are not implemented";
       // If augmentation strings are not identical, use an empty string.
       if (i == 0) {
         hdr.AugmentationStringSize = nd.hdr.AugmentationStringSize;
@@ -4395,7 +4391,7 @@ static uint8_t getAbiVersion(Ctx &ctx) {
     uint8_t ver = ctx.objectFiles[0]->abiVersion;
     for (InputFile *file : ArrayRef(ctx.objectFiles).slice(1))
       if (file->abiVersion != ver)
-        ErrAlways(ctx) << "incompatible ABI version: " << file;
+        Err(ctx) << "incompatible ABI version: " << file;
     return ver;
   }
 

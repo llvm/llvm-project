@@ -274,7 +274,7 @@ void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
                         "not built with zstd support";
   } else {
     ErrAlways(ctx) << this << ": unsupported compression type ("
-                   << Twine(hdr->ch_type) << ")";
+                   << uint32_t(hdr->ch_type) << ")";
     return;
   }
 
