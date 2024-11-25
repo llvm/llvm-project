@@ -285,7 +285,8 @@ def : Pat<(riscv_fclass FPR64:$rs1), (FCLASS_D $rs1)>;
 
 def : PatFprFpr<fcopysign, FSGNJ_D, FPR64, f64>;
 def : PatFprFpr<riscv_fsgnjx, FSGNJX_D, FPR64, f64>;
-def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)), (FSGNJN_D $rs1, $rs2)>;
+def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)),
+          (FSGNJN_D FPR64:$rs1, FPR64:$rs2)>;
 def : Pat<(fcopysign FPR64:$rs1, FPR32:$rs2), (FSGNJ_D $rs1, (FCVT_D_S $rs2,
                                                               FRM_RNE))>;
 def : Pat<(fcopysign FPR32:$rs1, FPR64:$rs2), (FSGNJ_S $rs1, (FCVT_S_D $rs2,
@@ -323,7 +324,7 @@ def : Pat<(riscv_fclass FPR64INX:$rs1), (FCLASS_D_INX $rs1)>;
 def : PatFprFpr<fcopysign, FSGNJ_D_INX, FPR64INX, f64>;
 def : PatFprFpr<riscv_fsgnjx, FSGNJX_D_INX, FPR64INX, f64>;
 def : Pat<(fcopysign FPR64INX:$rs1, (fneg FPR64INX:$rs2)),
-          (FSGNJN_D_INX $rs1, $rs2)>;
+          (FSGNJN_D_INX FPR64INX:$rs1, FPR64INX:$rs2)>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR32INX:$rs2),
           (FSGNJ_D_INX $rs1, (f64 (FCVT_D_S_INX $rs2, FRM_RNE)))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64INX:$rs2),
@@ -361,7 +362,7 @@ def : Pat<(riscv_fclass FPR64IN32X:$rs1), (FCLASS_D_IN32X $rs1)>;
 def : PatFprFpr<fcopysign, FSGNJ_D_IN32X, FPR64IN32X, f64>;
 def : PatFprFpr<riscv_fsgnjx, FSGNJX_D_IN32X, FPR64IN32X, f64>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, (fneg FPR64IN32X:$rs2)),
-          (FSGNJN_D_IN32X $rs1, $rs2)>;
+          (FSGNJN_D_IN32X FPR64IN32X:$rs1, FPR64IN32X:$rs2)>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, FPR32INX:$rs2),
           (FSGNJ_D_IN32X $rs1, (FCVT_D_S_IN32X $rs2, FRM_RNE))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64IN32X:$rs2),

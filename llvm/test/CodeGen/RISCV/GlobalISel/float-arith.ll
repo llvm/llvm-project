@@ -183,8 +183,7 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fsgnjn_s:
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fadd.s fa5, fa0, fa1
-; CHECKIF-NEXT:    fneg.s fa5, fa5
-; CHECKIF-NEXT:    fsgnj.s fa0, fa0, fa5
+; CHECKIF-NEXT:    fsgnjn.s fa0, fa0, fa5
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnjn_s:
