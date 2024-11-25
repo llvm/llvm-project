@@ -1208,8 +1208,9 @@ public:
     Instruction *BBTerminatorInst = Builder->GetInsertBlock()->getTerminator();
 
     MDNode *MDNode = BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
-    if (MDNode && MDNode->getNumOperands() != 2)
-      llvm_unreachable("invalid metadata hlsl.controlflow.hint");
+    if (MDNode)
+      assert(MDNode->getNumOperands() == 2 &&
+             "invalid metadata hlsl.controlflow.hint");
 
     Value *MDNodeValue = MetadataAsValue::get(Builder->getContext(), MDNode);
 
