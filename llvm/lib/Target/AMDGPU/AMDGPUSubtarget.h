@@ -52,6 +52,7 @@ protected:
   bool HasTrue16BitInsts = false;
   bool HasFP8ConversionScaleInsts = false;
   bool HasBF8ConversionScaleInsts = false;
+  bool HasFP4ConversionScaleInsts = false;
   bool EnableRealTrue16Insts = false;
   bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
@@ -180,6 +181,8 @@ public:
   bool hasFP8ConversionScaleInsts() const { return HasFP8ConversionScaleInsts; }
 
   bool hasBF8ConversionScaleInsts() const { return HasBF8ConversionScaleInsts; }
+
+  bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
 
   bool hasMadMacF32Insts() const {
     return HasMadMacF32Insts || !isGCN();
