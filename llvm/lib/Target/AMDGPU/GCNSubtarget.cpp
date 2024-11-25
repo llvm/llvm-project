@@ -353,6 +353,19 @@ void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
   }
 }
 
+bool GCNSubtarget::hasScalarSubwordBufferLoads() const {
+  Generation Gen = getGeneration();
+
+  // On gfx12, s_buffer_load_(i/u)(8/16) have a hw-bug that is triggered when:
+  // * the stride is not a multiple of 4, or
+  // * the stride is 0 and the num-records is not a multiple of 4
+  // Avoid these instructions unless the frontend explicitly specifies that the
+  // input buffers are known to not trigger the bug.
+  if (Gen == GFX12)
+    return UseGFX12SubwordSBufferLoad;
+  return hasScalarSubwordLoads();
+}
+
 bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16_e64) != -1;
 }
