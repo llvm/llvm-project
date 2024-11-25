@@ -1143,9 +1143,7 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
   assert(
       (!ExtendingManyInputs || SubMask.size() > Mask.size() ||
        // Check if input scalars were extended to match the size of other node.
-       (SubMask.size() == Mask.size() &&
-        std::all_of(std::next(Mask.begin(), Mask.size() / 2), Mask.end(),
-                    [](int Idx) { return Idx == PoisonMaskElem; }))) &&
+       (SubMask.size() == Mask.size() && Mask.back() == PoisonMaskElem)) &&
       "SubMask with many inputs support must be larger than the mask.");
   if (Mask.empty()) {
     Mask.append(SubMask.begin(), SubMask.end());
@@ -10877,9 +10875,10 @@ public:
           CommonMask[Idx] = Idx;
       // Add subvectors permutation cost.
       if (!SubVectorsMask.empty()) {
-        assert(SubVectorsMask.size() == CommonMask.size() &&
+        assert(SubVectorsMask.size() <= CommonMask.size() &&
                "Expected same size of masks for subvectors and common mask.");
-        SmallVector<int> SVMask(SubVectorsMask.begin(), SubVectorsMask.end());
+        SmallVector<int> SVMask(CommonMask.size(), PoisonMaskElem);
+        copy(SubVectorsMask, SVMask.begin());
         for (auto [I1, I2] : zip(SVMask, CommonMask)) {
           if (I2 != PoisonMaskElem) {
             assert(I1 == PoisonMaskElem && "Expected unused subvectors mask");
@@ -14374,7 +14373,8 @@ public:
       if (SubVectorsMask.empty()) {
         Vec = CreateSubVectors(Vec, CommonMask);
       } else {
-        SmallVector<int> SVMask(SubVectorsMask.begin(), SubVectorsMask.end());
+        SmallVector<int> SVMask(CommonMask.size(), PoisonMaskElem);
+        copy(SubVectorsMask, SVMask.begin());
         for (auto [I1, I2] : zip(SVMask, CommonMask)) {
           if (I2 != PoisonMaskElem) {
             assert(I1 == PoisonMaskElem && "Expected unused subvectors mask");
