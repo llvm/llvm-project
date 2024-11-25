@@ -1516,3 +1516,203 @@ uint64x2_t test_splatq_laneq_u64(uint64x2_t v) {
   // LLVM: [[RES:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[TMP1]], <2 x i32> zeroinitializer
   // LLVM: ret <2 x i64> [[RES]]
 }
+
+int16x4_t test_vpadal_s8(int16x4_t a, int8x8_t b) {
+  return vpadal_s8(a, b);
+
+  // CIR-LABEL: vpadal_s8
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s8i x 8>) -> !cir.vector<!s16i x 4>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s16i x 4>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!s16i x 4>
+
+  // LLVM: {{.*}}test_vpadal_s8(<4 x i16>{{.*}}[[a:%.*]], <8 x i8>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i16> [[a]] to <8 x i8>
+  // LLVM:   [[VPADAL_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.saddlp.v4i16.v8i8(<8 x i8> [[b]])
+  // LLVM:   [[TMP1:%.*]] = add <4 x i16> [[VPADAL_I]], [[a]]
+  // LLVM:   ret <4 x i16> [[TMP1]]
+}
+
+int32x2_t test_vpadal_s16(int32x2_t a, int16x4_t b) {
+  return vpadal_s16(a, b);
+
+  // CIR-LABEL: vpadal_s16
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s16i x 4>) -> !cir.vector<!s32i x 2>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s32i x 2>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!s32i x 2>
+
+  // LLVM: {{.*}}test_vpadal_s16(<2 x i32>{{.*}}[[a:%.*]], <4 x i16>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i32> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i16> [[b]] to <8 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <2 x i32> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <2 x i32> [[TMP2]]
+}
+
+int64x1_t test_vpadal_s32(int64x1_t a, int32x2_t b) {
+  return vpadal_s32(a, b);
+
+  // CIR-LABEL: vpadal_s32
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s32i x 2>) -> !cir.vector<!s64i x 1>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!s64i x 1>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!s64i x 1>
+
+  // LLVM: {{.*}}test_vpadal_s32(<1 x i64>{{.*}}[[a:%.*]], <2 x i32>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <1 x i64> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i32> [[b]] to <8 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <1 x i64> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <1 x i64> [[TMP2]]
+}
+
+uint16x4_t test_vpadal_u8(uint16x4_t a, uint8x8_t b) {
+  return vpadal_u8(a, b);
+
+  // CIR-LABEL: vpadal_u8
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!u8i x 8>) -> !cir.vector<!u16i x 4>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!u16i x 4>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!u16i x 4>
+
+  // LLVM: {{.*}}test_vpadal_u8(<4 x i16>{{.*}}[[a:%.*]], <8 x i8>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i16> [[a]] to <8 x i8>
+  // LLVM:   [[VPADAL_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uaddlp.v4i16.v8i8(<8 x i8> [[b]])
+  // LLVM:   [[TMP1:%.*]] = add <4 x i16> [[VPADAL_I]], [[a]]
+  // LLVM:   ret <4 x i16> [[TMP1]]
+}
+
+uint32x2_t test_vpadal_u16(uint32x2_t a, uint16x4_t b) {
+  return vpadal_u16(a, b);
+
+  // CIR-LABEL: vpadal_u16
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!u16i x 4>) -> !cir.vector<!u32i x 2>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!u32i x 2>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!u32i x 2>
+
+  // LLVM: {{.*}}test_vpadal_u16(<2 x i32>{{.*}}[[a:%.*]], <4 x i16>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i32> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i16> [[b]] to <8 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.uaddlp.v2i32.v4i16(<4 x i16> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <2 x i32> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <2 x i32> [[TMP2]]
+}
+
+uint64x1_t test_vpadal_u32(uint64x1_t a, uint32x2_t b) {
+  return vpadal_u32(a, b);
+
+  // CIR-LABEL: vpadal_u32
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!u32i x 2>) -> !cir.vector<!u64i x 1>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 8>), !cir.vector<!u64i x 1>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!u64i x 1>
+
+  // LLVM: {{.*}}test_vpadal_u32(<1 x i64>{{.*}}[[a:%.*]], <2 x i32>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <1 x i64> [[a]] to <8 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i32> [[b]] to <8 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.uaddlp.v1i64.v2i32(<2 x i32> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <1 x i64> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <1 x i64> [[TMP2]]
+}
+
+int16x8_t test_vpadalq_s8(int16x8_t a, int8x16_t b) {
+  return vpadalq_s8(a, b);
+
+  // CIR-LABEL: vpadalq_s8
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s8i x 16>) -> !cir.vector<!s16i x 8>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s16i x 8>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!s16i x 8>
+
+  // LLVM: {{.*}}test_vpadalq_s8(<8 x i16>{{.*}}[[a:%.*]], <16 x i8>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <8 x i16> [[a]] to <16 x i8>
+  // LLVM:   [[VPADAL_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.saddlp.v8i16.v16i8(<16 x i8> [[b]])
+  // LLVM:   [[TMP1:%.*]] = add <8 x i16> [[VPADAL_I]], [[a]]
+  // LLVM:   ret <8 x i16> [[TMP1]]
+}
+
+int32x4_t test_vpadalq_s16(int32x4_t a, int16x8_t b) {
+  return vpadalq_s16(a, b);
+
+  // CIR-LABEL: vpadalq_s16
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s16i x 8>) -> !cir.vector<!s32i x 4>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s32i x 4>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!s32i x 4>
+
+  // LLVM: {{.*}}test_vpadalq_s16(<4 x i32>{{.*}}[[a:%.*]], <8 x i16>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i16> [[b]] to <16 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.saddlp.v4i32.v8i16(<8 x i16> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <4 x i32> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <4 x i32> [[TMP2]]
+}
+
+int64x2_t test_vpadalq_s32(int64x2_t a, int32x4_t b) {
+  return vpadalq_s32(a, b);
+
+  // CIR-LABEL: vpadalq_s32
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!s32i x 4>) -> !cir.vector<!s64i x 2>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s64i x 2>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!s64i x 2>
+
+  // LLVM: {{.*}}test_vpadalq_s32(<2 x i64>{{.*}}[[a:%.*]], <4 x i32>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i64> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i32> [[b]] to <16 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.saddlp.v2i64.v4i32(<4 x i32> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <2 x i64> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <2 x i64> [[TMP2]]
+}
+
+uint16x8_t test_vpadalq_u8(uint16x8_t a, uint8x16_t b) {
+  return vpadalq_u8(a, b);
+
+  // CIR-LABEL: vpadalq_u8
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!u8i x 16>) -> !cir.vector<!u16i x 8>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!u16i x 8>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!u16i x 8>
+
+  // LLVM: {{.*}}test_vpadalq_u8(<8 x i16>{{.*}}[[a:%.*]], <16 x i8>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <8 x i16> [[a]] to <16 x i8>
+  // LLVM:   [[VPADAL_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8> [[b]])
+  // LLVM:   [[TMP1:%.*]] = add <8 x i16> [[VPADAL_I]], [[a]]
+  // LLVM:   ret <8 x i16> [[TMP1]]
+}
+
+uint32x4_t test_vpadalq_u16(uint32x4_t a, uint16x8_t b) {
+  return vpadalq_u16(a, b);
+
+  // CIR-LABEL: vpadalq_u16
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!u16i x 8>) -> !cir.vector<!u32i x 4>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!u32i x 4>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!u32i x 4>
+
+  // LLVM: {{.*}}test_vpadalq_u16(<4 x i32>{{.*}}[[a:%.*]], <8 x i16>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <8 x i16> [[b]] to <16 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <4 x i32> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <4 x i32> [[TMP2]]
+}
+
+uint64x2_t test_vpadalq_u32(uint64x2_t a, uint32x4_t b) {
+  return vpadalq_u32(a, b);
+
+  // CIR-LABEL: vpadalq_u32
+  // CIR: [[VPADAL_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} :
+  // CIR-SAME: (!cir.vector<!u32i x 4>) -> !cir.vector<!u64i x 2>
+  // CIR: [[a:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!u64i x 2>
+  // CIR: {{%.*}} = cir.binop(add, [[VPADAL_I]], [[a]]) : !cir.vector<!u64i x 2>
+
+  // LLVM: {{.*}}test_vpadalq_u32(<2 x i64>{{.*}}[[a:%.*]], <4 x i32>{{.*}}[[b:%.*]])
+  // LLVM:   [[TMP0:%.*]] = bitcast <2 x i64> [[a]] to <16 x i8>
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i32> [[b]] to <16 x i8>
+  // LLVM:   [[VPADAL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.uaddlp.v2i64.v4i32(<4 x i32> [[b]])
+  // LLVM:   [[TMP2:%.*]] = add <2 x i64> [[VPADAL1_I]], [[a]]
+  // LLVM:   ret <2 x i64> [[TMP2]]
+}
