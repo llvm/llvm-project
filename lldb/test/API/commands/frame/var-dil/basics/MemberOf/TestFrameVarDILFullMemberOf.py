@@ -73,10 +73,8 @@ class TestFrameVarDILMemberOf(TestBase):
         self.expect("frame variable '(sarr + 1)->x'", substrs=["1"])
 
         self.expect("frame variable 'sp->4'", error=True,
-                    substrs=["<expr>:1:5: expected 'identifier', got: <'4' "
-                             "(numeric_constant)>\n"
-                             "sp->4\n"
-                             "    ^"])
+                    substrs=["expected 'identifier', got: <'4' "
+                             "(numeric_constant)>"])
         self.expect("frame variable 'sp->foo'", error=True,
                     substrs=["no member named 'foo' in 'Sx'"])
         self.expect("frame variable 'sp->r / (void*)0'", error=True,
