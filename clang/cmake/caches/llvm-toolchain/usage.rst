@@ -15,6 +15,7 @@ The build is done in 4 stages:
 
 ## Usage
 
-..
-  cmake -S llvm -B build -C clang/cmake/caches/llvm-toolchain/stage1.cmake
-  ninja stage3-install-distribution
+::
+
+  $ cmake -S llvm -B build -C clang/cmake/caches/llvm-toolchain/stage1.cmake
+  $ ninja stage3-install-distribution
