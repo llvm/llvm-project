@@ -285,8 +285,8 @@ define double @preserve_load_metadata_after_select_transform_metadata_missing_4(
 ; CHECK-NEXT:    ret double [[L_SEL]]
 ;
 entry:
-  %l.a = load double, ptr %a, align 8, !tbaa !0, !llvm.access.group !7
-  %l.b = load double, ptr %b, align 8, !tbaa !0, !llvm.access.group !12
+  %l.a = load double, ptr %a, align 8, !tbaa !0, !llvm.access.group !7, !alias.scope !3, !noalias !3
+  %l.b = load double, ptr %b, align 8, !tbaa !0, !llvm.access.group !12, !alias.scope !14, !noalias !14
   %cmp.i = fcmp fast olt double %l.a, %l.b
   %ptr.sel = select i1 %cmp.i, ptr %b, ptr %a
   %l.sel = load double, ptr %ptr.sel, align 8, !tbaa !0, !llvm.access.group !13
@@ -307,6 +307,10 @@ entry:
 !11 = !{i32 5, i32 6}
 !12 = distinct !{}
 !13 = distinct !{}
+!14 = !{!15}
+!15 = distinct !{!15, !16}
+!16 = distinct !{!16}
+
 ;.
 ; CHECK: [[TBAA0]] = !{[[LOOP1]], [[LOOP1]], i64 0}
 ; CHECK: [[LOOP1]] = !{!"scalar type", [[META2:![0-9]+]]}
