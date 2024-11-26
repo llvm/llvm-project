@@ -7592,7 +7592,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
           Subtarget->hasGloballyAddressableScratch()) {
         // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
         // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
-        SDValue AllOnes = DAG.getConstant(-1, SL, MVT::i32);
+        SDValue AllOnes = DAG.getSignedTargetConstant(-1, SL, MVT::i32);
         SDValue ThreadID = DAG.getConstant(0, SL, MVT::i32);
         ThreadID = DAG.getNode(
             ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
@@ -10145,18 +10145,28 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
   case Intrinsic::amdgcn_s_barrier:
+  case Intrinsic::amdgcn_s_barrier_signal:
+  case Intrinsic::amdgcn_s_barrier_wait:
   case Intrinsic::amdgcn_s_cluster_barrier: {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
       unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
-      if (WGSize <= ST.getWavefrontSize())
-        return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL, MVT::Other,
-                                          Op.getOperand(0)),
-                       0);
+      if (WGSize <= ST.getWavefrontSize()) {
+        // If the workgroup fits in a wave, remove s_barrier_signal and lower
+        // s_barrier/s_barrier_wait to wave_barrier.
+        if (IntrinsicID == Intrinsic::amdgcn_s_barrier_signal)
+          return Op.getOperand(0);
+        else
+          return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL,
+                                            MVT::Other, Op.getOperand(0)),
+                         0);
+      }
     }
 
     // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
-    if (ST.hasSplitBarriers()) {
+    if (ST.hasSplitBarriers() &&
+        (IntrinsicID == Intrinsic::amdgcn_s_barrier ||
+         IntrinsicID == Intrinsic::amdgcn_s_cluster_barrier)) {
       int BarTy = IntrinsicID == Intrinsic::amdgcn_s_barrier
                       ? AMDGPU::Barrier::WORKGROUP
                       : AMDGPU::Barrier::CLUSTER;
@@ -11289,7 +11299,7 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
   Tmp = DAG.getNode(ISD::BITCAST, SL, MVT::f32, TmpCast);
   Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
   SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
-                             DAG.getConstant(0, SL, MVT::i32));
+                             DAG.getTargetConstant(0, SL, MVT::i32));
   return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
                      Op->getFlags());
 }
