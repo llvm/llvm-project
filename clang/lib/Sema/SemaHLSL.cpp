@@ -700,6 +700,13 @@ static bool isValidWaveSizeValue(unsigned Value) {
   return llvm::isPowerOf2_32(Value) && Value >= 4 && Value <= 128;
 }
 
+void SemaHLSL::handleHLSLRootSignature(Decl *D, const ParsedAttr &AL) {
+  Expr *X = AL.getArgAsExpr(0);
+  if (const StringLiteral *ST = dyn_cast<StringLiteral>(X)){
+    auto str = ST->getString();
+  }
+}
+
 void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
   // validate that the wavesize argument is a power of 2 between 4 and 128
   // inclusive

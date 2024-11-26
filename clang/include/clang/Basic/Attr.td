@@ -4305,6 +4305,17 @@ def HLSLLoopHint: StmtAttr {
   let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
 }
 
+/// HLSL Root Signature Attributes
+def HLSLRootSignature: Attr {
+  /// [RootSignature(signature)]
+  let Spellings = [Microsoft<"RootSignature">];
+  let Args = [StringArgument<"signature">];
+  let Subjects = SubjectList<[Function],
+                              ErrorDiag, "'function'">;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLLoopHintDocs];
+}
+
 def CapturedRecord : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

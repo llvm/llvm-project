@@ -7095,10 +7095,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HybridPatchable:
     handleSimpleAttribute<HybridPatchableAttr>(S, D, AL);
     break;
-
   // HLSL attributes:
   case ParsedAttr::AT_HLSLNumThreads:
     S.HLSL().handleNumThreadsAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLRootSignature:
+    S.HLSL().handleHLSLRootSignature(D, AL);
     break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
