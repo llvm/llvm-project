@@ -8,7 +8,6 @@
 
 #include "clang/Driver/MultilibBuilder.h"
 #include "ToolChains/CommonArgs.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"

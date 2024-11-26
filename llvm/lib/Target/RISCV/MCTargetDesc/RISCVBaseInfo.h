@@ -208,6 +208,12 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - Offset;
 }
 
+static inline unsigned getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
+  // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
+  // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
+  return FeatureBits[RISCV::FeatureStdExtZicfilp] ? RISCV::X7 : RISCV::X6;
+}
+
 static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   assert(hasSEWOp(TSFlags));
@@ -330,7 +336,20 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
   OPERAND_SPIMM,
-  OPERAND_LAST_RISCV_IMM = OPERAND_SPIMM,
+  // Operand is a 3-bit rounding mode, '111' indicates FRM register.
+  // Represents 'frm' argument passing to floating-point operations.
+  OPERAND_FRMARG,
+  // Operand is a 3-bit rounding mode where only RTZ is valid.
+  OPERAND_RTZARG,
+  // Condition code used by select and short forward branch pseudos.
+  OPERAND_COND_CODE,
+  // Vector policy operand.
+  OPERAND_VEC_POLICY,
+  // Vector SEW operand.
+  OPERAND_SEW,
+  // Vector rounding mode for VXRM or FRM.
+  OPERAND_VEC_RM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.

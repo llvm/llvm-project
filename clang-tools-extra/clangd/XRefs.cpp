@@ -63,6 +63,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -2238,7 +2239,10 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
     if (!(isa<DeclContext>(Decl) &&
           cast<DeclContext>(Decl)->isFunctionOrMethod()) &&
-        Decl->getKind() != Decl::Kind::FunctionTemplate)
+        Decl->getKind() != Decl::Kind::FunctionTemplate &&
+        !(Decl->getKind() == Decl::Kind::Var &&
+          !cast<VarDecl>(Decl)->isLocalVarDecl()) &&
+        Decl->getKind() != Decl::Kind::Field)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
       Result.emplace_back(std::move(*CHI));
@@ -2272,7 +2276,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // Initially store the ranges in a map keyed by SymbolID of the caller.
   // This allows us to group different calls with the same caller
   // into the same CallHierarchyIncomingCall.
-  llvm::DenseMap<SymbolID, std::vector<Range>> CallsIn;
+  llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
   // We can populate the ranges based on a refs request only. As we do so, we
   // also accumulate the container IDs into a lookup request.
   LookupRequest ContainerLookup;
@@ -2282,8 +2286,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       elog("incomingCalls failed to convert location: {0}", Loc.takeError());
       return;
     }
-    auto It = CallsIn.try_emplace(R.Container, std::vector<Range>{}).first;
-    It->second.push_back(Loc->range);
+    CallsIn[R.Container].push_back(*Loc);
 
     ContainerLookup.IDs.insert(R.Container);
   });
@@ -2292,9 +2295,21 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
     auto It = CallsIn.find(Caller.ID);
     assert(It != CallsIn.end());
-    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file()))
+    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+      std::vector<Range> FromRanges;
+      for (const Location &L : It->second) {
+        if (L.uri != CHI->uri) {
+          // Call location not in same file as caller.
+          // This can happen in some edge cases. There's not much we can do,
+          // since the protocol only allows returning ranges interpreted as
+          // being in the caller's file.
+          continue;
+        }
+        FromRanges.push_back(L.range);
+      }
       Results.push_back(
-          CallHierarchyIncomingCall{std::move(*CHI), std::move(It->second)});
+          CallHierarchyIncomingCall{std::move(*CHI), std::move(FromRanges)});
+    }
   });
   // Sort results by name of container.
   llvm::sort(Results, [](const CallHierarchyIncomingCall &A,

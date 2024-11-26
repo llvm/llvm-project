@@ -132,7 +132,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator++(int) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__count_ > 0, "Iterator already at or past end.");
     --__count_;
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
     try {
       return __current_++;
     } catch (...) {
@@ -141,7 +141,7 @@ public:
     }
 #  else
     return __current_++;
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator++(int)

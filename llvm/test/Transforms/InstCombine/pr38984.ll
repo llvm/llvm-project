@@ -9,7 +9,7 @@ target datalayout = "p:16:16"
 define <4 x i1> @PR38984_1() {
 ; CHECK-LABEL: @PR38984_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %0 = load i16, ptr @offsets, align 1

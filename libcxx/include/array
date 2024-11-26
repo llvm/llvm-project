@@ -118,8 +118,10 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__algorithm/swap_ranges.h>
 #include <__assert>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__fwd/array.h>
 #include <__iterator/reverse_iterator.h>
+#include <__iterator/static_bounded_iter.h>
 #include <__iterator/wrap_iter.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__type_traits/conditional.h>
@@ -177,7 +179,10 @@ struct _LIBCPP_TEMPLATE_VIS array {
   using const_reference = const value_type&;
   using pointer         = value_type*;
   using const_pointer   = const value_type*;
-#if defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+  using iterator       = __static_bounded_iter<pointer, _Size>;
+  using const_iterator = __static_bounded_iter<const_pointer, _Size>;
+#elif defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
 #else
@@ -201,13 +206,33 @@ struct _LIBCPP_TEMPLATE_VIS array {
   }
 
   // iterators:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator begin() _NOEXCEPT { return iterator(data()); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const_iterator begin() const _NOEXCEPT {
-    return const_iterator(data());
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator begin() _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<_Size>(data(), data());
+#else
+    return iterator(data());
+#endif
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator end() _NOEXCEPT { return iterator(data() + _Size); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const_iterator begin() const _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<_Size>(data(), data());
+#else
+    return const_iterator(data());
+#endif
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator end() _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<_Size>(data() + _Size, data());
+#else
+    return iterator(data() + _Size);
+#endif
+  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const_iterator end() const _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<_Size>(data() + _Size, data());
+#else
     return const_iterator(data() + _Size);
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator rbegin() _NOEXCEPT {
@@ -277,7 +302,10 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   using const_reference = const value_type&;
   using pointer         = value_type*;
   using const_pointer   = const value_type*;
-#if defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+  using iterator       = __static_bounded_iter<pointer, 0>;
+  using const_iterator = __static_bounded_iter<const_pointer, 0>;
+#elif defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
 #else
@@ -309,13 +337,33 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   }
 
   // iterators:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator begin() _NOEXCEPT { return iterator(data()); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const_iterator begin() const _NOEXCEPT {
-    return const_iterator(data());
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator begin() _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<0>(data(), data());
+#else
+    return iterator(data());
+#endif
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator end() _NOEXCEPT { return iterator(data()); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const_iterator end() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const_iterator begin() const _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<0>(data(), data());
+#else
     return const_iterator(data());
+#endif
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 iterator end() _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<0>(data(), data());
+#else
+    return iterator(data());
+#endif
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const_iterator end() const _NOEXCEPT {
+#if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
+    return std::__make_static_bounded_iter<0>(data(), data());
+#else
+    return const_iterator(data());
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator rbegin() _NOEXCEPT {

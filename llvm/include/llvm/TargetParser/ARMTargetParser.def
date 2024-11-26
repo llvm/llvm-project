@@ -342,6 +342,7 @@ ARM_CPU_NAME("cortex-m4", ARMV7EM, FK_FPV4_SP_D16, true, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m7", ARMV7EM, FK_FPV5_D16, false, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m23", ARMV8MBaseline, FK_NONE, false, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m33", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
+ARM_CPU_NAME("star-mc1", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
 ARM_CPU_NAME("cortex-m35p", ARMV8MMainline, FK_FPV5_SP_D16, false, ARM::AEK_DSP)
 ARM_CPU_NAME("cortex-m55", ARMV8_1MMainline, FK_FP_ARMV8_FULLFP16_D16, false,
              (ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP | ARM::AEK_FP16))

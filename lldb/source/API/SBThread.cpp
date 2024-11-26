@@ -24,7 +24,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -43,6 +42,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>

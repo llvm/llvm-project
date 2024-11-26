@@ -14,15 +14,19 @@ namespace mlir {
 class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
+class DialectRegistry;
 
 /// Collect a set of patterns to lower AMX ops to ops that map to LLVM
 /// intrinsics.
-void populateAMXLegalizeForLLVMExportPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
+void populateAMXLegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
+                                              RewritePatternSet &patterns);
 
 /// Configure the target to support lowering AMX ops to ops that map to LLVM
 /// intrinsics.
 void configureAMXLegalizeForExportTarget(LLVMConversionTarget &target);
+
+/// Register LLVM conversion interface for AMX dialect.
+void registerConvertAMXToLLVMInterface(DialectRegistry &registry);
 
 } // namespace mlir
 

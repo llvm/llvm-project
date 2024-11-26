@@ -29,6 +29,13 @@ namespace Fortran::parser {
 struct Keyword;
 }
 
+namespace Fortran::evaluate { // avoid including all of Evaluate/tools.h
+template <typename T>
+std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
+extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
+} // namespace Fortran::evaluate
+
 namespace Fortran::semantics {
 
 class Scope;
@@ -110,6 +117,11 @@ public:
     return category_ == that.category_ && expr_ == that.expr_;
   }
   bool operator!=(const ParamValue &that) const { return !(*this == that); }
+  bool IsEquivalentInInterface(const ParamValue &that) const {
+    return (category_ == that.category_ &&
+        expr_.has_value() == that.expr_.has_value() &&
+        (!expr_ || evaluate::AreEquivalentInInterface(*expr_, *that.expr_)));
+  }
   std::string AsFortran() const;
 
 private:

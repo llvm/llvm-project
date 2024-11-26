@@ -276,7 +276,7 @@ define dso_local i32 @baz() {
 ; CHECK-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[BAZ_VARARG:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[BAZ_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[TMP0]], align 16
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[TMP0]], align 16
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @variadics3(i32 noundef 1, ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[VARARG_BUFFER]])
 ; CHECK-NEXT:    ret i32 [[CALL]]

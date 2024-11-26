@@ -198,13 +198,12 @@ static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
   return nullptr;
 }
 
-class ReferencedDeclsVisitor
-    : public AnalysisASTVisitor<ReferencedDeclsVisitor> {
+class ReferencedDeclsVisitor : public AnalysisASTVisitor {
 public:
   ReferencedDeclsVisitor(ReferencedDecls &Referenced)
       : Referenced(Referenced) {}
 
-  void TraverseConstructorInits(const CXXConstructorDecl *Ctor) {
+  void traverseConstructorInits(const CXXConstructorDecl *Ctor) {
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
       if (Init->isMemberInitializer()) {
         Referenced.Fields.insert(Init->getMember());
@@ -225,21 +224,21 @@ public:
     }
   }
 
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     insertIfGlobal(*D, Referenced.Globals);
     insertIfLocal(*D, Referenced.Locals);
     insertIfFunction(*D, Referenced.Functions);
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     insertIfGlobal(*E->getDecl(), Referenced.Globals);
     insertIfLocal(*E->getDecl(), Referenced.Locals);
     insertIfFunction(*E->getDecl(), Referenced.Functions);
     return true;
   }
 
-  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *C) {
+  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *C) override {
     // If this is a method that returns a member variable but does nothing else,
     // model the field of the return value.
     if (MemberExpr *E = getMemberForAccessor(*C))
@@ -248,7 +247,7 @@ public:
     return true;
   }
 
-  bool VisitMemberExpr(MemberExpr *E) {
+  bool VisitMemberExpr(MemberExpr *E) override {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
     insertIfGlobal(*VD, Referenced.Globals);
@@ -258,14 +257,14 @@ public:
     return true;
   }
 
-  bool VisitInitListExpr(InitListExpr *InitList) {
+  bool VisitInitListExpr(InitListExpr *InitList) override {
     if (InitList->getType()->isRecordType())
       for (const auto *FD : getFieldsForInitListExpr(InitList))
         Referenced.Fields.insert(FD);
     return true;
   }
 
-  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *ParenInitList) {
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *ParenInitList) override {
     if (ParenInitList->getType()->isRecordType())
       for (const auto *FD : getFieldsForInitListExpr(ParenInitList))
         Referenced.Fields.insert(FD);
@@ -281,7 +280,7 @@ ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
   ReferencedDeclsVisitor Visitor(Result);
   Visitor.TraverseStmt(FD.getBody());
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&FD))
-    Visitor.TraverseConstructorInits(CtorDecl);
+    Visitor.traverseConstructorInits(CtorDecl);
 
   return Result;
 }

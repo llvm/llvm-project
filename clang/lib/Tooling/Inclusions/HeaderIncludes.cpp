@@ -335,10 +335,9 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
 // \p Offset: the start of the line following this include directive.
 void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
                                         unsigned NextLineOffset) {
-  auto Iter =
-      ExistingIncludes.try_emplace(trimInclude(IncludeToAdd.Name)).first;
-  Iter->second.push_back(std::move(IncludeToAdd));
-  auto &CurInclude = Iter->second.back();
+  auto &Incs = ExistingIncludes[trimInclude(IncludeToAdd.Name)];
+  Incs.push_back(std::move(IncludeToAdd));
+  auto &CurInclude = Incs.back();
   // The header name with quotes or angle brackets.
   // Only record the offset of current #include if we can insert after it.
   if (CurInclude.R.getOffset() <= MaxInsertOffset) {

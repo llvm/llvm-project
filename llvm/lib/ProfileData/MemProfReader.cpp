@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -228,28 +227,6 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
   return OS.str();
 }
 } // namespace
-
-MemProfReader::MemProfReader(
-    llvm::DenseMap<FrameId, Frame> FrameIdMap,
-    llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-    : IdToFrame(std::move(FrameIdMap)),
-      FunctionProfileData(std::move(ProfData)) {
-  // Populate CSId in each IndexedAllocationInfo and IndexedMemProfRecord
-  // while storing CallStack in CSIdToCallStack.
-  for (auto &KV : FunctionProfileData) {
-    IndexedMemProfRecord &Record = KV.second;
-    for (auto &AS : Record.AllocSites) {
-      CallStackId CSId = hashCallStack(AS.CallStack);
-      AS.CSId = CSId;
-      CSIdToCallStack.insert({CSId, AS.CallStack});
-    }
-    for (auto &CS : Record.CallSites) {
-      CallStackId CSId = hashCallStack(CS);
-      Record.CallSiteIds.push_back(CSId);
-      CSIdToCallStack.insert({CSId, CS});
-    }
-  }
-}
 
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
@@ -549,8 +526,6 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Record.CallSiteIds.push_back(CSId);
     }
   }
-
-  verifyFunctionProfileData(FunctionProfileData);
 
   return Error::success();
 }

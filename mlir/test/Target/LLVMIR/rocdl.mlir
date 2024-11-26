@@ -118,6 +118,25 @@ llvm.func @rocdl.ballot64(%pred : i1) -> i64 {
   llvm.return %0 : i64
 }
 
+llvm.func @rocdl.readlane(%src0 : f32, %src1: f64, %src2: i32, %src3: vector<2 x f32>) -> f32 {
+  %idx = llvm.mlir.constant(0 : i32) : i32
+
+  // CHECK-LABEL: rocdl.readlane
+  // CHECK: call float @llvm.amdgcn.readlane.f32(float %{{.*}}, i32 0)
+  %0 = rocdl.readlane %src0, %idx : (f32, i32) -> f32
+
+  // CHECK: call double @llvm.amdgcn.readlane.f64(double %{{.*}}, i32 0)
+  %1 = rocdl.readlane %src1, %idx : (f64, i32) -> f64
+
+  // CHECK: call i32 @llvm.amdgcn.readlane.i32(i32 %{{.*}}, i32 0)
+  %2 = rocdl.readlane %src2, %idx : (i32, i32) -> i32
+
+  // CHECK: call <2 x float> @llvm.amdgcn.readlane.v2f32(<2 x float> %{{.*}}, i32 0)
+  %3 = rocdl.readlane %src3, %idx : (vector<2 x f32>, i32) -> vector<2 x f32>
+
+  llvm.return %0 : f32
+}
+
 llvm.func @rocdl.waitcnt() {
   // CHECK-LABEL: rocdl.waitcnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.waitcnt(i32 0)
@@ -176,6 +195,22 @@ llvm.func @rocdl.schedbarrier() {
   rocdl.sched.barrier 0
   // CHECK-NEXT: call void @llvm.amdgcn.sched.barrier(i32 1)
   rocdl.sched.barrier 1
+  llvm.return
+}
+
+llvm.func @rocdl.sched.group.barrier() {
+  // CHECK-LABEL: rocdl.sched.group.barrier
+  // CHECK-NEXT: call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
+  rocdl.sched.group.barrier 8, 1, 0
+  llvm.return
+}
+
+llvm.func @rocdl.iglp.opt() {
+  // CHECK-LABEL: rocdl.iglp.opt
+  // CHECK-NEXT: call void @llvm.amdgcn.iglp.opt(i32 0)
+  rocdl.iglp.opt 0
+  // CHECK-NEXT: call void @llvm.amdgcn.iglp.opt(i32 1)
+  rocdl.iglp.opt 1
   llvm.return
 }
 

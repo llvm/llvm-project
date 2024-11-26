@@ -229,6 +229,16 @@ void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
   linalg::populateEraseUnnecessaryInputsPatterns(patterns);
 }
 
+void transform::ApplyDecomposeTensorPackUnpackPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateDecomposePackUnpackPatterns(patterns);
+}
+
+void transform::ApplyDecomposeTensorPadPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateDecomposePadPatterns(patterns);
+}
+
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::ControlDropUnitDims options;
@@ -251,6 +261,12 @@ void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
 void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populateFoldAddIntoDestPatterns(patterns);
+}
+
+void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populatePadOpVectorizationPatterns(patterns);
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1727,7 +1743,7 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
 void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<int64_t> paddingDimensions,
                              ArrayRef<int64_t> padToMultipleOf,
-                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<int64_t> nofoldFlags,
                              ArrayRef<Attribute> transposePaddings,
                              StringRef copyBackOp) {
   auto resultType = transform::AnyOpType::get(b.getContext());
@@ -1742,7 +1758,7 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                (padToMultipleOf.empty()
                     ? DenseI64ArrayAttr()
                     : b.getDenseI64ArrayAttr(padToMultipleOf)),
-               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
                /*copyBackOp=*/b.getStringAttr(copyBackOp));
 }
@@ -1750,7 +1766,7 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
 void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<int64_t> paddingDimensions,
                              ArrayRef<OpFoldResult> mixedPadToMultipleOf,
-                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<int64_t> nofoldFlags,
                              ArrayRef<Attribute> transposePaddings,
                              StringRef copyBackOp) {
   auto resultType = transform::AnyOpType::get(b.getContext());
@@ -1766,7 +1782,7 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
                /*padToMultipleOf=*/dynamicPadToMultipleOf,
                /*padToMultipleOf=*/staticPadToMultipleOf,
-               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
                /*copyBackOp=*/b.getStringAttr(copyBackOp));
 }
@@ -1800,10 +1816,10 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     }
 
     // Convert the integer packing flags to booleans.
-    SmallVector<bool> packPaddings;
+    SmallVector<bool> nofoldFlags;
     for (int64_t packPadding :
-         extractFromIntegerArrayAttr<int64_t>(getPackPaddings()))
-      packPaddings.push_back(static_cast<bool>(packPadding));
+         extractFromIntegerArrayAttr<int64_t>(getNofoldFlags()))
+      nofoldFlags.push_back(static_cast<bool>(packPadding));
 
     // Convert the padding values to attributes.
     SmallVector<Attribute> paddingValues;
@@ -1861,7 +1877,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
-    options.packPaddings = packPaddings;
+    options.nofoldFlags = nofoldFlags;
     if (getCopyBackOp() ==
         bufferization::MaterializeInDestinationOp::getOperationName()) {
       options.copyBackOp = LinalgPaddingOptions::CopyBackOp::
@@ -1907,14 +1923,14 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 }
 
 LogicalResult transform::PadOp::verify() {
-  SmallVector<int64_t> packPaddings =
-      extractFromIntegerArrayAttr<int64_t>(getPackPaddings());
-  if (any_of(packPaddings, [](int64_t packPadding) {
+  SmallVector<int64_t> nofoldFlags =
+      extractFromIntegerArrayAttr<int64_t>(getNofoldFlags());
+  if (any_of(nofoldFlags, [](int64_t packPadding) {
         return packPadding != 0 && packPadding != 1;
       })) {
     return emitOpError()
-           << "expects pack_paddings to contain booleans (0/1), found "
-           << getPackPaddings();
+           << "expects nofold_flags to contain booleans (0/1), found "
+           << getNofoldFlags();
   }
 
   SmallVector<int64_t> paddingDimensions =
@@ -2357,10 +2373,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   };
 
+  SmallVector<Operation *> opList;
   if (isMultiwaySplit) {
 
     // Split a single target operation at multiple points.
-    SmallVector<Operation *> opList;
     TilingInterface head, tail;
     Operation *target = payload.front();
 
@@ -2400,8 +2416,6 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     // Append any leftover parts to the end of the result list.
     if (tail)
       opList.push_back(tail.getOperation());
-    results.set(cast<OpResult>(getFirst()), opList);
-    results.set(cast<OpResult>(getSecond()), {});
 
   } else {
     // Split each target operation.
@@ -2447,9 +2461,11 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
       return diag;
     }
 
-    results.set(cast<OpResult>(getFirst()), first);
-    results.set(cast<OpResult>(getSecond()), second);
+    opList.append(first);
+    if (second.size())
+      opList.append(second);
   }
+  results.set(cast<OpResult>(getSplitList()), opList);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2501,7 +2517,7 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(
       SplitOp::getStaticChunkSizesAttrName(result.name).getValue(),
       staticChunkSizes);
-  result.addTypes({targetType, targetType});
+  result.addTypes(targetType);
   return success();
 }
 
@@ -3477,8 +3493,16 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  if (getVectorizePadding())
+  // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
+
+  if (getVectorizePadding()) {
     linalg::populatePadOpVectorizationPatterns(patterns);
+    // This creates an alternative path for lowering tensor.pad - by
+    // decomposing it into e.g. linalg.fill.
+    linalg::populateDecomposePadPatterns(patterns);
+  }
+  vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
   GreedyRewriteConfig config;
@@ -3558,7 +3582,7 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
   // WARNING: This hoisting does not model parallelism and is generally
   // incorrect when used on distributed loops with memref semantics!
   // TODO: obsolete and should be retired.
-  linalg::hoistRedundantVectorTransfers(target);
+  linalg::hoistRedundantVectorTransfers(target, getVerifyNonZeroTrip());
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }

@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -27,6 +26,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Utility/ARM_DWARF_Registers.h"
@@ -38,13 +38,6 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE(ABISysV_arm)
 
 static const RegisterInfo g_register_infos[] = {
-    //  NAME       ALT       SZ OFF ENCODING         FORMAT          EH_FRAME
-    //  DWARF               GENERIC                     PROCESS PLUGIN
-    //  LLDB NATIVE            VALUE REGS    INVALIDATE REGS
-    //  ========== =======   == === =============    ============
-    //  ======================= =================== ===========================
-    //  ======================= ====================== ==========
-    //  ===============
     {"r0",
      nullptr,
      4,

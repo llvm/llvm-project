@@ -14,6 +14,9 @@
 // ARM specific DAG Nodes.
 //
 
+/// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
+defvar FlagsVT = i32;
+
 // Type profiles.
 def SDT_ARMCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
                                            SDTCisVT<1, i32> ]>;
@@ -76,6 +79,18 @@ def SDT_WIN__DBZCHK : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def SDT_ARMMEMCPY  : SDTypeProfile<2, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
                                           SDTCisVT<2, i32>, SDTCisVT<3, i32>,
                                           SDTCisVT<4, i32>]>;
+
+def SDTIntUnaryOpWithFlagsOut : SDTypeProfile<2, 1, [
+  SDTCisInt<0>,         // result
+  SDTCisVT<1, FlagsVT>, // out flags
+  SDTCisSameAs<2, 0>    // operand
+]>;
+
+def SDTIntUnaryOpWithFlagsIn : SDTypeProfile<1, 2, [
+  SDTCisInt<0>,        // result
+  SDTCisSameAs<1, 0>,  // operand
+  SDTCisVT<1, FlagsVT> // in flags
+]>;
 
 def SDTBinaryArithWithFlags : SDTypeProfile<2, 2,
                                             [SDTCisSameAs<0, 2>,
@@ -191,9 +206,9 @@ def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
 def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
 def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
 
-def ARMsrl_glue      : SDNode<"ARMISD::SRL_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
-def ARMsra_glue      : SDNode<"ARMISD::SRA_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
-def ARMrrx           : SDNode<"ARMISD::RRX"     , SDTIntUnaryOp, [SDNPInGlue ]>;
+def ARMlsrs1 : SDNode<"ARMISD::LSRS1", SDTIntUnaryOpWithFlagsOut>;
+def ARMasrs1 : SDNode<"ARMISD::ASRS1", SDTIntUnaryOpWithFlagsOut>;
+def ARMrrx   : SDNode<"ARMISD::RRX"  , SDTIntUnaryOpWithFlagsIn>;
 
 def ARMaddc          : SDNode<"ARMISD::ADDC",  SDTBinaryArithWithFlags,
                               [SDNPCommutative]>;
@@ -371,14 +386,14 @@ def ARMVCCElse : PatLeaf<(i32 2)>;
 
 // imm_neg_XFORM - Return the negation of an i32 immediate value.
 def imm_neg_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(-(int)N->getZExtValue(), SDLoc(N), MVT::i32,
-                                   /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(-(int)N->getZExtValue(), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 // imm_not_XFORM - Return the complement of a i32 immediate value.
 def imm_not_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32,
-                                   /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(~(int)N->getZExtValue(), SDLoc(N),
+                                         MVT::i32);
 }]>;
 def gi_imm_not_XFORM : GICustomOperandRenderer<"renderInvertedImm">,
   GISDNodeXFormEquiv<imm_not_XFORM>;
@@ -2378,13 +2393,13 @@ def UDF : AInoP<(outs), (ins imm0_65535:$imm16), MiscFrm, NoItinerary,
  *  - In ARM: UDF #60896;
  *  - In Thumb: UDF #254 followed by a branch-to-self.
  */
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def TRAPNaCl : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
            Requires<[IsARM,UseNaClTrap]> {
   let Inst = 0xe7fedef0;
 }
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def TRAP : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
            Requires<[IsARM,DontUseNaClTrap]> {
@@ -3730,20 +3745,17 @@ def : ARMPat<(or GPR:$src, 0xffff0000), (MOVTi16 GPR:$src, 0xffff)>,
       Requires<[IsARM, HasV6T2]>;
 
 let Uses = [CPSR] in
-def RRX: PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
-                    [(set GPR:$Rd, (ARMrrx GPR:$Rm))]>, UnaryDP,
-                    Requires<[IsARM]>, Sched<[WriteALU]>;
-
-// These aren't really mov instructions, but we have to define them this way
-// due to glue operands.
+def RRX : PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
+                     [(set GPR:$Rd, (ARMrrx GPR:$Rm, CPSR))]>,
+          UnaryDP, Requires<[IsARM]>, Sched<[WriteALU]>;
 
 let Defs = [CPSR] in {
-def MOVsrl_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsrl_glue GPR:$src))]>, UnaryDP,
-                      Sched<[WriteALU]>, Requires<[IsARM]>;
-def MOVsra_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsra_glue GPR:$src))]>, UnaryDP,
-                      Sched<[WriteALU]>, Requires<[IsARM]>;
+  def LSRs1 : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                         [(set GPR:$dst, CPSR, (ARMlsrs1 GPR:$src))]>,
+              UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
+  def ASRs1 : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                         [(set GPR:$dst, CPSR, (ARMasrs1 GPR:$src))]>,
+              UnaryDP, Sched<[WriteALU]>, Requires<[IsARM]>;
 }
 
 //===----------------------------------------------------------------------===//

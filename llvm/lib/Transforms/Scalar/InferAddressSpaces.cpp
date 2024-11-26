@@ -120,7 +120,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -380,7 +379,8 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_load: {
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
-    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {DestTy, SrcTy});
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(M, IID, {DestTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
@@ -391,7 +391,8 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_gather: {
     Type *RetTy = II->getType();
     Type *NewPtrTy = NewV->getType();
-    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {RetTy, NewPtrTy});
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(M, IID, {RetTy, NewPtrTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
@@ -400,16 +401,16 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_scatter: {
     Type *ValueTy = II->getOperand(0)->getType();
     Type *NewPtrTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {ValueTy, NewPtrTy});
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {ValueTy, NewPtrTy});
     II->setArgOperand(1, NewV);
     II->setCalledFunction(NewDecl);
     return true;
   }
   case Intrinsic::prefetch:
   case Intrinsic::is_constant: {
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {NewV->getType()});
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {NewV->getType()});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;

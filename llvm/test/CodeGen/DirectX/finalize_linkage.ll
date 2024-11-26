@@ -6,7 +6,7 @@ target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 ; DXILFinalizeLinkage changes linkage of all functions that are not
 ; entry points or exported function to internal.
 
-; CHECK: define internal void @"?f1@@YAXXZ"()
+; CHECK-NOT: define internal void @"?f1@@YAXXZ"()
 define void @"?f1@@YAXXZ"() #0 {
 entry:
   ret void

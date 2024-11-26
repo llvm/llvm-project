@@ -128,8 +128,10 @@ public:
   }
 
   bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
+  bool supportsCpuIs() const override { return getTriple().isOSLinux(); }
   bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
   bool validateCpuSupports(StringRef Feature) const override;
+  bool validateCpuIs(StringRef CPUName) const override;
   bool isValidFeatureName(StringRef Name) const override;
 
   bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
@@ -139,6 +141,13 @@ public:
     // Always generate Zicfilp lpad insns
     // Non-zicfilp CPUs would read them as NOP
     return true;
+  }
+
+  bool
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
+    if (ISAInfo->hasExtension("zicfiss"))
+      return true;
+    return TargetInfo::checkCFProtectionReturnSupported(Diags);
   }
 
   CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const override {

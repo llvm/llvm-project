@@ -297,3 +297,25 @@ void __trans_tmp_1() {
 }
 
 }
+
+namespace GH47400 {
+
+struct Foo {};
+
+template <int, Foo> struct Arr {};
+
+template <int> struct S {};
+
+constexpr void foo() {
+  constexpr Foo f;
+  [&]<int is>() {
+    [&](Arr<is, f>) {}({}); // f constitutes an ODR-use
+  }.template operator()<42>();
+
+  constexpr int C = 1;
+  [] {
+    [](S<C>) { }({}); // ... while C doesn't
+  }();
+}
+
+} // namespace GH47400

@@ -342,7 +342,13 @@ static Value *copyFlags(const CallInst &Old, Value *New) {
 static Value *mergeAttributesAndFlags(CallInst *NewCI, const CallInst &Old) {
   NewCI->setAttributes(AttributeList::get(
       NewCI->getContext(), {NewCI->getAttributes(), Old.getAttributes()}));
-  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(NewCI->getType()));
+  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewCI->getType(), NewCI->getRetAttributes()));
+  for (unsigned I = 0; I < NewCI->arg_size(); ++I)
+    NewCI->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(NewCI->getArgOperand(I)->getType(),
+                                            NewCI->getParamAttributes(I)));
+
   return copyFlags(Old, NewCI);
 }
 
@@ -1407,8 +1413,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
   }
 
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+  bool OptForSize = llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
                                                 PGSOQueryType::IRPass);
 
   // If the char is variable but the input str and length are not we can turn
@@ -1958,10 +1963,9 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   // g((double) float) -> (double) gf(float)
   Value *R;
   if (IsIntrinsic) {
-    Module *M = CI->getModule();
     Intrinsic::ID IID = CalleeFn->getIntrinsicID();
-    Function *Fn = Intrinsic::getDeclaration(M, IID, B.getFloatTy());
-    R = isBinary ? B.CreateCall(Fn, V) : B.CreateCall(Fn, V[0]);
+    R = isBinary ? B.CreateIntrinsic(IID, B.getFloatTy(), V)
+                 : B.CreateIntrinsic(IID, B.getFloatTy(), V[0]);
   } else {
     AttributeList CalleeAttrs = CalleeFn->getAttributes();
     R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
@@ -3477,10 +3481,8 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 
-    bool OptForSize = CI->getFunction()->hasOptSize() ||
-                      llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
-                                                  PGSOQueryType::IRPass);
-    if (OptForSize)
+    if (llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                    PGSOQueryType::IRPass))
       return nullptr;
 
     Value *Len = emitStrLen(CI->getArgOperand(2), B, DL, TLI);
@@ -3790,10 +3792,8 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
 
   // Don't rewrite fputs to fwrite when optimising for size because fwrite
   // requires more arguments and thus extra MOVs are required.
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                  PGSOQueryType::IRPass))
     return nullptr;
 
   // We can't optimize if return value is used.

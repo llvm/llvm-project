@@ -22,10 +22,13 @@ Using Clang as a Compiler
    ClangCommandLineReference
    AttributeReference
    DiagnosticsReference
+   WarningSuppressionMappings
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   SafeBuffers
    DataFlowAnalysisIntro
+   FunctionEffectAnalysis
    AddressSanitizer
    ThreadSanitizer
    MemorySanitizer
@@ -91,12 +94,12 @@ Using Clang Tools
    ClangCheck
    ClangFormat
    ClangFormatStyleOptions
-   ClangFormattedStatus
    ClangLinkerWrapper
    ClangNVLinkWrapper
    ClangOffloadBundler
    ClangOffloadPackager
    ClangRepl
+   ClangSYCLLinker
 
 Design Documents
 ================

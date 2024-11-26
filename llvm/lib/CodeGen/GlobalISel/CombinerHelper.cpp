@@ -178,7 +178,7 @@ void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
   if (MRI.constrainRegAttrs(ToReg, FromReg))
     MRI.replaceRegWith(FromReg, ToReg);
   else
-    Builder.buildCopy(ToReg, FromReg);
+    Builder.buildCopy(FromReg, ToReg);
 
   Observer.finishedChangingAllUsesOfReg();
 }
@@ -229,8 +229,8 @@ bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
 void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, SrcReg);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
@@ -379,8 +379,8 @@ void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
     Builder.buildUndef(NewDstReg);
   else
     Builder.buildBuildVector(NewDstReg, Ops);
-  MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
@@ -445,7 +445,13 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
 
 void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
                                                SmallVector<Register> &Ops) {
-  LLT SrcTy = MRI.getType(Ops[0]);
+  LLT SrcTy;
+  for (Register &Reg : Ops) {
+    if (Reg != 0)
+      SrcTy = MRI.getType(Reg);
+  }
+  assert(SrcTy.isValid() && "Unexpected full undef vector in concat combine");
+
   Register UndefReg = 0;
 
   for (Register &Reg : Ops) {
@@ -559,8 +565,8 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
   else
     Builder.buildMergeLikeInstr(NewDstReg, Ops);
 
-  MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchShuffleToExtract(MachineInstr &MI) {
@@ -1049,7 +1055,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
 
   Register SrcReg = MI.getOperand(1).getReg();
   auto *LoadDef = getOpcodeDef<GLoad>(SrcReg, MRI);
-  if (!LoadDef || !MRI.hasOneNonDBGUse(DstReg))
+  if (!LoadDef || !MRI.hasOneNonDBGUse(SrcReg))
     return false;
 
   uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
@@ -1110,6 +1116,9 @@ void CombinerHelper::applySextInRegOfLoad(
   Builder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, MI.getOperand(0).getReg(),
                          LoadDef->getPointerReg(), *NewMMO);
   MI.eraseFromParent();
+
+  // Not all loads can be deleted, so make sure the old one is removed.
+  LoadDef->eraseFromParent();
 }
 
 /// Return true if 'MI' is a load or a store that may be fold it's address
@@ -2041,6 +2050,31 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
+bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) {
+  GSub &Sub = cast<GSub>(MI);
+
+  LLT Ty = MRI.getType(Sub.getReg(0));
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {Ty}}))
+    return false;
+
+  if (!isConstantLegalOrBeforeLegalizer(Ty))
+    return false;
+
+  APInt Imm = getIConstantFromReg(Sub.getRHSReg(), MRI);
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    auto NegCst = B.buildConstant(Ty, -Imm);
+    Observer.changingInstr(MI);
+    MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
+    MI.getOperand(2).setReg(NegCst.getReg(0));
+    MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+    Observer.changedInstr(MI);
+  };
+  return true;
+}
+
 // shl ([sza]ext x), y => zext (shl x, y), if shift does not overflow source
 bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
                                              RegisterImmPair &MatchData) {
@@ -2825,8 +2859,8 @@ void CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
   Register OldReg = MI.getOperand(0).getReg();
   Register Replacement = MI.getOperand(OpIdx).getReg();
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
-  MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
+  MI.eraseFromParent();
 }
 
 void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
@@ -2834,8 +2868,8 @@ void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
   Register OldReg = MI.getOperand(0).getReg();
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
-  MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchConstantLargerBitWidth(MachineInstr &MI,
@@ -4408,40 +4442,7 @@ bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
 
   if (!KnownVal) {
     auto KnownLHS = KB->getKnownBits(MI.getOperand(2).getReg());
-    switch (Pred) {
-    default:
-      llvm_unreachable("Unexpected G_ICMP predicate?");
-    case CmpInst::ICMP_EQ:
-      KnownVal = KnownBits::eq(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_NE:
-      KnownVal = KnownBits::ne(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_SGE:
-      KnownVal = KnownBits::sge(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_SGT:
-      KnownVal = KnownBits::sgt(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_SLE:
-      KnownVal = KnownBits::sle(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_SLT:
-      KnownVal = KnownBits::slt(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_UGE:
-      KnownVal = KnownBits::uge(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_UGT:
-      KnownVal = KnownBits::ugt(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_ULE:
-      KnownVal = KnownBits::ule(KnownLHS, KnownRHS);
-      break;
-    case CmpInst::ICMP_ULT:
-      KnownVal = KnownBits::ult(KnownLHS, KnownRHS);
-      break;
-    }
+    KnownVal = ICmpInst::compare(KnownLHS, KnownRHS, Pred);
   }
 
   if (!KnownVal)
@@ -7610,4 +7611,257 @@ bool CombinerHelper::matchFoldAMinusC1PlusC2(const MachineInstr &MI,
   };
 
   return true;
+}
+
+bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
+                                                         BuildFnTy &MatchInfo) {
+  const GUnmerge *Unmerge = cast<GUnmerge>(&MI);
+
+  if (!MRI.hasOneNonDBGUse(Unmerge->getSourceReg()))
+    return false;
+
+  const MachineInstr *Source = MRI.getVRegDef(Unmerge->getSourceReg());
+
+  LLT DstTy = MRI.getType(Unmerge->getReg(0));
+
+  // $bv:_(<8 x s8>) = G_BUILD_VECTOR ....
+  // $any:_(<8 x s16>) = G_ANYEXT $bv
+  // $uv:_(<4 x s16>), $uv1:_(<4 x s16>) = G_UNMERGE_VALUES $any
+  //
+  // ->
+  //
+  // $any:_(s16) = G_ANYEXT $bv[0]
+  // $any1:_(s16) = G_ANYEXT $bv[1]
+  // $any2:_(s16) = G_ANYEXT $bv[2]
+  // $any3:_(s16) = G_ANYEXT $bv[3]
+  // $any4:_(s16) = G_ANYEXT $bv[4]
+  // $any5:_(s16) = G_ANYEXT $bv[5]
+  // $any6:_(s16) = G_ANYEXT $bv[6]
+  // $any7:_(s16) = G_ANYEXT $bv[7]
+  // $uv:_(<4 x s16>) = G_BUILD_VECTOR $any, $any1, $any2, $any3
+  // $uv1:_(<4 x s16>) = G_BUILD_VECTOR $any4, $any5, $any6, $any7
+
+  // We want to unmerge into vectors.
+  if (!DstTy.isFixedVector())
+    return false;
+
+  const GAnyExt *Any = dyn_cast<GAnyExt>(Source);
+  if (!Any)
+    return false;
+
+  const MachineInstr *NextSource = MRI.getVRegDef(Any->getSrcReg());
+
+  if (const GBuildVector *BV = dyn_cast<GBuildVector>(NextSource)) {
+    // G_UNMERGE_VALUES G_ANYEXT G_BUILD_VECTOR
+
+    if (!MRI.hasOneNonDBGUse(BV->getReg(0)))
+      return false;
+
+    // FIXME: check element types?
+    if (BV->getNumSources() % Unmerge->getNumDefs() != 0)
+      return false;
+
+    LLT BigBvTy = MRI.getType(BV->getReg(0));
+    LLT SmallBvTy = DstTy;
+    LLT SmallBvElemenTy = SmallBvTy.getElementType();
+
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_BUILD_VECTOR, {SmallBvTy, SmallBvElemenTy}}))
+      return false;
+
+    // We check the legality of scalar anyext.
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_ANYEXT,
+             {SmallBvElemenTy, BigBvTy.getElementType()}}))
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      // Build into each G_UNMERGE_VALUES def
+      // a small build vector with anyext from the source build vector.
+      for (unsigned I = 0; I < Unmerge->getNumDefs(); ++I) {
+        SmallVector<Register> Ops;
+        for (unsigned J = 0; J < SmallBvTy.getNumElements(); ++J) {
+          Register SourceArray =
+              BV->getSourceReg(I * SmallBvTy.getNumElements() + J);
+          auto AnyExt = B.buildAnyExt(SmallBvElemenTy, SourceArray);
+          Ops.push_back(AnyExt.getReg(0));
+        }
+        B.buildBuildVector(Unmerge->getOperand(I).getReg(), Ops);
+      };
+    };
+    return true;
+  };
+
+  return false;
+}
+
+bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) {
+
+  bool Changed = false;
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  ArrayRef<int> OrigMask = Shuffle.getMask();
+  SmallVector<int, 16> NewMask;
+  const LLT SrcTy = MRI.getType(Shuffle.getSrc1Reg());
+  const unsigned NumSrcElems = SrcTy.isVector() ? SrcTy.getNumElements() : 1;
+  const unsigned NumDstElts = OrigMask.size();
+  for (unsigned i = 0; i != NumDstElts; ++i) {
+    int Idx = OrigMask[i];
+    if (Idx >= (int)NumSrcElems) {
+      Idx = -1;
+      Changed = true;
+    }
+    NewMask.push_back(Idx);
+  }
+
+  if (!Changed)
+    return false;
+
+  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+    B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
+                         NewMask);
+  };
+
+  return true;
+}
+
+static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
+  const unsigned MaskSize = Mask.size();
+  for (unsigned I = 0; I < MaskSize; ++I) {
+    int Idx = Mask[I];
+    if (Idx < 0)
+      continue;
+
+    if (Idx < (int)NumElems)
+      Mask[I] = Idx + NumElems;
+    else
+      Mask[I] = Idx - NumElems;
+  }
+}
+
+bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) {
+
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  // If any of the two inputs is already undef, don't check the mask again to
+  // prevent infinite loop
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc1Reg(), MRI))
+    return false;
+
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc2Reg(), MRI))
+    return false;
+
+  const LLT DstTy = MRI.getType(Shuffle.getReg(0));
+  const LLT Src1Ty = MRI.getType(Shuffle.getSrc1Reg());
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_SHUFFLE_VECTOR, {DstTy, Src1Ty}}))
+    return false;
+
+  ArrayRef<int> Mask = Shuffle.getMask();
+  const unsigned NumSrcElems = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
+
+  bool TouchesSrc1 = false;
+  bool TouchesSrc2 = false;
+  const unsigned NumElems = Mask.size();
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    if (Mask[Idx] < 0)
+      continue;
+
+    if (Mask[Idx] < (int)NumSrcElems)
+      TouchesSrc1 = true;
+    else
+      TouchesSrc2 = true;
+  }
+
+  if (TouchesSrc1 == TouchesSrc2)
+    return false;
+
+  Register NewSrc1 = Shuffle.getSrc1Reg();
+  SmallVector<int, 16> NewMask(Mask);
+  if (TouchesSrc2) {
+    NewSrc1 = Shuffle.getSrc2Reg();
+    commuteMask(NewMask, NumSrcElems);
+  }
+
+  MatchInfo = [=, &Shuffle](MachineIRBuilder &B) {
+    auto Undef = B.buildUndef(Src1Ty);
+    B.buildShuffleVector(Shuffle.getReg(0), NewSrc1, Undef, NewMask);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) {
+  const GSubCarryOut *Subo = cast<GSubCarryOut>(&MI);
+
+  Register Dst = Subo->getReg(0);
+  Register LHS = Subo->getLHSReg();
+  Register RHS = Subo->getRHSReg();
+  Register Carry = Subo->getCarryOutReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT CarryTy = MRI.getType(Carry);
+
+  // Check legality before known bits.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy}}) ||
+      !isConstantLegalOrBeforeLegalizer(CarryTy))
+    return false;
+
+  ConstantRange KBLHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(LHS),
+                                   /* IsSigned=*/Subo->isSigned());
+  ConstantRange KBRHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(RHS),
+                                   /* IsSigned=*/Subo->isSigned());
+
+  if (Subo->isSigned()) {
+    // G_SSUBO
+    switch (KBLHS.signedSubMayOverflow(KBRHS)) {
+    case ConstantRange::OverflowResult::MayOverflow:
+      return false;
+    case ConstantRange::OverflowResult::NeverOverflows: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoSWrap);
+        B.buildConstant(Carry, 0);
+      };
+      return true;
+    }
+    case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+    case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS);
+        B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                              /*isVector=*/CarryTy.isVector(),
+                                              /*isFP=*/false));
+      };
+      return true;
+    }
+    }
+    return false;
+  }
+
+  // G_USUBO
+  switch (KBLHS.unsignedSubMayOverflow(KBRHS)) {
+  case ConstantRange::OverflowResult::MayOverflow:
+    return false;
+  case ConstantRange::OverflowResult::NeverOverflows: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoUWrap);
+      B.buildConstant(Carry, 0);
+    };
+    return true;
+  }
+  case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+  case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS);
+      B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                            /*isVector=*/CarryTy.isVector(),
+                                            /*isFP=*/false));
+    };
+    return true;
+  }
+  }
+
+  return false;
 }

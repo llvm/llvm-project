@@ -6,7 +6,13 @@ Introduction
 ============
 
 This document contains information about adding a build configuration and
-buildbot-worker to private worker builder to LLVM Buildbot Infrastructure.
+buildbot worker to the LLVM Buildbot Infrastructure.
+
+.. note:: The term "buildmaster" is used in this document to refer to the
+  server that manages which builds are run and where. Though we would not
+  normally choose to use "master" terminology, it is used in this document
+  because it is the term that the Buildbot package currently
+  `uses <https://github.com/buildbot/buildbot/issues/5382>`_.
 
 Buildmasters
 ============
@@ -179,6 +185,88 @@ Here are the steps you can follow to do so:
    buildbot.tac file to change the port number from 9994 to 9990 and start it
    again.
 
+Testing a Builder Config Locally
+================================
+
+It is possible to test a builder running against a local version of LLVM's
+buildmaster setup. This allows you to test changes to builder, worker, and
+buildmaster configuration. A buildmaster launched in this "local testing" mode
+will:
+
+* Bind only to local interfaces.
+* Use SQLite as the database.
+* Use a single fixed password for workers.
+* Disable extras like GitHub authentication.
+
+In order to use this "local testing" mode:
+
+* Within a checkout of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_,
+  create and activate a Python `venv
+  <https://docs.python.org/3/library/venv.html>`_ and install the necessary
+  dependencies.
+
+    .. code-block:: bash
+
+       python -m venv bbenv
+       source bbenv/bin/activate
+       pip install buildbot{,-console-view,-grid-view,-waterfall-view,-worker,-www}==3.11.7 urllib3
+
+* Initialise the necessary buildmaster files, link to the configuration in
+  ``llvm-zorg`` and ask ``buildbot`` to check the configuration. This step can
+  be run from any directory.
+
+    .. code-block:: bash
+
+       buildbot create-master llvm-testbbmaster
+       cd llvm-testbbmaster
+       ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/master.cfg .
+       ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/config/ .
+       ln -s /path/to/checkout/of/llvm-zorg/zorg/ .
+       BUILDBOT_TEST=1 buildbot checkconfig
+
+* Start the buildmaster.
+
+    .. code-block:: bash
+
+       BUILDBOT_TEST=1 buildbot start --nodaemon .
+
+* After waiting a few seconds for startup to complete, you should be able to
+  open the web UI at ``http://localhost:8011``.  If there are any errors or
+  this isn't working, check ``twistd.log`` (within the current directory) for
+  more information.
+
+* You can now create and start a buildbot worker. Ensure you pick the correct
+  name for the worker associated with the build configuration you want to test
+  in ``buildbot/osuosl/master/config/builders.py``.
+
+    .. code-block:: bash
+
+       buildbot-worker create-worker <buildbot-worker-root-directory> \
+                       localhost:9990 \
+                       <buildbot-worker-name> \
+                       test
+       buildbot-worker start --nodaemon <buildbot-worker-root-directory>
+
+* Either wait until the poller sets off a build, or alternatively force a
+  build to start in the web UI.
+
+* Review the progress and results of the build in the web UI.
+
+This local testing configuration defaults to binding only to the loopback
+interface for security reasons.
+
+If you want to run the test worker on a different machine, or to run the
+buildmaster on a remote server, ssh port forwarding can be used to make
+connection possible. For instance, if running the buildmaster on a remote
+server the following command will suffice to make the web UI accessible via
+``http://localhost:8011`` and make it possible for a local worker to connect
+to the remote buildmaster by connecting to ``localhost:9900``:
+
+    .. code-block:: bash
+
+       ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@buildmaster_server_address
+
+
 Best Practices for Configuring a Fast Builder
 =============================================
 
@@ -276,4 +364,33 @@ Leave it on the staging buildmaster
   impacting the broader community.  The sponsoring organization simply
   has to take on the responsibility of all bisection and triage.
 
-  
+Managing a Worker From The Web Interface
+========================================
+
+Tasks such as clearing pending building requests can be done using
+the Buildbot web interface. To do this you must be recognised as an admin
+of the worker:
+
+* Set your public GitHub profile email to one that was included in the
+  ``admin`` information you set up on the worker. It does not matter if this
+  is your primary account email or a "verified email". To confirm this has been
+  done correctly, go to ``github.com/<your GitHub username>`` and you should
+  see the email address listed there.
+
+  A worker can have many admins, if they are listed in the form
+  ``First Last <first.last@example.com>, First2 Last2 <first2.last2@example.com>``.
+  You only need to have one of those addresses in your profile to be recognised
+  as an admin.
+
+  If you need to add an email address, you can edit the ``admin`` file and
+  restart the worker. You should see the new admin details in the web interface
+  shortly afterwards.
+
+* Connect GitHub to Buildbot by clicking on the "Anonymous" button on the
+  top right of the page, then "Login with GitHub" and authorise the app.
+
+Some tasks don't give immediate feedback, so if nothing happens within a short
+time, try again with the browser's web console open. Sometimes you will see
+403 errors and other messages that might indicate you don't have the correct
+details set up.
+

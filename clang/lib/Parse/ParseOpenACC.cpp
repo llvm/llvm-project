@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/OpenACCClause.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenACCKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -571,6 +571,9 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::Loop:
     return true;
   }
@@ -582,6 +585,9 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::KernelsLoop:
     // Mark this as a BreakScope/ContinueScope as well as a compute construct
     // so that we can diagnose trying to 'break'/'continue' inside of one.
     return Scope::BreakScope | Scope::ContinueScope |
@@ -797,23 +803,26 @@ bool Parser::ParseOpenACCSizeExprList(
 /// [num:]int-expr
 /// dim:int-expr
 /// static:size-expr
-bool Parser::ParseOpenACCGangArg(SourceLocation GangLoc) {
+Parser::OpenACCGangArgRes Parser::ParseOpenACCGangArg(SourceLocation GangLoc) {
 
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Static, getCurToken()) &&
       NextToken().is(tok::colon)) {
     // 'static' just takes a size-expr, which is an int-expr or an asterisk.
     ConsumeToken();
     ConsumeToken();
-    return ParseOpenACCSizeExpr(OpenACCClauseKind::Gang).isInvalid();
+    ExprResult Res = ParseOpenACCSizeExpr(OpenACCClauseKind::Gang);
+    return {OpenACCGangKind::Static, Res};
   }
 
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Dim, getCurToken()) &&
       NextToken().is(tok::colon)) {
     ConsumeToken();
     ConsumeToken();
-    return ParseOpenACCIntExpr(OpenACCDirectiveKind::Invalid,
-                               OpenACCClauseKind::Gang, GangLoc)
-        .first.isInvalid();
+    // Parse this as a const-expression, and we'll check its integer-ness/value
+    // in CheckGangExpr.
+    ExprResult Res =
+        getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
+    return {OpenACCGangKind::Dim, Res};
   }
 
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Num, getCurToken()) &&
@@ -822,27 +831,40 @@ bool Parser::ParseOpenACCGangArg(SourceLocation GangLoc) {
     ConsumeToken();
     // Fallthrough to the 'int-expr' handling for when 'num' is omitted.
   }
+
   // This is just the 'num' case where 'num' is optional.
-  return ParseOpenACCIntExpr(OpenACCDirectiveKind::Invalid,
-                             OpenACCClauseKind::Gang, GangLoc)
-      .first.isInvalid();
+  ExprResult Res = ParseOpenACCIntExpr(OpenACCDirectiveKind::Invalid,
+                                       OpenACCClauseKind::Gang, GangLoc)
+                       .first;
+  return {OpenACCGangKind::Num, Res};
 }
 
-bool Parser::ParseOpenACCGangArgList(SourceLocation GangLoc) {
-  if (ParseOpenACCGangArg(GangLoc)) {
+bool Parser::ParseOpenACCGangArgList(
+    SourceLocation GangLoc, llvm::SmallVectorImpl<OpenACCGangKind> &GKs,
+    llvm::SmallVectorImpl<Expr *> &IntExprs) {
+
+  Parser::OpenACCGangArgRes Res = ParseOpenACCGangArg(GangLoc);
+  if (!Res.second.isUsable()) {
     SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
               Parser::StopBeforeMatch);
-    return false;
+    return true;
   }
+
+  GKs.push_back(Res.first);
+  IntExprs.push_back(Res.second.get());
 
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     ExpectAndConsume(tok::comma);
 
-    if (ParseOpenACCGangArg(GangLoc)) {
+    Res = ParseOpenACCGangArg(GangLoc);
+    if (!Res.second.isUsable()) {
       SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
                 Parser::StopBeforeMatch);
-      return false;
+      return true;
     }
+
+    GKs.push_back(Res.first);
+    IntExprs.push_back(Res.second.get());
   }
   return false;
 }
@@ -1114,6 +1136,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
           Parens.skipToEnd();
           return OpenACCCanContinue();
         }
+        ParsedClause.setIntExprDetails(IntExpr.get());
         break;
       }
       case OpenACCClauseKind::Async: {
@@ -1129,12 +1152,16 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         }
         break;
       }
-      case OpenACCClauseKind::Gang:
-        if (ParseOpenACCGangArgList(ClauseLoc)) {
+      case OpenACCClauseKind::Gang: {
+        llvm::SmallVector<OpenACCGangKind> GKs;
+        llvm::SmallVector<Expr *> IntExprs;
+        if (ParseOpenACCGangArgList(ClauseLoc, GKs, IntExprs)) {
           Parens.skipToEnd();
           return OpenACCCanContinue();
         }
+        ParsedClause.setGangDetails(std::move(GKs), std::move(IntExprs));
         break;
+      }
       case OpenACCClauseKind::Wait: {
         OpenACCWaitParseInfo Info =
             ParseOpenACCWaitArgument(ClauseLoc,
@@ -1477,14 +1504,15 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     return StmtError();
 
   StmtResult AssocStmt;
-  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
-      getActions().OpenACC(), DirInfo.DirKind, {}, DirInfo.Clauses);
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getActions().OpenACC(),
+                                                DirInfo.DirKind, DirInfo.DirLoc,
+                                                {}, DirInfo.Clauses);
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
 
     AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
-        DirInfo.StartLoc, DirInfo.DirKind, ParseStatement());
+        DirInfo.StartLoc, DirInfo.DirKind, DirInfo.Clauses, ParseStatement());
   }
 
   return getActions().OpenACC().ActOnEndStmtDirective(

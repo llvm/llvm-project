@@ -1,4 +1,7 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
+; Test for MIR printing of reference types in other address spaces. This should
+; not error out.
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types -print-after=finalize-isel | FileCheck %s
 
 %externref = type ptr addrspace(10) ;; addrspace 10 is nonintegral
 

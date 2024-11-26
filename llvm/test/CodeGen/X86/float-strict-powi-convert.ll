@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s -check-prefix=WIN
 ; RUN: llc -mtriple=x86_64-pc-linux %s -o -| FileCheck %s -check-prefix=UNIX
 
-declare float @llvm.experimental.constrained.powi.f32.i32(float, i32, metadata, metadata)
+declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, metadata)
 
 define float @powi_f64(float %a, i32 %b) nounwind strictfp {
 ; WIN-LABEL: powi_f64:
@@ -19,6 +19,6 @@ define float @powi_f64(float %a, i32 %b) nounwind strictfp {
 ; UNIX-NEXT:    callq __powisf2@PLT
 ; UNIX-NEXT:    popq %rax
 ; UNIX-NEXT:    retq
-  %1 = call float @llvm.experimental.constrained.powi.f32.i32(float %a, i32 %b, metadata !"round.tonearest", metadata !"fpexcept.ignore") strictfp
+  %1 = call float @llvm.experimental.constrained.powi.f32(float %a, i32 %b, metadata !"round.tonearest", metadata !"fpexcept.ignore") strictfp
   ret float %1
 }

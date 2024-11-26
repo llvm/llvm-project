@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 
@@ -16,6 +22,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 template <typename T> struct StrToNumResult {
   T value;
   int error;

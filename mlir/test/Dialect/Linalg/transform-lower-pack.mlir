@@ -586,7 +586,7 @@ module attributes {transform.with_named_sequence} {
 
 // Check that we can lower unpack "as unpad" with dynamic dims.
 // CHECK-LABEL: func.func @unpack_as_pad_dynamic(
-// CHECK-SAME: %[[ARG0:.*]]: tensor<1x1x1x1x?x?x?x?xf32>, %[[ARG1:.*]]: tensor<?x?x?x?xf32>
+// CHECK-SAME: %[[ARG0:.*]]: tensor<1x1x1x1x136x64x16x16xf32>, %[[ARG1:.*]]: tensor<?x?x?x?xf32>
 //      CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
 //      CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //      CHECK-DAG:  %[[C2:.*]] = arith.constant 2 : index
@@ -602,10 +602,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:   [1, 1, 1, 1, %[[DIM0]], %[[DIM1]], %[[DIM2]], %[[DIM3]]]
 // strides multiplers.
 // CHECK-SAME:   [1, 1, 1, 1, 1, 1, 1, 1]
-// CHECK-SAME:   : tensor<1x1x1x1x?x?x?x?xf32> to tensor<?x?x?x?xf32>
-func.func @unpack_as_pad_dynamic(%arg0: tensor<1x1x1x1x?x?x?x?xf32>, %arg1: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+// CHECK-SAME:   :  tensor<1x1x1x1x136x64x16x16xf32> to tensor<?x?x?x?xf32>
+func.func @unpack_as_pad_dynamic(%arg0: tensor<1x1x1x1x136x64x16x16xf32>, %arg1: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %pack = tensor.unpack %arg0 inner_dims_pos = [0, 1, 2, 3] inner_tiles = [136, 64, 16, 16] into %arg1
-    : tensor<1x1x1x1x?x?x?x?xf32> -> tensor<?x?x?x?xf32>
+    : tensor<1x1x1x1x136x64x16x16xf32> -> tensor<?x?x?x?xf32>
   return %pack : tensor<?x?x?x?xf32>
 }
 

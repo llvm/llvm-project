@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 
@@ -54,14 +55,14 @@ static std::string computeDataLayout(const Triple &TT) {
   // memory model used for graphics: PhysicalStorageBuffer64. But it shouldn't
   // mean anything.
   if (Arch == Triple::spirv32)
-    return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
-           "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1";
+    return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+           "v256:256-v512:512-v1024:1024-n8:16:32:64-G1";
   if (TT.getVendor() == Triple::VendorType::AMD &&
       TT.getOS() == Triple::OSType::AMDHSA)
-    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-           "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0";
-  return "e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-         "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1";
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+           "v512:512-v1024:1024-n32:64-S32-G1-P4-A0";
+  return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+         "v512:512-v1024:1024-n8:16:32:64-G1";
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -79,9 +80,9 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
@@ -101,6 +102,7 @@ public:
   SPIRVTargetMachine &getSPIRVTargetMachine() const {
     return getTM<SPIRVTargetMachine>();
   }
+  void addMachineSSAOptimization() override;
   void addIRPasses() override;
   void addISelPrepare() override;
 
@@ -126,6 +128,16 @@ private:
 // the entire pipeline, so return nullptr to disable register allocation.
 FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
+}
+
+// Disable passes that may break CFG.
+void SPIRVPassConfig::addMachineSSAOptimization() {
+  // Some standard passes that optimize machine instructions in SSA form uses
+  // MI.isPHI() that doesn't account for OpPhi in SPIR-V and so are able to
+  // break the CFG (e.g., MachineSink).
+  disablePass(&MachineSinkingID);
+
+  TargetPassConfig::addMachineSSAOptimization();
 }
 
 // Disable passes that break from assuming no virtual registers exist.
@@ -169,13 +181,21 @@ void SPIRVPassConfig::addIRPasses() {
     //  - loops have a single back-edge.
     addPass(createLoopSimplifyPass());
 
-    // 2. Merge the convergence region exit nodes into one. After this step,
+    // 2. Removes registers whose lifetime spans across basic blocks. Also
+    // removes phi nodes. This will greatly simplify the next steps.
+    addPass(createRegToMemWrapperPass());
+
+    // 3. Merge the convergence region exit nodes into one. After this step,
     // regions are single-entry, single-exit. This will help determine the
     // correct merge block.
     addPass(createSPIRVMergeRegionExitTargetsPass());
 
-    // 3. Structurize.
+    // 4. Structurize.
     addPass(createSPIRVStructurizerPass());
+
+    // 5. Reduce the amount of variables required by pushing some operations
+    // back to virtual registers.
+    addPass(createPromoteMemoryToRegisterPass());
   }
 
   addPass(createSPIRVRegularizerPass());
