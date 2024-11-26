@@ -1311,7 +1311,10 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
 
   if (EnableMaxIlpSchedStrategy)
     return createGCNMaxILPMachineScheduler(C);
-  if (EnableMaxMemoryClauseSchedStrategy)
+
+  if (EnableMaxMemoryClauseSchedStrategy ||
+      C->MF->getFunction().hasFnAttribute(
+          "amdgpu-enable-max-memory-clause-scheduling-strategy"))
     return createGCNMaxMemoryClauseMachineScheduler(C);
 
   return createGCNMaxOccupancyMachineScheduler(C);
