@@ -28,13 +28,17 @@ invoke.cont:
 lpad:
   ; CHECK:      store volatile i32 -1
   ; CHECK-NEXT: resume
-  %lp = landingpad { ptr, i32 } cleanup
+  %lp = landingpad { ptr, i32 } catch ptr @type_info
   resume { ptr, i32 } %lp
 
 try.cont:
+  ; CHECK:      store volatile i32 -1
+  ; CHECK-NEXT: call void @may_throw
   call void @may_throw()
   ret void
 }
+
+@type_info = external constant ptr
 
 declare void @may_throw()
 declare i32 @__gxx_personality_sj0(...)
