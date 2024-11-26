@@ -498,36 +498,6 @@ getPushOrLibCallsSavedInfo(const MachineFunction &MF,
   return PushOrLibCallsCSI;
 }
 
-void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
-                                           MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MBBI,
-                                           const DebugLoc &DL, int64_t Amount,
-                                           MachineInstr::MIFlag Flag) const {
-  assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
-
-  // Optimize compile time offset case
-  StackOffset Offset = StackOffset::getScalable(Amount);
-  if (auto VLEN = STI.getRealVLen()) {
-    // 1. Multiply the number of v-slots by the (constant) length of register
-    const int64_t VLENB = *VLEN / 8;
-    assert(Amount % 8 == 0 &&
-           "Reserve the stack by the multiple of one vector size.");
-    const int64_t NumOfVReg = Amount / 8;
-    const int64_t FixedOffset = NumOfVReg * VLENB;
-    if (!isInt<32>(FixedOffset)) {
-      report_fatal_error(
-        "Frame size outside of the signed 32-bit range not supported");
-    }
-    Offset = StackOffset::getFixed(FixedOffset);
-  }
-
-  const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
-  // We must keep the stack pointer aligned through any intermediate
-  // updates.
-  RI.adjustReg(MBB, MBBI, DL, SPReg, SPReg, Offset,
-               Flag, getStackAlign());
-}
-
 static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
                                            SmallVectorImpl<char> &Expr,
                                            int FixedOffset, int ScalableOffset,
@@ -799,8 +769,12 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (RVVStackSize) {
-    adjustStackForRVV(MF, MBB, MBBI, DL, -RVVStackSize,
-                      MachineInstr::FrameSetup);
+    // We must keep the stack pointer aligned through any intermediate
+    // updates.
+    RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
+                  StackOffset::getScalable(-RVVStackSize),
+                  MachineInstr::FrameSetup, getStackAlign());
+
     if (!hasFP(MF)) {
       // Emit .cfi_def_cfa_expression "sp + StackSize + RVVStackSize * vlenb".
       unsigned CFIIndex = MF.addFrameInst(createDefCFAExpression(
@@ -925,8 +899,9 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     // If RestoreSPFromFP the stack pointer will be restored using the frame
     // pointer value.
     if (!RestoreSPFromFP)
-      adjustStackForRVV(MF, MBB, LastFrameDestroy, DL, RVVStackSize,
-                        MachineInstr::FrameDestroy);
+      RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg,
+                    StackOffset::getScalable(RVVStackSize),
+                    MachineInstr::FrameDestroy, getStackAlign());
 
     if (!hasFP(MF)) {
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
