@@ -13,7 +13,6 @@
 #include "flang/Runtime/execute.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <cstddef>
 #include <cstdlib>
