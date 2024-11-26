@@ -7,9 +7,8 @@
 ; CHECK-DAG: %[[#PtrInt:]] = OpTypePointer Function %[[#Int]]
 ; CHECK: %[[#R1:]] = OpFunctionCall %[[#PtrChar]] %[[#]]
 ; CHECK: %[[#R2:]] = OpFunctionCall %[[#PtrInt]] %[[#]]
-; CHECK: %[[#Casted:]] = OpBitcast %[[#PtrChar]] %[[#R2]]
-; CHECK: OpPhi %[[#PtrChar]] %[[#R1]] %[[#]] %[[#Casted]] %[[#]]
-; CHECK: OpPhi %[[#PtrChar]] %[[#R1]] %[[#]] %[[#Casted]] %[[#]]
+; CHECK-2: %[[#]] = OpBitcast %[[#PtrChar]] %[[#R2]]
+; CHECK-2: OpPhi %[[#PtrChar]] %[[#R1]] %[[#]] %[[#]] %[[#]]
 
 define ptr @foo(i1 %arg) {
 entry:

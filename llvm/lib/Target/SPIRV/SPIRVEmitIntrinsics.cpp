@@ -186,10 +186,10 @@ class SPIRVEmitIntrinsics
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
       Type *&KnownElemTy, bool IsPostprocessing);
 
-  CallInst *buildSpvPtrcast(Value *Op, Type *ElemTy);
+  CallInst *buildSpvPtrcast(Function *F, Value *Op, Type *ElemTy);
   void propagateElemType(Value *Op, Type *ElemTy);
-  void propagateElemTypeRec(Value *Op, Type *PtrElemTy, CallInst *PtrCasted);
-  void propagateElemTypeRec(Value *Op, Type *PtrElemTy, CallInst *PtrCasted,
+  void propagateElemTypeRec(Value *Op, Type *PtrElemTy, Type *CastElemTy);
+  void propagateElemTypeRec(Value *Op, Type *PtrElemTy, Type *CastElemTy,
                             std::unordered_set<Value *> &Visited);
 
   void replaceAllUsesWith(Value *Src, Value *Dest, bool DeleteOld = true);
@@ -426,7 +426,8 @@ void SPIRVEmitIntrinsics::updateAssignType(CallInst *AssignCI, Value *Arg,
   GR->addDeducedElementType(Arg, ElemTy);
 }
 
-CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Value *Op, Type *ElemTy) {
+CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Function *F, Value *Op,
+                                               Type *ElemTy) {
   IRBuilder<> B(Op->getContext());
   if (auto *OpI = dyn_cast<Instruction>(Op)) {
     // spv_ptrcast's argument Op denotes an instruction that generates
@@ -436,7 +437,7 @@ CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Value *Op, Type *ElemTy) {
     B.SetInsertPointPastAllocas(OpA->getParent());
     B.SetCurrentDebugLocation(DebugLoc());
   } else {
-    B.SetInsertPoint(CurrF->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
   }
   Type *OpTy = Op->getType();
   SmallVector<Type *, 2> Types = {OpTy, OpTy};
@@ -449,30 +450,36 @@ CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Value *Op, Type *ElemTy) {
 }
 
 void SPIRVEmitIntrinsics::propagateElemType(Value *Op, Type *ElemTy) {
-  CallInst *PtrCasted = buildSpvPtrcast(Op, ElemTy);
+  // CallInst *PtrCasted = buildSpvPtrcast(Op, ElemTy);
   SmallVector<User *> Users(Op->users());
   for (auto *U : Users) {
+    if (!isa<Instruction>(U))
+      continue;
     if (isa<BitCastInst>(U) || isa<GetElementPtrInst>(U) || isSpvIntrinsic(U))
       continue;
-    U->replaceUsesOfWith(Op, PtrCasted);
+    U->replaceUsesOfWith(
+        Op, buildSpvPtrcast(dyn_cast<Instruction>(U)->getParent()->getParent(),
+                            Op, ElemTy));
   }
 }
 
 void SPIRVEmitIntrinsics::propagateElemTypeRec(Value *Op, Type *PtrElemTy,
-                                               CallInst *PtrCasted) {
+                                               Type *CastElemTy) {
   if (!isNestedPointer(PtrElemTy))
     return;
   std::unordered_set<Value *> Visited;
-  propagateElemTypeRec(Op, PtrElemTy, PtrCasted, Visited);
+  propagateElemTypeRec(Op, PtrElemTy, CastElemTy, Visited);
 }
 
 void SPIRVEmitIntrinsics::propagateElemTypeRec(
-    Value *Op, Type *PtrElemTy, CallInst *PtrCasted,
+    Value *Op, Type *PtrElemTy, Type *CastElemTy,
     std::unordered_set<Value *> &Visited) {
   if (!Visited.insert(Op).second)
     return;
   SmallVector<User *> Users(Op->users());
   for (auto *U : Users) {
+    if (!isa<Instruction>(U))
+      continue;
     if (isa<BitCastInst>(U) || isSpvIntrinsic(U))
       continue;
     if (auto *Ref = dyn_cast<GetElementPtrInst>(U)) {
@@ -490,12 +497,13 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
         updateAssignType(AssignCI, Ref, PoisonValue::get(NewElemTy));
         // recursively propagate change
         if (isNestedPointer(NewElemTy))
-          propagateElemTypeRec(Ref, NewElemTy, buildSpvPtrcast(Ref, PrevElemTy),
-                               Visited);
+          propagateElemTypeRec(Ref, NewElemTy, PrevElemTy, Visited);
       }
       continue;
     }
-    U->replaceUsesOfWith(Op, PtrCasted);
+    U->replaceUsesOfWith(
+        Op, buildSpvPtrcast(dyn_cast<Instruction>(U)->getParent()->getParent(),
+                            Op, CastElemTy));
   }
 }
 
@@ -1088,13 +1096,12 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
         GR->addAssignPtrTypeInstr(Op, CI);
       } else {
         updateAssignType(AssignCI, Op, OpTyVal);
-        propagateElemTypeRec(
-            Op, KnownElemTy,
-            buildSpvPtrcast(Op, GR->findDeducedElementType(Op)));
+        propagateElemTypeRec(Op, KnownElemTy, GR->findDeducedElementType(Op));
       }
     } else {
       eraseTodoType(Op);
-      CallInst *PtrCastI = buildSpvPtrcast(Op, KnownElemTy);
+      CallInst *PtrCastI =
+          buildSpvPtrcast(I->getParent()->getParent(), Op, KnownElemTy);
       if (OpIt.second == std::numeric_limits<unsigned>::max())
         dyn_cast<CallInst>(I)->setCalledOperand(PtrCastI);
       else
@@ -2280,7 +2287,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
             propagateElemType(CI, ElemTy);
           } else {
             updateAssignType(AssignCI, CI, PoisonValue::get(ElemTy));
-            propagateElemTypeRec(CI, ElemTy, buildSpvPtrcast(CI, KnownTy));
+            propagateElemTypeRec(CI, ElemTy, KnownTy);
           }
           eraseTodoType(Op);
           continue;
