@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, process_mrelease, (int pidfd, unsigned int flags)) {
 
   if (ret < 0) {
     libc_errno = static_cast<int>(-ret);
-    return libc_errno;
+    return -1;
   }
 
   return 0;

@@ -1,3 +1,10 @@
+//===-- Unittests for process_mrelease ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 //===-- Unittests for process_mrelease
 //-------------------------------------===//
 //
@@ -68,5 +75,5 @@ TEST(LlvmLibcMProcessMReleaseTest, ErrorNotKilled) {
 
 TEST(LlvmLibcMProcessMReleaseTest, ErrorNonExistingPidfd) {
 
-  ASSERT_EQ(LIBC_NAMESPACE::process_mrelease(12345, 0), EBADF);
+  ASSERT_EQ(LIBC_NAMESPACE::process_mrelease(-1, 0), EBADF);
 }
