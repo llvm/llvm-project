@@ -499,6 +499,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(LLRINT_F);
   }
   llvm_unreachable("Unknown libcall function");
+#undef RTLIBCASE_INT
+#undef RTLIBCASE
 }
 
 /// True if an instruction is in tail position in its caller. Intended for
