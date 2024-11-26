@@ -4621,6 +4621,13 @@ def HLSLNumThreads: InheritableAttr {
   let Documentation = [NumThreadsDocs];
 }
 
+def HLSLSV_GroupID: HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"SV_GroupID">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_GroupIDDocs];
+}
+
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
   let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
