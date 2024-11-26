@@ -535,6 +535,9 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
 
   bool EnableGSLAnalysis = !Callee->getASTContext().getDiagnostics().isIgnored(
       diag::warn_dangling_lifetime_pointer, SourceLocation());
+  bool EnableDanglingCapture =
+      !Callee->getASTContext().getDiagnostics().isIgnored(
+          diag::warn_dangling_reference_captured, SourceLocation());
   Expr *ObjectArg = nullptr;
   if (isa<CXXOperatorCallExpr>(Call) && Callee->isCXXInstanceMember()) {
     ObjectArg = Args[0];
@@ -622,6 +625,14 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       Arg = DAE->getExpr();
     }
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+    else if (const auto *CaptureAttr =
+                 Callee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+             EnableDanglingCapture && CaptureAttr &&
+             isa<CXXConstructorDecl>(Callee) &&
+             llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
+               return ArgIdx == LifetimeCaptureByAttr::THIS;
+             }))
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument

@@ -411,3 +411,22 @@ void use() {
 }
 } // namespace with_span
 } // namespace inferred_capture_by
+
+namespace on_constructor {
+struct T {
+  T(const int& t [[clang::lifetime_capture_by(this)]]);
+};
+struct T2 {
+  T2(const int& t [[clang::lifetime_capture_by(x)]], int& x);
+};
+int foo(const T& t);
+
+void test() {
+  auto x = foo(T(1)); // OK. no diagnosic
+  T(1); // OK. no diagnostic
+  T t(1); // expected-warning {{temporary whose address is used}}
+    
+  int a;
+  T2(1, a); // expected-warning {{object whose reference is captured by}}
+}
+} // namespace on_constructor
