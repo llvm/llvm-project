@@ -180,23 +180,7 @@ gatherProducerConsumerMemrefs(unsigned srcId, unsigned dstId,
                                 producerConsumerMemrefs);
 }
 
-static bool containedWithin(Type loadType, Type storeType) {
-  ShapedType loadShapedType = cast<ShapedType>(loadType);
-  ShapedType storeShapedType = cast<ShapedType>(storeType);
-
-  for (int i = 0; i < loadShapedType.getRank(); ++i) {
-    auto loadDim = loadShapedType.getDimSize(i);
-    auto storeDim = storeShapedType.getDimSize(i);
-
-    if (loadDim > storeDim) {
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool
-verifyLoadStoreDomainContainment(unsigned srcId, unsigned dstId,
+static bool checkLoadStoreShapes(unsigned srcId, unsigned dstId,
                                  DenseSet<Value> &producerConsumerMemrefs,
                                  MemRefDependenceGraph *mdg) {
   SmallVector<Operation *> storeOps;
@@ -211,12 +195,18 @@ verifyLoadStoreDomainContainment(unsigned srcId, unsigned dstId,
 
     for (Operation *storeOp : storeOps) {
       Value storeValue = cast<AffineWriteOpInterface>(storeOp).getValueStore();
+      ShapedType storeShapedType = cast<ShapedType>(storeValue.getType());
 
       for (Operation *loadOp : loadOps) {
         Value loadValue = cast<AffineReadOpInterface>(loadOp).getValue();
+        ShapedType loadShapedType = cast<ShapedType>(loadValue.getType());
 
-        if (!containedWithin(loadValue.getType(), storeValue.getType())) {
-          return false;
+        for (int i = 0; i < loadShapedType.getRank(); ++i) {
+          auto loadDim = loadShapedType.getDimSize(i);
+          auto storeDim = storeShapedType.getDimSize(i);
+
+          if (loadDim > storeDim)
+            return false;
         }
       }
     }
@@ -909,8 +899,8 @@ public:
             }))
           continue;
 
-        if (!verifyLoadStoreDomainContainment(srcId, dstId,
-                                              &producerConsumerMemrefs, mdg)) {
+        if (!checkLoadStoreShapes(srcId, dstId, &producerConsumerMemrefs,
+                                  mdg)) {
           LLVM_DEBUG(llvm::dbgs() << "Can't fuse: load domain not contained "
                                      "within store domain\n");
           continue;
