@@ -6400,7 +6400,7 @@ def err_incorrect_number_of_vector_initializers : Error<
 // Used by C++ which allows bit-fields that are wider than the type.
 def warn_bitfield_width_exceeds_type_width: Warning<
   "width of bit-field %0 (%1 bits) exceeds the width of its type; value will "
-  "be truncated to %2 bit%s2">, InGroup<BitFieldWidth>;
+  "be truncated to %2 bits">, InGroup<BitFieldWidth>;
 def err_bitfield_too_wide : Error<
   "%select{bit-field %1|anonymous bit-field}0 is too wide (%2 bits)">;
 def warn_bitfield_too_small_for_enum : Warning<
