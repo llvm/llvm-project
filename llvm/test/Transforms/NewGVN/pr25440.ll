@@ -10,38 +10,38 @@ target triple = "thumbv7--linux-gnueabi"
 @length = external global [0 x i32], align 4
 
 ; Function Attrs: nounwind
-define fastcc void @foo(ptr nocapture readonly %x, i1 %arg, i1 %arg2) {
+define fastcc void @foo(ptr nocapture readonly %x, i1 %arg, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-LABEL: define fastcc void @foo(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], i1 [[ARG:%.*]], i1 [[ARG2:%.*]]) {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], i1 [[ARG:%.*]], i1 [[ARG2:%.*]], i1 [[ARG3:%.*]], i1 [[ARG4:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB0:%.*]]
 ; CHECK:       bb0:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X]], align 4
+; CHECK-NEXT:    [[X_TR:%.*]] = phi ptr [ [[X]], [[ENTRY:%.*]] ], [ null, [[LAND_LHS_TRUE:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X_TR]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    switch i32 [[CONV]], label [[IF_END_50:%.*]] [
 ; CHECK-NEXT:      i32 43, label [[CLEANUP:%.*]]
 ; CHECK-NEXT:      i32 52, label [[IF_THEN_5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then.5:
-; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_LHS_TRUE:%.*]], label [[IF_THEN_26:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_LHS_TRUE]], label [[IF_THEN_26:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    br i1 true, label [[CLEANUP]], label [[BB0]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[CLEANUP]], label [[BB0]]
 ; CHECK:       if.then.26:
-; CHECK-NEXT:    br i1 false, label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[ARG3]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[MODE:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[X]], i32 0, i32 1
+; CHECK-NEXT:    [[MODE:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[X_TR]], i32 0, i32 1
 ; CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[MODE]], align 2
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    br i1 [[ARG2]], label [[IF_THEN_44:%.*]], label [[CLEANUP]]
+; CHECK-NEXT:    br i1 [[ARG3]], label [[IF_THEN_44:%.*]], label [[CLEANUP]]
 ; CHECK:       if.then.44:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end.50:
 ; CHECK-NEXT:    [[ARRAYIDX52:%.*]] = getelementptr inbounds [0 x i32], ptr @length, i32 0, i32 [[CONV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX52]], align 4
-; CHECK-NEXT:    br i1 false, label [[FOR_BODY_57:%.*]], label [[CLEANUP]]
+; CHECK-NEXT:    br i1 [[ARG4]], label [[FOR_BODY_57:%.*]], label [[CLEANUP]]
 ; CHECK:       for.body.57:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -62,11 +62,11 @@ if.then.5:                                        ; preds = %bb0
   br i1 %arg, label %land.lhs.true, label %if.then.26
 
 land.lhs.true:                                    ; preds = %if.then.5
-  br i1 true, label %cleanup, label %bb0
+  br i1 %arg2, label %cleanup, label %bb0
 
 if.then.26:                                       ; preds = %if.then.5
   %x.tr.lcssa163 = phi ptr [ %x.tr, %if.then.5 ]
-  br i1 %arg, label %cond.end, label %cond.false
+  br i1 %arg3, label %cond.end, label %cond.false
 
 cond.false:                                       ; preds = %if.then.26
   %mode = getelementptr inbounds %struct.a, ptr %x.tr.lcssa163, i32 0, i32 1
@@ -75,7 +75,7 @@ cond.false:                                       ; preds = %if.then.26
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %if.then.26
-  br i1 %arg2, label %if.then.44, label %cleanup
+  br i1 %arg3, label %if.then.44, label %cleanup
 
 if.then.44:                                       ; preds = %cond.end
   unreachable
@@ -84,7 +84,7 @@ if.end.50:                                        ; preds = %bb0
   %conv.lcssa = phi i32 [ %conv, %bb0 ]
   %arrayidx52 = getelementptr inbounds [0 x i32], ptr @length, i32 0, i32 %conv.lcssa
   %1 = load i32, ptr %arrayidx52, align 4
-  br i1 false, label %for.body.57, label %cleanup
+  br i1 %arg4, label %for.body.57, label %cleanup
 
 for.body.57:                                      ; preds = %if.end.50
   %i.2157 = add nsw i32 %1, -1
