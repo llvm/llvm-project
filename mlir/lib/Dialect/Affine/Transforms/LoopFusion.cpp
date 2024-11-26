@@ -180,6 +180,10 @@ gatherProducerConsumerMemrefs(unsigned srcId, unsigned dstId,
                                 producerConsumerMemrefs);
 }
 
+/// Checks the shapes of the loads and stores of each memref in
+/// the producer/consumer chains. If the load shapes are larger
+/// than the stores then we cannot fuse the loops. The loads
+/// would have a dependency on the values stored.
 static bool checkLoadStoreShapes(unsigned srcId, unsigned dstId,
                                  DenseSet<Value> &producerConsumerMemrefs,
                                  MemRefDependenceGraph *mdg) {
@@ -194,7 +198,8 @@ static bool checkLoadStoreShapes(unsigned srcId, unsigned dstId,
     dstNode->getLoadOpsForMemref(memref, &loadOps);
 
     for (Operation *storeOp : storeOps) {
-      Value storeValue = cast<AffineWriteOpInterface>(storeOp).getValueStore();
+      Value storeValue =
+          cast<AffineWriteOpInterface>(storeOp).getValueToStore();
       ShapedType storeShapedType = cast<ShapedType>(storeValue.getType());
 
       for (Operation *loadOp : loadOps) {
