@@ -343,9 +343,8 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
 
 TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
   llvm::SmallString<64> cmd;
-  if (std::error_code ec = llvm::sys::fs::current_path(cmd))
-    FAIL() << "Failed to obtain the current working directory";
-  llvm::sys::path::append(cmd, "bin", "not");
+  llvm::sys::path::native(LLVM_TOOLS_BINARY_DIR, cmd);
+  llvm::sys::path::append(cmd, "not");
   OwningPtr<Descriptor> command{CharDescriptor(cmd.data())};
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
