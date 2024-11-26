@@ -134,10 +134,8 @@ namespace toolchains {
 /// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
 bool isARMBareMetal(const llvm::Triple &Triple) {
   auto arch = Triple.getArch();
-  if (arch != llvm::Triple::arm &&
-      arch != llvm::Triple::thumb &&
-      arch != llvm::Triple::armeb &&
-      arch != llvm::Triple::thumbeb)
+  if (arch != llvm::Triple::arm && arch != llvm::Triple::thumb &&
+      arch != llvm::Triple::armeb && arch != llvm::Triple::thumbeb)
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
