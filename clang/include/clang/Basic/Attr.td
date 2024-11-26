@@ -1926,7 +1926,7 @@ public:
   }
   auto getArgIdents() const { return ArgIdents; }
   auto getArgLocs() const { return ArgLocs; }
-  void setParamIdx(size_t Idx, int Val) { 
+  void setParamIdx(size_t Idx, int Val) {
     assert(Idx < params_Size);
     params_[Idx] = Val;
   }
@@ -4661,7 +4661,7 @@ def HLSLResourceBinding: InheritableAttr {
   let AdditionalMembers = [{
   public:
       enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I };
-  
+
   private:
       RegisterType RegType;
       unsigned SlotNumber;
@@ -4731,7 +4731,7 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [    
+  let Args = [
     EnumArgument<
         "ResourceKind", "llvm::hlsl::ResourceKind",
         /*is_string=*/0,
@@ -4756,7 +4756,7 @@ def HLSLResource : InheritableAttr {
 
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
-  let LangOpts = [HLSL]; 
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
@@ -4781,7 +4781,7 @@ def HLSLContainedType : TypeAttr {
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
-  let LangOpts = [HLSL]; 
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
