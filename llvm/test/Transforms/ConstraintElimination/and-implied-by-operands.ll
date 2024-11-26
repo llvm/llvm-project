@@ -659,7 +659,7 @@ define void @or_tree_second_implies_first_with_unknown_cond(i64 %x, i1 %cond) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X:%.*]], 1
 ; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[CMP1]], i1 [[COND:%.*]], i1 false
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[X]], 2
-; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[OR1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[OR1]], i1 false, i1 false
 ; CHECK-NEXT:    br i1 [[OR2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @side_effect()

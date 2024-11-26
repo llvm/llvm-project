@@ -1536,9 +1536,7 @@ static bool checkOrAndOpImpliedByOther(
              : match(Val, m_LogicalAnd(m_Value(LHS), m_Value(RHS)))) {
       Worklist.push_back(LHS);
       Worklist.push_back(RHS);
-      continue;
     }
-    return false;
   }
   if (OldSize == DFSInStack.size())
     return false;
