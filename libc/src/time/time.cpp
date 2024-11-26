@@ -18,8 +18,7 @@
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
-
-LLVM_LIBC_FUNCTION(time_t, time, (time_t *tp)) {
+LLVM_LIBC_FUNCTION(time_t, time, (time_t * tp)) {
   struct timespec ts;
   auto result = internal::clock_gettime(CLOCK_REALTIME, &ts);
   if (!result.has_value()) {
