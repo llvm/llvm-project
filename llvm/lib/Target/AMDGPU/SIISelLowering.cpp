@@ -10756,7 +10756,7 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
   Tmp = DAG.getNode(ISD::BITCAST, SL, MVT::f32, TmpCast);
   Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
   SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
-                             DAG.getConstant(0, SL, MVT::i32));
+                             DAG.getTargetConstant(0, SL, MVT::i32));
   return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
                      Op->getFlags());
 }
