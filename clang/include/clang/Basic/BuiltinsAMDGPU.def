@@ -276,6 +276,7 @@ TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_bf8, "fUiUif", "nc", "dot11-insts")
 TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_fp8, "fUiUif", "nc", "dot11-insts")
 TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_fp8, "fUiUif", "nc", "dot11-insts")
 TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_bf8, "fUiUif", "nc", "dot11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_fdot2c_f32_bf16, "fV2yV2yfIb", "nc", "dot13-insts")
 
 //===----------------------------------------------------------------------===//
 // GFX10+ only builtins.
