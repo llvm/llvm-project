@@ -15,10 +15,10 @@
 #include <limits.h>
 
 #include "shared/rpc.h"
+#include "shared/rpc_opcodes.h"
 
 #include "llvmlibc_rpc_server.h"
 
-#include "include/llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/parser.h"

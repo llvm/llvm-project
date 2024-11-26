@@ -343,15 +343,15 @@ define void @replace_or(ptr nocapture noundef %newst, ptr noundef %t, ptr nounde
 ; CHECKOO-NEXT:    [[CMP84:%.*]] = icmp slt i64 [[TMP7]], [[TMP8]]
 ; CHECKOO-NEXT:    [[ADD:%.*]] = zext i1 [[CMP84]] to i64
 ; CHECKOO-NEXT:    [[CMP84_FROZEN:%.*]] = freeze i1 [[CMP84]]
+; CHECKOO-NEXT:    [[TMP9:%.*]] = or i64 [[MUL]], 1
 ; CHECKOO-NEXT:    br i1 [[CMP84_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
-; CHECKOO:       select.true.sink:
-; CHECKOO-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[MUL]], 1
-; CHECKOO-NEXT:    br label [[SELECT_FALSE]]
+; CHECKOO:       select.false:
+; CHECKOO-NEXT:    br label [[SELECT_END]]
 ; CHECKOO:       select.end:
-; CHECKOO-NEXT:    [[SPEC_SELECT:%.*]] = phi i64 [ [[TMP9]], [[SELECT_END]] ], [ [[MUL]], [[IF_THEN]] ]
+; CHECKOO-NEXT:    [[SPEC_SELECT:%.*]] = phi i64 [ [[TMP9]], [[IF_THEN]] ], [ [[MUL]], [[SELECT_FALSE]] ]
 ; CHECKOO-NEXT:    br label [[IF_END87]]
 ; CHECKOO:       if.end87:
-; CHECKOO-NEXT:    [[CMP_1]] = phi i64 [ [[MUL]], [[WHILE_BODY]] ], [ [[SPEC_SELECT]], [[SELECT_FALSE]] ]
+; CHECKOO-NEXT:    [[CMP_1]] = phi i64 [ [[MUL]], [[WHILE_BODY]] ], [ [[SPEC_SELECT]], [[SELECT_END]] ]
 ; CHECKOO-NEXT:    [[CMP16_NOT:%.*]] = icmp sgt i64 [[CMP_1]], [[MA]]
 ; CHECKOO-NEXT:    br i1 [[CMP16_NOT]], label [[WHILE_END]], label [[LAND_RHS]]
 ; CHECKOO:       while.end:
@@ -666,15 +666,20 @@ define i32 @or_samegroup(ptr nocapture noundef %x, i32 noundef %n, ptr nocapture
 ; CHECKOO-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
 ; CHECKOO-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP5]]
 ; CHECKOO-NEXT:    br i1 [[SEL_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
-; CHECKOO:       select.true.sink:
-; CHECKOO-NEXT:    [[TMP2:%.*]] = or i32 1, [[ADD]]
-; CHECKOO-NEXT:    br label [[SELECT_FALSE]]
+; CHECKOO:       select.false:
+; CHECKOO-NEXT:    br label [[SELECT_END]]
 ; CHECKOO:       select.end:
-; CHECKOO-NEXT:    [[SEL:%.*]] = phi i32 [ [[ADD]], [[SELECT_END]] ], [ 1, [[IF_THEN]] ]
-; CHECKOO-NEXT:    [[OR:%.*]] = phi i32 [ [[TMP2]], [[SELECT_END]] ], [ 1, [[IF_THEN]] ]
+; CHECKOO-NEXT:    [[SEL:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ 1, [[SELECT_FALSE]] ]
+; CHECKOO-NEXT:    [[CMP5_FROZEN3:%.*]] = freeze i1 [[CMP5]]
+; CHECKOO-NEXT:    [[TMP2:%.*]] = or i32 [[SEL]], 1
+; CHECKOO-NEXT:    br i1 [[CMP5_FROZEN3]], label [[SELECT_END1:%.*]], label [[SELECT_FALSE2:%.*]]
+; CHECKOO:       select.false2:
+; CHECKOO-NEXT:    br label [[SELECT_END1]]
+; CHECKOO:       select.end1:
+; CHECKOO-NEXT:    [[OR:%.*]] = phi i32 [ [[TMP2]], [[SELECT_END]] ], [ [[SEL]], [[SELECT_FALSE2]] ]
 ; CHECKOO-NEXT:    br label [[IF_END]]
 ; CHECKOO:       if.end:
-; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[SEL]], [[SELECT_FALSE]] ], [ 0, [[FOR_BODY]] ]
+; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[SEL]], [[SELECT_END1]] ], [ 0, [[FOR_BODY]] ]
 ; CHECKOO-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
 ; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -785,15 +790,15 @@ define i32 @or_oneusevalues(ptr nocapture noundef %x, i32 noundef %n, ptr nocapt
 ; CHECKOO-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], 1
 ; CHECKOO-NEXT:    [[ADD2:%.*]] = or i32 [[ADD1]], 1
 ; CHECKOO-NEXT:    [[CMP5_FROZEN:%.*]] = freeze i1 [[CMP5]]
+; CHECKOO-NEXT:    [[TMP2:%.*]] = or i32 [[ADD2]], 1
 ; CHECKOO-NEXT:    br i1 [[CMP5_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
-; CHECKOO:       select.true.sink:
-; CHECKOO-NEXT:    [[TMP2:%.*]] = or i32 1, [[ADD2]]
-; CHECKOO-NEXT:    br label [[SELECT_FALSE]]
+; CHECKOO:       select.false:
+; CHECKOO-NEXT:    br label [[SELECT_END]]
 ; CHECKOO:       select.end:
-; CHECKOO-NEXT:    [[OR:%.*]] = phi i32 [ [[TMP2]], [[SELECT_END]] ], [ [[ADD2]], [[IF_THEN]] ]
+; CHECKOO-NEXT:    [[OR:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ [[ADD2]], [[SELECT_FALSE]] ]
 ; CHECKOO-NEXT:    br label [[IF_END]]
 ; CHECKOO:       if.end:
-; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[SELECT_FALSE]] ], [ 0, [[FOR_BODY]] ]
+; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[SELECT_END]] ], [ 0, [[FOR_BODY]] ]
 ; CHECKOO-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
 ; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]

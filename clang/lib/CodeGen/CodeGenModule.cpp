@@ -2047,6 +2047,15 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
                  GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel),
                  ND));
 
+  // This invariant should hold true in the future.
+  // Prior work:
+  // https://discourse.llvm.org/t/rfc-clang-diagnostic-for-demangling-failures/82835/8
+  // https://github.com/llvm/llvm-project/issues/111345
+  // assert((MangledName.startswith("_Z") || MangledName.startswith("?")) &&
+  //        !GD->hasAttr<AsmLabelAttr>() &&
+  //        llvm::demangle(MangledName) != MangledName &&
+  //        "LLVM demangler must demangle clang-generated names");
+
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();
 }

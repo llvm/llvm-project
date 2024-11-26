@@ -1408,6 +1408,11 @@ public:
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
 
+  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
+
+  bool hasPermlane16Swap() const { return HasPermlane16Swap; }
+  bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+
   bool hasMinimum3Maximum3F32() const {
     return HasMinimum3Maximum3F32;
   }
@@ -1424,12 +1429,8 @@ public:
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
 
-  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
-
   bool hasTanhInsts() const { return HasTanhInsts; }
 
-  bool hasPermlane16Swap() const { return HasPermlane16Swap; }
-  bool hasPermlane32Swap() const { return HasPermlane32Swap; }
   bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
   bool hasAddPC64Inst() const { return GFX1210Insts; }
