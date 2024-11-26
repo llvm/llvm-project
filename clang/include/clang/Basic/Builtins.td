@@ -1486,13 +1486,13 @@ def ReduceMinimum : Builtin {
 
 def ReduceXor : Builtin {
   let Spellings = ["__builtin_reduce_xor"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceOr : Builtin {
   let Spellings = ["__builtin_reduce_or"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -4750,6 +4750,18 @@ def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool(...)";
 }
 
+def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_asdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_any_true"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
+}
+
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
@@ -4870,7 +4882,6 @@ def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-
 def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_select"];
   let Attributes = [NoThrow, Const];
@@ -4893,6 +4904,12 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_radians"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLBufferUpdateCounter : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_buffer_update_counter"];
+  let Attributes = [NoThrow];
+  let Prototype = "uint32_t(...)";
 }
 
 def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {

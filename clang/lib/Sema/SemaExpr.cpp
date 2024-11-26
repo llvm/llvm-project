@@ -983,6 +983,9 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
   if (getLangOpts().MSVCCompat)
     return VAK_MSVCUndefined;
 
+  if (getLangOpts().HLSL && Ty->getAs<HLSLAttributedResourceType>())
+    return VAK_Valid;
+
   // FIXME: In C++11, these cases are conditionally-supported, meaning we're
   // permitted to reject them. We should consider doing so.
   return VAK_Undefined;
@@ -13821,7 +13824,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   CheckForNullPointerDereference(*this, LHSExpr);
 
   AssignedEntity AE{LHSExpr};
-  checkExprLifetime(*this, AE, RHS.get());
+  checkAssignmentLifetime(*this, AE, RHS.get());
 
   if (getLangOpts().CPlusPlus20 && LHSType.isVolatileQualified()) {
     if (CompoundType.isNull()) {

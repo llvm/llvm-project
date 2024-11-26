@@ -953,7 +953,7 @@ PrintCompletion(FILE *output_file,
     } else {
       // If the completion doesn't fit on the screen, print ellipsis and don't
       // bother with the description.
-      fprintf(output_file, "%.*s...\n\n",
+      fprintf(output_file, "%.*s...\n",
               static_cast<int>(max_length - padding_length - ellipsis_length),
               c.GetCompletion().c_str());
       continue;

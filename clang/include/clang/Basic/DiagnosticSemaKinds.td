@@ -1728,9 +1728,9 @@ def err_introducing_special_friend : Error<
 def err_tagless_friend_type_template : Error<
   "friend type templates must use an elaborated type">;
 def err_no_matching_local_friend : Error<
-  "no matching function found in local scope">;
+  "cannot define friend function in a local class definition">;
 def err_no_matching_local_friend_suggest : Error<
-  "no matching function %0 found in local scope; did you mean %3?">;
+  "cannot define friend function %0 in a local class definition; did you mean %3?">;
 def err_partial_specialization_friend : Error<
   "partial specialization cannot be declared as a friend">;
 def err_qualified_friend_def : Error<
@@ -7287,6 +7287,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
+def err_typecheck_expect_hlsl_resource : Error<
+  "used type %0 where __hlsl_resource_t is required">;
 def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
   "arithmetic on a pointer to %select{an incomplete|sizeless}0 type %1">;
 def err_typecheck_pointer_arith_function_type : Error<
@@ -10129,10 +10131,11 @@ def err_lifetimebound_ctor_dtor : Error<
   "%select{constructor|destructor}0">;
 def err_lifetimebound_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to a parameter of a function "
-  "that returns void">;
+  "that returns void; did you mean 'lifetime_capture_by(X)'">;
 def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to an implicit object "
-  "parameter of a function that returns void">;
+  "parameter of a function that returns void; "
+  "did you mean 'lifetime_capture_by(X)'">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
@@ -10227,6 +10230,12 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
+def warn_dangling_reference_captured : Warning<
+   "object whose reference is captured by '%0' will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+def warn_dangling_reference_captured_by_unknown : Warning<
+   "object whose reference is captured will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -11389,7 +11398,7 @@ def err_omp_atomic_weak_no_equality : Error<"expected '==' operator for 'weak' c
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
-  "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', 'relaxed', |}1'acq_rel', 'acquire' or 'release' clause">;
+  "directive '#pragma omp %0' cannot contain more than one 'seq_cst',%select{ 'relaxed',|}1 'acq_rel', 'acquire' or 'release' clause">;
 def err_omp_atomic_incompatible_mem_order_clause : Error<
   "directive '#pragma omp atomic%select{ %0|}1' cannot be used with '%2' clause">;
 def note_omp_previous_mem_order_clause : Note<
@@ -12521,6 +12530,10 @@ def warn_attr_min_eq_max:  Warning<
 
 def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
   "attribute %0 with %1 arguments requires shader model %2 or greater">;
+def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
+  "argument %0 must be constant integer 1 or -1">;
+def err_invalid_hlsl_resource_type: Error<
+  "invalid __hlsl_resource_t type attributes">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

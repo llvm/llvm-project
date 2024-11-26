@@ -274,6 +274,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     else
       Features.push_back("-lam-bh");
   }
+
+  // Select ld-seq-sa feature determined by -m[no-]ld-seq-sa.
+  if (const Arg *A = Args.getLastArg(options::OPT_mld_seq_sa,
+                                     options::OPT_mno_ld_seq_sa)) {
+    if (A->getOption().matches(options::OPT_mld_seq_sa))
+      Features.push_back("+ld-seq-sa");
+    else
+      Features.push_back("-ld-seq-sa");
+  }
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,

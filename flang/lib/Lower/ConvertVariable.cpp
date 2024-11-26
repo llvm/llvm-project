@@ -1681,6 +1681,8 @@ isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
     return true;
   // Consider that any capture of a variable that is in an equivalence with the
   // symbol imply that the storage of the symbol may also be accessed inside
+  // symbol implies that the storage of the symbol may also be accessed inside
+
   // the internal procedure and flag it as captured.
   if (const auto *equivSet = Fortran::semantics::FindEquivalenceSet(sym))
     for (const Fortran::semantics::EquivalenceObject &eqObj : *equivSet)

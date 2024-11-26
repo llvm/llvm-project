@@ -3183,3 +3183,109 @@ define i1 @icmp_of_ucmp_plus_const_with_const(i32 %x, i32 %y) {
   %cmp2 = icmp ult i8 %add, 2
   ret i1 %cmp2
 }
+
+define i1 @zext_range_check_ult(i8 %x) {
+; CHECK-LABEL: @zext_range_check_ult(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i8 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ult i32 %add, 3
+  ret i1 %cmp
+}
+
+; TODO: should be canonicalized to (x - 4) u> 2
+define i1 @zext_range_check_ugt(i8 %x) {
+; CHECK-LABEL: @zext_range_check_ugt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[CONV]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP0]], -3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i8 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ugt i32 %add, 2
+  ret i1 %cmp
+}
+
+; TODO: should be canonicalized to (x - 4) u> 2
+define i1 @zext_range_check_ult_alter(i8 %x) {
+; CHECK-LABEL: @zext_range_check_ult_alter(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], -3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i8 %x to i32
+  %add = add i32 %conv, -7
+  %cmp = icmp ult i32 %add, -3
+  ret i1 %cmp
+}
+
+define i1 @zext_range_check_mergable(i8 %x) {
+; CHECK-LABEL: @zext_range_check_mergable(
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[X:%.*]], 7
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %conv = zext i8 %x to i32
+  %add = add nsw i32 %conv, -4
+  %cmp1 = icmp ult i32 %add, 3
+  %cmp2 = icmp slt i8 %x, 4
+  %cond = select i1 %cmp2, i1 true, i1 %cmp1
+  ret i1 %cond
+}
+
+; Negative tests
+
+define i1 @sext_range_check_ult(i8 %x) {
+; CHECK-LABEL: @sext_range_check_ult(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = sext i8 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ult i32 %add, 3
+  ret i1 %cmp
+}
+
+define i1 @zext_range_check_ult_illegal_type(i7 %x) {
+; CHECK-LABEL: @zext_range_check_ult_illegal_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = zext i7 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i7 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ult i32 %add, 3
+  ret i1 %cmp
+}
+
+define i1 @zext_range_check_ult_range_check_failure(i8 %x) {
+; CHECK-LABEL: @zext_range_check_ult_range_check_failure(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 253
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i8 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ult i32 %add, 253
+  ret i1 %cmp
+}
