@@ -45842,7 +45842,8 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
 /// Extracting a scalar FP value from vector element 0 is free, so extract each
 /// operand first, then perform the math as a scalar op.
 static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
-                                 const X86Subtarget &Subtarget) {
+                                 const X86Subtarget &Subtarget,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
   assert(ExtElt->getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Expected extract");
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
@@ -45877,23 +45878,30 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
   // Vector FP selects don't fit the pattern of FP math ops (because the
   // condition has a different type and we have to change the opcode), so deal
   // with those here.
-  // FIXME: This is restricted to pre type legalization by ensuring the setcc
-  // has i1 elements. If we loosen this we need to convert vector bool to a
-  // scalar bool.
   if (Vec.getOpcode() == ISD::VSELECT &&
       Vec.getOperand(0).getOpcode() == ISD::SETCC &&
       Vec.getOperand(0).getValueType().getScalarType() == MVT::i1 &&
       Vec.getOperand(0).getOperand(0).getValueType() == VecVT) {
     // ext (sel Cond, X, Y), 0 --> sel (ext Cond, 0), (ext X, 0), (ext Y, 0)
     SDLoc DL(ExtElt);
-    SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                               Vec.getOperand(0).getValueType().getScalarType(),
-                               Vec.getOperand(0), Index);
-    SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
-                               Vec.getOperand(1), Index);
-    SDValue Ext2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
-                               Vec.getOperand(2), Index);
-    return DAG.getNode(ISD::SELECT, DL, VT, Ext0, Ext1, Ext2);
+    bool AfterLegalize = DCI.getDAGCombineLevel() >= llvm::AfterLegalizeTypes;
+    EVT VecOperandType = Vec.getOperand(0).getValueType();
+    EVT LegalType = DAG.getTargetLoweringInfo().getTypeToTransformTo(
+        *DAG.getContext(), VecOperandType.getScalarType());
+    // The second condition checks that we don't create an invalid extract e.g
+    // 32 bit extract from a v*i64. This will cause a crash on 32-bit machines.
+    if (!AfterLegalize ||
+        LegalType.getSizeInBits() >= VecOperandType.getScalarSizeInBits()) {
+      SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                 AfterLegalize ? LegalType
+                                               : VecOperandType.getScalarType(),
+                                 Vec.getOperand(0), Index);
+      SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                                 Vec.getOperand(1), Index);
+      SDValue Ext2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                                 Vec.getOperand(2), Index);
+      return DAG.getNode(ISD::SELECT, DL, VT, Ext0, Ext1, Ext2);
+    }
   }
 
   // TODO: This switch could include FNEG and the x86-specific FP logic ops
@@ -46242,7 +46250,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineArithReduction(N, DAG, Subtarget))
     return V;
 
-  if (SDValue V = scalarizeExtEltFP(N, DAG, Subtarget))
+  if (SDValue V = scalarizeExtEltFP(N, DAG, Subtarget, DCI))
     return V;
 
   if (CIdx)
