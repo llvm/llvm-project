@@ -2322,7 +2322,8 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
     return trueVal;
 
   // select %x, true, false => %x
-  if (getType().isInteger(1) && matchPattern(adaptor.getTrueValue(), m_One()) &&
+  if (getType().isSignlessInteger(1) &&
+      matchPattern(adaptor.getTrueValue(), m_One()) &&
       matchPattern(adaptor.getFalseValue(), m_Zero()))
     return condition;
 

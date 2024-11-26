@@ -54,6 +54,18 @@ func.func @select_extui_i1(%arg0: i1) -> i1 {
   return %res : i1
 }
 
+// CHECK-LABEL: @select_no_fold_ui1
+//       CHECK:  %[[CONST_0:.+]] = "test.constant"() <{value = 0 : i32}> : () -> ui1
+//       CHECK:  %[[CONST_1:.+]] = "test.constant"() <{value = 1 : i32}> : () -> ui1
+//  CHECK-NEXT:  %[[RES:.+]] = arith.select %arg0, %[[CONST_1]], %[[CONST_0]] : ui1
+//  CHECK-NEXT:   return %[[RES]]
+func.func @select_no_fold_ui1(%arg0: i1) -> ui1 {
+  %c0_i1 = "test.constant"() {value = 0 : i32} : () -> ui1
+  %c1_i1 = "test.constant"() {value = 1 : i32} : () -> ui1
+  %res = arith.select %arg0, %c1_i1, %c0_i1 : ui1
+  return %res : ui1
+}
+
 // CHECK-LABEL: @select_cst_false_scalar
 //  CHECK-SAME:   (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32)
 //  CHECK-NEXT:   return %[[ARG1]]
