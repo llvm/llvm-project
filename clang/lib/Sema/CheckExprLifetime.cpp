@@ -14,7 +14,6 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLExtras.h"
 
 namespace clang::sema {
 namespace {
@@ -988,6 +987,7 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
     return visitFunctionCallArguments(Path, Init, Visit);
 
   if (auto *CPE = dyn_cast<CXXParenListInitExpr>(Init)) {
+    RevertToOldSizeRAII RAII(Path);
     Path.push_back({IndirectLocalPathEntry::ParenAggInit, CPE});
     for (auto *I : CPE->getInitExprs()) {
       if (I->isGLValue())
@@ -996,7 +996,6 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
       else
         visitLocalsRetainedByInitializer(Path, I, Visit, true);
     }
-    Path.pop_back();
   }
   switch (Init->getStmtClass()) {
   case Stmt::UnaryOperatorClass: {
