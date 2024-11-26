@@ -51,7 +51,7 @@ getLLVMDefaultFPExceptionBehavior(MLIRContext &context);
 template <typename SourceOp, typename TargetOp>
 class AttrConvertFastMathToLLVM {
 public:
-  AttrConvertFastMathToLLVM(SourceOp srcOp) {
+  explicit AttrConvertFastMathToLLVM(SourceOp srcOp) {
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
     // Get the name of the arith fastmath attribute.
@@ -81,7 +81,7 @@ private:
 template <typename SourceOp, typename TargetOp>
 class AttrConvertOverflowToLLVM {
 public:
-  AttrConvertOverflowToLLVM(SourceOp srcOp) {
+  explicit AttrConvertOverflowToLLVM(SourceOp srcOp) {
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
     // Get the name of the arith overflow attribute.
@@ -109,7 +109,7 @@ class AttrConverterConstrainedFPToLLVM {
                 "LLVM::FPExceptionBehaviorOpInterface");
 
 public:
-  AttrConverterConstrainedFPToLLVM(SourceOp srcOp) {
+  explicit AttrConverterConstrainedFPToLLVM(SourceOp srcOp) {
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
 
