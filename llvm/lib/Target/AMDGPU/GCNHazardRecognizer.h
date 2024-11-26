@@ -134,6 +134,7 @@ private:
   int checkMFMAPadding(MachineInstr *MI);
   int checkMAIVALUHazards(MachineInstr *MI);
   int checkMAILdStHazards(MachineInstr *MI);
+  int checkPermlaneHazards(MachineInstr *MI);
 
 public:
   GCNHazardRecognizer(const MachineFunction &MF);
