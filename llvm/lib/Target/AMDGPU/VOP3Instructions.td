@@ -925,6 +925,19 @@ def VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile : VOP3_Profile<VOPProfile<[i32, v2f
   let HasOMod = 0;
 }
 
+class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
+  let HasModifiers = 0;
+  let HasSrc0IntMods = 0;
+  let HasSrc1IntMods = 0;
+  let HasOMod = 0;
+  let HasOpSel = 0;
+  let HasClamp = 0;
+  let HasExtDPP = 0;
+  let HasExt32BitDPP = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExt64BitDPP = 0;
+}
+
 let SubtargetPredicate = HasFP8ConversionScaleInsts, mayRaiseFPException = 0 in {
   defm V_CVT_SCALEF32_F16_FP8 : VOP3Inst<"v_cvt_scalef32_f16_fp8", VOP3_CVT_SCALE_F1632_FP8BF8_Profile<f16>>;
   defm V_CVT_SCALEF32_F32_FP8 : VOP3Inst<"v_cvt_scalef32_f32_fp8", VOP3_CVT_SCALE_F1632_FP8BF8_Profile<f32>>;
@@ -948,6 +961,11 @@ let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in 
   defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_Profile>;
   defm V_CVT_SCALEF32_PK_F16_FP4 : VOP3Inst<"v_cvt_scalef32_pk_f16_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f16>>;
   defm V_CVT_SCALEF32_PK_BF16_FP4 : VOP3Inst<"v_cvt_scalef32_pk_bf16_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2bf16>>;
+}
+
+let SubtargetPredicate = HasFP6BF6ConversionScaleInsts, mayRaiseFPException = 0 in {
+  defm V_CVT_SCALEF32_PK32_F32_FP6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_fp6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>>;
+  defm V_CVT_SCALEF32_PK32_F32_BF6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>>;
 }
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -1893,4 +1911,8 @@ defm V_CVT_SCALEF32_PK_F32_FP4 : VOP3OpSel_Real_gfx9 <0x23f>;
 defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3OpSel_Real_gfx9 <0x23d>;
 defm V_CVT_SCALEF32_PK_F16_FP4 : VOP3OpSel_Real_gfx9 <0x250>;
 defm V_CVT_SCALEF32_PK_BF16_FP4 : VOP3OpSel_Real_gfx9 <0x251>;
+}
+let OtherPredicates = [HasFP6BF6ConversionScaleInsts] in {
+defm V_CVT_SCALEF32_PK32_F32_FP6 : VOP3_Real_gfx9<0x256, "v_cvt_scalef32_pk32_f32_fp6">;
+defm V_CVT_SCALEF32_PK32_F32_BF6 : VOP3_Real_gfx9<0x257, "v_cvt_scalef32_pk32_f32_bf6">;
 }

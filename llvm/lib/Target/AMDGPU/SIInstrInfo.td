@@ -1696,7 +1696,8 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
-  RegisterOperand ret = !cond(!eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
+                              !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
                               !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
                               !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
@@ -1752,7 +1753,8 @@ class getSOPSrcForVT<ValueType VT> {
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
-  !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+  !cond(!eq(VT.Size, 192) : RegisterOperand<VReg_192>,
+        !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
@@ -1785,6 +1787,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT, v2i16)    : VSrc_v2b16,
         !eq(VT, v4f16)    : AVSrc_64,
         !eq(VT, v4bf16)   : AVSrc_64,
+        !eq(VT.Size, 192) : VRegSrc_192,
         !eq(VT.Size, 128) : VRegSrc_128,
         !eq(VT.Size, 96)  : VRegSrc_96,
         !eq(VT.Size, 64)  : VSrc_b64,
@@ -2828,6 +2831,9 @@ def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=
 def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
 def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
+def VOP_V32F32_V6I32_F32 : VOPProfile <[v32f32, v6i32, f32, untyped]>;
+def VOP_V32F16_V6I32_F32 : VOPProfile <[v32f16, v6i32, f32, untyped]>;
+def VOP_V32BF16_V6I32_F32 : VOPProfile <[v32bf16, v6i32, f32, untyped]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
