@@ -54,6 +54,7 @@ bool LoongArch::getArchFeatures(StringRef Arch,
       Features.push_back("+frecipe");
       Features.push_back("+lam-bh");
       Features.push_back("+ld-seq-sa");
+      Features.push_back("+div32");
     }
     return true;
   }
