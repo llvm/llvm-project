@@ -807,10 +807,6 @@ def err_drv_loongarch_invalid_simd_option_combination : Error<
   "invalid option combination; LASX depends on LSX">;
 def err_drv_loongarch_invalid_msimd_EQ : Error<
   "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
-// Support for other float specifications for flang in LoongArch64 may be
-// added in the future, such as 32-bit fpu or soft fpu.
-def err_drv_loongarch_disable_fpu64_for_flang : Error<
-  "invalid argument '%0'; must support 64-bit fpu for flang in LoongArch64">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;

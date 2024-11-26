@@ -210,11 +210,9 @@ void Flang::AddLoongArch64TargetArgs(const ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     StringRef V = A->getValue();
     if (V != "lp64d") {
-      std::string errMesg = std::string("-mabi=") + std::string(V.data());
-      D.Diag(diag::err_drv_loongarch_disable_fpu64_for_flang) << errMesg;
+      D.Diag(diag::err_drv_argument_not_allowed_with) << "-mabi" << V;
     }
   }
-  CmdArgs.push_back("-mabi=lp64d");
 }
 
 void Flang::AddPPCTargetArgs(const ArgList &Args,
