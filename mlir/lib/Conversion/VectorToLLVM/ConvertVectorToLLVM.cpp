@@ -1096,43 +1096,50 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
-    // Extract entire vector. Should be handled by folder, but just to be safe.
-    ArrayRef<OpFoldResult> position(positionVec);
-    if (position.empty()) {
-      rewriter.replaceOp(extractOp, adaptor.getVector());
-      return success();
-    }
+    // Determine if we need to extract a scalar as the result. We extract
+    // a scalar if the extract is full rank i.e. the number of indices is equal
+    // to source vector rank.
+    bool isScalarExtract =
+        positionVec.size() == extractOp.getSourceVectorType().getRank();
+    // Determine if we need to extract a slice out of the original vector. We
+    // always need to extract a slice if the input rank >= 2.
+    bool isSlicingExtract = extractOp.getSourceVectorType().getRank() >= 2;
 
-    // One-shot extraction of vector from array (only requires extractvalue).
-    // Except for extracting 1-element vectors.
-    if (isa<VectorType>(resultType) &&
-        position.size() !=
-            static_cast<size_t>(extractOp.getSourceVectorType().getRank())) {
-      if (extractOp.hasDynamicPosition())
-        return failure();
-
-      Value extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, adaptor.getVector(), getAsIntegers(position));
-      rewriter.replaceOp(extractOp, extracted);
-      return success();
-    }
-
-    // Potential extraction of 1-D vector from array.
     Value extracted = adaptor.getVector();
-    if (position.size() > 1) {
-      if (extractOp.hasDynamicPosition())
+    if (isSlicingExtract) {
+      ArrayRef<OpFoldResult> position(positionVec);
+      if (isScalarExtract) {
+        // If we are extracting a scalar from the returned slice, we need to
+        // extract a N-1 D slice.
+        position = position.drop_back();
+      }
+      // llvm.extractvalue does not support dynamic dimensions.
+      if (!llvm::all_of(position,
+                        [](OpFoldResult x) { return isa<Attribute>(x); })) {
         return failure();
-
-      SmallVector<int64_t> nMinusOnePosition =
-          getAsIntegers(position.drop_back());
-      extracted = rewriter.create<LLVM::ExtractValueOp>(loc, extracted,
-                                                        nMinusOnePosition);
+      }
+      extracted = rewriter.create<LLVM::ExtractValueOp>(
+          loc, extracted, getAsIntegers(position));
     }
 
-    Value lastPosition = getAsLLVMValue(rewriter, loc, position.back());
-    // Remaining extraction of element from 1-D LLVM vector.
-    rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(extractOp, extracted,
-                                                        lastPosition);
+    if (isScalarExtract) {
+      Value position;
+      if (positionVec.empty()) {
+        // A scalar extract with no position is a 0-D vector extract. The LLVM
+        // type converter converts 0-D vectors to 1-D vectors, so we need to add
+        // a constant position.
+        auto idxType = rewriter.getIndexType();
+        position = rewriter.create<LLVM::ConstantOp>(
+            loc, typeConverter->convertType(idxType),
+            rewriter.getIntegerAttr(idxType, 0));
+      } else {
+        position = getAsLLVMValue(rewriter, loc, positionVec.back());
+      }
+      extracted =
+          rewriter.create<LLVM::ExtractElementOp>(loc, extracted, position);
+    }
+
+    rewriter.replaceOp(extractOp, extracted);
     return success();
   }
 };
