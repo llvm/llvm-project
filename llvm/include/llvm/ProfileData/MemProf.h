@@ -212,18 +212,19 @@ using LinearFrameId = uint32_t;
 struct Frame {
   // A uuid (uint64_t) identifying the function. It is obtained by
   // llvm::md5(FunctionName) which returns the lower 64 bits.
-  GlobalValue::GUID Function;
+  GlobalValue::GUID Function = 0;
   // The symbol name for the function. Only populated in the Frame by the reader
   // if requested during initialization. This field should not be serialized.
   std::unique_ptr<std::string> SymbolName;
   // The source line offset of the call from the beginning of parent function.
-  uint32_t LineOffset;
+  uint32_t LineOffset = 0;
   // The source column number of the call to help distinguish multiple calls
   // on the same line.
-  uint32_t Column;
+  uint32_t Column = 0;
   // Whether the current frame is inlined.
-  bool IsInlineFrame;
+  bool IsInlineFrame = false;
 
+  Frame() = default;
   Frame(const Frame &Other) {
     Function = Other.Function;
     SymbolName = Other.SymbolName
@@ -817,7 +818,7 @@ template <typename MapTy> struct FrameIdConverter {
     auto Iter = Map.find(Id);
     if (Iter == Map.end()) {
       LastUnmappedId = Id;
-      return Frame(0, 0, 0, false);
+      return Frame();
     }
     return detail::DerefIterator<Frame>(Iter);
   }
