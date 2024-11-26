@@ -15,7 +15,6 @@ unittest("CoreTests") {
     "BinaryContext.cpp",
     "DynoStats.cpp",
     "MCPlusBuilder.cpp",
-    "MemoryMaps.cpp",
   ]
 
   defines = []
