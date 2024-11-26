@@ -1757,6 +1757,9 @@ public:
   /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
   void inferLifetimeBoundAttribute(FunctionDecl *FD);
 
+  /// Add [[clang:::lifetime_capture_by(this)]] to STL container methods.
+  void inferLifetimeCaptureByAttribute(FunctionDecl *FD);
+
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
@@ -14254,7 +14257,7 @@ public:
                                    SourceLocation EllipsisLoc, Expr *IndexExpr,
                                    SourceLocation RSquareLoc,
                                    ArrayRef<Expr *> ExpandedExprs = {},
-                                   bool EmptyPack = false);
+                                   bool FullySubstituted = false);
 
   /// Handle a C++1z fold-expression: ( expr op ... op expr ).
   ExprResult ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,

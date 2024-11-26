@@ -12048,7 +12048,8 @@ void Sema::CheckForIntOverflow (const Expr *E) {
              New && New->isArray()) {
       if (auto ArraySize = New->getArraySize())
         Exprs.push_back(*ArraySize);
-    }
+    } else if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(OriginalE))
+      Exprs.push_back(MTE->getSubExpr());
   } while (!Exprs.empty());
 }
 

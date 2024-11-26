@@ -100,14 +100,16 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (Gen == AMDGPUSubtarget::INVALID) {
     Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
-  }
-
-  if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
-      !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    // Assume wave64 for the unknown target, if not explicitly set.
+    if (getWavefrontSizeLog2() == 0)
+      WavefrontSizeLog2 = 6;
+  } else if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
+             !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     // If there is no default wave size it must be a generation before gfx10,
     // these have FeatureWavefrontSize64 in their definition already. For gfx10+
     // set wave32 as a default.
     ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    WavefrontSizeLog2 = getGeneration() >= AMDGPUSubtarget::GFX10 ? 5 : 6;
   }
 
   // We don't support FP64 for EG/NI atm.
@@ -147,10 +149,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
       !getFeatureBits().test(AMDGPU::FeatureCuMode))
     LocalMemorySize *= 2;
 
-  // Don't crash on invalid devices.
-  if (WavefrontSizeLog2 == 0)
-    WavefrontSizeLog2 = 5;
-
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
 
@@ -166,7 +164,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   LLVMContext &Ctx = F.getContext();
-  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) &&
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
