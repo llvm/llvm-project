@@ -3227,15 +3227,16 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if (!foundAny) New->dropAttrs();
 }
 
+// Returns the number of added attributes.
 template <class T>
-static unsigned propagateAttribute(ParmVarDecl *toDecl,
-                                   const ParmVarDecl *fromDecl, Sema &S) {
+static unsigned propagateAttribute(ParmVarDecl *To, const ParmVarDecl *From,
+                                   Sema &S) {
   unsigned found = 0;
-  for (const auto *I : fromDecl->specific_attrs<T>()) {
-    if (!DeclHasAttr(toDecl, I)) {
+  for (const auto *I : From->specific_attrs<T>()) {
+    if (!DeclHasAttr(To, I)) {
       T *newAttr = cast<T>(I->clone(S.Context));
       newAttr->setInherited(true);
-      toDecl->addAttr(newAttr);
+      To->addAttr(newAttr);
       ++found;
     }
   }
@@ -3243,28 +3244,29 @@ static unsigned propagateAttribute(ParmVarDecl *toDecl,
 }
 
 template <class F>
-static void propagateAttributes(ParmVarDecl *toDecl,
-                                const ParmVarDecl *fromDecl, F &&propagator) {
-  if (!fromDecl->hasAttrs()) {
+static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
+                                F &&propagator) {
+  if (!From->hasAttrs()) {
     return;
   }
 
-  bool foundAny = toDecl->hasAttrs();
+  bool foundAny = To->hasAttrs();
 
   // Ensure that any moving of objects within the allocated map is
   // done before we process them.
   if (!foundAny)
-    toDecl->setAttrs(AttrVec());
+    To->setAttrs(AttrVec());
 
-  foundAny |= std::forward<F>(propagator)(toDecl, fromDecl) != 0;
+  foundAny |= std::forward<F>(propagator)(To, From) != 0;
 
   if (!foundAny)
-    toDecl->dropAttrs();
+    To->dropAttrs();
 }
 
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
-static void mergeParamDeclAttributes(ParmVarDecl *newDecl, ParmVarDecl *oldDecl,
+static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
+                                     const ParmVarDecl *oldDecl,
                                      Sema &S) {
   // C++11 [dcl.attr.depend]p2:
   //   The first declaration of a function shall specify the
@@ -3284,23 +3286,15 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl, ParmVarDecl *oldDecl,
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
   }
 
-  // Forward propagation (from old parameter to new)
   propagateAttributes(
-      newDecl, oldDecl, [&S](ParmVarDecl *toDecl, const ParmVarDecl *fromDecl) {
+      newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
-        found += propagateAttribute<InheritableParamAttr>(toDecl, fromDecl, S);
-        return found;
-      });
-
-  // Backward propagation (from new parameter to old)
-  propagateAttributes(
-      oldDecl, newDecl, [&S](ParmVarDecl *toDecl, const ParmVarDecl *fromDecl) {
-        unsigned found = 0;
+        found += propagateAttribute<InheritableParamAttr>(To, From, S);
         // Propagate the lifetimebound attribute from parameters to the
-        // canonical declaration. Note that this doesn't include the implicit
+        // most recent declaration. Note that this doesn't include the implicit
         // 'this' parameter, as the attribute is applied to the function type in
         // that case.
-        found += propagateAttribute<LifetimeBoundAttr>(toDecl, fromDecl, S);
+        found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
         return found;
       });
 }
@@ -4356,8 +4350,8 @@ void Sema::mergeObjCMethodDecls(ObjCMethodDecl *newMethod,
   mergeDeclAttributes(newMethod, oldMethod, MergeKind);
 
   // Merge attributes from the parameters.
-  ObjCMethodDecl::param_iterator oi = oldMethod->param_begin(),
-                                 oe = oldMethod->param_end();
+  ObjCMethodDecl::param_const_iterator oi = oldMethod->param_begin(),
+                                       oe = oldMethod->param_end();
   for (ObjCMethodDecl::param_iterator
          ni = newMethod->param_begin(), ne = newMethod->param_end();
        ni != ne && oi != oe; ++ni, ++oi)
@@ -6981,6 +6975,7 @@ static void checkInheritableAttr(Sema &S, NamedDecl &ND) {
 static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   // Check the attributes on the function type and function params, if any.
   if (const auto *FD = dyn_cast<FunctionDecl>(&ND)) {
+    FD = FD->getMostRecentDecl();
     // Don't declare this variable in the second operand of the for-statement;
     // GCC miscompiles that by ending its lifetime before evaluating the
     // third operand. See gcc.gnu.org/PR86769.
