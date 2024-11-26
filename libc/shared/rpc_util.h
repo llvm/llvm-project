@@ -17,6 +17,11 @@
 #define RPC_TARGET_IS_GPU
 #endif
 
+// Workaround for missing __has_builtin in < GCC 10.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 #ifndef RPC_INLINE
 #define RPC_INLINE inline
 #endif
@@ -141,17 +146,15 @@ public:
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 RPC_INLINE void sleep_briefly() {
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
+#if defined(__NVPTX__)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700)
     asm("nanosleep.u32 64;" ::: "memory");
-#elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#elif defined(__AMDGPU__)
   __builtin_amdgcn_s_sleep(2);
-#elif defined(LIBC_TARGET_ARCH_IS_X86)
+#elif __has_builtin(__builtin_ia32_pause)
   __builtin_ia32_pause();
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && __has_builtin(__builtin_arm_isb)
+#elif __has_builtin(__builtin_arm_isb)
   __builtin_arm_isb(0xf);
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  asm volatile("isb\n" ::: "memory");
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif
