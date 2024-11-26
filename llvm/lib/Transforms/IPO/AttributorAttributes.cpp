@@ -33,7 +33,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -9241,12 +9240,12 @@ struct AAValueConstantRangeReturned
     : AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true> {
+                                   /* PropagateCallBaseContext */ true> {
   using Base =
       AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true>;
+                                   /* PropagateCallBaseContext */ true>;
   AAValueConstantRangeReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
@@ -12583,16 +12582,36 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
     uint32_t OldAddressSpace = AssumedAddressSpace;
-    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
-                                                        DepClassTy::REQUIRED);
-    auto Pred = [&](Value &Obj) {
+
+    auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<UndefValue>(&Obj))
         return true;
+      // If an argument in flat address space only has addrspace cast uses, and
+      // those casts are same, then we take the dst addrspace.
+      if (auto *Arg = dyn_cast<Argument>(&Obj)) {
+        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
+          unsigned CastAddrSpace = FlatAS;
+          for (auto *U : Arg->users()) {
+            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
+            if (!ASCI)
+              return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
+            if (CastAddrSpace != FlatAS &&
+                CastAddrSpace != ASCI->getDestAddressSpace())
+              return false;
+            CastAddrSpace = ASCI->getDestAddressSpace();
+          }
+          if (CastAddrSpace != FlatAS)
+            return takeAddressSpace(CastAddrSpace);
+        }
+      }
       return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
     };
 
-    if (!AUO->forallUnderlyingObjects(Pred))
+    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
+                                                        DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
       return indicatePessimisticFixpoint();
 
     return OldAddressSpace == AssumedAddressSpace ? ChangeStatus::UNCHANGED
@@ -12601,17 +12620,21 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    if (getAddressSpace() == InvalidAddressSpace ||
-        getAddressSpace() == getAssociatedType()->getPointerAddressSpace())
+    unsigned NewAS = getAddressSpace();
+
+    if (NewAS == InvalidAddressSpace ||
+        NewAS == getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+
     Value *AssociatedValue = &getAssociatedValue();
-    Value *OriginalValue = peelAddrspacecast(AssociatedValue);
+    Value *OriginalValue = peelAddrspacecast(AssociatedValue, FlatAS);
 
     PointerType *NewPtrTy =
-        PointerType::get(getAssociatedType()->getContext(), getAddressSpace());
+        PointerType::get(getAssociatedType()->getContext(), NewAS);
     bool UseOriginalValue =
-        OriginalValue->getType()->getPointerAddressSpace() == getAddressSpace();
+        OriginalValue->getType()->getPointerAddressSpace() == NewAS;
 
     bool Changed = false;
 
@@ -12671,12 +12694,19 @@ private:
     return AssumedAddressSpace == AS;
   }
 
-  static Value *peelAddrspacecast(Value *V) {
-    if (auto *I = dyn_cast<AddrSpaceCastInst>(V))
-      return peelAddrspacecast(I->getPointerOperand());
+  static Value *peelAddrspacecast(Value *V, unsigned FlatAS) {
+    if (auto *I = dyn_cast<AddrSpaceCastInst>(V)) {
+      assert(I->getSrcAddressSpace() != FlatAS &&
+             "there should not be flat AS -> non-flat AS");
+      return I->getPointerOperand();
+    }
     if (auto *C = dyn_cast<ConstantExpr>(V))
-      if (C->getOpcode() == Instruction::AddrSpaceCast)
-        return peelAddrspacecast(C->getOperand(0));
+      if (C->getOpcode() == Instruction::AddrSpaceCast) {
+        assert(C->getOperand(0)->getType()->getPointerAddressSpace() !=
+                   FlatAS &&
+               "there should not be flat AS -> non-flat AS X");
+        return C->getOperand(0);
+      }
     return V;
   }
 };

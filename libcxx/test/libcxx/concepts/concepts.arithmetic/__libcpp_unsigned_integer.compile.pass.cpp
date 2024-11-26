@@ -30,7 +30,7 @@ static_assert(std::__libcpp_unsigned_integer<unsigned int>);
 static_assert(std::__libcpp_unsigned_integer<unsigned long int>);
 static_assert(std::__libcpp_unsigned_integer<unsigned long long int>);
 static_assert(std::__libcpp_unsigned_integer<unsigned short int>);
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
 static_assert(std::__libcpp_unsigned_integer<__uint128_t>);
 #endif
 // Signed
@@ -40,7 +40,7 @@ static_assert(!std::__libcpp_unsigned_integer<int>);
 static_assert(!std::__libcpp_unsigned_integer<long int>);
 static_assert(!std::__libcpp_unsigned_integer<long long int>);
 static_assert(!std::__libcpp_unsigned_integer<short int>);
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
 static_assert(!std::__libcpp_unsigned_integer<__int128_t>);
 #endif
 // Non-integer

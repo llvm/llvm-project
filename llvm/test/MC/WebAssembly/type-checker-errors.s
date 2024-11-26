@@ -966,4 +966,21 @@ eh_test:
     end_block
   end_block
   drop
+
+  loop
+  i32.const 0
+    loop (i32) -> ()
+      loop (i32) -> ()
+        loop
+# CHECK: :[[@LINE+4]]:11: error: try_table: catch index 0: type mismatch, catch tag type is [i32], but destination's type is []
+# CHECK: :[[@LINE+3]]:11: error: try_table: catch index 1: type mismatch, catch tag type is [i32, exnref], but destination's type is [i32]
+# CHECK: :[[@LINE+2]]:11: error: try_table: catch index 2: type mismatch, catch tag type is [], but destination's type is [i32]
+# CHECK: :[[@LINE+1]]:11: error: try_table: catch index 3: type mismatch, catch tag type is [exnref], but destination's type is []
+          try_table (catch __cpp_exception 0) (catch_ref __cpp_exception 1) (catch_all 2) (catch_all_ref 3)
+          end_try_table
+        end_loop
+        drop
+      end_loop
+    end_loop
+  end_loop
   end_function

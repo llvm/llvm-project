@@ -44,10 +44,11 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
 
-  bool hasFP(const MachineFunction & /*MF*/) const override { return true; }
-
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;
+
+protected:
+  bool hasFPImpl(const MachineFunction & /*MF*/) const override { return true; }
 };
 
 } // namespace llvm

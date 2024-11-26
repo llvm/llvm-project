@@ -964,33 +964,26 @@ private:
   bool overridingStores(const ParseMemoryInst &Earlier,
                         const ParseMemoryInst &Later);
 
-  Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
-    // TODO: We could insert relevant casts on type mismatch here.
-    if (auto *LI = dyn_cast<LoadInst>(Inst))
-      return LI->getType() == ExpectedType ? LI : nullptr;
-    if (auto *SI = dyn_cast<StoreInst>(Inst)) {
-      Value *V = SI->getValueOperand();
-      return V->getType() == ExpectedType ? V : nullptr;
+  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType) const {
+    // TODO: We could insert relevant casts on type mismatch.
+    // The load or the store's first operand.
+    Value *V;
+    if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::masked_load:
+        V = II;
+        break;
+      case Intrinsic::masked_store:
+        V = II->getOperand(0);
+        break;
+      default:
+        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
+      }
+    } else {
+      V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
     }
-    assert(isa<IntrinsicInst>(Inst) && "Instruction not supported");
-    auto *II = cast<IntrinsicInst>(Inst);
-    if (isHandledNonTargetIntrinsic(II->getIntrinsicID()))
-      return getOrCreateResultNonTargetMemIntrinsic(II, ExpectedType);
-    return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
-  }
 
-  Value *getOrCreateResultNonTargetMemIntrinsic(IntrinsicInst *II,
-                                                Type *ExpectedType) const {
-    // TODO: We could insert relevant casts on type mismatch here.
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::masked_load:
-      return II->getType() == ExpectedType ? II : nullptr;
-    case Intrinsic::masked_store: {
-      Value *V = II->getOperand(0);
-      return V->getType() == ExpectedType ? V : nullptr;
-    }
-    }
-    return nullptr;
+    return V->getType() == ExpectedType ? V : nullptr;
   }
 
   /// Return true if the instruction is known to only operate on memory

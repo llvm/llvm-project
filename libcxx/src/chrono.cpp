@@ -12,7 +12,7 @@
 #  define _LARGE_TIME_API
 #endif
 
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <cerrno> // errno
 #include <chrono>
 
@@ -134,7 +134,10 @@ static system_clock::time_point __libcpp_system_clock_now() {
 
 #endif
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
 const bool system_clock::is_steady;
+_LIBCPP_DIAGNOSTIC_POP
 
 system_clock::time_point system_clock::now() noexcept { return __libcpp_system_clock_now(); }
 
@@ -152,7 +155,7 @@ system_clock::time_point system_clock::from_time_t(time_t t) noexcept { return s
 //  instead.
 //
 
-#ifndef _LIBCPP_HAS_NO_MONOTONIC_CLOCK
+#if _LIBCPP_HAS_MONOTONIC_CLOCK
 
 #  if defined(__APPLE__)
 
@@ -226,11 +229,14 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
 #    error "Monotonic clock not implemented on this platform"
 #  endif
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
 const bool steady_clock::is_steady;
+_LIBCPP_DIAGNOSTIC_POP
 
 steady_clock::time_point steady_clock::now() noexcept { return __libcpp_steady_clock_now(); }
 
-#endif // !_LIBCPP_HAS_NO_MONOTONIC_CLOCK
+#endif // _LIBCPP_HAS_MONOTONIC_CLOCK
 
 } // namespace chrono
 

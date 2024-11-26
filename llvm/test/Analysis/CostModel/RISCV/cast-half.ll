@@ -842,7 +842,7 @@ define void @sitofp() {
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v64i64_v64f16 = sitofp <64 x i64> undef to <64 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %v64i1_v64f16 = sitofp <64 x i1> undef to <64 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 83 for instruction: %v128i8_v128f16 = sitofp <128 x i8> undef to <128 x half>
-; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i16_v128f16 = sitofp <128 x i16> undef to <128 x half>
+; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v128i16_v128f16 = sitofp <128 x i16> undef to <128 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v128i32_v128f16 = sitofp <128 x i32> undef to <128 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v128i64_v128f16 = sitofp <128 x i64> undef to <128 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %v128i1_v128f16 = sitofp <128 x i1> undef to <128 x half>
@@ -988,7 +988,7 @@ define void @sitofp() {
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v64i64_v64f16 = sitofp <64 x i64> undef to <64 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %v64i1_v64f16 = sitofp <64 x i1> undef to <64 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 83 for instruction: %v128i8_v128f16 = sitofp <128 x i8> undef to <128 x half>
-; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i16_v128f16 = sitofp <128 x i16> undef to <128 x half>
+; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v128i16_v128f16 = sitofp <128 x i16> undef to <128 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v128i32_v128f16 = sitofp <128 x i32> undef to <128 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v128i64_v128f16 = sitofp <128 x i64> undef to <128 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %v128i1_v128f16 = sitofp <128 x i1> undef to <128 x half>
@@ -1208,7 +1208,7 @@ define void @uitofp() {
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v64i64_v64f16 = uitofp <64 x i64> undef to <64 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %v64i1_v64f16 = uitofp <64 x i1> undef to <64 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 83 for instruction: %v128i8_v128f16 = uitofp <128 x i8> undef to <128 x half>
-; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i16_v128f16 = uitofp <128 x i16> undef to <128 x half>
+; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v128i16_v128f16 = uitofp <128 x i16> undef to <128 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v128i32_v128f16 = uitofp <128 x i32> undef to <128 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v128i64_v128f16 = uitofp <128 x i64> undef to <128 x half>
 ; RV32ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %v128i1_v128f16 = uitofp <128 x i1> undef to <128 x half>
@@ -1354,7 +1354,7 @@ define void @uitofp() {
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v64i64_v64f16 = uitofp <64 x i64> undef to <64 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %v64i1_v64f16 = uitofp <64 x i1> undef to <64 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 83 for instruction: %v128i8_v128f16 = uitofp <128 x i8> undef to <128 x half>
-; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i16_v128f16 = uitofp <128 x i16> undef to <128 x half>
+; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v128i16_v128f16 = uitofp <128 x i16> undef to <128 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v128i32_v128f16 = uitofp <128 x i32> undef to <128 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v128i64_v128f16 = uitofp <128 x i64> undef to <128 x half>
 ; RV64ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %v128i1_v128f16 = uitofp <128 x i1> undef to <128 x half>

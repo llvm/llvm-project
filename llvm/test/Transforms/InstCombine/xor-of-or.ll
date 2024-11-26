@@ -42,8 +42,8 @@ define i4 @t2(i4 %x) {
 ; Splat constants are fine too.
 define <2 x i4> @t3(<2 x i4> %x) {
 ; CHECK-LABEL: @t3(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 3>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], splat (i4 3)
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], splat (i4 6)
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 12>
@@ -55,7 +55,7 @@ define <2 x i4> @t3(<2 x i4> %x) {
 define <2 x i4> @t4(<2 x i4> %x) {
 ; CHECK-LABEL: @t4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 5>
-; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], <i4 6, i4 6>
+; CHECK-NEXT:    [[I1:%.*]] = xor <2 x i4> [[TMP1]], splat (i4 6)
 ; CHECK-NEXT:    ret <2 x i4> [[I1]]
 ;
   %i0 = or <2 x i4> %x, <i4 12, i4 10>

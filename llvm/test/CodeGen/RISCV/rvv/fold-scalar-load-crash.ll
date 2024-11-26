@@ -7,10 +7,10 @@
 define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV32-LABEL: test:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    th.lbib a3, (a1), -1, 0
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a3
 ; RV32-NEXT:    addi a3, a2, 1
+; RV32-NEXT:    th.lbib a4, (a1), -1, 0
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a4
 ; RV32-NEXT:    vmv.s.x v9, zero
 ; RV32-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
 ; RV32-NEXT:    vslideup.vx v8, v9, a2
@@ -33,10 +33,10 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ;
 ; RV64-LABEL: test:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    th.lbib a3, (a1), -1, 0
-; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a3
 ; RV64-NEXT:    addi a3, a2, 1
+; RV64-NEXT:    th.lbib a4, (a1), -1, 0
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a4
 ; RV64-NEXT:    vmv.s.x v9, zero
 ; RV64-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
 ; RV64-NEXT:    vslideup.vx v8, v9, a2

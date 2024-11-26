@@ -15,13 +15,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64PBQPRegAlloc.h"
-#include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegAllocPBQP.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"

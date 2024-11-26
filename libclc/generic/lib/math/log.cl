@@ -1,5 +1,5 @@
 #include <clc/clc.h>
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 /*
  *log(x) = log2(x) * (1/log2(e))

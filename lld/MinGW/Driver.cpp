@@ -97,11 +97,12 @@ public:
 };
 } // namespace
 
-static void printHelp(const char *argv0) {
+static void printHelp(CommonLinkerContext &ctx, const char *argv0) {
+  auto &outs = ctx.e.outs();
   MinGWOptTable().printHelp(
-      lld::outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
-      false /*ShowHidden*/, true /*ShowAllAliases*/);
-  lld::outs() << "\n";
+      outs, (std::string(argv0) + " [options] file...").c_str(), "lld",
+      /*ShowHidden=*/false, /*ShowAllAliases=*/true);
+  outs << '\n';
 }
 
 static cl::TokenizerCallback getQuotingStyle() {
@@ -189,7 +190,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
 
   if (args.hasArg(OPT_help)) {
-    printHelp(argsArr[0]);
+    printHelp(*ctx, argsArr[0]);
     return true;
   }
 
@@ -327,6 +328,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-build-id:no");
     else
       add("-build-id");
+  }
+
+  if (auto *a = args.getLastArg(OPT_functionpadmin)) {
+    StringRef v = a->getValue();
+    if (v.empty())
+      add("-functionpadmin");
+    else
+      add("-functionpadmin:" + v);
   }
 
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
@@ -563,7 +572,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
-    lld::errs() << llvm::join(linkArgs, " ") << "\n";
+    ctx->e.errs() << llvm::join(linkArgs, " ") << "\n";
 
   if (args.hasArg(OPT__HASH_HASH_HASH))
     return true;

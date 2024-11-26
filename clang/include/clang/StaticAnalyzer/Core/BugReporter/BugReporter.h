@@ -644,14 +644,14 @@ public:
   void EmitBasicReport(const Decl *DeclWithIssue, const CheckerBase *Checker,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = std::nullopt,
-                       ArrayRef<FixItHint> Fixits = std::nullopt);
+                       ArrayRef<SourceRange> Ranges = {},
+                       ArrayRef<FixItHint> Fixits = {});
 
   void EmitBasicReport(const Decl *DeclWithIssue, CheckerNameRef CheckerName,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = std::nullopt,
-                       ArrayRef<FixItHint> Fixits = std::nullopt);
+                       ArrayRef<SourceRange> Ranges = {},
+                       ArrayRef<FixItHint> Fixits = {});
 
 private:
   llvm::StringMap<std::unique_ptr<BugType>> StrBugTypes;

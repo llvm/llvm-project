@@ -1,0 +1,49 @@
+# REQUIRES: shell, aarch64-registered-target
+# UNSUPPORTED: system-windows
+
+# Test merge a single object file into a cgdata
+
+RUN: split-file %s %t
+
+# Merge an object file that has no cgdata (__llvm_outline). It still produces a header only cgdata.
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-empty.ll -o %t/merge-empty.o
+RUN: llvm-cgdata --merge %t/merge-empty.o --output %t/merge-empty.cgdata
+# No summary appear with the header only cgdata.
+RUN: llvm-cgdata --show %t/merge-empty.cgdata | count 0
+
+# Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
+RUN: llvm-cgdata --convert --format binary %t/raw-single.cgtext -o %t/raw-single.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-single.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-single-bytes.txt
+
+RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-single-bytes.txt)/g" %t/merge-single-template.ll > %t/merge-single.ll
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-single.ll -o %t/merge-single.o
+
+# Merge an object file having cgdata (__llvm_outline)
+RUN: llvm-cgdata -m %t/merge-single.o -o %t/merge-single.cgdata
+RUN: llvm-cgdata -s %t/merge-single.cgdata | FileCheck %s
+CHECK: Outlined hash tree:
+CHECK-NEXT:  Total Node Count: 3
+CHECK-NEXT:  Terminal Node Count: 1
+CHECK-NEXT:  Depth: 2
+
+;--- merge-empty.ll
+@.data = private unnamed_addr constant [1 x i8] c"\01"
+
+;--- raw-single.cgtext
+:outlined_hash_tree
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2 ]
+2:
+  Hash:            0x2
+  Terminals:       4
+  SuccessorIds:    [  ]
+...
+
+;--- merge-single-template.ll
+@.data = private unnamed_addr constant [72 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_outline"

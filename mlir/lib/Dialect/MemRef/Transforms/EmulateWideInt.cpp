@@ -159,7 +159,7 @@ void memref::populateMemRefWideIntEmulationConversions(
 
         Type newElemTy = typeConverter.convertType(intTy);
         if (!newElemTy)
-          return std::nullopt;
+          return nullptr;
 
         return ty.cloneWith(std::nullopt, newElemTy);
       });

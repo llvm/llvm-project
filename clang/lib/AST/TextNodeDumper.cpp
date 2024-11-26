@@ -420,11 +420,24 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Self:
     case OpenACCClauseKind::Seq:
     case OpenACCClauseKind::Tile:
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
       break;
+    case OpenACCClauseKind::Gang: {
+      OS << " clause";
+      // print the list of all GangKinds, so that there is some sort of
+      // relationship to the expressions listed afterwards.
+      auto *GC = cast<OpenACCGangClause>(C);
+
+      for (unsigned I = 0; I < GC->getNumExprs(); ++I) {
+        OS << " " << GC->getExpr(I).first;
+      }
+      break;
+    }
     case OpenACCClauseKind::Collapse:
       OS << " clause";
       if (cast<OpenACCCollapseClause>(C)->hasForce())
@@ -2915,7 +2928,12 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
   if (S->isOrphanedLoopConstruct())
     OS << " <orphan>";
   else
-    OS << " parent: " << S->getParentComputeConstruct();
+    OS << " parent: " << S->getParentComputeConstructKind();
+}
+
+void TextNodeDumper::VisitOpenACCCombinedConstruct(
+    const OpenACCCombinedConstruct *S) {
+  OS << " " << S->getDirectiveKind();
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {

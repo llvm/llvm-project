@@ -46,4 +46,8 @@ using IncludeSpellingStrategy = llvm::Registry<IncludeSpeller>;
 std::string spellHeader(const IncludeSpeller::Input &Input);
 } // namespace clang::include_cleaner
 
+namespace llvm {
+extern template class Registry<clang::include_cleaner::IncludeSpeller>;
+} // namespace llvm
+
 #endif

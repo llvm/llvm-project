@@ -13,7 +13,7 @@
 ! * (no type specified, resulting in an object file)
 
 ! All invocations should begin with flang -fc1, consume up to here.
-! ALL-LABEL: "{{[^"]*}}flang-new{{[^"/]*}}" "-fc1"
+! ALL-LABEL: "{{[^"]*}}flang{{[^"/]*}}" "-fc1"
 
 ! Check that f90 files are not treated as "previously preprocessed"
 ! ... in --driver-mode=flang.

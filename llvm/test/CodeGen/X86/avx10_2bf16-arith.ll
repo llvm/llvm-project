@@ -1166,3 +1166,25 @@ entry:
   %2 = select <8 x i1> %1, <8 x bfloat> %0, <8 x bfloat> zeroinitializer
   ret <8 x bfloat> %2
 }
+
+define <32 x bfloat> @addv(<32 x bfloat> %a, <32 x bfloat> %b) nounwind {
+; X64-LABEL: addv:
+; X64:       # %bb.0:
+; X64-NEXT:    vaddnepbf16 %ymm2, %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7d,0x28,0x58,0xc2]
+; X64-NEXT:    vaddnepbf16 %ymm3, %ymm1, %ymm1 # encoding: [0x62,0xf5,0x75,0x28,0x58,0xcb]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: addv:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp # encoding: [0x55]
+; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
+; X86-NEXT:    andl $-32, %esp # encoding: [0x83,0xe4,0xe0]
+; X86-NEXT:    subl $32, %esp # encoding: [0x83,0xec,0x20]
+; X86-NEXT:    vaddnepbf16 %ymm2, %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7d,0x28,0x58,0xc2]
+; X86-NEXT:    vaddnepbf16 8(%ebp), %ymm1, %ymm1 # encoding: [0x62,0xf5,0x75,0x28,0x58,0x8d,0x08,0x00,0x00,0x00]
+; X86-NEXT:    movl %ebp, %esp # encoding: [0x89,0xec]
+; X86-NEXT:    popl %ebp # encoding: [0x5d]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %add = fadd <32 x bfloat> %a, %b
+  ret <32 x bfloat> %add
+}

@@ -7,7 +7,7 @@
 ; Check that we can evaluate a sum of phis from two different loops in any
 ; order.
 
-define void @test_00() {
+define void @test_00(i1 %arg) {
 ; CHECK-LABEL: 'test_00'
 ; CHECK-NEXT:  Classifying expressions for: @test_00
 ; CHECK-NEXT:    %phi1 = phi i32 [ 10, %entry ], [ %phi1.inc, %loop1 ]
@@ -383,7 +383,7 @@ exit:
 
 ; Another mix of previous use cases that demonstrates that incorrect picking of
 ; a loop for a recurrence may cause a crash of SCEV analysis.
-define void @test_04() {
+define void @test_04(i1 %arg) {
 ; CHECK-LABEL: 'test_04'
 ; CHECK-NEXT:  Classifying expressions for: @test_04
 ; CHECK-NEXT:    %tmp = phi i64 [ 2, %bb ], [ %tmp4, %bb3 ]
@@ -425,7 +425,7 @@ bb:
 loop1:
   %tmp = phi i64 [ 2, %bb ], [ %tmp4, %bb3 ]
   %tmp2 = trunc i64 %tmp to i32
-  br i1 undef, label %loop2, label %bb3
+  br i1 %arg, label %loop2, label %bb3
 
 bb3:
   %tmp4 = add nuw nsw i64 %tmp, 1

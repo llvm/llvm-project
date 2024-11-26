@@ -469,7 +469,7 @@ define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[X:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 3.000000e+00, double 2.000000e+00, double 1.000000e+00, double 0.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    ret <4 x double> [[TMP6]]
 ;
   %t0 = fadd double %w , 0.000000e+00

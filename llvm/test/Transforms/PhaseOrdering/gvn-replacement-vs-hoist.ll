@@ -26,7 +26,7 @@ define void @test(ptr noundef %a, i32 noundef %beam) {
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I_06]], 9999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[I_06]], 9999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ;
 entry:

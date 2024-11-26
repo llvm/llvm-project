@@ -524,7 +524,9 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) strictfp {
 ; CHECK32-D-NEXT:    seqz a1, a0
 ; CHECK32-D-NEXT:    add a0, a0, a1
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK32-D-NEXT:    .cfi_restore ra
 ; CHECK32-D-NEXT:    addi sp, sp, 16
+; CHECK32-D-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK32-D-NEXT:    ret
   %a = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %x, metadata !"fpexcept.strict")
   %b = icmp eq i32 %a, 0
@@ -2359,7 +2361,11 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; CHECK32-D-NEXT:    .cfi_restore ra
+; CHECK32-D-NEXT:    .cfi_restore s0
+; CHECK32-D-NEXT:    .cfi_restore s1
 ; CHECK32-D-NEXT:    addi sp, sp, 16
+; CHECK32-D-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK32-D-NEXT:    ret
   %3 = add i32 %0, 1
   %4 = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %3, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -2493,7 +2499,11 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; CHECK32-D-NEXT:    .cfi_restore ra
+; CHECK32-D-NEXT:    .cfi_restore s0
+; CHECK32-D-NEXT:    .cfi_restore s1
 ; CHECK32-D-NEXT:    addi sp, sp, 16
+; CHECK32-D-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK32-D-NEXT:    ret
   %3 = add i32 %0, 1
   %4 = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %3, metadata !"round.dynamic", metadata !"fpexcept.strict")

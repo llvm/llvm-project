@@ -68,6 +68,9 @@ DLWRAP(hsa_amd_register_system_event_handler, 2)
 DLWRAP(hsa_amd_signal_create, 5)
 DLWRAP(hsa_amd_signal_async_handler, 5)
 DLWRAP(hsa_amd_pointer_info, 5)
+DLWRAP(hsa_code_object_reader_create_from_memory, 3)
+DLWRAP(hsa_code_object_reader_destroy, 1)
+DLWRAP(hsa_executable_load_agent_code_object, 5)
 
 DLWRAP_FINALIZE()
 
