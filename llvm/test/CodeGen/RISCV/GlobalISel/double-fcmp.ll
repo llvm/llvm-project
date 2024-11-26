@@ -28,6 +28,7 @@ define i32 @fcmp_false(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: slli+srli on RV64 are unnecessary 
 define i32 @fcmp_oeq(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_oeq:
 ; CHECKIFD:       # %bb.0:
@@ -60,6 +61,7 @@ define i32 @fcmp_oeq(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: sext.w on RV64 is unnecessary
 define i32 @fcmp_ogt(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ogt:
 ; CHECKIFD:       # %bb.0:
@@ -91,6 +93,7 @@ define i32 @fcmp_ogt(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: sext.w on RV64 is unnecessary
 define i32 @fcmp_oge(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_oge:
 ; CHECKIFD:       # %bb.0:
@@ -124,6 +127,7 @@ define i32 @fcmp_oge(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: sext.w on RV64 is unnecessary
 define i32 @fcmp_olt(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_olt:
 ; CHECKIFD:       # %bb.0:
@@ -155,6 +159,8 @@ define i32 @fcmp_olt(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: sext.w on RV64 is unnecessary
+; FIXME: sgtz+xori can be slti a0, a0, 1
 define i32 @fcmp_ole(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ole:
 ; CHECKIFD:       # %bb.0:
@@ -188,6 +194,7 @@ define i32 @fcmp_ole(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: slli+srli on RV64 are unnecessary 
 define i32 @fcmp_one(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_one:
 ; CHECKIFD:       # %bb.0:
@@ -258,6 +265,7 @@ define i32 @fcmp_one(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: slli+srli on RV64 are unnecessary 
 define i32 @fcmp_ord(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ord:
 ; CHECKIFD:       # %bb.0:
@@ -292,6 +300,7 @@ define i32 @fcmp_ord(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: slli+srli on RV64 are unnecessary 
 define i32 @fcmp_ueq(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ueq:
 ; CHECKIFD:       # %bb.0:
@@ -363,6 +372,7 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: sext.w on RV64 is unnecessary
 define i32 @fcmp_ugt(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ugt:
 ; CHECKIFD:       # %bb.0:
@@ -429,6 +439,7 @@ define i32 @fcmp_uge(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: sext.w on RV64 is unnecessary
 define i32 @fcmp_ult(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ult:
 ; CHECKIFD:       # %bb.0:
@@ -461,6 +472,8 @@ define i32 @fcmp_ult(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: sext.w on RV64 is unnecessary
+; FIXME: sgtz+xori can be slti a0, a0, 1
 define i32 @fcmp_ule(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ule:
 ; CHECKIFD:       # %bb.0:
@@ -495,6 +508,7 @@ define i32 @fcmp_ule(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: slli+srli on RV64 are unnecessary 
 define i32 @fcmp_une(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_une:
 ; CHECKIFD:       # %bb.0:
@@ -528,6 +542,7 @@ define i32 @fcmp_une(double %a, double %b) nounwind {
   ret i32 %2
 }
 
+; FIXME: slli+srli on RV64 are unnecessary 
 define i32 @fcmp_uno(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_uno:
 ; CHECKIFD:       # %bb.0:
