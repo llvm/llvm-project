@@ -63,8 +63,6 @@
 #              barSub(FooVar, BarVar) + fooAdd(FooVar, BarVar);
 #   return temp;
 # }
-	.text
-	.file	"main.cpp"
 	.globl	fooSubFunc
 	.p2align	4, 0x90
 	.type	fooSubFunc,@function

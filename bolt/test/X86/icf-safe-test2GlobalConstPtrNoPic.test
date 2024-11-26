@@ -63,8 +63,6 @@
 # int FooVar = 1;
 # int BarVar = 2;
 # Manually modified to remove "extra" assembly.
-	.text
-	.file	"main.cpp"
 	.globl	fooMulFunc
 	.p2align	4, 0x90
 	.type	fooMulFunc,@function

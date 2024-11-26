@@ -88,8 +88,6 @@
 #   return 5;
 # }
 # Manually modified to remove "extra" assembly.
-  .text
-	.file	"main.cpp"
 	.section	.text.hot.,"ax",@progbits
 	.globl	_Z10createTypei
 	.p2align	4, 0x90

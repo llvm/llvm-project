@@ -67,8 +67,6 @@
 #   return temp;
 # }
 # Manually modified to remove "extra" assembly.
-	.text
-	.file	"main.cpp"
 	.globl	fooSubFunc
 	.p2align	4, 0x90
 	.type	fooSubFunc,@function
