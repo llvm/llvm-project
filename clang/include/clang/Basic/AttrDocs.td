@@ -7934,6 +7934,16 @@ randomized.
   }];
 }
 
+def HLSLSV_GroupIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
+thread group a shader is executing in. This attribute is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
+  }];
+}
+
 def HLSLSV_GroupIndexDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
