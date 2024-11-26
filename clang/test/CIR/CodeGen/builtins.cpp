@@ -116,3 +116,292 @@ extern "C" void *test_frame_address(void) {
   // LLVM-LABEL: @test_frame_address
   // LLVM: {{%.*}} = call ptr @llvm.frameaddress.p0(i32 1)
 }
+
+// Following block of tests are for __builtin_launder
+// FIXME: Once we fully __builtin_launder by allowing -fstrict-vtable-pointers,
+//        we should move following block of tests to a separate file.
+namespace launder_test {
+//===----------------------------------------------------------------------===//
+//                            Positive Cases
+//===----------------------------------------------------------------------===//
+
+struct TestVirtualFn {
+  virtual void foo() {}
+};
+
+// CIR-LABEL: test_builtin_launder_virtual_fn
+// LLVM: define{{.*}} void @test_builtin_launder_virtual_fn(ptr [[P:%.*]])
+extern "C" void test_builtin_launder_virtual_fn(TestVirtualFn *p) {
+  // CIR: cir.return
+
+  // LLVM: store ptr [[P]], ptr [[P_ADDR:%.*]], align 8
+  // LLVM-NEXT: [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+  // LLVM-NEXT: store ptr [[TMP0]], ptr {{%.*}}
+  // LLVM-NEXT: ret void
+  TestVirtualFn *d = __builtin_launder(p);
+}
+
+struct TestPolyBase : TestVirtualFn {
+};
+
+// CIR-LABEL: test_builtin_launder_poly_base
+// LLVM: define{{.*}} void @test_builtin_launder_poly_base(ptr [[P:%.*]])
+extern "C" void test_builtin_launder_poly_base(TestPolyBase *p) {
+  // CIR: cir.return
+
+  // LLVM: store ptr [[P]], ptr [[P_ADDR:%.*]], align 8
+  // LLVM-NEXT: [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+  // LLVM-NEXT: store ptr [[TMP0]], ptr {{%.*}}
+  // LLVM-NEXT: ret void
+  TestPolyBase *d = __builtin_launder(p);
+}
+
+struct TestBase {};
+struct TestVirtualBase : virtual TestBase {};
+
+// CIR-LABEL: test_builtin_launder_virtual_base
+// LLVM: define{{.*}} void @test_builtin_launder_virtual_base(ptr [[P:%.*]])
+extern "C" void test_builtin_launder_virtual_base(TestVirtualBase *p) {
+  TestVirtualBase *d = __builtin_launder(p);
+
+  // CIR: cir.return
+
+  // LLVM: store ptr [[P]], ptr [[P_ADDR:%.*]], align 8
+  // LLVM-NEXT: [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+  // LLVM-NEXT: store ptr [[TMP0]], ptr {{%.*}}
+  // LLVM-NEXT: ret void
+}
+
+//===----------------------------------------------------------------------===//
+//                            Negative Cases
+//===----------------------------------------------------------------------===//
+
+// CIR-LABEL: test_builtin_launder_ommitted_one
+// LLVM: define{{.*}} void @test_builtin_launder_ommitted_one(ptr [[P:%.*]])
+extern "C" void test_builtin_launder_ommitted_one(int *p) {
+  int *d = __builtin_launder(p);
+
+  // CIR: cir.return
+
+  // LLVM-NEXT: [[P_ADDR:%.*]] = alloca ptr, i64 1, align 8
+  // LLVM-NEXT: [[D:%.*]] = alloca ptr, i64 1, align 8
+  // LLVM: store ptr [[P]], ptr [[P_ADDR:%.*]], align 8
+  // LLVM-NEXT: [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+  // LLVM-NEXT: store ptr [[TMP0]], ptr [[D]]
+  // LLVM-NEXT: ret void
+}
+
+struct TestNoInvariant {
+  int x;
+};
+
+// CIR-LABEL: test_builtin_launder_ommitted_two
+// LLVM: define{{.*}} void @test_builtin_launder_ommitted_two(ptr [[P:%.*]])
+extern "C" void test_builtin_launder_ommitted_two(TestNoInvariant *p) {
+  TestNoInvariant *d = __builtin_launder(p);
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM-NEXT: [[P_ADDR:%.*]] = alloca ptr, i64 1, align 8
+  // LLVM-NEXT: [[D:%.*]] = alloca ptr, i64 1, align 8
+  // LLVM: store ptr [[P]], ptr [[P_ADDR:%.*]], align 8
+  // LLVM-NEXT: [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+  // LLVM-NEXT: store ptr [[TMP0]], ptr [[D]]
+  // LLVM-NEXT: ret void
+}
+
+struct TestVirtualMember {
+  TestVirtualFn member;
+};
+
+// CIR-LABEL: test_builtin_launder_virtual_member
+// LLVM: define{{.*}} void @test_builtin_launder_virtual_member
+extern "C" void test_builtin_launder_virtual_member(TestVirtualMember *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  TestVirtualMember *d = __builtin_launder(p);
+}
+
+struct TestVirtualMemberDepth2 {
+  TestVirtualMember member;
+};
+
+// CIR-LABEL: test_builtin_launder_virtual_member_depth_2
+// LLVM: define{{.*}} void @test_builtin_launder_virtual_member_depth_2
+extern "C" void test_builtin_launder_virtual_member_depth_2(TestVirtualMemberDepth2 *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  TestVirtualMemberDepth2 *d = __builtin_launder(p);
+}
+
+struct TestVirtualReferenceMember {
+  TestVirtualFn &member;
+};
+
+// CIR-LABEL: test_builtin_launder_virtual_reference_member
+// LLVM: define{{.*}} void @test_builtin_launder_virtual_reference_member
+extern "C" void test_builtin_launder_virtual_reference_member(TestVirtualReferenceMember *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  TestVirtualReferenceMember *d = __builtin_launder(p);
+}
+
+struct TestRecursiveMember {
+  TestRecursiveMember() : member(*this) {}
+  TestRecursiveMember &member;
+};
+
+// CIR-LABEL: test_builtin_launder_recursive_member
+// LLVM: define{{.*}} void @test_builtin_launder_recursive_member
+extern "C" void test_builtin_launder_recursive_member(TestRecursiveMember *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  TestRecursiveMember *d = __builtin_launder(p);
+}
+
+struct TestVirtualRecursiveMember {
+  TestVirtualRecursiveMember() : member(*this) {}
+  TestVirtualRecursiveMember &member;
+  virtual void foo();
+};
+
+// CIR-LABEL: test_builtin_launder_virtual_recursive_member
+// LLVM: define{{.*}} void @test_builtin_launder_virtual_recursive_member
+extern "C" void test_builtin_launder_virtual_recursive_member(TestVirtualRecursiveMember *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  TestVirtualRecursiveMember *d = __builtin_launder(p);
+}
+
+// CIR-LABEL: test_builtin_launder_array
+// LLVM: define{{.*}} void @test_builtin_launder_array
+extern "C" void test_builtin_launder_array(TestVirtualFn (&Arr)[5]) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  TestVirtualFn *d = __builtin_launder(Arr);
+}
+
+// CIR-LABEL: test_builtin_launder_array_nested
+// LLVM: define{{.*}} void @test_builtin_launder_array_nested
+extern "C" void test_builtin_launder_array_nested(TestVirtualFn (&Arr)[5][2]) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  using RetTy = TestVirtualFn(*)[2];
+  RetTy d = __builtin_launder(Arr);
+}
+
+// CIR-LABEL: test_builtin_launder_array_no_invariant
+// LLVM: define{{.*}} void @test_builtin_launder_array_no_invariant
+extern "C" void test_builtin_launder_array_no_invariant(TestNoInvariant (&Arr)[5]) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  TestNoInvariant *d = __builtin_launder(Arr);
+}
+
+// CIR-LABEL: test_builtin_launder_array_nested_no_invariant
+// LLVM: define{{.*}} void @test_builtin_launder_array_nested_no_invariant
+extern "C" void test_builtin_launder_array_nested_no_invariant(TestNoInvariant (&Arr)[5][2]) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  using RetTy = TestNoInvariant(*)[2];
+  RetTy d = __builtin_launder(Arr);
+}
+
+template <class Member>
+struct WithMember {
+  Member mem;
+};
+
+template struct WithMember<TestVirtualFn[5]>;
+
+// CIR-LABEL: test_builtin_launder_member_array
+// LLVM: define{{.*}} void @test_builtin_launder_member_array
+extern "C" void test_builtin_launder_member_array(WithMember<TestVirtualFn[5]> *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  auto *d = __builtin_launder(p);
+}
+
+template struct WithMember<TestVirtualFn[5][2]>;
+
+// CIR-LABEL: test_builtin_launder_member_array_nested
+// LLVM: define{{.*}} void @test_builtin_launder_member_array_nested
+extern "C" void test_builtin_launder_member_array_nested(WithMember<TestVirtualFn[5][2]> *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  auto *d = __builtin_launder(p);
+}
+
+template struct WithMember<TestNoInvariant[5]>;
+
+// CIR-LABEL: test_builtin_launder_member_array_no_invariant
+// LLVM: define{{.*}} void @test_builtin_launder_member_array_no_invariant
+extern "C" void test_builtin_launder_member_array_no_invariant(WithMember<TestNoInvariant[5]> *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  auto *d = __builtin_launder(p);
+}
+
+template struct WithMember<TestNoInvariant[5][2]>;
+
+// CIR-LABEL: test_builtin_launder_member_array_nested_no_invariant
+// LLVM: define{{.*}} void @test_builtin_launder_member_array_nested_no_invariant
+extern "C" void test_builtin_launder_member_array_nested_no_invariant(WithMember<TestNoInvariant[5][2]> *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  auto *d = __builtin_launder(p);
+}
+
+template <class T>
+struct WithBase : T {};
+
+template struct WithBase<TestNoInvariant>;
+
+// CIR-LABEL: test_builtin_launder_base_no_invariant
+// LLVM: define{{.*}} void @test_builtin_launder_base_no_invariant
+extern "C" void test_builtin_launder_base_no_invariant(WithBase<TestNoInvariant> *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  auto *d = __builtin_launder(p);
+}
+
+template struct WithBase<TestVirtualFn>;
+
+// CIR-LABEL: test_builtin_launder_base
+// LLVM: define{{.*}} void @test_builtin_launder_base
+extern "C" void test_builtin_launder_base(WithBase<TestVirtualFn> *p) {
+  // CIR: cir.return
+
+  // LLVM-NOT: llvm.launder.invariant.group
+  // LLVM: ret void
+  auto *d = __builtin_launder(p);
+}
+}

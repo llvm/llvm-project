@@ -330,6 +330,43 @@ static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
   return returnBool ? op.getResult(1) : op.getResult(0);
 }
 
+static bool
+typeRequiresBuiltinLaunderImp(const ASTContext &ctx, QualType ty,
+                              llvm::SmallPtrSetImpl<const Decl *> &seen) {
+  if (const auto *arr = ctx.getAsArrayType(ty))
+    ty = ctx.getBaseElementType(arr);
+
+  const auto *record = ty->getAsCXXRecordDecl();
+  if (!record)
+    return false;
+
+  // We've already checked this type, or are in the process of checking it.
+  if (!seen.insert(record).second)
+    return false;
+
+  assert(record->hasDefinition() &&
+         "Incomplete types should already be diagnosed");
+
+  if (record->isDynamicClass())
+    return true;
+
+  for (FieldDecl *fld : record->fields()) {
+    if (typeRequiresBuiltinLaunderImp(ctx, fld->getType(), seen))
+      return true;
+  }
+  return false;
+}
+
+/// Determine if the specified type requires laundering by checking if it is a
+/// dynamic class type or contains a subobject which is a dynamic class type.
+static bool typeRequiresBuiltinLaunder(clang::CIRGen::CIRGenModule &cgm,
+                                       QualType ty) {
+  if (!cgm.getCodeGenOpts().StrictVTablePointers)
+    return false;
+  llvm::SmallPtrSet<const Decl *, 16> seen;
+  return typeRequiresBuiltinLaunderImp(cgm.getASTContext(), ty, seen);
+}
+
 RValue CIRGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
   auto src = emitScalarExpr(E->getArg(0));
   auto shiftAmt = emitScalarExpr(E->getArg(1));
@@ -1625,8 +1662,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__builtin_setjmp NYI");
   case Builtin::BI__builtin_longjmp:
     llvm_unreachable("BI__builtin_longjmp NYI");
-  case Builtin::BI__builtin_launder:
-    llvm_unreachable("BI__builtin_launder NYI");
+  case Builtin::BI__builtin_launder: {
+    const clang::Expr *arg = E->getArg(0);
+    clang::QualType argTy = arg->getType()->getPointeeType();
+    mlir::Value ptr = emitScalarExpr(arg);
+    if (typeRequiresBuiltinLaunder(CGM, argTy)) {
+      assert(!MissingFeatures::createLaunderInvariantGroup());
+      llvm_unreachable(" launder.invariant.group NYI ");
+    }
+    return RValue::get(ptr);
+  }
 
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
