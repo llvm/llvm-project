@@ -36,6 +36,7 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -697,25 +698,59 @@ static bool isTokenAtLoc(const SourceManager &SM, const LangOptions &LangOpts,
   return !Invalid && Text == TokenText;
 }
 
-std::optional<SourceLocation>
-getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
-                       const ASTContext &Context) {
+namespace {
+struct SourceLocationHash {
+  std::size_t operator()(const SourceLocation &Loc) const {
+    return Loc.getHashValue();
+  }
+};
+
+struct SourceLocationEqual {
+  bool operator()(const SourceLocation &LHS, const SourceLocation &RHS) const {
+    return LHS == RHS;
+  }
+};
+
+} // namespace
+
+static std::optional<SourceLocation> getExpansionLocOfMacroRecursive(
+    StringRef MacroName, SourceLocation Loc, const ASTContext &Context,
+    std::unordered_set<SourceLocation, SourceLocationHash, SourceLocationEqual>
+        &CheckedLocations) {
   auto &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
   while (Loc.isMacroID()) {
+    if (CheckedLocations.count(Loc)) {
+      return std::nullopt;
+    }
+    CheckedLocations.insert(Loc);
     SrcMgr::ExpansionInfo Expansion =
         SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
-    if (Expansion.isMacroArgExpansion())
+    if (Expansion.isMacroArgExpansion()) {
       // Check macro argument for an expansion of the given macro. For example,
       // `F(G(3))`, where `MacroName` is `G`.
-      if (std::optional<SourceLocation> ArgLoc = getExpansionLocOfMacro(
-              MacroName, Expansion.getSpellingLoc(), Context))
+      if (std::optional<SourceLocation> ArgLoc =
+              getExpansionLocOfMacroRecursive(MacroName,
+                                              Expansion.getSpellingLoc(),
+                                              Context, CheckedLocations)) {
         return ArgLoc;
+      }
+    }
     Loc = Expansion.getExpansionLocStart();
-    if (isTokenAtLoc(SM, LangOpts, MacroName, Loc))
+    if (isTokenAtLoc(SM, LangOpts, MacroName, Loc)) {
       return Loc;
+    }
   }
   return std::nullopt;
+}
+
+std::optional<SourceLocation>
+getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
+                       const ASTContext &Context) {
+  std::unordered_set<SourceLocation, SourceLocationHash, SourceLocationEqual>
+      CheckedLocations;
+  return getExpansionLocOfMacroRecursive(MacroName, Loc, Context,
+                                         CheckedLocations);
 }
 
 std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
