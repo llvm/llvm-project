@@ -225,6 +225,8 @@ cir::AllocaOp findAlloca(mlir::Operation *op) {
       return findAlloca(vals[0].getDefiningOp());
   } else if (auto load = mlir::dyn_cast<cir::LoadOp>(op)) {
     return findAlloca(load.getAddr().getDefiningOp());
+  } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
+    return findAlloca(cast.getSrc().getDefiningOp());
   }
 
   return {};

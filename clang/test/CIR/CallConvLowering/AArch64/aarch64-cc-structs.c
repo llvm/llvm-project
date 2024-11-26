@@ -276,3 +276,57 @@ typedef struct {
 // LLVM: %[[#V3:]] = load ptr, ptr %[[#V2]], align 8
 // LLVM: ret void
 void pass_cat(CAT a) {}
+
+typedef struct {
+  union {
+    struct {
+      char a, b;
+    };
+    char c;
+  };
+} NESTED_U;
+
+// CHECK: cir.func @pass_nested_u(%arg0: !u64i
+// CHECK: %[[#V0:]] = cir.alloca !ty_NESTED_U, !cir.ptr<!ty_NESTED_U>, [""] {alignment = 4 : i64}
+// CHECK: %[[#V1:]] = cir.cast(integral, %arg0 : !u64i), !u16i
+// CHECK: %[[#V2:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_NESTED_U>
+// CHECK: cir.store %[[#V1]], %[[#V2]] : !u16i
+// CHECK: cir.return
+
+// LLVM: @pass_nested_u(i64 %[[#V0:]]
+// LLVM: %[[#V2:]] = alloca %struct.NESTED_U, i64 1, align 4
+// LLVM: %[[#V3:]] = trunc i64 %[[#V0]] to i16
+// LLVM: store i16 %[[#V3]], ptr %[[#V2]], align 2
+// LLVM: ret void
+void pass_nested_u(NESTED_U a) {}
+
+// CHECK: cir.func no_proto @call_nested_u()
+// CHECK: %[[#V0:]] = cir.alloca !ty_NESTED_U, !cir.ptr<!ty_NESTED_U>
+// CHECK: %[[#V1:]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["tmp"] {alignment = 8 : i64}
+// CHECK: %[[#V2:]] = cir.load %[[#V0]] : !cir.ptr<!ty_NESTED_U>, !ty_NESTED_U
+// CHECK: %[[#V3:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_NESTED_U>)
+// CHECK: %[[#V4:]] = cir.load %[[#V3]]
+// CHECK: %[[#V5:]] = cir.cast(bitcast, %[[#V3]]
+// CHECK: %[[#V6:]] = cir.load %[[#V5]]
+// CHECK: %[[#V7:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_NESTED_U>), !cir.ptr<!void>
+// CHECK: %[[#V8:]] = cir.cast(bitcast, %[[#V1]] : !cir.ptr<!u64i>), !cir.ptr<!void>
+// CHECK: %[[#V9:]] = cir.const #cir.int<2> : !u64i
+// CHECK: cir.libc.memcpy %[[#V9]] bytes from %[[#V7]] to %[[#V8]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+// CHECK: %[[#V10:]] = cir.load %[[#V1]] : !cir.ptr<!u64i>, !u64i
+// CHECK: cir.call @pass_nested_u(%[[#V10]]) : (!u64i) -> ()
+// CHECK: cir.return
+
+// LLVM: void @call_nested_u()
+// LLVM: %[[#V1:]] = alloca %struct.NESTED_U, i64 1, align 1
+// LLVM: %[[#V2:]] = alloca i64, i64 1, align 8
+// LLVM: %[[#V3:]] = load %struct.NESTED_U, ptr %[[#V1]], align 1
+// LLVM: %[[#V4:]] = load %union.anon.0, ptr %[[#V1]], align 1
+// LLVM: %[[#V5:]] = load %struct.anon.1, ptr %[[#V1]], align 1
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[#V2]], ptr %[[#V1]], i64 2, i1 false)
+// LLVM: %[[#V6:]] = load i64, ptr %[[#V2]], align 8
+// LLVM: call void @pass_nested_u(i64 %[[#V6]])
+// LLVM: ret void
+void call_nested_u() {
+  NESTED_U a;
+  pass_nested_u(a);
+}
