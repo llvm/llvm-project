@@ -8824,7 +8824,9 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 
   const bool IsPacked = (Desc.TSFlags & SIInstrFlags::IsPacked) != 0;
 
-  if (Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
+  if (Opc == AMDGPU::V_CVT_SCALEF32_PK_FP4_F16_vi ||
+      Opc == AMDGPU::V_CVT_SCALEF32_PK_FP4_BF16_vi ||
+      Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx12 ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12) {
