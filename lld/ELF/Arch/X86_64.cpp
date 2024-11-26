@@ -589,9 +589,11 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
           << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
     }
   } else if (rel.type == R_X86_64_CODE_4_GOTTPOFF) {
-    if (loc[-4] != 0xd5)
+    if (loc[-4] != 0xd5) {
       Err(ctx) << getErrorLoc(ctx, loc - 4)
                << "Invalid prefix with R_X86_64_CODE_4_GOTTPOFF!";
+      return;
+    }
     const uint8_t rex = loc[-3];
     loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
     *regSlot = 0xc0 | reg;
