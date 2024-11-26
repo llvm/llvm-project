@@ -753,9 +753,8 @@ define i8 @sub_from_constant_extra_use(i8 %x, i8 %y) {
 
 define i32 @sub_plus_mul(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_plus_mul(
-; CHECK-NEXT:    [[A:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Y]], 10
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Y:%.*]], 9
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = sub i32 %x, %y
@@ -766,9 +765,8 @@ define i32 @sub_plus_mul(i32 %x, i32 %y) {
 
 define i32 @sub_plus_mul_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_plus_mul_2(
-; CHECK-NEXT:    [[A:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Y]], -10
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Y:%.*]], -11
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = sub i32 %x, %y
@@ -779,9 +777,8 @@ define i32 @sub_plus_mul_2(i32 %x, i32 %y) {
 
 define i32 @sub_plus_mul3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_plus_mul3(
-; CHECK-NEXT:    [[A:%.*]] = mul i32 [[Y:%.*]], 10
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[B]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[Y:%.*]], 9
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[B:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = mul i32 %y, 10
@@ -792,9 +789,8 @@ define i32 @sub_plus_mul3(i32 %x, i32 %y) {
 
 define i32 @sub_plus_mul4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_plus_mul4(
-; CHECK-NEXT:    [[A:%.*]] = mul i32 [[Y:%.*]], -10
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[B]], [[A]]
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[Y:%.*]], -11
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[B:%.*]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = mul i32 %y, -10
@@ -805,9 +801,8 @@ define i32 @sub_plus_mul4(i32 %x, i32 %y) {
 
 define <2 x i8> @sub_plus_mul_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_plus_mul_splat(
-; CHECK-NEXT:    [[A:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = mul <2 x i8> [[Y]], splat (i8 7)
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[B:%.*]] = mul <2 x i8> [[Y:%.*]], splat (i8 6)
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i8> [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %a = sub <2 x i8> %x, %y
@@ -818,7 +813,7 @@ define <2 x i8> @sub_plus_mul_splat(<2 x i8> %x, <2 x i8> %y) {
 
 ;; <- Negative Tests ->
 
-;; mul does not work if it is a powerof2, because it results in worse codegen
+;; mul does not work if it is a power of 2, because it results in worse codegen
 define i32 @neg_sub_plus_mul_pow2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @neg_sub_plus_mul_pow2(
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
@@ -832,8 +827,8 @@ define i32 @neg_sub_plus_mul_pow2(i32 %x, i32 %y) {
   ret i32 %c
 }
 
-define <2 x i8> @sub_plus_mul_splat_shl(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @sub_plus_mul_splat_shl(
+define <2 x i8> @neg_sub_plus_mul_splat_shl(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @neg_sub_plus_mul_splat_shl(
 ; CHECK-NEXT:    [[A:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = shl <2 x i8> [[Y]], splat (i8 3)
 ; CHECK-NEXT:    [[C:%.*]] = add <2 x i8> [[A]], [[B]]
