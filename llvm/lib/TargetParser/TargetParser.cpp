@@ -470,6 +470,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gws"] = true;
       break;
     case GK_GFX950:
+      Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       Features["prng-inst"] = true;
       Features["permlane16-swap"] = true;
       Features["permlane32-swap"] = true;
