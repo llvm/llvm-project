@@ -3928,6 +3928,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     CGM.getCodeGenOpts().TrapFuncName);
       TrapCall->addFnAttr(A);
     }
+    // We unconditionally add NoMerge, even if this is the first time we've
+    // seen this type of trap in this function. This is necessary because
+    // inlining may occur in later stages.
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
