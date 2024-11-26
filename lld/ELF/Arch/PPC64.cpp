@@ -288,10 +288,10 @@ static void writeSequence(Ctx &ctx, const char *prefix, int from,
   // The full section content has the extent of [begin, end). We drop unused
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
-      ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 4,
+      ctx.internalFile, ".text", SHT_PROGBITS, SHF_ALLOC, /*addralign=*/4,
+      /*entsize=*/0,
       ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
-               4 * (buf.size() - first)),
-      ".text");
+               4 * (buf.size() - first)));
   ctx.inputSections.push_back(sec);
   for (Defined *sym : defined) {
     sym->section = sec;

@@ -149,6 +149,7 @@ private:
   bool selectBVHIntrinsic(MachineInstr &I) const;
 #endif /* LLPC_BUILD_GFX12 */
   bool selectSMFMACIntrin(MachineInstr &I) const;
+  bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
   bool selectWaveAddress(MachineInstr &I) const;
   bool selectStackRestore(MachineInstr &MI) const;
   bool selectNamedBarrierInit(MachineInstr &I, Intrinsic::ID IID) const;
@@ -332,6 +333,8 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
 
   void renderOpSelTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;

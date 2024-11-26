@@ -11,6 +11,10 @@
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=bb-freq | FileCheck %s --check-prefixes=CHECK,PGO-BBF,BBF-ONLY
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=br-prob | FileCheck %s --check-prefixes=CHECK,PGO-BRP,BRP-ONLY
 
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=func-entry-count -basic-block-address-map-skip-bb-entries | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES
+; RUN: not llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=bb-freq -basic-block-address-map-skip-bb-entries 2>&1 | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES-ERROR
+; RUN: not llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=br-prob -basic-block-address-map-skip-bb-entries 2>&1 | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES-ERROR
+
 ;; Verify that we emit an error if we try and specify values in addition to all/none
 ; RUN: not llc < %s -mtriple=x86_64 -basic-block-address-map -pgo-analysis-map=all,bb-freq
 ; RUN: not llc < %s -mtriple=x86_64 -basic-block-address-map -pgo-analysis-map=none,bb-freq
@@ -134,3 +138,10 @@ declare i32 @__gxx_personality_v0(...)
 ; PGO-BRP-NEXT:	.byte	5		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\b"	# successor branch probability
 
+; SKIP-BB-ENTRIES:      .byte	17                              # feature
+; SKIP-BB-ENTRIES-NEXT:	.quad	.Lfunc_begin0                   # function address
+; SKIP-BB-ENTRIES-NEXT:	.byte	6                               # number of basic blocks
+; SKIP-BB-ENTRIES-NEXT:	.byte	100                             # function entry count
+; SKIP-BB-ENTRIES-NOT:  # BB id
+
+; SKIP-BB-ENTRIES-ERROR: error: BB entries info is required for BBFreq and BrProb features

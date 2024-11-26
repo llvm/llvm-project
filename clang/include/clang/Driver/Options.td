@@ -5888,12 +5888,24 @@ def target : Joined<["--"], "target=">, Flags<[NoXarchOption]>,
 def darwin_target_variant : Separate<["-"], "darwin-target-variant">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Generate code for an additional runtime variant of the deployment target">;
+
+//===----------------------------------------------------------------------===//
+// Print CPU info options (clang, clang-cl, flang)
+//===----------------------------------------------------------------------===//
+
+let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option] in {
+
 def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
   Group<CompileOnly_Group>,
-  Visibility<[ClangOption, CC1Option, CLOption]>,
-  HelpText<"Print supported cpu models for the given target (if target is not specified,"
-           " it will print the supported cpus for the default target)">,
+  HelpText<"Print supported cpu models for the given target (if target is not "
+           "specified,it will print the supported cpus for the default target)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedCPUs">>;
+
+def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
+def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
+
+} // let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option]
+
 def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Print supported -march extensions (RISC-V, AArch64 and ARM only)">,
@@ -5903,8 +5915,6 @@ def print_enabled_extensions : Flag<["-", "--"], "print-enabled-extensions">,
   HelpText<"Print the extensions enabled by the given target and -march/-mcpu options."
            " (AArch64 and RISC-V only)">,
   MarshallingInfoFlag<FrontendOpts<"PrintEnabledExtensions">>;
-def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
-def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
 def time : Flag<["-"], "time">,
   HelpText<"Time individual commands">;
 def traditional_cpp : Flag<["-", "--"], "traditional-cpp">,

@@ -144,6 +144,11 @@ def : VOP3PSatPat<usubsat, V_PK_SUB_U16>;
 def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
+let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
+defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
+defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
+}
+
 // TODO: Make sure we're doing the right thing with denormals. Note
 // that FMA and MAD will differ.
 multiclass MadFmaMixPats<SDPatternOperator fma_like,
@@ -406,12 +411,12 @@ def DOT2_BF16_Profile
   let HasSrc1Mods = 1;
 }
 
-let SubtargetPredicate = HasDot9Insts  in {
+let SubtargetPredicate = HasDot12Insts  in {
 
 defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16", DOT2_BF16_Profile,
   int_amdgcn_fdot2_f32_bf16, 1>;
 
-} // End SubtargetPredicate = HasDot9Insts
+} // End SubtargetPredicate = HasDot12Insts
 
 } // End let IsDOT = 1
 
@@ -644,6 +649,7 @@ def VOPProfileSMFMAC_I32_16X16X128_I8 : VOPProfileSMFMAC<VOP_V4I32_V4I32_V8I32_I
 def VOPProfileSMFMAC_I32_32X32X64_I8 : VOPProfileSMFMAC<VOP_V16I32_V4I32_V8I32_I32, AVDst_512, AVSrc_128, AVSrc_256>;
 
 def VOPProfileSMFMAC_F32_16X16X128_F8  : VOPProfileSMFMAC<VOP_V4F32_V4I32_V8I32_I32,  AVDst_128, AVSrc_128, AVSrc_256>;
+def VOPProfileSMFMAC_F32_32X32X64_F8  : VOPProfileSMFMAC<VOP_V16F32_V4I32_V8I32_I32,  AVDst_512, AVSrc_128, AVSrc_256>;
 
 def VOPProfileMAI_F32_V8F16_X32     : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_F32_V8F16_X32_VCD : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       VISrc_128_f32,  VDst_128, AVSrc_128>;
@@ -1061,6 +1067,10 @@ defm V_SMFMAC_F32_16X16X128_BF8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x128_bf8_bf8
 defm V_SMFMAC_F32_16X16X128_BF8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x128_bf8_fp8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_bf8_fp8>;
 defm V_SMFMAC_F32_16X16X128_FP8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x128_fp8_bf8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_fp8_bf8>;
 defm V_SMFMAC_F32_16X16X128_FP8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x128_fp8_fp8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_fp8_fp8>;
+defm V_SMFMAC_F32_32X32X64_BF8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x64_bf8_bf8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_bf8_bf8>;
+defm V_SMFMAC_F32_32X32X64_BF8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x64_bf8_fp8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_bf8_fp8>;
+defm V_SMFMAC_F32_32X32X64_FP8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x64_fp8_bf8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_fp8_bf8>;
+defm V_SMFMAC_F32_32X32X64_FP8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x64_fp8_fp8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_fp8_fp8>;
 }
 
 def MAIInstInfoTable : GenericTable {
@@ -2045,6 +2055,9 @@ defm V_PK_MUL_F16 : VOP3P_Real_vi <0x10>;
 defm V_PK_MIN_F16 : VOP3P_Real_vi <0x11>;
 defm V_PK_MAX_F16 : VOP3P_Real_vi <0x12>;
 
+defm V_PK_MINIMUM3_F16 : VOP3P_Real_vi <0x1b>;
+defm V_PK_MAXIMUM3_F16 : VOP3P_Real_vi <0x1c>;
+
 defm V_MAD_MIX_F32 : VOP3P_Real_vi <0x20>;
 defm V_MAD_MIXLO_F16 : VOP3P_Real_vi <0x21>;
 defm V_MAD_MIXHI_F16 : VOP3P_Real_vi <0x22>;
@@ -2113,6 +2126,7 @@ defm V_MFMA_F32_16X16X128_F8F6F4 : VOP3P_Real_MFMA_F8F6F4_gfx950_mc <0x2d, "v_mf
 defm V_MFMA_SCALE_F32_16X16X128_F8F6F4 : VOP3PX_Real_ScaledMFMA_F8F6F4_mc <0x2d>;
 defm V_MFMA_F32_32X32X64_F8F6F4  : VOP3P_Real_MFMA_F8F6F4_gfx950_mc <0x2e, "v_mfma_f32_32x32x64_f8f6f4">;
 defm V_MFMA_SCALE_F32_32X32X64_F8F6F4 : VOP3PX_Real_ScaledMFMA_F8F6F4_mc <0x2e>;
+defm V_DOT2_F32_BF16 : VOP3P_Real_vi<0x1a>;
 
 defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
 defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;
@@ -2163,6 +2177,10 @@ defm V_SMFMAC_F32_16X16X128_BF8_BF8 : VOP3P_Real_SMFMAC <0x3b, "v_smfmac_f32_16x
 defm V_SMFMAC_F32_16X16X128_BF8_FP8 : VOP3P_Real_SMFMAC <0x3c, "v_smfmac_f32_16x16x128bf8fp8">;
 defm V_SMFMAC_F32_16X16X128_FP8_BF8 : VOP3P_Real_SMFMAC <0x3d, "v_smfmac_f32_16x16x128fp8bf8">;
 defm V_SMFMAC_F32_16X16X128_FP8_FP8 : VOP3P_Real_SMFMAC <0x43, "v_smfmac_f32_16x16x128fp8fp8">;
+defm V_SMFMAC_F32_32X32X64_BF8_BF8 : VOP3P_Real_SMFMAC <0x4b, "v_smfmac_f32_32x32x64bf8bf8">;
+defm V_SMFMAC_F32_32X32X64_BF8_FP8 : VOP3P_Real_SMFMAC <0x4e, "v_smfmac_f32_32x32x64bf8fp8">;
+defm V_SMFMAC_F32_32X32X64_FP8_BF8 : VOP3P_Real_SMFMAC <0x4f, "v_smfmac_f32_32x32x64fp8bf8">;
+defm V_SMFMAC_F32_32X32X64_FP8_FP8 : VOP3P_Real_SMFMAC <0x53, "v_smfmac_f32_32x32x64fp8fp8">;
 
 defm V_PK_FMA_F32 : VOP3P_Real_vi <0x30>;
 defm V_PK_MUL_F32 : VOP3P_Real_vi <0x31>;
