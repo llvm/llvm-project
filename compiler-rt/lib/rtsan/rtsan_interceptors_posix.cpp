@@ -190,6 +190,23 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return REAL(fcntl)(filedes, cmd, arg);
 }
 
+INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+  __rtsan_notify_intercepted_call("ioctl");
+
+  // See fcntl for discussion on why we use intptr_t
+  // And why we read from va_args on all request types
+  using arg_type = intptr_t;
+  static_assert(sizeof(arg_type) >= sizeof(struct ifreq *));
+  static_assert(sizeof(arg_type) >= sizeof(int));
+
+  va_list args;
+  va_start(args, request);
+  arg_type arg = va_arg(args, arg_type);
+  va_end(args);
+
+  return REAL(ioctl)(filedes, request, arg);
+}
+
 #if SANITIZER_INTERCEPT_FCNTL64
 INTERCEPTOR(int, fcntl64, int filedes, int cmd, ...) {
   __rtsan_notify_intercepted_call("fcntl64");
@@ -801,6 +818,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
   INTERCEPT_FUNCTION(dup2);
+  INTERCEPT_FUNCTION(ioctl);
 
 #if SANITIZER_APPLE
   INTERCEPT_FUNCTION(OSSpinLockLock);
