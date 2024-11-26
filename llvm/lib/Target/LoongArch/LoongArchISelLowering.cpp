@@ -5751,6 +5751,10 @@ bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
 }
 
+// When -mlamcas is enabled, MinCmpXchgSizeInBits will be set to 8,
+// atomicrmw and/or/xor operations with operands less than 32 bits cannot be
+// expanded to am{and/or/xor}[_db].w through AtomicExpandPass. To prevent
+// regression, we need to implement it manually.
 void LoongArchTargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   AtomicRMWInst::BinOp Op = AI->getOperation();
 
