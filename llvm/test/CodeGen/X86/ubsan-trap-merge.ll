@@ -176,5 +176,5 @@ attributes #4 = { noreturn nounwind }
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
-!4 = !{!"clang version 20.0.0git (https://github.com/thurstond/llvm-project.git fe3c23b439b9a2d00442d9bc6a4ca86f73066a3d)"}
+!4 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git fe3c23b439b9a2d00442d9bc6a4ca86f73066a3d)"}
 !5 = !{}
