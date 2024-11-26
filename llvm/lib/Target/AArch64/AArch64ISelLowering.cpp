@@ -29211,6 +29211,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     }
   }
 
+  // Try to widen the shuffle before generating a possibly expensive SVE TBL.
+  // This may allow the shuffle to be matched as something cheaper like ZIP1.
+  if (SDValue WideOp = tryWidenMaskForShuffle(Op, DAG))
+    return WideOp;
+
   // Avoid producing TBL instruction if we don't know SVE register minimal size,
   // unless NEON is not available and we can assume minimal SVE register size is
   // 128-bits.

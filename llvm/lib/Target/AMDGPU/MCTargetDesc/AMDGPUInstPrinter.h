@@ -184,8 +184,6 @@ private:
                      const MCSubtargetInfo &STI, raw_ostream &O,
                      StringRef Prefix, bool PrintInHex, bool AlwaysPrint);
 
-  void printBitOp3(const MCInst *MI, unsigned OpNo,
-                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printScaleSel(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printAuxData(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -197,6 +195,8 @@ private:
                   raw_ostream &O);
   void printGSrcSimple(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printBitOp3(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
 
 public:
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,

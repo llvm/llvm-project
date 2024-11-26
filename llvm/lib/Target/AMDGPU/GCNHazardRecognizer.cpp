@@ -1210,12 +1210,11 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixGetRegWaitIdle(MI);
 }
 
-static bool isVCmpXWritesExec(const SIInstrInfo &TII,
-                              const SIRegisterInfo &TRI,
+static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
                               const MachineInstr &MI) {
   return (TII.isVOPC(MI) ||
           (MI.isCompare() && (TII.isVOP3(MI) || TII.isSDWA(MI)))) &&
-    MI.modifiesRegister(AMDGPU::EXEC, &TRI);
+         MI.modifiesRegister(AMDGPU::EXEC, &TRI);
 }
 
 bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {

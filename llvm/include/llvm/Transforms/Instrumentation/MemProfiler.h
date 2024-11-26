@@ -16,6 +16,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/MemProf.h"
 
+#include <unordered_map>
+
 namespace llvm {
 class Function;
 class IndexedInstrProfReader;

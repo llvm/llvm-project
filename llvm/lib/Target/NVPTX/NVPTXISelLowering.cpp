@@ -2714,10 +2714,10 @@ SDValue NVPTXTargetLowering::LowerFROUND32(SDValue Op,
 
   // RoundedA = (float) (int) ( A > 0 ? (A + 0.5f) : (A - 0.5f))
   SDValue Bitcast  = DAG.getNode(ISD::BITCAST, SL, MVT::i32, A);
-  const int SignBitMask = 0x80000000;
+  const unsigned SignBitMask = 0x80000000;
   SDValue Sign = DAG.getNode(ISD::AND, SL, MVT::i32, Bitcast,
                              DAG.getConstant(SignBitMask, SL, MVT::i32));
-  const int PointFiveInBits = 0x3F000000;
+  const unsigned PointFiveInBits = 0x3F000000;
   SDValue PointFiveWithSignRaw =
       DAG.getNode(ISD::OR, SL, MVT::i32, Sign,
                   DAG.getConstant(PointFiveInBits, SL, MVT::i32));
@@ -3031,9 +3031,9 @@ SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
         ISD::ADD, DL, VAList.getValueType(), VAList,
         DAG.getConstant(MA->value() - 1, DL, VAList.getValueType()));
 
-    VAList = DAG.getNode(
-        ISD::AND, DL, VAList.getValueType(), VAList,
-        DAG.getConstant(-(int64_t)MA->value(), DL, VAList.getValueType()));
+    VAList = DAG.getNode(ISD::AND, DL, VAList.getValueType(), VAList,
+                         DAG.getSignedConstant(-(int64_t)MA->value(), DL,
+                                               VAList.getValueType()));
   }
 
   // Increment the pointer, VAList, to the next vaarg

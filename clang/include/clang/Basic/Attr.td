@@ -3323,7 +3323,7 @@ def Target : InheritableAttr {
   }];
 }
 
-def TargetVersion : InheritableAttr {
+def TargetVersion : InheritableAttr, TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetRISCV.Arches)>> {
   let Spellings = [GCC<"target_version">];
   let Args = [StringArgument<"NamesStr">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
@@ -4912,5 +4912,12 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Spellings = [Clang<"clspv_libclc_builtin">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ClspvLibclcBuiltinDoc];
+  let SimpleHandler = 1;
+}
+
+def NoTrivialAutoVarInit: InheritableAttr {
+  let Spellings = [Declspec<"no_init_all">];
+  let Subjects = SubjectList<[Function, Tag]>;
+  let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
 }

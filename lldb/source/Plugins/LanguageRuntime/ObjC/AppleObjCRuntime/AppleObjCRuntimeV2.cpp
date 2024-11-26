@@ -3398,7 +3398,8 @@ std::optional<uint64_t> AppleObjCRuntimeV2::GetSharedCacheImageHeaderVersion() {
   return std::nullopt;
 }
 
-StructuredData::ObjectSP AppleObjCRuntimeV2::GetLanguageInfo(SymbolContext sc) {
+StructuredData::ObjectSP
+AppleObjCRuntimeV2::GetLanguageSpecificData(SymbolContext sc) {
   auto dict_up = std::make_unique<StructuredData::Dictionary>();
   dict_up->AddItem("Objective-C runtime version",
                    std::make_unique<StructuredData::UnsignedInteger>(2));

@@ -1231,14 +1231,14 @@ bool StackFrame::IsHidden() {
   return false;
 }
 
-StructuredData::ObjectSP StackFrame::GetLanguageInfo() {
+StructuredData::ObjectSP StackFrame::GetLanguageSpecificData() {
   auto process_sp = CalculateProcess();
   SourceLanguage language = GetLanguage();
   if (!language)
     return {};
   if (auto runtime_sp =
           process_sp->GetLanguageRuntime(language.AsLanguageType()))
-    return runtime_sp->GetLanguageInfo(
+    return runtime_sp->GetLanguageSpecificData(
         GetSymbolContext(eSymbolContextFunction));
   return {};
 }
