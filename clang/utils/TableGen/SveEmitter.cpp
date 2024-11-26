@@ -492,9 +492,9 @@ std::string SVEType::builtin_str() const {
   }
 
   // Make chars and integer pointers explicitly signed.
-  if((ElementBitwidth == 8 || isPointer()) && isSignedInteger())
+  if ((ElementBitwidth == 8 || isPointer()) && isSignedInteger())
     OutStr = "S" + OutStr;
-  else if(isUnsignedInteger())
+  else if (isUnsignedInteger())
     OutStr = "U" + OutStr;
 
   // Constant indices are "int", but have the "constant expression" modifier.
@@ -1005,7 +1005,7 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     // Replace templated arg with the right suffix (e.g. u32)
     std::string TypeCode;
 
-    if(T.isSignedInteger())
+    if (T.isSignedInteger())
       TypeCode = 's';
     else if (T.isUnsignedInteger())
       TypeCode = 'u';
