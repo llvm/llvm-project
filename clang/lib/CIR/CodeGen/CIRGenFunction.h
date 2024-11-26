@@ -76,11 +76,24 @@ private:
   /// require a jump out through normal cleanups.
   struct JumpDest {
     JumpDest() = default;
-    JumpDest(mlir::Block *Block) : Block(Block) {}
+    JumpDest(mlir::Block *block, EHScopeStack::stable_iterator depth = {},
+             unsigned index = 0)
+        : block(block) {}
 
-    bool isValid() const { return Block != nullptr; }
-    mlir::Block *getBlock() const { return Block; }
-    mlir::Block *Block = nullptr;
+    bool isValid() const { return block != nullptr; }
+    mlir::Block *getBlock() const { return block; }
+    EHScopeStack::stable_iterator getScopeDepth() const { return scopeDepth; }
+    unsigned getDestIndex() const { return index; }
+
+    // This should be used cautiously.
+    void setScopeDepth(EHScopeStack::stable_iterator depth) {
+      scopeDepth = depth;
+    }
+
+  private:
+    mlir::Block *block = nullptr;
+    EHScopeStack::stable_iterator scopeDepth;
+    unsigned index;
   };
 
   /// Track mlir Blocks for each C/C++ label.

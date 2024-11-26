@@ -42,8 +42,36 @@ cir::BrOp CIRGenFunction::emitBranchThroughCleanup(mlir::Location Loc,
 
   // Insert a branch: to the cleanup block (unsolved) or to the already
   // materialized label. Keep track of unsolved goto's.
-  return builder.create<BrOp>(Loc, Dest.isValid() ? Dest.getBlock()
-                                                  : ReturnBlock().getBlock());
+  auto brOp = builder.create<BrOp>(
+      Loc, Dest.isValid() ? Dest.getBlock() : ReturnBlock().getBlock());
+
+  // Calculate the innermost active normal cleanup.
+  EHScopeStack::stable_iterator TopCleanup =
+      EHStack.getInnermostActiveNormalCleanup();
+
+  // If we're not in an active normal cleanup scope, or if the
+  // destination scope is within the innermost active normal cleanup
+  // scope, we don't need to worry about fixups.
+  if (TopCleanup == EHStack.stable_end() ||
+      TopCleanup.encloses(Dest.getScopeDepth())) { // works for invalid
+    // FIXME(cir): should we clear insertion point here?
+    return brOp;
+  }
+
+  // If we can't resolve the destination cleanup scope, just add this
+  // to the current cleanup scope as a branch fixup.
+  if (!Dest.getScopeDepth().isValid()) {
+    BranchFixup &Fixup = EHStack.addBranchFixup();
+    Fixup.destination = Dest.getBlock();
+    Fixup.destinationIndex = Dest.getDestIndex();
+    Fixup.initialBranch = brOp;
+    Fixup.optimisticBranchBlock = nullptr;
+    // FIXME(cir): should we clear insertion point here?
+    return brOp;
+  }
+
+  // FIXME(cir): otherwise, thread through all the normal cleanups in scope.
+  return brOp;
 }
 
 /// Emits all the code to cause the given temporary to be cleaned up.
@@ -573,6 +601,18 @@ void CIRGenFunction::PopCleanupBlocks(
 //===----------------------------------------------------------------------===//
 
 void EHScopeStack::Cleanup::anchor() {}
+
+EHScopeStack::stable_iterator
+EHScopeStack::getInnermostActiveNormalCleanup() const {
+  for (stable_iterator si = getInnermostNormalCleanup(), se = stable_end();
+       si != se;) {
+    EHCleanupScope &cleanup = cast<EHCleanupScope>(*find(si));
+    if (cleanup.isActive())
+      return si;
+    si = cleanup.getEnclosingNormalCleanup();
+  }
+  return stable_end();
+}
 
 /// Push an entry of the given size onto this protected-scope stack.
 char *EHScopeStack::allocate(size_t Size) {

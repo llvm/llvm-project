@@ -34,22 +34,22 @@ class CIRGenFunction;
 /// the innermost cleanup.  When a (normal) cleanup is popped, any
 /// unresolved fixups in that scope are threaded through the cleanup.
 struct BranchFixup {
-  // /// The block containing the terminator which needs to be modified
-  // /// into a switch if this fixup is resolved into the current scope.
-  // /// If null, LatestBranch points directly to the destination.
-  // llvm::BasicBlock *OptimisticBranchBlock;
+  /// The block containing the terminator which needs to be modified
+  /// into a switch if this fixup is resolved into the current scope.
+  /// If null, LatestBranch points directly to the destination.
+  mlir::Block *optimisticBranchBlock = nullptr;
 
-  // /// The ultimate destination of the branch.
-  // ///
-  // /// This can be set to null to indicate that this fixup was
-  // /// successfully resolved.
-  // llvm::BasicBlock *Destination;
+  /// The ultimate destination of the branch.
+  ///
+  /// This can be set to null to indicate that this fixup was
+  /// successfully resolved.
+  mlir::Block *destination = nullptr;
 
-  // /// The destination index value.
-  // unsigned DestinationIndex;
+  /// The destination index value.
+  unsigned destinationIndex = 0;
 
-  // /// The initial branch of the fixup.
-  // llvm::BranchInst *InitialBranch;
+  /// The initial branch of the fixup.
+  cir::BrOp initialBranch = {};
 };
 
 template <class T> struct InvariantValue {
