@@ -150,7 +150,7 @@ inline std::ostream &operator<<(std::ostream &os, const struct {0} *params) {{
   OS << TAB_1 "return os;\n}\n";
 }
 
-void EmitOffloadPrintHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitOffloadPrintHeader(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << R"""(
 // Auto-generated file, do not manually edit.
