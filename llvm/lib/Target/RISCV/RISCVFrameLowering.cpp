@@ -582,8 +582,9 @@ static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
 
 void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
-                                       StackOffset Offset, bool EmitCFI,
-                                       unsigned CFIIndex) const {
+                                       MachineFunction &MF, StackOffset Offset,
+                                       uint64_t RealStackSize,
+                                       bool EmitCFI) const {
   DebugLoc DL;
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   const RISCVInstrInfo *TII = STI.getInstrInfo();
@@ -592,7 +593,9 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
                 getStackAlign());
 
   if (EmitCFI) {
-    // Emit ".cfi_def_cfa_offset StackSize"
+    // Emit ".cfi_def_cfa_offset RealStackSize"
+    unsigned CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::cfiDefCfaOffset(nullptr, RealStackSize));
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -715,10 +718,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (StackSize != 0) {
     // Allocate space on the stack if necessary.
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::cfiDefCfaOffset(nullptr, RealStackSize));
-    allocateStack(MBB, MBBI, StackOffset::getFixed(-StackSize),
-		  /*EmitCFI=*/ true, CFIIndex);
+    allocateStack(MBB, MBBI, MF, StackOffset::getFixed(-StackSize),
+                  RealStackSize, /*EmitCFI=*/true);
   }
 
   // The frame pointer is callee-saved, and code has been generated for us to
@@ -760,12 +761,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
 
-    // If we are using a frame-pointer, and thus emitted ".cfi_def_cfa fp, 0",
-    // don't emit an sp-based .cfi_def_cfa_offset
-    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(
-        nullptr, getStackSizeWithRVVPadding(MF)));
-    allocateStack(MBB, MBBI, StackOffset::getFixed(-SecondSPAdjustAmount),
-                  !hasFP(MF), CFIIndex);
+    allocateStack(MBB, MBBI, MF, StackOffset::getFixed(-SecondSPAdjustAmount),
+                  getStackSizeWithRVVPadding(MF), !hasFP(MF));
   }
 
   if (RVVStackSize) {
