@@ -1146,10 +1146,10 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
   }
 }
 
-enum ArmSMEInlinability : uint8_t {
+enum class ArmSMEInlinability : uint8_t {
   Ok = 0,
-  MismatchedStreamingCompatibility = 1 << 1,
-  IncompatibleStreamingModes = 1,
+  MismatchedStreamingCompatibility = 1 << 0,
+  IncompatibleStreamingModes = 1 << 1,
   CalleeRequiresNewZA = 1 << 2,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CalleeRequiresNewZA),
 };
@@ -1190,15 +1190,17 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
   ArmSMEInlinability Inlinability = GetArmSMEInlinability(Caller, Callee);
 
   if ((Inlinability & ArmSMEInlinability::MismatchedStreamingCompatibility) !=
-      0)
+      ArmSMEInlinability::Ok)
     CGM.getDiags().Report(
         CallLoc,
-        (Inlinability & ArmSMEInlinability::IncompatibleStreamingModes) != 0
+        (Inlinability & ArmSMEInlinability::IncompatibleStreamingModes) !=
+                ArmSMEInlinability::Ok
             ? diag::err_function_always_inline_attribute_mismatch
             : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
 
-  if ((Inlinability & ArmSMEInlinability::CalleeRequiresNewZA) != 0)
+  if ((Inlinability & ArmSMEInlinability::CalleeRequiresNewZA) !=
+      ArmSMEInlinability::Ok)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
         << Callee->getDeclName();
 }
