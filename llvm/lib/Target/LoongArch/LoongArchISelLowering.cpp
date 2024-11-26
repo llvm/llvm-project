@@ -2833,7 +2833,10 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   case ISD::UREM:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    Results.push_back(customLegalizeToWOp(N, DAG, 2, ISD::SIGN_EXTEND));
+    Results.push_back(customLegalizeToWOp(N, DAG, 2,
+                                          Subtarget.hasDiv32() && VT == MVT::i32
+                                              ? ISD::ANY_EXTEND
+                                              : ISD::SIGN_EXTEND));
     break;
   case ISD::SHL:
   case ISD::SRA:
