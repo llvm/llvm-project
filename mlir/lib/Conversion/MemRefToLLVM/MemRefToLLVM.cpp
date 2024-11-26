@@ -192,7 +192,7 @@ struct AssumeAlignmentOpLowering
     Value ptr = getStridedElementPtr(loc, srcMemRefType, memref, /*indices=*/{},
                                      rewriter);
 
-    // Emit llvm.assume(true) "align"(memref, alignment).
+    // Emit llvm.assume(true) ["align"(memref, alignment)].
     // This is more direct than ptrtoint-based checks, is explicitly supported,
     // and works with non-integral address spaces.
     Value trueCond =
