@@ -333,38 +333,11 @@ void Block::FinalizeRanges() {
 void Block::AddRange(const Range &range) {
   Block *parent_block = GetParent();
   if (parent_block && !parent_block->Contains(range)) {
-    Log *log = GetLog(LLDBLog::Symbols);
-    if (log) {
-      ModuleSP module_sp(m_parent_scope.CalculateSymbolContextModule());
-      Function *function = m_parent_scope.CalculateSymbolContextFunction();
-      const addr_t function_file_addr = function->GetAddress().GetFileAddress();
-      const addr_t block_start_addr = function_file_addr + range.GetRangeBase();
-      const addr_t block_end_addr = function_file_addr + range.GetRangeEnd();
-      Type *func_type = function->GetType();
-
-      const Declaration &func_decl = func_type->GetDeclaration();
-      if (func_decl.GetLine()) {
-        LLDB_LOGF(log,
-                  "warning: %s:%u block {0x%8.8" PRIx64
-                  "} has range[%u] [0x%" PRIx64 " - 0x%" PRIx64
-                  ") which is not contained in parent block {0x%8.8" PRIx64
-                  "} in function {0x%8.8" PRIx64 "} from %s",
-                  func_decl.GetFile().GetPath().c_str(), func_decl.GetLine(),
-                  GetID(), (uint32_t)m_ranges.GetSize(), block_start_addr,
-                  block_end_addr, parent_block->GetID(), function->GetID(),
-                  module_sp->GetFileSpec().GetPath().c_str());
-      } else {
-        LLDB_LOGF(log,
-                  "warning: block {0x%8.8" PRIx64 "} has range[%u] [0x%" PRIx64
-                  " - 0x%" PRIx64
-                  ") which is not contained in parent block {0x%8.8" PRIx64
-                  "} in function {0x%8.8" PRIx64 "} from %s",
-                  GetID(), (uint32_t)m_ranges.GetSize(), block_start_addr,
-                  block_end_addr, parent_block->GetID(), function->GetID(),
-                  module_sp->GetFileSpec().GetPath().c_str());
-      }
-    }
-    parent_block->AddRange(range);
+    m_parent_scope.CalculateSymbolContextModule()->ReportWarning(
+        "block {0:x} has a range [{1:x}, {2:x}) which is not contained in the "
+        "parent block {3:x}",
+        GetID(), range.GetRangeBase(), range.GetRangeEnd(),
+        parent_block->GetID());
   }
   m_ranges.Append(range);
 }
