@@ -2,6 +2,8 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,-div32 < %s | FileCheck %s --check-prefix=LA64
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,+div32 < %s | FileCheck %s --check-prefix=LA64-DIV32
 
+; TODO: Use div.w/mod.w for sdiv/srem i32
+
 define i32 @divw(i64 %a, i64 %b) {
 ; LA64-LABEL: divw:
 ; LA64:       # %bb.0:
