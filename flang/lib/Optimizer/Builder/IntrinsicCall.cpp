@@ -434,6 +434,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"lgt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sgt>},
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
+    {"lnblnk", &I::genLenTrim},
     {"loc", &I::genLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"malloc", &I::genMalloc},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
@@ -7280,11 +7281,21 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 }
 
 // SYSTEM
-void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 2);
+fir::ExtendedValue
+IntrinsicLibrary::genSystem(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((!resultType && (args.size() == 2)) ||
+         (resultType && (args.size() == 1)));
   mlir::Value command = fir::getBase(args[0]);
-  const fir::ExtendedValue &exitstat = args[1];
   assert(command && "expected COMMAND parameter");
+
+  fir::ExtendedValue exitstat;
+  if (resultType) {
+    mlir::Value tmp = builder.createTemporary(loc, *resultType);
+    exitstat = builder.createBox(loc, tmp);
+  } else {
+    exitstat = args[1];
+  }
 
   mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
 
@@ -7307,6 +7318,12 @@ void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
                                       exitstatBox, cmdstatBox, cmdmsgBox);
+
+  if (resultType) {
+    mlir::Value exitstatAddr = builder.create<fir::BoxAddrOp>(loc, exitstatBox);
+    return builder.create<fir::LoadOp>(loc, fir::getBase(exitstatAddr));
+  }
+  return {};
 }
 
 // SYSTEM_CLOCK
