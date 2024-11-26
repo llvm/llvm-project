@@ -93,7 +93,8 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
   // the bounds of the op can be still computed after dropping the selected
   // operand. inversePermutation returns an empty AffineMap in case the
   // concatanated indexing maps are not invertible.
-  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+  return !indexingMaps.empty() &&
+         inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
 }
 
 /// Returns a set of indices of the producer's results which would

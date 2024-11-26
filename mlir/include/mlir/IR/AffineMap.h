@@ -595,7 +595,10 @@ AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 /// potentially empty maps. Assumes each of the underlying map has 0 symbols.
 /// The resulting map has a number of dims equal to the max of `maps`' dims and
 /// the concatenated results as its results.
-/// Returns an empty map if all input `maps` are empty.
+///
+/// This method asserts when `maps` is empty.
+/// TODO: this should return an empty map when `maps` is empty but there is no
+/// way to get the MLIRContext needed to construct it.
 ///
 /// Example:
 /// When applied to the following list of 3 affine maps,

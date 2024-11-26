@@ -834,6 +834,7 @@ AffineMap mlir::inverseAndBroadcastProjectedPermutation(AffineMap map) {
 }
 
 AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
+  assert(maps.size());
   unsigned numResults = 0, numDims = 0, numSymbols = 0;
   for (auto m : maps)
     numResults += m.getNumResults();
