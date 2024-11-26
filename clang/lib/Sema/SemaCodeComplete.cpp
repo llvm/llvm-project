@@ -1836,6 +1836,9 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
       Builder.AddChunk(CodeCompletionString::CK_RightParen);
       Results.AddResult(Result(Builder.TakeString()));
     }
+
+    if (LangOpts.Char8 || LangOpts.CPlusPlus20)
+      Results.AddResult(Result("char8_t", CCP_Type));
   } else
     Results.AddResult(Result("__auto_type", CCP_Type));
 
@@ -1888,6 +1891,9 @@ AddStorageSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
     Results.AddResult(Result("constexpr"));
     Results.AddResult(Result("thread_local"));
   }
+
+  if (LangOpts.CPlusPlus20)
+    Results.AddResult(Result("constinit"));
 }
 
 static void
@@ -1911,6 +1917,9 @@ AddFunctionSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
   case SemaCodeCompletion::PCC_Template:
     if (LangOpts.CPlusPlus || LangOpts.C99)
       Results.AddResult(Result("inline"));
+
+    if (LangOpts.CPlusPlus20)
+      Results.AddResult(Result("consteval"));
     break;
 
   case SemaCodeCompletion::PCC_ObjCInstanceVariableList:
@@ -2186,6 +2195,69 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       } else {
         Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
       }
+
+      if (SemaRef.getLangOpts().CPlusPlus20 &&
+          SemaRef.getLangOpts().CPlusPlusModules) {
+        clang::Module *CurrentModule = SemaRef.getCurrentModule();
+        if (SemaRef.CurContext->isTranslationUnit()) {
+          /// Global module fragment can only be declared in the beginning of
+          /// the file. CurrentModule should be null in this case.
+          if (!CurrentModule) {
+            // module;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+
+          /// Named module should be declared in the beginning of the file,
+          /// or after the global module fragment.
+          if (!CurrentModule ||
+              CurrentModule->Kind == Module::ExplicitGlobalModuleFragment ||
+              CurrentModule->Kind == Module::ImplicitGlobalModuleFragment) {
+            // export module;
+            // module name;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddPlaceholderChunk("name");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+
+          /// Import can occur in non module file or after the named module
+          /// declaration.
+          if (!CurrentModule ||
+              CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+              CurrentModule->Kind == Module::ModulePartitionInterface) {
+            // import name;
+            Builder.AddTypedTextChunk("import");
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddPlaceholderChunk("name");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+
+          if (CurrentModule &&
+              (CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+               CurrentModule->Kind == Module::ModulePartitionInterface)) {
+            // module: private;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_Colon);
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddTypedTextChunk("private");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
+        }
+
+        // export
+        if (!CurrentModule ||
+            CurrentModule->Kind != Module::ModuleKind::PrivateModuleFragment)
+          Results.AddResult(Result("export", CodeCompletionResult::RK_Keyword));
+      }
     }
 
     if (SemaRef.getLangOpts().ObjC)
@@ -2253,6 +2325,11 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     [[fallthrough]];
 
   case SemaCodeCompletion::PCC_Template:
+    if (SemaRef.getLangOpts().CPlusPlus20 &&
+        CCC == SemaCodeCompletion::PCC_Template)
+      Results.AddResult(Result("concept", CCP_Keyword));
+    [[fallthrough]];
+
   case SemaCodeCompletion::PCC_MemberTemplate:
     if (SemaRef.getLangOpts().CPlusPlus && Results.includeCodePatterns()) {
       // template < parameters >
@@ -2264,6 +2341,11 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
     } else {
       Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
     }
+
+    if (SemaRef.getLangOpts().CPlusPlus20 &&
+        (CCC == SemaCodeCompletion::PCC_Template ||
+         CCC == SemaCodeCompletion::PCC_MemberTemplate))
+      Results.AddResult(Result("requires", CCP_Keyword));
 
     AddStorageSpecifiers(CCC, SemaRef.getLangOpts(), Results);
     AddFunctionSpecifiers(CCC, SemaRef.getLangOpts(), Results);
@@ -2486,6 +2568,14 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       Builder.AddPlaceholderChunk("expression");
       Builder.AddChunk(CodeCompletionString::CK_SemiColon);
       Results.AddResult(Result(Builder.TakeString()));
+      // "co_return expression ;" for coroutines(C++20).
+      if (SemaRef.getLangOpts().CPlusPlus20) {
+        Builder.AddTypedTextChunk("co_return");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddPlaceholderChunk("expression");
+        Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+        Results.AddResult(Result(Builder.TakeString()));
+      }
       // When boolean, also add 'return true;' and 'return false;'.
       if (ReturnType->isBooleanType()) {
         Builder.AddTypedTextChunk("return true");
@@ -2705,6 +2795,44 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
         Builder.AddPlaceholderChunk("parameter-pack");
         Builder.AddChunk(CodeCompletionString::CK_RightParen);
         Results.AddResult(Result(Builder.TakeString()));
+      }
+
+      if (SemaRef.getLangOpts().CPlusPlus20) {
+        // co_await expression
+        Builder.AddTypedTextChunk("co_await");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddPlaceholderChunk("expression");
+        Results.AddResult(Result(Builder.TakeString()));
+
+        // co_yield expression
+        Builder.AddTypedTextChunk("co_yield");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddPlaceholderChunk("expression");
+        Results.AddResult(Result(Builder.TakeString()));
+
+        // requires (parameters) { requirements }
+        Builder.AddResultTypeChunk("bool");
+        Builder.AddTypedTextChunk("requires");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+        Builder.AddPlaceholderChunk("parameters");
+        Builder.AddChunk(CodeCompletionString::CK_RightParen);
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddPlaceholderChunk("requirements");
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+        Results.AddResult(Result(Builder.TakeString()));
+
+        if (SemaRef.CurContext->isRequiresExprBody()) {
+          // requires expression ;
+          Builder.AddTypedTextChunk("requires");
+          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+          Builder.AddPlaceholderChunk("expression");
+          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+          Results.AddResult(Result(Builder.TakeString()));
+        }
       }
     }
 
