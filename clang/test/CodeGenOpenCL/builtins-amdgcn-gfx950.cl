@@ -7,6 +7,8 @@ typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
 typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
 typedef __bf16 __attribute__((ext_vector_type(32))) bfloat32;
 typedef half __attribute__((ext_vector_type(32))) half32;
+typedef short __attribute__((ext_vector_type(2))) short2;
+typedef float __attribute__((ext_vector_type(16))) float16;
 
 // CHECK-LABEL: @test_prng_b32(
 // CHECK-NEXT:  entry:
@@ -115,10 +117,14 @@ void test_permlane32_swap(global uint2* out, uint old, uint src) {
 // CHECK-NEXT:    [[OUT6_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRCBF32_ADDR:%.*]] = alloca <32 x bfloat>, align 64, addrspace(5)
 // CHECK-NEXT:    [[SRCH32_ADDR:%.*]] = alloca <32 x half>, align 64, addrspace(5)
+// CHECK-NEXT:    [[SRC0F32_ADDR:%.*]] = alloca <16 x float>, align 64, addrspace(5)
+// CHECK-NEXT:    [[SRC1F32_ADDR:%.*]] = alloca <16 x float>, align 64, addrspace(5)
 // CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    store ptr addrspace(1) [[OUT6:%.*]], ptr addrspace(5) [[OUT6_ADDR]], align 8
 // CHECK-NEXT:    store <32 x bfloat> [[SRCBF32:%.*]], ptr addrspace(5) [[SRCBF32_ADDR]], align 64
 // CHECK-NEXT:    store <32 x half> [[SRCH32:%.*]], ptr addrspace(5) [[SRCH32_ADDR]], align 64
+// CHECK-NEXT:    store <16 x float> [[SRC0F32:%.*]], ptr addrspace(5) [[SRC0F32_ADDR]], align 64
+// CHECK-NEXT:    store <16 x float> [[SRC1F32:%.*]], ptr addrspace(5) [[SRC1F32_ADDR]], align 64
 // CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <32 x bfloat>, ptr addrspace(5) [[SRCBF32_ADDR]], align 64
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
@@ -140,12 +146,26 @@ void test_permlane32_swap(global uint2* out, uint old, uint src) {
 // CHECK-NEXT:    [[TMP14:%.*]] = call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.fp6.f16(<32 x half> [[TMP12]], float [[TMP13]])
 // CHECK-NEXT:    [[TMP15:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT6_ADDR]], align 8
 // CHECK-NEXT:    store <6 x i32> [[TMP14]], ptr addrspace(1) [[TMP15]], align 32
+// CHECK-NEXT:    [[TMP16:%.*]] = load <16 x float>, ptr addrspace(5) [[SRC0F32_ADDR]], align 64
+// CHECK-NEXT:    [[TMP17:%.*]] = load <16 x float>, ptr addrspace(5) [[SRC1F32_ADDR]], align 64
+// CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP19:%.*]] = call <6 x i32> @llvm.amdgcn.cvt.scalef32.2xpk16.bf6.f32(<16 x float> [[TMP16]], <16 x float> [[TMP17]], float [[TMP18]])
+// CHECK-NEXT:    [[TMP20:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT6_ADDR]], align 8
+// CHECK-NEXT:    store <6 x i32> [[TMP19]], ptr addrspace(1) [[TMP20]], align 32
+// CHECK-NEXT:    [[TMP21:%.*]] = load <16 x float>, ptr addrspace(5) [[SRC0F32_ADDR]], align 64
+// CHECK-NEXT:    [[TMP22:%.*]] = load <16 x float>, ptr addrspace(5) [[SRC1F32_ADDR]], align 64
+// CHECK-NEXT:    [[TMP23:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP24:%.*]] = call <6 x i32> @llvm.amdgcn.cvt.scalef32.2xpk16.fp6.f32(<16 x float> [[TMP21]], <16 x float> [[TMP22]], float [[TMP23]])
+// CHECK-NEXT:    [[TMP25:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT6_ADDR]], align 8
+// CHECK-NEXT:    store <6 x i32> [[TMP24]], ptr addrspace(1) [[TMP25]], align 32
 // CHECK-NEXT:    ret void
 //
-void test_cvt_scalef32_pk(global uint6 *out6, bfloat32 srcbf32, half32 srch32, float scale)
+void test_cvt_scalef32_pk(global uint6 *out6, bfloat32 srcbf32, half32 srch32, float16 src0f32, float16 src1f32, float scale)
 {
   *out6 = __builtin_amdgcn_cvt_scalef32_pk32_bf6_bf16(srcbf32, scale);
   *out6 = __builtin_amdgcn_cvt_scalef32_pk32_bf6_f16(srch32, scale);
   *out6 = __builtin_amdgcn_cvt_scalef32_pk32_fp6_bf16(srcbf32, scale);
   *out6 = __builtin_amdgcn_cvt_scalef32_pk32_fp6_f16(srch32, scale);
+  *out6 = __builtin_amdgcn_cvt_scalef32_2xpk16_bf6_f32(src0f32, src1f32, scale);
+  *out6 = __builtin_amdgcn_cvt_scalef32_2xpk16_fp6_f32(src0f32, src1f32, scale);
 }
