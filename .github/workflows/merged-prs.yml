@@ -23,6 +23,7 @@ jobs:
       - name: Checkout Automation Script
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: llvm/utils/git/
           ref: main
 

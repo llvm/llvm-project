@@ -21,6 +21,7 @@ jobs:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout through merge base
@@ -42,6 +43,7 @@ jobs:
       - name: Fetch code formatting utils
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           repository: ${{ github.repository }}
           ref: ${{ github.base_ref }}
           sparse-checkout: |

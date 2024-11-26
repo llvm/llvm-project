@@ -55,6 +55,8 @@ jobs:
             cxx: 'g++-14'
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -101,6 +103,8 @@ jobs:
             cxx: 'clang++-18'
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -165,6 +169,8 @@ jobs:
     container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -203,6 +209,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: 'latest'
@@ -243,6 +251,8 @@ jobs:
         - { config: mingw-incomplete-sysroot, mingw: true }
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Install dependencies
         run: |
           choco install -y ninja

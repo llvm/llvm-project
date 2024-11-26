@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         uses: aminya/setup-cpp@v1

@@ -88,6 +88,7 @@ jobs:
       # clean: false.
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 250
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1

@@ -23,6 +23,8 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 #v4.1.6
+        with:
+          persist-credentials: false
       - name: "Run Audit Script"
         env:
           GITHUB_TOKEN: ${{ github.token }}

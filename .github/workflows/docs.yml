@@ -62,6 +62,7 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 1
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
@@ -98,6 +99,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 1
       - name: Setup Python env
         uses: actions/setup-python@v5

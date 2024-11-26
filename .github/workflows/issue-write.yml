@@ -27,6 +27,7 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/workflows/unprivileged-download-artifact/action.yml
           sparse-checkout-cone-mode: false

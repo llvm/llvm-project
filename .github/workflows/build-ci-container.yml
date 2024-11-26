@@ -28,6 +28,7 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: .github/workflows/containers/github-action-ci/
       - name: Change podman Root Direcotry
         run: |
@@ -67,6 +68,7 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: .github/workflows/containers/github-action-ci/
 
       - name: Change podman Root Direcotry

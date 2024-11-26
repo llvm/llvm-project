@@ -70,6 +70,8 @@ jobs:
 
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        persist-credentials: false
 
     - name: Install Dependencies
       shell: bash
@@ -155,6 +157,7 @@ jobs:
     - name: Checkout Actions
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
+        persist-credentials: false
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
           .github/workflows/
@@ -176,6 +179,7 @@ jobs:
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
+        persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Copy main workflows
@@ -229,6 +233,7 @@ jobs:
     - name: Checkout Actions
       uses: actions/checkout@v4
       with:
+        persist-credentials: false
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
           .github/workflows/
@@ -263,6 +268,7 @@ jobs:
     - name: Checkout Actions
       uses: actions/checkout@v4
       with:
+        persist-credentials: false
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
           .github/workflows/
@@ -312,6 +318,7 @@ jobs:
     - name: Checkout Actions
       uses: actions/checkout@v4
       with:
+        persist-credentials: false
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
           .github/workflows/
@@ -362,6 +369,7 @@ jobs:
     - name: Checkout Actions
       uses: actions/checkout@v4
       with:
+        persist-credentials: false
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
           .github/workflows/
@@ -423,6 +431,7 @@ jobs:
     - name: Checkout Release Scripts
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
+        persist-credentials: false
         sparse-checkout: |
           llvm/utils/release/github-upload-release.py
           llvm/utils/git/requirements.txt
@@ -475,6 +484,7 @@ jobs:
     - name: Checkout Actions
       uses: actions/checkout@v4
       with:
+        persist-credentials: false
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
           .github/workflows/

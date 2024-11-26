@@ -1,0 +1,37 @@
+name: GitHub Actions Workflow Checks
+
+on:
+  push:
+    paths: [".github/workflows/*.ya?ml"]
+  pull_request:
+    paths: [".github/workflows/*.ya?ml"]
+
+jobs:
+  zizmor:
+    name: Workflow Security Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - name: Add Homebrew to PATH
+        run: echo "/home/linuxbrew/.linuxbrew/bin" >>"${GITHUB_PATH}"
+
+      - name: Get zizmor
+        run: brew install zizmor
+
+      - name: Run zizmor
+        run: zizmor --format sarif . > results.sarif
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@f09c1c0a94de965c15400f5634aa42fac8fb8f88 # v3.27.5
+        with:
+          sarif_file: results.sarif
+          category: zizmor
