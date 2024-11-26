@@ -18055,14 +18055,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     EVT VT = N->getValueType(0);
     EVT SrcVT = N0.getValueType();
     if (VT.isRISCVVectorTuple() && N0->getOpcode() == ISD::SPLAT_VECTOR) {
-      SDValue VL = DAG.getRegister(RISCV::X0, Subtarget.getXLenVT());
       unsigned NF = VT.getRISCVVectorTupleNumFields();
       unsigned NumScalElts = VT.getSizeInBits().getKnownMinValue() / (NF * 8);
       SDValue EltVal = DAG.getConstant(0, DL, Subtarget.getXLenVT());
       MVT ScalTy = MVT::getScalableVectorVT(MVT::getIntegerVT(8), NumScalElts);
 
-      SDValue Splat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ScalTy,
-                                  DAG.getUNDEF(ScalTy), EltVal, VL);
+      SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalTy, EltVal);
 
       SDValue Result = DAG.getUNDEF(VT);
       for (unsigned i = 0; i < NF; ++i)
