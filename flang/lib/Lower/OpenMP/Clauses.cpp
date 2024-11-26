@@ -478,7 +478,7 @@ Bind make(const parser::OmpClause::Bind &inp,
   using wrapped = parser::OmpBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Bind::Binding,
+      convert, wrapped::Binding, Bind::Binding,
       // clang-format off
       MS(Teams, Teams)
       MS(Parallel, Parallel)
@@ -523,7 +523,7 @@ Default make(const parser::OmpClause::Default &inp,
   using wrapped = parser::OmpDefaultClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Default::DataSharingAttribute,
+      convert, wrapped::DataSharingAttribute, Default::DataSharingAttribute,
       // clang-format off
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
@@ -680,7 +680,8 @@ DeviceType make(const parser::OmpClause::DeviceType &inp,
   using wrapped = parser::OmpDeviceTypeClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, DeviceType::DeviceTypeDescription,
+      convert, wrapped::DeviceTypeDescription,
+      DeviceType::DeviceTypeDescription,
       // clang-format off
       MS(Any,    Any)
       MS(Host,   Host)
@@ -1142,7 +1143,7 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
   using wrapped = parser::OmpProcBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, ProcBind::AffinityPolicy,
+      convert, wrapped::AffinityPolicy, ProcBind::AffinityPolicy,
       // clang-format off
       MS(Close,    Close)
       MS(Master,   Master)

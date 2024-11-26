@@ -428,7 +428,7 @@ void OmpStructureChecker::HasInvalidLoopBinding(
     for (const auto &clause : clauseList.v) {
       if (const auto *bindClause{
               std::get_if<parser::OmpClause::Bind>(&clause.u)}) {
-        if (bindClause->v.v != parser::OmpBindClause::Type::Teams) {
+        if (bindClause->v.v != parser::OmpBindClause::Binding::Teams) {
           context_.Say(beginDir.source, msg);
         }
       }
@@ -1644,7 +1644,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
               [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
                 deviceTypeClauseFound = true;
                 if (deviceTypeClause.v.v !=
-                    parser::OmpDeviceTypeClause::Type::Host) {
+                    parser::OmpDeviceTypeClause::DeviceTypeDescription::Host) {
                   // Function / subroutine explicitly marked as runnable by the
                   // target device.
                   deviceConstructFound_ = true;
