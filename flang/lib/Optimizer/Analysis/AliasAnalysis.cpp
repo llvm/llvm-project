@@ -32,8 +32,8 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace fir {
-  static AliasAnalysis::Source::Attributes
-  getAttrsFromVariable(fir::FortranVariableOpInterface var);
+static AliasAnalysis::Source::Attributes
+getAttrsFromVariable(fir::FortranVariableOpInterface var);
 }
 
 /// Temporary function to skip through all the no op operations
