@@ -252,7 +252,30 @@ static void emitMemberInitializer(CIRGenFunction &CGF,
       CGF.getContext().getAsConstantArrayType(FieldType);
   if (Array && Constructor->isDefaulted() &&
       Constructor->isCopyOrMoveConstructor()) {
-    llvm_unreachable("NYI");
+    QualType baseElementTy = CGF.getContext().getBaseElementType(Array);
+    // NOTE(cir): CodeGen allows record types to be memcpy'd if applicable,
+    // whereas ClangIR wants to represent all object construction explicitly.
+    if (!baseElementTy->isRecordType()) {
+      unsigned srcArgIndex =
+          CGF.CGM.getCXXABI().getSrcArgforCopyCtor(Constructor, Args);
+      cir::LoadOp srcPtr = CGF.getBuilder().createLoad(
+          CGF.getLoc(MemberInit->getSourceLocation()),
+          CGF.GetAddrOfLocalVar(Args[srcArgIndex]));
+      LValue thisRhslv = CGF.MakeNaturalAlignAddrLValue(srcPtr, RecordTy);
+      LValue src = CGF.emitLValueForFieldInitialization(thisRhslv, Field,
+                                                        Field->getName());
+
+      // Copy the aggregate.
+      CGF.emitAggregateCopy(LHS, src, FieldType,
+                            CGF.getOverlapForFieldInit(Field),
+                            LHS.isVolatileQualified());
+      // Ensure that we destroy the objects if an exception is thrown later in
+      // the constructor.
+      QualType::DestructionKind dtorKind = FieldType.isDestructedType();
+      assert(!CGF.needsEHCleanup(dtorKind) &&
+             "Arrays of non-record types shouldn't need EH cleanup");
+      return;
+    }
   }
 
   CGF.emitInitializerForField(Field, LHS, MemberInit->getInit());
