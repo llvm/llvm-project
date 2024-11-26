@@ -279,6 +279,9 @@ Resolutions to C++ Defect Reports
   by default.
   (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
+- Fix name lookup for a dependent base class that is the current instantiation.  
+  (`CWG591: When a dependent base class is the current instantiation <https://cplusplus.github.io/CWG/issues/591.html>`_).
+
 C Language Changes
 ------------------
 
@@ -372,6 +375,7 @@ Non-comprehensive list of changes in this release
 - ``__builtin_reduce_mul`` function can now be used in constant expressions.
 - ``__builtin_reduce_and`` function can now be used in constant expressions.
 - ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
+- ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
