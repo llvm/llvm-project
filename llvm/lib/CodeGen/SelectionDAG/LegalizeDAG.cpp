@@ -5472,6 +5472,19 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(isTrunc, dl, /*isTarget=*/true)));
     break;
   }
+  case ISD::STRICT_FLDEXP: {
+    Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                       {Node->getOperand(0), Node->getOperand(1)});
+    Tmp2 = Node->getOperand(2);
+    Tmp3 = DAG.getNode(ISD::STRICT_FLDEXP, dl, {NVT, MVT::Other},
+                       {Tmp1.getValue(1), Tmp1, Tmp2});
+    Tmp4 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
+                       {Tmp3.getValue(1), Tmp3,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
+    Results.push_back(Tmp4);
+    Results.push_back(Tmp4.getValue(1));
+    break;
+  }
   case ISD::STRICT_FPOWI:
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
                        {Node->getOperand(0), Node->getOperand(1)});
