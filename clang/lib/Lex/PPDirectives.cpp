@@ -3871,8 +3871,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 }
 
 void Preprocessor::HandleEmbedDirectiveImpl(
-    SourceLocation HashLoc, const LexEmbedParametersResult &Params,
-    StringRef BinaryContents) {
+    SourceLocation HashLoc, StringRef Filename, bool IsAngled,
+    const LexEmbedParametersResult &Params, StringRef BinaryContents) {
   if (BinaryContents.empty()) {
     // If we have no binary contents, the only thing we need to emit are the
     // if_empty tokens, if any.
@@ -3902,6 +3902,8 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   }
 
   EmbedAnnotationData *Data = new (BP) EmbedAnnotationData;
+  Data->Filename = Filename;
+  Data->IsAngled = IsAngled;
   Data->BinaryData = BinaryContents;
 
   Toks[CurIdx].startToken();
@@ -4006,5 +4008,6 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   if (Callbacks)
     Callbacks->EmbedDirective(HashLoc, Filename, isAngled, MaybeFileRef,
                               *Params);
-  HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents);
+  HandleEmbedDirectiveImpl(HashLoc, Filename, isAngled, *Params,
+                           BinaryContents);
 }

@@ -4917,19 +4917,24 @@ class EmbedExpr final : public Expr {
   SourceLocation EmbedKeywordLoc;
   IntegerLiteral *FakeChildNode = nullptr;
   const ASTContext *Ctx = nullptr;
+  StringRef Filename;
+  bool IsAngled;
   EmbedDataStorage *Data;
   unsigned Begin = 0;
   unsigned NumOfElements;
 
 public:
-  EmbedExpr(const ASTContext &Ctx, SourceLocation Loc, EmbedDataStorage *Data,
-            unsigned Begin, unsigned NumOfElements);
+  EmbedExpr(const ASTContext &Ctx, SourceLocation Loc, StringRef Filename,
+            bool IsAngled, EmbedDataStorage *Data, unsigned Begin,
+            unsigned NumOfElements);
   explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
 
   SourceLocation getLocation() const { return EmbedKeywordLoc; }
   SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
   SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
+  StringRef getFilename() const { return Filename; }
+  bool getIsAngled() const { return IsAngled; }
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
   EmbedDataStorage *getData() const { return Data; }
 
