@@ -32,6 +32,34 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace fir {
+  static AliasAnalysis::Source::Attributes
+  getAttrsFromVariable(fir::FortranVariableOpInterface var);
+}
+
+/// Temporary function to skip through all the no op operations
+/// TODO: Generalize support of fir.load
+static mlir::Value
+getOriginalDef(mlir::Value v,
+               fir::AliasAnalysis::Source::Attributes &attributes,
+               bool &isCapturedInInternalProcedure) {
+  mlir::Operation *defOp;
+  bool breakFromLoop = false;
+  while (!breakFromLoop && (defOp = v.getDefiningOp())) {
+    llvm::TypeSwitch<Operation *>(defOp)
+        .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
+        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
+          v = op.getMemref();
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= fir::getAttrsFromVariable(varIf);
+          isCapturedInInternalProcedure |=
+              varIf.isCapturedInInternalProcedure();
+        })
+        .Default([&](auto op) { breakFromLoop = true; });
+  }
+  return v;
+}
+
+namespace fir {
 
 void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   if (auto v = llvm::dyn_cast<mlir::Value>(origin.u))
@@ -480,29 +508,6 @@ static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
     }
   }
   return privateArg;
-}
-
-/// Temporary function to skip through all the no op operations
-/// TODO: Generalize support of fir.load
-static mlir::Value
-getOriginalDef(mlir::Value v,
-               fir::AliasAnalysis::Source::Attributes &attributes,
-               bool &isCapturedInInternalProcedure) {
-  mlir::Operation *defOp;
-  bool breakFromLoop = false;
-  while (!breakFromLoop && (defOp = v.getDefiningOp())) {
-    llvm::TypeSwitch<Operation *>(defOp)
-        .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
-          v = op.getMemref();
-          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
-          attributes |= getAttrsFromVariable(varIf);
-          isCapturedInInternalProcedure |=
-              varIf.isCapturedInInternalProcedure();
-        })
-        .Default([&](auto op) { breakFromLoop = true; });
-  }
-  return v;
 }
 
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
