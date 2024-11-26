@@ -35,6 +35,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -243,6 +244,12 @@ void AggressiveDeadCodeElimination::initialize() {
 }
 
 bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
+  // Check to remove dead inline asms. For the inline asm that does not have
+  // side effects and is not a memory clobber, it is not marked as always live.
+  if (auto *CB = dyn_cast<CallBase>(&I))
+    if (auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand()))
+      return IA->modMemory();
+
   // TODO -- use llvm::isInstructionTriviallyDead
   if (I.isEHPad() || I.mayHaveSideEffects()) {
     // Skip any value profile instrumentation calls if they are
