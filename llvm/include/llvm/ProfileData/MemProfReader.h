@@ -46,7 +46,8 @@ public:
     return Iterator(this);
   }
 
-  // Take the complete profile data.
+  // Take the complete profile data.  Once this function is invoked,
+  // MemProfReader no longer owns the MemProf profile.
   IndexedMemProfData takeMemProfData() { return std::move(MemProfData); }
 
   virtual Error
@@ -82,7 +83,7 @@ public:
   virtual ~MemProfReader() = default;
 
   // Initialize the MemProfReader with the given MemProf profile.
-  MemProfReader(IndexedMemProfData MemProfData)
+  MemProfReader(IndexedMemProfData &&MemProfData)
       : MemProfData(std::move(MemProfData)) {}
 
 protected:
