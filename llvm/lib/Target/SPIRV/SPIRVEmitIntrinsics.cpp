@@ -450,7 +450,6 @@ CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Function *F, Value *Op,
 }
 
 void SPIRVEmitIntrinsics::propagateElemType(Value *Op, Type *ElemTy) {
-  // CallInst *PtrCasted = buildSpvPtrcast(Op, ElemTy);
   SmallVector<User *> Users(Op->users());
   for (auto *U : Users) {
     if (!isa<Instruction>(U))
@@ -1095,8 +1094,9 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
                             {B.getInt32(getPointerAddressSpace(OpTy))}, B);
         GR->addAssignPtrTypeInstr(Op, CI);
       } else {
+        Type *PrevElemTy = GR->findDeducedElementType(Op);
         updateAssignType(AssignCI, Op, OpTyVal);
-        propagateElemTypeRec(Op, KnownElemTy, GR->findDeducedElementType(Op));
+        propagateElemTypeRec(Op, KnownElemTy, PrevElemTy);
       }
     } else {
       eraseTodoType(Op);
@@ -1412,10 +1412,13 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       if (mayUpdateOpType(Pointer)) {
         //  If this wouldn't be the first spv_ptrcast but existing type info is
         //  uncomplete, update spv_assign_ptr_type arguments.
-        if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Pointer))
+        if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Pointer)) {
+          Type *PrevElemTy = GR->findDeducedElementType(Pointer);
           updateAssignType(AssignCI, Pointer, ExpectedElementVal);
-        else
+          propagateElemTypeRec(Pointer, ExpectedElementType, PrevElemTy);
+        } else {
           buildAssignPtr(B, ExpectedElementType, Pointer);
+        }
         return;
       }
     }
@@ -1428,6 +1431,7 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   I->setOperand(OperandToReplace, PtrCastI);
   // We need to set up a pointee type for the newly created spv_ptrcast.
   buildAssignPtr(B, ExpectedElementType, PtrCastI);
+  //propagateElemType(Pointer, ExpectedElementType);
 }
 
 void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
