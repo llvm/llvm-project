@@ -87,7 +87,6 @@ public:
   bool isPointer() const { return Pointer; }
   bool isConstant() const { return Constant; }
   bool isImmediate() const { return Immediate; }
-  bool isSigned() const { return Kind != UInt; }
   bool isScalar() const { return NumVectors == 0; }
   bool isVector() const { return NumVectors > 0; }
   bool isScalableVector() const { return isVector() && IsScalable; }
@@ -98,11 +97,12 @@ public:
   bool isFloat() const { return Kind == Float; }
   bool isBFloat() const { return Kind == BFloat16; }
   bool isMFloat() const { return Kind == MFloat8; }
-  bool isTypedPointer() const { return Pointer && Kind != Void; }
   bool isFloatingPoint() const {
     return Kind == Float || Kind == BFloat16 || Kind == MFloat8;
   }
   bool isInteger() const { return Kind == SInt || Kind == UInt; }
+  bool isSignedInteger() const { return Kind == SInt; }
+  bool isUnsignedInteger() const { return Kind == UInt; }
   bool isScalarPredicate() const {
     return Kind == Predicate && NumVectors == 0;
   }
@@ -491,13 +491,11 @@ std::string SVEType::builtin_str() const {
     }
   }
 
-  // Make chars and typed pointers explicitly signed.
-  if (!isFloatingPoint() && !isVoid()) {
-    if ((ElementBitwidth == 8 || isPointer()) && isSigned())
-      OutStr = "S" + OutStr;
-    if (!isSigned())
-      OutStr = "U" + OutStr;
-  }
+  // Make chars and integer pointers explicitly signed.
+  if((ElementBitwidth == 8 || isPointer()) && isSignedInteger())
+    OutStr = "S" + OutStr;
+  else if(isUnsignedInteger())
+    OutStr = "U" + OutStr;
 
   // Constant indices are "int", but have the "constant expression" modifier.
   if (isImmediate()) {
@@ -544,12 +542,10 @@ std::string SVEType::str() const {
       S += "bfloat";
     else if (isMFloat())
       S += "mfloat";
-    else {
-      if (isSigned())
-        S += "int";
-      else
-        S += "uint";
-    };
+    else if (isSignedInteger())
+      S += "int";
+    else if (isUnsignedInteger())
+      S += "uint";
 
     if (!isPredicate() && !isSvcount())
       S += utostr(ElementBitwidth);
@@ -1008,8 +1004,11 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
 
     // Replace templated arg with the right suffix (e.g. u32)
     std::string TypeCode;
-    if (T.isInteger())
-      TypeCode = T.isSigned() ? 's' : 'u';
+
+    if(T.isSignedInteger())
+      TypeCode = 's';
+    else if (T.isUnsignedInteger())
+      TypeCode = 'u';
     else if (T.isSvcount())
       TypeCode = 'c';
     else if (T.isPredicate())
