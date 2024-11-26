@@ -1692,7 +1692,7 @@ def int_amdgcn_struct_ptr_buffer_atomic_cmpswap : Intrinsic<
    ImmArg<ArgIndex<6>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<2, 0>;
 
-// gfx908 intrinsic
+// gfx908 intrinsic. Supports v2bf16 on gfx12+ and gfx950
 def int_amdgcn_struct_buffer_atomic_fadd : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_struct_ptr_buffer_atomic_fadd : AMDGPUStructPtrBufferAtomic<llvm_anyfloat_ty>;
 
