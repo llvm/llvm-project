@@ -43,23 +43,21 @@ define i32 @fcvt_wu_d(double %a) nounwind {
 define i32 @fcvt_wu_d_multiple_use(double %x, ptr %y) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_d_multiple_use:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.wu.d a1, fa0, rtz
-; RV32IFD-NEXT:    li a0, 1
-; RV32IFD-NEXT:    beqz a1, .LBB4_2
+; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV32IFD-NEXT:    bnez a0, .LBB4_2
 ; RV32IFD-NEXT:  # %bb.1:
-; RV32IFD-NEXT:    mv a0, a1
+; RV32IFD-NEXT:    li a0, 1
 ; RV32IFD-NEXT:  .LBB4_2:
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcvt_wu_d_multiple_use:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.wu.d a1, fa0, rtz
-; RV64IFD-NEXT:    slli a0, a1, 32
-; RV64IFD-NEXT:    srli a2, a0, 32
-; RV64IFD-NEXT:    li a0, 1
-; RV64IFD-NEXT:    beqz a2, .LBB4_2
+; RV64IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV64IFD-NEXT:    slli a1, a0, 32
+; RV64IFD-NEXT:    srli a1, a1, 32
+; RV64IFD-NEXT:    bnez a1, .LBB4_2
 ; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    mv a0, a1
+; RV64IFD-NEXT:    li a0, 1
 ; RV64IFD-NEXT:  .LBB4_2:
 ; RV64IFD-NEXT:    ret
   %a = fptoui double %x to i32
