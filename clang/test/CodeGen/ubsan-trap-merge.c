@@ -2,23 +2,22 @@
 // The most important assertion is the attributes at the end of the file, which
 // shows that ubsan does not currently attach 'nomerge'.
 //
-// RUN: %clang -fsanitize=signed-integer-overflow -S -emit-llvm -fsanitize-trap=all -O3 -mllvm -ubsan-unique-traps %s -o - \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o - \
 // RUN:     | FileCheck %s
-
-#include <stdio.h>
-#include <stdlib.h>
+//
+// REQUIRES: x86-registered-target
 
 // CHECK-LABEL: define dso_local noundef i32 @f(
 // CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META5:![0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META5]]
-// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META2:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize [[META5]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META5]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int f(int x) {
@@ -28,14 +27,14 @@ int f(int x) {
 // CHECK-LABEL: define dso_local noundef i32 @g(
 // CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META5]]
-// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META5]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META5]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int g(int x) {
@@ -45,22 +44,22 @@ int g(int x) {
 // CHECK-LABEL: define dso_local noundef i32 @h(
 // CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META5]]
-// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META5]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META5]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 129), !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META5]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP1:.*]], label %[[CONT2:.*]], !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 129), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP1:.*]], label %[[CONT2:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP1]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 4) #[[ATTR4]], !nosanitize [[META5]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META5]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 4) #[[ATTR4]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT2]]:
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
 // CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.smin.i32(i32 [[TMP5]], i32 [[TMP4]])
 // CHECK-NEXT:    ret i32 [[COND]]
 //
@@ -73,30 +72,30 @@ int h(int x, int y) {
 // CHECK-LABEL: define dso_local noundef i32 @m(
 // CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META5]]
-// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP_I:.*]], label %[[F_EXIT:.*]], !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP_I:.*]], label %[[F_EXIT:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP_I]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META5]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META5]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[F_EXIT]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 127), !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META5]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP_I2:.*]], label %[[G_EXIT:.*]], !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 127), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP_I2:.*]], label %[[G_EXIT:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP_I2]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META5]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META5]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[G_EXIT]]:
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[TMP4]], i32 [[TMP5]]), !nosanitize [[META5]]
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1, !nosanitize [[META5]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP6:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[TMP4]], i32 [[TMP5]]), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META5]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META5]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i32, i1 } [[TMP6]], 0, !nosanitize [[META5]]
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i32, i1 } [[TMP6]], 0, !nosanitize [[META2]]
 // CHECK-NEXT:    ret i32 [[TMP8]]
 //
 int m(int x, int y) {
