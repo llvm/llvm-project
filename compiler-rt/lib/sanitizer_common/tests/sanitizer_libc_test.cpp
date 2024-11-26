@@ -346,7 +346,7 @@ TEST(SanitizerCommon, ReportFile) {
   ReportFile report_file = {&report_file_mu, kStderrFd, "", "", 0};
   char tmpfile[128];
   temp_file_name(tmpfile, sizeof(tmpfile),
-                 "dir/sanitizer_common.reportfile.tmp.");
+                 "sanitizer_common.reportfile.tmp.");
   report_file.SetReportPath(tmpfile);
   const char *path = report_file.GetReportPath();
   EXPECT_EQ(internal_strncmp(tmpfile, path, strlen(tmpfile)), 0);
