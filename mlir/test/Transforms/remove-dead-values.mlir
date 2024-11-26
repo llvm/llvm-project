@@ -3,9 +3,12 @@
 // The IR is updated regardless of memref.global private constant
 //
 module {
-  memref.global "private" constant @__something_global : memref<i32> = dense<0>
+  // CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
+  memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
   func.func @main(%arg0: i32) -> i32 {
     %0 = tensor.empty() : tensor<10xbf16>
+    // CHECK-NOT: memref.get_global
+    %1 = memref.get_global @__constant_4xi32 : memref<4xi32>
     // CHECK-NOT: tensor.empty
     return %arg0 : i32
   }
@@ -29,7 +32,7 @@ module @named_module_acceptable {
 //
 func.func @dont_touch_unacceptable_ir_has_cleanable_simple_op_with_branch_op(%arg0: i1) {
   %non_live = arith.constant 0 : i32
-  // expected-error @+1 {{cannot optimize an IR with non-call symbol user ops or branch ops}}
+  // expected-error @+1 {{cannot optimize an IR with branch ops}}
   cf.cond_br %arg0, ^bb1(%non_live : i32), ^bb2(%non_live : i32)
 ^bb1(%non_live_0 : i32):
   cf.br ^bb3

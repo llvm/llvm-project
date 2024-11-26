@@ -42252,6 +42252,17 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                            DAG.getIntPtrConstant(0, DL));
       }
     }
+    SmallVector<SDValue, 2> Ops;
+    SmallVector<int, 32> Mask;
+    if (isShuffleFoldableLoad(N.getOperand(0)) &&
+        !isShuffleFoldableLoad(N.getOperand(2)) &&
+        getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
+      ShuffleVectorSDNode::commuteMask(Mask);
+      SDValue NewMask = getConstVector(
+          Mask, N.getOperand(1).getSimpleValueType(), DAG, DL, /*IsMask=*/true);
+      return DAG.getNode(X86ISD::VPERMV3, DL, VT, N.getOperand(2), NewMask,
+                         N.getOperand(0));
+    }
     return SDValue();
   }
   default:
