@@ -6,13 +6,13 @@ define void @test(ptr nocapture noundef writeonly %array1, i32 noundef signext %
 ; RV64-LABEL: test:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addiw a3, a1, 5
-; RV64-NEXT:    slli a4, a3, 2
-; RV64-NEXT:    add a4, a0, a4
 ; RV64-NEXT:    slli a1, a1, 2
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    sw a2, 0(a4)
-; RV64-NEXT:    sw a2, 24(a0)
-; RV64-NEXT:    sw a3, 140(a0)
+; RV64-NEXT:    slli a4, a3, 2
+; RV64-NEXT:    add a1, a1, a0
+; RV64-NEXT:    add a0, a0, a4
+; RV64-NEXT:    sw a2, 0(a0)
+; RV64-NEXT:    sw a2, 24(a1)
+; RV64-NEXT:    sw a3, 140(a1)
 ; RV64-NEXT:    ret
 entry:
   %add = add nsw i32 %a, 5
@@ -70,13 +70,13 @@ define void @test2(ptr nocapture noundef writeonly %array1, i64 noundef %a, i64 
 ; RV64-LABEL: test2:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi a3, a1, 5
-; RV64-NEXT:    slli a4, a3, 3
-; RV64-NEXT:    add a4, a0, a4
 ; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    sd a2, 0(a4)
-; RV64-NEXT:    sd a2, 48(a0)
-; RV64-NEXT:    sd a3, 280(a0)
+; RV64-NEXT:    slli a4, a3, 3
+; RV64-NEXT:    add a1, a1, a0
+; RV64-NEXT:    add a0, a0, a4
+; RV64-NEXT:    sd a2, 0(a0)
+; RV64-NEXT:    sd a2, 48(a1)
+; RV64-NEXT:    sd a3, 280(a1)
 ; RV64-NEXT:    ret
 entry:
   %add = add nsw i64 %a, 5
@@ -101,8 +101,8 @@ define void @test3(ptr nocapture noundef %array1, i64 noundef %a, i64 noundef %b
 ; RV64-NEXT:    mv a5, a2
 ; RV64-NEXT:  .LBB3_2: # %entry
 ; RV64-NEXT:    slli a2, a4, 3
-; RV64-NEXT:    add a2, a0, a2
 ; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    add a2, a0, a2
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    sd a5, 0(a2)
 ; RV64-NEXT:    sd a5, 48(a0)

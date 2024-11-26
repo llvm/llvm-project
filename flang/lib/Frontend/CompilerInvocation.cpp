@@ -634,6 +634,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.outputFile = args.getLastArgValue(clang::driver::options::OPT_o);
   opts.showHelp = args.hasArg(clang::driver::options::OPT_help);
   opts.showVersion = args.hasArg(clang::driver::options::OPT_version);
+  opts.printSupportedCPUs =
+      args.hasArg(clang::driver::options::OPT_print_supported_cpus);
 
   // Get the input kind (from the value passed via `-x`)
   InputKind dashX(Language::Unknown);

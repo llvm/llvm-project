@@ -459,6 +459,7 @@ struct Tag {
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
+  std::optional<bool> SwiftEscapable;
   FunctionsSeq Methods;
   FieldsSeq Fields;
 
@@ -498,6 +499,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
     IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
+    IO.mapOptional("SwiftEscapable", T.SwiftEscapable);
     IO.mapOptional("Methods", T.Methods);
     IO.mapOptional("Fields", T.Fields);
     IO.mapOptional("Tags", T.Tags);
@@ -983,6 +985,8 @@ public:
 
     if (T.SwiftCopyable)
       TI.setSwiftCopyable(T.SwiftCopyable);
+    if (T.SwiftEscapable)
+      TI.setSwiftEscapable(T.SwiftEscapable);
 
     if (T.EnumConvenienceKind) {
       if (T.EnumExtensibility) {

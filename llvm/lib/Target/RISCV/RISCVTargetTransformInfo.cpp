@@ -925,6 +925,14 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::ctpop, MVT::i16, 19},
     {Intrinsic::ctpop, MVT::i32, 20},
     {Intrinsic::ctpop, MVT::i64, 21},
+    {Intrinsic::ctlz, MVT::i8, 19},
+    {Intrinsic::ctlz, MVT::i16, 28},
+    {Intrinsic::ctlz, MVT::i32, 31},
+    {Intrinsic::ctlz, MVT::i64, 35},
+    {Intrinsic::cttz, MVT::i8, 16},
+    {Intrinsic::cttz, MVT::i16, 23},
+    {Intrinsic::cttz, MVT::i32, 24},
+    {Intrinsic::cttz, MVT::i64, 25},
     {Intrinsic::vp_ctpop, MVT::i8, 12},
     {Intrinsic::vp_ctpop, MVT::i16, 19},
     {Intrinsic::vp_ctpop, MVT::i32, 20},
@@ -1013,6 +1021,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::cttz:
+  case Intrinsic::ctlz:
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector())
@@ -1024,7 +1034,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ST->hasVInstructions() && LT.second.isVector()) {
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
-      return LT.first * 2;
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VRSUB_VI, RISCV::VMAX_VV},
+                                     LT.second, CostKind);
     }
     break;
   }
@@ -1104,81 +1116,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
-  // vp integer arithmetic ops.
-  case Intrinsic::vp_add:
-  case Intrinsic::vp_and:
-  case Intrinsic::vp_ashr:
-  case Intrinsic::vp_lshr:
-  case Intrinsic::vp_mul:
-  case Intrinsic::vp_or:
-  case Intrinsic::vp_sdiv:
-  case Intrinsic::vp_shl:
-  case Intrinsic::vp_srem:
-  case Intrinsic::vp_sub:
-  case Intrinsic::vp_udiv:
-  case Intrinsic::vp_urem:
-  case Intrinsic::vp_xor:
-  // vp float arithmetic ops.
-  case Intrinsic::vp_fadd:
-  case Intrinsic::vp_fsub:
-  case Intrinsic::vp_fmul:
-  case Intrinsic::vp_fdiv:
-  case Intrinsic::vp_frem: {
+  case Intrinsic::vp_fneg: {
     std::optional<unsigned> FOp =
         VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
     assert(FOp.has_value());
     return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
-  }
-  // vp int cast ops.
-  case Intrinsic::vp_trunc:
-  case Intrinsic::vp_zext:
-  case Intrinsic::vp_sext:
-  // vp float cast ops.
-  case Intrinsic::vp_fptoui:
-  case Intrinsic::vp_fptosi:
-  case Intrinsic::vp_uitofp:
-  case Intrinsic::vp_sitofp:
-  case Intrinsic::vp_fptrunc:
-  case Intrinsic::vp_fpext: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value() && !ICA.getArgTypes().empty());
-    return getCastInstrCost(*FOp, RetTy, ICA.getArgTypes()[0],
-                            TTI::CastContextHint::None, CostKind);
-    break;
-  }
-
-  // vp compare
-  case Intrinsic::vp_icmp:
-  case Intrinsic::vp_fcmp: {
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    // We can only handle vp_cmp intrinsics with underlying instructions.
-    if (!ICA.getInst())
-      break;
-
-    assert(FOp);
-    auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
-    return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
-                              UI->getPredicate(), CostKind);
-  }
-  // vp load/store
-  case Intrinsic::vp_load:
-  case Intrinsic::vp_store: {
-    if (!ICA.getInst())
-      break;
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    assert(FOp.has_value());
-    auto *UI = cast<VPIntrinsic>(ICA.getInst());
-    if (ICA.getID() == Intrinsic::vp_load)
-      return getMemoryOpCost(
-          *FOp, ICA.getReturnType(), UI->getPointerAlignment(),
-          UI->getOperand(0)->getType()->getPointerAddressSpace(), CostKind);
-    return getMemoryOpCost(
-        *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
-        UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
   }
   case Intrinsic::vp_select: {
     Intrinsic::ID IID = ICA.getID();
@@ -1191,6 +1134,47 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
                               ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
                               CostKind);
+  case Intrinsic::experimental_vp_splat: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    // TODO: Lower i1 experimental_vp_splat
+    if (!ST->hasVInstructions() || LT.second.getScalarType() == MVT::i1)
+      return InstructionCost::getInvalid();
+    return LT.first * getRISCVInstructionCost(LT.second.isFloatingPoint()
+                                                  ? RISCV::VFMV_V_F
+                                                  : RISCV::VMV_V_X,
+                                              LT.second, CostKind);
+  }
+  case Intrinsic::vp_reduce_add:
+  case Intrinsic::vp_reduce_fadd:
+  case Intrinsic::vp_reduce_mul:
+  case Intrinsic::vp_reduce_fmul:
+  case Intrinsic::vp_reduce_and:
+  case Intrinsic::vp_reduce_or:
+  case Intrinsic::vp_reduce_xor: {
+    std::optional<Intrinsic::ID> RedID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+    assert(RedID.has_value());
+    unsigned RedOp = getArithmeticReductionInstruction(*RedID);
+    return getArithmeticReductionCost(RedOp,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      ICA.getFlags(), CostKind);
+  }
+  case Intrinsic::vp_reduce_smax:
+  case Intrinsic::vp_reduce_smin:
+  case Intrinsic::vp_reduce_umax:
+  case Intrinsic::vp_reduce_umin:
+  case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fmaximum:
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fminimum: {
+    std::optional<Intrinsic::ID> RedID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+    assert(RedID.has_value());
+    Intrinsic::ID MinMaxID = getMinMaxReductionIntrinsicOp(*RedID);
+    return getMinMaxReductionCost(MinMaxID,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1624,6 +1608,14 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
                                            FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+
+  if (IsUnsigned && Opcode == Instruction::Add &&
+      LT.second.isFixedLengthVector() && LT.second.getScalarType() == MVT::i1) {
+    // Represent vector_reduce_add(ZExt(<n x i1>)) as
+    // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
+    return LT.first *
+           getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
+  }
 
   if (ResTy->getScalarSizeInBits() != 2 * LT.second.getScalarSizeInBits())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
@@ -2323,20 +2315,6 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
   return true;
-}
-
-bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
-                                       const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Inline a callee if its target-features are a subset of the callers
-  // target-features.
-  return (CallerBits & CalleeBits) == CalleeBits;
 }
 
 /// See if \p I should be considered for address type promotion. We check if \p

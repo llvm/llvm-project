@@ -1172,6 +1172,17 @@ public:
   MachineInstrBuilder buildInsert(const DstOp &Res, const SrcOp &Src,
                                   const SrcOp &Op, unsigned Index);
 
+  /// Build and insert \p Res = G_STEP_VECTOR \p Step
+  ///
+  /// G_STEP_VECTOR returns a scalable vector of linear sequence of step \p Step
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalable vector type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildStepVector(const DstOp &Res, unsigned Step);
+
   /// Build and insert \p Res = G_VSCALE \p MinElts
   ///
   /// G_VSCALE puts the value of the runtime vscale multiplied by \p MinElts

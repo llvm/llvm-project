@@ -13,3 +13,7 @@ Tags:
   SwiftConformsTo: MySwiftModule.MySwiftNonCopyableProtocol
 - Name: CopyableType
   SwiftCopyable: true
+- Name: NonEscapableType
+  SwiftEscapable: false
+- Name: EscapableType
+  SwiftEscapable: true

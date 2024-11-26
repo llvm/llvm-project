@@ -51,7 +51,7 @@ define <2 x i1> @cmp_signedness(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i1> @cmp_signedness(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i16> [[ZEXT]], splat (i16 5)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult <2 x i16> [[ZEXT]], splat (i16 5)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %zext = zext <2 x i8> %a to <2 x i16>
@@ -87,7 +87,7 @@ define <vscale x 2 x i16> @infer_nowrap_scalable(<vscale x 2 x i8> %a) {
 ; CHECK-LABEL: define range(i16 1, 257) <vscale x 2 x i16> @infer_nowrap_scalable(
 ; CHECK-SAME: <vscale x 2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i8> [[A]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], splat (i16 1)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[RES]]
 ;
   %zext = zext <vscale x 2 x i8> %a to <vscale x 2 x i16>

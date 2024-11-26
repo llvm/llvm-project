@@ -310,9 +310,9 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   Mangled mangled = GetMangledForPDBFunc(pdb_func);
 
-  FunctionSP func_sp =
-      std::make_shared<Function>(&comp_unit, pdb_func.getSymIndexId(),
-                                 func_type_uid, mangled, func_type, func_range);
+  FunctionSP func_sp = std::make_shared<Function>(
+      &comp_unit, pdb_func.getSymIndexId(), func_type_uid, mangled, func_type,
+      AddressRanges{func_range});
 
   comp_unit.AddFunction(func_sp);
 

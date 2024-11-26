@@ -26,7 +26,6 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_FINALIZINGBUFFERIZE
 #define GEN_PASS_DEF_BUFFERIZATIONBUFFERIZE
 #define GEN_PASS_DEF_ONESHOTBUFFERIZE
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
@@ -98,75 +97,6 @@ void mlir::bufferization::populateBufferizeMaterializationLegality(
 }
 
 namespace {
-// In a finalizing bufferize conversion, we know that all tensors have been
-// converted to memrefs, thus, this op becomes an identity.
-class BufferizeToTensorOp
-    : public OpConversionPattern<bufferization::ToTensorOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(bufferization::ToTensorOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOp(op, adaptor.getMemref());
-    return success();
-  }
-};
-} // namespace
-
-namespace {
-// In a finalizing bufferize conversion, we know that all tensors have been
-// converted to memrefs, thus, this op becomes an identity.
-class BufferizeToMemrefOp
-    : public OpConversionPattern<bufferization::ToMemrefOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(bufferization::ToMemrefOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOp(op, adaptor.getTensor());
-    return success();
-  }
-};
-} // namespace
-
-void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
-    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
-  patterns.add<BufferizeToTensorOp, BufferizeToMemrefOp>(typeConverter,
-                                                         patterns.getContext());
-}
-
-namespace {
-struct FinalizingBufferizePass
-    : public bufferization::impl::FinalizingBufferizeBase<
-          FinalizingBufferizePass> {
-  using FinalizingBufferizeBase<
-      FinalizingBufferizePass>::FinalizingBufferizeBase;
-
-  void runOnOperation() override {
-    auto func = getOperation();
-    auto *context = &getContext();
-
-    BufferizeTypeConverter typeConverter;
-    RewritePatternSet patterns(context);
-    ConversionTarget target(*context);
-
-    populateEliminateBufferizeMaterializationsPatterns(typeConverter, patterns);
-
-    // If all result types are legal, and all block arguments are legal (ensured
-    // by func conversion above), then all types in the program are legal.
-    //
-    // We also check that the operand types are legal to avoid creating invalid
-    // IR. For example, this prevents
-    // populateEliminateBufferizeMaterializationsPatterns from updating the
-    // types of the operands to a return op without updating the enclosing
-    // function.
-    target.markUnknownOpDynamicallyLegal(
-        [&](Operation *op) { return typeConverter.isLegal(op); });
-
-    if (failed(applyFullConversion(func, target, std::move(patterns))))
-      signalPassFailure();
-  }
-};
 
 static LayoutMapOption parseLayoutMapOption(const std::string &s) {
   if (s == "fully-dynamic-layout-map")
@@ -329,11 +259,6 @@ std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
 std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass(
     const OneShotBufferizationOptions &options) {
   return std::make_unique<OneShotBufferizePass>(options);
-}
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::bufferization::createFinalizingBufferizePass() {
-  return std::make_unique<FinalizingBufferizePass>();
 }
 
 //===----------------------------------------------------------------------===//

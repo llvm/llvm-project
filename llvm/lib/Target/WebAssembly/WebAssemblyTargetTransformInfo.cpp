@@ -13,8 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyTargetTransformInfo.h"
-#include "llvm/CodeGen/CostTable.h"
-#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasmtti"
@@ -104,24 +102,6 @@ TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(
     return TTI::ReductionShuffle::Pairwise;
   }
   return TTI::ReductionShuffle::SplitHalf;
-}
-
-bool WebAssemblyTTIImpl::areInlineCompatible(const Function *Caller,
-                                             const Function *Callee) const {
-  // Allow inlining only when the Callee has a subset of the Caller's
-  // features. In principle, we should be able to inline regardless of any
-  // features because WebAssembly supports features at module granularity, not
-  // function granularity, but without this restriction it would be possible for
-  // a module to "forget" about features if all the functions that used them
-  // were inlined.
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  return (CallerBits & CalleeBits) == CalleeBits;
 }
 
 void WebAssemblyTTIImpl::getUnrollingPreferences(

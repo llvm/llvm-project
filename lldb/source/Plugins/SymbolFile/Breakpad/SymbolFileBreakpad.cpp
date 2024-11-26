@@ -255,7 +255,7 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
           section_sp, address - section_sp->GetFileAddress(), record->Size);
       // Use the CU's id because every CU has only one function inside.
       func_sp = std::make_shared<Function>(&comp_unit, id, 0, func_name,
-                                           nullptr, func_range);
+                                           nullptr, AddressRanges{func_range});
       comp_unit.AddFunction(func_sp);
     }
   }

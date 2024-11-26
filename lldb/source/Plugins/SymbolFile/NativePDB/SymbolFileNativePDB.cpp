@@ -504,7 +504,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   Mangled mangled(proc.Name);
   FunctionSP func_sp = std::make_shared<Function>(
       &comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
-      func_type.get(), func_range);
+      func_type.get(), AddressRanges{func_range});
 
   comp_unit.AddFunction(func_sp);
 

@@ -44,6 +44,18 @@ enum NodeType : unsigned {
   SELECT_CC,
   BR_CC,
 
+  /// Turn a pair of `i<xlen>`s into an even-odd register pair (`untyped`).
+  /// - Output: `untyped` even-odd register pair
+  /// - Input 0: `i<xlen>` low-order bits, for even register.
+  /// - Input 1: `i<xlen>` high-order bits, for odd register.
+  BuildGPRPair,
+
+  /// Turn an even-odd register pair (`untyped`) into a pair of `i<xlen>`s.
+  /// - Output 0: `i<xlen>` low-order bits, from even register.
+  /// - Output 1: `i<xlen>` high-order bits, from odd register.
+  /// - Input: `untyped` even-odd register pair
+  SplitGPRPair,
+
   /// Turns a pair of `i32`s into an `f64`. Needed for rv32d/ilp32.
   /// - Output: `f64`.
   /// - Input 0: low-order bits (31-0) (as `i32`), for even register.
@@ -546,6 +558,11 @@ public:
   /// as a series of gpr sized integers.
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                     EVT VT) const override;
+
+  /// Return the number of registers for a given MVT, for inline assembly
+  unsigned
+  getNumRegisters(LLVMContext &Context, EVT VT,
+                  std::optional<MVT> RegisterVT = std::nullopt) const override;
 
   /// Return the number of registers for a given MVT, ensuring vectors are
   /// treated as a series of gpr sized integers.
@@ -1051,6 +1068,9 @@ private:
 
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
+
+  std::pair<const TargetRegisterClass *, uint8_t>
+  findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT) const override;
 };
 
 namespace RISCVVIntrinsicsTable {

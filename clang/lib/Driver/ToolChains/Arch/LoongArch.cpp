@@ -135,10 +135,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     Features.push_back("+lsx");
 
   std::string ArchName;
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    ArchName = A->getValue();
+  const Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
+  if (MArch)
+    ArchName = MArch->getValue();
   ArchName = postProcessTargetCPUString(ArchName, Triple);
   llvm::LoongArch::getArchFeatures(ArchName, Features);
+  if (MArch && StringRef(MArch->getValue()) == "native")
+    for (auto &F : llvm::sys::getHostCPUFeatures())
+      Features.push_back(
+          Args.MakeArgString((F.second ? "+" : "-") + F.first()));
 
   // Select floating-point features determined by -mdouble-float,
   // -msingle-float, -msoft-float and -mfpu.
@@ -268,6 +273,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       Features.push_back("+lam-bh");
     else
       Features.push_back("-lam-bh");
+  }
+
+  // Select ld-seq-sa feature determined by -m[no-]ld-seq-sa.
+  if (const Arg *A = Args.getLastArg(options::OPT_mld_seq_sa,
+                                     options::OPT_mno_ld_seq_sa)) {
+    if (A->getOption().matches(options::OPT_mld_seq_sa))
+      Features.push_back("+ld-seq-sa");
+    else
+      Features.push_back("-ld-seq-sa");
   }
 }
 
