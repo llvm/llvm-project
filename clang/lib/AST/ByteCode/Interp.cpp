@@ -1370,9 +1370,15 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame.get();
 
   if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
-    NewFrame.release();
+    // Release ownership of NewFrame to prevent it from being deleted.
+    NewFrame.release(); // Frame was deleted already.
+    // Ensure that S.Current is correctly reset to the previous frame.
+    assert(S.Current == FrameBefore);
     return true;
   }
+
+  // Interpreting the function failed somehow. Reset to
+  // previous state.
   S.Current = FrameBefore;
   return false;
 }
@@ -1475,10 +1481,11 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   assert(E);
-  const auto &Loc = S.Current->getSource(OpPC);
 
   if (S.getLangOpts().CPlusPlus26)
     return true;
+
+  const auto &Loc = S.Current->getSource(OpPC);
 
   if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
@@ -1588,7 +1595,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
-#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma optimize("", off)
 #endif
 bool Interpret(InterpState &S, APValue &Result) {
@@ -1616,7 +1623,7 @@ bool Interpret(InterpState &S, APValue &Result) {
   }
 }
 // https://github.com/llvm/llvm-project/issues/102513
-#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma optimize("", on)
 #endif
 

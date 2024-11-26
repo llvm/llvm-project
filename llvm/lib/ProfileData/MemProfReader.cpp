@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -549,8 +548,6 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Record.CallSiteIds.push_back(CSId);
     }
   }
-
-  verifyFunctionProfileData(FunctionProfileData);
 
   return Error::success();
 }

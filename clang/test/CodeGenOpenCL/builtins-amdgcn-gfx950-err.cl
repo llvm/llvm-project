@@ -11,6 +11,10 @@
 // REQUIRES: amdgpu-registered-target
 
 typedef unsigned int uint;
-void test_prng_b32(global uint* out, uint a) {
+typedef unsigned int uint2 __attribute__((ext_vector_type(2)));
+
+void test(global uint* out, global uint2* out_v2u32, uint a, uint b) {
   *out = __builtin_amdgcn_prng_b32(a); // expected-error{{'__builtin_amdgcn_prng_b32' needs target feature prng-inst}}
+  *out_v2u32 = __builtin_amdgcn_permlane16_swap(a, b, false, false); // expected-error{{'__builtin_amdgcn_permlane16_swap' needs target feature permlane16-swap}}
+  *out_v2u32 = __builtin_amdgcn_permlane32_swap(a, b, false, false); // expected-error{{'__builtin_amdgcn_permlane32_swap' needs target feature permlane32-swap}}
 }

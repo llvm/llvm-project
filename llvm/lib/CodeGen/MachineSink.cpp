@@ -1227,7 +1227,8 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
       AllSuccs, [&](const MachineBasicBlock *L, const MachineBasicBlock *R) {
         uint64_t LHSFreq = MBFI ? MBFI->getBlockFreq(L).getFrequency() : 0;
         uint64_t RHSFreq = MBFI ? MBFI->getBlockFreq(R).getFrequency() : 0;
-        if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI) || !LHSFreq || !RHSFreq)
+        if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI) ||
+            (!LHSFreq && !RHSFreq))
           return CI->getCycleDepth(L) < CI->getCycleDepth(R);
         return LHSFreq < RHSFreq;
       });

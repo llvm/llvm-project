@@ -830,3 +830,31 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   // TODO: Check the dependencies to/from NewSN after they land.
   // TODO: Check the MemDGNode chain.
 }
+
+TEST_F(DependencyGraphTest, EraseInstrCallback) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  // Check erase instruction callback.
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({S1, S3});
+  S2->eraseFromParent();
+  auto *DeletedN = DAG.getNodeOrNull(S2);
+  EXPECT_TRUE(DeletedN == nullptr);
+  // TODO: Check the dependencies to/from NewSN after they land.
+  // TODO: Check the MemDGNode chain.
+}

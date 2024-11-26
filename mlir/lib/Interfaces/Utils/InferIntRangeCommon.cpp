@@ -558,6 +558,20 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
+  // TODO: The code below doesn't work for bitwidths > i1.
+  // For input ranges lhs=[2060639849, 2060639850], rhs=[2060639849, 2060639849]
+  // widenBitwiseBounds will produce:
+  // lhs:
+  // 2060639848  01111010110100101101111001101000
+  // 2060639851  01111010110100101101111001101011
+  // rhs:
+  // 2060639849  01111010110100101101111001101001
+  // 2060639849  01111010110100101101111001101001
+  // None of those combinations xor to 0, while intermediate values does.
+  unsigned width = argRanges[0].umin().getBitWidth();
+  if (width > 1)
+    return ConstantIntRanges::maxRange(width);
+
   auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
   auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
   auto xori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {

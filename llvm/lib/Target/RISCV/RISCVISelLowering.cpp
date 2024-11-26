@@ -133,7 +133,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       addRegisterClass(MVT::f64, &RISCV::GPRRegClass);
     else
-      addRegisterClass(MVT::f64, &RISCV::GPRF64PairRegClass);
+      addRegisterClass(MVT::f64, &RISCV::GPRPairRegClass);
   }
 
   static const MVT::SimpleValueType BoolVecVTs[] = {
@@ -1527,7 +1527,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
                          ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
-                         ISD::INSERT_VECTOR_ELT, ISD::ABS});
+                         ISD::INSERT_VECTOR_ELT, ISD::ABS, ISD::CTPOP});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -17055,6 +17055,52 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
   return Val;
 }
 
+// Convert
+//   (iX ctpop (bitcast (vXi1 A)))
+// ->
+//   (zext (vcpop.m (nxvYi1 (insert_subvec (vXi1 A)))))
+// FIXME: It's complicated to match all the variations of this after type
+// legalization so we only handle the pre-type legalization pattern, but that
+// requires the fixed vector type to be legal.
+static SDValue combineScalarCTPOPToVCPOP(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+
+  // Peek through zero_extend. It doesn't change the count.
+  if (Src.getOpcode() == ISD::ZERO_EXTEND)
+    Src = Src.getOperand(0);
+
+  if (Src.getOpcode() != ISD::BITCAST)
+    return SDValue();
+
+  Src = Src.getOperand(0);
+  EVT SrcEVT = Src.getValueType();
+  if (!SrcEVT.isSimple())
+    return SDValue();
+
+  MVT SrcMVT = SrcEVT.getSimpleVT();
+  // Make sure the input is an i1 vector.
+  if (!SrcMVT.isVector() || SrcMVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  if (!useRVVForFixedLengthVectorVT(SrcMVT, Subtarget))
+    return SDValue();
+
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcMVT, Subtarget);
+  Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+
+  SDLoc DL(N);
+  auto [Mask, VL] = getDefaultVLOps(SrcMVT, ContainerVT, DL, DAG, Subtarget);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Pop = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Src, Mask, VL);
+  return DAG.getZExtOrTrunc(Pop, DL, VT);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -18023,6 +18069,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     return SDValue();
   }
+  case ISD::CTPOP:
+    if (SDValue V = combineScalarCTPOPToVCPOP(N, DAG, Subtarget))
+      return V;
+    break;
   }
 
   return SDValue();
@@ -20507,7 +20557,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
         return std::make_pair(0U, &RISCV::GPRF32NoX0RegClass);
       if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &RISCV::GPRF64PairNoX0RegClass);
+        return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
       if (VT == MVT::f16) {
@@ -20524,14 +20574,14 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (Subtarget.hasStdExtD())
           return std::make_pair(0U, &RISCV::FPR64RegClass);
         if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-          return std::make_pair(0U, &RISCV::GPRF64PairNoX0RegClass);
+          return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
         if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
           return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
       }
       break;
     case 'R':
       if (VT == MVT::f64 && !Subtarget.is64Bit() && Subtarget.hasStdExtZdinx())
-        return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
+        return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
       return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
     default:
       break;
@@ -20570,7 +20620,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
       return std::make_pair(0U, &RISCV::GPRF32CRegClass);
     if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-      return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
+      return std::make_pair(0U, &RISCV::GPRPairCRegClass);
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
   } else if (Constraint == "cf") {
@@ -20588,7 +20638,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (Subtarget.hasStdExtD())
         return std::make_pair(0U, &RISCV::FPR64CRegClass);
       if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &RISCV::GPRF64PairCRegClass);
+        return std::make_pair(0U, &RISCV::GPRPairCRegClass);
       if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
         return std::make_pair(0U, &RISCV::GPRCRegClass);
     }
@@ -20752,7 +20802,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // Subtarget into account.
   if (Res.second == &RISCV::GPRF16RegClass ||
       Res.second == &RISCV::GPRF32RegClass ||
-      Res.second == &RISCV::GPRF64PairRegClass)
+      Res.second == &RISCV::GPRPairRegClass)
     return std::make_pair(Res.first, &RISCV::GPRRegClass);
 
   return Res;
@@ -21379,12 +21429,19 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
   bool IsABIRegCopy = CC.has_value();
   EVT ValueVT = Val.getValueType();
 
-  if (ValueVT == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) &&
+  MVT PairVT = Subtarget.is64Bit() ? MVT::i128 : MVT::i64;
+  if ((ValueVT == PairVT ||
+       (!Subtarget.is64Bit() && Subtarget.hasStdExtZdinx() &&
+        ValueVT == MVT::f64)) &&
       NumParts == 1 && PartVT == MVT::Untyped) {
-    // Pairs in Inline Assembly
+    // Pairs in Inline Assembly, f64 in Inline assembly on rv32_zdinx
     MVT XLenVT = Subtarget.getXLenVT();
+    if (ValueVT == MVT::f64)
+      Val = DAG.getBitcast(MVT::i64, Val);
     auto [Lo, Hi] = DAG.SplitScalar(Val, DL, XLenVT, XLenVT);
-    Parts[0] = DAG.getNode(RISCVISD::BuildGPRPair, DL, MVT::Untyped, Lo, Hi);
+    // Always creating an MVT::Untyped part, so always use
+    // RISCVISD::BuildGPRPair.
+    Parts[0] = DAG.getNode(RISCVISD::BuildGPRPair, DL, PartVT, Lo, Hi);
     return true;
   }
 
@@ -21396,7 +21453,7 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Val);
     Val = DAG.getNode(ISD::OR, DL, MVT::i32, Val,
                       DAG.getConstant(0xFFFF0000, DL, MVT::i32));
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Val);
+    Val = DAG.getNode(ISD::BITCAST, DL, PartVT, Val);
     Parts[0] = Val;
     return true;
   }
@@ -21465,14 +21522,24 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.has_value();
 
-  if (ValueVT == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) &&
+  MVT PairVT = Subtarget.is64Bit() ? MVT::i128 : MVT::i64;
+  if ((ValueVT == PairVT ||
+       (!Subtarget.is64Bit() && Subtarget.hasStdExtZdinx() &&
+        ValueVT == MVT::f64)) &&
       NumParts == 1 && PartVT == MVT::Untyped) {
-    // Pairs in Inline Assembly
+    // Pairs in Inline Assembly, f64 in Inline assembly on rv32_zdinx
     MVT XLenVT = Subtarget.getXLenVT();
-    SDValue Res = DAG.getNode(RISCVISD::SplitGPRPair, DL,
-                              DAG.getVTList(XLenVT, XLenVT), Parts[0]);
-    return DAG.getNode(ISD::BUILD_PAIR, DL, ValueVT, Res.getValue(0),
-                       Res.getValue(1));
+
+    SDValue Val = Parts[0];
+    // Always starting with an MVT::Untyped part, so always use
+    // RISCVISD::SplitGPRPair
+    Val = DAG.getNode(RISCVISD::SplitGPRPair, DL, DAG.getVTList(XLenVT, XLenVT),
+                      Val);
+    Val = DAG.getNode(ISD::BUILD_PAIR, DL, PairVT, Val.getValue(0),
+                      Val.getValue(1));
+    if (ValueVT == MVT::f64)
+      Val = DAG.getBitcast(ValueVT, Val);
+    return Val;
   }
 
   if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
@@ -22044,9 +22111,11 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
   if (Subtarget.hasStdExtZicfilp()) {
     // When Zicfilp enabled, we need to use software guarded branch for jump
     // table branch.
-    SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
-    return DAG.getNode(RISCVISD::SW_GUARDED_BRIND, dl, MVT::Other, JTInfo,
-                       Addr);
+    SDValue Chain = Value;
+    // Jump table debug info is only needed if CodeView is enabled.
+    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+      Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
+    return DAG.getNode(RISCVISD::SW_GUARDED_BRIND, dl, MVT::Other, Chain, Addr);
   }
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }

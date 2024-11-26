@@ -481,6 +481,33 @@ void macho::markAddrSigSymbols() {
   }
 }
 
+// Given a symbol that was folded into a thunk, return the symbol pointing to
+// the actual body of the function. We use this approach rather than storing the
+// needed info in the Defined itself in order to minimize memory usage.
+Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
+  assert(isa<ConcatInputSection>(foldedSym->originalIsec) &&
+         "thunk-folded ICF symbol expected to be on a ConcatInputSection");
+  // foldedSec is the InputSection that was marked as deleted upon fold
+  ConcatInputSection *foldedSec =
+      cast<ConcatInputSection>(foldedSym->originalIsec);
+
+  // thunkBody is the actual live thunk, containing the code that branches to
+  // the actual body of the function.
+  InputSection *thunkBody = foldedSec->replacement;
+
+  // The actual (merged) body of the function that the thunk jumps to. This will
+  // end up in the final binary.
+  InputSection *functionBody = target->getThunkBranchTarget(thunkBody);
+
+  for (Symbol *sym : functionBody->symbols) {
+    Defined *d = dyn_cast<Defined>(sym);
+    // The symbol needs to be at the start of the InputSection
+    if (d && d->value == 0)
+      return d;
+  }
+
+  llvm_unreachable("could not find body symbol for ICF-generated thunk");
+}
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed

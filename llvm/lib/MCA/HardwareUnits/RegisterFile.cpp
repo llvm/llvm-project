@@ -24,11 +24,6 @@ namespace mca {
 
 const unsigned WriteRef::INVALID_IID = std::numeric_limits<unsigned>::max();
 
-static std::function<bool(MCPhysReg)>
-isNonArtificial(const MCRegisterInfo &MRI) {
-  return [&MRI](MCPhysReg R) { return !MRI.isArtificial(R); };
-}
-
 WriteRef::WriteRef(unsigned SourceIndex, WriteState *WS)
     : IID(SourceIndex), WriteBackCycle(), WriteResID(), RegisterID(),
       Write(WS) {}
@@ -287,8 +282,7 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   MCPhysReg ZeroRegisterID =
       WS.clearsSuperRegisters() ? RegID : WS.getRegisterID();
   ZeroRegisters.setBitVal(ZeroRegisterID, IsWriteZero);
-  for (MCPhysReg I :
-       make_filter_range(MRI.subregs(ZeroRegisterID), isNonArtificial(MRI)))
+  for (MCPhysReg I : MRI.subregs(ZeroRegisterID))
     ZeroRegisters.setBitVal(I, IsWriteZero);
 
   // If this move has been eliminated, then method tryEliminateMoveOrSwap should
@@ -310,8 +304,7 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
     // Update the mapping for register RegID including its sub-registers.
     RegisterMappings[RegID].first = Write;
     RegisterMappings[RegID].second.AliasRegID = 0U;
-    for (MCPhysReg I :
-         make_filter_range(MRI.subregs(RegID), isNonArtificial(MRI))) {
+    for (MCPhysReg I : MRI.subregs(RegID)) {
       RegisterMappings[I].first = Write;
       RegisterMappings[I].second.AliasRegID = 0U;
     }
@@ -479,8 +472,7 @@ bool RegisterFile::tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
       AliasedReg = RMAlias.AliasRegID;
 
     RegisterMappings[AliasReg].second.AliasRegID = AliasedReg;
-    for (MCPhysReg I :
-         make_filter_range(MRI.subregs(AliasReg), isNonArtificial(MRI)))
+    for (MCPhysReg I : MRI.subregs(AliasReg))
       RegisterMappings[I].second.AliasRegID = AliasedReg;
 
     if (ZeroRegisters[RS.getRegisterID()]) {

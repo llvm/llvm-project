@@ -24,7 +24,34 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       libc.src.__support.CPP.array
       libc.src.__support.CPP.span
+      libc.src.__support.block
       libc.src.__support.freelist
+  )
+
+  add_libc_test(
+    freetrie_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freetrie_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.optional
+      libc.src.__support.block
+      libc.src.__support.freetrie
+  )
+
+  add_libc_test(
+    freestore_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freestore_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.optional
+      libc.src.__support.block
+      libc.src.__support.freelist
+      libc.src.__support.freestore
+      libc.src.__support.freetrie
   )
 endif()
 

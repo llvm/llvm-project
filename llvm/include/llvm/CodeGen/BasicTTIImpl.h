@@ -277,6 +277,20 @@ public:
         E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);
   }
 
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const {
+    const TargetMachine &TM = getTLI()->getTargetMachine();
+
+    const FeatureBitset &CallerBits =
+        TM.getSubtargetImpl(*Caller)->getFeatureBits();
+    const FeatureBitset &CalleeBits =
+        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+    // Inline a callee if its target-features are a subset of the callers
+    // target-features.
+    return (CallerBits & CalleeBits) == CalleeBits;
+  }
+
   bool hasBranchDivergence(const Function *F = nullptr) { return false; }
 
   bool isSourceOfDivergence(const Value *V) { return false; }
@@ -666,6 +680,10 @@ public:
     return BaseT::isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
   }
 
+  unsigned getEpilogueVectorizationMinVF() {
+    return BaseT::getEpilogueVectorizationMinVF();
+  }
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
     return BaseT::preferPredicateOverEpilogue(TFI);
   }
@@ -795,6 +813,11 @@ public:
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx) const {
     return false;
+  }
+
+  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int ScalarOpdIdx) const {
+    return ScalarOpdIdx == -1;
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
@@ -2756,6 +2779,18 @@ public:
                                            Type *ResTy, VectorType *Ty,
                                            FastMathFlags FMF,
                                            TTI::TargetCostKind CostKind) {
+    if (auto *FTy = dyn_cast<FixedVectorType>(Ty);
+        FTy && IsUnsigned && Opcode == Instruction::Add &&
+        FTy->getElementType() == IntegerType::getInt1Ty(Ty->getContext())) {
+      // Represent vector_reduce_add(ZExt(<n x i1>)) as
+      // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
+      auto *IntTy =
+          IntegerType::get(ResTy->getContext(), FTy->getNumElements());
+      IntrinsicCostAttributes ICA(Intrinsic::ctpop, IntTy, {IntTy}, FMF);
+      return thisT()->getCastInstrCost(Instruction::BitCast, IntTy, FTy,
+                                       TTI::CastContextHint::None, CostKind) +
+             thisT()->getIntrinsicInstrCost(ICA, CostKind);
+    }
     // Without any native support, this is equivalent to the cost of
     // vecreduce.opcode(ext(Ty A)).
     VectorType *ExtTy = VectorType::get(ResTy, Ty);
