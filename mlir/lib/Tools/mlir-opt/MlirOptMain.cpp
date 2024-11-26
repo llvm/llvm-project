@@ -113,6 +113,10 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Enable Debugger hook for debugging MLIR Actions"),
         cl::location(enableDebuggerActionHookFlag), cl::init(false));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> disableRemarkDiagnostic(
+        "mlir-disable-diagnostic", cl::desc("Disable diagnostic information"),
+        cl::location(disableDiagnosticFlag), cl::init(false));
+
     static cl::opt<bool, /*ExternalStorage=*/true> explicitModule(
         "no-implicit-module",
         cl::desc("Disable implicit addition of a top-level module op during "
@@ -473,6 +477,9 @@ static LogicalResult processBuffer(raw_ostream &os,
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
   if (!config.shouldVerifyDiagnostics()) {
+    if (config.shouldDisableDiagnostic())
+      return performActions(os, sourceMgr, &context, config);
+
     SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
     return performActions(os, sourceMgr, &context, config);
   }

@@ -82,6 +82,9 @@ public:
     return *this;
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
+
+  bool shouldDisableDiagnostic() const { return disableDiagnosticFlag; }
+
   bool shouldElideResourceDataFromBytecode() const {
     return elideResourceDataFromBytecodeFlag;
   }
@@ -207,6 +210,10 @@ protected:
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
+
+  /// Disable the diagnostic handlers. Warnings, errors, remarks, etc. will not
+  /// be printed.
+  bool disableDiagnosticFlag = false;
 
   /// Elide resources when generating bytecode.
   bool elideResourceDataFromBytecodeFlag = false;
