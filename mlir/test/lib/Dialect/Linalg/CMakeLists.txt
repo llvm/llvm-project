@@ -8,6 +8,7 @@ add_mlir_library(MLIRLinalgTestPasses
   TestLinalgRankReduceContractionOps.cpp
   TestLinalgTransforms.cpp
   TestPadFusion.cpp
+  TestNewConv.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
@@ -32,4 +33,4 @@ add_mlir_library(MLIRLinalgTestPasses
   MLIRVectorDialect
   MLIRVectorToSCF
   MLIRVectorTransforms
-  )
+)

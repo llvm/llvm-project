@@ -63,4 +63,30 @@ def TypeFn : I32EnumAttr<"TypeFn", "", [
   let cppNamespace = "::mlir::linalg";
 }
 
+
+class ConvDimEnumAttrCase<string sym, int val, string str = sym>
+    : IntEnumAttrCaseBase<I8, sym, str, val>;
+
+def ConvDimEnumAttr :
+    IntEnumAttr<I8, "ConvDimEnum", "summary", [
+      /// Batch is a dimension of input and output, indexed from a parallel loop.
+      ConvDimEnumAttrCase<"BATCH", 0, "N">,
+      /// Input channel is a dimension in all tensors, indexed from a reduction loop.
+      /// Depthwise convolutions perform no reduction across channels and therefore
+      /// do not use this.
+      ConvDimEnumAttrCase<"INPUT_CHANNEL", 1, "C">,
+      /// Output channel is a dimension in filter and output, index from a parallel loop.
+      ConvDimEnumAttrCase<"OUTPUT_CHANNEL", 2, "F">,
+      /// Group is a dimension in all tensors and indexed from a parallel loop.
+      ConvDimEnumAttrCase<"GROUP", 3, "G">,
+      /// Spatial dimensions occur in all tensors. Output is indexed from a parallel
+      /// loop, filter from a reduction loop and input from both.
+      ConvDimEnumAttrCase<"SPATIAL_0", 4, "0">,
+      ConvDimEnumAttrCase<"SPATIAL_1", 5, "1">,
+      ConvDimEnumAttrCase<"SPATIAL_2", 6, "2">,
+    ]> {
+  let underlyingType = "uint8_t";
+  let cppNamespace = "::mlir::linalg";
+}
+
 #endif // LINALG_ENUMS

@@ -203,6 +203,41 @@ static void buildMatmulOp(OpBuilder &b, OperationState &state,
                            attributes, regionBuilder);
 }
 
+static void buildConvOp(OpBuilder &b, OperationState &state,
+                        std::optional<TypeRange> resultTensorTypes,
+                        ValueRange inputs, ValueRange outputs,
+                        ConvDimsAttr inputDims, ConvDimsAttr filterDims,
+                        ConvDimsAttr outputDims, Attribute strides,
+                        Attribute dilations,
+                        ArrayRef<NamedAttribute> attributes,
+                        RegionBuilderFn regionBuilder) {
+  state.addAttribute("input_dims", inputDims);
+  state.addAttribute("filter_dims", filterDims);
+  state.addAttribute("output_dims", outputDims);
+  if (strides)
+    state.addAttribute("strides", strides);
+
+  if (dilations)
+    state.addAttribute("dilations", dilations);
+  return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
+                           attributes, regionBuilder);
+}
+
+static void buildConvOp(OpBuilder &b, OperationState &state,
+                        std::optional<TypeRange> resultTensorTypes, Value input,
+                        Value filter, Value output, ConvDims inputDims,
+                        ConvDims filterDims, ConvDims outputDims,
+                        ArrayRef<int64_t> strides, ArrayRef<int64_t> dilations,
+                        ArrayRef<NamedAttribute> attributes,
+                        RegionBuilderFn regionBuilder) {
+  auto iAttr = ConvDimsAttr::get(b.getContext(), inputDims);
+  auto fAttr = ConvDimsAttr::get(b.getContext(), filterDims);
+  auto oAttr = ConvDimsAttr::get(b.getContext(), outputDims);
+  return buildConvOp(b, state, resultTensorTypes, {input, filter}, {output},
+                     iAttr, fAttr, oAttr, b.getI64VectorAttr(strides),
+                     b.getI64VectorAttr(dilations), attributes, regionBuilder);
+}
+
 /// Common parsing used for both named structured ops created by ods-gen and by
 /// manually defined C++ ops. Does not handle regions.
 static ParseResult
@@ -3608,6 +3643,217 @@ void MatmulOp::getEffects(
 }
 
 Speculation::Speculatability MatmulOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+//===----------------------------------------------------------------------===//
+// ConvOp
+//===----------------------------------------------------------------------===//
+
+bool ConvOp::isDepthwise() {
+  return !getFilterDims().contains(ConvDimEnum::INPUT_CHANNEL);
+}
+
+bool ConvOp::isGrouped() {
+  // If not all tensors contain the GROUP dimension, then it's either not a
+  // grouped convolution, or the number of groups is 1, which we also don't
+  // consider grouped.
+  return getInputDims().contains(ConvDimEnum::GROUP) &&
+         getFilterDims().contains(ConvDimEnum::GROUP) &&
+         getOutputDims().contains(ConvDimEnum::GROUP);
+}
+
+bool ConvOp::isBatched() {
+  // Both input and output tensors must contain the BATCH dimension.
+  return getInputDims().contains(ConvDimEnum::BATCH) &&
+         getOutputDims().contains(ConvDimEnum::BATCH);
+}
+
+int64_t ConvOp::getNumSpatialDims() {
+  if (getInputDims().contains(ConvDimEnum::SPATIAL_2))
+    return 3;
+  if (getInputDims().contains(ConvDimEnum::SPATIAL_1))
+    return 2;
+  return 1;
+}
+
+SmallVector<utils::IteratorType> ConvOp::getIteratorTypesArray() {
+  int numParallelDims = getOutputDims().size();
+
+  int numReductionDims = getNumSpatialDims();
+  if (!isDepthwise())
+    ++numReductionDims; // input channel
+
+  SmallVector<utils::IteratorType> iteratorTypes(numParallelDims,
+                                                 utils::IteratorType::parallel);
+  iteratorTypes.append(numReductionDims, utils::IteratorType::reduction);
+  return iteratorTypes;
+}
+
+ArrayAttr ConvOp::getIndexingMaps() {
+  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(
+      LinalgDialect::kMemoizedIndexingMapsAttrName);
+  if (cached)
+    return cached;
+
+  Builder b(getContext());
+  SmallVector<AffineExpr> strides, dilations;
+  {
+    SmallVector<int64_t> strideValues, dilationValues;
+
+    if (getStrides())
+      strideValues = SmallVector<int64_t>(getStrides()->getValues<int64_t>());
+    else
+      strideValues = SmallVector<int64_t>(getNumSpatialDims(), 1);
+
+    if (getDilations())
+      dilationValues =
+          SmallVector<int64_t>(getDilations()->getValues<int64_t>());
+    else
+      dilationValues = SmallVector<int64_t>(getNumSpatialDims(), 1);
+
+    for (int j = 0; j < getNumSpatialDims(); ++j) {
+      strides.push_back(b.getAffineConstantExpr(strideValues[j]));
+      dilations.push_back(b.getAffineConstantExpr(dilationValues[j]));
+    }
+  }
+
+  llvm::DenseMap<ConvDimEnum, AffineExpr> parallelDims;
+  llvm::DenseMap<ConvDimEnum, AffineExpr> reductionDims;
+  SmallVector<AffineExpr> oExprs;
+
+  // Via the iterator types, we have defined the parallel loops to come first,
+  // followed by the reduction loops. We choose the order of the parallel loops
+  // to match the order of the output tensor dimensions. This is arbitrary and
+  // is done to follow the convention which most/some of the old linalg
+  // convolution ops follow.
+  int64_t i = 0;
+  for (auto d : getOutputDims()) {
+    auto expr = b.getAffineDimExpr(i++);
+    parallelDims[d] = expr;
+    oExprs.push_back(expr);
+  }
+  // Reduction loops are ordered to match the order of the filter tensor.
+  for (auto d : getFilterDims())
+    if (d == ConvDimEnum::INPUT_CHANNEL || d == ConvDimEnum::SPATIAL_0 ||
+        d == ConvDimEnum::SPATIAL_1 || d == ConvDimEnum::SPATIAL_2)
+      reductionDims[d] = b.getAffineDimExpr(i++);
+
+  SmallVector<AffineExpr> iExprs =
+      llvm::map_to_vector(getInputDims(), [&](ConvDimEnum dim) -> AffineExpr {
+        switch (dim) {
+        case ConvDimEnum::SPATIAL_0:
+          return (parallelDims[dim] * strides[0]) +
+                 (reductionDims[dim] * dilations[0]);
+        case ConvDimEnum::SPATIAL_1:
+          return (parallelDims[dim] * strides[1]) +
+                 (reductionDims[dim] * dilations[1]);
+        case ConvDimEnum::SPATIAL_2:
+          return (parallelDims[dim] * strides[2]) +
+                 (reductionDims[dim] * dilations[2]);
+        case ConvDimEnum::INPUT_CHANNEL:
+          return reductionDims[dim];
+        default:
+          return parallelDims[dim];
+        }
+      });
+  SmallVector<AffineExpr> fExprs =
+      llvm::map_to_vector(getFilterDims(), [&](ConvDimEnum dim) -> AffineExpr {
+        if (reductionDims.contains(dim))
+          return reductionDims[dim];
+        return parallelDims[dim];
+      });
+
+  cached = b.getAffineMapArrayAttr(
+      {AffineMap::get(getNumLoops(), 0, iExprs, getContext()),
+       AffineMap::get(getNumLoops(), 0, fExprs, getContext()),
+       AffineMap::get(getNumLoops(), 0, oExprs, getContext())});
+  getOperation()->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+  return cached;
+}
+
+void ConvOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                           ArrayRef<NamedAttribute> attrs) {
+  RegionBuilderHelper helper(b, block);
+  SmallVector<Value> yields;
+
+  TypeFn castVal = TypeFn::cast_signed;
+  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+    return attr.getName() == "cast";
+  });
+  if (castIter != attrs.end()) {
+    if (auto attr = llvm::dyn_cast<TypeFnAttr>(castIter->getValue()))
+      castVal = attr.getValue();
+  }
+
+  Value value1 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
+                                    block.getArgument(0));
+  Value value2 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
+                                    block.getArgument(1));
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
+  Value value4 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  yields.push_back(value4);
+  helper.yieldOutputs(yields);
+}
+
+ParseResult ConvOp::parse(OpAsmParser &parser, OperationState &result) {
+  return ::parseNamedStructuredOp(parser, result, 3,
+                                  ConvOp::getRegionBuilder());
+}
+void ConvOp::print(OpAsmPrinter &p) {
+  SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes",
+                                           "linalg.memoized_indexing_maps"};
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                           elidedAttrs);
+}
+
+LogicalResult ConvOp::verify() {
+  // Batch dimension cannot be present in filter tensor.
+  if (getFilterDims().contains(ConvDimEnum::BATCH))
+    return emitOpError("Batch dimension cannot be present in filter tensor.");
+
+  // Output channel cannot be present in input tensor.
+  if (getInputDims().contains(ConvDimEnum::OUTPUT_CHANNEL))
+    return emitOpError("Output channel cannot be present in input tensor.");
+
+  // Higher space dimensions cannot occur without the respective lower ones, so
+  // as to work with the `strides` and `dilations` attributes.
+  bool isSpat2 = getInputDims().contains(ConvDimEnum::SPATIAL_2);
+  bool isSpat1 = getInputDims().contains(ConvDimEnum::SPATIAL_1);
+  bool isSpat0 = getInputDims().contains(ConvDimEnum::SPATIAL_0);
+
+  if ((isSpat2 && (!isSpat1 || !isSpat0)) || (isSpat1 && !isSpat0))
+    return emitOpError("Inconsistent spatial dimensions in `input_dims`.");
+
+  if (!isSpat0)
+    return emitOpError("Requires at least one spatial dimension.");
+
+  // Spatial dimensions have to match between all tensors.
+  if (isSpat2 != getFilterDims().contains(ConvDimEnum::SPATIAL_2) ||
+      isSpat2 != getOutputDims().contains(ConvDimEnum::SPATIAL_2) ||
+      isSpat1 != getFilterDims().contains(ConvDimEnum::SPATIAL_1) ||
+      isSpat1 != getOutputDims().contains(ConvDimEnum::SPATIAL_1) ||
+      isSpat0 != getFilterDims().contains(ConvDimEnum::SPATIAL_0) ||
+      isSpat0 != getOutputDims().contains(ConvDimEnum::SPATIAL_0))
+    return emitOpError("Inconsistent spatial dimensions between tensors.");
+
+  return success();
+}
+
+LogicalResult ConvOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+
+void ConvOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability ConvOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 

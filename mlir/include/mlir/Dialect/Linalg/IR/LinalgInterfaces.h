@@ -117,6 +117,33 @@ FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 bool isaConvolutionOpInterface(LinalgOp linalgOp,
                                bool allowEmptyConvolvedDims = false);
 
+enum class ConvDimEnum : uint8_t;
+class ConvDims {
+  ArrayRef<ConvDimEnum> storage;
+
+public:
+  ConvDims() = default;
+  ConvDims(ArrayRef<ConvDimEnum> dims) : storage(dims) {}
+  ConvDims(SmallVectorImpl<ConvDimEnum> &dims) : storage(dims) {}
+
+  bool contains(ConvDimEnum dim) const {
+    return llvm::is_contained(storage, dim);
+  }
+
+  int64_t getPos(ConvDimEnum dim) const {
+    auto it = llvm::find(storage, dim);
+    assert(it != storage.end() && "expected dimension to be present");
+
+    return std::distance(storage.begin(), it);
+  }
+
+  int64_t size() const { return storage.size(); }
+  operator ArrayRef<ConvDimEnum>() const { return storage; }
+
+  auto begin() const { return storage.begin(); }
+  auto end() const { return storage.end(); }
+};
+
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
 
