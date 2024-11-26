@@ -964,9 +964,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
     __x.__begin_ = __x.__end_ = __x.__cap_ = nullptr;
   } else {
     typedef move_iterator<iterator> _Ip;
-    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
-    assign(_Ip(__x.begin()), _Ip(__x.end()));
-    __guard.__complete();
+    __init_with_size(_Ip(__x.begin()), _Ip(__x.end()), __x.size());
   }
 }
 
