@@ -126,7 +126,7 @@ def HasLD_SEQ_SA : Predicate<"Subtarget->hasLD_SEQ_SA()">;
 // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
 def FeatureDiv32
     : SubtargetFeature<"div32", "HasDiv32", "true",
-                        "Support div.w[u] and mod.w[u] can handle inputs that are not sign-extended">;
+                        "Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended">;
 def HasDiv32 : Predicate<"Subtarget->hasDiv32()">;
 
 def TunePreferWInst
