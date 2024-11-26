@@ -45,10 +45,6 @@ struct ConvertToEmitC final : impl::ConvertToEmitCBase<ConvertToEmitC> {
     target.addIllegalDialect<arith::ArithDialect, func::FuncDialect,
                              memref::MemRefDialect, scf::SCFDialect>();
     target.addLegalDialect<emitc::EmitCDialect>();
-    target.addDynamicallyLegalOp<emitc::FuncOp>(
-        [&typeConverter](emitc::FuncOp op) {
-          return typeConverter.isSignatureLegal(op.getFunctionType());
-        });
 
     populateConvertToEmitCTypeConverter(typeConverter);
     populateConvertToEmitCPatterns(typeConverter, patterns);

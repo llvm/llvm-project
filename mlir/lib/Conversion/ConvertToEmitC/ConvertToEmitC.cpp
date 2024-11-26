@@ -35,9 +35,7 @@ void mlir::populateConvertToEmitCTypeConverter(TypeConverter &typeConverter) {
 void mlir::populateConvertToEmitCPatterns(TypeConverter &typeConverter,
                                     RewritePatternSet &patterns) {
   populateArithToEmitCPatterns(typeConverter, patterns);
-  populateFuncToEmitCPatterns(patterns);
+  populateFuncToEmitCPatterns(typeConverter, patterns);
   populateMemRefToEmitCConversionPatterns(patterns, typeConverter);
   populateSCFToEmitCConversionPatterns(patterns);
-  populateFunctionOpInterfaceTypeConversionPattern<emitc::FuncOp>(
-      patterns, typeConverter);
 }
