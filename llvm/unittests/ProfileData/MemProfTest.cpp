@@ -628,7 +628,7 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
       FrameHistogram =
           llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
   llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
   ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
   const auto Mappings = Builder.takeCallStackPos();
@@ -646,7 +646,7 @@ TEST(MemProf, RadixTreeBuilderOne) {
       FrameHistogram =
           llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
   llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(), testing::ElementsAreArray({
                                            3U, // Size of CS1,
@@ -673,7 +673,7 @@ TEST(MemProf, RadixTreeBuilderTwo) {
       FrameHistogram =
           llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
   llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
               testing::ElementsAreArray({
@@ -711,7 +711,7 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
       FrameHistogram =
           llvm::memprof::computeFrameHistogram<FrameId>(MemProfCallStackData);
   llvm::memprof::CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
               testing::ElementsAreArray({
