@@ -56,7 +56,7 @@ while.end:
 
 ;; This is an example of a case where the memory states are equivalent solely due to unreachability,
 ;; but the stores are not equal.
-define void @foo(ptr %arg, i1 %arg2) {
+define void @foo(ptr %arg, i1 %arg2, i1 %arg3) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -71,9 +71,8 @@ define void @foo(ptr %arg, i1 %arg2) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    br i1 true, label [[BB9:%.*]], label [[BB7:%.*]]
+; CHECK-NEXT:    br i1 [[ARG3:%.*]], label [[BB9:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    switch i8 0, label [[BB6]] [
 ; CHECK-NEXT:      i8 6, label [[BB8:%.*]]
 ; CHECK-NEXT:    ]
@@ -103,7 +102,7 @@ bb4:                                              ; preds = %bb8, %bb3
   br label %bb6
 
 bb6:                                              ; preds = %bb7, %bb4
-  br i1 %arg2, label %bb9, label %bb7
+  br i1 %arg3, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb6
   switch i8 0, label %bb6 [

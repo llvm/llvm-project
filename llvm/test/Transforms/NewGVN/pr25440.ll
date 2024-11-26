@@ -10,9 +10,9 @@ target triple = "thumbv7--linux-gnueabi"
 @length = external global [0 x i32], align 4
 
 ; Function Attrs: nounwind
-define fastcc void @foo(ptr nocapture readonly %x, i1 %arg) {
+define fastcc void @foo(ptr nocapture readonly %x, i1 %arg, i1 %arg2) {
 ; CHECK-LABEL: define fastcc void @foo(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], i1 [[ARG:%.*]]) {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], i1 [[ARG:%.*]], i1 [[ARG2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB0:%.*]]
 ; CHECK:       bb0:
@@ -33,9 +33,8 @@ define fastcc void @foo(ptr nocapture readonly %x, i1 %arg) {
 ; CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[MODE]], align 2
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    br i1 false, label [[IF_THEN_44:%.*]], label [[CLEANUP]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[IF_THEN_44:%.*]], label [[CLEANUP]]
 ; CHECK:       if.then.44:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end.50:
 ; CHECK-NEXT:    [[ARRAYIDX52:%.*]] = getelementptr inbounds [0 x i32], ptr @length, i32 0, i32 [[CONV]]
@@ -76,7 +75,7 @@ cond.false:                                       ; preds = %if.then.26
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %if.then.26
-  br i1 false, label %if.then.44, label %cleanup
+  br i1 %arg2, label %if.then.44, label %cleanup
 
 if.then.44:                                       ; preds = %cond.end
   unreachable

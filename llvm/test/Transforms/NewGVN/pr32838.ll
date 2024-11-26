@@ -95,7 +95,7 @@ temp:
 }
 @b = external global i32, align 4
 @a = external global i32, align 4
-define void @fn3(i1 %arg) {
+define void @fn3(i1 %arg, i1 %arg2) {
 ; CHECK-LABEL: @fn3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L1:%.*]]
@@ -112,11 +112,12 @@ define void @fn3(i1 %arg) {
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[L2:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND1:%.*]], label [[L1_LOOPEXIT]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[FOR_COND1:%.*]], label [[L1_LOOPEXIT]]
 ; CHECK:       l2:
+; CHECK-NEXT:    [[G_4:%.*]] = phi ptr [ @b, [[FOR_END14]] ], [ @a, [[FOR_COND1]] ]
+; CHECK-NEXT:    [[F_2:%.*]] = phi ptr [ [[F_0]], [[FOR_END14]] ], [ @a, [[FOR_COND1]] ]
 ; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND_LOOPEXIT:%.*]], label [[FOR_INC]]
@@ -143,7 +144,7 @@ for.cond1.preheader:
 for.cond1:
   br label %l2
 for.body3:
-  br i1 %arg, label %for.cond1, label %l1.loopexit
+  br i1 %arg2, label %for.cond1, label %l1.loopexit
 l2:
   %g.4 = phi ptr [ %g.1, %for.end14 ], [ @a, %for.cond1 ]
   %f.2 = phi ptr [ %f.1, %for.end14 ], [ @a, %for.cond1 ]

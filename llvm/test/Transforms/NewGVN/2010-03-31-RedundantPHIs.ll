@@ -4,19 +4,17 @@
 ; CHECK-NOT: load
 ; CHECK-NOT: phi
 
-define ptr @cat(ptr %s1, i1 %arg, ...) nounwind {
+define ptr @cat(ptr %s1, i1 %arg, i1 %arg2, i1 %arg3, ...) nounwind {
 ; CHECK-LABEL: define ptr @cat(
-; CHECK-SAME: ptr [[S1:%.*]], i1 [[ARG:%.*]], ...) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[S1:%.*]], i1 [[ARG:%.*]], i1 [[ARG2:%.*]], i1 [[ARG3:%.*]], ...) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[BB:%.*]], label [[BB3:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[BB:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb3:
 ; CHECK-NEXT:    store ptr undef, ptr undef, align 4
-; CHECK-NEXT:    br i1 false, label [[BB5:%.*]], label [[BB6:%.*]]
+; CHECK-NEXT:    br i1 [[ARG3]], label [[BB5:%.*]], label [[BB6:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br label [[BB12:%.*]]
@@ -35,14 +33,14 @@ define ptr @cat(ptr %s1, i1 %arg, ...) nounwind {
 ; CHECK-NEXT:    ret ptr undef
 ;
 entry:
-  br i1 false, label %bb, label %bb3
+  br i1 %arg2, label %bb, label %bb3
 
 bb:                                               ; preds = %entry
   unreachable
 
 bb3:                                              ; preds = %entry
   store ptr undef, ptr undef, align 4
-  br i1 false, label %bb5, label %bb6
+  br i1 %arg3, label %bb5, label %bb6
 
 bb5:                                              ; preds = %bb3
   unreachable

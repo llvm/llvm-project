@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;; Both of these tests are tests of phi nodes that end up all equivalent to each other
 ;; Without proper leader ordering, we will end up cycling the leader between all of them and never converge.
 
-define void @foo(i1 %arg) {
+define void @foo(i1 %arg, i1 %arg2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -21,11 +21,10 @@ define void @foo(i1 %arg) {
 ; CHECK:       bb9:
 ; CHECK-NEXT:    br i1 [[ARG]], label [[BB2]], label [[BB11:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    br i1 false, label [[BB16:%.*]], label [[BB14:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB16:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb16:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    br label [[BB1]]
@@ -53,7 +52,7 @@ bb9:                                              ; preds = %bb7
   br i1 %arg, label %bb2, label %bb11
 
 bb11:                                             ; preds = %bb9
-  br i1 %arg, label %bb16, label %bb14
+  br i1 %arg2, label %bb16, label %bb14
 
 bb14:                                             ; preds = %bb11
   %tmp15 = phi i32 [ %tmp8, %bb11 ]

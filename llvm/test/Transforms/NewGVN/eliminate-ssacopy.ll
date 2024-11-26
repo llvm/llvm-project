@@ -9,12 +9,11 @@
 @a = external dso_local local_unnamed_addr global i8, align 1
 @f = external dso_local local_unnamed_addr global i16, align 2
 
-define void @g() {
+define void @g(i1 %arg) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[FOR_COND1THREAD_PRE_SPLIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND1THREAD_PRE_SPLIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.cond1thread-pre-split:
 ; CHECK-NEXT:    br label [[FOR_END4_SPLIT:%.*]]
@@ -39,7 +38,7 @@ define void @g() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 true, label %for.cond1thread-pre-split, label %for.cond.preheader
+  br i1 %arg, label %for.cond1thread-pre-split, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
   unreachable
@@ -51,7 +50,7 @@ for.end4.split:                                   ; preds = %for.cond1thread-pre
   br i1 true, label %for.cond6.preheader, label %if.end11
 
 for.cond6.preheader:                              ; preds = %for.end4.split
-  br i1 true, label %for.cond6.preheader3, label %if.end11.loopexit
+  br i1 %arg, label %for.cond6.preheader3, label %if.end11.loopexit
 
 for.cond6.preheader3:                             ; preds = %for.cond6.preheader
   br label %if.end11.loopexit
