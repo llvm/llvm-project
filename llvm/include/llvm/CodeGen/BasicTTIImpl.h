@@ -1632,6 +1632,21 @@ public:
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
         }
+        if (VPCastIntrinsic::isVPCast(ICA.getID())) {
+          return thisT()->getCastInstrCost(
+              *FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
+              TTI::CastContextHint::None, CostKind);
+        }
+        if (VPCmpIntrinsic::isVPCmp(ICA.getID())) {
+          // We can only handle vp_cmp intrinsics with underlying instructions.
+          if (ICA.getInst()) {
+            assert(FOp);
+            auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
+            return thisT()->getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0],
+                                               ICA.getReturnType(),
+                                               UI->getPredicate(), CostKind);
+          }
+        }
       }
 
       std::optional<Intrinsic::ID> FID =
