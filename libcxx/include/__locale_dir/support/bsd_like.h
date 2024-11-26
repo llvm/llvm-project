@@ -160,19 +160,23 @@ inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __c, __locale_t __loc) { return 
 
 inline _LIBCPP_HIDE_FROM_ABI int __wctob(wint_t __c, __locale_t __loc) { return ::wctob_l(__c, __loc); }
 
+#  ifdef _LIBCPP_BUILDING_LIBRARY
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __wcsnrtombs(char* __dest, const wchar_t** __src, size_t __nwc, size_t __len, mbstate_t* __ps, __locale_t __loc) {
   return ::wcsnrtombs_l(__dest, __src, __nwc, __len, __ps, __loc);
 }
+#  endif
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcrtomb(char* __s, wchar_t __wc, mbstate_t* __ps, __locale_t __loc) {
   return ::wcrtomb_l(__s, __wc, __ps, __loc);
 }
 
+#  ifdef _LIBCPP_BUILDING_LIBRARY
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __mbsnrtowcs(wchar_t* __dest, const char** __src, size_t __nms, size_t __len, mbstate_t* __ps, __locale_t __loc) {
   return ::mbsnrtowcs_l(__dest, __src, __nms, __len, __ps, __loc);
 }
+#  endif
 
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __mbrtowc(wchar_t* __pwc, const char* __s, size_t __n, mbstate_t* __ps, __locale_t __loc) {

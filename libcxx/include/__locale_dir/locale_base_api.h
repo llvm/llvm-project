@@ -23,12 +23,16 @@
 // Variadic functions may be implemented as templates with a parameter pack instead
 // of C-style variadic functions.
 //
+// Most of these functions are only required when building the library. Functions that are also
+// required when merely using the headers are marked as such below.
+//
 // TODO: __localeconv shouldn't take a reference, but the Windows implementation doesn't allow copying __locale_t
+// TODO: Eliminate the need for any of these functions from the headers.
 //
 // Locale management
 // -----------------
 // namespace __locale {
-//  using __locale_t = implementation-defined;
+//  using __locale_t = implementation-defined;  // required by the headers
 //  using __lconv_t  = implementation-defined;
 //  __locale_t  __newlocale(int, const char*, __locale_t);
 //  void        __freelocale(__locale_t);
@@ -60,8 +64,8 @@
 // namespace __locale {
 //  int     __islower(int, __locale_t);
 //  int     __isupper(int, __locale_t);
-//  int     __isdigit(int, __locale_t);
-//  int     __isxdigit(int, __locale_t);
+//  int     __isdigit(int, __locale_t);  // required by the headers
+//  int     __isxdigit(int, __locale_t); // required by the headers
 //  int     __toupper(int, __locale_t);
 //  int     __tolower(int, __locale_t);
 //  int     __strcoll(const char*, const char*, __locale_t);
@@ -99,9 +103,10 @@
 //  int     __mbtowc(wchar_t*, const char*, size_t, __locale_t);
 //  size_t  __mbrlen(const char*, size_t, mbstate_t*, __locale_t);
 //  size_t  __mbsrtowcs(wchar_t*, const char**, size_t, mbstate_t*, __locale_t);
-//  int     __snprintf(char*, size_t, __locale_t, const char*, ...);
-//  int     __asprintf(char**, __locale_t, const char*, ...);
-//  int     __sscanf(const char*, __locale_t, const char*, ...);
+//
+//  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
+//  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
+//  int     __sscanf(const char*, __locale_t, const char*, ...);     // required by the headers
 // }
 
 #if defined(__APPLE__)
