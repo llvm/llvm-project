@@ -447,9 +447,9 @@ public:
   bool isOpSelHi() const { return isImmTy(ImmTyOpSelHi); }
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
+  bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
   bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
   bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
-  bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();

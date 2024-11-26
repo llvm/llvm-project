@@ -448,6 +448,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     QualType SubExprTy = SubExpr->getType();
     std::optional<PrimType> FromT = classify(SubExprTy);
+    // Casts from integer to vectors in C.
+    if (FromT && CE->getType()->isVectorType())
+      return this->emitBuiltinBitCast(CE);
+
     std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
       return false;
@@ -6494,8 +6498,23 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   }
 
   // Get a pointer to the value-to-cast on the stack.
-  if (!this->visit(SubExpr))
-    return false;
+  // For CK_LValueToRValueBitCast, this is always an lvalue and
+  // we later assume it to be one (i.e. a PT_Ptr). However,
+  // we call this function for other utility methods where
+  // a bitcast might be useful, so convert it to a PT_Ptr in that case.
+  if (SubExpr->isGLValue()) {
+    if (!this->visit(SubExpr))
+      return false;
+  } else if (std::optional<PrimType> FromT = classify(SubExpr)) {
+    unsigned TempOffset = allocateLocalPrimitive(
+        SubExpr, *FromT, /*IsConst=*/true, /*IsExtended=*/false);
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(*FromT, TempOffset, E))
+      return false;
+    if (!this->emitGetPtrLocal(TempOffset, E))
+      return false;
+  }
 
   if (!ToT || ToT == PT_Ptr) {
     if (!this->emitBitCastPtr(E))
