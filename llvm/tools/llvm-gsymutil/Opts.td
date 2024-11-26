@@ -19,7 +19,7 @@ defm convert :
 def merged_functions :
   FF<"merged-functions", "Encode merged function information for functions in debug info that have matching address ranges.\nWithout this option one function per unique address range will be emitted.">;
 defm callsites_yaml_file :
-  Eq<"callsites-yaml-file", "Load call site info from YAML file.">;
+  Eq<"callsites-yaml-file", "Load call site info from YAML file. Useful for testing.">, Flags<[HelpHidden]>;
 defm arch :
   Eq<"arch",
      "Process debug information for the specified CPU architecture only.\nArchitectures may be specified by name or by number.\nThis option can be specified multiple times, once for each desired architecture">;
