@@ -4691,14 +4691,11 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                          ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                                Result.TaskDupFn, CGF.VoidPtrTy)
                          : llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
-  if (Data.HasModifier)
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_taskloop_5),
-                        TaskArgs);
-  else
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_taskloop),
-                        TaskArgs);
+  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                          CGM.getModule(), Data.HasModifier
+                                               ? OMPRTL___kmpc_taskloop_5
+                                               : OMPRTL___kmpc_taskloop),
+                      TaskArgs);
 }
 
 /// Emit reduction operation for each element of array (required for
