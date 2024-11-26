@@ -1652,7 +1652,7 @@ def : InstRW<[Zn4MOVS], (instregex
 
 def Zn4MOVSZ: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 4;
-  let ReleaseAtCycles = [4];
+  let ReleaseAtCycles = [2];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVSZ], (instregex
@@ -1661,7 +1661,7 @@ def : InstRW<[Zn4MOVSZ], (instregex
 
 def Zn4MOVSrr: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 5;
-  let ReleaseAtCycles = [5];
+  let ReleaseAtCycles = [2];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVSrr], (instregex
