@@ -199,6 +199,8 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
+// Check if it's a SPIR-V specific intrinsic call.
+bool isSpvIntrinsic(const Value *Arg);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
@@ -304,7 +306,6 @@ inline Type *getPointeeType(const Type *Ty) {
     else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
       if (isTypedPointerWrapper(ExtTy))
         return ExtTy->getTypeParameter(0);
-        //return applyWrappers(ExtTy->getTypeParameter(0));
   }
   return nullptr;
 }

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <queue>
 #include <vector>
@@ -749,6 +750,14 @@ bool isNestedPointer(const Type *Ty) {
   }
   if (const ArrayType *RefTy = dyn_cast<ArrayType>(Ty))
     return isNestedPointer(RefTy->getElementType());
+  return false;
+}
+
+bool isSpvIntrinsic(const Value *Arg) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
+    if (Function *F = II->getCalledFunction())
+      if (F->getName().starts_with("llvm.spv."))
+        return true;
   return false;
 }
 
