@@ -149,6 +149,12 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
 >;
 
+def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
+  "HasMinimum3Maximum3PKF16",
+  "true",
+  "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -414,11 +420,33 @@ def FeatureFP6BF6ConversionScaleInsts : SubtargetFeature<"fp6bf6-cvt-scale-insts
   "Has fp6 and bf6 conversion scale instructions"
 >;
 
+def FeatureF16BF16ToFP6BF6ConversionScaleInsts : SubtargetFeature<"f16bf16-to-fp6bf6-cvt-scale-insts",
+  "HasF16BF16ToFP6BF6ConversionScaleInsts",
+  "true",
+  "Has f16bf16 to fp6bf6 conversion scale instructions"
+>;
+
+def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
+  "HasAshrPkInsts",
+  "true",
+  "Has Arithmetic Shift Pack instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
   "Additional instructions for GFX950+",
-  [FeaturePermlane16Swap, FeaturePermlane32Swap, FeatureFP8ConversionScaleInsts, FeatureBF8ConversionScaleInsts, FeatureFP4ConversionScaleInsts, FeatureFP6BF6ConversionScaleInsts]
+  [FeaturePermlane16Swap,
+   FeaturePermlane32Swap,
+   FeatureAshrPkInsts,
+   FeatureFP8ConversionScaleInsts,
+   FeatureBF8ConversionScaleInsts,
+   FeatureFP4ConversionScaleInsts,
+   FeatureFP6BF6ConversionScaleInsts,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureMinimum3Maximum3F32,
+   FeatureMinimum3Maximum3PKF16
+   ]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -719,7 +747,7 @@ def FeatureDot8Insts : SubtargetFeature<"dot8-insts",
 def FeatureDot9Insts : SubtargetFeature<"dot9-insts",
   "HasDot9Insts",
   "true",
-  "Has v_dot2_f16_f16, v_dot2_bf16_bf16, v_dot2_f32_bf16 instructions"
+  "Has v_dot2_f16_f16, v_dot2_bf16_bf16 instructions"
 >;
 
 def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
@@ -733,6 +761,19 @@ def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
   "true",
   "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
 >;
+
+def FeatureDot12Insts : SubtargetFeature<"dot12-insts",
+  "HasDot12Insts",
+  "true",
+  "Has v_dot2_f32_bf16 instructions"
+>;
+
+def FeatureDot13Insts : SubtargetFeature<"dot13-insts",
+  "HasDot13Insts",
+  "true",
+  "Has v_dot2c_f32_bf16 instructions"
+>;
+
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
@@ -1585,7 +1626,10 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP8ConversionScaleInsts,
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
-   FeatureFP6BF6ConversionScaleInsts
+   FeatureFP6BF6ConversionScaleInsts,
+   FeatureDot12Insts,
+   FeatureDot13Insts,
+   FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -1713,6 +1757,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot12Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureShaderCyclesRegister,
@@ -1796,6 +1841,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot9Insts,
    FeatureDot10Insts,
    FeatureDot11Insts,
+   FeatureDot12Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureShaderCyclesHiLoRegisters,
@@ -2133,6 +2179,10 @@ def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
 
+def HasMinimum3Maximum3PKF16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
+
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
@@ -2368,6 +2418,12 @@ def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
 def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
   AssemblerPredicate<(all_of FeatureDot11Insts)>;
 
+def HasDot12Insts : Predicate<"Subtarget->hasDot12Insts()">,
+  AssemblerPredicate<(all_of FeatureDot12Insts)>;
+
+def HasDot13Insts : Predicate<"Subtarget->hasDot13Insts()">,
+  AssemblerPredicate<(all_of FeatureDot13Insts)>;
+
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
 
@@ -2471,6 +2527,9 @@ def HasFP4ConversionScaleInsts : Predicate<"Subtarget->hasFP4ConversionScaleInst
 def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP6BF6ConversionScaleInsts)>;
 
+def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
+
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
 def HasGWS : Predicate<"Subtarget->hasGWS()">;
@@ -2484,6 +2543,9 @@ def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 
 def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
    AssemblerPredicate<(all_of FeatureXF32Insts)>;
+
+def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
+  AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
