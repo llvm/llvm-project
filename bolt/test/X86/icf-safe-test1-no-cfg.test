@@ -1,7 +1,7 @@
 ## Check that BOLT handles correctly folding functions with --icf-safe that can be referenced.
 
 # REQUIRES: system-linux
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %p/Inputs/mainSafeICFTest1.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
 # RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt --no-threads %t.exe --icf=all      -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
 # RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf --skip-funcs=_Z7helper1PFiiiEii,main -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
@@ -17,3 +17,174 @@
 # SAFEICFCHECK-NEXT: ICF iteration 1
 # SAFEICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
 # SAFEICFCHECK-NEXT: ===---------
+
+# clang++ -c main.cpp -o main.o
+# extern int FooVar;
+# extern int BarVar;
+# [[clang::noinline]]
+# int fooSub(int a, int b) {
+#   return a - b;
+# }
+# [[clang::noinline]]
+# int barSub(int a, int b) {
+#   return a - b;
+# }
+# [[clang::noinline]]
+# int fooMul(int a, int b) {
+#   return a * b;
+# }
+# [[clang::noinline]]
+# int barMul(int a, int b) {
+#   return a * b;
+# }
+# [[clang::noinline]]
+# int fooAdd(int a, int b) {
+#   return a + b;
+# }
+# [[clang::noinline]]
+# int barAdd(int a, int b) {
+#   return a + b;
+# }
+# [[clang::noinline]]
+# int helper1(int (*func)(int, int), int a, int b) {
+#   if (func == barAdd)
+#     return 1;
+#   return func(a, b) - 4;
+# }
+# [[clang::noinline]]
+# int helper2(int (*func)(int, int), int (*func2)(int, int), int a, int b) {
+#   if (func == func2)
+#     return 2;
+#   return func(a, b) + func2(a, b);
+# }
+# int main(int argc, char **argv) {
+#   int temp = helper1(barAdd, FooVar, BarVar) +
+#              helper2(fooMul, barMul, FooVar, BarVar) + fooSub(FooVar, BarVar) +
+#              barSub(FooVar, BarVar) + fooAdd(FooVar, BarVar);
+#   return temp;
+# }
+	.text
+	.file	"main.cpp"
+	.globl	_Z6fooSubii                     # -- Begin function _Z6fooSubii
+	.p2align	4, 0x90
+	.type	_Z6fooSubii,@function
+_Z6fooSubii:                            # @_Z6fooSubii
+	.cfi_startproc
+	subl	-8(%rbp), %eax
+	retq
+.Lfunc_end0:
+	.size	_Z6fooSubii, .Lfunc_end0-_Z6fooSubii
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z6barSubii                     # -- Begin function _Z6barSubii
+	.p2align	4, 0x90
+	.type	_Z6barSubii,@function
+_Z6barSubii:                            # @_Z6barSubii
+	.cfi_startproc
+	subl	-8(%rbp), %eax
+	retq
+.Lfunc_end1:
+	.size	_Z6barSubii, .Lfunc_end1-_Z6barSubii
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z6fooMulii                     # -- Begin function _Z6fooMulii
+	.p2align	4, 0x90
+	.type	_Z6fooMulii,@function
+_Z6fooMulii:                            # @_Z6fooMulii
+	.cfi_startproc
+	imull	-8(%rbp), %eax
+	retq
+.Lfunc_end2:
+	.size	_Z6fooMulii, .Lfunc_end2-_Z6fooMulii
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z6barMulii                     # -- Begin function _Z6barMulii
+	.p2align	4, 0x90
+	.type	_Z6barMulii,@function
+_Z6barMulii:                            # @_Z6barMulii
+	.cfi_startproc
+	imull	-8(%rbp), %eax
+	retq
+.Lfunc_end3:
+	.size	_Z6barMulii, .Lfunc_end3-_Z6barMulii
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z6fooAddii                     # -- Begin function _Z6fooAddii
+	.p2align	4, 0x90
+	.type	_Z6fooAddii,@function
+_Z6fooAddii:                            # @_Z6fooAddii
+	.cfi_startproc
+	addl	-8(%rbp), %eax
+	retq
+.Lfunc_end4:
+	.size	_Z6fooAddii, .Lfunc_end4-_Z6fooAddii
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z6barAddii                     # -- Begin function _Z6barAddii
+	.p2align	4, 0x90
+	.type	_Z6barAddii,@function
+_Z6barAddii:                            # @_Z6barAddii
+	.cfi_startproc
+	addl	-8(%rbp), %eax
+	retq
+.Lfunc_end5:
+	.size	_Z6barAddii, .Lfunc_end5-_Z6barAddii
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z7helper1PFiiiEii              # -- Begin function _Z7helper1PFiiiEii
+	.p2align	4, 0x90
+	.type	_Z7helper1PFiiiEii,@function
+_Z7helper1PFiiiEii:                     # @_Z7helper1PFiiiEii
+	.cfi_startproc
+	leaq	_Z6barAddii(%rip), %rax
+	cmpq	%rax, -16(%rbp)
+	jne	.LBB6_2
+	jmp	.LBB6_3
+.LBB6_2:
+	callq	*%rax
+.LBB6_3:
+	retq
+.Lfunc_end6:
+	.size	_Z7helper1PFiiiEii, .Lfunc_end6-_Z7helper1PFiiiEii
+	.cfi_endproc
+                                        # -- End function
+	.globl	_Z7helper2PFiiiES0_ii           # -- Begin function _Z7helper2PFiiiES0_ii
+	.p2align	4, 0x90
+	.type	_Z7helper2PFiiiES0_ii,@function
+_Z7helper2PFiiiES0_ii:                  # @_Z7helper2PFiiiES0_ii
+	.cfi_startproc
+  # Operates on registers.
+	retq
+.Lfunc_end7:
+	.size	_Z7helper2PFiiiES0_ii, .Lfunc_end7-_Z7helper2PFiiiES0_ii
+	.cfi_endproc
+                                        # -- End function
+	.globl	main                            # -- Begin function main
+	.p2align	4, 0x90
+	.type	main,@function
+main:                                   # @main
+	.cfi_startproc
+	movq	FooVar@GOTPCREL(%rip), %rax
+	movq	BarVar@GOTPCREL(%rip), %rax
+	leaq	_Z6barAddii(%rip), %rdi
+	callq	_Z7helper1PFiiiEii
+	movq	FooVar@GOTPCREL(%rip), %rax
+	movq	BarVar@GOTPCREL(%rip), %rax
+	leaq	_Z6fooMulii(%rip), %rdi
+	leaq	_Z6barMulii(%rip), %rsi
+	callq	_Z7helper2PFiiiES0_ii
+	movq	FooVar@GOTPCREL(%rip), %rax
+	movq	BarVar@GOTPCREL(%rip), %rax
+	callq	_Z6fooSubii
+	movq	FooVar@GOTPCREL(%rip), %rax
+	movq	BarVar@GOTPCREL(%rip), %rax
+	callq	_Z6barSubii
+	movq	FooVar@GOTPCREL(%rip), %rax
+	movq	BarVar@GOTPCREL(%rip), %rax
+	callq	_Z6fooAddii
+	retq
+.Lfunc_end8:
+	.size	main, .Lfunc_end8-main
+	.cfi_endproc
+                                        # -- End function
+	.ident	"clang version 20.0.0git"
