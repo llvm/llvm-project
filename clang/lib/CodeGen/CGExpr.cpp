@@ -3930,7 +3930,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
       TrapCall->addFnAttr(A);
     }
     if (!NewTrapBB)
-        TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
