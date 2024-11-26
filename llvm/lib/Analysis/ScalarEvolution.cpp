@@ -6031,6 +6031,7 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
 const SCEV *
 ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
   BinaryOperator *CommonInst = nullptr;
+  // check if instructions are identical
   for (Value *Incoming : PN->incoming_values()) {
     auto *IncomingInst = dyn_cast<BinaryOperator>(Incoming);
     if (!IncomingInst)
@@ -6046,6 +6047,7 @@ ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
   if (!CommonInst)
     return nullptr;
 
+  // check if SCEV exprs for instructions are identical
   const SCEV *CommonSCEV = getSCEV(CommonInst);
   bool SCEVExprsIdentical = std::all_of(
       PN->incoming_values().begin(), PN->incoming_values().end(),
