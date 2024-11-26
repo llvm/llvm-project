@@ -38,6 +38,7 @@ class VPRegionBlock;
 class VPlan;
 class Value;
 class LoopVersioning;
+class VPDominatorTree;
 
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
@@ -351,6 +352,9 @@ struct VPTransformState {
 
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
+
+  /// VPlan-based dominator tree.
+  VPDominatorTree *VPDT = nullptr;
 };
 
 /// Struct to hold various analysis needed for cost computations.
