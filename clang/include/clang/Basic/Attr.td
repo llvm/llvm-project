@@ -3260,10 +3260,10 @@ def Target : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [TargetDocs];
   let AdditionalMembers = [{
-    std::optional<StringRef> getArchitecture() const {
+    std::optional<StringRef> getX86Architecture() const {
       StringRef Features = getFeaturesStr();
       SmallVector<StringRef, 4> AttrFeatures;
-      Features.split(AttrFeatures, ",");
+      Features.split(AttrFeatures, ',');
       for (StringRef Feature : AttrFeatures) {
         Feature = Feature.trim();
         if (Feature.starts_with("arch="))
@@ -3274,16 +3274,14 @@ def Target : InheritableAttr {
 
     // Gets the list of features as simple string-refs with no +/- or 'no-'.
     // Only adds the items to 'Out' that are additions.
-    void getAddedFeatures(llvm::SmallVectorImpl<StringRef> &Out) const {
+    void getX86AddedFeatures(llvm::SmallVectorImpl<StringRef> &Out) const {
+      if (isDefaultVersion())
+        return;
       StringRef Features = getFeaturesStr();
-      if (Features == "default") return;
-
-      SmallVector<StringRef, 1> AttrFeatures;
-      Features.split(AttrFeatures, ",");
-
+      SmallVector<StringRef, 4> AttrFeatures;
+      Features.split(AttrFeatures, ',');
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
-
         if (!Feature.starts_with("no-") && !Feature.starts_with("arch=") &&
             !Feature.starts_with("fpmath=") && !Feature.starts_with("tune="))
           Out.push_back(Feature);
@@ -3346,32 +3344,20 @@ def TargetClones : InheritableAttr {
       }
     }
 
-    // x86 only.
-    std::optional<StringRef> getArchitecture(unsigned Index) const {
-      StringRef Features = getFeatureStr(Index);
-      SmallVector<StringRef, 4> AttrFeatures;
-      Features.split(AttrFeatures, ',');
-      for (StringRef Feature : AttrFeatures) {
-        Feature = Feature.trim();
-        if (Feature.starts_with("arch="))
-          return Feature.drop_front(sizeof("arch=") - 1);
-      }
+    std::optional<StringRef> getX86Architecture(unsigned Index) const {
+      StringRef Feature = getFeatureStr(Index);
+      if (Feature.starts_with("arch="))
+        return Feature.drop_front(sizeof("arch=") - 1);
       return std::nullopt;
     }
 
-    // x86 only.
-    void getAddedFeatures(llvm::SmallVectorImpl<StringRef> &Out,
-                          unsigned Index) const {
+    void getX86Feature(llvm::SmallVectorImpl<StringRef> &Out,
+                       unsigned Index) const {
       if (isDefaultVersion(Index))
         return;
-      StringRef Features = getFeatureStr(Index);
-      SmallVector<StringRef, 4> AttrFeatures;
-      Features.split(AttrFeatures, ",");
-      for (StringRef Feature : AttrFeatures) {
-        Feature = Feature.trim();
-        if (!Feature.starts_with("arch="))
-          Out.push_back(Feature);
-      }
+      if (getX86Architecture(Index))
+        return;
+      Out.push_back(getFeatureStr(Index));
     }
 
     // Given an index into the 'featuresStrs' sequence, compute a unique

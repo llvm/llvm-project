@@ -4270,9 +4270,10 @@ void CodeGenModule::emitMultiVersionFunctions() {
           bool IsDefined = CurFD->doesThisDeclarationHaveABody();
 
           if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
-            TA->getAddedFeatures(Feats);
+            assert(getTarget().getTriple().isX86() && "Unsupported target");
+            TA->getX86AddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
-            Options.emplace_back(Func, Feats, TA->getArchitecture());
+            Options.emplace_back(Func, Feats, TA->getX86Architecture());
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
@@ -4290,8 +4291,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
               llvm::Function *Func = createFunction(CurFD, I);
               Feats.clear();
               if (getTarget().getTriple().isX86()) {
-                TC->getAddedFeatures(Feats, I);
-                Options.emplace_back(Func, Feats, TC->getArchitecture(I));
+                TC->getX86Feature(Feats, I);
+                Options.emplace_back(Func, Feats, TC->getX86Architecture(I));
               } else {
                 char Delim = getTarget().getTriple().isAArch64() ? '+' : ',';
                 TC->getFeatures(Feats, I, Delim);
