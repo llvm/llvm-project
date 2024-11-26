@@ -10,6 +10,7 @@ import argparse
 import json
 import sys
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
