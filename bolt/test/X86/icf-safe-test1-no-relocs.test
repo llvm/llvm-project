@@ -7,9 +7,9 @@
 # RUN: not llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
 
 # ICFCHECK:      ICF iteration 1
-# ICFCHECK-NEXT: folding _Z6barAddii into _Z6fooAddii
-# ICFCHECK-NEXT: folding _Z6barMulii into _Z6fooMulii
-# ICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
+# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
+# ICFCHECK-NEXT: folding barMulFunc into fooMulFunc
+# ICFCHECK-NEXT: folding barSubFunc into fooSubFunc
 
 # SAFEICFCHECK: BOLT-ERROR: Binary built without relocations. Safe ICF is not supported
 
@@ -60,78 +60,78 @@
 # }
 	.text
 	.file	"main.cpp"
-	.globl	_Z6fooSubii                     # -- Begin function _Z6fooSubii
+	.globl	fooSubFunc
 	.p2align	4, 0x90
-	.type	_Z6fooSubii,@function
-_Z6fooSubii:                            # @_Z6fooSubii
+	.type	fooSubFunc,@function
+fooSubFunc:
 	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
 .Lfunc_end0:
-	.size	_Z6fooSubii, .Lfunc_end0-_Z6fooSubii
+	.size	fooSubFunc, .Lfunc_end0-fooSubFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6barSubii                     # -- Begin function _Z6barSubii
+
+	.globl	barSubFunc
 	.p2align	4, 0x90
-	.type	_Z6barSubii,@function
-_Z6barSubii:                            # @_Z6barSubii
+	.type	barSubFunc,@function
+barSubFunc:
 	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
 .Lfunc_end1:
-	.size	_Z6barSubii, .Lfunc_end1-_Z6barSubii
+	.size	barSubFunc, .Lfunc_end1-barSubFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6fooMulii                     # -- Begin function _Z6fooMulii
+
+	.globl	fooMulFunc
 	.p2align	4, 0x90
-	.type	_Z6fooMulii,@function
-_Z6fooMulii:                            # @_Z6fooMulii
+	.type	fooMulFunc,@function
+fooMulFunc:
 	.cfi_startproc
 	imull	-8(%rbp), %eax
 	retq
 .Lfunc_end2:
-	.size	_Z6fooMulii, .Lfunc_end2-_Z6fooMulii
+	.size	fooMulFunc, .Lfunc_end2-fooMulFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6barMulii                     # -- Begin function _Z6barMulii
+
+	.globl	barMulFunc
 	.p2align	4, 0x90
-	.type	_Z6barMulii,@function
-_Z6barMulii:                            # @_Z6barMulii
+	.type	barMulFunc,@function
+barMulFunc:
 	.cfi_startproc
 	imull	-8(%rbp), %eax
 	retq
 .Lfunc_end3:
-	.size	_Z6barMulii, .Lfunc_end3-_Z6barMulii
+	.size	barMulFunc, .Lfunc_end3-barMulFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6fooAddii                     # -- Begin function _Z6fooAddii
+
+	.globl	fooAddFunc
 	.p2align	4, 0x90
-	.type	_Z6fooAddii,@function
-_Z6fooAddii:                            # @_Z6fooAddii
+	.type	fooAddFunc,@function
+fooAddFunc:
 	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
 .Lfunc_end4:
-	.size	_Z6fooAddii, .Lfunc_end4-_Z6fooAddii
+	.size	fooAddFunc, .Lfunc_end4-fooAddFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6barAddii                     # -- Begin function _Z6barAddii
+
+	.globl	barAddFunc
 	.p2align	4, 0x90
-	.type	_Z6barAddii,@function
-_Z6barAddii:                            # @_Z6barAddii
+	.type	barAddFunc,@function
+barAddFunc:
 	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
 .Lfunc_end5:
-	.size	_Z6barAddii, .Lfunc_end5-_Z6barAddii
+	.size	barAddFunc, .Lfunc_end5-barAddFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z7helper1PFiiiEii              # -- Begin function _Z7helper1PFiiiEii
+
+	.globl	helper1Func
 	.p2align	4, 0x90
-	.type	_Z7helper1PFiiiEii,@function
-_Z7helper1PFiiiEii:                     # @_Z7helper1PFiiiEii
+	.type	helper1Func,@function
+helper1Func:
 	.cfi_startproc
-	leaq	_Z6barAddii(%rip), %rax
+	leaq	barAddFunc(%rip), %rax
 	cmpq	%rax, -16(%rbp)
 	jne	.LBB6_2
 	jmp	.LBB6_3
@@ -140,43 +140,43 @@ _Z7helper1PFiiiEii:                     # @_Z7helper1PFiiiEii
 .LBB6_3:
 	retq
 .Lfunc_end6:
-	.size	_Z7helper1PFiiiEii, .Lfunc_end6-_Z7helper1PFiiiEii
+	.size	helper1Func, .Lfunc_end6-helper1Func
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z7helper2PFiiiES0_ii           # -- Begin function _Z7helper2PFiiiES0_ii
+
+	.globl	helper2Func
 	.p2align	4, 0x90
-	.type	_Z7helper2PFiiiES0_ii,@function
-_Z7helper2PFiiiES0_ii:                  # @_Z7helper2PFiiiES0_ii
+	.type	helper2Func,@function
+helper2Func:
 	.cfi_startproc
   # Operates on registers.
 	retq
 .Lfunc_end7:
-	.size	_Z7helper2PFiiiES0_ii, .Lfunc_end7-_Z7helper2PFiiiES0_ii
+	.size	helper2Func, .Lfunc_end7-helper2Func
 	.cfi_endproc
-                                        # -- End function
-	.globl	main                            # -- Begin function main
+
+	.globl	main
 	.p2align	4, 0x90
 	.type	main,@function
-main:                                   # @main
+main:
 	.cfi_startproc
 	movq	FooVar@GOTPCREL(%rip), %rax
 	movq	BarVar@GOTPCREL(%rip), %rax
-	leaq	_Z6barAddii(%rip), %rdi
-	callq	_Z7helper1PFiiiEii
+	leaq	barAddFunc(%rip), %rdi
+	callq	helper1Func
 	movq	FooVar@GOTPCREL(%rip), %rax
 	movq	BarVar@GOTPCREL(%rip), %rax
-	leaq	_Z6fooMulii(%rip), %rdi
-	leaq	_Z6barMulii(%rip), %rsi
-	callq	_Z7helper2PFiiiES0_ii
+	leaq	fooMulFunc(%rip), %rdi
+	leaq	barMulFunc(%rip), %rsi
+	callq	helper2Func
 	movq	FooVar@GOTPCREL(%rip), %rax
 	movq	BarVar@GOTPCREL(%rip), %rax
-	callq	_Z6fooSubii
+	callq	fooSubFunc
 	movq	FooVar@GOTPCREL(%rip), %rax
 	movq	BarVar@GOTPCREL(%rip), %rax
-	callq	_Z6barSubii
+	callq	barSubFunc
 	movq	FooVar@GOTPCREL(%rip), %rax
 	movq	BarVar@GOTPCREL(%rip), %rax
-	callq	_Z6fooAddii
+	callq	fooAddFunc
 	retq
 .Lfunc_end8:
 	.size	main, .Lfunc_end8-main

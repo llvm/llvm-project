@@ -8,17 +8,17 @@
 # RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
 
 # ICFCHECK:      ICF iteration 1
-# ICFCHECK-NEXT: folding _Z6barAddii into _Z6fooAddii
-# ICFCHECK-NEXT: folding _Z12barAddHdlperii into _Z6fooAddii
-# ICFCHECK-NEXT: folding _Z6barMulii into _Z6fooMulii
-# ICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
+# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
+# ICFCHECK-NEXT: folding _Z12barAddHdlperii into fooAddFunc
+# ICFCHECK-NEXT: folding barMulFunc into fooMulFunc
+# ICFCHECK-NEXT: folding barSubFunc into fooSubFunc
 
-# SAFEICFCHECK:      skipping function _Z6fooMulii
-# SAFEICFCHECK-NEXT: skipping function _Z6barAddii
+# SAFEICFCHECK:      skipping function fooMulFunc
+# SAFEICFCHECK-NEXT: skipping function barAddFunc
 # SAFEICFCHECK-NEXT: skipping function _Z12barAddHdlperii
-# SAFEICFCHECK-NEXT: skipping function _Z19fooGlobalFuncHelperii
+# SAFEICFCHECK-NEXT: skipping function fooGlobalFuncHelperFunc
 # SAFEICFCHECK-NEXT: ICF iteration 1
-# SAFEICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
+# SAFEICFCHECK-NEXT: folding barSubFunc into fooSubFunc
 # SAFEICFCHECK-NEXT: ===---------
 
 # clang++ main.cpp -c -o
@@ -88,99 +88,99 @@
 # Manually modified to remove "extra" assembly.
 	.text
 	.file	"main.cpp"
-	.globl	_Z6fooSubii                     # -- Begin function _Z6fooSubii
+	.globl	fooSubFunc
 	.p2align	4, 0x90
-	.type	_Z6fooSubii,@function
-_Z6fooSubii:                            # @_Z6fooSubii
+	.type	fooSubFunc,@function
+fooSubFunc:
 	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
 .Lfunc_end0:
-	.size	_Z6fooSubii, .Lfunc_end0-_Z6fooSubii
+	.size	fooSubFunc, .Lfunc_end0-fooSubFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6barSubii                     # -- Begin function _Z6barSubii
+
+	.globl	barSubFunc
 	.p2align	4, 0x90
-	.type	_Z6barSubii,@function
-_Z6barSubii:                            # @_Z6barSubii
+	.type	barSubFunc,@function
+barSubFunc:
 	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
 .Lfunc_end1:
-	.size	_Z6barSubii, .Lfunc_end1-_Z6barSubii
+	.size	barSubFunc, .Lfunc_end1-barSubFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6fooMulii                     # -- Begin function _Z6fooMulii
+
+	.globl	fooMulFunc
 	.p2align	4, 0x90
-	.type	_Z6fooMulii,@function
-_Z6fooMulii:                            # @_Z6fooMulii
+	.type	fooMulFunc,@function
+fooMulFunc:
 	.cfi_startproc
 	imull	-8(%rbp), %eax
 	retq
 .Lfunc_end2:
-	.size	_Z6fooMulii, .Lfunc_end2-_Z6fooMulii
+	.size	fooMulFunc, .Lfunc_end2-fooMulFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6barMulii                     # -- Begin function _Z6barMulii
+
+	.globl	barMulFunc
 	.p2align	4, 0x90
-	.type	_Z6barMulii,@function
-_Z6barMulii:                            # @_Z6barMulii
+	.type	barMulFunc,@function
+barMulFunc:
 	.cfi_startproc
 	imull	-8(%rbp), %eax
 	retq
 .Lfunc_end3:
-	.size	_Z6barMulii, .Lfunc_end3-_Z6barMulii
+	.size	barMulFunc, .Lfunc_end3-barMulFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6fooAddii                     # -- Begin function _Z6fooAddii
+
+	.globl	fooAddFunc
 	.p2align	4, 0x90
-	.type	_Z6fooAddii,@function
-_Z6fooAddii:                            # @_Z6fooAddii
+	.type	fooAddFunc,@function
+fooAddFunc:
 	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
 .Lfunc_end4:
-	.size	_Z6fooAddii, .Lfunc_end4-_Z6fooAddii
+	.size	fooAddFunc, .Lfunc_end4-fooAddFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z6barAddii                     # -- Begin function _Z6barAddii
+
+	.globl	barAddFunc
 	.p2align	4, 0x90
-	.type	_Z6barAddii,@function
-_Z6barAddii:
-  .cfi_startproc                           # @_Z6barAddii
+	.type	barAddFunc,@function
+barAddFunc:
+  .cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
 .Lfunc_end5:
-	.size	_Z6barAddii, .Lfunc_end5-_Z6barAddii
+	.size	barAddFunc, .Lfunc_end5-barAddFunc
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z7helper1PFKiiiEii             # -- Begin function _Z7helper1PFKiiiEii
+
+	.globl	_Z7helper1PFKiiiEii
 	.p2align	4, 0x90
 	.type	_Z7helper1PFKiiiEii,@function
-_Z7helper1PFKiiiEii:                    # @_Z7helper1PFKiiiEii
+_Z7helper1PFKiiiEii:
 	.cfi_startproc
-	movabsq	$_Z6barAddii, %rax
+	movabsq	$barAddFunc, %rax
 	cmpq	%rax, -16(%rbp)
 	retq
 .Lfunc_end6:
 	.size	_Z7helper1PFKiiiEii, .Lfunc_end6-_Z7helper1PFKiiiEii
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z7helper2PFKiiiES1_ii          # -- Begin function _Z7helper2PFKiiiES1_ii
+
+	.globl	_Z7helper2PFKiiiES1_ii
 	.p2align	4, 0x90
 	.type	_Z7helper2PFKiiiES1_ii,@function
-_Z7helper2PFKiiiES1_ii:                 # @_Z7helper2PFKiiiES1_ii
+_Z7helper2PFKiiiES1_ii:
 	.cfi_startproc
   # All operations on registers.
 	retq
 .Lfunc_end7:
 	.size	_Z7helper2PFKiiiES1_ii, .Lfunc_end7-_Z7helper2PFKiiiES1_ii
 	.cfi_endproc
-                                        # -- End function
-	.globl	main                            # -- Begin function main
+
+	.globl	main
 	.p2align	4, 0x90
 	.type	main,@function
-main:                                   # @main
+main:
 	.cfi_startproc
 	movl	FooVar, %esi
 	movl	BarVar, %edx
@@ -188,8 +188,8 @@ main:                                   # @main
 	callq	_Z7helper1PFKiiiEii
 	movl	FooVar, %edx
 	movl	BarVar, %ecx
-	movabsq	$_Z6fooMulii, %rdi
-	movabsq	$_Z19fooGlobalFuncHelperii, %rsi
+	movabsq	$fooMulFunc, %rdi
+	movabsq	$fooGlobalFuncHelperFunc, %rsi
 	callq	_Z7helper2PFKiiiES1_ii
 	retq
 .Lfunc_end8:
@@ -197,39 +197,39 @@ main:                                   # @main
 	.cfi_endproc
 
 
-  	.globl	_Z12barAddHdlperii              # -- Begin function _Z12barAddHdlperii
+  	.globl	_Z12barAddHdlperii
 	.p2align	4, 0x90
 	.type	_Z12barAddHdlperii,@function
-_Z12barAddHdlperii:                     # @_Z12barAddHdlperii
+_Z12barAddHdlperii:
 	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
 .Lfunc_end01:
 	.size	_Z12barAddHdlperii, .Lfunc_end01-_Z12barAddHdlperii
 	.cfi_endproc
-                                        # -- End function
-	.globl	_Z19fooGlobalFuncHelperii       # -- Begin function _Z19fooGlobalFuncHelperii
+
+	.globl	fooGlobalFuncHelperFunc
 	.p2align	4, 0x90
-	.type	_Z19fooGlobalFuncHelperii,@function
-_Z19fooGlobalFuncHelperii:              # @_Z19fooGlobalFuncHelperii
+	.type	fooGlobalFuncHelperFunc,@function
+fooGlobalFuncHelperFunc:
 	.cfi_startproc
 	callq	_Z12barAddHdlperii
 	retq
 .Lfunc_end11:
-	.size	_Z19fooGlobalFuncHelperii, .Lfunc_end11-_Z19fooGlobalFuncHelperii
+	.size	fooGlobalFuncHelperFunc, .Lfunc_end11-fooGlobalFuncHelperFunc
 	.cfi_endproc
-                                        # -- End function
-	.type	FooVar,@object                  # @FooVar
+
+	.type	FooVar,@object
 	.data
 	.globl	FooVar
 	.p2align	2, 0x0
 FooVar:
-	.long	1                               # 0x1
+	.long	1
 	.size	FooVar, 4
 
-	.type	BarVar,@object                  # @BarVar
+	.type	BarVar,@object
 	.globl	BarVar
 	.p2align	2, 0x0
 BarVar:
-	.long	2                               # 0x2
+	.long	2
 	.size	BarVar, 4
