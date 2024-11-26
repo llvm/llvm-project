@@ -4569,9 +4569,38 @@ LogicalResult AffineDelinearizeIndexOp::verify() {
   return success();
 }
 
+/// Give mixed basis of affine.delinearize_index/linearize_index replace
+/// constant SSA values with the constant integer value and returns the
+/// new static basis.
+static SmallVector<int64_t>
+foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
+                           MutableOperandRange mutableDynamicBasis,
+                           ArrayRef<Attribute> dynamicBasis) {
+  SmallVector<int64_t> staticBasis;
+  for (OpFoldResult basis : mixedBasis) {
+    std::optional<int64_t> basisVal = getConstantIntValue(basis);
+    if (!basisVal)
+      staticBasis.push_back(ShapedType::kDynamic);
+    else
+      staticBasis.push_back(*basisVal);
+  }
+
+  int64_t dynamicBasisIndex = 0;
+  for (OpFoldResult basis : dynamicBasis) {
+    if (basis) {
+      mutableDynamicBasis.erase(dynamicBasisIndex);
+    } else {
+      ++dynamicBasisIndex;
+    }
+  }
+  return staticBasis;
+}
+
 LogicalResult
 AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
                                SmallVectorImpl<OpFoldResult> &result) {
+  setStaticBasis(foldCstValueToCstAttrBasis(
+      getMixedBasis(), getDynamicBasisMutable(), adaptor.getDynamicBasis()));
   // If we won't be doing any division or modulo (no basis or the one basis
   // element is purely advisory), simply return the input value.
   if (getNumResults() == 1) {
@@ -4729,55 +4758,12 @@ struct CancelDelinearizeOfLinearizeDisjointExactTail
     return success();
   }
 };
-
-/// Give mixed basis of affine.delinearize_index/linearize_index replace
-/// constant SSA values with constant attribute as OpFoldResult. In case no
-/// change is made to the existing mixed basis set, return failure; success
-/// otherwise.
-static LogicalResult
-fetchNewConstantBasis(PatternRewriter &rewriter,
-                      SmallVector<OpFoldResult> mixedBasis,
-                      SmallVector<OpFoldResult> &newBasis) {
-  // Replace all constant SSA values with the constant attribute.
-  bool hasConstantSSAVal = false;
-  for (OpFoldResult basis : mixedBasis) {
-    std::optional<int64_t> basisVal = getConstantIntValue(basis);
-    if (basisVal && !isa<Attribute>(basis)) {
-      newBasis.push_back(rewriter.getIndexAttr(*basisVal));
-      hasConstantSSAVal = true;
-    } else {
-      newBasis.push_back(basis);
-    }
-  }
-  if (hasConstantSSAVal)
-    return success();
-  return failure();
-}
-
-/// Folds away constant SSA Value with constant Attribute in basis.
-struct ConstantAttributeBasisDelinearizeIndexOpPattern
-    : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp op,
-                                PatternRewriter &rewriter) const override {
-    // Replace all constant SSA values with the constant attribute.
-    SmallVector<OpFoldResult> newBasis;
-    if (failed(fetchNewConstantBasis(rewriter, op.getMixedBasis(), newBasis)))
-      return rewriter.notifyMatchFailure(op, "no constant SSA value in basis");
-
-    rewriter.replaceOpWithNewOp<affine::AffineDelinearizeIndexOp>(
-        op, op.getLinearIndex(), newBasis, op.hasOuterBound());
-    return success();
-  }
-};
 } // namespace
 
 void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<CancelDelinearizeOfLinearizeDisjointExactTail,
-                  DropUnitExtentBasis,
-                  ConstantAttributeBasisDelinearizeIndexOpPattern>(context);
+                  DropUnitExtentBasis>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4832,6 +4818,8 @@ LogicalResult AffineLinearizeIndexOp::verify() {
 }
 
 OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
+  setStaticBasis(foldCstValueToCstAttrBasis(
+      getMixedBasis(), getDynamicBasisMutable(), adaptor.getDynamicBasis()));
   // No indices linearizes to zero.
   if (getMultiIndex().empty())
     return IntegerAttr::get(getResult().getType(), 0);
@@ -5002,31 +4990,12 @@ struct DropLinearizeLeadingZero final
     return success();
   }
 };
-
-/// Folds away constant SSA Value with constant Attribute in basis.
-struct ConstantAttributeBasisLinearizeIndexOpPattern
-    : public OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
-                                PatternRewriter &rewriter) const override {
-    // Replace all constant SSA values with the constant attribute.
-    SmallVector<OpFoldResult> newBasis;
-    if (failed(fetchNewConstantBasis(rewriter, op.getMixedBasis(), newBasis)))
-      return rewriter.notifyMatchFailure(op, "no constant SSA value in basis");
-
-    rewriter.replaceOpWithNewOp<affine::AffineLinearizeIndexOp>(
-        op, op.getMultiIndex(), newBasis, op.getDisjoint());
-    return success();
-  }
-};
 } // namespace
 
 void affine::AffineLinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.add<CancelLinearizeOfDelinearizeExact, DropLinearizeLeadingZero,
-               DropLinearizeUnitComponentsIfDisjointOrZero,
-               ConstantAttributeBasisLinearizeIndexOpPattern>(context);
+               DropLinearizeUnitComponentsIfDisjointOrZero>(context);
 }
 
 //===----------------------------------------------------------------------===//
