@@ -196,7 +196,7 @@ OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
   OS << "ol_code_location_t *CodeLocation);\n\n";
 }
 
-void EmitOffloadAPI(RecordKeeper &Records, raw_ostream &OS) {
+void EmitOffloadAPI(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << FileHeader;
   // Generate main API definitions

@@ -18,17 +18,17 @@ namespace tblgen {
 
 class HandleRec {
 public:
-  explicit HandleRec(Record *rec) : rec(rec) {}
+  explicit HandleRec(const Record *rec) : rec(rec) {}
   StringRef getName() const { return rec->getValueAsString("name"); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
 
 private:
-  Record *rec;
+  const Record *rec;
 };
 
 class MacroRec {
 public:
-  explicit MacroRec(Record *rec) : rec(rec) {
+  explicit MacroRec(const Record *rec) : rec(rec) {
     auto Name = rec->getValueAsString("name");
     auto OpenBrace = Name.find_first_of("(");
     nameWithoutArgs = Name.substr(0, OpenBrace);
@@ -46,24 +46,24 @@ public:
   }
 
 private:
-  Record *rec;
+  const Record *rec;
   std::string nameWithoutArgs;
 };
 
 class TypedefRec {
 public:
-  explicit TypedefRec(Record *rec) : rec(rec) {}
+  explicit TypedefRec(const Record *rec) : rec(rec) {}
   StringRef getName() const { return rec->getValueAsString("name"); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
   StringRef getValue() const { return rec->getValueAsString("value"); }
 
 private:
-  Record *rec;
+  const Record *rec;
 };
 
 class EnumValueRec {
 public:
-  explicit EnumValueRec(Record *rec) : rec(rec) {}
+  explicit EnumValueRec(const Record *rec) : rec(rec) {}
   std::string getName() const { return rec->getValueAsString("name").upper(); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
   StringRef getTaggedType() const {
@@ -71,13 +71,13 @@ public:
   }
 
 private:
-  Record *rec;
+  const Record *rec;
 };
 
 class EnumRec {
 public:
-  explicit EnumRec(Record *rec) : rec(rec) {
-    for (auto *Val : rec->getValueAsListOfDefs("etors")) {
+  explicit EnumRec(const Record *rec) : rec(rec) {
+    for (const auto *Val : rec->getValueAsListOfDefs("etors")) {
       vals.emplace_back(EnumValueRec{Val});
     }
   }
@@ -93,24 +93,24 @@ public:
   bool isTyped() const { return rec->getValueAsBit("is_typed"); }
 
 private:
-  Record *rec;
+  const Record *rec;
   std::vector<EnumValueRec> vals;
 };
 
 class StructMemberRec {
 public:
-  explicit StructMemberRec(Record *rec) : rec(rec) {}
+  explicit StructMemberRec(const Record *rec) : rec(rec) {}
   StringRef getType() const { return rec->getValueAsString("type"); }
   StringRef getName() const { return rec->getValueAsString("name"); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
 
 private:
-  Record *rec;
+  const Record *rec;
 };
 
 class StructRec {
 public:
-  explicit StructRec(Record *rec) : rec(rec) {
+  explicit StructRec(const Record *rec) : rec(rec) {
     for (auto *Member : rec->getValueAsListOfDefs("all_members")) {
       members.emplace_back(StructMemberRec(Member));
     }
@@ -123,13 +123,13 @@ public:
   const std::vector<StructMemberRec> &getMembers() const { return members; }
 
 private:
-  Record *rec;
+  const Record *rec;
   std::vector<StructMemberRec> members;
 };
 
 class ParamRec {
 public:
-  explicit ParamRec(Record *rec) : rec(rec) {
+  explicit ParamRec(const Record *rec) : rec(rec) {
     flags = rec->getValueAsBitsInit("flags");
     auto *Range = rec->getValueAsDef("range");
     auto RangeBegin = Range->getValueAsString("begin");
@@ -158,7 +158,7 @@ public:
   bool isOut() const { return dyn_cast<BitInit>(flags->getBit(1))->getValue(); }
   bool isOpt() const { return dyn_cast<BitInit>(flags->getBit(2))->getValue(); }
 
-  Record *getRec() const { return rec; }
+  const Record *getRec() const { return rec; }
   std::optional<std::pair<StringRef, StringRef>> getRange() const {
     return range;
   }
@@ -171,27 +171,27 @@ public:
   bool operator!=(const ParamRec &p) const { return rec != p.getRec(); }
 
 private:
-  Record *rec;
-  BitsInit *flags;
+  const Record *rec;
+  const BitsInit *flags;
   std::optional<std::pair<StringRef, StringRef>> range;
   std::optional<std::pair<StringRef, StringRef>> typeinfo;
 };
 
 class ReturnRec {
 public:
-  ReturnRec(Record *rec) : rec(rec) {}
+  ReturnRec(const Record *rec) : rec(rec) {}
   StringRef getValue() const { return rec->getValueAsString("value"); }
   std::vector<StringRef> getConditions() const {
     return rec->getValueAsListOfStrings("conditions");
   }
 
 private:
-  Record *rec;
+  const Record *rec;
 };
 
 class FunctionRec {
 public:
-  FunctionRec(Record *rec) : rec(rec) {
+  FunctionRec(const Record *rec) : rec(rec) {
     for (auto &Ret : rec->getValueAsListOfDefs("all_returns"))
       rets.emplace_back(Ret);
     for (auto &Param : rec->getValueAsListOfDefs("params"))
@@ -219,7 +219,7 @@ private:
   std::vector<ReturnRec> rets;
   std::vector<ParamRec> params;
 
-  Record *rec;
+  const Record *rec;
 };
 
 } // namespace tblgen

@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace offload::tblgen;
 
 // Emit a list of just the API function names
-void EmitOffloadFuncNames(RecordKeeper &Records, raw_ostream &OS) {
+void EmitOffloadFuncNames(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << R"(
 #ifndef OFFLOAD_FUNC
@@ -41,7 +41,7 @@ void EmitOffloadFuncNames(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n#undef OFFLOAD_FUNC\n";
 }
 
-void EmitOffloadExports(RecordKeeper &Records, raw_ostream &OS) {
+void EmitOffloadExports(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "VERS1.0 {\n";
   OS << TAB_1 "global:\n";
 
@@ -57,7 +57,7 @@ void EmitOffloadExports(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emit declarations for every implementation function
-void EmitOffloadImplFuncDecls(RecordKeeper &Records, raw_ostream &OS) {
+void EmitOffloadImplFuncDecls(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     FunctionRec F{R};
