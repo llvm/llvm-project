@@ -818,6 +818,15 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def MakeDouble :  DXILOp<101, makeDouble> {
+  let Doc = "creates a double value";
+  let LLVMIntrinsic = int_dx_asdouble;
+  let arguments = [Int32Ty, Int32Ty];
+  let result = DoubleTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def SplitDouble :  DXILOp<102, splitDouble> {
   let Doc = "Splits a double into 2 uints";
   let arguments = [OverloadTy];

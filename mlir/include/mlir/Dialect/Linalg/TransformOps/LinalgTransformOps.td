@@ -52,6 +52,17 @@ def ApplyDecomposeTensorPackUnpackPatternsOp
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyDecomposeTensorPadPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pad",
+         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to decompose tensor.pad into e.g. tensor::EmptyOp,
+    linalg::FillOp and tensor::InsertSliceOp.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyFoldUnitExtentDimsViaReshapesPatternsOp : Op<Transform_Dialect,
     "apply_patterns.linalg.fold_unit_extent_dims_via_reshapes",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
