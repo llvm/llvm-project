@@ -57,6 +57,8 @@ enum FeatureKind : uint32_t {
   // Do not generate load-load barrier instructions (dbar 0x700).
   FK_LD_SEQ_SA = 1 << 12,
 
+  // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
+  FK_DIV32 = 1 << 13,
 };
 
 struct FeatureInfo {

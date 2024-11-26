@@ -283,6 +283,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     else
       Features.push_back("-ld-seq-sa");
   }
+
+  // Select div32 feature determined by -m[no-]div32.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mdiv32, options::OPT_mno_div32)) {
+    if (A->getOption().matches(options::OPT_mdiv32))
+      Features.push_back("+div32");
+    else
+      Features.push_back("-div32");
+  }
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,
