@@ -59,6 +59,7 @@ add_subdirectory(stdio)
 add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(wchar)
+add_subdirectory(time)
 
 # Depends on utilities in stdlib
 add_subdirectory(inttypes)
@@ -82,7 +83,6 @@ add_subdirectory(network)
 add_subdirectory(setjmp)
 add_subdirectory(signal)
 add_subdirectory(spawn)
-add_subdirectory(time)
 add_subdirectory(locale)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")

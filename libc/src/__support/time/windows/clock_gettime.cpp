@@ -20,7 +20,7 @@
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
-
+namespace internal {
 static long long get_ticks_per_second() {
   static cpp::Atomic<long long> frequency = 0;
   if (!frequency) {
@@ -86,4 +86,5 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
   }
   return ret;
 }
+} // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
