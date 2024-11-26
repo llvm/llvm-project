@@ -16,8 +16,9 @@
 #include <cstdio>
 #include <cstdlib>
 
-#ifdef __linux__
-#include <execinfo.h>
+#include "llvm/Config/config.h"
+#ifdef HAVE_BACKTRACE
+#include BACKTRACE_HEADER
 #endif
 
 extern "C" {
@@ -157,27 +158,22 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
 }
 
 static void PrintBacktrace() {
-#ifdef __linux__
+#ifdef HAVE_BACKTRACE
   // TODO: Need to parse DWARF information to print function line numbers
   constexpr int MAX_CALL_STACK{999};
   void *buffer[MAX_CALL_STACK];
   int nptrs{backtrace(buffer, MAX_CALL_STACK)};
-  char **symbols{backtrace_symbols(buffer, nptrs)};
 
-  if (symbols == nullptr) {
-    Fortran::runtime::Terminator{}.Crash("no symbols");
-    std::exit(EXIT_FAILURE);
+  if (char **symbols{backtrace_symbols(buffer, nptrs)}) {
+    for (int i = 0; i < nptrs; i++) {
+      Fortran::runtime::Terminator{}.PrintCrashArgs("#%d %s\n", i, symbols[i]);
+    }
+    free(symbols);
   }
-
-  for (int i = 0; i < nptrs; i++) {
-    Fortran::runtime::Terminator{}.PrintCrashArgs("#%d %s\n", i, symbols[i]);
-  }
-
-  free(symbols);
 
 #else
 
-  // TODO: Windows platform implemention
+  // TODO: Windows platform implementation
 
 #endif
 }
