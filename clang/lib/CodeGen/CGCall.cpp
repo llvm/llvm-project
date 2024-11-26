@@ -5111,9 +5111,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   // Some architectures (such as x86-64) have the ABI changed based on
   // attribute-target/features. Give them a chance to diagnose.
-  CGM.getTargetCodeGenInfo().checkFunctionCallABI(
-      CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl),
-      dyn_cast_or_null<FunctionDecl>(TargetDecl), CallArgs, RetTy);
+  const FunctionDecl *CallerDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  const FunctionDecl *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  CGM.getTargetCodeGenInfo().checkFunctionCallABI(CGM, Loc, CallerDecl,
+                                                  CalleeDecl, CallArgs, RetTy);
 
   // 1. Set up the arguments.
 
@@ -5688,7 +5689,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoInline);
 
   // Add call-site always_inline attribute if exists.
-  if (InAlwaysInlineAttributedStmt)
+  // Note: This corresponds to the [[clang::always_inline]] statement attribute.
+  if (InAlwaysInlineAttributedStmt &&
+      !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
+          CallerDecl, CalleeDecl))
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
@@ -5704,7 +5708,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // FIXME: should this really take priority over __try, below?
   if (CurCodeDecl && CurCodeDecl->hasAttr<FlattenAttr>() &&
       !InNoInlineAttributedStmt &&
-      !(TargetDecl && TargetDecl->hasAttr<NoInlineAttr>())) {
+      !(TargetDecl && TargetDecl->hasAttr<NoInlineAttr>()) &&
+      !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
+          CallerDecl, CalleeDecl)) {
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
   }
