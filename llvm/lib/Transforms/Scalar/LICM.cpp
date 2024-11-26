@@ -1826,7 +1826,6 @@ class LoopPromoter : public LoadAndStorePromoter {
   ICFLoopSafetyInfo &SafetyInfo;
   bool CanInsertStoresInExitBlocks;
   ArrayRef<const Instruction *> Uses;
-  bool StoreIsGuanteedToExecute;
 
   // We're about to add a use of V in a loop exit block.  Insert an LCSSA phi
   // (if legal) if doing so would add an out-of-loop use to an instruction
@@ -1853,15 +1852,13 @@ public:
                SmallVectorImpl<MemoryAccess *> &MSSAIP, PredIteratorCache &PIC,
                MemorySSAUpdater &MSSAU, LoopInfo &li, DebugLoc dl,
                Align Alignment, bool UnorderedAtomic, const AAMDNodes &AATags,
-               ICFLoopSafetyInfo &SafetyInfo, bool CanInsertStoresInExitBlocks,
-               bool StoreIsGuanteedToExecute)
+               ICFLoopSafetyInfo &SafetyInfo, bool CanInsertStoresInExitBlocks)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), LoopExitBlocks(LEB),
         LoopInsertPts(LIP), MSSAInsertPts(MSSAIP), PredCache(PIC), MSSAU(MSSAU),
         LI(li), DL(std::move(dl)), Alignment(Alignment),
         UnorderedAtomic(UnorderedAtomic), AATags(AATags),
         SafetyInfo(SafetyInfo),
-        CanInsertStoresInExitBlocks(CanInsertStoresInExitBlocks), Uses(Insts),
-        StoreIsGuanteedToExecute(StoreIsGuanteedToExecute) {}
+        CanInsertStoresInExitBlocks(CanInsertStoresInExitBlocks), Uses(Insts) {}
 
   void insertStoresInLoopExitBlocks() {
     // Insert stores after in the loop exit blocks.  Each exit block gets a
@@ -1895,7 +1892,7 @@ public:
         NewSI->setMetadata(LLVMContext::MD_DIAssignID, NewID);
       }
 
-      if (AATags && StoreIsGuanteedToExecute)
+      if (AATags)
         NewSI->setAAMetadata(AATags);
 
       MemoryAccess *MSSAInsertPoint = MSSAInsertPts[i];
@@ -2093,8 +2090,10 @@ bool llvm::promoteLoopAccessesToScalars(
         FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
-        LoadIsGuaranteedToExecute |=
-            SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
+
+        if (!LoadIsGuaranteedToExecute)
+          LoadIsGuaranteedToExecute =
+              SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
@@ -2240,8 +2239,9 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
-                        SawUnorderedAtomic, AATags, *SafetyInfo,
-                        StoreSafety == StoreSafe, StoreIsGuanteedToExecute);
+                        SawUnorderedAtomic,
+                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
