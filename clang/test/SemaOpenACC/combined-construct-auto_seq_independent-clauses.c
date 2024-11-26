@@ -111,8 +111,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc parallel loop auto no_create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc parallel loop auto present(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto private(Var)
@@ -274,8 +272,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc parallel loop no_create(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc parallel loop present(Var) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop private(Var) auto
@@ -438,8 +434,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc parallel loop independent no_create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc parallel loop independent present(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent private(Var)
@@ -601,8 +595,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc parallel loop no_create(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc parallel loop present(Var) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop private(Var) independent
@@ -771,8 +763,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc parallel loop seq no_create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc parallel loop seq present(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq private(Var)
@@ -940,8 +930,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc parallel loop no_create(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc parallel loop present(Var) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop private(Var) seq
