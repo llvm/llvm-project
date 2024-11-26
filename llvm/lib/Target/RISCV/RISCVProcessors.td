@@ -49,6 +49,9 @@ class RISCVProcessorModel<string n,
                           string default_march = "">
     :  ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
+  int MVendorID = 0;
+  int MArchID = 0;
+  int MImpID = 0;
 }
 
 class RISCVTuneProcessorModel<string n,
@@ -457,7 +460,11 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                               TuneZExtHFusion,
                                               TuneZExtWFusion,
                                               TuneShiftedZExtWFusion,
-                                              TuneLDADDFusion]>;
+                                              TuneLDADDFusion]> {
+  let MVendorID = 0x61f;
+  let MArchID = 0x8000000000010000;
+  let MImpID = 0x111;
+}
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
@@ -503,7 +510,11 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                        [TuneDLenFactor2,
                                         TuneOptimizedNF2SegmentLoadStore,
                                         TuneOptimizedNF3SegmentLoadStore,
-                                        TuneOptimizedNF4SegmentLoadStore]>;
+                                        TuneOptimizedNF4SegmentLoadStore]> {
+  let MVendorID = 0x710;
+  let MArchID = 0x8000000058000001;
+  let MImpID = 0x1000000049772200;
+}
 
 def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
                                          NoSchedModel,

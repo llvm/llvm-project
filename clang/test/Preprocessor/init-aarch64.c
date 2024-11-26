@@ -44,7 +44,7 @@
 // AARCH64:      #define __BIGGEST_ALIGNMENT__ 16
 // AARCH64_BE-NEXT: #define __BIG_ENDIAN__ 1
 // AARCH64-NEXT: #define __BITINT_MAXWIDTH__ 128
-// AARCH64-NEXT: #define __BOOL_WIDTH__ 8
+// AARCH64-NEXT: #define __BOOL_WIDTH__ 1
 // AARCH64_BE-NEXT: #define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // AARCH64_LE-NEXT: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // AARCH64-NEXT: #define __CHAR16_TYPE__ unsigned short
@@ -785,7 +785,7 @@
 // ARM64EC-MSVC: #define __ATOMIC_SEQ_CST 5
 // ARM64EC-MSVC: #define __BIGGEST_ALIGNMENT__ 16
 // ARM64EC-MSVC: #define __BITINT_MAXWIDTH__ 128
-// ARM64EC-MSVC: #define __BOOL_WIDTH__ 8
+// ARM64EC-MSVC: #define __BOOL_WIDTH__ 1
 // ARM64EC-MSVC: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // ARM64EC-MSVC: #define __CHAR16_TYPE__ unsigned short
 // ARM64EC-MSVC: #define __CHAR32_TYPE__ unsigned int

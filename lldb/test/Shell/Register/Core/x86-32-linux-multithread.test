@@ -1,7 +1,7 @@
 # RUN: %lldb -b -s %s -c %p/Inputs/x86-32-linux-multithread.core | FileCheck %s
 
 thread list
-# CHECK: * thread #1: tid = 330633, 0x080492d2, name = 'a.out', stop reason = signal SIGSEGV
+# CHECK: * thread #1: tid = 330633, 0x080492d2, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address: 0x0)
 # CHECK-NEXT:   thread #2: tid = 330634, 0x080492dd, stop reason = signal 0
 # CHECK-NEXT:   thread #3: tid = 330635, 0x080492dd, stop reason = signal 0
 # CHECK-NEXT:   thread #4: tid = 330632, 0xf7f59549, stop reason = signal 0
