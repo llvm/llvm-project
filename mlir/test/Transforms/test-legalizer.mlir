@@ -472,3 +472,23 @@ func.func @circular_mapping() {
   %0 = "test.erase_op"() : () -> (i64)
   "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @test_replace_uses_of_block_arg() {
+//       CHECK:   "test.convert_block_and_replace_arg"() ({
+//       CHECK:   ^bb0(%[[arg0:.*]]: f64, %[[arg1:.*]]: f64):
+//       CHECK:     %[[producer:.*]] = "test.type_producer"() : () -> f64
+//       CHECK:     %[[cast:.*]] = "test.cast"(%[[producer]], %[[arg1]]) : (f64, f64) -> f32
+//       CHECK:     "test.some_user"(%[[cast]]) : (f32) -> ()
+//       CHECK:   }) {legal} : () -> ()
+//       CHECK:   "test.return"() : () -> ()
+//       CHECK: }
+func.func @test_replace_uses_of_block_arg() {
+  "test.convert_block_and_replace_arg"() ({
+  ^bb0(%arg0: f32):
+    // expected-remark @below{{'test.some_user' is not legalizable}}
+    "test.some_user"(%arg0) : (f32) -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
+}
