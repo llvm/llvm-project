@@ -133,8 +133,7 @@ static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
     // Object compatible with all conventions.
     return;
   default:
-    ErrAlways(ctx) << f
-                   << ": unknown Tag_ABI_VFP_args value: " << Twine(vfpArgs);
+    ErrAlways(ctx) << f << ": unknown Tag_ABI_VFP_args value: " << vfpArgs;
     return;
   }
   // Follow ld.bfd and error if there is a mix of calling conventions.
@@ -284,7 +283,7 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
   StringRef target =
       !ctx.arg.bfdname.empty() ? ctx.arg.bfdname : ctx.arg.emulation;
   if (!target.empty()) {
-    ErrAlways(ctx) << file << " is incompatible with " << target;
+    Err(ctx) << file << " is incompatible with " << target;
     return false;
   }
 
@@ -295,10 +294,10 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
     existing = ctx.sharedFiles[0];
   else if (!ctx.bitcodeFiles.empty())
     existing = ctx.bitcodeFiles[0];
-  std::string with;
+  auto diag = Err(ctx);
+  diag << file << " is incompatible";
   if (existing)
-    with = " with " + toStr(ctx, existing);
-  ErrAlways(ctx) << file << " is incompatible" << with;
+    diag << " with " << existing;
   return false;
 }
 
@@ -691,8 +690,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // Otherwise, discard group members.
     for (uint32_t secIndex : entries.slice(1)) {
       if (secIndex >= size)
-        Fatal(ctx) << this
-                   << ": invalid section index in group: " << Twine(secIndex);
+        Fatal(ctx) << this << ": invalid section index in group: " << secIndex;
       this->sections[secIndex] = &InputSection::discarded;
     }
   }
@@ -748,8 +746,8 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
     return false;
   if (sec.sh_size % entSize)
     Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
-               << Twine(sec.sh_size) << ") must be a multiple of sh_entsize ("
-               << Twine(entSize) << ")";
+               << uint64_t(sec.sh_size)
+               << ") must be a multiple of sh_entsize (" << entSize << ")";
 
   if (sec.sh_flags & SHF_WRITE)
     Fatal(ctx) << this << ":(" << name
@@ -810,7 +808,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           Warn(ctx) << this
                     << ": --icf=safe conservatively ignores "
                        "SHT_LLVM_ADDRSIG [index "
-                    << Twine(i)
+                    << i
                     << "] with sh_link=0 "
                        "(likely created using objcopy or ld -r)";
       }
@@ -903,9 +901,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // simply handle such sections as non-mergeable ones. Degrading like this
       // is acceptable because section merging is optional.
       if (auto *ms = dyn_cast<MergeInputSection>(s)) {
-        s = makeThreadLocal<InputSection>(
-            ms->file, ms->flags, ms->type, ms->addralign,
-            ms->contentMaybeDecompress(), ms->name);
+        s = makeThreadLocal<InputSection>(ms->file, ms->name, ms->type,
+                                          ms->flags, ms->addralign, ms->entsize,
+                                          ms->contentMaybeDecompress());
         sections[info] = s;
       }
 
@@ -939,7 +937,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
     if (!linkSec)
-      Fatal(ctx) << this << ": invalid sh_link index: " << Twine(sec.sh_link);
+      Fatal(ctx) << this
+                 << ": invalid sh_link index: " << uint32_t(sec.sh_link);
 
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
@@ -1167,7 +1166,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
         Fatal(ctx) << this << ": common symbol '" << sym->getName()
-                   << "' has invalid alignment: " << Twine(value);
+                   << "' has invalid alignment: " << value;
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
                                      type, value, size});
@@ -1214,7 +1213,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
+      Fatal(ctx) << this << ": invalid section index: " << secIdx;
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
       ErrAlways(ctx) << this << ": non-local symbol (" << i
                      << ") found at index < .symtab's sh_info (" << end << ")";
@@ -1274,7 +1273,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
+      Fatal(ctx) << this << ": invalid section index: " << secIdx;
     InputSectionBase *sec = sections[secIdx];
     if (sec == &InputSection::discarded) {
       if (sym.traced) {
@@ -1577,8 +1576,8 @@ template <class ELFT> void SharedFile::parse() {
       // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
       if (ver != VER_NDX_LOCAL && ver != VER_NDX_GLOBAL) {
         if (idx >= verneeds.size()) {
-          ErrAlways(ctx) << "corrupt input file: version need index "
-                         << Twine(idx) << " for symbol " << name
+          ErrAlways(ctx) << "corrupt input file: version need index " << idx
+                         << " for symbol " << name
                          << " is out of bounds\n>>> defined in " << this;
           continue;
         }
@@ -1602,8 +1601,8 @@ template <class ELFT> void SharedFile::parse() {
       // VER_NDX_LOCAL. Workaround this bug.
       if (ctx.arg.emachine == EM_MIPS && name == "_gp_disp")
         continue;
-      ErrAlways(ctx) << "corrupt input file: version definition index "
-                     << Twine(idx) << " for symbol " << name
+      ErrAlways(ctx) << "corrupt input file: version definition index " << idx
+                     << " for symbol " << name
                      << " is out of bounds\n>>> defined in " << this;
       continue;
     }
@@ -1849,8 +1848,9 @@ void BitcodeFile::postParse() {
 
 void BinaryFile::parse() {
   ArrayRef<uint8_t> data = arrayRefFromStringRef(mb.getBuffer());
-  auto *section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                                     8, data, ".data");
+  auto *section =
+      make<InputSection>(this, ".data", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
+                         /*addralign=*/8, /*entsize=*/0, data);
   sections.push_back(section);
 
   // For each input file foo that is embedded to a result as a binary

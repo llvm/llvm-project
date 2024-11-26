@@ -2842,14 +2842,9 @@ ExpressionResults Target::EvaluateExpression(
     execution_results = eExpressionCompleted;
   } else {
     llvm::StringRef prefix = GetExpressionPrefixContents();
-    Status error;
-    execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
-                                                 result_valobj_sp, error,
-                                                 fixed_expression, ctx_obj);
-    // Pass up the error by wrapping it inside an error result.
-    if (error.Fail() && !result_valobj_sp)
-      result_valobj_sp = ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(), std::move(error));
+    execution_results =
+        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+                                 result_valobj_sp, fixed_expression, ctx_obj);
   }
 
   if (execution_results == eExpressionCompleted)

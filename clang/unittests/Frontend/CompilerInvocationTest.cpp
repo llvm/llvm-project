@@ -12,6 +12,7 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
@@ -38,9 +39,9 @@ public:
   }
 
   CommandLineTest()
-      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions(),
-                                                  new TextDiagnosticBuffer())) {
-  }
+      : Diags(CompilerInstance::createDiagnostics(
+            *llvm::vfs::getRealFileSystem(), new DiagnosticOptions(),
+            new TextDiagnosticBuffer())) {}
 };
 
 template <typename M>

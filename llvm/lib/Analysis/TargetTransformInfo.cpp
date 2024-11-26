@@ -359,6 +359,10 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
   return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
 }
 
+unsigned TargetTransformInfo::getEpilogueVectorizationMinVF() const {
+  return TTIImpl->getEpilogueVectorizationMinVF();
+}
+
 bool TargetTransformInfo::preferPredicateOverEpilogue(
     TailFoldingInfo *TFI) const {
   return TTIImpl->preferPredicateOverEpilogue(TFI);
@@ -609,6 +613,11 @@ bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
 bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
     Intrinsic::ID ID, unsigned ScalarOpdIdx) const {
   return TTIImpl->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+}
+
+bool TargetTransformInfo::isVectorIntrinsicWithOverloadTypeAtArg(
+    Intrinsic::ID ID, int ScalarOpdIdx) const {
+  return TTIImpl->isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx);
 }
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(

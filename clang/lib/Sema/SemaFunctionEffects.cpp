@@ -627,7 +627,7 @@ private:
           IsNoexcept = isNoexcept(FD);
         } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
           if (auto *TSI = BD->getSignatureAsWritten()) {
-            auto *FPT = TSI->getType()->getAs<FunctionProtoType>();
+            auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
             IsNoexcept = FPT->isNothrow() || BD->hasAttr<NoThrowAttr>();
           }
         }
@@ -807,7 +807,8 @@ private:
 
     auto MaybeAddTemplateNote = [&](const Decl *D) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-        while (FD != nullptr && FD->isTemplateInstantiation()) {
+        while (FD != nullptr && FD->isTemplateInstantiation() &&
+               FD->getPointOfInstantiation().isValid()) {
           S.Diag(FD->getPointOfInstantiation(),
                  diag::note_func_effect_from_template);
           FD = FD->getTemplateInstantiationPattern();

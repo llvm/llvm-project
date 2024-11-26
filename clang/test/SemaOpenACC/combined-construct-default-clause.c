@@ -11,8 +11,7 @@ void SingleOnly() {
 
   int i;
 
-  // expected-warning@+4{{OpenACC clause 'copy' not yet implemented}}
-  // expected-warning@+3{{OpenACC clause 'present' not yet implemented}}
+  // expected-warning@+3{{OpenACC clause 'copy' not yet implemented}}
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels loop' directive}}
   // expected-note@+1{{previous clause is here}}
   #pragma acc kernels loop self default(present) present(i) default(none) copy(i)

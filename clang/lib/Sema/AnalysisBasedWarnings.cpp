@@ -2257,24 +2257,33 @@ public:
       } else if (isa<MemberExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
-        auto ME = dyn_cast<MemberExpr>(Operation);
+        auto *ME = cast<MemberExpr>(Operation);
         D = ME->getMemberDecl();
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
+        bool destTypeComplete = true;
+
         if (!isa<PointerType>(destType))
           return;
+        destType = destType.getTypePtr()->getPointeeType();
+        if (const auto *D = destType->getAsTagDecl())
+          destTypeComplete = D->isCompleteDefinition();
 
-        const uint64_t dSize =
-            Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
+        // If destination type is incomplete, it is unsafe to cast to anyway, no
+        // need to check its type:
+        if (destTypeComplete) {
+          const uint64_t dSize = Ctx.getTypeSize(destType);
+          QualType srcType = ECE->getSubExpr()->getType();
 
-        QualType srcType = ECE->getSubExpr()->getType();
-        const uint64_t sSize =
-            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+          assert(srcType->isPointerType());
 
-        if (sSize >= dSize)
-          return;
+          const uint64_t sSize =
+              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
 
+          if (sSize >= dSize)
+            return;
+        }
         if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
                 ECE->getSubExpr()->IgnoreParens())) {
           D = CE->getMethodDecl();
