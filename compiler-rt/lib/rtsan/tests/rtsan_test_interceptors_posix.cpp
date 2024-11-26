@@ -248,6 +248,7 @@ TEST(TestRtsanInterceptors, SchedYieldDiesWhenRealtime) {
 /*
     Filesystem
 */
+
 TEST_F(RtsanFileTest, OpenDiesWhenRealtime) {
   auto Func = [this]() { open(GetTemporaryFilePath(), O_RDONLY); };
   ExpectRealtimeDeath(Func, MAYBE_APPEND_64("open"));
@@ -396,7 +397,6 @@ TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
   if (sock == -1) {
     perror("socket");
     GTEST_SKIP();
-    return;
   }
 
   struct ifaddrs *ifaddr = nullptr;
@@ -404,7 +404,6 @@ TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
     perror("getifaddrs");
     close(sock);
     GTEST_SKIP();
-    return;
   }
 
   struct ifreq ifr {};
@@ -415,8 +414,7 @@ TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
     perror("ioctl");
     close(sock);
     freeifaddrs(ifaddr);
-    ASSERT_TRUE(false) << "ioctl failed";
-    return;
+    FAIL();
   }
 
   freeifaddrs(ifaddr);
