@@ -136,7 +136,7 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
       return getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     };
-    auto GetCachedBFI = [&](Function &) -> BlockFrequencyInfo * {
+    auto GetCachedBFI = [](Function &) -> BlockFrequencyInfo * {
       return nullptr;
     };
 
