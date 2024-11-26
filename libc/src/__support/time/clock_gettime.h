@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
-#define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_CLOCK_GETTIME_H
+#define LLVM_LIBC_SRC___SUPPORT_TIME_CLOCK_GETTIME_H
 
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/error_or.h"
-
-#if defined(SYS_clock_gettime64)
-#include <linux/time_types.h>
-#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -23,4 +19,4 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts);
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
+#endif // LLVM_LIBC_SRC___SUPPORT_TIME_CLOCK_GETTIME_H

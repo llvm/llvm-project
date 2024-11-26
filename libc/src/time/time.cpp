@@ -9,14 +9,17 @@
 #include "hdr/time_macros.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/time/linux/clock_gettime.h"
+#include "src/__support/time/clock_gettime.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/time_func.h"
 
+#ifdef _MSC_VER
+#include "include/llvm-libc-macros/windows/time-macros-ext.h"
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(time_t, time, (time_t * tp)) {
-  // TODO: Use the Linux VDSO to fetch the time and avoid the syscall.
+LLVM_LIBC_FUNCTION(time_t, time, (time_t *tp)) {
   struct timespec ts;
   auto result = internal::clock_gettime(CLOCK_REALTIME, &ts);
   if (!result.has_value()) {

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_HDR_TYPES_CLOCKID_T_H
 #define LLVM_LIBC_HDR_TYPES_CLOCKID_T_H
 
-#ifdef LIBC_FULL_BUILD
+#if defined(LIBC_FULL_BUILD) || defined(_MSC_VER)
 
 #include "include/llvm-libc-types/clockid_t.h"
 
