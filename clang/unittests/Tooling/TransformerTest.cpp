@@ -605,6 +605,49 @@ TEST_F(TransformerTest, RewriteDescendantsReferToParentBinding) {
            Input, Expected);
 }
 
+TEST_F(TransformerTest, RewriteDescendantsApplyFirstOrderedRuleUnrelated) {
+  std::string Input = "int f(int x) { int y = x; return x; }";
+  std::string Expected = "int f(int x) { char y = 3; return 3; }";
+  auto IntToChar = makeRule(typeLoc(loc(qualType(isInteger(), builtinType()))),
+                            changeTo(cat("char")));
+  auto InlineX =
+      makeRule(declRefExpr(to(varDecl(hasName("x")))), changeTo(cat("3")));
+  testRule(
+      makeRule(functionDecl(hasName("f"), hasBody(stmt().bind("body"))),
+               rewriteDescendants("body", applyFirst({InlineX, IntToChar}))),
+      Input, Expected);
+}
+
+TEST_F(TransformerTest, RewriteDescendantsApplyFirstOrderedRuleRelated) {
+  std::string Input = "int f(int x) { int y = x; return x; }";
+  std::string Expected = "int f(int x) { int y = 3; return y; }";
+  auto ReturnY = makeRule(
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               declRefExpr(to(varDecl(hasName("x"))), hasParent(returnStmt()))),
+      changeTo(cat("y")));
+  auto InlineX = makeRule(traverse(TK_IgnoreUnlessSpelledInSource,
+                                   declRefExpr(to(varDecl(hasName("x"))))),
+                          changeTo(cat("3")));
+  testRule(makeRule(functionDecl(hasName("f"), hasBody(stmt().bind("body"))),
+                    rewriteDescendants("body", applyFirst({ReturnY, InlineX}))),
+           Input, Expected);
+}
+
+TEST_F(TransformerTest, RewriteDescendantsApplyFirstOrderedRuleRelatedSwapped) {
+  std::string Input = "int f(int x) { int y = x; return x; }";
+  std::string Expected = "int f(int x) { int y = 3; return 3; }";
+  auto ReturnY = makeRule(
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               declRefExpr(to(varDecl(hasName("x"))), hasParent(returnStmt()))),
+      changeTo(cat("y")));
+  auto InlineX = makeRule(traverse(TK_IgnoreUnlessSpelledInSource,
+                                   declRefExpr(to(varDecl(hasName("x"))))),
+                          changeTo(cat("3")));
+  testRule(makeRule(functionDecl(hasName("f"), hasBody(stmt().bind("body"))),
+                    rewriteDescendants("body", applyFirst({InlineX, ReturnY}))),
+           Input, Expected);
+}
+
 TEST_F(TransformerTest, RewriteDescendantsUnboundNode) {
   std::string Input =
       "int f(int x) { int y = x; { int z = x * x; } return x; }";
