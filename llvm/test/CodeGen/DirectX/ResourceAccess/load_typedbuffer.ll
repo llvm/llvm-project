@@ -3,7 +3,7 @@
 target triple = "dxil-pc-shadermodel6.6-compute"
 
 declare void @use_float4(<4 x float>)
-declare void @use_float(<4 x float>)
+declare void @use_float(float)
 
 ; CHECK-LABEL: define void @load_float4
 define void @load_float4(i32 %index, i32 %elemindex) {

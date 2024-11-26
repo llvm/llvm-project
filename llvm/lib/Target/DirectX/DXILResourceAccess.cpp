@@ -29,11 +29,11 @@ static void replaceTypedBufferAccess(IntrinsicInst *II,
   assert(HandleType->getName() == "dx.TypedBuffer" &&
          "Unexpected typed buffer type");
   Type *ContainedType = HandleType->getTypeParameter(0);
+
+  // We need the size of an element in bytes so that we can calculate the offset
+  // in elements given a total offset in bytes later.
   Type *ScalarType = ContainedType->getScalarType();
   uint64_t ScalarSize = DL.getTypeSizeInBits(ScalarType) / 8;
-  int NumElements = ContainedType->getNumContainedTypes();
-  if (!NumElements)
-    NumElements = 1;
 
   // Process users keeping track of indexing accumulated from GEPs.
   struct AccessAndIndex {
