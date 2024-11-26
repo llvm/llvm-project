@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -281,6 +282,17 @@ ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
   Visitor.TraverseStmt(FD.getBody());
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&FD))
     Visitor.traverseConstructorInits(CtorDecl);
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(&FD);
+      Method && isLambdaCallOperator(Method)) {
+    for (const auto &Capture : Method->getParent()->captures()) {
+      if (Capture.capturesVariable()) {
+        if (const auto *Param =
+                dyn_cast<ParmVarDecl>(Capture.getCapturedVar())) {
+          Result.LambdaCapturedParams.insert(Param);
+        }
+      }
+    }
+  }
 
   return Result;
 }
