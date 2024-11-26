@@ -61,7 +61,7 @@ class Compilation {
       OrderedOffloadingToolchains;
 
   /// The original (untranslated) input argument list.
-  std::shared_ptr<llvm::opt::InputArgList> Args;
+  std::unique_ptr<llvm::opt::InputArgList> Args;
 
   /// The driver translated arguments. Note that toolchains may perform their
   /// own argument translation.
@@ -134,7 +134,7 @@ class Compilation {
 
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
-              std::shared_ptr<llvm::opt::InputArgList> Args,
+              std::unique_ptr<llvm::opt::InputArgList> Args,
               std::shared_ptr<llvm::opt::DerivedArgList> TranslatedArgs,
               bool ContainsError);
   ~Compilation();

@@ -33,11 +33,11 @@ using namespace driver;
 using namespace llvm::opt;
 
 Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
-                         std::shared_ptr<InputArgList> _Args,
+                         std::unique_ptr<InputArgList> _Args,
                          std::shared_ptr<DerivedArgList> _TranslatedArgs,
                          bool ContainsError)
-    : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(_Args),
-      TranslatedArgs(_TranslatedArgs), ContainsError(ContainsError) {
+    : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(std::move(_Args)),
+      TranslatedArgs(std::move(_TranslatedArgs)), ContainsError(ContainsError) {
   // The offloading host toolchain is the default toolchain.
   OrderedOffloadingToolchains.insert(
       std::make_pair(Action::OFK_Host, &DefaultToolChain));

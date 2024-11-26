@@ -1552,7 +1552,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   // Construct the list of inputs.
   InputList Inputs;
-  BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
+  BuildInputs(C->getDefaultToolChain(), C->getArgs(), Inputs);
 
   // Populate the tool chains for the offloading devices, if any.
   CreateOffloadingDeviceToolChains(*C, Inputs);
