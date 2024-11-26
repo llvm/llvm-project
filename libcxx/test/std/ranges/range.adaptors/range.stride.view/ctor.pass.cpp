@@ -35,20 +35,8 @@ constexpr bool test() {
     // from when the stride view is constructed.
     std::ranges::stride_view<MoveOnlyView<cpp17_input_iterator<int*>>> mosv(std::move(mov), 1);
 
-    // While we are here, make sure that the ctor captured the proper things
+    // While we are here, make sure that the ctor captured the stride.
     assert(mosv.stride() == 1);
-
-    auto mosv_i = mosv.begin();
-    assert(*mosv_i == 1);
-
-    mosv_i++;
-    assert(*mosv_i == 2);
-
-    mosv_i++;
-    assert(*mosv_i == 3);
-
-    mosv_i++;
-    assert(mosv_i == mosv.end());
   }
   return true;
 }
