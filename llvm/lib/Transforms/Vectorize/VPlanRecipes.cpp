@@ -995,9 +995,12 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
     if (!V) {
       // Push all the VP Intrinsic's ops into the Argments even if is nullptr.
       // Some VP Intrinsic's cost will assert the number of parameters.
+      // Mainly appears in the following two scenarios:
+      // 1. EVL Op is nullptr
+      // 2. The Argmunt of the VP Intrinsic is also the VP Intrinsic
       if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
         Arguments.push_back(V);
-        break;
+        continue;
       }
       if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
         Arguments.push_back(UI->getArgOperand(Idx));
