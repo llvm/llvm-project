@@ -584,7 +584,7 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
       // clang-format on
   );
 
-  auto &mods{semantics::OmpGetModifiers(inp.v)};
+  auto &mods = semantics::OmpGetModifiers(inp.v);
   auto &t0 = std::get<wrapped::ImplicitBehavior>(inp.v.t);
   auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpVariableCategory>(mods);
 
@@ -764,37 +764,35 @@ Firstprivate make(const parser::OmpClause::Firstprivate &inp,
 From make(const parser::OmpClause::From &inp,
           semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpFromClause
-  using wrapped = parser::OmpFromClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpFromClause::Expectation, From::Expectation,
+      convert, parser::OmpExpectation::Value, From::Expectation,
       // clang-format off
       MS(Present, Present)
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<std::list<wrapped::Expectation>>>(inp.v.t);
-  auto &t1 = std::get<std::optional<std::list<parser::OmpIterator>>>(inp.v.t);
-  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpExpectation>(mods);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
+  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+  auto &t3 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  assert((!t0 || t0->size() == 1) && "Only one expectation modifier allowed");
-  assert((!t1 || t1->size() == 1) && "Only one iterator modifier allowed");
-
-  auto expectation = [&]() -> std::optional<From::Expectation> {
-    if (t0)
-      return convert(t0->front());
+  auto mappers = [&]() -> std::optional<List<Mapper>> {
+    if (t1)
+      return List<Mapper>{Mapper{makeObject(t1->v, semaCtx)}};
     return std::nullopt;
   }();
 
   auto iterator = [&]() -> std::optional<Iterator> {
-    if (t1)
-      return makeIterator(t1->front(), semaCtx);
+    if (t2)
+      return makeIterator(*t2, semaCtx);
     return std::nullopt;
   }();
 
-  return From{{/*Expectation=*/std::move(expectation), /*Mapper=*/std::nullopt,
+  return From{{/*Expectation=*/maybeApplyToV(convert, t0),
+               /*Mappers=*/std::move(mappers),
                /*Iterator=*/std::move(iterator),
-               /*LocatorList=*/makeObjects(t2, semaCtx)}};
+               /*LocatorList=*/makeObjects(t3, semaCtx)}};
 }
 
 // Full: empty
@@ -963,10 +961,8 @@ Link make(const parser::OmpClause::Link &inp,
 Map make(const parser::OmpClause::Map &inp,
          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpMapClause
-  using wrapped = parser::OmpMapClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert1, parser::OmpMapClause::Type, Map::MapType,
+      convert1, parser::OmpMapType::Value, Map::MapType,
       // clang-format off
       MS(Alloc,    Alloc)
       MS(Delete,   Delete)
@@ -978,7 +974,7 @@ Map make(const parser::OmpClause::Map &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert2, parser::OmpMapClause::TypeModifier, Map::MapTypeModifier,
+      convert2, parser::OmpMapTypeModifier::Value, Map::MapTypeModifier,
       // clang-format off
       MS(Always,    Always)
       MS(Close,     Close)
@@ -987,42 +983,43 @@ Map make(const parser::OmpClause::Map &inp,
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<std::list<wrapped::TypeModifier>>>(inp.v.t);
-  auto &t1 = std::get<std::optional<std::list<parser::OmpIterator>>>(inp.v.t);
-  auto &t2 = std::get<std::optional<std::list<wrapped::Type>>>(inp.v.t);
-  auto &t3 = std::get<parser::OmpObjectList>(inp.v.t);
-  auto &t4 = std::get<parser::OmpMapperIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
+  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+  auto *t3 = semantics::OmpGetUniqueModifier<parser::OmpMapType>(mods);
+  auto &t4 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  if (t4.v)
-    TODO_NOLOC("OmpMapClause(MAPPER(...)): user defined mapper not supported");
-
-  // These should have been diagnosed already.
-  assert((!t1 || t1->size() == 1) && "Only one iterator modifier is allowed");
-  assert((!t2 || t2->size() == 1) && "Only one map type is allowed");
-
-  auto iterator = [&]() -> std::optional<Iterator> {
+  auto mappers = [&]() -> std::optional<List<Mapper>> {
     if (t1)
-      return makeIterator(t1->front(), semaCtx);
+      return List<Mapper>{Mapper{makeObject(t1->v, semaCtx)}};
     return std::nullopt;
   }();
 
-  std::optional<Map::MapType> maybeType;
-  if (t2)
-    maybeType = maybeApply(convert1, std::optional<wrapped::Type>(t2->front()));
+  auto iterator = [&]() -> std::optional<Iterator> {
+    if (t2)
+      return makeIterator(*t2, semaCtx);
+    return std::nullopt;
+  }();
 
-  std::optional<Map::MapTypeModifiers> maybeTypeMods = maybeApply(
-      [&](const std::list<wrapped::TypeModifier> &typeMods) {
-        Map::MapTypeModifiers mods;
-        for (wrapped::TypeModifier mod : typeMods)
-          mods.push_back(convert2(mod));
-        return mods;
-      },
-      t0);
+  auto type = [&]() -> std::optional<Map::MapType> {
+    if (t3)
+      return convert1(t3->v);
+    return Map::MapType::Tofrom;
+  }();
 
-  return Map{{/*MapType=*/maybeType,
-              /*MapTypeModifiers=*/maybeTypeMods,
-              /*Mapper=*/std::nullopt, /*Iterator=*/std::move(iterator),
-              /*LocatorList=*/makeObjects(t3, semaCtx)}};
+  Map::MapTypeModifiers typeMods;
+  for (auto *typeMod :
+       semantics::OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(mods)) {
+    typeMods.push_back(convert2(typeMod->v));
+  }
+  std::optional<Map::MapTypeModifiers> maybeTypeMods{};
+  if (!typeMods.empty())
+    maybeTypeMods = std::move(typeMods);
+
+  return Map{{/*MapType=*/std::move(type),
+              /*MapTypeModifiers=*/std::move(maybeTypeMods),
+              /*Mapper=*/std::move(mappers), /*Iterator=*/std::move(iterator),
+              /*LocatorList=*/makeObjects(t4, semaCtx)}};
 }
 
 // Match: incomplete
@@ -1316,37 +1313,35 @@ ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
 To make(const parser::OmpClause::To &inp,
         semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpToClause
-  using wrapped = parser::OmpToClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpToClause::Expectation, To::Expectation,
+      convert, parser::OmpExpectation::Value, To::Expectation,
       // clang-format off
       MS(Present, Present)
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<std::list<wrapped::Expectation>>>(inp.v.t);
-  auto &t1 = std::get<std::optional<std::list<parser::OmpIterator>>>(inp.v.t);
-  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpExpectation>(mods);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
+  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+  auto &t3 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  assert((!t0 || t0->size() == 1) && "Only one expectation modifier allowed");
-  assert((!t1 || t1->size() == 1) && "Only one iterator modifier allowed");
-
-  auto expectation = [&]() -> std::optional<To::Expectation> {
-    if (t0)
-      return convert(t0->front());
+  auto mappers = [&]() -> std::optional<List<Mapper>> {
+    if (t1)
+      return List<Mapper>{Mapper{makeObject(t1->v, semaCtx)}};
     return std::nullopt;
   }();
 
   auto iterator = [&]() -> std::optional<Iterator> {
-    if (t1)
-      return makeIterator(t1->front(), semaCtx);
+    if (t2)
+      return makeIterator(*t2, semaCtx);
     return std::nullopt;
   }();
 
-  return To{{/*Expectation=*/std::move(expectation), /*Mapper=*/std::nullopt,
+  return To{{/*Expectation=*/maybeApplyToV(convert, t0),
+             /*Mappers=*/{std::move(mappers)},
              /*Iterator=*/std::move(iterator),
-             /*LocatorList=*/makeObjects(t2, semaCtx)}};
+             /*LocatorList=*/makeObjects(t3, semaCtx)}};
 }
 
 // UnifiedAddress: empty

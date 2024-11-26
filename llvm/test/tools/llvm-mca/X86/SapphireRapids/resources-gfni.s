@@ -43,13 +43,13 @@ gf2p8mulb           (%rax), %xmm1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 3.00   3.00   1.00   1.00    -      -      -      -      -      -      -     1.00    -
+# CHECK-NEXT: 3.00   3.00   1.00   1.00    -      -      -      -      -      -     1.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     gf2p8affineinvqb	$0, %xmm0, %xmm1
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     gf2p8affineinvqb	$0, (%rax), %xmm1
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     gf2p8affineinvqb	$0, (%rax), %xmm1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     gf2p8affineqb	$0, %xmm0, %xmm1
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     gf2p8affineqb	$0, (%rax), %xmm1
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     gf2p8affineqb	$0, (%rax), %xmm1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     gf2p8mulb	%xmm0, %xmm1
-# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     gf2p8mulb	(%rax), %xmm1
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -     0.33    -      -     gf2p8mulb	(%rax), %xmm1
