@@ -20,13 +20,7 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
 
   if (BF.getState() != BinaryFunction::State::CFG &&
       BF.getState() != BinaryFunction::State::CFG_Finalized) {
-    BC.errs() << "BOLT-WARNING: No CFG for " << BF.getPrintName()
-              << " in InsertNegateRAStatePass\n";
-    return;
-  }
-
-  if (BF.getState() == BinaryFunction::State::CFG_Finalized) {
-    BC.errs() << "BOLT-WARNING: CFG finalized for " << BF.getPrintName()
+    BC.outs() << "BOLT-INFO: No CFG for " << BF.getPrintName()
               << " in InsertNegateRAStatePass\n";
     return;
   }
