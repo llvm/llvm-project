@@ -25,7 +25,7 @@
 // LA32-NEXT: #define __ATOMIC_SEQ_CST 5
 // LA32: #define __BIGGEST_ALIGNMENT__ 16
 // LA32: #define __BITINT_MAXWIDTH__ 128
-// LA32: #define __BOOL_WIDTH__ 8
+// LA32: #define __BOOL_WIDTH__ 1
 // LA32: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // LA32: #define __CHAR16_TYPE__ unsigned short
 // LA32: #define __CHAR32_TYPE__ unsigned int
@@ -346,7 +346,7 @@
 // LA64-NEXT: #define __ATOMIC_SEQ_CST 5
 // LA64: #define __BIGGEST_ALIGNMENT__ 16
 // LA64: #define __BITINT_MAXWIDTH__ 128
-// LA64: #define __BOOL_WIDTH__ 8
+// LA64: #define __BOOL_WIDTH__ 1
 // LA64: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // LA64: #define __CHAR16_TYPE__ unsigned short
 // LA64: #define __CHAR32_TYPE__ unsigned int
