@@ -209,6 +209,7 @@ enum Kind {
 
   // Captures attribute:
   kw_address,
+  kw_address_is_null,
   kw_provenance,
   kw_read_provenance,
 

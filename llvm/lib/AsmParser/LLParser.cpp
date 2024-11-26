@@ -3192,15 +3192,17 @@ bool LLParser::parseCapturesAttr(AttrBuilder &B) {
       return true;
   } else {
     while (true) {
-      if (EatIfPresent(lltok::kw_address))
+      if (EatIfPresent(lltok::kw_address_is_null))
+        CC |= CaptureComponents::AddressIsNull;
+      else if (EatIfPresent(lltok::kw_address))
         CC |= CaptureComponents::Address;
       else if (EatIfPresent(lltok::kw_provenance))
         CC |= CaptureComponents::Provenance;
       else if (EatIfPresent(lltok::kw_read_provenance))
         CC |= CaptureComponents::ReadProvenance;
       else
-        return tokError(
-            "expected one of 'address', 'provenance' or 'read_provenance'");
+        return tokError("expected one of 'address', 'address_is_null', "
+                        "'provenance' or 'read_provenance'");
 
       if (EatIfPresent(lltok::rparen))
         break;

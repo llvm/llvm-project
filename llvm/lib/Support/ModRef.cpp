@@ -59,7 +59,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, CaptureComponents CC) {
   }
 
   ListSeparator LS;
-  if (capturesAddress(CC))
+  if (capturesAddressIsNullOnly(CC))
+    OS << LS << "address_is_null";
+  else if (capturesAddress(CC))
     OS << LS << "address";
   if (capturesReadProvenanceOnly(CC))
     OS << LS << "read_provenance";

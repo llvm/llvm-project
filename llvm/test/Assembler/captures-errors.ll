@@ -35,7 +35,7 @@ define void @test(ptr captures(ret address) %p) {
 
 ;--- invalid-component.ll
 
-; CHECK-INVALID-COMPONENT: <stdin>:[[@LINE+1]]:32: error: expected one of 'address', 'provenance' or 'read_provenance'
+; CHECK-INVALID-COMPONENT: <stdin>:[[@LINE+1]]:32: error: expected one of 'address', 'address_is_null', 'provenance' or 'read_provenance'
 define void @test(ptr captures(foo) %p) {
   ret void
 }

@@ -276,9 +276,10 @@ using FunctionModRefBehavior = MemoryEffects;
 /// Components of the pointer that may be captured.
 enum class CaptureComponents : uint8_t {
   None = 0,
-  Address = (1 << 0),
-  ReadProvenance = (1 << 1),
-  Provenance = (1 << 2) | ReadProvenance,
+  AddressIsNull = (1 << 0),
+  Address = (1 << 1) | AddressIsNull,
+  ReadProvenance = (1 << 2),
+  Provenance = (1 << 3) | ReadProvenance,
   All = Address | Provenance,
   LLVM_MARK_AS_BITMASK_ENUM(Provenance),
 };
@@ -289,6 +290,10 @@ inline bool capturesNothing(CaptureComponents CC) {
 
 inline bool capturesAnything(CaptureComponents CC) {
   return CC != CaptureComponents::None;
+}
+
+inline bool capturesAddressIsNullOnly(CaptureComponents CC) {
+  return (CC & CaptureComponents::Address) == CaptureComponents::AddressIsNull;
 }
 
 inline bool capturesAddress(CaptureComponents CC) {

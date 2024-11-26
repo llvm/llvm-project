@@ -18,6 +18,14 @@ define void @test_address(ptr captures(address) %p) {
   ret void
 }
 
+define void @test_address_is_null(ptr captures(address_is_null) %p) {
+; CHECK-LABEL: define void @test_address_is_null(
+; CHECK-SAME: ptr captures(address_is_null) [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
 define void @test_address_provenance(ptr captures(address, provenance) %p) {
 ; CHECK-LABEL: define void @test_address_provenance(
 ; CHECK-SAME: ptr captures(address, provenance) [[P:%.*]]) {
@@ -55,6 +63,15 @@ define void @test_duplicate(ptr captures(address, address) %p) {
 define void @test_duplicate_read_provenance(ptr captures(read_provenance, provenance) %p) {
 ; CHECK-LABEL: define void @test_duplicate_read_provenance(
 ; CHECK-SAME: ptr captures(provenance) [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+; address_is_null is a subset of address.
+define void @test_duplicate_address_is_null(ptr captures(address_is_null, address) %p) {
+; CHECK-LABEL: define void @test_duplicate_address_is_null(
+; CHECK-SAME: ptr captures(address) [[P:%.*]]) {
 ; CHECK-NEXT:    ret void
 ;
   ret void

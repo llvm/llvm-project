@@ -1406,10 +1406,11 @@ Currently, only the following parameter attributes are defined:
     which may be ``none``, or a combination of:
 
     - ``address``: The integral address of the pointer.
+    - ``address_is_null`` (subet of ``address``): Whether the address is null.
     - ``provenance``: The ability to access the pointer for both read and write
       after the function returns.
-    - ``read_provenance``: The ability to access the pointer only for reads
-      after the function returns.
+    - ``read_provenance`` (subset of ``provenance``): The ability to access the
+      pointer only for reads after the function returns.
 
     Additionally, it is possible to specify that the pointer is captured via
     the return value only, by using ``captures(ret: ...)``.
@@ -1422,6 +1423,7 @@ Currently, only the following parameter attributes are defined:
     - ``captures(none)``: Pointer not captured.
     - ``captures(address, provenance)``: Equivalent to omitting the attribute.
     - ``captures(address)``: Address may be captured, but not provenance.
+    - ``captures(address_is_null)``: Only captures whether the address is null.
     - ``captures(address, read_provenance)``: Both address and provenance
       captured, but only for read-only access.
     - ``captures(ret: address, provenance)``: Pointer captured through return
@@ -3373,7 +3375,8 @@ memory before the call, the call may capture two components of the pointer:
 
   * The address of the pointer, which is its integral value. This also includes
     parts of the address or any information about the address, including the
-    fact that it does not equal one specific value.
+    fact that it does not equal one specific value. We further distinguish
+    whether only the fact that the address is/isn't null is captured.
   * The provenance of the pointer, which is the ability to perform memory
     accesses through the pointer, in the sense of the :ref:`pointer aliasing
     rules <pointeraliasing>`. We further distinguish whether only read acceses
@@ -3420,19 +3423,6 @@ While address capture includes uses of the address within the body of the
 function, provenance capture refers exclusively to the ability to perform
 accesses *after* the function returns. Memory accesses within the function
 itself are not considered pointer captures.
-
-Comparison of a pointer with a null pointer is generally also considered an
-address capture. As an exception, if the pointer is known to be either null
-or in bounds of an allocated object, it is not considered an address capture.
-As such, the following example does not capture the pointer argument due to
-the presence of the ``dereferenceable_or_null`` attribute:
-
-.. code-block:: llvm
-
-    define i1 @f(ptr dereferenceable_or_null(4) %a) {
-      %c = icmp eq ptr %a, null
-      ret i1 %c
-    }
 
 We can further say that the capture only occurs through a specific location.
 In the following example, the pointer (both address and provenance) is captured
