@@ -45,7 +45,7 @@ mlir::Value emitRoundPointerUpToAlignment(cir::CIRBaseBuilderTy &builder,
       builder.getUnsignedInt(loc, alignment - 1, /*width=*/32));
   return builder.create<cir::PtrMaskOp>(
       loc, roundUp.getType(), roundUp,
-      builder.getSignedInt(loc, -alignment, /*width=*/32));
+      builder.getSignedInt(loc, -(signed)alignment, /*width=*/32));
 }
 
 mlir::Type useFirstFieldIfTransparentUnion(mlir::Type Ty) {
