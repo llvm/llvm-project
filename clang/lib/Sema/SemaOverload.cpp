@@ -15576,7 +15576,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     // Build the actual expression node.
     ExprResult FnExpr =
         CreateFunctionRefExpr(*this, Method, FoundDecl, MemExpr,
-                              HadMultipleCandidates, MemExpr->getExprLoc());
+                              HadMultipleCandidates, MemExpr->getBeginLoc());
     if (FnExpr.isInvalid())
       return ExprError();
 
