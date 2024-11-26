@@ -337,13 +337,14 @@ void ErrorHandler::fatal(const Twine &msg) {
 }
 
 SyncStream::~SyncStream() {
-  os.flush();
   switch (level) {
+  case DiagLevel::None:
+    break;
   case DiagLevel::Log:
     e.log(buf);
     break;
   case DiagLevel::Msg:
-    e.message(buf, llvm::outs());
+    e.message(buf, e.outs());
     break;
   case DiagLevel::Warn:
     e.warn(buf);

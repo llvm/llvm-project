@@ -191,10 +191,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getLinearVars().empty() || !op.getLinearStepVars().empty())
       result = todo("linear");
   };
-  auto checkMergeable = [&todo](auto op, LogicalResult &result) {
-    if (op.getMergeable())
-      result = todo("mergeable");
-  };
   auto checkNontemporal = [&todo](auto op, LogicalResult &result) {
     if (!op.getNontemporalVars().empty())
       result = todo("nontemporal");
@@ -257,7 +253,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkMergeable(op, result);
         checkPriority(op, result);
         checkUntied(op, result);
       })
@@ -1597,24 +1592,21 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
       builder.SetInsertPoint(copyBlock->getFirstNonPHIOrDbgOrAlloca());
     }
-    for (unsigned i = 0; i < privateBlockArgs.size(); ++i) {
-      if (privateDecls[i].getDataSharingType() !=
-          omp::DataSharingClauseType::FirstPrivate)
+    for (auto [decl, mlirVar, llvmVar] :
+         llvm::zip_equal(privateDecls, mlirPrivateVars, llvmPrivateVars)) {
+      if (decl.getDataSharingType() != omp::DataSharingClauseType::FirstPrivate)
         continue;
 
       // copyRegion implements `lhs = rhs`
-      Region &copyRegion = privateDecls[i].getCopyRegion();
+      Region &copyRegion = decl.getCopyRegion();
 
       // map copyRegion rhs arg
-      llvm::Value *nonPrivateVar =
-          moduleTranslation.lookupValue(taskOp.getPrivateVars()[i]);
+      llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(privateDecls[i].getCopyMoldArg(),
-                                 nonPrivateVar);
+      moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
       // map copyRegion lhs arg
-      moduleTranslation.mapValue(privateDecls[i].getCopyPrivateArg(),
-                                 llvmPrivateVars[i]);
+      moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
 
       // in-place convert copy region
       builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
@@ -1665,7 +1657,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createTask(
           ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
           moduleTranslation.lookupValue(taskOp.getFinal()),
-          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds);
+          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds,
+          taskOp.getMergeable());
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
@@ -1936,24 +1929,21 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
           splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
       builder.SetInsertPoint(copyBlock->getFirstNonPHIOrDbgOrAlloca());
     }
-    for (unsigned i = 0; i < privateBlockArgs.size(); ++i) {
-      if (privateDecls[i].getDataSharingType() !=
-          omp::DataSharingClauseType::FirstPrivate)
+    for (auto [decl, mlirVar, llvmVar] :
+         llvm::zip_equal(privateDecls, mlirPrivateVars, llvmPrivateVars)) {
+      if (decl.getDataSharingType() != omp::DataSharingClauseType::FirstPrivate)
         continue;
 
       // copyRegion implements `lhs = rhs`
-      Region &copyRegion = privateDecls[i].getCopyRegion();
+      Region &copyRegion = decl.getCopyRegion();
 
       // map copyRegion rhs arg
-      llvm::Value *nonPrivateVar =
-          moduleTranslation.lookupValue(opInst.getPrivateVars()[i]);
+      llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(privateDecls[i].getCopyMoldArg(),
-                                 nonPrivateVar);
+      moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
       // map copyRegion lhs arg
-      moduleTranslation.mapValue(privateDecls[i].getCopyPrivateArg(),
-                                 llvmPrivateVars[i]);
+      moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
 
       // in-place convert copy region
       builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
