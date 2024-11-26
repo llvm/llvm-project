@@ -1409,7 +1409,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     NestedNameSpecifier *Name = Iter.first;
     PendingSymbolOverloads &Overloads = Iter.second;
     for (auto &I : Overloads) {
-      if (auto *D = trySymbolLookUp(Name, I)) {
+      if (auto *D = trySymbolLookUpInPragma(Name, I)) {
         if (D->hasExternalFormalLinkage()) {
           if (D->isCXXClassMember()) {
             D->addAttr(VisibilityAttr::CreateImplicit(

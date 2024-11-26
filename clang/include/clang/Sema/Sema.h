@@ -1931,12 +1931,12 @@ public:
       SymbolNames;
   SymbolNames PendingExportNames;
 
-  FunctionDecl *tryFunctionLookUp(NestedNameSpecifier *NestedName,
+  FunctionDecl *tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
                                   SourceLocation NameLoc);
 
   /// trySymbolLookUp try to look up a decl matching the nested specifier
   /// with optional type list.
-  NamedDecl *trySymbolLookUp(NestedNameSpecifier *NestedName,
+  NamedDecl *trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
                              const clang::Sema::SymbolLabel &Label);
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.

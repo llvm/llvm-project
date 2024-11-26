@@ -1361,7 +1361,7 @@ static bool typeListMatches(ASTContext& Context, FunctionDecl *FD,
   return true;
 }
 
-FunctionDecl *Sema::tryFunctionLookUp(NestedNameSpecifier *NestedName,
+FunctionDecl *Sema::tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
                                       SourceLocation NameLoc) {
   assert(!NestedName->getPrefix() ||
          NestedName->getPrefix()->getKind() == NestedNameSpecifier::Identifier);
@@ -1392,7 +1392,7 @@ FunctionDecl *Sema::tryFunctionLookUp(NestedNameSpecifier *NestedName,
   return nullptr;
 }
 
-NamedDecl *Sema::trySymbolLookUp(NestedNameSpecifier *NestedName,
+NamedDecl *Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
                                  const clang::Sema::SymbolLabel &Label) {
 
   assert(!NestedName->getPrefix() ||
