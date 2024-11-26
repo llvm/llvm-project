@@ -226,5 +226,3 @@ BarVar:
 _ZZ4mainE16funcGlobalBarAdd:
 	.quad	_Z6barAddii
 	.size	_ZZ4mainE16funcGlobalBarAdd, 8
-
-	.ident	"clang version 20.0.0git"

@@ -226,5 +226,3 @@ funcGlobalBarMul:
 _ZL16funcGlobalBarAdd:
 	.quad	_Z6barAddii
 	.size	_ZL16funcGlobalBarAdd, 8
-
-	.ident	"clang version 20.0.0git"

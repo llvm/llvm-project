@@ -261,5 +261,3 @@ BarVar:
 .L.str:
 	.asciz	"val: %d\n"
 	.size	.L.str, 9
-
-	.ident	"clang version 20.0.0git"

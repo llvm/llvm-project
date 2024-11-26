@@ -220,5 +220,3 @@ FooVar:
 BarVar:
 	.long	2                               # 0x2
 	.size	BarVar, 4
-
-	.ident	"clang version 20.0.0git"

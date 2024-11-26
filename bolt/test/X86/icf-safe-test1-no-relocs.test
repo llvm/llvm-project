@@ -181,5 +181,3 @@ main:                                   # @main
 .Lfunc_end8:
 	.size	main, .Lfunc_end8-main
 	.cfi_endproc
-                                        # -- End function
-	.ident	"clang version 20.0.0git"

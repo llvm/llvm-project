@@ -226,5 +226,3 @@ BarVar:
 funcGlobalBarMul:
 	.quad	_Z6barMulii
 	.size	funcGlobalBarMul, 8
-
-	.ident	"clang version 20.0.0git"
