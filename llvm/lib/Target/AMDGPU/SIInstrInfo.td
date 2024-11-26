@@ -1697,6 +1697,7 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
+                              !eq(VT.Size, 512) : VOPDstOperand<VReg_512>,
                               !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
                               !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
