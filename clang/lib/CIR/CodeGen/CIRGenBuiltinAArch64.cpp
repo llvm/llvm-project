@@ -2562,9 +2562,11 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
                                                     : "aarch64.neon.srhadd";
     break;
   }
+  case NEON::BI__builtin_neon_vshl_v:
   case NEON::BI__builtin_neon_vshlq_v: {
-    intrincsName = (intrinicId != altLLVMIntrinsic) ? "aarch64.neon.ushl"
-                                                    : "aarch64.neon.sshl";
+    return builder.create<cir::ShiftOp>(
+        getLoc(e->getExprLoc()), vTy, builder.createBitcast(ops[0], vTy),
+        builder.createBitcast(ops[1], vTy), true /* left */);
     break;
   }
   case NEON::BI__builtin_neon_vhadd_v:
