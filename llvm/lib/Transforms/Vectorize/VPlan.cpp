@@ -19,6 +19,7 @@
 #include "VPlan.h"
 #include "LoopVectorizationPlanner.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
@@ -264,7 +265,12 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     return Data.VPV2Vector[Def];
 
   auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist = !Def->hasDefiningRecipe();
+    VPDominatorTree VPDT(*Plan);
+    bool SafeToHoist =
+        !Def->hasDefiningRecipe() ||
+        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
+                               Plan->getVectorPreheader());
+
     if (VF.isScalar())
       return V;
     // Place the code for broadcasting invariant variables in the new preheader.
