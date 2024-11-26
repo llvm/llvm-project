@@ -250,6 +250,7 @@ protected:
   bool HasAshrPkInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+  bool HasMinimum3Maximum3PKF16 = false;
 
   bool RequiresCOV6 = false;
 
@@ -1346,6 +1347,10 @@ public:
 
   bool hasMinimum3Maximum3F16() const {
     return HasMinimum3Maximum3F16;
+  }
+
+  bool hasMinimum3Maximum3PKF16() const {
+    return HasMinimum3Maximum3PKF16;
   }
 
   /// \returns The maximum number of instructions that can be enclosed in an
