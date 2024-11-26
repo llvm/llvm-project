@@ -245,8 +245,10 @@ protected:
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
+  bool HasAshrPkInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+
   bool RequiresCOV6 = false;
 
   // Dummy feature to use for assembler in tablegen.
@@ -1326,6 +1328,7 @@ public:
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
   bool hasMinimum3Maximum3F32() const {
     return HasMinimum3Maximum3F32;
