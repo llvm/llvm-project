@@ -1444,6 +1444,37 @@ static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
   }
 }
 
+static bool canInsertPadding(OutputSection *sec) {
+    StringRef s = sec->name;
+    return s == ".bss" || s == ".data" || s == ".data.rel.ro" ||
+           s == ".rodata" || s.starts_with(".text");
+}
+
+static void shufflePadding(Ctx &ctx) {
+  std::mt19937 g(*ctx.arg.shufflePadding);
+  PhdrEntry *curPtLoad = nullptr;
+  for (OutputSection *os : ctx.outputSections) {
+    if (!canInsertPadding(os))
+      continue;
+    for (SectionCommand *bc : os->commands) {
+      if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
+        SmallVector<InputSection *, 0> tmp;
+        if (os->ptLoad != curPtLoad) {
+          tmp.push_back(
+              make<ShufflePaddingSection>(ctx, g() % ctx.arg.maxPageSize, os));
+          curPtLoad = os->ptLoad;
+        }
+        for (InputSection *isec : isd->sections) {
+          if (g() < (1<<28))
+            tmp.push_back(make<ShufflePaddingSection>(ctx, isec->addralign, os));
+          tmp.push_back(isec);
+        }
+        isd->sections = std::move(tmp);
+      }
+    }
+  }
+}
+
 // We need to generate and finalize the content that depends on the address of
 // InputSections. As the generation of the content may also alter InputSection
 // addresses we must converge to a fixed point. We do that here. See the comment
@@ -1469,6 +1500,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   // Converts call x@GDPLT to call __tls_get_addr
   if (ctx.arg.emachine == EM_HEXAGON)
     hexagonTLSSymbolUpdate(ctx);
+
+  if (ctx.arg.shufflePadding)
+    shufflePadding(ctx);
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
