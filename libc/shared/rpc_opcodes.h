@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_RPC_OPCODES_T_H
-#define LLVM_LIBC_TYPES_RPC_OPCODES_T_H
+#ifndef LLVM_LIBC_SHARED_RPC_OPCODES_H
+#define LLVM_LIBC_SHARED_RPC_OPCODES_H
 
 #define LLVM_LIBC_RPC_BASE 'c'
 #define LLVM_LIBC_OPCODE(n) (LLVM_LIBC_RPC_BASE << 24 | n)
@@ -46,4 +46,4 @@ typedef enum {
   RPC_LAST = 0xFFFFFFFF,
 } rpc_opcode_t;
 
-#endif // LLVM_LIBC_TYPES_RPC_OPCODES_T_H
+#endif // LLVM_LIBC_SHARED_RPC_OPCODES_H

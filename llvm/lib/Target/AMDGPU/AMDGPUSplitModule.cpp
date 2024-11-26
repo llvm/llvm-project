@@ -149,7 +149,8 @@ static constexpr unsigned InvalidPID = -1;
 /// \param Dem denominator
 /// \returns a printable object to print (Num/Dem) using "%0.2f".
 static auto formatRatioOf(CostType Num, CostType Dem) {
-  return format("%0.2f", (static_cast<double>(Num) / Dem) * 100);
+  CostType DemOr1 = Dem ? Dem : 1;
+  return format("%0.2f", (static_cast<double>(Num) / DemOr1) * 100);
 }
 
 /// Checks whether a given function is non-copyable.
