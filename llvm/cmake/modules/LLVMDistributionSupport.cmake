@@ -276,6 +276,11 @@ function(llvm_distribution_add_targets)
       # This happens for example if a target is an INTERFACE target.
       if(TARGET ${target})
         add_dependencies(${distribution_target} ${target})
+	# Add a special case for bolt-optimized clang.  This will ensure that the
+	# bolt optimized clang is built with the rest of the distribution.
+	if (target STREQUAL "clang" AND TARGET clang-bolt)
+	  add_dependencies(${distribution_target} clang-bolt)
+	endif()
       endif()
 
       if(TARGET install-${target})
