@@ -2030,7 +2030,9 @@ bool llvm::promoteLoopAccessesToScalars(
 
   bool DereferenceableInPH = false;
   bool StoreIsGuanteedToExecute = false;
+  bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
+
   // Goes from Unknown to either Safe or Unsafe, but can't switch between them.
   enum {
     StoreSafe,
@@ -2088,6 +2090,10 @@ bool llvm::promoteLoopAccessesToScalars(
         FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
+
+        if (!LoadIsGuaranteedToExecute)
+          LoadIsGuaranteedToExecute =
+              SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
@@ -2233,8 +2239,9 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
-                        SawUnorderedAtomic, AATags, *SafetyInfo,
-                        StoreSafety == StoreSafe);
+                        SawUnorderedAtomic,
+                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
@@ -2247,7 +2254,7 @@ bool llvm::promoteLoopAccessesToScalars(
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
     PreheaderLoad->setDebugLoc(DebugLoc());
-    if (AATags)
+    if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
     MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
