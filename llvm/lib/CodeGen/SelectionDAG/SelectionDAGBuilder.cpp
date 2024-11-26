@@ -1902,8 +1902,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                  ISD::BITCAST, getCurSDLoc(), VT,
                  DAG.getNode(
                      ISD::SPLAT_VECTOR, getCurSDLoc(),
-                     MVT::getScalableVectorVT(
-                         MVT::i8, VT.getSizeInBits().getKnownMinValue() / 8),
+                     EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                                      VT.getSizeInBits().getKnownMinValue() / 8,
+                                      true),
                      DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 

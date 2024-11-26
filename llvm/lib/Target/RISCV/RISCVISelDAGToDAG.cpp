@@ -57,28 +57,6 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
 
     SDValue Result;
     switch (N->getOpcode()) {
-    case ISD::BITCAST: {
-      MVT VT = N->getSimpleValueType(0);
-      SDLoc DL(N);
-      SDValue VL = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
-      if (VT.isRISCVVectorTuple() &&
-          N->getOperand(0)->getOpcode() == ISD::SPLAT_VECTOR) {
-        unsigned NF = VT.getRISCVVectorTupleNumFields();
-        unsigned NumScalElts = VT.getSizeInBits().getKnownMinValue() / (NF * 8);
-        SDValue EltVal = CurDAG->getConstant(0, DL, Subtarget->getXLenVT());
-        MVT ScalTy =
-            MVT::getScalableVectorVT(MVT::getIntegerVT(8), NumScalElts);
-
-        SDValue Splat = CurDAG->getNode(RISCVISD::VMV_V_X_VL, DL, ScalTy,
-                                        CurDAG->getUNDEF(ScalTy), EltVal, VL);
-
-        Result = CurDAG->getUNDEF(VT);
-        for (unsigned i = 0; i < NF; ++i)
-          Result = CurDAG->getNode(RISCVISD::TUPLE_INSERT, DL, VT, Result,
-                                   Splat, CurDAG->getVectorIdxConstant(i, DL));
-      }
-      break;
-    }
     case ISD::SPLAT_VECTOR: {
       // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
       // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
