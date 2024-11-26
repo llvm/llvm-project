@@ -372,10 +372,41 @@ def FeatureGFX940Insts : SubtargetFeature<"gfx940-insts",
   "Additional instructions for GFX940+"
 >;
 
+def FeaturePermlane16Swap : SubtargetFeature<"permlane16-swap",
+  "HasPermlane16Swap",
+  "true",
+  "Has v_permlane16_swap_b32 instructions"
+>;
+
+def FeaturePermlane32Swap : SubtargetFeature<"permlane32-swap",
+  "HasPermlane32Swap",
+  "true",
+  "Has v_permlane32_swap_b32 instructions"
+>;
+
+def FeatureFP8ConversionScaleInsts : SubtargetFeature<"fp8-cvt-scale-insts",
+  "HasFP8ConversionScaleInsts",
+  "true",
+  "Has fp8 conversion scale instructions"
+>;
+
+def FeatureBF8ConversionScaleInsts : SubtargetFeature<"bf8-cvt-scale-insts",
+  "HasBF8ConversionScaleInsts",
+  "true",
+  "Has bf8 conversion scale instructions"
+>;
+
+def FeatureFP4ConversionScaleInsts : SubtargetFeature<"fp4-cvt-scale-insts",
+  "HasFP4ConversionScaleInsts",
+  "true",
+  "Has fp4 conversion scale instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
-  "Additional instructions for GFX950+"
+  "Additional instructions for GFX950+",
+  [FeaturePermlane16Swap, FeaturePermlane32Swap, FeatureFP8ConversionScaleInsts, FeatureBF8ConversionScaleInsts, FeatureFP4ConversionScaleInsts]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -984,6 +1015,12 @@ def FeatureVmemWriteVgprInOrder : SubtargetFeature<"vmem-write-vgpr-in-order",
   "VMEM instructions of the same type write VGPR results in order"
 >;
 
+def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
+  "HasBitOp3Insts",
+  "true",
+  "Has v_bitop3_b32/v_bitop3_b16 instructions"
+>;
+
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
   "true",
@@ -1511,7 +1548,11 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureCvtFP8VOP1Bug,
    FeatureGFX950Insts,
    FeaturePrngInst,
-   FeatureBF16ConversionInsts
+   FeatureBF16ConversionInsts,
+   FeatureBitOp3Insts,
+   FeatureFP8ConversionScaleInsts,
+   FeatureBF8ConversionScaleInsts,
+   FeatureFP4ConversionScaleInsts
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -1986,6 +2027,14 @@ def HasGFX950Insts :
   Predicate<"Subtarget->hasGFX950Insts()">,
   AssemblerPredicate<(all_of FeatureGFX950Insts)>;
 
+def HasPermlane16Swap :
+  Predicate<"Subtarget->hasPermlane16Swap()">,
+  AssemblerPredicate<(all_of FeaturePermlane16Swap)>;
+
+def HasPermlane32Swap :
+  Predicate<"Subtarget->hasPermlane32Swap()">,
+  AssemblerPredicate<(all_of FeaturePermlane32Swap)>;
+
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
@@ -2370,8 +2419,20 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
 
+def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
+  AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
+
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
+
+def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
+
+def HasBF8ConversionScaleInsts : Predicate<"Subtarget->hasBF8ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureBF8ConversionScaleInsts)>;
+
+def HasFP4ConversionScaleInsts : Predicate<"Subtarget->hasFP4ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureFP4ConversionScaleInsts)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
