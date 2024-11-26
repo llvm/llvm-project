@@ -455,7 +455,7 @@ struct TemplateParameterListBuilder {
 //
 //   BuiltinTypeMethodBuilder(Sema, RecordBuilder, "MethodName", ReturnType)
 //       .addParam("param_name", Type, InOutModifier)
-//       .callBuiltin("buildin_name", { BuiltinParams })
+//       .callBuiltin("builtin_name", BuiltinParams...)
 //       .finalizeMethod();
 //
 // The builder needs to have all of the method parameters before it can create
@@ -465,9 +465,9 @@ struct TemplateParameterListBuilder {
 // referenced from the body building methods. Destructor or an explicit call to
 // finalizeMethod() will complete the method definition.
 //
-// The callBuiltin helper method passes in the resource handle as the first
-// argument of the builtin call. If this is not desired it takes a bool flag to
-// disable this.
+// The callBuiltin helper method accepts constants via `Expr *` or placeholder
+// value arguments to indicate which function arguments to forward to the
+// builtin.
 //
 // If the method that is being built has a non-void return type the
 // finalizeMethod will create a return statent with the value of the last
@@ -489,6 +489,24 @@ struct BuiltinTypeMethodBuilder {
   llvm::SmallVector<MethodParam> Params;
   llvm::SmallVector<Stmt *> StmtsList;
 
+  // Argument placeholders, inspired by std::placeholder. These are the indices
+  // of arguments to forward to `callBuiltin`, and additionally `Handle` which
+  // refers to the resource handle.
+  enum class PlaceHolder { _0, _1, _2, _3, Handle = 127 };
+
+  Expr *convertPlaceholder(PlaceHolder PH) {
+    if (PH == PlaceHolder::Handle)
+      return getResourceHandleExpr();
+
+    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+    ParmVarDecl *ParamDecl = Method->getParamDecl(static_cast<unsigned>(PH));
+    return DeclRefExpr::Create(
+        AST, NestedNameSpecifierLoc(), SourceLocation(), ParamDecl, false,
+        DeclarationNameInfo(ParamDecl->getDeclName(), SourceLocation()),
+        ParamDecl->getType(), VK_PRValue);
+  }
+  Expr *convertPlaceholder(Expr *E) { return E; }
+
 public:
   BuiltinTypeMethodBuilder(Sema &S, BuiltinTypeDeclBuilder &DB, StringRef Name,
                            QualType ReturnTy)
@@ -502,7 +520,10 @@ public:
                                      HLSLParamModifierAttr::Spelling Modifier =
                                          HLSLParamModifierAttr::Keyword_in) {
     assert(Method == nullptr && "Cannot add param, method already created");
-    llvm_unreachable("not yet implemented");
+    const IdentifierInfo &II = DeclBuilder.SemaRef.getASTContext().Idents.get(
+        Name, tok::TokenKind::identifier);
+    Params.emplace_back(II, Ty, Modifier);
+    return *this;
   }
 
 private:
@@ -564,9 +585,10 @@ public:
                                       OK_Ordinary);
   }
 
-  BuiltinTypeMethodBuilder &
-  callBuiltin(StringRef BuiltinName, ArrayRef<Expr *> CallParms,
-              bool AddResourceHandleAsFirstArg = true) {
+  template <typename... Ts>
+  BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName, Ts... ArgSpecs) {
+    std::array<Expr *, sizeof...(ArgSpecs)> Args{
+        convertPlaceholder(std::forward<Ts>(ArgSpecs))...};
 
     // The first statement added to a method or access to 'this` creates the
     // declaration.
@@ -579,16 +601,9 @@ public:
         AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
         FD->getNameInfo(), FD->getType(), VK_PRValue);
 
-    SmallVector<Expr *> NewCallParms;
-    if (AddResourceHandleAsFirstArg) {
-      NewCallParms.push_back(getResourceHandleExpr());
-      for (auto *P : CallParms)
-        NewCallParms.push_back(P);
-    }
-
-    Expr *Call = CallExpr::Create(
-        AST, DRE, AddResourceHandleAsFirstArg ? NewCallParms : CallParms,
-        FD->getReturnType(), VK_PRValue, SourceLocation(), FPOptionsOverride());
+    Expr *Call =
+        CallExpr::Create(AST, DRE, Args, FD->getReturnType(), VK_PRValue,
+                         SourceLocation(), FPOptionsOverride());
     StmtsList.push_back(Call);
     return *this;
   }
@@ -656,18 +671,20 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   return BuiltinTypeMethodBuilder(SemaRef, *this, "IncrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter",
-                   {getConstantIntExpr(1)})
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", PH::Handle,
+                   getConstantIntExpr(1))
       .finalizeMethod();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   return BuiltinTypeMethodBuilder(SemaRef, *this, "DecrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter",
-                   {getConstantIntExpr(-1)})
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", PH::Handle,
+                   getConstantIntExpr(-1))
       .finalizeMethod();
 }
 
