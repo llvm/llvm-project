@@ -1029,8 +1029,7 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
     return false;
 
   if (any_of(BBPreds, [](const BasicBlock *Pred) {
-        return isa<PHINode>(Pred->begin()) &&
-               isa<IndirectBrInst>(Pred->getTerminator());
+        return isa<IndirectBrInst>(Pred->getTerminator());
       }))
     return false;
 
