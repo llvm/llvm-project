@@ -55,7 +55,7 @@ cl::opt<ActionType> Action(
                    "Generate export file for the Offload library")));
 }
 
-static bool OffloadTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
+static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   switch (Action) {
   case PrintRecords:
     OS << Records;
