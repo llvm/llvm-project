@@ -591,6 +591,8 @@ Improvements to Clang's diagnostics
 - For an rvalue reference bound to a temporary struct with an integer member, Clang will detect constant integer overflow
   in the initializer for the integer member (#GH46755).
 
+- Fixed a false negative ``-Wunused-private-field`` diagnostic when a defaulted comparison operator is defined out of class (#GH116961).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -732,6 +734,8 @@ Bug Fixes to AST Handling
   sometimes incorrectly return null even if a comment was present. (#GH108145)
 - Clang now correctly parses the argument of the ``relates``, ``related``, ``relatesalso``,
   and ``relatedalso`` comment commands.
+- Clang now uses the location of the begin of the member expression for ``CallExpr``
+  involving deduced ``this``. (#GH116928)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
