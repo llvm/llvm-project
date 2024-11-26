@@ -616,6 +616,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical},
     {"llt", {{"string_a", SameCharNoLen}, {"string_b", SameCharNoLen}},
         DefaultLogical},
+    {"lnblnk", {{"string", AnyChar}}, DefaultInt},
     {"loc", {{"x", Addressable, Rank::anyOrAssumedRank}}, SubscriptInt,
         Rank::scalar},
     {"log", {{"x", SameFloating}}, SameFloating},
