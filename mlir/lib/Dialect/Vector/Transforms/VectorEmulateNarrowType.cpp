@@ -130,6 +130,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
               })
           .Case<vector::ConstantMaskOp>(
               [&](auto constantMaskOp) -> std::optional<Operation *> {
+                // Take the shape of mask, compress its trailing dimension:
                 SmallVector<int64_t> maskDimSizes(
                     constantMaskOp.getMaskDimSizes());
                 int64_t &maskIndex = maskDimSizes.back();
@@ -586,6 +587,10 @@ struct ConvertVectorMaskedLoad final
   LogicalResult
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // See #115653
+    if (op.getVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());

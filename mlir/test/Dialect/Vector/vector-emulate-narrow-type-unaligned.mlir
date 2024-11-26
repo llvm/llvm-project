@@ -134,15 +134,13 @@ func.func @vector_constant_mask_maskedload_i2_multidim(%passthru: vector<5xi2>) 
 }
 
 // CHECK-LABEL: func @vector_constant_mask_maskedload_i2_multidim(
-// CHECK-SAME:   %[[PASSTHRU:[a-zA-Z0-9]+]]
-// CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<15xi8>
 // CHECK: %[[ORIG_MASK:.+]] = vector.constant_mask [2, 2] : vector<3x5xi1>
-// CHECK: %[[EXT_ORIG_MASK:.+]] = vector.extract %[[ORIG_MASK]][1]
+// CHECK: vector.extract %[[ORIG_MASK]][1]
 
 // Compressing the mask used for emulated masked load.
 // The innermost dimension is compressed to 2 elements from 5.
-// CHECK: %[[NEW_MASK:.+]] = vector.constant_mask [2, 1] : vector<3x2xi1>
-// CHECK: %[[EXT_NEW_MASK:.+]] = vector.extract %[[NEW_MASK]][1]
+// CHECK: %[[NEW_COMPRESSED_MASK:.+]] = vector.constant_mask [2, 1] : vector<3x2xi1>
+// CHECK: vector.extract %[[NEW_COMPRESSED_MASK]][1]
 
 // -----
 
