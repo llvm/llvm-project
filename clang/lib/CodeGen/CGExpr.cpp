@@ -3905,9 +3905,11 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  if (!ClSanitizeDebugDeoptimization &&
-      CGM.getCodeGenOpts().OptimizationLevel && TrapBB &&
-      (!CurCodeDecl || !CurCodeDecl->hasAttr<OptimizeNoneAttr>())) {
+  bool NoMerge = ClSanitizeDebugDeoptimization ||
+                 !CGM.getCodeGenOpts().OptimizationLevel ||
+                 (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+
+  if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
@@ -3928,10 +3930,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     CGM.getCodeGenOpts().TrapFuncName);
       TrapCall->addFnAttr(A);
     }
-    // We unconditionally add NoMerge, even if this is the first time we've
-    // seen this type of trap in this function. This is necessary because
-    // inlining may occur in later stages.
-    TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+    if (NoMerge)
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
