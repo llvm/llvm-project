@@ -1000,7 +1000,7 @@ bool ClauseProcessor::processMap(
                      const parser::CharBlock &source) {
     using Map = omp::clause::Map;
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
+    const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     // If the map type is specified, then process it else Tofrom is the
@@ -1029,13 +1029,11 @@ bool ClauseProcessor::processMap(
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
     }
 
-    auto &modTypeMods =
-        std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
-    if (modTypeMods) {
-      if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+    if (typeMods) {
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Always))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
       // Diagnose unimplemented map-type-modifiers.
-      if (llvm::any_of(*modTypeMods, [](Map::MapTypeModifier m) {
+      if (llvm::any_of(*typeMods, [](Map::MapTypeModifier m) {
             return m != Map::MapTypeModifier::Always;
           })) {
         TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
@@ -1043,9 +1041,13 @@ bool ClauseProcessor::processMap(
       }
     }
 
-    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+    if (iterator) {
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
+    }
+    if (mappers) {
+      TODO(currentLocation,
+           "Support for mapper modifiers is not implemented yet");
     }
 
     processMapObjects(stmtCtx, clauseLocation,

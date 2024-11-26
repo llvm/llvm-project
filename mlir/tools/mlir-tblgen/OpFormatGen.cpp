@@ -2033,8 +2033,9 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
     body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
 
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
@@ -2080,8 +2081,10 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
     body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
