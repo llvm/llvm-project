@@ -10846,7 +10846,7 @@ multiclass sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOp
 // FP8 Widening Multiply-Add Long - Indexed Group
 class sve2_fp8_mla_long_by_indexed_elem<bit T, string mnemonic>
     : I<(outs ZPR16:$Zda),
-      (ins ZPR16:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB:$imm4),
+      (ins ZPR16:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB32b:$imm4),
       mnemonic, "\t$Zda, $Zn, $Zm$imm4",
       "", []>, Sched<[]>{
   bits<5> Zda;
@@ -10866,6 +10866,12 @@ class sve2_fp8_mla_long_by_indexed_elem<bit T, string mnemonic>
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR16.ElementSize;
   let Uses = [FPMR, FPCR];
+}
+
+multiclass sve2_fp8_mla_long_by_indexed_elem<bit T, string mnemonic, SDPatternOperator op> {
+  def NAME : sve2_fp8_mla_long_by_indexed_elem<T, mnemonic>;
+
+  def : SVE_4_Op_Pat<nxv8f16, op, nxv8f16, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
 }
 
 // FP8 Widening Multiply-Add (Long)/(Long Long) Group
@@ -10892,10 +10898,16 @@ class sve2_fp8_mla<bits<3>opc, ZPRRegOp dst_ty, string mnemonic>
   let Uses = [FPMR, FPCR];
 }
 
+multiclass sve2_fp8_mla<bits<3> opc,  ZPRRegOp dst_ty, string mnemonic, ValueType vta, SDPatternOperator op> {
+  def NAME : sve2_fp8_mla<opc, dst_ty, mnemonic>;
+
+  def : SVE_3_Op_Pat<vta, op, vta, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
+}
+
 // FP8 Widening Multiply-Add Long Long - Indexed Group
 class sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic>
     : I<(outs ZPR32:$Zda),
-      (ins ZPR32:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB:$imm4),
+      (ins ZPR32:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB32b:$imm4),
       mnemonic, "\t$Zda, $Zn, $Zm$imm4",
       "", []>, Sched<[]>{
   bits<5> Zda;
@@ -10915,6 +10927,12 @@ class sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic>
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR32.ElementSize;
   let Uses = [FPMR, FPCR];
+}
+
+multiclass sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic, SDPatternOperator op> {
+  def NAME : sve2_fp8_mla_long_long_by_indexed_elem<TT, mnemonic>;
+
+  def : SVE_4_Op_Pat<nxv4f32, op, nxv4f32, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
 }
 
 // FP8 Matrix Multiply-accumulate Group
