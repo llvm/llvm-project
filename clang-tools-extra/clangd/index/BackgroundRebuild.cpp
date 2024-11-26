@@ -34,6 +34,8 @@ bool BackgroundIndexRebuilder::enoughTUsToRebuild() const {
 
 void BackgroundIndexRebuilder::indexedTU() {
   maybeRebuild("after indexing enough files", [this] {
+    // Add a lock guard to protect the critical section
+    std::lock_guard<std::mutex> Lock(Mu);
     ++IndexedTUs;
     if (Loading)
       return false;                      // rebuild once loading finishes
@@ -64,6 +66,8 @@ void BackgroundIndexRebuilder::loadedShard(size_t ShardCount) {
 }
 void BackgroundIndexRebuilder::doneLoading() {
   maybeRebuild("after loading index from disk", [this] {
+    // Add a lock guard to protect the critical section.
+    std::lock_guard<std::mutex> Lock(Mu);
     assert(Loading);
     --Loading;
     if (Loading)    // was loading multiple batches concurrently

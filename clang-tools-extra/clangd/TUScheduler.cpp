@@ -501,6 +501,8 @@ public:
       }
 
       {
+        // Add a lock guard to protect the critical section.
+        std::lock_guard<std::mutex> Lock(Mutex);
         WithContext Guard(std::move(CurrentReq->Ctx));
         // Note that we don't make use of the ContextProvider here.
         // Preamble tasks are always scheduled by ASTWorker tasks, and we
@@ -1329,6 +1331,8 @@ void ASTWorker::startTask(llvm::StringRef Name,
                           std::optional<UpdateType> Update,
                           TUScheduler::ASTActionInvalidation Invalidation) {
   if (RunSync) {
+    // Add a lock guard to protect the critical section.
+    std::lock_guard<std::mutex> Lock(Mutex);
     assert(!Done && "running a task after stop()");
     runTask(Name, Task);
     return;
