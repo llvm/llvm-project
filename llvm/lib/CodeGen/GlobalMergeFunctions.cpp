@@ -405,12 +405,13 @@ static ParamLocsVecTy computeParamInfo(
   }
 
   ParamLocsVecTy ParamLocsVec;
-  for (auto &[HashSeq, Locs] : HashSeqToLocs) {
+  for (auto &[HashSeq, Locs] : HashSeqToLocs)
     ParamLocsVec.push_back(std::move(Locs));
-    llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
-      return L[0] < R[0];
-    });
-  }
+
+  llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
+    return L[0] < R[0];
+  });
+
   return ParamLocsVec;
 }
 
