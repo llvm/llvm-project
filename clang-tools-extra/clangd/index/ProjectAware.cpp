@@ -35,10 +35,6 @@ public:
   /// Query all indexes while prioritizing the associated one (if any).
   bool refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override;
-  /// Query all indexes while prioritizing the associated one (if any).
-  bool containedRefs(const ContainedRefsRequest &Req,
-                     llvm::function_ref<void(const ContainedRefsResult &)>
-                         Callback) const override;
 
   /// Queries only the associates index when Req.RestrictForCodeCompletion is
   /// set, otherwise queries all.
@@ -95,15 +91,6 @@ bool ProjectAwareIndex::refs(
   trace::Span Tracer("ProjectAwareIndex::refs");
   if (auto *Idx = getIndex())
     return Idx->refs(Req, Callback);
-  return false;
-}
-
-bool ProjectAwareIndex::containedRefs(
-    const ContainedRefsRequest &Req,
-    llvm::function_ref<void(const ContainedRefsResult &)> Callback) const {
-  trace::Span Tracer("ProjectAwareIndex::refersTo");
-  if (auto *Idx = getIndex())
-    return Idx->containedRefs(Req, Callback);
   return false;
 }
 
