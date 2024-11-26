@@ -3915,7 +3915,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                               Builder.getCurrentDebugLocation());
     Builder.CreateCondBr(Checked, Cont, TrapBB);
   } else {
-    bool NewTrapBB = (TrapBB == nullptr);
     TrapBB = createBasicBlock("trap");
     Builder.CreateCondBr(Checked, Cont, TrapBB);
     EmitBlock(TrapBB);
@@ -3929,8 +3928,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     CGM.getCodeGenOpts().TrapFuncName);
       TrapCall->addFnAttr(A);
     }
-    if (!NewTrapBB)
-        TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+    TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();

@@ -55,7 +55,7 @@ int g(int x) {
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP1:.*]], label %[[CONT2:.*]], !nosanitize [[META2]]
 // CHECK:       [[TRAP1]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR5:[0-9]+]], !nosanitize [[META2]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT2]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META2]]
@@ -102,5 +102,4 @@ int m(int x, int y) {
   return f(x) + g(y);
 }
 //.
-// CHECK: attributes #[[ATTR4]] = { noreturn nounwind }
-// CHECK: attributes #[[ATTR5]] = { nomerge noreturn nounwind }
+// CHECK: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
