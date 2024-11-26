@@ -8,9 +8,11 @@
 // They cannot physically alias
 // CHECK-DAG: p1.addr#0 <-> p2.addr#0: NoAlias
 
-// p1.addr and p2.addr could both be wrapped inside boxes
-// CHECK-DAG: p1.addr#0 <-> boxp1.addr#0: MayAlias
-// CHECK-DAG: p2.addr#0 <-> boxp1.addr#0: MayAlias
+// p1.addr is the address returned by an alloca.  It does not have a target
+// attribute, and it is not the address retrieved from a pointer.  It cannot
+// alias anything.  Likewise for p2.addr.
+// CHECK-DAG: p1.addr#0 <-> boxp1.addr#0: NoAlias
+// CHECK-DAG: p2.addr#0 <-> boxp1.addr#0: NoAlias
 
 // TODO: To really see aliasing, we should be looking at a load of p1.addr
 // p1.addr is just a local address holding the address to the data 
@@ -27,10 +29,11 @@
 // CHECK-DAG: p2.addr#0 <-> func.region0#2: NoAlias
 
 // All arguments are either pointers or targets
-// A pointer in a box may alias with both
+// The address *in* a local pointer may alias the address of a target
+// argument, but it does not alias the address *of* a pointer argument.
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#1: MayAlias
-// CHECK-DAG: boxp1.addr#0 <-> func.region0#2: MayAlias
+// CHECK-DAG: boxp1.addr#0 <-> func.region0#2: NoAlias
 
 // A target dummy may alias with another target
 // CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
