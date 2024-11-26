@@ -455,7 +455,7 @@ struct TemplateParameterListBuilder {
 //
 //   BuiltinTypeMethodBuilder(Sema, RecordBuilder, "MethodName", ReturnType)
 //       .addParam("param_name", Type, InOutModifier)
-//       .callBuiltin("buildin_name", BuiltinParams... )
+//       .callBuiltin("builtin_name", BuiltinParams...)
 //       .finalizeMethod();
 //
 // The builder needs to have all of the method parameters before it can create
@@ -587,7 +587,8 @@ public:
 
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName, Ts... ArgSpecs) {
-    SmallVector<Expr *> Args{convertPlaceholder(std::forward<Ts>(ArgSpecs))...};
+    std::array<Expr *, sizeof...(ArgSpecs)> Args{
+        convertPlaceholder(std::forward<Ts>(ArgSpecs))...};
 
     // The first statement added to a method or access to 'this` creates the
     // declaration.
