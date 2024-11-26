@@ -194,6 +194,10 @@ static cl::opt<bool>
     MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
                cl::desc("Use the MVE code generator for software pipelining"));
 
+static cl::opt<unsigned> MaxCircuitPaths(
+    "pipeliner-max-circuit-paths", cl::Hidden, cl::init(5),
+    cl::desc("Maximum number of circles to be detected for each vertex"));
+
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
@@ -221,7 +225,6 @@ cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
 
 } // end namespace llvm
 
-unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
 char MachinePipeliner::ID = 0;
 #ifndef NDEBUG
 int MachinePipeliner::NumTries = 0;
@@ -562,13 +565,19 @@ void SwingSchedulerDAG::setMAX_II() {
 void SwingSchedulerDAG::schedule() {
   AliasAnalysis *AA = &Pass.getAnalysis<AAResultsWrapperPass>().getAAResults();
   buildSchedGraph(AA);
-  addLoopCarriedDependences(AA);
   updatePhiDependences();
   Topo.InitDAGTopologicalSorting();
   changeDependences();
   postProcessDAG();
-  DDG = std::make_unique<SwingSchedulerDDG>(SUnits, &EntrySU, &ExitSU);
   LLVM_DEBUG(dump());
+
+  auto LCE = addLoopCarriedDependences(AA);
+  LLVM_DEBUG({
+    dbgs() << "Loop Carried Edges:\n";
+    for (SUnit &SU : SUnits)
+      LCE.dump(&SU, TRI, &MRI);
+  });
+  DDG = std::make_unique<SwingSchedulerDDG>(SUnits, &EntrySU, &ExitSU, LCE);
 
   NodeSetType NodeSets;
   findCircuits(NodeSets);
@@ -779,42 +788,18 @@ static unsigned getLoopPhiReg(const MachineInstr &Phi,
   return 0;
 }
 
-/// Return true if SUb can be reached from SUa following the chain edges.
-static bool isSuccOrder(SUnit *SUa, SUnit *SUb) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SUnit *, 8> Worklist;
-  Worklist.push_back(SUa);
-  while (!Worklist.empty()) {
-    const SUnit *SU = Worklist.pop_back_val();
-    for (const auto &SI : SU->Succs) {
-      SUnit *SuccSU = SI.getSUnit();
-      if (SI.getKind() == SDep::Order) {
-        if (Visited.count(SuccSU))
-          continue;
-        if (SuccSU == SUb)
-          return true;
-        Worklist.push_back(SuccSU);
-        Visited.insert(SuccSU);
-      }
-    }
-  }
-  return false;
-}
-
 /// Return true if the instruction causes a chain between memory
 /// references before and after it.
-static bool isDependenceBarrier(MachineInstr &MI) {
-  return MI.isCall() || MI.mayRaiseFPException() ||
-         MI.hasUnmodeledSideEffects() ||
-         (MI.hasOrderedMemoryRef() &&
-          (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad()));
+static bool isGlobalMemoryObject(MachineInstr &MI) {
+  return MI.isCall() || MI.hasUnmodeledSideEffects() ||
+         (MI.hasOrderedMemoryRef() && !MI.isDereferenceableInvariantLoad());
 }
 
 /// Return the underlying objects for the memory references of an instruction.
 /// This function calls the code in ValueTracking, but first checks that the
 /// instruction has a memory operand.
-static void getUnderlyingObjects(const MachineInstr *MI,
-                                 SmallVectorImpl<const Value *> &Objs) {
+static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
+                                         SmallVectorImpl<const Value *> &Objs) {
   if (!MI->hasOneMemOperand())
     return;
   MachineMemOperand *MM = *MI->memoperands_begin();
@@ -829,97 +814,63 @@ static void getUnderlyingObjects(const MachineInstr *MI,
   }
 }
 
-/// Add a chain edge between a load and store if the store can be an
-/// alias of the load on a subsequent iteration, i.e., a loop carried
-/// dependence. This code is very similar to the code in ScheduleDAGInstrs
-/// but that code doesn't create loop carried dependences.
-void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
-  MapVector<const Value *, SmallVector<SUnit *, 4>> PendingLoads;
-  Value *UnknownValue =
-    UndefValue::get(Type::getVoidTy(MF.getFunction().getContext()));
-  for (auto &SU : SUnits) {
-    MachineInstr &MI = *SU.getInstr();
-    if (isDependenceBarrier(MI))
-      PendingLoads.clear();
-    else if (MI.mayLoad()) {
-      SmallVector<const Value *, 4> Objs;
-      ::getUnderlyingObjects(&MI, Objs);
-      if (Objs.empty())
-        Objs.push_back(UnknownValue);
-      for (const auto *V : Objs) {
-        SmallVector<SUnit *, 4> &SUs = PendingLoads[V];
-        SUs.push_back(&SU);
-      }
-    } else if (MI.mayStore()) {
-      SmallVector<const Value *, 4> Objs;
-      ::getUnderlyingObjects(&MI, Objs);
-      if (Objs.empty())
-        Objs.push_back(UnknownValue);
-      for (const auto *V : Objs) {
-        MapVector<const Value *, SmallVector<SUnit *, 4>>::iterator I =
-            PendingLoads.find(V);
-        if (I == PendingLoads.end())
-          continue;
-        for (auto *Load : I->second) {
-          if (isSuccOrder(Load, &SU))
-            continue;
-          MachineInstr &LdMI = *Load->getInstr();
-          // First, perform the cheaper check that compares the base register.
-          // If they are the same and the load offset is less than the store
-          // offset, then mark the dependence as loop carried potentially.
-          const MachineOperand *BaseOp1, *BaseOp2;
-          int64_t Offset1, Offset2;
-          bool Offset1IsScalable, Offset2IsScalable;
-          if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1,
-                                           Offset1IsScalable, TRI) &&
-              TII->getMemOperandWithOffset(MI, BaseOp2, Offset2,
-                                           Offset2IsScalable, TRI)) {
-            if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-                Offset1IsScalable == Offset2IsScalable &&
-                (int)Offset1 < (int)Offset2) {
-              assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI) &&
-                     "What happened to the chain edge?");
-              SDep Dep(Load, SDep::Barrier);
-              Dep.setLatency(1);
-              SU.addPred(Dep);
-              continue;
-            }
-          }
-          // Second, the more expensive check that uses alias analysis on the
-          // base registers. If they alias, and the load offset is less than
-          // the store offset, the mark the dependence as loop carried.
-          if (!AA) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-          MachineMemOperand *MMO1 = *LdMI.memoperands_begin();
-          MachineMemOperand *MMO2 = *MI.memoperands_begin();
-          if (!MMO1->getValue() || !MMO2->getValue()) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-          if (MMO1->getValue() == MMO2->getValue() &&
-              MMO1->getOffset() <= MMO2->getOffset()) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-          if (!AA->isNoAlias(
-                  MemoryLocation::getAfter(MMO1->getValue(), MMO1->getAAInfo()),
-                  MemoryLocation::getAfter(MMO2->getValue(),
-                                           MMO2->getAAInfo()))) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-          }
-        }
-      }
-    }
+static std::optional<MemoryLocation>
+getMemoryLocationForAA(const MachineInstr *MI) {
+  const MachineMemOperand *MMO = *MI->memoperands_begin();
+  const Value *Val = MMO->getValue();
+  if (!Val)
+    return std::nullopt;
+  auto MemLoc = MemoryLocation::getBeforeOrAfter(Val, MMO->getAAInfo());
+
+  // Peel off noalias information from `AATags` because it might be valid only
+  // in single iteration.
+  // FIXME: This is too conservative. Checking
+  // `llvm.experimental.noalias.scope.decl` instrinsics in the original LLVM IR
+  // can perform more accuurately.
+  MemLoc.AATags.NoAlias = nullptr;
+  return MemLoc;
+}
+
+/// Return true for an memory dependence that is loop carried
+/// potentially. A dependence is loop carried if the destination defines a value
+/// that may be used or defined by the source in a subsequent iteration.
+bool SwingSchedulerDAG::hasLoopCarriedMemDep(const MachineInstr *Src,
+                                             const MachineInstr *Dst,
+                                             BatchAAResults *BAA) const {
+  if (!SwpPruneLoopCarried)
+    return true;
+
+  // First, check the dependence by comparing base register, offset, and
+  // step value of the loop.
+  switch (mayOverlapInLaterIter(Src, Dst)) {
+  case AliasResult::Kind::MustAlias:
+    return true;
+  case AliasResult::Kind::NoAlias:
+    return false;
+  case AliasResult::Kind::MayAlias:
+    break;
+  default:
+    llvm_unreachable("Unexpected alias");
+  }
+
+  // If we cannot determine the dependence by previouse check, then
+  // check by using alias analysis.
+  if (!BAA)
+    return true;
+
+  const auto MemLoc1 = getMemoryLocationForAA(Src);
+  const auto MemLoc2 = getMemoryLocationForAA(Dst);
+  if (!MemLoc1.has_value() || !MemLoc2.has_value())
+    return true;
+  switch (BAA->alias(*MemLoc1, *MemLoc2)) {
+  case AliasResult::Kind::MayAlias:
+  case AliasResult::Kind::MustAlias:
+  case AliasResult::Kind::PartialAlias:
+    return true;
+  case AliasResult::Kind::NoAlias:
+    return false;
+  default:
+    llvm_unreachable("Unexpected alias");
   }
 }
 
@@ -1544,7 +1495,310 @@ public:
   }
 };
 
+/// Add loop-carried chain dependencies. This class handles the same type of
+/// dependencies added by `ScheduleDAGInstrs::buildSchedGraph`, but takes into
+/// account dependencies across iterations.
+class LoopCarriedOrderDepsTracker {
+  // Type of instruction that is relevant to order-dependencies
+  enum class InstrTag {
+    // Instruction related to global memory objects. There are order
+    // dependencies between instructions that may load or store or raise
+    // floating-point exception before and after this one.
+    GlobalMemoryObject = 0,
+
+    // Instruction that may load or store memory, but does not form a global
+    // barrier.
+    LoadOrStore = 1,
+
+    // Instruction that does not match above, but may raise floatin-point
+    // exceptions.
+    FPExceptions = 2,
+  };
+
+  struct TaggedSUnit : PointerIntPair<SUnit *, 2> {
+    TaggedSUnit(SUnit *SU, InstrTag Tag)
+        : PointerIntPair<SUnit *, 2>(SU, unsigned(Tag)) {}
+
+    InstrTag getTag() const { return InstrTag(getInt()); }
+  };
+
+  using SUsType = SmallVector<SUnit *, 4>;
+  using Value2SUs = MapVector<const Value *, SUsType>;
+
+  // Retains loads and stores classified by the underlying objects.
+  struct LoadStoreChunk {
+    Value2SUs Loads, Stores;
+    SUsType UnknownLoads, UnknownStores;
+  };
+
+  SwingSchedulerDAG *DAG;
+  std::unique_ptr<BatchAAResults> BAA;
+  const Value *UnknownValue;
+  std::vector<SUnit> &SUnits;
+
+  // The size of SUnits, for convenience.
+  const unsigned N;
+
+  // Adjacency matrix consisiting of order dependencies of the original DAG.
+  std::vector<BitVector> AdjMatrix;
+
+  // Loop-carried Edges.
+  std::vector<BitVector> LoopCarried;
+
+  // Instructions related to chain dependencies. They are one of the following.
+  //
+  //   1. Global memory object.
+  //   2. Load, but not a global memory object, not invariant, or may load trap
+  //      value.
+  //   3. Store, but not global memory object.
+  //   4. None of them, but may raise floating-point exceptions.
+  //
+  // This is used when analyzing loop-carried dependencies that access global
+  // barrier instructions.
+  std::vector<TaggedSUnit> TaggedSUnits;
+
+public:
+  LoopCarriedOrderDepsTracker(SwingSchedulerDAG *SSD, AAResults *AA)
+      : DAG(SSD), BAA(nullptr), SUnits(DAG->SUnits), N(SUnits.size()),
+        AdjMatrix(N, BitVector(N)), LoopCarried(N, BitVector(N)) {
+    UnknownValue =
+        UndefValue::get(Type::getVoidTy(DAG->MF.getFunction().getContext()));
+    if (AA) {
+      BAA = std::make_unique<BatchAAResults>(*AA);
+      BAA->enableCrossIterationMode();
+    }
+    initAdjMatrix();
+  }
+
+  void computeDependencies() {
+    // Traverse all instructions and extract only what we are targetting.
+    for (auto &SU : SUnits) {
+      auto Tagged = checkInstrType(&SU);
+
+      // This instruction has no loop-carried order-dependencies.
+      if (!Tagged)
+        continue;
+
+      TaggedSUnits.push_back(*Tagged);
+    }
+
+    addLoopCarriedDependencies();
+
+    // Finalize the results.
+    for (int I = 0; I != int(N); I++) {
+      // If the dependence between two instructions already exists in the
+      // original DAG, then loop-carried dependence of the same instructions is
+      // unnecessary because the original one expresses stricter
+      // constraint than loop-carried one.
+      LoopCarried[I].reset(AdjMatrix[I]);
+
+      // Self-loops are noisy.
+      LoopCarried[I].reset(I);
+    }
+  }
+
+  const BitVector &getLoopCarried(unsigned Idx) const {
+    return LoopCarried[Idx];
+  }
+
+private:
+  // Calculate reachability induced by the adjacency matrix. The original graph
+  // is DAG, so we can compute them from bottom to top.
+  void initAdjMatrix() {
+    for (int RI = 0; RI != int(N); RI++) {
+      int I = SUnits.size() - (RI + 1);
+      for (const auto &Succ : SUnits[I].Succs)
+        if (Succ.isNormalMemoryOrBarrier()) {
+          SUnit *SSU = Succ.getSUnit();
+          if (SSU->isBoundaryNode())
+            continue;
+          // `updatePhiDependences` may add barrier-dependencies between PHIs,
+          // which don't make sense in this case.
+          if (SSU->getInstr()->isPHI())
+            continue;
+          int J = SSU->NodeNum;
+          AdjMatrix[I].set(J);
+        }
+    }
+  }
+
+  // Tags to \p SU if the instruction may affect the order-dependencies.
+  std::optional<TaggedSUnit> checkInstrType(SUnit *SU) const {
+    MachineInstr *MI = SU->getInstr();
+    if (isGlobalMemoryObject(*MI))
+      return TaggedSUnit(SU, InstrTag::GlobalMemoryObject);
+
+    if (MI->mayStore() ||
+        (MI->mayLoad() && !MI->isDereferenceableInvariantLoad()))
+      return TaggedSUnit(SU, InstrTag::LoadOrStore);
+
+    if (MI->mayRaiseFPException())
+      return TaggedSUnit(SU, InstrTag::FPExceptions);
+
+    return std::nullopt;
+  }
+
+  void addDependencesBetweenSUs(const SUsType &From, const SUsType &To) {
+    for (SUnit *SUa : From)
+      for (SUnit *SUb : To)
+        if (DAG->hasLoopCarriedMemDep(SUa->getInstr(), SUb->getInstr(),
+                                      BAA.get()))
+          LoopCarried[SUa->NodeNum].set(SUb->NodeNum);
+  }
+
+  void addDependenciesOfObj(const SUsType &From, const Value *Obj,
+                            const Value2SUs &To) {
+    auto *Ite = To.find(Obj);
+    if (Ite != To.end())
+      addDependencesBetweenSUs(From, Ite->second);
+  }
+
+  void addDependencesBetweenChunks(const LoadStoreChunk &From,
+                                   const LoadStoreChunk &To) {
+    // Add dependencies from store with known object
+    for (auto &[Obj, Stores] : From.Stores) {
+      addDependenciesOfObj(Stores, Obj, To.Stores);
+      addDependenciesOfObj(Stores, Obj, To.Loads);
+      addDependencesBetweenSUs(Stores, To.UnknownStores);
+      addDependencesBetweenSUs(Stores, To.UnknownLoads);
+    }
+
+    // Add dependencies from load with known object
+    for (auto &[Obj, Loads] : From.Loads) {
+      addDependenciesOfObj(Loads, Obj, To.Stores);
+      addDependencesBetweenSUs(Loads, To.UnknownStores);
+    }
+
+    // Add dependencies from load/store with unknown object
+    for ([[maybe_unused]] auto &[Obj, Stores] : To.Stores) {
+      addDependencesBetweenSUs(From.UnknownStores, Stores);
+      addDependencesBetweenSUs(From.UnknownLoads, Stores);
+    }
+    for ([[maybe_unused]] auto &[Obj, Loads] : To.Loads)
+      addDependencesBetweenSUs(From.UnknownStores, Loads);
+    addDependencesBetweenSUs(From.UnknownStores, To.UnknownStores);
+    addDependencesBetweenSUs(From.UnknownStores, To.UnknownLoads);
+    addDependencesBetweenSUs(From.UnknownLoads, To.UnknownStores);
+  }
+
+  void updateLoadStoreChunk(SUnit *SU, LoadStoreChunk &Chunk) {
+    const MachineInstr *MI = SU->getInstr();
+    if (!MI->mayLoadOrStore())
+      return;
+    SmallVector<const Value *, 4> Objs;
+    getUnderlyingObjectsForInstr(MI, Objs);
+    for (auto &Obj : Objs) {
+      if (Obj == UnknownValue) {
+        Objs.clear();
+        break;
+      }
+    }
+
+    if (Objs.empty()) {
+      (MI->mayStore() ? Chunk.UnknownStores : Chunk.UnknownLoads).push_back(SU);
+    } else {
+      auto &Map = (MI->mayStore() ? Chunk.Stores : Chunk.Loads);
+      for (const auto *Obj : Objs)
+        Map[Obj].push_back(SU);
+    }
+  }
+
+  void addLoopCarriedDependencies() {
+    // Collect instructions until a first instruction for global memory object
+    // is found
+    LoadStoreChunk FirstChunk;
+    std::vector<SUnit *> FirstSUs;
+    SUnit *FirstBarrier = nullptr;
+    for (const auto &TSU : TaggedSUnits) {
+      SUnit *SU = TSU.getPointer();
+      FirstSUs.push_back(SU);
+      if (TSU.getTag() == InstrTag::GlobalMemoryObject) {
+        FirstBarrier = SU;
+        break;
+      }
+      updateLoadStoreChunk(SU, FirstChunk);
+    }
+
+    // If there are no instructions related to global memory object, then check
+    // loop-carried dependencies for all load/store pairs.
+    if (FirstBarrier == nullptr) {
+      addDependencesBetweenChunks(FirstChunk, FirstChunk);
+      return;
+    }
+
+    // The instructions sequence is as follows.
+    //
+    // ```
+    // Some loads/stores/fp-exceptions (FirstSUs)
+    // Global memory object (FirstBarrier)
+    // ...
+    // Global memory object (LastBarrier)
+    // Some loads/stores/fp-exceptions (LastSUs)
+    // ```
+    //
+    // At this point, add the following loop-carried dependencies.
+    //
+    //   - From LastBarrier to FirstSUs and FirstBarrier
+    //   - From LastSUs to FirstBarrier
+    //   - From loads/stores in LastSUs to loads/stores in FirstSUs
+    //     if they can overlap
+    //
+    // Other loop-carried dependencies, such as LastSUs to load/store between
+    // FirstBarrier and LastBarrier, are implied by the above and existing
+    // dependencies, so we don't add them explicitly.
+    LoadStoreChunk LastChunk;
+    std::vector<SUnit *> LastSUs;
+    SUnit *LastBarrier = nullptr;
+    for (const auto &TSU : reverse(TaggedSUnits)) {
+      SUnit *SU = TSU.getPointer();
+      LastSUs.push_back(SU);
+      if (TSU.getTag() == InstrTag::GlobalMemoryObject) {
+        LastBarrier = SU;
+        break;
+      }
+      updateLoadStoreChunk(SU, LastChunk);
+    }
+
+    for (SUnit *SU : FirstSUs)
+      LoopCarried[LastBarrier->NodeNum].set(SU->NodeNum);
+    for (SUnit *SU : LastSUs)
+      LoopCarried[SU->NodeNum].set(FirstBarrier->NodeNum);
+    LoopCarried[FirstBarrier->NodeNum].reset(LastBarrier->NodeNum);
+    addDependencesBetweenChunks(LastChunk, FirstChunk);
+  }
+};
+
 } // end anonymous namespace
+
+/// Add dependencies across iterations.
+LoopCarriedEdges SwingSchedulerDAG::addLoopCarriedDependences(AAResults *AA) {
+  LoopCarriedEdges LCE;
+  const unsigned N = SUnits.size();
+
+  // Add loop-carried output-dependencies
+  for (SUnit &SU : SUnits) {
+    for (const auto &Pred : SU.Preds) {
+      if (Pred.getKind() != SDep::Output)
+        continue;
+      SUnit *PredSU = Pred.getSUnit();
+      if (PredSU->isBoundaryNode())
+        continue;
+      Register Reg = Pred.getReg();
+      for (const auto &E : LCE.OutputDeps[PredSU][Reg])
+        LCE.OutputDeps[&SU][Reg].insert(E);
+      LCE.OutputDeps[&SU][Reg].insert(PredSU);
+    }
+  }
+
+  // Add loop-carried order-dependencies
+  LoopCarriedOrderDepsTracker LCODTracker(this, AA);
+  LCODTracker.computeDependencies();
+  for (int I = 0; I != int(N); I++)
+    for (const int Succ : LCODTracker.getLoopCarried(I).set_bits())
+      LCE.OrderDeps[&SUnits[I]].insert(&SUnits[Succ]);
+
+  return LCE;
+}
 
 /// Calculate the resource constrained minimum initiation interval for the
 /// specified loop. We use the DFA to model the resources needed for
@@ -1586,25 +1840,13 @@ unsigned SwingSchedulerDAG::calculateRecMII(NodeSetType &NodeSets) {
 
 /// Create the adjacency structure of the nodes in the graph.
 void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
-    SwingSchedulerDAG *DAG) {
+    const SwingSchedulerDDG *DDG) {
   BitVector Added(SUnits.size());
-  DenseMap<int, int> OutputDeps;
-  for (int i = 0, e = SUnits.size(); i != e; ++i) {
+  LoopCarried.resize(SUnits.size(), BitVector(SUnits.size(), true));
+  for (int I = 0, E = SUnits.size(); I != E; ++I) {
     Added.reset();
     // Add any successor to the adjacency matrix and exclude duplicates.
-    for (auto &OE : DAG->DDG->getOutEdges(&SUnits[i])) {
-      // Only create a back-edge on the first and last nodes of a dependence
-      // chain. This records any chains and adds them later.
-      if (OE.isOutputDep()) {
-        int N = OE.getDst()->NodeNum;
-        int BackEdge = i;
-        auto Dep = OutputDeps.find(BackEdge);
-        if (Dep != OutputDeps.end()) {
-          BackEdge = Dep->second;
-          OutputDeps.erase(Dep);
-        }
-        OutputDeps[N] = BackEdge;
-      }
+    for (const auto &OE : DDG->getOutEdges(&SUnits[I])) {
       // Do not process a boundary node, an artificial node.
       if (OE.getDst()->isBoundaryNode() || OE.isArtificial())
         continue;
@@ -1618,61 +1860,52 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
       if (OE.isAntiDep())
         continue;
 
+      // Ignore store-store dependencies when finding circuits for historical
+      // reasons. Adding these edges causes regressions in some important cases.
+      // FIXME: This could lead to an inaccurate estimation of RecMII. By
+      // improving the heuristics after circuit detection, this may not be
+      // necessary.
+      if (OE.isOrderDep() && OE.getSrc()->getInstr()->mayStore() &&
+          OE.getDst()->getInstr()->mayStore())
+        continue;
+
       int N = OE.getDst()->NodeNum;
+
+      if (OE.getDistance() == 0)
+        LoopCarried[I].reset(N);
       if (!Added.test(N)) {
-        AdjK[i].push_back(N);
+        AdjK[I].push_back(N);
         Added.set(N);
       }
     }
-    // A chain edge between a store and a load is treated as a back-edge in the
-    // adjacency matrix.
-    for (auto &IE : DAG->DDG->getInEdges(&SUnits[i])) {
-      SUnit *Src = IE.getSrc();
-      SUnit *Dst = IE.getDst();
-      if (!Dst->getInstr()->mayStore() || !DAG->isLoopCarriedDep(IE))
-        continue;
-      if (IE.isOrderDep() && Src->getInstr()->mayLoad()) {
-        int N = Src->NodeNum;
-        if (!Added.test(N)) {
-          AdjK[i].push_back(N);
-          Added.set(N);
-        }
-      }
-    }
   }
-  // Add back-edges in the adjacency matrix for the output dependences.
-  for (auto &OD : OutputDeps)
-    if (!Added.test(OD.second)) {
-      AdjK[OD.first].push_back(OD.second);
-      Added.set(OD.second);
-    }
 }
 
 /// Identify an elementary circuit in the dependence graph starting at the
 /// specified node.
 bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
-                                          const SwingSchedulerDAG *DAG,
-                                          bool HasBackedge) {
+                                          const SwingSchedulerDDG *DDG,
+                                          bool HasLoopCarriedEdge) {
   SUnit *SV = &SUnits[V];
   bool F = false;
   Stack.insert(SV);
   Blocked.set(V);
 
   for (auto W : AdjK[V]) {
-    if (NumPaths > MaxPaths)
+    if (NumPaths > MaxCircuitPaths)
       break;
     if (W < S)
       continue;
     if (W == S) {
-      if (!HasBackedge)
-        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end(), DAG));
+      if (!HasLoopCarriedEdge)
+        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end(), DDG));
       F = true;
       ++NumPaths;
       break;
     }
     if (!Blocked.test(W)) {
-      if (circuit(W, S, NodeSets, DAG,
-                  Node2Idx->at(W) < Node2Idx->at(V) ? true : HasBackedge))
+      if (circuit(W, S, NodeSets, DDG,
+                  LoopCarried[V].test(W) || HasLoopCarriedEdge))
         F = true;
     }
   }
@@ -1707,12 +1940,12 @@ void SwingSchedulerDAG::Circuits::unblock(int U) {
 /// Identify all the elementary circuits in the dependence graph using
 /// Johnson's circuit algorithm.
 void SwingSchedulerDAG::findCircuits(NodeSetType &NodeSets) {
-  Circuits Cir(SUnits, Topo);
+  Circuits Cir(SUnits);
   // Create the adjacency structure.
-  Cir.createAdjacencyStructure(this);
+  Cir.createAdjacencyStructure(getDDG());
   for (int I = 0, E = SUnits.size(); I != E; ++I) {
     Cir.reset();
-    Cir.circuit(I, I, NodeSets, this);
+    Cir.circuit(I, I, NodeSets, getDDG());
   }
 }
 
@@ -2753,12 +2986,19 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 
 /// Return false if there is no overlap between the region accessed by BaseMI in
 /// an iteration and the region accessed by OtherMI in subsequent iterations.
-bool SwingSchedulerDAG::mayOverlapInLaterIter(
-    const MachineInstr *BaseMI, const MachineInstr *OtherMI) const {
+AliasResult::Kind
+SwingSchedulerDAG::mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                                         const MachineInstr *OtherMI) const {
+  if (!BaseMI->mayLoadOrStore() || !OtherMI->mayLoadOrStore())
+    return AliasResult::Kind::NoAlias;
+
+  // The conservative assumption is that a dependence between memory operations
+  // may be loop carried. The following code checks when it can be proved that
+  // there is no loop carried dependence.
   int DeltaB, DeltaO, Delta;
   if (!computeDelta(*BaseMI, DeltaB) || !computeDelta(*OtherMI, DeltaO) ||
       DeltaB != DeltaO)
-    return true;
+    return AliasResult::MayAlias;
   Delta = DeltaB;
 
   const MachineOperand *BaseOpB, *BaseOpO;
@@ -2769,25 +3009,25 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
                                     OffsetBIsScalable, TRI) ||
       !TII->getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
                                     OffsetOIsScalable, TRI))
-    return true;
+    return AliasResult::MayAlias;
 
   if (OffsetBIsScalable || OffsetOIsScalable)
-    return true;
+    return AliasResult::MayAlias;
 
   if (!BaseOpB->isIdenticalTo(*BaseOpO)) {
     // Pass cases with different base operands but same initial values.
     // Typically for when pre/post increment is used.
 
     if (!BaseOpB->isReg() || !BaseOpO->isReg())
-      return true;
+      return AliasResult::MayAlias;
     Register RegB = BaseOpB->getReg(), RegO = BaseOpO->getReg();
     if (!RegB.isVirtual() || !RegO.isVirtual())
-      return true;
+      return AliasResult::MayAlias;
 
     MachineInstr *DefB = MRI.getVRegDef(BaseOpB->getReg());
     MachineInstr *DefO = MRI.getVRegDef(BaseOpO->getReg());
     if (!DefB || !DefO || !DefB->isPHI() || !DefO->isPHI())
-      return true;
+      return AliasResult::MayAlias;
 
     unsigned InitValB = 0;
     unsigned LoopValB = 0;
@@ -2799,7 +3039,7 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
     MachineInstr *InitDefO = MRI.getVRegDef(InitValO);
 
     if (!InitDefB->isIdenticalTo(*InitDefO))
-      return true;
+      return AliasResult::MayAlias;
   }
 
   LocationSize AccessSizeB = (*BaseMI->memoperands_begin())->getSize();
@@ -2808,7 +3048,7 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
   // This is the main test, which checks the offset values and the loop
   // increment value to determine if the accesses may be loop carried.
   if (!AccessSizeB.hasValue() || !AccessSizeO.hasValue())
-    return true;
+    return AliasResult::MayAlias;
 
   LLVM_DEBUG({
     dbgs() << "Overlap check:\n";
@@ -2831,52 +3071,18 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
     int64_t OhterNextIterMaxAddr = OffsetO + Delta + AccessSizeO.getValue() - 1;
     if (BaseMinAddr > OhterNextIterMaxAddr) {
       LLVM_DEBUG(dbgs() << "  Result: No overlap\n");
-      return false;
+      return AliasResult::NoAlias;
     }
   } else {
     int64_t BaseMaxAddr = OffsetB + AccessSizeB.getValue() - 1;
     int64_t OtherNextIterMinAddr = OffsetO + Delta;
     if (BaseMaxAddr < OtherNextIterMinAddr) {
       LLVM_DEBUG(dbgs() << "  Result: No overlap\n");
-      return false;
+      return AliasResult::NoAlias;
     }
   }
   LLVM_DEBUG(dbgs() << "  Result: Overlap\n");
-  return true;
-}
-
-/// Return true for an order or output dependence that is loop carried
-/// potentially. A dependence is loop carried if the destination defines a value
-/// that may be used or defined by the source in a subsequent iteration.
-bool SwingSchedulerDAG::isLoopCarriedDep(
-    const SwingSchedulerDDGEdge &Edge) const {
-  if ((!Edge.isOrderDep() && !Edge.isOutputDep()) || Edge.isArtificial() ||
-      Edge.getDst()->isBoundaryNode())
-    return false;
-
-  if (!SwpPruneLoopCarried)
-    return true;
-
-  if (Edge.isOutputDep())
-    return true;
-
-  MachineInstr *SI = Edge.getSrc()->getInstr();
-  MachineInstr *DI = Edge.getDst()->getInstr();
-  assert(SI != nullptr && DI != nullptr && "Expecting SUnit with an MI.");
-
-  // Assume ordered loads and stores may have a loop carried dependence.
-  if (SI->hasUnmodeledSideEffects() || DI->hasUnmodeledSideEffects() ||
-      SI->mayRaiseFPException() || DI->mayRaiseFPException() ||
-      SI->hasOrderedMemoryRef() || DI->hasOrderedMemoryRef())
-    return true;
-
-  if (!DI->mayLoadOrStore() || !SI->mayLoadOrStore())
-    return false;
-
-  // The conservative assumption is that a dependence between memory operations
-  // may be loop carried. The following code checks when it can be proved that
-  // there is no loop carried dependence.
-  return mayOverlapInLaterIter(DI, SI);
+  return AliasResult::MustAlias;
 }
 
 void SwingSchedulerDAG::postProcessDAG() {
@@ -3001,12 +3207,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
     for (SUnit *I : getInstructions(cycle)) {
       for (const auto &IE : DDG->getInEdges(SU)) {
         if (IE.getSrc() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(IE)) {
-            int End = earliestCycleInChain(IE, DDG) + (II - 1);
-            *MinLateStart = std::min(*MinLateStart, End);
-          }
           int EarlyStart = cycle + IE.getLatency() - IE.getDistance() * II;
           *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
         }
@@ -3014,12 +3214,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
 
       for (const auto &OE : DDG->getOutEdges(SU)) {
         if (OE.getDst() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(OE)) {
-            int Start = latestCycleInChain(OE, DDG) + 1 - II;
-            *MaxEarlyStart = std::max(*MaxEarlyStart, Start);
-          }
           int LateStart = cycle - OE.getLatency() + OE.getDistance() * II;
           *MinLateStart = std::min(*MinLateStart, LateStart);
         }
@@ -3110,7 +3304,8 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
     for (auto &OE : DDG->getOutEdges(SU)) {
       if (OE.getDst() != *I)
         continue;
-      if (OE.isOrderDep() && stageScheduled(*I) == StageInst1) {
+      if (OE.isOrderDep() && OE.getDistance() == 0 &&
+          stageScheduled(*I) == StageInst1) {
         OrderBeforeUse = true;
         if (Pos < MoveUse)
           MoveUse = Pos;
@@ -3118,7 +3313,8 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
       // We did not handle HW dependences in previous for loop,
       // and we normally set Latency = 0 for Anti/Output deps,
       // so may have nodes in same cycle with Anti/Output dependent on HW regs.
-      else if ((OE.isAntiDep() || OE.isOutputDep()) &&
+      else if ((OE.isAntiDep() ||
+                (OE.isOutputDep() && OE.getDistance() == 0)) &&
                stageScheduled(*I) == StageInst1) {
         OrderBeforeUse = true;
         if ((MoveUse == 0) || (Pos < MoveUse))
@@ -3129,7 +3325,7 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
       if (IE.getSrc() != *I)
         continue;
       if ((IE.isAntiDep() || IE.isOutputDep() || IE.isOrderDep()) &&
-          stageScheduled(*I) == StageInst1) {
+          IE.getDistance() == 0 && stageScheduled(*I) == StageInst1) {
         OrderAfterDef = true;
         MoveDef = Pos;
       }
@@ -3224,9 +3420,12 @@ bool SMSchedule::isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD,
 /// dependencies.
 bool SMSchedule::onlyHasLoopCarriedOutputOrOrderPreds(
     SUnit *SU, const SwingSchedulerDDG *DDG) const {
-  for (const auto &IE : DDG->getInEdges(SU))
+  for (const auto &IE : DDG->getInEdges(SU)) {
+    if (IE.getDistance() != 0 && !IE.getDst()->getInstr()->isPHI())
+      continue;
     if (InstrToCycle.count(IE.getSrc()))
       return false;
+  }
   return true;
 }
 
@@ -3341,6 +3540,10 @@ bool SMSchedule::isValidSchedule(SwingSchedulerDAG *SSD) {
 /// The reason is that although an invalid node order may prevent
 /// the pipeliner from finding a pipelined schedule for arbitrary II,
 /// it does not lead to the generation of incorrect code.
+/// FIXME: Currently, we don't search all circuits. There is an upper limit to
+/// the number of circuits that can be searched. Also, there may be some that
+/// are pruned by heuristics. Therefore, this function may generate false
+/// positives.
 void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
 
   // a sorted vector that maps each SUnit to its index in the NodeOrder
@@ -3915,7 +4118,7 @@ void SwingSchedulerDDG::initEdges(SUnit *SU) {
 }
 
 SwingSchedulerDDG::SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU,
-                                     SUnit *ExitSU)
+                                     SUnit *ExitSU, const LoopCarriedEdges &LCE)
     : EntrySU(EntrySU), ExitSU(ExitSU) {
   EdgesVec.resize(SUnits.size());
 
@@ -3923,6 +4126,38 @@ SwingSchedulerDDG::SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU,
   initEdges(ExitSU);
   for (auto &SU : SUnits)
     initEdges(&SU);
+
+  addLoopCarriedEdges(SUnits, LCE);
+}
+
+void SwingSchedulerDDG::addLoopCarriedEdges(std::vector<SUnit> &SUnits,
+                                            const LoopCarriedEdges &LCE) {
+  for (SUnit &SU : SUnits) {
+    SUnit *Src = &SU;
+
+    if (auto *OutputDep = LCE.getOutputDepOrNull(Src))
+      for (const auto &[Reg, Set] : *OutputDep) {
+        SDep Dep(Src, SDep::Output, Reg);
+        Dep.setLatency(1);
+        for (SUnit *Dst : Set) {
+          SwingSchedulerDDGEdge Edge(Dst, Dep, false);
+          Edge.setDistance(1);
+          addEdge(Src, Edge);
+          addEdge(Dst, Edge);
+        }
+      }
+
+    if (auto *OrderDep = LCE.getOrderDepOrNull(Src)) {
+      SDep Dep(Src, SDep::Barrier);
+      Dep.setLatency(1);
+      for (SUnit *Dst : *OrderDep) {
+        SwingSchedulerDDGEdge Edge(Dst, Dep, false);
+        Edge.setDistance(1);
+        addEdge(Src, Edge);
+        addEdge(Dst, Edge);
+      }
+    }
+  }
 }
 
 const SwingSchedulerDDG::EdgesType &
@@ -3933,4 +4168,36 @@ SwingSchedulerDDG::getInEdges(const SUnit *SU) const {
 const SwingSchedulerDDG::EdgesType &
 SwingSchedulerDDG::getOutEdges(const SUnit *SU) const {
   return getEdges(SU).Succs;
+}
+
+void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
+                            const MachineRegisterInfo *MRI) const {
+  const auto *Output = getOutputDepOrNull(SU);
+  const auto *Order = getOrderDepOrNull(SU);
+
+  if (!Output && !Order)
+    return;
+
+  const auto DumpSU = [](const SUnit *SU) {
+    std::ostringstream OSS;
+    OSS << "SU(" << SU->NodeNum << ")";
+    return OSS.str();
+  };
+
+  dbgs() << "  Loop carried edges from " << DumpSU(SU) << "\n";
+
+  if (Output) {
+    dbgs() << "    Output\n";
+    for (const auto &[Reg, Set] : *Output) {
+      const auto PReg = printReg(Reg, TRI, 0, MRI);
+      for (SUnit *Dst : Set)
+        dbgs() << "      " << DumpSU(Dst) << " Reg=" << PReg << "\n";
+    }
+  }
+
+  if (Order) {
+    dbgs() << "    Order\n";
+    for (SUnit *Dst : *Order)
+      dbgs() << "      " << DumpSU(Dst) << "\n";
+  }
 }
