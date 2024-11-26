@@ -2286,7 +2286,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
   def SVTBLQ : SInst<"svtblq[_{d}]", "ddu", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_tblq">;
   def SVTBXQ : SInst<"svtbxq[_{d}]", "dddu", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_tbxq">;
   // EXTQ
-  def EXTQ : SInst<"svextq[_{d}]", "dddk", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_extq", [], [ImmCheck<2, ImmCheck0_15>]>;
+  def EXTQ : SInst<"svextq[_{d}]", "dddk", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_extq", [], [ImmCheck<2, ImmCheckLaneIndex, 0>]>;
 
   // PMOV
   // Move to Pred
