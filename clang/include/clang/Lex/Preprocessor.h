@@ -1530,19 +1530,20 @@ public:
   ///
   /// If \p Namespace is non-null, then it is a token required to exist on the
   /// pragma line before the pragma string starts, e.g. "STDC" or "GCC".
-  void AddPragmaHandler(StringRef Namespace, PragmaHandler *Handler);
-  void AddPragmaHandler(PragmaHandler *Handler) {
+  void AddPragmaHandler(StringRef Namespace,
+                        std::shared_ptr<PragmaHandler> Handler);
+  void AddPragmaHandler(std::shared_ptr<PragmaHandler> Handler) {
     AddPragmaHandler(StringRef(), Handler);
   }
 
   /// Remove the specific pragma handler from this preprocessor.
   ///
   /// If \p Namespace is non-null, then it should be the namespace that
-  /// \p Handler was added to. It is an error to remove a handler that
+  /// \p HandlerName was added to. It is an error to remove a handler that
   /// has not been registered.
-  void RemovePragmaHandler(StringRef Namespace, PragmaHandler *Handler);
-  void RemovePragmaHandler(PragmaHandler *Handler) {
-    RemovePragmaHandler(StringRef(), Handler);
+  void RemovePragmaHandler(StringRef Namespace, StringRef HandlerName);
+  void RemovePragmaHandler(StringRef HandlerName) {
+    RemovePragmaHandler(StringRef(), HandlerName);
   }
 
   /// Install empty handlers for all pragmas (making them ignored).

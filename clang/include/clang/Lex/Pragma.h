@@ -96,7 +96,7 @@ public:
 class PragmaNamespace : public PragmaHandler {
   /// Handlers - This is a map of the handlers in this namespace with their name
   /// as key.
-  llvm::StringMap<std::unique_ptr<PragmaHandler>> Handlers;
+  llvm::StringMap<std::shared_ptr<PragmaHandler>> Handlers;
 
 public:
   explicit PragmaNamespace(StringRef Name) : PragmaHandler(Name) {}
@@ -109,11 +109,11 @@ public:
                              bool IgnoreNull = true) const;
 
   /// AddPragma - Add a pragma to this namespace.
-  void AddPragma(PragmaHandler *Handler);
+  void AddPragma(std::shared_ptr<PragmaHandler> Handler);
 
   /// RemovePragmaHandler - Remove the given handler from the
   /// namespace.
-  void RemovePragmaHandler(PragmaHandler *Handler);
+  void RemovePragmaHandler(StringRef Name);
 
   bool IsEmpty() const { return Handlers.empty(); }
 

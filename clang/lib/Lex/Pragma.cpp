@@ -85,18 +85,15 @@ PragmaHandler *PragmaNamespace::FindHandler(StringRef Name,
   return nullptr;
 }
 
-void PragmaNamespace::AddPragma(PragmaHandler *Handler) {
+void PragmaNamespace::AddPragma(std::shared_ptr<PragmaHandler> Handler) {
   assert(!Handlers.count(Handler->getName()) &&
          "A handler with this name is already registered in this namespace");
-  Handlers[Handler->getName()].reset(Handler);
+  Handlers[Handler->getName()] = Handler;
 }
 
-void PragmaNamespace::RemovePragmaHandler(PragmaHandler *Handler) {
-  auto I = Handlers.find(Handler->getName());
-  assert(I != Handlers.end() &&
-         "Handler not registered in this namespace");
-  // Release ownership back to the caller.
-  I->getValue().release();
+void PragmaNamespace::RemovePragmaHandler(StringRef Name) {
+  auto I = Handlers.find(Name);
+  assert(I != Handlers.end() && "Handler not registered in this namespace");
   Handlers.erase(I);
 }
 
@@ -909,7 +906,7 @@ void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
 /// If 'Namespace' is non-null, then it is a token required to exist on the
 /// pragma line before the pragma string starts, e.g. "STDC" or "GCC".
 void Preprocessor::AddPragmaHandler(StringRef Namespace,
-                                    PragmaHandler *Handler) {
+                                    std::shared_ptr<PragmaHandler> Handler) {
   PragmaNamespace *InsertNS = PragmaHandlers.get();
 
   // If this is specified to be in a namespace, step down into it.
@@ -925,7 +922,7 @@ void Preprocessor::AddPragmaHandler(StringRef Namespace,
       // Otherwise, this namespace doesn't exist yet, create and insert the
       // handler for it.
       InsertNS = new PragmaNamespace(Namespace);
-      PragmaHandlers->AddPragma(InsertNS);
+      PragmaHandlers->AddPragma(std::shared_ptr<PragmaHandler>(InsertNS));
     }
   }
 
@@ -940,7 +937,7 @@ void Preprocessor::AddPragmaHandler(StringRef Namespace,
 /// namespace that \arg Handler was added to. It is an error to remove
 /// a handler that has not been registered.
 void Preprocessor::RemovePragmaHandler(StringRef Namespace,
-                                       PragmaHandler *Handler) {
+                                       StringRef HandlerName) {
   PragmaNamespace *NS = PragmaHandlers.get();
 
   // If this is specified to be in a namespace, step down into it.
@@ -952,13 +949,11 @@ void Preprocessor::RemovePragmaHandler(StringRef Namespace,
     assert(NS && "Invalid namespace, registered as a regular pragma handler!");
   }
 
-  NS->RemovePragmaHandler(Handler);
+  NS->RemovePragmaHandler(HandlerName);
 
   // If this is a non-default namespace and it is now empty, remove it.
-  if (NS != PragmaHandlers.get() && NS->IsEmpty()) {
-    PragmaHandlers->RemovePragmaHandler(NS);
-    delete NS;
-  }
+  if (NS != PragmaHandlers.get() && NS->IsEmpty())
+    PragmaHandlers->RemovePragmaHandler(NS->getName());
 }
 
 bool Preprocessor::LexOnOffSwitch(tok::OnOffSwitch &Result) {
@@ -2127,73 +2122,76 @@ struct PragmaFinalHandler : public PragmaHandler {
 /// RegisterBuiltinPragmas - Install the standard preprocessor pragmas:
 /// \#pragma GCC poison/system_header/dependency and \#pragma once.
 void Preprocessor::RegisterBuiltinPragmas() {
-  AddPragmaHandler(new PragmaOnceHandler());
-  AddPragmaHandler(new PragmaMarkHandler());
-  AddPragmaHandler(new PragmaPushMacroHandler());
-  AddPragmaHandler(new PragmaPopMacroHandler());
-  AddPragmaHandler(new PragmaMessageHandler(PPCallbacks::PMK_Message));
+  AddPragmaHandler(std::make_shared<PragmaOnceHandler>());
+  AddPragmaHandler(std::make_shared<PragmaMarkHandler>());
+  AddPragmaHandler(std::make_shared<PragmaPushMacroHandler>());
+  AddPragmaHandler(std::make_shared<PragmaPopMacroHandler>());
+  AddPragmaHandler(
+      std::make_shared<PragmaMessageHandler>(PPCallbacks::PMK_Message));
 
   // #pragma GCC ...
-  AddPragmaHandler("GCC", new PragmaPoisonHandler());
-  AddPragmaHandler("GCC", new PragmaSystemHeaderHandler());
-  AddPragmaHandler("GCC", new PragmaDependencyHandler());
-  AddPragmaHandler("GCC", new PragmaDiagnosticHandler("GCC"));
-  AddPragmaHandler("GCC", new PragmaMessageHandler(PPCallbacks::PMK_Warning,
-                                                   "GCC"));
-  AddPragmaHandler("GCC", new PragmaMessageHandler(PPCallbacks::PMK_Error,
-                                                   "GCC"));
+  AddPragmaHandler("GCC", std::make_shared<PragmaPoisonHandler>());
+  AddPragmaHandler("GCC", std::make_shared<PragmaSystemHeaderHandler>());
+  AddPragmaHandler("GCC", std::make_shared<PragmaDependencyHandler>());
+  AddPragmaHandler("GCC", std::make_shared<PragmaDiagnosticHandler>("GCC"));
+  AddPragmaHandler("GCC", std::make_shared<PragmaMessageHandler>(
+                              PPCallbacks::PMK_Warning, "GCC"));
+  AddPragmaHandler("GCC", std::make_shared<PragmaMessageHandler>(
+                              PPCallbacks::PMK_Error, "GCC"));
   // #pragma clang ...
-  AddPragmaHandler("clang", new PragmaPoisonHandler());
-  AddPragmaHandler("clang", new PragmaSystemHeaderHandler());
-  AddPragmaHandler("clang", new PragmaDebugHandler());
-  AddPragmaHandler("clang", new PragmaDependencyHandler());
-  AddPragmaHandler("clang", new PragmaDiagnosticHandler("clang"));
-  AddPragmaHandler("clang", new PragmaARCCFCodeAuditedHandler());
-  AddPragmaHandler("clang", new PragmaAssumeNonNullHandler());
-  AddPragmaHandler("clang", new PragmaDeprecatedHandler());
-  AddPragmaHandler("clang", new PragmaRestrictExpansionHandler());
-  AddPragmaHandler("clang", new PragmaFinalHandler());
+  AddPragmaHandler("clang", std::make_shared<PragmaPoisonHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaSystemHeaderHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaDebugHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaDependencyHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaDiagnosticHandler>("clang"));
+  AddPragmaHandler("clang", std::make_shared<PragmaARCCFCodeAuditedHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaAssumeNonNullHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaDeprecatedHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaRestrictExpansionHandler>());
+  AddPragmaHandler("clang", std::make_shared<PragmaFinalHandler>());
 
   // #pragma clang module ...
-  auto *ModuleHandler = new PragmaNamespace("module");
+  std::shared_ptr<PragmaNamespace> ModuleHandler =
+      std::make_shared<PragmaNamespace>("module");
   AddPragmaHandler("clang", ModuleHandler);
-  ModuleHandler->AddPragma(new PragmaModuleImportHandler());
-  ModuleHandler->AddPragma(new PragmaModuleBeginHandler());
-  ModuleHandler->AddPragma(new PragmaModuleEndHandler());
-  ModuleHandler->AddPragma(new PragmaModuleBuildHandler());
-  ModuleHandler->AddPragma(new PragmaModuleLoadHandler());
+  ModuleHandler->AddPragma(std::make_shared<PragmaModuleImportHandler>());
+  ModuleHandler->AddPragma(std::make_shared<PragmaModuleBeginHandler>());
+  ModuleHandler->AddPragma(std::make_shared<PragmaModuleEndHandler>());
+  ModuleHandler->AddPragma(std::make_shared<PragmaModuleBuildHandler>());
+  ModuleHandler->AddPragma(std::make_shared<PragmaModuleLoadHandler>());
 
   // Safe Buffers pragmas
-  AddPragmaHandler("clang", new PragmaUnsafeBufferUsageHandler);
+  AddPragmaHandler("clang", std::make_shared<PragmaUnsafeBufferUsageHandler>());
 
   // Add region pragmas.
-  AddPragmaHandler(new PragmaRegionHandler("region"));
-  AddPragmaHandler(new PragmaRegionHandler("endregion"));
+  AddPragmaHandler(std::make_shared<PragmaRegionHandler>("region"));
+  AddPragmaHandler(std::make_shared<PragmaRegionHandler>("endregion"));
 
   // MS extensions.
   if (LangOpts.MicrosoftExt) {
-    AddPragmaHandler(new PragmaWarningHandler());
-    AddPragmaHandler(new PragmaExecCharsetHandler());
-    AddPragmaHandler(new PragmaIncludeAliasHandler());
-    AddPragmaHandler(new PragmaHdrstopHandler());
-    AddPragmaHandler(new PragmaSystemHeaderHandler());
-    AddPragmaHandler(new PragmaManagedHandler("managed"));
-    AddPragmaHandler(new PragmaManagedHandler("unmanaged"));
+    AddPragmaHandler(std::make_shared<PragmaWarningHandler>());
+    AddPragmaHandler(std::make_shared<PragmaExecCharsetHandler>());
+    AddPragmaHandler(std::make_shared<PragmaIncludeAliasHandler>());
+    AddPragmaHandler(std::make_shared<PragmaHdrstopHandler>());
+    AddPragmaHandler(std::make_shared<PragmaSystemHeaderHandler>());
+    AddPragmaHandler(std::make_shared<PragmaManagedHandler>("managed"));
+    AddPragmaHandler(std::make_shared<PragmaManagedHandler>("unmanaged"));
   }
 
   // Pragmas added by plugins
   for (const PragmaHandlerRegistry::entry &handler :
        PragmaHandlerRegistry::entries()) {
-    AddPragmaHandler(handler.instantiate().release());
+    AddPragmaHandler(
+        std::shared_ptr<PragmaHandler>(handler.instantiate().release()));
   }
 }
 
 /// Ignore all pragmas, useful for modes such as -Eonly which would otherwise
 /// warn about those pragmas being unknown.
 void Preprocessor::IgnorePragmas() {
-  AddPragmaHandler(new EmptyPragmaHandler());
+  AddPragmaHandler(std::make_shared<EmptyPragmaHandler>());
   // Also ignore all pragmas in all namespaces created
   // in Preprocessor::RegisterBuiltinPragmas().
-  AddPragmaHandler("GCC", new EmptyPragmaHandler());
-  AddPragmaHandler("clang", new EmptyPragmaHandler());
+  AddPragmaHandler("GCC", std::make_shared<EmptyPragmaHandler>());
+  AddPragmaHandler("clang", std::make_shared<EmptyPragmaHandler>());
 }

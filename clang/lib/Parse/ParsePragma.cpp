@@ -418,289 +418,242 @@ void markAsReinjectedForRelexing(llvm::MutableArrayRef<clang::Token> Toks) {
 }  // end namespace
 
 void Parser::initializePragmaHandlers() {
-  AlignHandler = std::make_unique<PragmaAlignHandler>();
-  PP.AddPragmaHandler(AlignHandler.get());
+  AlignHandler = std::make_shared<PragmaAlignHandler>();
+  PP.AddPragmaHandler(AlignHandler);
 
-  GCCVisibilityHandler = std::make_unique<PragmaGCCVisibilityHandler>();
-  PP.AddPragmaHandler("GCC", GCCVisibilityHandler.get());
+  GCCVisibilityHandler = std::make_shared<PragmaGCCVisibilityHandler>();
+  PP.AddPragmaHandler("GCC", GCCVisibilityHandler);
 
-  OptionsHandler = std::make_unique<PragmaOptionsHandler>();
-  PP.AddPragmaHandler(OptionsHandler.get());
+  OptionsHandler = std::make_shared<PragmaOptionsHandler>();
+  PP.AddPragmaHandler(OptionsHandler);
 
-  PackHandler = std::make_unique<PragmaPackHandler>();
-  PP.AddPragmaHandler(PackHandler.get());
+  PackHandler = std::make_shared<PragmaPackHandler>();
+  PP.AddPragmaHandler(PackHandler);
 
-  MSStructHandler = std::make_unique<PragmaMSStructHandler>();
-  PP.AddPragmaHandler(MSStructHandler.get());
+  MSStructHandler = std::make_shared<PragmaMSStructHandler>();
+  PP.AddPragmaHandler(MSStructHandler);
 
-  UnusedHandler = std::make_unique<PragmaUnusedHandler>();
-  PP.AddPragmaHandler(UnusedHandler.get());
+  UnusedHandler = std::make_shared<PragmaUnusedHandler>();
+  PP.AddPragmaHandler(UnusedHandler);
 
-  WeakHandler = std::make_unique<PragmaWeakHandler>();
-  PP.AddPragmaHandler(WeakHandler.get());
+  WeakHandler = std::make_shared<PragmaWeakHandler>();
+  PP.AddPragmaHandler(WeakHandler);
 
-  RedefineExtnameHandler = std::make_unique<PragmaRedefineExtnameHandler>();
-  PP.AddPragmaHandler(RedefineExtnameHandler.get());
+  RedefineExtnameHandler = std::make_shared<PragmaRedefineExtnameHandler>();
+  PP.AddPragmaHandler(RedefineExtnameHandler);
 
-  FPContractHandler = std::make_unique<PragmaFPContractHandler>();
-  PP.AddPragmaHandler("STDC", FPContractHandler.get());
+  FPContractHandler = std::make_shared<PragmaFPContractHandler>();
+  PP.AddPragmaHandler("STDC", FPContractHandler);
 
-  STDCFenvAccessHandler = std::make_unique<PragmaSTDC_FENV_ACCESSHandler>();
-  PP.AddPragmaHandler("STDC", STDCFenvAccessHandler.get());
+  STDCFenvAccessHandler = std::make_shared<PragmaSTDC_FENV_ACCESSHandler>();
+  PP.AddPragmaHandler("STDC", STDCFenvAccessHandler);
 
-  STDCFenvRoundHandler = std::make_unique<PragmaSTDC_FENV_ROUNDHandler>();
-  PP.AddPragmaHandler("STDC", STDCFenvRoundHandler.get());
+  STDCFenvRoundHandler = std::make_shared<PragmaSTDC_FENV_ROUNDHandler>();
+  PP.AddPragmaHandler("STDC", STDCFenvRoundHandler);
 
-  STDCCXLIMITHandler = std::make_unique<PragmaSTDC_CX_LIMITED_RANGEHandler>();
-  PP.AddPragmaHandler("STDC", STDCCXLIMITHandler.get());
+  STDCCXLIMITHandler = std::make_shared<PragmaSTDC_CX_LIMITED_RANGEHandler>();
+  PP.AddPragmaHandler("STDC", STDCCXLIMITHandler);
 
-  STDCUnknownHandler = std::make_unique<PragmaSTDC_UnknownHandler>();
-  PP.AddPragmaHandler("STDC", STDCUnknownHandler.get());
+  STDCUnknownHandler = std::make_shared<PragmaSTDC_UnknownHandler>();
+  PP.AddPragmaHandler("STDC", STDCUnknownHandler);
 
-  PCSectionHandler = std::make_unique<PragmaClangSectionHandler>(Actions);
-  PP.AddPragmaHandler("clang", PCSectionHandler.get());
+  PCSectionHandler = std::make_shared<PragmaClangSectionHandler>(Actions);
+  PP.AddPragmaHandler("clang", PCSectionHandler);
 
   if (getLangOpts().OpenCL) {
-    OpenCLExtensionHandler = std::make_unique<PragmaOpenCLExtensionHandler>();
-    PP.AddPragmaHandler("OPENCL", OpenCLExtensionHandler.get());
+    OpenCLExtensionHandler = std::make_shared<PragmaOpenCLExtensionHandler>();
+    PP.AddPragmaHandler("OPENCL", OpenCLExtensionHandler);
 
-    PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
+    PP.AddPragmaHandler("OPENCL", FPContractHandler);
   }
   if (getLangOpts().OpenMP)
-    OpenMPHandler = std::make_unique<PragmaOpenMPHandler>();
+    OpenMPHandler = std::make_shared<PragmaOpenMPHandler>();
   else
-    OpenMPHandler = std::make_unique<PragmaNoOpenMPHandler>();
-  PP.AddPragmaHandler(OpenMPHandler.get());
+    OpenMPHandler = std::make_shared<PragmaNoOpenMPHandler>();
+  PP.AddPragmaHandler(OpenMPHandler);
 
   if (getLangOpts().OpenACC)
-    OpenACCHandler = std::make_unique<PragmaOpenACCHandler>();
+    OpenACCHandler = std::make_shared<PragmaOpenACCHandler>();
   else
-    OpenACCHandler = std::make_unique<PragmaNoOpenACCHandler>();
-  PP.AddPragmaHandler(OpenACCHandler.get());
+    OpenACCHandler = std::make_shared<PragmaNoOpenACCHandler>();
+  PP.AddPragmaHandler(OpenACCHandler);
 
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
-    MSCommentHandler = std::make_unique<PragmaCommentHandler>(Actions);
-    PP.AddPragmaHandler(MSCommentHandler.get());
+    MSCommentHandler = std::make_shared<PragmaCommentHandler>(Actions);
+    PP.AddPragmaHandler(MSCommentHandler);
   }
 
-  FloatControlHandler = std::make_unique<PragmaFloatControlHandler>(Actions);
-  PP.AddPragmaHandler(FloatControlHandler.get());
+  FloatControlHandler = std::make_shared<PragmaFloatControlHandler>(Actions);
+  PP.AddPragmaHandler(FloatControlHandler);
   if (getLangOpts().MicrosoftExt) {
     MSDetectMismatchHandler =
-        std::make_unique<PragmaDetectMismatchHandler>(Actions);
-    PP.AddPragmaHandler(MSDetectMismatchHandler.get());
-    MSPointersToMembers = std::make_unique<PragmaMSPointersToMembers>();
-    PP.AddPragmaHandler(MSPointersToMembers.get());
-    MSVtorDisp = std::make_unique<PragmaMSVtorDisp>();
-    PP.AddPragmaHandler(MSVtorDisp.get());
-    MSInitSeg = std::make_unique<PragmaMSPragma>("init_seg");
-    PP.AddPragmaHandler(MSInitSeg.get());
-    MSDataSeg = std::make_unique<PragmaMSPragma>("data_seg");
-    PP.AddPragmaHandler(MSDataSeg.get());
-    MSBSSSeg = std::make_unique<PragmaMSPragma>("bss_seg");
-    PP.AddPragmaHandler(MSBSSSeg.get());
-    MSConstSeg = std::make_unique<PragmaMSPragma>("const_seg");
-    PP.AddPragmaHandler(MSConstSeg.get());
-    MSCodeSeg = std::make_unique<PragmaMSPragma>("code_seg");
-    PP.AddPragmaHandler(MSCodeSeg.get());
-    MSSection = std::make_unique<PragmaMSPragma>("section");
-    PP.AddPragmaHandler(MSSection.get());
+        std::make_shared<PragmaDetectMismatchHandler>(Actions);
+    PP.AddPragmaHandler(MSDetectMismatchHandler);
+    MSPointersToMembers = std::make_shared<PragmaMSPointersToMembers>();
+    PP.AddPragmaHandler(MSPointersToMembers);
+    MSVtorDisp = std::make_shared<PragmaMSVtorDisp>();
+    PP.AddPragmaHandler(MSVtorDisp);
+    MSInitSeg = std::make_shared<PragmaMSPragma>("init_seg");
+    PP.AddPragmaHandler(MSInitSeg);
+    MSDataSeg = std::make_shared<PragmaMSPragma>("data_seg");
+    PP.AddPragmaHandler(MSDataSeg);
+    MSBSSSeg = std::make_shared<PragmaMSPragma>("bss_seg");
+    PP.AddPragmaHandler(MSBSSSeg);
+    MSConstSeg = std::make_shared<PragmaMSPragma>("const_seg");
+    PP.AddPragmaHandler(MSConstSeg);
+    MSCodeSeg = std::make_shared<PragmaMSPragma>("code_seg");
+    PP.AddPragmaHandler(MSCodeSeg);
+    MSSection = std::make_shared<PragmaMSPragma>("section");
+    PP.AddPragmaHandler(MSSection);
     MSStrictGuardStackCheck =
-        std::make_unique<PragmaMSPragma>("strict_gs_check");
-    PP.AddPragmaHandler(MSStrictGuardStackCheck.get());
-    MSFunction = std::make_unique<PragmaMSPragma>("function");
-    PP.AddPragmaHandler(MSFunction.get());
-    MSAllocText = std::make_unique<PragmaMSPragma>("alloc_text");
-    PP.AddPragmaHandler(MSAllocText.get());
-    MSOptimize = std::make_unique<PragmaMSPragma>("optimize");
-    PP.AddPragmaHandler(MSOptimize.get());
-    MSRuntimeChecks = std::make_unique<PragmaMSRuntimeChecksHandler>();
-    PP.AddPragmaHandler(MSRuntimeChecks.get());
-    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>();
-    PP.AddPragmaHandler(MSIntrinsic.get());
-    MSFenvAccess = std::make_unique<PragmaMSFenvAccessHandler>();
-    PP.AddPragmaHandler(MSFenvAccess.get());
+        std::make_shared<PragmaMSPragma>("strict_gs_check");
+    PP.AddPragmaHandler(MSStrictGuardStackCheck);
+    MSFunction = std::make_shared<PragmaMSPragma>("function");
+    PP.AddPragmaHandler(MSFunction);
+    MSAllocText = std::make_shared<PragmaMSPragma>("alloc_text");
+    PP.AddPragmaHandler(MSAllocText);
+    MSOptimize = std::make_shared<PragmaMSPragma>("optimize");
+    PP.AddPragmaHandler(MSOptimize);
+    MSRuntimeChecks = std::make_shared<PragmaMSRuntimeChecksHandler>();
+    PP.AddPragmaHandler(MSRuntimeChecks);
+    MSIntrinsic = std::make_shared<PragmaMSIntrinsicHandler>();
+    PP.AddPragmaHandler(MSIntrinsic);
+    MSFenvAccess = std::make_shared<PragmaMSFenvAccessHandler>();
+    PP.AddPragmaHandler(MSFenvAccess);
   }
 
   if (getLangOpts().CUDA) {
     CUDAForceHostDeviceHandler =
-        std::make_unique<PragmaForceCUDAHostDeviceHandler>(Actions);
-    PP.AddPragmaHandler("clang", CUDAForceHostDeviceHandler.get());
+        std::make_shared<PragmaForceCUDAHostDeviceHandler>(Actions);
+    PP.AddPragmaHandler("clang", CUDAForceHostDeviceHandler);
   }
 
-  OptimizeHandler = std::make_unique<PragmaOptimizeHandler>(Actions);
-  PP.AddPragmaHandler("clang", OptimizeHandler.get());
+  OptimizeHandler = std::make_shared<PragmaOptimizeHandler>(Actions);
+  PP.AddPragmaHandler("clang", OptimizeHandler);
 
-  LoopHintHandler = std::make_unique<PragmaLoopHintHandler>();
-  PP.AddPragmaHandler("clang", LoopHintHandler.get());
+  LoopHintHandler = std::make_shared<PragmaLoopHintHandler>();
+  PP.AddPragmaHandler("clang", LoopHintHandler);
 
-  UnrollHintHandler = std::make_unique<PragmaUnrollHintHandler>("unroll");
-  PP.AddPragmaHandler(UnrollHintHandler.get());
-  PP.AddPragmaHandler("GCC", UnrollHintHandler.get());
+  UnrollHintHandler = std::make_shared<PragmaUnrollHintHandler>("unroll");
+  PP.AddPragmaHandler(UnrollHintHandler);
+  PP.AddPragmaHandler("GCC", UnrollHintHandler);
 
-  NoUnrollHintHandler = std::make_unique<PragmaUnrollHintHandler>("nounroll");
-  PP.AddPragmaHandler(NoUnrollHintHandler.get());
-  PP.AddPragmaHandler("GCC", NoUnrollHintHandler.get());
+  NoUnrollHintHandler = std::make_shared<PragmaUnrollHintHandler>("nounroll");
+  PP.AddPragmaHandler(NoUnrollHintHandler);
+  PP.AddPragmaHandler("GCC", NoUnrollHintHandler);
 
   UnrollAndJamHintHandler =
-      std::make_unique<PragmaUnrollHintHandler>("unroll_and_jam");
-  PP.AddPragmaHandler(UnrollAndJamHintHandler.get());
+      std::make_shared<PragmaUnrollHintHandler>("unroll_and_jam");
+  PP.AddPragmaHandler(UnrollAndJamHintHandler);
 
   NoUnrollAndJamHintHandler =
-      std::make_unique<PragmaUnrollHintHandler>("nounroll_and_jam");
-  PP.AddPragmaHandler(NoUnrollAndJamHintHandler.get());
+      std::make_shared<PragmaUnrollHintHandler>("nounroll_and_jam");
+  PP.AddPragmaHandler(NoUnrollAndJamHintHandler);
 
-  FPHandler = std::make_unique<PragmaFPHandler>();
-  PP.AddPragmaHandler("clang", FPHandler.get());
+  FPHandler = std::make_shared<PragmaFPHandler>();
+  PP.AddPragmaHandler("clang", FPHandler);
 
   AttributePragmaHandler =
-      std::make_unique<PragmaAttributeHandler>(AttrFactory);
-  PP.AddPragmaHandler("clang", AttributePragmaHandler.get());
+      std::make_shared<PragmaAttributeHandler>(AttrFactory);
+  PP.AddPragmaHandler("clang", AttributePragmaHandler);
 
-  MaxTokensHerePragmaHandler = std::make_unique<PragmaMaxTokensHereHandler>();
-  PP.AddPragmaHandler("clang", MaxTokensHerePragmaHandler.get());
+  MaxTokensHerePragmaHandler = std::make_shared<PragmaMaxTokensHereHandler>();
+  PP.AddPragmaHandler("clang", MaxTokensHerePragmaHandler);
 
-  MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
-  PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
+  MaxTokensTotalPragmaHandler = std::make_shared<PragmaMaxTokensTotalHandler>();
+  PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler);
 
   if (getTargetInfo().getTriple().isRISCV()) {
-    RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
-    PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
+    RISCVPragmaHandler = std::make_shared<PragmaRISCVHandler>(Actions);
+    PP.AddPragmaHandler("clang", RISCVPragmaHandler);
   }
 }
 
 void Parser::resetPragmaHandlers() {
   // Remove the pragma handlers we installed.
-  PP.RemovePragmaHandler(AlignHandler.get());
-  AlignHandler.reset();
-  PP.RemovePragmaHandler("GCC", GCCVisibilityHandler.get());
-  GCCVisibilityHandler.reset();
-  PP.RemovePragmaHandler(OptionsHandler.get());
-  OptionsHandler.reset();
-  PP.RemovePragmaHandler(PackHandler.get());
-  PackHandler.reset();
-  PP.RemovePragmaHandler(MSStructHandler.get());
-  MSStructHandler.reset();
-  PP.RemovePragmaHandler(UnusedHandler.get());
-  UnusedHandler.reset();
-  PP.RemovePragmaHandler(WeakHandler.get());
-  WeakHandler.reset();
-  PP.RemovePragmaHandler(RedefineExtnameHandler.get());
-  RedefineExtnameHandler.reset();
+  PP.RemovePragmaHandler(AlignHandler->getName());
+  PP.RemovePragmaHandler("GCC", GCCVisibilityHandler->getName());
+  PP.RemovePragmaHandler(OptionsHandler->getName());
+  PP.RemovePragmaHandler(PackHandler->getName());
+  PP.RemovePragmaHandler(MSStructHandler->getName());
+  PP.RemovePragmaHandler(UnusedHandler->getName());
+  PP.RemovePragmaHandler(WeakHandler->getName());
+  PP.RemovePragmaHandler(RedefineExtnameHandler->getName());
 
   if (getLangOpts().OpenCL) {
-    PP.RemovePragmaHandler("OPENCL", OpenCLExtensionHandler.get());
-    OpenCLExtensionHandler.reset();
-    PP.RemovePragmaHandler("OPENCL", FPContractHandler.get());
+    PP.RemovePragmaHandler("OPENCL", OpenCLExtensionHandler->getName());
+    PP.RemovePragmaHandler("OPENCL", FPContractHandler->getName());
   }
-  PP.RemovePragmaHandler(OpenMPHandler.get());
-  OpenMPHandler.reset();
+  PP.RemovePragmaHandler(OpenMPHandler->getName());
 
-  PP.RemovePragmaHandler(OpenACCHandler.get());
-  OpenACCHandler.reset();
+  PP.RemovePragmaHandler(OpenACCHandler->getName());
 
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
-    PP.RemovePragmaHandler(MSCommentHandler.get());
-    MSCommentHandler.reset();
+    PP.RemovePragmaHandler(MSCommentHandler->getName());
   }
 
-  PP.RemovePragmaHandler("clang", PCSectionHandler.get());
-  PCSectionHandler.reset();
+  PP.RemovePragmaHandler("clang", PCSectionHandler->getName());
 
-  PP.RemovePragmaHandler(FloatControlHandler.get());
-  FloatControlHandler.reset();
+  PP.RemovePragmaHandler(FloatControlHandler->getName());
   if (getLangOpts().MicrosoftExt) {
-    PP.RemovePragmaHandler(MSDetectMismatchHandler.get());
-    MSDetectMismatchHandler.reset();
-    PP.RemovePragmaHandler(MSPointersToMembers.get());
-    MSPointersToMembers.reset();
-    PP.RemovePragmaHandler(MSVtorDisp.get());
-    MSVtorDisp.reset();
-    PP.RemovePragmaHandler(MSInitSeg.get());
-    MSInitSeg.reset();
-    PP.RemovePragmaHandler(MSDataSeg.get());
-    MSDataSeg.reset();
-    PP.RemovePragmaHandler(MSBSSSeg.get());
-    MSBSSSeg.reset();
-    PP.RemovePragmaHandler(MSConstSeg.get());
-    MSConstSeg.reset();
-    PP.RemovePragmaHandler(MSCodeSeg.get());
-    MSCodeSeg.reset();
-    PP.RemovePragmaHandler(MSSection.get());
-    MSSection.reset();
-    PP.RemovePragmaHandler(MSStrictGuardStackCheck.get());
-    MSStrictGuardStackCheck.reset();
-    PP.RemovePragmaHandler(MSFunction.get());
-    MSFunction.reset();
-    PP.RemovePragmaHandler(MSAllocText.get());
-    MSAllocText.reset();
-    PP.RemovePragmaHandler(MSRuntimeChecks.get());
-    MSRuntimeChecks.reset();
-    PP.RemovePragmaHandler(MSIntrinsic.get());
-    MSIntrinsic.reset();
-    PP.RemovePragmaHandler(MSOptimize.get());
-    MSOptimize.reset();
-    PP.RemovePragmaHandler(MSFenvAccess.get());
-    MSFenvAccess.reset();
+    PP.RemovePragmaHandler(MSDetectMismatchHandler->getName());
+    PP.RemovePragmaHandler(MSPointersToMembers->getName());
+    PP.RemovePragmaHandler(MSVtorDisp->getName());
+    PP.RemovePragmaHandler(MSInitSeg->getName());
+    PP.RemovePragmaHandler(MSDataSeg->getName());
+    PP.RemovePragmaHandler(MSBSSSeg->getName());
+    PP.RemovePragmaHandler(MSConstSeg->getName());
+    PP.RemovePragmaHandler(MSCodeSeg->getName());
+    PP.RemovePragmaHandler(MSSection->getName());
+    PP.RemovePragmaHandler(MSStrictGuardStackCheck->getName());
+    PP.RemovePragmaHandler(MSFunction->getName());
+    PP.RemovePragmaHandler(MSAllocText->getName());
+    PP.RemovePragmaHandler(MSRuntimeChecks->getName());
+    PP.RemovePragmaHandler(MSIntrinsic->getName());
+    PP.RemovePragmaHandler(MSOptimize->getName());
+    PP.RemovePragmaHandler(MSFenvAccess->getName());
   }
 
   if (getLangOpts().CUDA) {
-    PP.RemovePragmaHandler("clang", CUDAForceHostDeviceHandler.get());
-    CUDAForceHostDeviceHandler.reset();
+    PP.RemovePragmaHandler("clang", CUDAForceHostDeviceHandler->getName());
   }
 
-  PP.RemovePragmaHandler("STDC", FPContractHandler.get());
-  FPContractHandler.reset();
+  PP.RemovePragmaHandler("STDC", FPContractHandler->getName());
 
-  PP.RemovePragmaHandler("STDC", STDCFenvAccessHandler.get());
-  STDCFenvAccessHandler.reset();
+  PP.RemovePragmaHandler("STDC", STDCFenvAccessHandler->getName());
 
-  PP.RemovePragmaHandler("STDC", STDCFenvRoundHandler.get());
-  STDCFenvRoundHandler.reset();
+  PP.RemovePragmaHandler("STDC", STDCFenvRoundHandler->getName());
 
-  PP.RemovePragmaHandler("STDC", STDCCXLIMITHandler.get());
-  STDCCXLIMITHandler.reset();
+  PP.RemovePragmaHandler("STDC", STDCCXLIMITHandler->getName());
 
-  PP.RemovePragmaHandler("STDC", STDCUnknownHandler.get());
-  STDCUnknownHandler.reset();
+  PP.RemovePragmaHandler("STDC", STDCUnknownHandler->getName());
 
-  PP.RemovePragmaHandler("clang", OptimizeHandler.get());
-  OptimizeHandler.reset();
+  PP.RemovePragmaHandler("clang", OptimizeHandler->getName());
 
-  PP.RemovePragmaHandler("clang", LoopHintHandler.get());
-  LoopHintHandler.reset();
+  PP.RemovePragmaHandler("clang", LoopHintHandler->getName());
 
-  PP.RemovePragmaHandler(UnrollHintHandler.get());
-  PP.RemovePragmaHandler("GCC", UnrollHintHandler.get());
-  UnrollHintHandler.reset();
+  PP.RemovePragmaHandler(UnrollHintHandler->getName());
+  PP.RemovePragmaHandler("GCC", UnrollHintHandler->getName());
 
-  PP.RemovePragmaHandler(NoUnrollHintHandler.get());
-  PP.RemovePragmaHandler("GCC", NoUnrollHintHandler.get());
-  NoUnrollHintHandler.reset();
+  PP.RemovePragmaHandler(NoUnrollHintHandler->getName());
+  PP.RemovePragmaHandler("GCC", NoUnrollHintHandler->getName());
 
-  PP.RemovePragmaHandler(UnrollAndJamHintHandler.get());
-  UnrollAndJamHintHandler.reset();
+  PP.RemovePragmaHandler(UnrollAndJamHintHandler->getName());
 
-  PP.RemovePragmaHandler(NoUnrollAndJamHintHandler.get());
-  NoUnrollAndJamHintHandler.reset();
+  PP.RemovePragmaHandler(NoUnrollAndJamHintHandler->getName());
 
-  PP.RemovePragmaHandler("clang", FPHandler.get());
-  FPHandler.reset();
+  PP.RemovePragmaHandler("clang", FPHandler->getName());
 
-  PP.RemovePragmaHandler("clang", AttributePragmaHandler.get());
-  AttributePragmaHandler.reset();
+  PP.RemovePragmaHandler("clang", AttributePragmaHandler->getName());
 
-  PP.RemovePragmaHandler("clang", MaxTokensHerePragmaHandler.get());
-  MaxTokensHerePragmaHandler.reset();
+  PP.RemovePragmaHandler("clang", MaxTokensHerePragmaHandler->getName());
 
-  PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
-  MaxTokensTotalPragmaHandler.reset();
+  PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler->getName());
 
   if (getTargetInfo().getTriple().isRISCV()) {
-    PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
-    RISCVPragmaHandler.reset();
+    PP.RemovePragmaHandler("clang", RISCVPragmaHandler->getName());
   }
 }
 
