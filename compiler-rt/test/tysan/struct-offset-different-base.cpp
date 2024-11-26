@@ -6,28 +6,26 @@
 #include <stdio.h>
 
 struct inner {
-	char buffer;
-	int i;
+  char buffer;
+  int i;
 };
 
-void init_inner(inner *iPtr) {
-	iPtr->i = 200;
-}
+void init_inner(inner *iPtr) { iPtr->i = 200; }
 
 struct outer {
-	inner foo;
-    char buffer;
+  inner foo;
+  char buffer;
 };
 
 int main(void) {
-    outer *l = new outer();
+  outer *l = new outer();
 
-    init_inner(&l->foo);
-    
-    int access_offsets_with_different_base = l->foo.i;
-    printf("Accessed value is %d\n", access_offsets_with_different_base);
-    
-    return 0;
+  init_inner(&l->foo);
+
+  int access_offsets_with_different_base = l->foo.i;
+  printf("Accessed value is %d\n", access_offsets_with_different_base);
+
+  return 0;
 }
 
 // CHECK: Accessed value is 200
