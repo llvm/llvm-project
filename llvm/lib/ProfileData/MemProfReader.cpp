@@ -304,7 +304,7 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
   uint64_t NumAllocFunctions = 0, NumMibInfo = 0;
-  for (const auto &KV : FunctionProfileData) {
+  for (const auto &KV : MemProfData.Records) {
     const size_t NumAllocSites = KV.second.AllocSites.size();
     if (NumAllocSites > 0) {
       NumAllocFunctions++;
@@ -500,13 +500,13 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     }
 
     CallStackId CSId = hashCallStack(Callstack);
-    CSIdToCallStack.insert({CSId, Callstack});
+    MemProfData.CallStacks.insert({CSId, Callstack});
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
       const Frame &F = idToFrame(Callstack[I]);
-      IndexedMemProfRecord &Record = FunctionProfileData[F.Function];
+      IndexedMemProfRecord &Record = MemProfData.Records[F.Function];
       Record.AllocSites.emplace_back(Callstack, CSId, MIB);
 
       if (!F.IsInlineFrame)
@@ -518,10 +518,10 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   for (const auto &[Id, Locs] : PerFunctionCallSites) {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
-    IndexedMemProfRecord &Record = FunctionProfileData[Id];
+    IndexedMemProfRecord &Record = MemProfData.Records[Id];
     for (LocationPtr Loc : Locs) {
       CallStackId CSId = hashCallStack(*Loc);
-      CSIdToCallStack.insert({CSId, *Loc});
+      MemProfData.CallStacks.insert({CSId, *Loc});
       Record.CallSites.push_back(*Loc);
       Record.CallSiteIds.push_back(CSId);
     }
@@ -585,7 +585,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
         }
 
         const FrameId Hash = F.hash();
-        IdToFrame.insert({Hash, F});
+        MemProfData.Frames.insert({Hash, F});
         SymbolizedFrame[VAddr].push_back(Hash);
       }
     }

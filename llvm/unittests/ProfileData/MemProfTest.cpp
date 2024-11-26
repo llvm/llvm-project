@@ -440,7 +440,7 @@ TEST(MemProf, BaseMemProfReader) {
   FakeRecord.AllocSites.emplace_back(/*CSId=*/CSId, /*MB=*/Block);
   MemProfData.Records.insert({F1.hash(), FakeRecord});
 
-  MemProfReader Reader(MemProfData);
+  MemProfReader Reader(std::move(MemProfData));
 
   llvm::SmallVector<MemProfRecord, 1> Records;
   for (const auto &KeyRecordPair : Reader) {
@@ -478,7 +478,7 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
       /*MB=*/Block);
   MemProfData.Records.insert({F1.hash(), FakeRecord});
 
-  MemProfReader Reader(MemProfData);
+  MemProfReader Reader(std::move(MemProfData));
 
   llvm::SmallVector<MemProfRecord, 1> Records;
   for (const auto &KeyRecordPair : Reader) {
