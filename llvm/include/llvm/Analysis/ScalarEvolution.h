@@ -1316,6 +1316,25 @@ public:
 
     LoopGuards(ScalarEvolution &SE) : SE(SE) {}
 
+    /// Recursively collect loop guards in \p Guards, starting from
+    /// block \p Block with predecessor \p Pred. The intended starting point
+    /// is to collect from a loop header and its predecessor.
+    static void
+    collectFromBlock(ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+                     const BasicBlock *Block, const BasicBlock *Pred,
+                     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+                     unsigned Depth = 0);
+
+    /// Collect loop guards in \p Guards, starting from PHINode \p
+    /// Phi, by calling \p collectFromBlock on the incoming blocks of
+    /// \Phi and trying to merge the found constraints into a single
+    /// combined one for \p Phi.
+    static void collectFromPHI(
+        ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+        const PHINode &Phi, SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+        SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
+        unsigned Depth);
+
   public:
     /// Collect rewrite map for loop guards for loop \p L, together with flags
     /// indicating if NUW and NSW can be preserved during rewriting.
@@ -2168,6 +2187,9 @@ private:
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
 
+  /// Returns true if \p Op is guaranteed to not be poison.
+  static bool isGuaranteedNotToBePoison(const SCEV *Op);
+
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
   /// SCEV commons expressions across control flow, and you can have cases
@@ -2376,6 +2398,10 @@ public:
   /// Get the (predicated) symbolic max backedge count for the analyzed loop.
   const SCEV *getSymbolicMaxBackedgeTakenCount();
 
+  /// Returns the upper bound of the loop trip count as a normal unsigned
+  /// value, or 0 if the trip count is unknown.
+  unsigned getSmallConstantMaxTripCount();
+
   /// Adds a new predicate.
   void addPredicate(const SCEVPredicate &Pred);
 
@@ -2447,6 +2473,9 @@ private:
 
   /// The symbolic backedge taken count.
   const SCEV *SymbolicMaxBackedgeCount = nullptr;
+
+  /// The constant max trip count for the loop.
+  std::optional<unsigned> SmallConstantMaxTripCount;
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {

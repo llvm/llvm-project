@@ -175,7 +175,6 @@ const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {
   WASM_FEATURE_PREFIX_USED = '+',
-  WASM_FEATURE_PREFIX_REQUIRED = '=',
   WASM_FEATURE_PREFIX_DISALLOWED = '-',
 };
 

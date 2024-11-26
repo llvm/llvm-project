@@ -50,8 +50,11 @@ bool LoongArch::getArchFeatures(StringRef Arch,
     Features.push_back("+d");
     Features.push_back("+lsx");
     Features.push_back("+ual");
-    if (Arch == "la64v1.1")
+    if (Arch == "la64v1.1") {
       Features.push_back("+frecipe");
+      Features.push_back("+lam-bh");
+      Features.push_back("+ld-seq-sa");
+    }
     return true;
   }
 

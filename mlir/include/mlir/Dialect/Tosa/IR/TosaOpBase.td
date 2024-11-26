@@ -234,6 +234,11 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
       "operands attr-dict `:` functional-type(operands, results)";
 }
 
+class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
+    Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
+              SameOperandsAndResultShape,
+              SameOperandsAndResultElementType])> {}
+
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {
   let assemblyFormat =

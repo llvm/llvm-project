@@ -82,7 +82,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
     }
     // Subnormal inputs.
     if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval())) {
-      if (x_u == 0) {
+      if (x == 0.0f) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);

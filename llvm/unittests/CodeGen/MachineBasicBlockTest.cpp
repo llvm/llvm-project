@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -20,7 +21,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

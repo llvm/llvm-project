@@ -79,7 +79,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -189,7 +188,7 @@ void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
   unsigned Cur = 0;
   while (MBB) {
     for (auto *Pred : MBB->predecessors()) {
-      if (Pred != Flow && !Blocks.contains(Pred))
+      if (Pred != Flow)
         Blocks.insert(Pred);
     }
 
@@ -407,10 +406,8 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
   while (!WorkList.empty()) {
     auto *MBB = WorkList.pop_back_val();
     for (auto *Succ : MBB->successors()) {
-      if (Succ != Flow && !Blocks.contains(Succ)) {
+      if (Succ != Flow && Blocks.insert(Succ))
         WorkList.push_back(Succ);
-        Blocks.insert(Succ);
-      }
     }
   }
 

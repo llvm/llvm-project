@@ -1,4 +1,4 @@
-//===--- ClangCommentCommandInfoEmitter.cpp - Generate command lists -----====//
+//===-- ClangCommentCommandInfoEmitter.cpp - Generate command lists -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -63,7 +63,7 @@ void clang::EmitClangCommentCommandInfo(const RecordKeeper &Records,
   std::vector<StringMatcher::StringPair> Matches;
   for (size_t i = 0, e = Tags.size(); i != e; ++i) {
     const Record &Tag = *Tags[i];
-    std::string Name = std::string(Tag.getValueAsString("Name"));
+    std::string Name = Tag.getValueAsString("Name").str();
     std::string Return;
     raw_string_ostream(Return) << "return &Commands[" << i << "];";
     Matches.emplace_back(std::move(Name), std::move(Return));

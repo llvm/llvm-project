@@ -14,6 +14,7 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
@@ -43,6 +44,8 @@ namespace clang::tidy::misc {
 namespace {
 
 AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
+
+AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 
 static bool isInMainFile(SourceLocation L, SourceManager &SM,
                          const FileExtensionsSet &HeaderFileExtensions) {
@@ -100,7 +103,7 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                 // 4. friend
                 hasAncestor(friendDecl()))));
   Finder->addMatcher(
-      functionDecl(Common, unless(cxxMethodDecl()), unless(isMain()))
+      functionDecl(Common, hasBody(), unless(cxxMethodDecl()), unless(isMain()))
           .bind("fn"),
       this);
   Finder->addMatcher(varDecl(Common, hasGlobalStorage()).bind("var"), this);
@@ -113,7 +116,7 @@ static constexpr StringRef Message =
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
     DiagnosticBuilder DB = diag(FD->getLocation(), Message) << "function" << FD;
-    SourceLocation FixLoc = FD->getTypeSpecStartLoc();
+    const SourceLocation FixLoc = FD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
     if (FixMode == FixModeKind::UseStatic)
@@ -128,7 +131,7 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
-    SourceLocation FixLoc = VD->getTypeSpecStartLoc();
+    const SourceLocation FixLoc = VD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
     if (FixMode == FixModeKind::UseStatic)

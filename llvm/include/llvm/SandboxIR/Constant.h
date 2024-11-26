@@ -22,6 +22,7 @@
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/User.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -796,6 +797,25 @@ public:
     return map_iterator(LLVMGV->getReverseIterator(), ToGV);
   }
 };
+
+// These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
+extern template LLVM_TEMPLATE_ABI GlobalIFunc &
+GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
+                                                                  &LLVMGV)
+    const;
+extern template LLVM_TEMPLATE_ABI Function &
+GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
+    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
+
+extern template LLVM_TEMPLATE_ABI GlobalVariable &GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject,
+    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
+    const;
+extern template LLVM_TEMPLATE_ABI GlobalAlias &
+GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
+                                                                 &LLVMGV) const;
 
 class GlobalIFunc final
     : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,

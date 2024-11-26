@@ -27,3 +27,29 @@ TEST_F(LlvmLibcLog2Test, SpecialNumbers) {
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log2(-1.0), FE_INVALID);
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log2(1.0));
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcLog2Test, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(-1074.0, LIBC_NAMESPACE::log2(min_denormal));
+}
+
+TEST_F(LlvmLibcLog2Test, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::log2(min_denormal));
+}
+
+TEST_F(LlvmLibcLog2Test, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::log2(min_denormal));
+}
+
+#endif

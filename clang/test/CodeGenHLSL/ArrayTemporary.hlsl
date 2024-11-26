@@ -68,11 +68,11 @@ void call4(float Arr[2][2]) {
 // CHECK: [[Tmp2:%.*]] = alloca [4 x float]
 // CHECK: [[Tmp3:%.*]] = alloca [3 x i32]
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp1]], ptr align 4 [[FA2]], i32 8, i1 false)
-// CHECK: call void @"??$template_fn@$$BY01M@@YAXY01M@Z"(ptr noundef byval([2 x float]) align 4 [[Tmp1]])
+// CHECK: call void @_Z11template_fnIA2_fEvT_(ptr noundef byval([2 x float]) align 4 [[Tmp1]])
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp2]], ptr align 4 [[FA4]], i32 16, i1 false)
-// CHECK: call void @"??$template_fn@$$BY03M@@YAXY03M@Z"(ptr noundef byval([4 x float]) align 4 [[Tmp2]])
+// CHECK: call void @_Z11template_fnIA4_fEvT_(ptr noundef byval([4 x float]) align 4 [[Tmp2]])
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp3]], ptr align 4 [[IA3]], i32 12, i1 false)
-// CHECK: call void @"??$template_fn@$$BY02H@@YAXY02H@Z"(ptr noundef byval([3 x i32]) align 4 [[Tmp3]])
+// CHECK: call void @_Z11template_fnIA3_iEvT_(ptr noundef byval([3 x i32]) align 4 [[Tmp3]])
 
 template<typename T>
 void template_fn(T Val) {}
@@ -90,7 +90,7 @@ void template_call(float FA2[2], float FA4[4], int IA3[3]) {
 
 // CHECK: [[Addr:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Tmp:%.*]] = load float, ptr [[Addr]]
-// CHECK: call void @"??$template_fn@M@@YAXM@Z"(float noundef [[Tmp]])
+// CHECK: call void @_Z11template_fnIfEvT_(float noundef [[Tmp]])
 
 // CHECK: [[Idx0:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Val0:%.*]] = load float, ptr [[Idx0]]

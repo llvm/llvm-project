@@ -507,6 +507,13 @@ acc.parallel num_gangs({%i64value: i64, %i64value : i64, %i64value : i64, %i64va
 
 // -----
 
+%0 = "arith.constant"() <{value = 1 : i64}> : () -> i64
+// expected-error@+1 {{num_gangs operand count does not match count in segments}}
+"acc.parallel"(%0) <{numGangsSegments = array<i32: 1>, operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0>}> ({
+}) : (i64) -> ()
+
+// -----
+
 %i64value = arith.constant 1 : i64
 acc.parallel {
 // expected-error@+1 {{'acc.set' op cannot be nested in a compute operation}}
@@ -604,7 +611,7 @@ func.func @acc_atomic_update(%x: memref<i32>, %expr: i32) {
 func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{expected three operations in atomic.capture region}}
   acc.atomic.capture {
-    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.terminator
   }
   return
@@ -615,56 +622,8 @@ func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.read %v = %x : memref<i32>, i32
-    acc.atomic.read %v = %x : memref<i32>, i32
-    acc.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  acc.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      acc.yield %newval : i32
-    }
-    acc.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      acc.yield %newval : i32
-    }
-    acc.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  acc.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  acc.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      acc.yield %newval : i32
-    }
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.terminator
   }
   return
@@ -680,6 +639,22 @@ func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       acc.yield %newval : i32
     }
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.write %x = %expr : memref<i32>, i32
     acc.atomic.write %x = %expr : memref<i32>, i32
     acc.terminator
   }
@@ -692,7 +667,39 @@ func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
     acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.terminator
   }
   return
@@ -708,7 +715,7 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
       %newval = llvm.add %xval, %expr : i32
       acc.yield %newval : i32
     }
-    acc.atomic.read %v = %y : memref<i32>, i32
+    acc.atomic.read %v = %y : memref<i32>, memref<i32>, i32
     acc.terminator
   }
 }
@@ -718,7 +725,7 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
-    acc.atomic.read %v = %y : memref<i32>, i32
+    acc.atomic.read %v = %y : memref<i32>, memref<i32>, i32
     acc.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -733,7 +740,7 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
-    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.atomic.write %y = %expr : memref<i32>, i32
     acc.terminator
   }

@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows
+# UNSUPPORTED: system-windows, remote-linux
 
 # RUN: %clangxx_host %p/Inputs/call-function.cpp -g -o %t
 

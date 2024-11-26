@@ -39,10 +39,10 @@ define void @qpFmadd(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-P8-NEXT:    vmr v3, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    li r3, 48
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -95,10 +95,10 @@ define void @qpFmadd_02(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    li r3, 48
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -214,8 +214,8 @@ define void @qpFnmadd(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    stb r4, 63(r1)
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    li r3, 64
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 96
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -331,10 +331,10 @@ define void @qpFmsub(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __subkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    li r3, 48
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
@@ -451,8 +451,8 @@ define void @qpFnmsub(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    stb r4, 63(r1)
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    li r3, 64
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 96
 ; CHECK-P8-NEXT:    ld r0, 16(r1)

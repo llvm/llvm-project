@@ -225,8 +225,8 @@ define void @addsub1(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 2
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i32> [[TMP0]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], splat (i32 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i32> [[TMP0]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
@@ -599,8 +599,8 @@ define void @addsub1f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i64 2
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP0]], <float -1.000000e+00, float -1.000000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <2 x float> [[TMP0]], <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP0]], splat (float -1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <2 x float> [[TMP0]], splat (float -1.000000e+00)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 3

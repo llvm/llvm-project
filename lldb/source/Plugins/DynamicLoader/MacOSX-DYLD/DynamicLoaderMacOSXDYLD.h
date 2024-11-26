@@ -50,6 +50,8 @@ public:
   static lldb_private::DynamicLoader *
   CreateInstance(lldb_private::Process *process, bool force);
 
+  static void DebuggerInitialize(lldb_private::Debugger &debugger);
+
   /// Called after attaching a process.
   ///
   /// Allow DynamicLoader plug-ins to execute some code after

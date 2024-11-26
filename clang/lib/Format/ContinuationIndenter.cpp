@@ -693,17 +693,14 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   bool DisallowLineBreaksOnThisLine =
       Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
-      Style.isCpp() && [&Current] {
-        // Deal with lambda arguments in C++. The aim here is to ensure that we
-        // don't over-indent lambda function bodies when lambdas are passed as
-        // arguments to function calls. We do this by ensuring that either all
-        // arguments (including any lambdas) go on the same line as the function
-        // call, or we break before the first argument.
-        const auto *Prev = Current.Previous;
-        if (!Prev)
-          return false;
+      // Deal with lambda arguments in C++. The aim here is to ensure that we
+      // don't over-indent lambda function bodies when lambdas are passed as
+      // arguments to function calls. We do this by ensuring that either all
+      // arguments (including any lambdas) go on the same line as the function
+      // call, or we break before the first argument.
+      Style.isCpp() && [&] {
         // For example, `/*Newline=*/false`.
-        if (Prev->is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
+        if (Previous.is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
           return false;
         const auto *PrevNonComment = Current.getPreviousNonComment();
         if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
@@ -2471,7 +2468,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
           State.Line->InPPDirective, Encoding, Style);
     }
   } else if (Current.is(TT_BlockComment)) {
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.
@@ -2492,7 +2489,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       }
       return true;
     }();
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
         switchesFormatting(Current) || !RegularComments) {
       return nullptr;

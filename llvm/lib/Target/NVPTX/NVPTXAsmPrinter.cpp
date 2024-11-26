@@ -78,16 +78,13 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <new>
 #include <string>
 #include <utility>
 #include <vector>
@@ -209,8 +206,8 @@ bool NVPTXAsmPrinter::lowerImageHandleOperand(const MachineInstr *MI,
 
 void NVPTXAsmPrinter::lowerImageHandleSymbol(unsigned Index, MCOperand &MCOp) {
   // Ewwww
-  LLVMTargetMachine &TM = const_cast<LLVMTargetMachine&>(MF->getTarget());
-  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine&>(TM);
+  TargetMachine &TM = const_cast<TargetMachine &>(MF->getTarget());
+  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine &>(TM);
   const NVPTXMachineFunctionInfo *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
   const char *Sym = MFI->getImageHandleSymbol(Index);
   StringRef SymName = nvTM.getStrPool().save(Sym);
@@ -1145,13 +1142,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   const Function *demotedFunc = nullptr;
   if (!processDemoted && canDemoteGlobalVar(GVar, demotedFunc)) {
     O << "// " << GVar->getName() << " has been demoted\n";
-    if (localDecls.find(demotedFunc) != localDecls.end())
-      localDecls[demotedFunc].push_back(GVar);
-    else {
-      std::vector<const GlobalVariable *> temp;
-      temp.push_back(GVar);
-      localDecls[demotedFunc] = temp;
-    }
+    localDecls[demotedFunc].push_back(GVar);
     return;
   }
 
@@ -1368,10 +1359,11 @@ void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
-  if (localDecls.find(f) == localDecls.end())
+  auto It = localDecls.find(f);
+  if (It == localDecls.end())
     return;
 
-  std::vector<const GlobalVariable *> &gvars = localDecls[f];
+  std::vector<const GlobalVariable *> &gvars = It->second;
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI =
@@ -1605,30 +1597,27 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       if (isKernelFunc) {
         if (PTy) {
-          // Special handling for pointer arguments to kernel
-          O << "\t.param .u" << PTySizeInBits << " ";
+          O << "\t.param .u" << PTySizeInBits << " .ptr";
 
-          if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
-              NVPTX::CUDA) {
-            int addrSpace = PTy->getAddressSpace();
-            switch (addrSpace) {
-            default:
-              O << ".ptr ";
-              break;
-            case ADDRESS_SPACE_CONST:
-              O << ".ptr .const ";
-              break;
-            case ADDRESS_SPACE_SHARED:
-              O << ".ptr .shared ";
-              break;
-            case ADDRESS_SPACE_GLOBAL:
-              O << ".ptr .global ";
-              break;
-            }
-            Align ParamAlign = I->getParamAlign().valueOrOne();
-            O << ".align " << ParamAlign.value() << " ";
+          switch (PTy->getAddressSpace()) {
+          default:
+            break;
+          case ADDRESS_SPACE_GLOBAL:
+            O << " .global";
+            break;
+          case ADDRESS_SPACE_SHARED:
+            O << " .shared";
+            break;
+          case ADDRESS_SPACE_CONST:
+            O << " .const";
+            break;
+          case ADDRESS_SPACE_LOCAL:
+            O << " .local";
+            break;
           }
-          O << TLI->getParamName(F, paramIndex);
+
+          O << " .align " << I->getParamAlign().valueOrOne().value();
+          O << " " << TLI->getParamName(F, paramIndex);
           continue;
         }
 

@@ -48,11 +48,9 @@ if(MSVC)
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  foreach(sym ${clang_repl_exports})
-    set(clang_repl_link_str "${clang_repl_link_str} /EXPORT:${sym}")
-  endforeach(sym ${clang_repl_exports})
+  list(TRANSFORM clang_repl_exports PREPEND "LINKER:/EXPORT:")
 
-  set_property(TARGET clang-repl APPEND_STRING PROPERTY LINK_FLAGS ${clang_repl_link_str})
+  set_property(TARGET clang-repl APPEND PROPERTY LINK_OPTIONS ${clang_repl_exports})
 
 endif(MSVC)
 

@@ -1247,6 +1247,50 @@ entry:
   ret fp128 %atan
 }
 
+define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
+; ANDROID-LABEL: atan2:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq atan2l@PLT
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
+;
+; GNU-LABEL: atan2:
+; GNU:       # %bb.0: # %entry
+; GNU-NEXT:    pushq %rax
+; GNU-NEXT:    callq atan2f128@PLT
+; GNU-NEXT:    popq %rax
+; GNU-NEXT:    retq
+;
+; X86-LABEL: atan2:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll atan2l
+; X86-NEXT:    addl $44, %esp
+; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    movaps %xmm0, (%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl $4
+entry:
+  %atan2 = call fp128 @llvm.experimental.constrained.atan2.f128(fp128 %x, fp128 %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret fp128 %atan2
+}
+
 define fp128 @tan(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: tan:
 ; ANDROID:       # %bb.0: # %entry
@@ -1734,13 +1778,12 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
@@ -1871,13 +1914,12 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
@@ -1926,7 +1968,9 @@ declare fp128 @llvm.experimental.constrained.fdiv.f128(fp128, fp128, metadata, m
 declare fp128 @llvm.experimental.constrained.fma.f128(fp128, fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.frem.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.ceil.f128(fp128, metadata)
+declare fp128 @llvm.experimental.constrained.acos.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.cos.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.cosh.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.exp.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.exp2.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.floor.f128(fp128, metadata)
@@ -1941,9 +1985,14 @@ declare fp128 @llvm.experimental.constrained.powi.f128(fp128, i32, metadata, met
 declare fp128 @llvm.experimental.constrained.rint.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata)
 declare fp128 @llvm.experimental.constrained.roundeven.f128(fp128, metadata)
+declare fp128 @llvm.experimental.constrained.asin.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.sin.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.sinh.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.sqrt.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.atan.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.atan2.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.tan.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.tanh.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f128(fp128, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.i64.f128(fp128, metadata, metadata)

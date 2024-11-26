@@ -17,9 +17,9 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -2445,8 +2445,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
               // Recover as if it were an explicit specialization.
               TemplateParameterLists FakedParamLists;
               FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-                  0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-                  std::nullopt, LAngleLoc, nullptr));
+                  0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
+                  LAngleLoc, nullptr));
 
               TheDecl = ParseFunctionDefinition(
                   D,
@@ -2787,8 +2787,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         // Recover as if it were an explicit specialization.
         TemplateParameterLists FakedParamLists;
         FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-            std::nullopt, LAngleLoc, nullptr));
+            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
+            LAngleLoc, nullptr));
 
         ThisDecl =
             Actions.ActOnTemplateDeclarator(getCurScope(), FakedParamLists, D);

@@ -567,15 +567,9 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
-    auto DisableFeatures = [](llvm::StringMap<bool> &Map, StringRef S) {
-      for (StringRef K : Map.keys())
-        if (K.starts_with(S))
-          Map[K] = false;
-    };
-
     llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-    DisableFeatures(CallerFeatureMapWithoutSVE, "sve");
+    CallerFeatureMapWithoutSVE["sve"] = false;
 
     // Avoid emitting diagnostics for a function that can never compile.
     if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
@@ -583,7 +577,7 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
 
     llvm::StringMap<bool> CallerFeatureMapWithoutSME;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-    DisableFeatures(CallerFeatureMapWithoutSME, "sme");
+    CallerFeatureMapWithoutSME["sme"] = false;
 
     // We know the builtin requires either some combination of SVE flags, or
     // some combination of SME flags, but we need to figure out which part
@@ -913,7 +907,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
 
   // Issue a warning if the cast is dodgy.
   CastKind CastNeeded = CK_NoOp;
-  if (!AddrType.isAtLeastAsQualifiedAs(ValType)) {
+  if (!AddrType.isAtLeastAsQualifiedAs(ValType, getASTContext())) {
     CastNeeded = CK_BitCast;
     Diag(DRE->getBeginLoc(), diag::ext_typecheck_convert_discards_qualifiers)
         << PointerArg->getType() << Context.getPointerType(AddrType)
