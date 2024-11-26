@@ -433,6 +433,12 @@ inline detail::constant_float_predicate_matcher m_NegInfFloat() {
   }};
 }
 
+/// Matches a constant scalar / vector splat / tensor splat with denormal
+/// values.
+inline detail::constant_float_predicate_matcher m_isDenormalFloat() {
+  return {[](const APFloat &value) { return value.isDenormal(); }};
+}
+
 /// Matches a constant scalar / vector splat / tensor splat integer zero.
 inline detail::constant_int_predicate_matcher m_Zero() {
   return {[](const APInt &value) { return 0 == value; }};

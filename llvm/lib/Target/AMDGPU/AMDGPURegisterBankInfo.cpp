@@ -4528,6 +4528,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_fdot2_bf16_bf16:
     case Intrinsic::amdgcn_fdot2_f16_f16:
     case Intrinsic::amdgcn_fdot2_f32_bf16:
+    case Intrinsic::amdgcn_fdot2c_f32_bf16:
     case Intrinsic::amdgcn_sudot4:
     case Intrinsic::amdgcn_sudot8:
     case Intrinsic::amdgcn_dot4_f32_fp8_bf8:
@@ -4542,6 +4543,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pk_bf8_f32:
     case Intrinsic::amdgcn_cvt_sr_fp8_f32:
     case Intrinsic::amdgcn_cvt_sr_bf8_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_pk32_bf6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_pk32_bf6_bf16:
+    case Intrinsic::amdgcn_ashr_pk_i8_i32:
+    case Intrinsic::amdgcn_ashr_pk_u8_i32:
+    case Intrinsic::amdgcn_cvt_scalef32_2xpk16_fp6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_2xpk16_bf6_f32:
     case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16:
     case Intrinsic::amdgcn_wmma_f16_16x16x16_f16:
     case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16_tied:
