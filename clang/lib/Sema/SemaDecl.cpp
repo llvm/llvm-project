@@ -8264,11 +8264,14 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    // Fields are not shadowed by variables in C++ static methods.
-    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewDC))
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewDC)) {
+      // Fields are not shadowed by variables in C++ static methods.
       if (MD->isStatic())
         return;
 
+      if (!MD->getParent()->isLambda() && MD->isExplicitObjectMemberFunction())
+        return;
+    }
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.
     if (isa<CXXConstructorDecl>(NewDC))
@@ -11913,6 +11916,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   NamedDecl *OldDecl = nullptr;
   bool MayNeedOverloadableChecks = false;
 
+  inferLifetimeCaptureByAttribute(NewFD);
   // Merge or overload the declaration with an existing declaration of
   // the same name, if appropriate.
   if (!Previous.empty()) {
@@ -16716,6 +16720,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
 
   LazyProcessLifetimeCaptureByParams(FD);
   inferLifetimeBoundAttribute(FD);
+  inferLifetimeCaptureByAttribute(FD);
   AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(FD);
 
   // If C++ exceptions are enabled but we are told extern "C" functions cannot

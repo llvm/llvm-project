@@ -413,15 +413,6 @@ bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
   return false;
 }
 
-std::optional<uint64_t> DWARFDie::getLanguage() const {
-  if (isValid()) {
-    if (std::optional<DWARFFormValue> LV =
-            U->getUnitDIE().find(dwarf::DW_AT_language))
-      return LV->getAsUnsignedConstant();
-  }
-  return std::nullopt;
-}
-
 Expected<DWARFLocationExpressionsVector>
 DWARFDie::getLocations(dwarf::Attribute Attr) const {
   std::optional<DWARFFormValue> Location = find(Attr);

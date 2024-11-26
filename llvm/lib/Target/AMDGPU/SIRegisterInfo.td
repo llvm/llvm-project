@@ -1249,7 +1249,9 @@ def VRegSrc_32 : SrcReg9<VGPR_32, "OPW32">;
 def VRegSrc_64 : SrcReg9<VReg_64, "OPW64">;
 def VRegSrc_96 : SrcReg9<VReg_96, "OPW96">;
 def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
+def VRegSrc_192: SrcReg9<VReg_192, "OPW192">;
 def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
+def VRegSrc_512: SrcReg9<VReg_512, "OPW512">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 
 // True 16 Operands
@@ -1346,11 +1348,14 @@ class AVSrcOperand<RegisterClass regClass, string width>
 def AVSrc_32 : AVSrcOperand<AV_32, "OPW32">;
 def AVSrc_64 : AVSrcOperand<AV_64, "OPW64">;
 def AVSrc_128 : AVSrcOperand<AV_128, "OPW128">;
+def AVSrc_192 : AVSrcOperand<AV_192, "OPW192">;
+def AVSrc_256 : AVSrcOperand<AV_256, "OPW256">;
 
 class AVDstOperand<RegisterClass regClass, string width>
   : AVOperand<regClass, "decodeAV10", width>;
 
 def AVDst_128 : AVDstOperand<AV_128, "OPW128">;
+def AVDst_256 : AVDstOperand<AV_256, "OPW256">;
 def AVDst_512 : AVDstOperand<AV_512, "OPW512">;
 
 class AVLdStOperand<RegisterClass regClass, string width>

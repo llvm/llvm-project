@@ -12,7 +12,7 @@
 // instantiated specialization.
 
 // EMPTY: ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit RasterizerOrderedStructuredBuffer
-// EMPTY-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> class depth 0 index 0 element_type
+// EMPTY-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> typename depth 0 index 0 element_type
 // EMPTY-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit <undeserialized declarations> class RasterizerOrderedStructuredBuffer
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
@@ -26,7 +26,7 @@ RasterizerOrderedStructuredBuffer<int> Buffer;
 #endif
 
 // CHECK: ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit RasterizerOrderedStructuredBuffer
-// CHECK-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> class depth 0 index 0 element_type
+// CHECK-NEXT: TemplateTypeParmDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> typename depth 0 index 0 element_type
 // CHECK-NEXT: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit class RasterizerOrderedStructuredBuffer definition
 
 // CHECK: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final

@@ -498,7 +498,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
-                        ISD::FLOG10},
+                        ISD::FLOG10, ISD::FLDEXP, ISD::FFREXP},
                        MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
@@ -506,7 +506,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::STRICT_FCEIL, ISD::STRICT_FFLOOR,
                         ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT,
                         ISD::STRICT_FROUND, ISD::STRICT_FROUNDEVEN,
-                        ISD::STRICT_FTRUNC},
+                        ISD::STRICT_FTRUNC, ISD::STRICT_FLDEXP},
                        MVT::f16, Promote);
 
     // We need to custom promote this.
@@ -1527,7 +1527,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
                          ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
-                         ISD::INSERT_VECTOR_ELT, ISD::ABS});
+                         ISD::INSERT_VECTOR_ELT, ISD::ABS, ISD::CTPOP});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -17055,6 +17055,52 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
   return Val;
 }
 
+// Convert
+//   (iX ctpop (bitcast (vXi1 A)))
+// ->
+//   (zext (vcpop.m (nxvYi1 (insert_subvec (vXi1 A)))))
+// FIXME: It's complicated to match all the variations of this after type
+// legalization so we only handle the pre-type legalization pattern, but that
+// requires the fixed vector type to be legal.
+static SDValue combineScalarCTPOPToVCPOP(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+
+  // Peek through zero_extend. It doesn't change the count.
+  if (Src.getOpcode() == ISD::ZERO_EXTEND)
+    Src = Src.getOperand(0);
+
+  if (Src.getOpcode() != ISD::BITCAST)
+    return SDValue();
+
+  Src = Src.getOperand(0);
+  EVT SrcEVT = Src.getValueType();
+  if (!SrcEVT.isSimple())
+    return SDValue();
+
+  MVT SrcMVT = SrcEVT.getSimpleVT();
+  // Make sure the input is an i1 vector.
+  if (!SrcMVT.isVector() || SrcMVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  if (!useRVVForFixedLengthVectorVT(SrcMVT, Subtarget))
+    return SDValue();
+
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcMVT, Subtarget);
+  Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+
+  SDLoc DL(N);
+  auto [Mask, VL] = getDefaultVLOps(SrcMVT, ContainerVT, DL, DAG, Subtarget);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Pop = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Src, Mask, VL);
+  return DAG.getZExtOrTrunc(Pop, DL, VT);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -18023,6 +18069,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     return SDValue();
   }
+  case ISD::CTPOP:
+    if (SDValue V = combineScalarCTPOPToVCPOP(N, DAG, Subtarget))
+      return V;
+    break;
   }
 
   return SDValue();
@@ -22061,9 +22111,11 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
   if (Subtarget.hasStdExtZicfilp()) {
     // When Zicfilp enabled, we need to use software guarded branch for jump
     // table branch.
-    SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
-    return DAG.getNode(RISCVISD::SW_GUARDED_BRIND, dl, MVT::Other, JTInfo,
-                       Addr);
+    SDValue Chain = Value;
+    // Jump table debug info is only needed if CodeView is enabled.
+    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+      Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
+    return DAG.getNode(RISCVISD::SW_GUARDED_BRIND, dl, MVT::Other, Chain, Addr);
   }
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }

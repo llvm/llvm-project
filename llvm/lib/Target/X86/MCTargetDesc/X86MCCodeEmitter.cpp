@@ -579,7 +579,9 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
     // this needs to be a GOTPC32 relocation.
     if (startsWithGlobalOffsetTable(Expr) != GOT_None)
       FixupKind = MCFixupKind(X86::reloc_global_offset_table);
-  }
+  } else if (FixupKind == MCFixupKind(X86::reloc_riprel_6byte_relax))
+    ImmOffset -= 6;
+
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
   if (FixupKind == FK_PCRel_1)
@@ -666,9 +668,16 @@ void X86MCCodeEmitter::emitMemModRMByte(
       case X86::SBB64rm:
       case X86::SUB64rm:
       case X86::XOR64rm:
+      case X86::LEA64r:
         return Kind == REX2  ? X86::reloc_riprel_4byte_relax_rex2
                : Kind == REX ? X86::reloc_riprel_4byte_relax_rex
                              : X86::reloc_riprel_4byte_relax;
+      case X86::ADD64rm_NF:
+      case X86::ADD64rm_ND:
+      case X86::ADD64mr_ND:
+      case X86::ADD64mr_NF_ND:
+      case X86::ADD64rm_NF_ND:
+        return X86::reloc_riprel_6byte_relax;
       }
     }();
 

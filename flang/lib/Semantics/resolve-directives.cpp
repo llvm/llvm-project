@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <list>
@@ -518,42 +519,51 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const parser::OmpReductionIdentifier &opr{
-        std::get<parser::OmpReductionIdentifier>(x.v.t)};
-    auto createDummyProcSymbol = [&](const parser::Name *name) {
-      // If name resolution failed, create a dummy symbol
-      const auto namePair{
-          currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
-      auto &newSymbol{*namePair.first->second};
-      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
-        newSymbol.attrs().set(Attr::INTRINSIC);
-      }
-      name->symbol = &newSymbol;
-    };
-    if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
-      if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
-        if (!name->symbol) {
-          if (!ResolveName(name)) {
-            createDummyProcSymbol(name);
-          }
-        }
-      }
-      if (const auto *procRef{
-              parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-        if (!procRef->v.thing.component.symbol) {
-          if (!ResolveName(&procRef->v.thing.component)) {
-            createDummyProcSymbol(&procRef->v.thing.component);
-          }
-        }
-      }
-    }
     const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
     ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
-    using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
-    const auto &maybeModifier{
-        std::get<std::optional<ReductionModifier>>(x.v.t)};
-    if (maybeModifier && *maybeModifier == ReductionModifier::Inscan) {
-      ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+
+    if (auto &modifiers{OmpGetModifiers(x.v)}) {
+      auto createDummyProcSymbol = [&](const parser::Name *name) {
+        // If name resolution failed, create a dummy symbol
+        const auto namePair{currScope().try_emplace(
+            name->source, Attrs{}, ProcEntityDetails{})};
+        auto &newSymbol{*namePair.first->second};
+        if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+          newSymbol.attrs().set(Attr::INTRINSIC);
+        }
+        name->symbol = &newSymbol;
+      };
+
+      for (auto &mod : *modifiers) {
+        if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
+          continue;
+        }
+        auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
+        if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+          if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+            if (!name->symbol) {
+              if (!ResolveName(name)) {
+                createDummyProcSymbol(name);
+              }
+            }
+          }
+          if (auto *procRef{
+                  parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+            if (!procRef->v.thing.component.symbol) {
+              if (!ResolveName(&procRef->v.thing.component)) {
+                createDummyProcSymbol(&procRef->v.thing.component);
+              }
+            }
+          }
+        }
+      }
+      using ReductionModifier = parser::OmpReductionModifier;
+      if (auto *maybeModifier{
+              OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
+        if (maybeModifier->v == ReductionModifier::Value::Inscan) {
+          ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
+        }
+      }
     }
     return false;
   }
@@ -631,28 +641,25 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
-    // There is only one `type' allowed, but it's parsed as a list. Multiple
-    // types are diagnosed in the semantic checks for OpenMP.
-    if (const auto &mapType{
-            std::get<std::optional<std::list<parser::OmpMapClause::Type>>>(
-                x.t)}) {
-      switch (mapType->front()) {
-      case parser::OmpMapClause::Type::To:
+    auto &mods{OmpGetModifiers(x)};
+    if (auto *mapType{OmpGetUniqueModifier<parser::OmpMapType>(mods)}) {
+      switch (mapType->v) {
+      case parser::OmpMapType::Value::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case parser::OmpMapClause::Type::From:
+      case parser::OmpMapType::Value::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case parser::OmpMapClause::Type::Tofrom:
+      case parser::OmpMapType::Value::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case parser::OmpMapClause::Type::Alloc:
+      case parser::OmpMapType::Value::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case parser::OmpMapClause::Type::Release:
+      case parser::OmpMapType::Value::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case parser::OmpMapClause::Type::Delete:
+      case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }
