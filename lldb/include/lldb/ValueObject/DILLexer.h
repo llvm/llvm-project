@@ -9,13 +9,10 @@
 #ifndef LLDB_VALUEOBJECT_DILLEXER_H_
 #define LLDB_VALUEOBJECT_DILLEXER_H_
 
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -199,18 +196,15 @@ class DILSourceManager {
   DILSourceManager(const DILSourceManager&) = delete;
   DILSourceManager& operator=(DILSourceManager const&) = delete;
 
-  clang::SourceManager& GetSourceManager() const { return m_smff->get(); }
-
   std::string GetSource() { return m_expr; }
 
  private:
-  explicit DILSourceManager(std::string expr);
+  explicit DILSourceManager(std::string expr)  : m_expr(std::move(expr)) {}
 
  private:
   // Store the expression, since SourceManagerForFile doesn't take the
   // ownership.
   std::string m_expr;
-  std::unique_ptr<clang::SourceManagerForFile> m_smff;
 };
 
 
@@ -220,12 +214,6 @@ class DILLexer {
   DILLexer(std::shared_ptr<DILSourceManager> dil_sm) :
       m_expr(dil_sm->GetSource()) {
     m_cur_pos = m_expr.begin();
-
-    clang::DiagnosticsEngine& de = dil_sm->GetSourceManager().getDiagnostics();
-    auto tOpts = std::make_shared<clang::TargetOptions>();
-    tOpts->Triple = llvm::sys::getDefaultTargetTriple();
-
-    m_ti.reset(clang::TargetInfo::CreateTargetInfo(de, tOpts));
     m_is_backtracking = false;
     m_backtracking_startpos = m_cur_pos;
   }
@@ -243,8 +231,6 @@ class DILLexer {
             kind == dil::TokenKind::utf8_string_literal);
   }
 
-  clang::TargetInfo &getTargetInfo() { return *m_ti; }
-
   uint32_t GetLocation() { return m_cur_pos - m_expr.begin(); }
 
   void ClearTokenCache() { m_cached_tokens.clear(); }
@@ -261,12 +247,15 @@ class DILLexer {
 
   void Backtrack();
 
+  uint32_t getCharWidth() { return 8; }
+  uint32_t getIntWidth() { return 32; }
+  uint32_t getWCharWidth() { return 16; }
+
 
  private:
   std::string m_expr;
   std::string::iterator m_cur_pos;
   std::vector<std::pair<DILToken, std::string::iterator>> m_cached_tokens;
-  std::unique_ptr<clang::TargetInfo> m_ti;
   std::vector<std::pair<DILToken, std::string::iterator>> m_backtrack_tokens;
   bool m_is_backtracking;
   std::string::iterator m_backtracking_startpos;

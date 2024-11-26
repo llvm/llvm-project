@@ -15,13 +15,6 @@
 #include <tuple>
 #include <vector>
 
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/LiteralSupport.h"
-#include "clang/Lex/ModuleLoader.h"
-#include "clang/Lex/Preprocessor.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -310,22 +303,14 @@ class DILParser {
   // context will outlive the parser.
   std::shared_ptr<ExecutionContextScope> m_ctx_scope;
 
-  std::shared_ptr<clang::SourceManagerForFile> m_smff;
-
   std::shared_ptr<DILSourceManager> m_sm;
   // The token lexer is stopped at (aka "current token").
-  clang::Token m_token;
   DILToken m_dil_token;
   // Holds an error if it occures during parsing.
   Status m_error;
 
   bool m_allow_side_effects = true;
 
-  std::unique_ptr<clang::TargetInfo> m_ti;
-  std::unique_ptr<clang::LangOptions> m_lang_opts;
-  std::unique_ptr<clang::HeaderSearch> m_hs;
-  std::unique_ptr<clang::TrivialModuleLoader> m_tml;
-  std::unique_ptr<clang::Preprocessor> m_pp;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
   bool m_fragile_ivar;

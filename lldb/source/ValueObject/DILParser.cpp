@@ -24,15 +24,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
-#include "clang/Basic/TokenKinds.h"
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -202,17 +193,6 @@ static bool GetPathToBaseType(CompilerType type, CompilerType target_base,
   return false;
 }
 
-DILSourceManager::DILSourceManager(std::string expr) : m_expr(std::move(expr))
-{
-  // This holds a DILSourceManager and all of its dependencies.
-  m_smff = std::make_unique<clang::SourceManagerForFile>("<expr>", m_expr);
-
-  // Disable default diagnostics reporting.
-  // TODO: Add custom consumer to keep track of errors.
-  clang::DiagnosticsEngine& de = m_smff->get().getDiagnostics();
-  de.setClient(new clang::IgnoringDiagConsumer);
-}
-
 std::shared_ptr<DILSourceManager> DILSourceManager::Create(std::string expr) {
   return std::shared_ptr<DILSourceManager>(new DILSourceManager(
       std::move(expr)));
@@ -221,7 +201,6 @@ std::shared_ptr<DILSourceManager> DILSourceManager::Create(std::string expr) {
 static const char* ToString(TypeDeclaration::TypeSpecifier type_spec) {
   using TypeSpecifier = TypeDeclaration::TypeSpecifier;
   switch (type_spec) {
-      // clang-format off
     case TypeSpecifier::kVoid:       return "void";
     case TypeSpecifier::kBool:       return "bool";
     case TypeSpecifier::kChar:       return "char";
@@ -235,7 +214,6 @@ static const char* ToString(TypeDeclaration::TypeSpecifier type_spec) {
     case TypeSpecifier::kWChar:      return "wchar_t";
     case TypeSpecifier::kChar16:     return "char16_t";
     case TypeSpecifier::kChar32:     return "char32_t";
-      // clang-format on
     default:
       assert(false && "invalid type specifier");
       return nullptr;
@@ -245,10 +223,8 @@ static const char* ToString(TypeDeclaration::TypeSpecifier type_spec) {
 static const char* ToString(TypeDeclaration::SignSpecifier sign_spec) {
   using SignSpecifier = TypeDeclaration::SignSpecifier;
   switch (sign_spec) {
-      // clang-format off
     case SignSpecifier::kSigned:   return "signed";
     case SignSpecifier::kUnsigned: return "unsigned";
-      // clang-format on
     default:
       assert(false && "invalid sign specifier");
       return nullptr;
@@ -587,7 +563,6 @@ static TypeDeclaration::TypeSpecifier ToTypeSpecifier(
     dil::TokenKind kind) {
   using TypeSpecifier = TypeDeclaration::TypeSpecifier;
   switch (kind) {
-      // clang-format off
     case dil::TokenKind::kw_void:     return TypeSpecifier::kVoid;
     case dil::TokenKind::kw_bool:     return TypeSpecifier::kBool;
     case dil::TokenKind::kw_char:     return TypeSpecifier::kChar;
@@ -599,7 +574,6 @@ static TypeDeclaration::TypeSpecifier ToTypeSpecifier(
     case dil::TokenKind::kw_wchar_t:  return TypeSpecifier::kWChar;
     case dil::TokenKind::kw_char16_t: return TypeSpecifier::kChar16;
     case dil::TokenKind::kw_char32_t: return TypeSpecifier::kChar32;
-      // clang-format on
     default:
       assert(false && "invalid type specifier token");
       return TypeSpecifier::kUnknown;
@@ -712,34 +686,6 @@ DILParser::DILParser(std::shared_ptr<DILSourceManager> dil_sm,
     m_check_ptr_vs_member(check_ptr_vs_member),
     m_dil_lexer(DILLexer(dil_sm))
 {
-  clang::SourceManager& sm = dil_sm->GetSourceManager();;
-  clang::DiagnosticsEngine& de = sm.getDiagnostics();
-
-  auto tOpts = std::make_shared<clang::TargetOptions>();
-  tOpts->Triple = llvm::sys::getDefaultTargetTriple();
-
-  m_ti.reset(clang::TargetInfo::CreateTargetInfo(de, tOpts));
-
-  m_lang_opts = std::make_unique<clang::LangOptions>();
-  m_lang_opts->Bool = true;
-  m_lang_opts->WChar = true;
-  m_lang_opts->CPlusPlus = true;
-  m_lang_opts->CPlusPlus11 = true;
-  m_lang_opts->CPlusPlus14 = true;
-  m_lang_opts->CPlusPlus17 = true;
-
-  m_tml = std::make_unique<clang::TrivialModuleLoader>();
-
-  auto hOpts = std::make_shared<clang::HeaderSearchOptions>();
-  m_hs = std::make_unique<clang::HeaderSearch>(hOpts, sm, de, *m_lang_opts,
-                                               m_ti.get());
-
-  auto pOpts = std::make_shared<clang::PreprocessorOptions>();
-  m_pp = std::make_unique<clang::Preprocessor>(pOpts, de, *m_lang_opts, sm,
-                                               *m_hs, *m_tml);
-  m_pp->Initialize(*m_ti);
-  m_pp->EnterMainSourceFile();
-
   // Initialize the token.
   m_dil_token.setKind(dil::TokenKind::unknown);
 }
@@ -1029,7 +975,7 @@ DILASTNodeUP DILParser::ParseStringLiteral() {
   uint64_t array_size = string_literal.GetStringLength() / byte_size + 1;
   auto array_type = compiler_type.GetArrayType(array_size);
 
-  clang::StringRef value = string_literal.GetString();
+  llvm::StringRef value = string_literal.GetString();
   std::string data(value.data());
 
   assert(data.size() == array_type.GetByteSize(nullptr) &&
@@ -4197,7 +4143,6 @@ lldb::BasicType TypeDeclaration::GetBasicType() const {
 
   if (m_sign_specifier == SignSpecifier::kUnsigned) {
     switch (m_type_specifier) {
-        // clang-format off
       // "unsigned" is "unsigned int"
       case TypeSpecifier::kUnknown:  return lldb::eBasicTypeUnsignedInt;
       case TypeSpecifier::kChar:     return lldb::eBasicTypeUnsignedChar;
@@ -4205,7 +4150,6 @@ lldb::BasicType TypeDeclaration::GetBasicType() const {
       case TypeSpecifier::kInt:      return lldb::eBasicTypeUnsignedInt;
       case TypeSpecifier::kLong:     return lldb::eBasicTypeUnsignedLong;
       case TypeSpecifier::kLongLong: return lldb::eBasicTypeUnsignedLongLong;
-      // clang-format on
       default:
         assert(false && "unknown unsigned basic type");
         return lldb::eBasicTypeInvalid;
@@ -4213,7 +4157,6 @@ lldb::BasicType TypeDeclaration::GetBasicType() const {
   }
 
   switch (m_type_specifier) {
-      // clang-format off
     case TypeSpecifier::kUnknown:
       // "signed" is "signed int"
       assert(m_sign_specifier == SignSpecifier::kSigned &&
@@ -4232,7 +4175,6 @@ lldb::BasicType TypeDeclaration::GetBasicType() const {
     case TypeSpecifier::kWChar:      return lldb::eBasicTypeWChar;
     case TypeSpecifier::kChar16:     return lldb::eBasicTypeChar16;
     case TypeSpecifier::kChar32:     return lldb::eBasicTypeChar32;
-      // clang-format on
   }
 
   return lldb::eBasicTypeInvalid;

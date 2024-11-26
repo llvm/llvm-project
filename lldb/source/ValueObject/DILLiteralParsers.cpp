@@ -13,7 +13,6 @@
 
 #include "lldb/ValueObject/DILLiteralParsers.h"
 
-#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Unicode.h"
 
 #include <algorithm>
@@ -88,18 +88,17 @@ static void Diags_Report(uint32_t loc, dil::diag diag_id, std::string diag_msg)
 }
 
 
-static unsigned getCharWidth(dil::TokenKind kind,
-                             const clang::TargetInfo &Target) {
+static unsigned getCharWidth(dil::TokenKind kind) {
   switch (kind) {
   default: llvm_unreachable("Unknown token type!");
   case dil::TokenKind::char_constant:
   case dil::TokenKind::string_literal:
   case dil::TokenKind::utf8_char_constant:
   case dil::TokenKind::utf8_string_literal:
-    return Target.getCharWidth();
+    return 8;
   case dil::TokenKind::wide_char_constant:
   case dil::TokenKind::wide_string_literal:
-    return Target.getWCharWidth();
+    return 16;
   }
 }
 
@@ -112,6 +111,7 @@ NumericLiteralParser::NumericLiteralParser(llvm::StringRef TokSpelling,
     ThisTokBegin(TokSpelling.begin()), ThisTokEnd(TokSpelling.end()) {
   s = DigitsBegin = ThisTokBegin;
   saw_exponent = false;
+  saw_fixed_point_suffix = false;
   saw_period = false;
   isLong = false;
   isUnsigned = false;
@@ -212,13 +212,13 @@ NumericLiteralParser::NumericLiteralParser(llvm::StringRef TokSpelling,
       // should also be supported.
       // ToDo: more precise check for CUDA.
       // TODO: AMDGPU might also support it in the future.
-      if ((lexer.getTargetInfo().hasFloat16Type() ||
-               lexer.getTargetInfo().getTriple().isNVPTX()) &&
-          s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
-        s += 2; // success, eat up 2 characters.
-        isFloat16 = true;
-        continue;
-      }
+      //if ((lexer.getTargetInfo().hasFloat16Type() ||
+      //         lexer.getTargetInfo().getTriple().isNVPTX()) &&
+      //    s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
+      //  s += 2; // success, eat up 2 characters.
+      //  isFloat16 = true;
+      //  continue;
+      //}
 
       isFloat = true;
       continue;  // Success.
@@ -1172,12 +1172,12 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   // FIXME: The "Value" is an uint64_t so we can handle char literals of
   // up to 64-bits.
   // FIXME: This extensively assumes that 'char' is 8-bits.
-  assert(lexer.getTargetInfo().getCharWidth() == 8 &&
+  assert(lexer.getCharWidth() == 8 &&
          "Assumes char is 8 bits");
-  assert(lexer.getTargetInfo().getIntWidth() <= 64 &&
-             (lexer.getTargetInfo().getIntWidth() & 7) == 0 &&
+  assert(lexer.getIntWidth() <= 64 &&
+             (lexer.getIntWidth() & 7) == 0 &&
          "Assumes sizeof(int) on target is <= 64 and a multiple of char");
-  assert(lexer.getTargetInfo().getWCharWidth() <= 64 &&
+  assert(lexer.getWCharWidth() <= 64 &&
          "Assumes sizeof(wchar) on target is <= 64");
 
   llvm::SmallVector<uint32_t, 4> codepoint_buffer;
@@ -1191,7 +1191,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   uint32_t largest_character_for_kind;
   if (dil::TokenKind::wide_char_constant == Kind) {
     largest_character_for_kind =
-        0xFFFFFFFFu >> (lexer.getTargetInfo().getWCharWidth());
+        0xFFFFFFFFu >> (lexer.getWCharWidth());
   } else if (dil::TokenKind::utf8_char_constant == Kind) {
     largest_character_for_kind = 0x7F;
   } else {
@@ -1255,7 +1255,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
       ++buffer_begin;
       continue;
     }
-    unsigned CharWidth = getCharWidth(Kind, lexer.getTargetInfo());
+    unsigned CharWidth = getCharWidth(Kind);
     uint64_t result =
         ProcessCharEscape(TokBegin, begin, end, HadError, Loc,CharWidth,
                           StringLiteralEvalMethod::Evaluated);
@@ -1279,7 +1279,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
     IsMultiChar = false;
   }
 
-  llvm::APInt LitVal(lexer.getTargetInfo().getIntWidth(), 0);
+  llvm::APInt LitVal(lexer.getIntWidth(), 0);
 
   // Narrow character literals act as though their value is concatenated
   // in this implementation, but warn on overflow.
@@ -1380,7 +1380,7 @@ void StringLiteralParser::init(llvm::ArrayRef<DILToken> StringToks,
   // TODO: K&R warning: "traditional C rejects string constant concatenation"
 
   // Get the width in bytes of char/wchar_t/char16_t/char32_t
-  CharByteWidth = getCharWidth(Kind, lexer.getTargetInfo());
+  CharByteWidth = getCharWidth(Kind);
   assert((CharByteWidth & 7) == 0 && "Assumes character size is byte multiple");
   CharByteWidth /= 8;
 
