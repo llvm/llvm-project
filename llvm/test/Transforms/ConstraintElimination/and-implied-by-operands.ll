@@ -653,6 +653,35 @@ return:
   ret void
 }
 
+define void @or_tree_second_implies_first_with_unknown_cond(i64 %x, i1 %cond) {
+; CHECK-LABEL: @or_tree_second_implies_first_with_unknown_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[CMP1]], i1 [[COND:%.*]], i1 false
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[X]], 2
+; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[OR1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    br i1 [[OR2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp ugt i64 %x, 1
+  %or1 = select i1 %cmp1, i1 %cond, i1 false
+  %cmp2 = icmp ult i64 %x, 2
+  %or2 = select i1 %or1, i1 %cmp2, i1 false
+  br i1 %or2, label %if.then, label %if.end
+
+if.then:
+  call void @side_effect()
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 define void @negative_and_or_tree_second_implies_first(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2) {
 ; CHECK-LABEL: @negative_and_or_tree_second_implies_first(
 ; CHECK-NEXT:  entry:
