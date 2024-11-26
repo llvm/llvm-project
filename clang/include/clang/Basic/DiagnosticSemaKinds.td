@@ -5447,7 +5447,7 @@ def note_dependent_function_template_spec_discard_reason : Note<
   "namespace; did you mean to explicitly qualify the specialization?}1}0">;
 def warn_invalid_specialization : Warning<
   "%0 cannot be specialized%select{|: %2}1">,
-  DefaultError, InGroup<InvalidSpecialization>;
+  DefaultError, InGroup<DiagGroup<"invalid-specialization">>;
 def note_marked_here : Note<"marked %0 here">;
 
 // C++ class template specializations and out-of-line definitions
