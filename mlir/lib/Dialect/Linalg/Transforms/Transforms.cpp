@@ -1090,8 +1090,8 @@ getPackUnpackNormalizedPerm(int rank, ArrayRef<int64_t> perm) {
   SmallVector<int64_t> vec(rank, kNonTiledMarker);
   for (auto [index, value] : llvm::enumerate(perm))
     vec[value] = index;
-  SmallVector<int64_t> normalizedPerm = llvm::to_vector(llvm::make_filter_range(
-      vec, [&](int64_t v) { return v != kNonTiledMarker; }));
+  SmallVector<int64_t> normalizedPerm = llvm::filter_to_vector(
+      vec, [&](int64_t v) { return v != kNonTiledMarker; });
   // This inverts the permutation in addition to normalizing so invert back.
   return invertPermutationVector(normalizedPerm);
 }

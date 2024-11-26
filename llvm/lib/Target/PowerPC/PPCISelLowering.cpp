@@ -18928,7 +18928,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
       SDValue Op1 = N.getOperand(1);
       int16_t Imm = Op1->getAsZExtVal();
       if (!Align || isAligned(*Align, Imm)) {
-        Disp = DAG.getTargetConstant(Imm, DL, N.getValueType());
+        Disp = DAG.getSignedTargetConstant(Imm, DL, N.getValueType());
         Base = Op0;
         if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Op0)) {
           Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
@@ -18959,7 +18959,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
       // this as "d, 0".
       int16_t Imm;
       if (isIntS16Immediate(CN, Imm) && (!Align || isAligned(*Align, Imm))) {
-        Disp = DAG.getTargetConstant(Imm, DL, CNType);
+        Disp = DAG.getSignedTargetConstant(Imm, DL, CNType);
         Base = DAG.getRegister(Subtarget.isPPC64() ? PPC::ZERO8 : PPC::ZERO,
                                CNType);
         break;
@@ -18992,14 +18992,14 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
     if (((Opcode == ISD::ADD) || (Opcode == ISD::OR)) &&
         (isIntS34Immediate(N.getOperand(1), Imm34))) {
       // N is an Add/OR Node, and it's operand is a 34-bit signed immediate.
-      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
+      Disp = DAG.getSignedTargetConstant(Imm34, DL, N.getValueType());
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
         Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
       else
         Base = N.getOperand(0);
     } else if (isIntS34Immediate(N, Imm34)) {
       // The address is a 34-bit signed immediate.
-      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
+      Disp = DAG.getSignedTargetConstant(Imm34, DL, N.getValueType());
       Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
     }
     break;
