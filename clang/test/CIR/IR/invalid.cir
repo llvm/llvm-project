@@ -1449,6 +1449,84 @@ cir.global external @f = #cir.fp<42> : !cir.float
 
 // -----
 
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!initializer_list_s32i = !cir.struct<class {!cir.ptr<!s32i>, !cir.ptr<!s32i>}>
+cir.func @std_initializer_list_wrong_arg_type() {
+  %0 = cir.alloca !initializer_list_s32i, !cir.ptr<!initializer_list_s32i>, ["v"]
+  %1 = cir.const #cir.int<1> : !s32i
+  %2 = cir.const #cir.int<1> : !u32i
+  // expected-error @below {{'cir.std.initializer_list' op arg type must be '!cir.int<s, 32>', but provided '!cir.int<u, 32>'}}
+  cir.std.initializer_list %0 (%2, %1, %1 : !u32i, !s32i, !s32i) : !cir.ptr<!initializer_list_s32i>
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!initializer_list_s32i = !cir.struct<class {!cir.ptr<!s32i>, !cir.ptr<!s32i>}>
+cir.func @std_initializer_list_wrong_arg_type() {
+  %0 = cir.alloca !initializer_list_s32i, !cir.ptr<!initializer_list_s32i>, ["v"]
+  %1 = cir.const #cir.int<1> : !s32i
+  %2 = cir.const #cir.int<1> : !u32i
+  // expected-error @below {{'cir.std.initializer_list' op arg type must be '!cir.int<s, 32>', but provided '!cir.int<u, 32>'}}
+  cir.std.initializer_list %0 (%1, %2, %1 : !s32i, !u32i, !s32i) : !cir.ptr<!initializer_list_s32i>
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!initializer_list_s32i = !cir.struct<class {!cir.ptr<!s32i>, !cir.ptr<!s32i>}>
+cir.func @std_initializer_list_wrong_arg_type() {
+  %0 = cir.alloca !initializer_list_s32i, !cir.ptr<!initializer_list_s32i>, ["v"]
+  %1 = cir.const #cir.int<1> : !s32i
+  %2 = cir.const #cir.int<1> : !u32i
+  // expected-error @below {{'cir.std.initializer_list' op arg type must be '!cir.int<s, 32>', but provided '!cir.int<u, 32>'}}
+  cir.std.initializer_list %0 (%1, %1, %2 : !s32i, !s32i, !u32i) : !cir.ptr<!initializer_list_s32i>
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!initializer_list_s32i = !cir.struct<class {!cir.ptr<!s32i>, !cir.ptr<!s32i>}>
+cir.func @std_initializer_list_wrong_arg_type() {
+  %0 = cir.alloca !initializer_list_s32i, !cir.ptr<!initializer_list_s32i>, ["v"]
+  %1 = cir.const #cir.int<1> : !s32i
+  %2 = cir.const #cir.int<1> : !u32i
+  // expected-error @below {{'cir.std.initializer_list' op arg type must be '!cir.int<s, 32>', but provided '!cir.int<u, 32>'}}
+  cir.std.initializer_list %0 (%2, %2, %2 : !u32i, !u32i, !u32i) : !cir.ptr<!initializer_list_s32i>
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!initializer_list_s32i = !cir.struct<class {!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>}>
+cir.func @std_initializer_list_wrong_struct() {
+  %0 = cir.alloca !initializer_list_s32i, !cir.ptr<!initializer_list_s32i>, ["v"]
+  %1 = cir.const #cir.int<1> : !s32i
+  // expected-error @below {{'cir.std.initializer_list' op std::initializer_list must be '!cir.struct' with two fields}}
+  cir.std.initializer_list %0 (%1, %1, %1 : !s32i, !s32i, !s32i) : !cir.ptr<!initializer_list_s32i>
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!initializer_list_s32i = !cir.struct<class {!s32i, !cir.ptr<!s32i>}>
+cir.func @std_initializer_list_wrong_struct() {
+  %0 = cir.alloca !initializer_list_s32i, !cir.ptr<!initializer_list_s32i>, ["v"]
+  %1 = cir.const #cir.int<1> : !s32i
+  // expected-error @below {{'cir.std.initializer_list' op first member type of std::initializer_list must be '!cir.ptr', but provided '!cir.int<s, 32>'}}
+  cir.std.initializer_list %0 (%1, %1, %1 : !s32i, !s32i, !s32i) : !cir.ptr<!initializer_list_s32i>
+  cir.return
+}
+
+// -----
 // Verify
 !s32i = !cir.int<s, 32>
 cir.func @cast0(%arg0: !s32i, %arg1: !s32i) {

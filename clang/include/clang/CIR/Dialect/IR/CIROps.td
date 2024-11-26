@@ -5283,4 +5283,38 @@ def SignBitOp : CIR_Op<"signbit", [Pure]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// StdInitializerListOp
+//===----------------------------------------------------------------------===//
+
+def StdInitializerListOp : CIR_Op<"std.initializer_list"> {
+  let summary = "Initialize std::initializer_list";
+  let description = [{
+    The `std.initializer_list` operation will initialize
+    `std::initializer_list<T>` with given arguments list.
+
+    ```cpp
+    initializer_list<int> v{1,2,3}; // initialize v with 1, 2, 3
+    ```
+
+    The code above will generate CIR similar as:
+
+    ```mlir
+    %0 = cir.alloca INITLIST_TYPE, !cir.ptr<INITLIST_TYPE>
+    %1 = cir.const #cir.int<1>
+    ...
+    cir.std.initializer_list %0 (%1 %2 %3)
+    ``` 
+
+    The type of each argument should be the same as template parameter of
+    `std::initializer_list` (aka `T` in `std::initializer_list<T>`).
+  }];
+  let arguments = (ins StructPtr:$initList, Variadic<CIR_AnyType>:$args);
+  let assemblyFormat = [{
+    $initList ` ` `(` ($args^ `:` type($args))? `)` `:` type($initList) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS

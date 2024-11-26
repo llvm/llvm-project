@@ -1,3 +1,5 @@
+// RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-cir %s -o %t.cir -clangir-disable-passes
+// RUN: FileCheck --check-prefix=BEFORE --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-llvm -fno-clangir-call-conv-lowering %s -o %t.ll
@@ -15,6 +17,13 @@ void test() {
 }
 } // namespace std
 
+// BEFORE: [[INITLIST_TYPE:!.*]] = !cir.struct<class "std::initializer_list<int>" {!cir.ptr<!s32i>, !u64i} #cir.record.decl.ast>
+// BEFORE: %0 = cir.alloca [[INITLIST_TYPE]], !cir.ptr<[[INITLIST_TYPE]]>,
+// BEFORE: %1 = cir.const #cir.int<7> : !s32i
+// BEFORE: cir.std.initializer_list %0 (%1 : !s32i) : !cir.ptr<[[INITLIST_TYPE]]>
+// BEFORE: %2 = cir.load %0 : !cir.ptr<[[INITLIST_TYPE]]>, [[INITLIST_TYPE]]
+// BEFORE: cir.call @_ZSt1fIiEvSt16initializer_listIT_E(%2) : ([[INITLIST_TYPE]]) -> ()
+
 // CIR: [[INITLIST_TYPE:!.*]] = !cir.struct<class "std::initializer_list<int>" {!cir.ptr<!s32i>, !u64i}>
 
 // CIR: cir.func linkonce_odr @_ZSt1fIiEvSt16initializer_listIT_E(%arg0: [[INITLIST_TYPE]]
@@ -25,13 +34,12 @@ void test() {
 // CIR: cir.func @_ZSt4testv()
 // CIR: cir.scope {
 // CIR: [[LIST_PTR:%.*]] = cir.alloca [[INITLIST_TYPE]], !cir.ptr<[[INITLIST_TYPE]]>,
+// CIR: [[SEVEN:%.*]] = cir.const #cir.int<7> : !s32i
 // CIR: [[ARRAY:%.*]] = cir.alloca !cir.array<!s32i x 1>, !cir.ptr<!cir.array<!s32i x 1>>,
 // CIR: [[DECAY_PTR:%.*]] = cir.cast(array_to_ptrdecay, [[ARRAY]] : !cir.ptr<!cir.array<!s32i x 1>>), !cir.ptr<!s32i>
-// CIR: [[SEVEN:%.*]] = cir.const #cir.int<7> : !s32i
 // CIR: cir.store [[SEVEN]], [[DECAY_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[FLD_C:%.*]] = cir.get_member [[LIST_PTR]][0] {name = "c"} : !cir.ptr<[[INITLIST_TYPE]]> -> !cir.ptr<!cir.ptr<!s32i>>
-// CIR: [[ARRAY_PTR:%.*]] = cir.cast(bitcast, [[FLD_C]] : !cir.ptr<!cir.ptr<!s32i>>), !cir.ptr<!cir.ptr<!cir.array<!s32i x 1>>>
-// CIR: cir.store [[ARRAY]], [[ARRAY_PTR]] : !cir.ptr<!cir.array<!s32i x 1>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 1>>>
+// CIR: cir.store [[DECAY_PTR]], [[FLD_C]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR: [[LENGTH_ONE:%.*]] = cir.const #cir.int<1>
 // CIR: [[FLD_LEN:%.*]] = cir.get_member [[LIST_PTR]][1] {name = "len"} : !cir.ptr<[[INITLIST_TYPE]]> -> !cir.ptr<!u64i>
 // CIR: cir.store [[LENGTH_ONE]], [[FLD_LEN]] : !u64i, !cir.ptr<!u64i>
@@ -54,7 +62,7 @@ void test() {
 // LLVM:  [[PTR_FIRST_ELEM:%.*]] = getelementptr i32, ptr [[ELEM_ARRAY]], i32 0,
 // LLVM:  store i32 7, ptr [[PTR_FIRST_ELEM]], align 4,
 // LLVM:  [[ELEM_ARRAY_PTR:%.*]] = getelementptr %"class.std::initializer_list<int>", ptr [[INIT_STRUCT]], i32 0, i32 0,
-// LLVM:  store ptr [[ELEM_ARRAY]], ptr [[ELEM_ARRAY_PTR]], align 8,
+// LLVM:  store ptr [[PTR_FIRST_ELEM]], ptr [[ELEM_ARRAY_PTR]], align 8,
 // LLVM:  [[INIT_LEN_FLD:%.*]] = getelementptr %"class.std::initializer_list<int>", ptr [[INIT_STRUCT]], i32 0, i32 1,
 // LLVM:  store i64 1, ptr [[INIT_LEN_FLD]], align 8,
 // LLVM:  [[ARG2PASS:%.*]] = load %"class.std::initializer_list<int>", ptr [[INIT_STRUCT]], align 8,
