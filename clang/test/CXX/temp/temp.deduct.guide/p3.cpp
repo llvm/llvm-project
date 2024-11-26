@@ -71,3 +71,11 @@ namespace WrongScope {
     Local(int) -> Local<int>; // expected-error {{expected}}
   }
 }
+
+namespace GH54909 {
+template <class T> struct A {};
+struct B {};
+
+template <typename T> using C = B;
+template <typename T> A() -> C<T>; // expected-error {{deduced type 'C<T>' (aka 'GH54909::B') of deduction guide is not a specialization of template 'A'}}
+}
