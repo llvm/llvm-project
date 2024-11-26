@@ -1072,7 +1072,7 @@ PHIExpression *NewGVN::createPHIExpression(ArrayRef<ValPair> PHIOperands,
       return false;
     OriginalOpsConstant = OriginalOpsConstant && isa<Constant>(P.first);
     HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
-    return lookupOperandLeader(P.first) != I;
+    return true;
   });
   std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
                  [&](const ValPair &P) -> Value * {
