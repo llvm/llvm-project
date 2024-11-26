@@ -180,12 +180,12 @@ static void parseArgs(int argc, char **argv) {
   LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
   StoreMergedFunctionInfo = Args.hasArg(OPT_merged_functions);
 
-  if (Args.hasArg(OPT_callsites_from_yaml_EQ)) {
-    CallSiteYamlPath = Args.getLastArgValue(OPT_callsites_from_yaml_EQ);
+  if (Args.hasArg(OPT_callsites_yaml_file_EQ)) {
+    CallSiteYamlPath = Args.getLastArgValue(OPT_callsites_yaml_file_EQ);
     if (CallSiteYamlPath.empty()) {
       llvm::errs()
           << ToolName
-          << ": --callsites-from-yaml option requires a non-empty argument.\n";
+          << ": --callsites-yaml-file option requires a non-empty argument.\n";
       std::exit(1);
     }
   }

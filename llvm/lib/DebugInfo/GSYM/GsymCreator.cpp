@@ -191,8 +191,8 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
 
 llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
   // Use the loader to load call site information from the YAML file.
-  CallSiteInfoLoader Loader(*this);
-  return Loader.loadYAML(Funcs, YAMLFile);
+  CallSiteInfoLoader Loader(*this, Funcs);
+  return Loader.loadYAML(YAMLFile);
 }
 
 void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {

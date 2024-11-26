@@ -149,8 +149,7 @@ template <> struct MappingTraits<FunctionsYAML> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(CallSiteYAML)
 LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionYAML)
 
-Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
-                                   StringRef YAMLFile) {
+Error CallSiteInfoLoader::loadYAML(StringRef YAMLFile) {
   // Step 1: Read YAML file
   auto BufferOrError = MemoryBuffer::getFile(YAMLFile);
   if (!BufferOrError)
@@ -167,14 +166,13 @@ Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
                              Buffer->getBufferIdentifier().str().c_str());
 
   // Step 3: Build function map from Funcs
-  auto FuncMap = buildFunctionMap(Funcs);
+  auto FuncMap = buildFunctionMap();
 
   // Step 4: Process parsed YAML functions and update FuncMap
   return processYAMLFunctions(FuncsYAML, FuncMap);
 }
 
-StringMap<FunctionInfo *>
-CallSiteInfoLoader::buildFunctionMap(std::vector<FunctionInfo> &Funcs) {
+StringMap<FunctionInfo *> CallSiteInfoLoader::buildFunctionMap() {
   // If the function name is already in the map, don't update it. This way we
   // preferentially use the first encountered function. Since symbols are
   // loaded from dSYM first, we end up preferring keeping track of symbols

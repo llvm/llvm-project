@@ -86,7 +86,8 @@ public:
   /// structures.
   ///
   /// \param GCreator A reference to the GsymCreator.
-  CallSiteInfoLoader(GsymCreator &GCreator) : GCreator(GCreator) {}
+  CallSiteInfoLoader(GsymCreator &GCreator, std::vector<FunctionInfo> &Funcs)
+      : GCreator(GCreator), Funcs(Funcs) {}
 
   /// This method reads the specified YAML file, parses its content, and updates
   /// the `Funcs` vector with call site information based on the YAML data.
@@ -97,7 +98,7 @@ public:
   /// file to be loaded.
   /// \returns An `llvm::Error` indicating success or describing any issues
   /// encountered during the loading process.
-  llvm::Error loadYAML(std::vector<FunctionInfo> &Funcs, StringRef YAMLFile);
+  llvm::Error loadYAML(StringRef YAMLFile);
 
 private:
   /// Builds a map from function names to FunctionInfo pointers based on the
@@ -106,7 +107,7 @@ private:
   /// \param Funcs A reference to a vector of FunctionInfo objects.
   /// \returns A StringMap mapping function names (StringRef) to their
   /// corresponding FunctionInfo pointers.
-  StringMap<FunctionInfo *> buildFunctionMap(std::vector<FunctionInfo> &Funcs);
+  StringMap<FunctionInfo *> buildFunctionMap();
 
   /// Processes the parsed YAML functions and updates the `FuncMap` accordingly.
   ///
@@ -121,6 +122,9 @@ private:
 
   /// Reference to the parent Gsym Creator object.
   GsymCreator &GCreator;
+
+  /// Reference to the vector of FunctionInfo objects to be populated.
+  std::vector<FunctionInfo> &Funcs;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const CallSiteInfo &CSI);
