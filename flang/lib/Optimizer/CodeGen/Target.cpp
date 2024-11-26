@@ -825,6 +825,97 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     }
     return marshal;
   }
+
+  // Flatten a RecordType::TypeList containing more record types or array types
+  static std::optional<std::vector<mlir::Type>>
+  flattenTypeList(const RecordType::TypeList &types) {
+    std::vector<mlir::Type> flatTypes;
+    // The flat list will be at least the same size as the non-flat list.
+    flatTypes.reserve(types.size());
+    for (auto [c, type] : types) {
+      // Flatten record type
+      if (auto recTy = mlir::dyn_cast<RecordType>(type)) {
+        auto subTypeList = flattenTypeList(recTy.getTypeList());
+        if (!subTypeList)
+          return std::nullopt;
+        llvm::copy(*subTypeList, std::back_inserter(flatTypes));
+        continue;
+      }
+
+      // Flatten array type
+      if (auto seqTy = mlir::dyn_cast<SequenceType>(type)) {
+        if (seqTy.hasDynamicExtents())
+          return std::nullopt;
+        std::size_t n = seqTy.getConstantArraySize();
+        auto eleTy = seqTy.getElementType();
+        // Flatten array of record types
+        if (auto recTy = mlir::dyn_cast<RecordType>(eleTy)) {
+          auto subTypeList = flattenTypeList(recTy.getTypeList());
+          if (!subTypeList)
+            return std::nullopt;
+          for (std::size_t i = 0; i < n; ++i)
+            llvm::copy(*subTypeList, std::back_inserter(flatTypes));
+        } else {
+          std::fill_n(std::back_inserter(flatTypes),
+                      seqTy.getConstantArraySize(), eleTy);
+        }
+        continue;
+      }
+
+      // Other types are already flat
+      flatTypes.push_back(type);
+    }
+    return flatTypes;
+  }
+
+  // Determine if the type is a Homogenous Floating-point Aggregate (HFA). An
+  // HFA is a record type with up to 4 floating-point members of the same type.
+  static bool isHFA(fir::RecordType ty) {
+    RecordType::TypeList types = ty.getTypeList();
+    if (types.empty() || types.size() > 4)
+      return false;
+
+    std::optional<std::vector<mlir::Type>> flatTypes = flattenTypeList(types);
+    if (!flatTypes || flatTypes->size() > 4) {
+      return false;
+    }
+
+    if (!isa_real(flatTypes->front())) {
+      return false;
+    }
+
+    return llvm::all_equal(*flatTypes);
+  }
+
+  // AArch64 procedure call ABI:
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#parameter-passing
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType ty) const override {
+    CodeGenSpecifics::Marshalling marshal;
+
+    if (isHFA(ty)) {
+      // Just return the existing record type
+      marshal.emplace_back(ty, AT{});
+      return marshal;
+    }
+
+    auto [size, align] =
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
+
+    // return in registers if size <= 16 bytes
+    if (size <= 16) {
+      std::size_t dwordSize = (size + 7) / 8;
+      auto newTy = fir::SequenceType::get(
+          dwordSize, mlir::IntegerType::get(ty.getContext(), 64));
+      marshal.emplace_back(newTy, AT{});
+      return marshal;
+    }
+
+    unsigned short stackAlign = std::max<unsigned short>(align, 8u);
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{stackAlign, false, true});
+    return marshal;
+  }
 };
 } // namespace
 
@@ -1126,6 +1217,30 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
       typeTodo(sem, loc, "return");
     }
     return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    if (argTy.getWidth() == 32) {
+      // LA64 LP64D ABI requires unsigned 32 bit integers to be sign extended.
+      // Therefore, Flang also follows it if a function needs to be
+      // interoperable with C.
+      //
+      // Currently, it only adds `signext` attribute to the dummy arguments and
+      // return values in the function signatures, but it does not add the
+      // corresponding attribute to the actual arguments and return values in
+      // `fir.call` instruction. Thanks to LLVM's integration of all these
+      // attributes, the modification is still effective.
+      CodeGenSpecifics::Marshalling marshal;
+      AT::IntegerExtension intExt = AT::IntegerExtension::Sign;
+      marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
+                                     /*sret=*/false, /*append=*/false,
+                                     /*intExt=*/intExt});
+      return marshal;
+    }
+
+    return GenericTarget::integerArgumentType(loc, argTy);
   }
 };
 } // namespace

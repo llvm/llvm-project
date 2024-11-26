@@ -1696,7 +1696,17 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-bool CheckArgTypeIsCorrect(
+static bool CheckArgTypeMatches(Sema *S, Expr *Arg, QualType ExpectedType) {
+  QualType ArgType = Arg->getType();
+  if (!S->getASTContext().hasSameUnqualifiedType(ArgType, ExpectedType)) {
+    S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+        << ArgType << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
+static bool CheckArgTypeIsCorrect(
     Sema *S, Expr *Arg, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   QualType PassedType = Arg->getType();
@@ -1711,7 +1721,7 @@ bool CheckArgTypeIsCorrect(
   return false;
 }
 
-bool CheckAllArgTypesAreCorrect(
+static bool CheckAllArgTypesAreCorrect(
     Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
@@ -1878,6 +1888,29 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckResourceHandle(
+    Sema *S, CallExpr *TheCall, unsigned ArgIndex,
+    llvm::function_ref<bool(const HLSLAttributedResourceType *ResType)> Check =
+        nullptr) {
+  assert(TheCall->getNumArgs() >= ArgIndex);
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  const HLSLAttributedResourceType *ResTy =
+      ArgType.getTypePtr()->getAs<HLSLAttributedResourceType>();
+  if (!ResTy) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_typecheck_expect_hlsl_resource)
+        << ArgType;
+    return true;
+  }
+  if (Check && Check(ResTy)) {
+    S->Diag(TheCall->getArg(ArgIndex)->getExprLoc(),
+            diag::err_invalid_hlsl_resource_type)
+        << ArgType;
+    return true;
+  }
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -1886,6 +1919,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_any: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_asdouble: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckUnsignedIntRepresentation(&SemaRef, TheCall))
+      return true;
+
+    SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().DoubleTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
@@ -1908,9 +1950,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     // ensure both args have 3 elements
     int NumElementsArg1 =
-        TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+        TheCall->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
     int NumElementsArg2 =
-        TheCall->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+        TheCall->getArg(1)->getType()->castAs<VectorType>()->getNumElements();
 
     if (NumElementsArg1 != 3) {
       int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
@@ -2165,6 +2207,27 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_elementwise_trunc: {
     if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_buffer_update_counter: {
+    auto checkResTy = [](const HLSLAttributedResourceType *ResTy) -> bool {
+      return !(ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+               ResTy->getAttrs().RawBuffer && ResTy->hasContainedType());
+    };
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().IntTy))
+      return true;
+    Expr *OffsetExpr = TheCall->getArg(1);
+    std::optional<llvm::APSInt> Offset =
+        OffsetExpr->getIntegerConstantExpr(SemaRef.getASTContext());
+    if (!Offset.has_value() || std::abs(Offset->getExtValue()) != 1) {
+      SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
+                   diag::err_hlsl_expect_arg_const_int_one_or_neg_one)
+          << 1;
+      return true;
+    }
     break;
   }
   }

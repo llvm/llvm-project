@@ -1728,9 +1728,9 @@ def err_introducing_special_friend : Error<
 def err_tagless_friend_type_template : Error<
   "friend type templates must use an elaborated type">;
 def err_no_matching_local_friend : Error<
-  "no matching function found in local scope">;
+  "cannot define friend function in a local class definition">;
 def err_no_matching_local_friend_suggest : Error<
-  "no matching function %0 found in local scope; did you mean %3?">;
+  "cannot define friend function %0 in a local class definition; did you mean %3?">;
 def err_partial_specialization_friend : Error<
   "partial specialization cannot be declared as a friend">;
 def err_qualified_friend_def : Error<
@@ -7287,6 +7287,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
+def err_typecheck_expect_hlsl_resource : Error<
+  "used type %0 where __hlsl_resource_t is required">;
 def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
   "arithmetic on a pointer to %select{an incomplete|sizeless}0 type %1">;
 def err_typecheck_pointer_arith_function_type : Error<
@@ -9300,11 +9302,11 @@ def warn_unused_container_subscript_expr : Warning<
 def warn_unused_call : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedValue>;
-def warn_unused_constructor : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute">,
+def warn_unused_return_type : Warning<
+  "ignoring %select{return value|temporary}0 of type %2 declared with %1 attribute%select{|: %4}3">,
   InGroup<UnusedValue>;
-def warn_unused_constructor_msg : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute: %1">,
+def warn_unused_constructor : Warning<
+  "ignoring temporary created by a constructor declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedValue>;
 def warn_side_effects_unevaluated_context : Warning<
   "expression with side effects has no effect in an unevaluated context">,
@@ -9313,10 +9315,7 @@ def warn_side_effects_typeid : Warning<
   "expression with side effects will be evaluated despite being used as an "
   "operand to 'typeid'">, InGroup<PotentiallyEvaluatedExpression>;
 def warn_unused_result : Warning<
-  "ignoring return value of function declared with %0 attribute">,
-  InGroup<UnusedResult>;
-def warn_unused_result_msg : Warning<
-  "ignoring return value of function declared with %0 attribute: %1">,
+  "ignoring return value of function declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedResult>;
 def warn_unused_result_typedef_unsupported_spelling : Warning<
   "'[[%select{nodiscard|gnu::warn_unused_result}0]]' attribute ignored when "
@@ -10132,10 +10131,11 @@ def err_lifetimebound_ctor_dtor : Error<
   "%select{constructor|destructor}0">;
 def err_lifetimebound_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to a parameter of a function "
-  "that returns void">;
+  "that returns void; did you mean 'lifetime_capture_by(X)'">;
 def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to an implicit object "
-  "parameter of a function that returns void">;
+  "parameter of a function that returns void; "
+  "did you mean 'lifetime_capture_by(X)'">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
@@ -10230,6 +10230,12 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
+def warn_dangling_reference_captured : Warning<
+   "object whose reference is captured by '%0' will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+def warn_dangling_reference_captured_by_unknown : Warning<
+   "object whose reference is captured will be destroyed at the end of "
+   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -11392,7 +11398,7 @@ def err_omp_atomic_weak_no_equality : Error<"expected '==' operator for 'weak' c
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
-  "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', 'relaxed', |}1'acq_rel', 'acquire' or 'release' clause">;
+  "directive '#pragma omp %0' cannot contain more than one 'seq_cst',%select{ 'relaxed',|}1 'acq_rel', 'acquire' or 'release' clause">;
 def err_omp_atomic_incompatible_mem_order_clause : Error<
   "directive '#pragma omp atomic%select{ %0|}1' cannot be used with '%2' clause">;
 def note_omp_previous_mem_order_clause : Note<
@@ -12366,7 +12372,7 @@ def err_preserve_enum_value_not_const: Error<
   "__builtin_preserve_enum_value argument %0 not a constant">;
 
 def err_bit_cast_non_trivially_copyable : Error<
-  "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;
+  "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
 
@@ -12524,6 +12530,10 @@ def warn_attr_min_eq_max:  Warning<
 
 def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
   "attribute %0 with %1 arguments requires shader model %2 or greater">;
+def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
+  "argument %0 must be constant integer 1 or -1">;
+def err_invalid_hlsl_resource_type: Error<
+  "invalid __hlsl_resource_t type attributes">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

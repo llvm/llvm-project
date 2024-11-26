@@ -630,6 +630,10 @@ public:
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;
 
+  // Query the target for which minimum vectorization factor epilogue
+  // vectorization should be considered.
+  unsigned getEpilogueVectorizationMinVF() const;
+
   /// Query the target whether it would be prefered to create a predicated
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
@@ -896,6 +900,12 @@ public:
 
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx) const;
+
+  /// Identifies if the vector form of the intrinsic is overloaded on the type
+  /// of the operand at index \p OpdIdx, or on the return type if \p OpdIdx is
+  /// -1.
+  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int ScalarOpdIdx) const;
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1912,6 +1922,7 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
+  virtual unsigned getEpilogueVectorizationMinVF() = 0;
   virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) = 0;
   virtual TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) = 0;
@@ -1988,6 +1999,8 @@ public:
   virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) = 0;
   virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                   unsigned ScalarOpdIdx) = 0;
+  virtual bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                      int ScalarOpdIdx) = 0;
   virtual InstructionCost getScalarizationOverhead(VectorType *Ty,
                                                    const APInt &DemandedElts,
                                                    bool Insert, bool Extract,
@@ -2392,6 +2405,9 @@ public:
                                 HardwareLoopInfo &HWLoopInfo) override {
     return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
   }
+  unsigned getEpilogueVectorizationMinVF() override {
+    return Impl.getEpilogueVectorizationMinVF();
+  }
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) override {
     return Impl.preferPredicateOverEpilogue(TFI);
   }
@@ -2559,6 +2575,11 @@ public:
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx) override {
     return Impl.isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+  }
+
+  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int ScalarOpdIdx) override {
+    return Impl.isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx);
   }
 
   InstructionCost getScalarizationOverhead(VectorType *Ty,

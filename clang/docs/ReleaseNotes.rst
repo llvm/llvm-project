@@ -148,6 +148,17 @@ C++ Specific Potentially Breaking Changes
     // Now diagnoses with an error.
     void f(int& i [[clang::lifetimebound]]);
 
+- Clang now rejects all field accesses on null pointers in constant expressions. The following code
+  used to work but will now be rejected:
+
+  .. code-block:: c++
+
+    struct S { int a; int b; };
+    constexpr const int *p = &((S*)nullptr)->b;
+
+  Previously, this code was erroneously accepted.
+
+
 ABI Changes in This Version
 ---------------------------
 
@@ -268,6 +279,9 @@ Resolutions to C++ Defect Reports
   by default.
   (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
+- Fix name lookup for a dependent base class that is the current instantiation.  
+  (`CWG591: When a dependent base class is the current instantiation <https://cplusplus.github.io/CWG/issues/591.html>`_).
+
 C Language Changes
 ------------------
 
@@ -321,6 +335,8 @@ C23 Feature Support
 
 - Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
 - Clang now officially supports `N3030 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_ Enhancements to Enumerations. Clang already supported it as an extension, so there were no changes to compiler behavior.
+- Fixed the value of ``BOOL_WIDTH`` in ``<limits.h>`` to return ``1``
+  explicitly, as mandated by the standard. Fixes #GH117348
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -356,6 +372,10 @@ Non-comprehensive list of changes in this release
   issues with the sanitizer because the counter is automatically set.
 
 - ``__builtin_reduce_add`` function can now be used in constant expressions.
+- ``__builtin_reduce_mul`` function can now be used in constant expressions.
+- ``__builtin_reduce_and`` function can now be used in constant expressions.
+- ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
+- ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -457,6 +477,8 @@ Attribute Changes in Clang
 - Clang now supports ``[[clang::lifetime_capture_by(X)]]``. Similar to lifetimebound, this can be
   used to specify when a reference to a function parameter is captured by another capturing entity ``X``.
 
+- The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -536,6 +558,40 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
+
+- Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
+
+- When diagnosing an unused return value of a type declared ``[[nodiscard]]``, the type
+  itself is now included in the diagnostic.
+
+- Clang will now prefer the ``[[nodiscard]]`` declaration on function declarations over ``[[nodiscard]]``
+  declaration on the return type of a function. Previously, when both have a ``[[nodiscard]]`` declaration attached,
+  the one on the return type would be preferred. This may affect the generated warning message:
+
+  .. code-block:: c++
+
+    struct [[nodiscard("Reason 1")]] S {};
+    [[nodiscard("Reason 2")]] S getS();
+    void use()
+    {
+      getS(); // Now diagnoses "Reason 2", previously diagnoses "Reason 1"
+    }
+
+- Clang now diagnoses ``= delete("reason")`` extension warnings only in pedantic mode rather than on by default. (#GH109311).
+
+- Clang now diagnoses missing return value in functions containing ``if consteval`` (#GH116485).
+
+- Clang now correctly recognises code after a call to a ``[[noreturn]]`` constructor
+  as unreachable (#GH63009).
+
+- Clang now omits shadowing warnings for parameter names in explicit object member functions (#GH95707).
+
+- Improved error recovery for function call arguments with trailing commas (#GH100921).
+
+- For an rvalue reference bound to a temporary struct with an integer member, Clang will detect constant integer overflow
+  in the initializer for the integer member (#GH46755).
+
+- Fixed a false negative ``-Wunused-private-field`` diagnostic when a defaulted comparison operator is defined out of class (#GH116961).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -666,6 +722,9 @@ Bug Fixes to C++ Support
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
 - Fixed expression transformation for ``[[assume(...)]]``, allowing using pack indexing expressions within the
   assumption if they also occur inside of a dependent lambda. (#GH114787)
+- Clang now uses valid deduced type locations when diagnosing functions with trailing return type
+  missing placeholder return type. (#GH78694)
+- Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -675,6 +734,8 @@ Bug Fixes to AST Handling
   sometimes incorrectly return null even if a comment was present. (#GH108145)
 - Clang now correctly parses the argument of the ``relates``, ``related``, ``relatesalso``,
   and ``relatedalso`` comment commands.
+- Clang now uses the location of the begin of the member expression for ``CallExpr``
+  involving deduced ``this``. (#GH116928)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -804,6 +865,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - The option ``-mcmodel=large`` for the large code model is supported.
+- Bump RVV intrinsic to version 1.0, the spec: https://github.com/riscv-non-isa/rvv-intrinsic-doc/releases/tag/v1.0.0-rc4
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

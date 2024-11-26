@@ -836,7 +836,7 @@ class sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op>
 : I<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
   asm, "\t$Pg, $Pn",
   "",
-  [(op (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn))]>, Sched<[]> {
+  [(set NZCV, (op (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn)))]>, Sched<[]> {
   bits<4> Pg;
   bits<4> Pn;
   let Inst{31-24} = 0b00100101;
@@ -860,7 +860,7 @@ multiclass sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op,
 
   let hasNoSchedulingInfo = 1, isCompare = 1, Defs = [NZCV] in {
   def _ANY : Pseudo<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
-                    [(op_any (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn))]>,
+                    [(set NZCV, (op_any (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn)))]>,
              PseudoInstExpansion<(!cast<Instruction>(NAME) PPRAny:$Pg, PPR8:$Pn)>;
   }
 }

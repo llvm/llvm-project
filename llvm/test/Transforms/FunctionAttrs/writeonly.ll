@@ -66,7 +66,7 @@ nouses-argworn-funwo_entry:
 define void @test_store(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_store
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR3:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 1)) [[P:%.*]]) #[[ATTR3:[0-9]+]] {
 ; FNATTRS-NEXT:    store i8 0, ptr [[P]], align 1
 ; FNATTRS-NEXT:    ret void
 ;
@@ -107,7 +107,7 @@ define i8 @test_store_capture(ptr %p) {
 define void @test_addressing(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_addressing
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((8, 12)) [[P:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; FNATTRS-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; FNATTRS-NEXT:    ret void

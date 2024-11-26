@@ -53,6 +53,18 @@ def NVVM_Dialect : Dialect {
     static StringRef getReqntidYName() { return "reqntidy"; }
     static StringRef getReqntidZName() { return "reqntidz"; }
 
+    /// Get the name of the attribute used to annotate exact CTAs required
+    /// per cluster for kernel functions.
+    static StringRef getClusterDimAttrName() { return "nvvm.cluster_dim"; }
+    /// Get the name of the metadata names for each dimension
+    static StringRef getClusterDimXName() { return "cluster_dim_x"; }
+    static StringRef getClusterDimYName() { return "cluster_dim_y"; }
+    static StringRef getClusterDimZName() { return "cluster_dim_z"; }
+
+    /// Get the name of the attribute used to annotate maximum number of
+    /// CTAs per cluster for kernel functions.
+    static StringRef getClusterMaxBlocksAttrName() {  return "nvvm.cluster_max_blocks"; }
+
     /// Get the name of the attribute used to annotate min CTA required
     /// per SM for kernel functions.
     static StringRef getMinctasmAttrName() { return "nvvm.minctasm"; }
