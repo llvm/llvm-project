@@ -95,7 +95,19 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
-           "The target representation of the compilation process.">
+           "The target representation of the compilation process.">,
+    Option<"initialLlvmIRCallback", "initialLlvmIRCallback", 
+           "llvm::function_ref<void(llvm::Module &)>", "nullptr",
+           "Callback invoked with the initial LLVM IR for the device module.">,
+    Option<"linkedLlvmIRCallback", "linkedLlvmIRCallback", 
+           "llvm::function_ref<void(llvm::Module &)>", "nullptr",
+           "Callback invoked with LLVM IR for the device module after linking the device libraries.">,
+    Option<"optimizedLlvmIRCallback", "optimizedLlvmIRCallback", 
+           "llvm::function_ref<void(llvm::Module &)>", "nullptr",
+           "Callback invoked with LLVM IR for the device module after LLVM optimizations but before codegen.">,
+    Option<"isaCallback", "isaCallback", 
+           "llvm::function_ref<void(llvm::StringRef)>", "nullptr",
+           "Callback invoked with the target ISA for the device, for example PTX assembly.">
   ];
 }
 
