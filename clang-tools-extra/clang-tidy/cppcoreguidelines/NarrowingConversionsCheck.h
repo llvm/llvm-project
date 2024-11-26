@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_NARROWING_CONVERSIONS_H
 
 #include "../ClangTidyCheck.h"
+#include <optional>
 
 namespace clang::tidy::cppcoreguidelines {
 
@@ -95,7 +96,7 @@ private:
                                           const BuiltinType &FromType,
                                           const BuiltinType &ToType) const;
 
-  const bool WarnOnIntegerNarrowingConversion;
+  const std::optional<bool> WarnOnIntegerNarrowingConversion;
   const bool WarnOnIntegerToFloatingPointNarrowingConversion;
   const bool WarnOnFloatingPointNarrowingConversion;
   const bool WarnWithinTemplateInstantiation;

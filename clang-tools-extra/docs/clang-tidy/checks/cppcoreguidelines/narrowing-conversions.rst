@@ -12,7 +12,7 @@ This check implements `ES.46
 from the C++ Core Guidelines.
 
 We enforce only part of the guideline, more specifically, we flag narrowing conversions from:
- - an integer to a narrower integer before C++20 (e.g. ``char`` to ``unsigned char``)
+ - an integer to a narrower integer (e.g. ``char`` to ``unsigned char``)
    if WarnOnIntegerNarrowingConversion Option is set,
  - an integer to a narrower floating-point (e.g. ``uint64_t`` to ``float``)
    if WarnOnIntegerToFloatingPointNarrowingConversion Option is set,
@@ -34,7 +34,9 @@ Options
 .. option:: WarnOnIntegerNarrowingConversion
 
     When `true`, the check will warn on narrowing integer conversion
-    (e.g. ``int`` to ``size_t``). `true` by default.
+    (e.g. ``int`` to ``size_t``).
+    Before C++20 `true` by default.
+    Since C++20 `false` by default.
 
 .. option:: WarnOnIntegerToFloatingPointNarrowingConversion
 
