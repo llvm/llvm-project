@@ -3533,72 +3533,68 @@ void CXXNameMangler::mangleExtFunctionInfo(const FunctionType *T) {
   // FIXME: noreturn
 }
 
-enum SMEState {
-  Normal = 0,
-  SM_Enabled = 1 << 0,
-  SM_Compatible = 1 << 1,
-  ZA_Agnostic = 1 << 2,
+enum class AAPCSBitmaskSME : unsigned {
+  ArmStreamingBit = 1 << 0,
+  ArmStreamingCompatibleBit = 1 << 1,
+  ArmAgnosticSMEZAStateBit = 1 << 2,
   ZA_Shift = 3,
   ZT0_Shift = 6,
-  None = 0b000,
-  In = 0b001,
-  Out = 0b010,
-  InOut = 0b011,
-  Preserves = 0b100
+  NoState = 0b000,
+  ArmIn = 0b001,
+  ArmOut = 0b010,
+  ArmInOut = 0b011,
+  ArmPreserves = 0b100
 };
 
-unsigned encodeZAState(unsigned SMEAttrs) {
+static unsigned encodeAAPCSZAState(unsigned SMEAttrs) {
   switch (SMEAttrs) {
   case FunctionType::ARM_None:
-    return SMEState::None;
+    return static_cast<unsigned>(AAPCSBitmaskSME::NoState);
   case FunctionType::ARM_In:
-    return SMEState::In;
+    return static_cast<unsigned>(AAPCSBitmaskSME::ArmIn);
   case FunctionType::ARM_Out:
-    return SMEState::Out;
+    return static_cast<unsigned>(AAPCSBitmaskSME::ArmOut);
   case FunctionType::ARM_InOut:
-    return SMEState::InOut;
+    return static_cast<unsigned>(AAPCSBitmaskSME::ArmInOut);
   case FunctionType::ARM_Preserves:
-    return SMEState::Preserves;
+    return static_cast<unsigned>(AAPCSBitmaskSME::ArmPreserves);
+  default:
+    llvm_unreachable("Unrecognised SME attribute");
   }
-  llvm_unreachable("Unrecognised SME attribute");
 }
 
-// As described in the AArch64 ACLE, the mangling scheme for function types
-// which have SME attributes is implemented as a "pseudo" template:
+// The mangling scheme for function types which have SME attributes is
+// implemented as a "pseudo" template:
 //
 //   '__SME_ATTRS<<normal_function_type>, <sme_state>>'
 //
 // Combining the function type with a bitmask representing the streaming and ZA
 // properties of the function's interface.
 //
-// The mangling scheme is otherwise defined in the appendices to the Procedure
-// Call Standard for the Arm Architecture, see
-// https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#appendix-c-mangling
+// Mangling of SME keywords is described in more detail in the AArch64 ACLE:
+// https://github.com/ARM-software/acle/blob/main/main/acle.md#c-mangling-of-sme-keywords
 //
 void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
   if (!SMEAttrs)
     return;
 
   // Streaming Mode
-  unsigned Bitmask = SMEState::Normal;
+  unsigned Bitmask = 0;
   if (SMEAttrs & FunctionType::SME_PStateSMEnabledMask)
-    Bitmask |= SMEState::SM_Enabled;
+    Bitmask |= static_cast<unsigned>(AAPCSBitmaskSME::ArmStreamingBit);
   else if (SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)
-    Bitmask |= SMEState::SM_Compatible;
+    Bitmask |=
+        static_cast<unsigned>(AAPCSBitmaskSME::ArmStreamingCompatibleBit);
 
   // TODO: Must represent __arm_agnostic("sme_za_state")
 
-  // ZA-State
-  Bitmask |= encodeZAState(FunctionType::getArmZAState(SMEAttrs))
-             << SMEState::ZA_Shift;
+  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
+             << static_cast<unsigned>(AAPCSBitmaskSME::ZA_Shift);
 
-  // ZT0 State
-  Bitmask |= encodeZAState(FunctionType::getArmZT0State(SMEAttrs))
-             << SMEState::ZT0_Shift;
+  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
+             << static_cast<unsigned>(AAPCSBitmaskSME::ZT0_Shift);
 
   Out << "Lj" << Bitmask << "EE";
-
-  return;
 }
 
 void
