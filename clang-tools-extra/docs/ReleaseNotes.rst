@@ -73,6 +73,8 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Added completion for C++20 keywords.
+
 Code actions
 ^^^^^^^^^^^^
 
