@@ -1096,14 +1096,20 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
-    // Determine if we need to extract a scalar as the result. We extract
-    // a scalar if the extract is full rank i.e. the number of indices is equal
-    // to source vector rank.
-    bool isScalarExtract =
-        positionVec.size() == extractOp.getSourceVectorType().getRank();
+    // The LLVM lowering models multi dimension vectors as stacked 1-d vectors.
+    // The stacking is modeled using arrays. We do this conversion from a
+    // N-d vector extract to stacked 1-d vector extract in two steps:
+    //  - Extract a 1-d vector or a stack of 1-d vectors (llvm.extractvalue)
+    //  - Extract a scalar out of the 1-d vector if needed (llvm.extractelement)
+
     // Determine if we need to extract a slice out of the original vector. We
     // always need to extract a slice if the input rank >= 2.
     bool isSlicingExtract = extractOp.getSourceVectorType().getRank() >= 2;
+    // Determine if we need to extract a scalar as the result. We extract
+    // a scalar if the extract is full rank i.e. the number of indices is equal
+    // to source vector rank.
+    bool isScalarExtract = static_cast<int64_t>(positionVec.size()) ==
+                           extractOp.getSourceVectorType().getRank();
 
     Value extracted = adaptor.getVector();
     if (isSlicingExtract) {
