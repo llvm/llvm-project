@@ -10264,6 +10264,11 @@ def warn_depr_array_comparison : Warning<
   "to compare array addresses, use unary '+' to decay operands to pointers">,
   InGroup<DeprecatedArrayCompare>;
 
+def warn_array_comparison : Warning<
+  "comparison between two arrays; "
+  "to compare array addresses, use unary '+' to decay operands to pointers">,
+  InGroup<ArrayCompare>;
+
 def warn_stringcompare : Warning<
   "result of comparison against %select{a string literal|@encode}0 is "
   "unspecified (use an explicit string comparison function instead)">,
