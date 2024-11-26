@@ -1445,9 +1445,9 @@ static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
 }
 
 static bool canInsertPadding(OutputSection *sec) {
-    StringRef s = sec->name;
-    return s == ".bss" || s == ".data" || s == ".data.rel.ro" ||
-           s == ".rodata" || s.starts_with(".text");
+  StringRef s = sec->name;
+  return s == ".bss" || s == ".data" || s == ".data.rel.ro" || s == ".rodata" ||
+         s.starts_with(".text");
 }
 
 static void shufflePadding(Ctx &ctx) {
@@ -1465,8 +1465,9 @@ static void shufflePadding(Ctx &ctx) {
           curPtLoad = os->ptLoad;
         }
         for (InputSection *isec : isd->sections) {
-          if (g() < (1<<28))
-            tmp.push_back(make<ShufflePaddingSection>(ctx, isec->addralign, os));
+          if (g() < (1 << 28))
+            tmp.push_back(
+                make<ShufflePaddingSection>(ctx, isec->addralign, os));
           tmp.push_back(isec);
         }
         isd->sections = std::move(tmp);
