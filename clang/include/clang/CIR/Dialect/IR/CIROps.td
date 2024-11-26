@@ -805,8 +805,8 @@ def TernaryOp : CIR_Op<"ternary",
     ```
   }];
   let arguments = (ins CIR_BoolType:$cond);
-  let regions = (region SizedRegion<1>:$trueRegion,
-                        SizedRegion<1>:$falseRegion);
+  let regions = (region AnyRegion:$trueRegion,
+                        AnyRegion:$falseRegion);
   let results = (outs Optional<CIR_AnyType>:$result);
 
   let skipDefaultBuilders = 1;
