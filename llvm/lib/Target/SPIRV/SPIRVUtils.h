@@ -277,7 +277,7 @@ inline Type *getTypedPointerWrapper(Type *ElemTy, unsigned AS) {
                             {ElemTy}, {AS});
 }
 
-inline bool isTypedPointerWrapper(TargetExtType *ExtTy) {
+inline bool isTypedPointerWrapper(const TargetExtType *ExtTy) {
   return ExtTy->getName() == TYPED_PTR_TARGET_EXT_NAME &&
          ExtTy->getNumIntParameters() == 1 &&
          ExtTy->getNumTypeParameters() == 1;
@@ -297,13 +297,14 @@ inline Type *applyWrappers(Type *Ty) {
   return Ty;
 }
 
-inline Type *getPointeeType(Type *Ty) {
+inline Type *getPointeeType(const Type *Ty) {
   if (Ty) {
     if (auto PType = dyn_cast<TypedPointerType>(Ty))
       return PType->getElementType();
     else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
       if (isTypedPointerWrapper(ExtTy))
-        return applyWrappers(ExtTy->getTypeParameter(0));
+        return ExtTy->getTypeParameter(0);
+        //return applyWrappers(ExtTy->getTypeParameter(0));
   }
   return nullptr;
 }
@@ -377,6 +378,9 @@ Register createVirtualRegister(const MachineInstr *SpvType,
                                MachineIRBuilder &MIRBuilder);
 Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
+
+// Return true if there is an opaque pointer type nested in the argument.
+bool isNestedPointer(const Type *Ty);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

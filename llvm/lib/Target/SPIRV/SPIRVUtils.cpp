@@ -406,8 +406,10 @@ bool hasBuiltinTypePrefix(StringRef Name) {
 }
 
 bool isSpecialOpaqueType(const Type *Ty) {
-  if (const TargetExtType *EType = dyn_cast<TargetExtType>(Ty))
-    return hasBuiltinTypePrefix(EType->getName());
+  if (const TargetExtType *ExtTy = dyn_cast<TargetExtType>(Ty))
+    return isTypedPointerWrapper(ExtTy)
+               ? false
+               : hasBuiltinTypePrefix(ExtTy->getName());
 
   return false;
 }
@@ -731,6 +733,23 @@ Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder) {
   return createVirtualRegister(GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
                                MIRBuilder);
+}
+
+// Return true if there is an opaque pointer type nested in the argument.
+bool isNestedPointer(const Type *Ty) {
+  if (Ty->isPtrOrPtrVectorTy())
+    return true;
+  if (const FunctionType *RefTy = dyn_cast<FunctionType>(Ty)) {
+    if (isNestedPointer(RefTy->getReturnType()))
+      return true;
+    for (const Type *ArgTy : RefTy->params())
+      if (isNestedPointer(ArgTy))
+        return true;
+    return false;
+  }
+  if (const ArrayType *RefTy = dyn_cast<ArrayType>(Ty))
+    return isNestedPointer(RefTy->getElementType());
+  return false;
 }
 
 } // namespace llvm
