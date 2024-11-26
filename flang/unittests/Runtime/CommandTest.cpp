@@ -13,7 +13,6 @@
 #include "flang/Runtime/execute.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
-#include "llvm/Support/Path.h"
 #include <cstddef>
 #include <cstdlib>
 
@@ -341,10 +340,7 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
 }
 
 TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
-  llvm::SmallString<64> cmd;
-  llvm::sys::path::native(LLVM_TOOLS_BINARY_DIR, cmd);
-  llvm::sys::path::append(cmd, "not");
-  OwningPtr<Descriptor> command{CharDescriptor(cmd.data())};
+  OwningPtr<Descriptor> command{CharDescriptor(NOT_EXE)};
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
