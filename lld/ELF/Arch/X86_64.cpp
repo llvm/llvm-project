@@ -401,6 +401,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
   case R_X86_64_CODE_4_GOTTPOFF:
+  case R_X86_64_CODE_6_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
@@ -562,8 +563,9 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-// In some conditions, R_X86_64_GOTTPOFF/R_X86_64_CODE_4_GOTTPOFF relocation can
-// be optimized to R_X86_64_TPOFF32 so that it does not use GOT.
+// In some conditions,
+// R_X86_64_GOTTPOFF/R_X86_64_CODE_4_GOTTPOFF/R_X86_64_CODE_6_GOTTPOFF
+// relocation can be optimized to R_X86_64_TPOFF32 so that it does not use GOT.
 void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
   uint8_t *inst = loc - 3;
@@ -622,6 +624,26 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
       Err(ctx) << getErrorLoc(ctx, loc - 4)
                << "R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ "
                   "instructions only";
+    }
+  } else if (rel.type == R_X86_64_CODE_6_GOTTPOFF) {
+    if (loc[-6] != 0x62) {
+      Err(ctx) << getErrorLoc(ctx, loc - 6)
+               << "Invalid prefix with R_X86_64_CODE_6_GOTTPOFF!";
+      return;
+    }
+    if (loc[-2] == 0x3 || loc[-2] == 0x1) {
+      // "addq foo@gottpoff(%rip), %reg1, %reg2" -> "addq $foo, %reg1, %reg2"
+      loc[-2] = 0x81;
+      // Move R bits to B bits in EVEX payloads and ModRM byte.
+      if ((loc[-5] & (1 << 7)) == 0)
+        loc[-5] = (loc[-5] | (1 << 7)) & ~(1 << 5);
+      if ((loc[-5] & (1 << 4)) == 0)
+        loc[-5] = loc[-5] | (1 << 4) | (1 << 3);
+      *regSlot = 0xc0 | reg;
+    } else {
+      Err(ctx)
+          << getErrorLoc(ctx, loc - 6)
+          << "R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions only";
     }
   } else {
     llvm_unreachable("Unsupported relocation type!");
@@ -782,6 +804,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
   case R_X86_64_CODE_4_GOTTPOFF:
+  case R_X86_64_CODE_6_GOTTPOFF:
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:
   case R_X86_64_TLSLD:
@@ -893,6 +916,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_X86_64_GOTTPOFF:
   case R_X86_64_CODE_4_GOTTPOFF:
+  case R_X86_64_CODE_6_GOTTPOFF:
     if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
