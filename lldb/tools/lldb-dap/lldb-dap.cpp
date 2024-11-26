@@ -4020,6 +4020,10 @@ void request_variables(DAP &dap, const llvm::json::Object &request) {
                           std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
           return;
+        if (child.IsSynthetic() && (child.GetType().IsPointerType() || child.GetType().IsReferenceType())) {
+          // Dereference to access synthetic children behind pointers/references
+          child = child.Dereference();
+        }
         bool is_permanent =
             dap.variables.IsPermanentVariableReference(variablesReference);
         int64_t var_ref = dap.variables.InsertVariable(child, is_permanent);
@@ -4028,6 +4032,9 @@ void request_variables(DAP &dap, const llvm::json::Object &request) {
             dap.enable_synthetic_child_debugging,
             /*is_name_duplicated=*/false, custom_name));
       };
+      if (variable.GetType().IsPointerType() || variable.GetType().IsReferenceType()) {
+        variable = variable.Dereference();
+      }
       const int64_t num_children = variable.GetNumChildren();
       int64_t end_idx = start + ((count == 0) ? num_children : count);
       int64_t i = start;
