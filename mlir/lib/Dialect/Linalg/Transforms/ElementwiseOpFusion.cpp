@@ -90,7 +90,7 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
   }
   if (indexingMaps.empty()) {
     // If there are no indexing maps, the operand can only be dropped
-    // if neither ops op have loops.
+    // if neither op has loops.
     return producer.getNumLoops() == 0 && consumer.getNumLoops() == 0;
   }
 
