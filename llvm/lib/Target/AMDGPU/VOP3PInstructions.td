@@ -255,6 +255,17 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   >;
 }
 
+class MinimumMaximumByMinimum3Maximum3VOP3P<SDPatternOperator node,
+                                            Instruction inst> : GCNPat<
+  (v2f16 (node (VOP3PMods v2f16:$src0, i32:$src0_mods), (VOP3PMods v2f16:$src1, i32:$src1_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, $src1_mods, $src1)
+>;
+
+let SubtargetPredicate = HasMinimum3Maximum3PKF16 in {
+def : MinimumMaximumByMinimum3Maximum3VOP3P<fminimum, V_PK_MINIMUM3_F16>;
+def : MinimumMaximumByMinimum3Maximum3VOP3P<fmaximum, V_PK_MAXIMUM3_F16>;
+}
+
 let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {
 
 // These are VOP3a-like opcodes which accept no omod.
