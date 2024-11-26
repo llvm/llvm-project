@@ -820,6 +820,13 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem]>;
 
+  def int_nvvm_div_full : ClangBuiltin<"__nvvm_div_full">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+  def int_nvvm_div_full_ftz : ClangBuiltin<"__nvvm_div_full_ftz">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+
 //
 // Sad
 //
