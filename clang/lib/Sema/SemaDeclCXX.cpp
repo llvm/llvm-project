@@ -11454,6 +11454,7 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
       const TemplateSpecializationType *TST = RetTST.getTypePtr();
       while (TST && TST->isTypeAlias())
         TST = TST->getAliasedType()->getAs<TemplateSpecializationType>();
+      assert(TST && "failed to resolve type alias");
 
       TemplateName SpecifiedName = TST->getTemplateName();
       bool TemplateMatches = Context.hasSameTemplateName(
