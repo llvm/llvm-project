@@ -6,21 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test sized operator delete[] replacement.
+// Test sized operator delete[] replacement.
 
-// These compiler versions don't enable sized deallocation by default.
-// UNSUPPORTED: clang-17, clang-18
+// UNSUPPORTED: c++03, c++11
+
+// These compiler versions and platforms don't enable sized deallocation by default.
+// ADDITIONAL_COMPILE_FLAGS(clang-17): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(clang-18): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(apple-clang-15): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(apple-clang-16): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=x86_64-w64-windows-gnu): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=i686-w64-windows-gnu): -fsized-deallocation
 
 // Android clang-r536225 identifies as clang-19.0 but it predates the real
 // LLVM 19.0.0, so it also leaves sized deallocation off by default.
 // UNSUPPORTED: android && clang-19.0
 
-// UNSUPPORTED: sanitizer-new-delete, c++03, c++11
-// XFAIL: apple-clang
+// UNSUPPORTED: sanitizer-new-delete
+
+// Sized deallocation was introduced in LLVM 11
 // XFAIL: using-built-library-before-llvm-11
 
-// AIX, z/OS, and MinGW default to -fno-sized-deallocation.
-// XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}, target={{.+}}-windows-gnu
+// AIX, and z/OS default to -fno-sized-deallocation.
+// XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}
+
+#if !defined(__cpp_sized_deallocation)
+# error __cpp_sized_deallocation should be defined
+#endif
+
+#if !(__cpp_sized_deallocation >= 201309L)
+# error expected __cpp_sized_deallocation >= 201309L
+#endif
 
 #include <new>
 #include <cstddef>
@@ -74,5 +90,5 @@ int main(int, char**)
     assert(0 == unsized_delete_nothrow_called);
     assert(1 == sized_delete_called);
 
-  return 0;
+    return 0;
 }
