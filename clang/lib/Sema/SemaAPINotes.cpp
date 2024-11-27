@@ -482,7 +482,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
-    MD = AnyFunc.get<ObjCMethodDecl *>();
+    MD = cast<ObjCMethodDecl *>(AnyFunc);
     D = MD;
   }
 
