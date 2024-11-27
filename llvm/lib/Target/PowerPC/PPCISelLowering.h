@@ -501,6 +501,12 @@ namespace llvm {
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
 
+    /// SETBC - The ISA 3.1 (P10) SETBC instruction.
+    SETBC,
+
+    /// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
+    SETBCR,
+
     // NOTE: The nodes below may require PC-Rel specific patterns if the
     // address could be PC-Relative. When adding new nodes below, consider
     // whether or not the address can be PC-Relative and add the corresponding
