@@ -491,20 +491,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FP Operations
 
-  getActionDefinitionsBuilder({G_FSUB, G_FDIV, G_FNEG})
-      .legalFor(ST.hasStdExtF(), {s32})
-      .legalFor(ST.hasStdExtD(), {s64})
-      .legalFor(ST.hasStdExtZfh(), {s16});
-
-  // FIXME: Merge with FSUB/FDIV/etc when we use libcalls for them.
   getActionDefinitionsBuilder(
-      {G_FADD, G_FMUL, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+      {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
       .libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder(G_FABS)
+  getActionDefinitionsBuilder({G_FNEG, G_FABS})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
@@ -536,7 +530,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
-      .clampScalar(ST.hasStdExtF(), 0, sXLen, sXLen);
+      .clampScalar(0, sXLen, sXLen)
+      .libcallFor({{sXLen, s32}, {sXLen, s64}});
 
   // TODO: Support vector version of G_IS_FPCLASS.
   getActionDefinitionsBuilder(G_IS_FPCLASS)
