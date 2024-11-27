@@ -58,7 +58,7 @@ func.func @reciprocal_div_infinity() -> tensor<f32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}<0.{{0*}}e+00>
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {value = dense<0x7F800000> : tensor<f32>} : () -> tensor<f32>
+  %0 = "tosa.const"() {value = dense<inf> : tensor<f32>} : () -> tensor<f32>
   %1 = "tosa.reciprocal"(%0) : (tensor<f32>) -> tensor<f32>
   return %1 : tensor<f32>
 }

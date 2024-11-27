@@ -47,7 +47,7 @@ func.func @exp2f() {
   call @func_exp2f(%g) : (f64) -> ()
 
   // CHECK-NEXT: 0
-  %neg_inf = arith.constant 0xff80000000000000 : f64
+  %neg_inf = arith.constant -inf : f64
   call @func_exp2f(%neg_inf) : (f64) -> ()
 
   // CHECK-NEXT: inf
@@ -229,7 +229,7 @@ func.func @powf() {
 
   // CHECK-NEXT: nan
   %i = arith.constant 1.0 : f64
-  %h = arith.constant 0x7fffffffffffffff : f64
+  %h = arith.constant nan : f64
   call @func_powff64(%i, %h) : (f64, f64) -> ()
 
   // CHECK-NEXT: inf
@@ -711,7 +711,7 @@ func.func @tanh_8xf32(%a : vector<8xf32>) {
 
 func.func @tanh() {
   // CHECK: -1, -0.761594, -0.291313, 0, 0.291313, 0.761594, 1, 1
-  %v3 = arith.constant dense<[0xff800000, -1.0, -0.3, 0.0, 0.3, 1.0, 10.0, 0x7f800000]> : vector<8xf32>
+  %v3 = arith.constant dense<[-inf, -1.0, -0.3, 0.0, 0.3, 1.0, 10.0, inf]> : vector<8xf32>
   call @tanh_8xf32(%v3) : (vector<8xf32>) -> ()
 
  return

@@ -108,8 +108,62 @@ func.func @float_attrs_pass() {
     // CHECK: float_attr = 2.000000e+00 : f128
     float_attr = 2. : f128
   } : () -> ()
+  "test.float_attrs"() {
+    // Note: nan/inf are printed in binary format because there may be multiple
+    // nan/inf representations.
+    // CHECK: float_attr = 0x7FC00000 : f32
+    float_attr = nan : f32
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 0x7C : f8E4M3
+    float_attr = nan : f8E4M3
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 0xFFC00000 : f32
+    float_attr = -nan : f32
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 0xFC : f8E4M3
+    float_attr = -nan : f8E4M3
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 0x7F800000 : f32
+    float_attr = inf : f32
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 0x78 : f8E4M3
+    float_attr = inf : f8E4M3
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 0xFF800000 : f32
+    float_attr = -inf : f32
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = 0xF8 : f8E4M3
+    float_attr = -inf : f8E4M3
+  } : () -> ()
   return
 }
+
+// -----
+
+func.func @float_nan_unsupported() {
+  "test.float_attrs"() {
+    // expected-error @below{{floating point type does not support NaN}}
+    float_attr = nan : f4E2M1FN
+  } : () -> ()
+}
+
+// -----
+
+func.func @float_inf_unsupported() {
+  "test.float_attrs"() {
+    // expected-error @below{{floating point type does not support infinity}}
+    float_attr = inf : f4E2M1FN
+  } : () -> ()
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // Test integer attributes

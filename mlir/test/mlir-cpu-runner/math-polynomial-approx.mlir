@@ -41,7 +41,7 @@ func.func @tanh() {
   call @tanh_8xf32(%v2) : (vector<8xf32>) -> ()
 
   // CHECK: nan
-  %nan = arith.constant 0x7fc00000 : f32
+  %nan = arith.constant nan : f32
   call @tanh_f32(%nan) : (f32) -> ()
 
  return
@@ -87,15 +87,15 @@ func.func @log() {
   call @log_f32(%zero) : (f32) -> ()
 
   // CHECK: nan
-  %nan = arith.constant 0x7fc00000 : f32
+  %nan = arith.constant nan : f32
   call @log_f32(%nan) : (f32) -> ()
 
   // CHECK: inf
-  %inf = arith.constant 0x7f800000 : f32
+  %inf = arith.constant inf : f32
   call @log_f32(%inf) : (f32) -> ()
 
   // CHECK: -inf, nan, inf, 0.693147
-  %special_vec = arith.constant dense<[0.0, -1.0, 0x7f800000, 2.0]> : vector<4xf32>
+  %special_vec = arith.constant dense<[0.0, -1.0, inf, 2.0]> : vector<4xf32>
   call @log_4xf32(%special_vec) : (vector<4xf32>) -> ()
 
   return
@@ -141,11 +141,11 @@ func.func @log2() {
   call @log2_f32(%neg_one) : (f32) -> ()
 
   // CHECK: inf
-  %inf = arith.constant 0x7f800000 : f32
+  %inf = arith.constant inf : f32
   call @log2_f32(%inf) : (f32) -> ()
 
   // CHECK: -inf, nan, inf, 1.58496
-  %special_vec = arith.constant dense<[0.0, -1.0, 0x7f800000, 3.0]> : vector<4xf32>
+  %special_vec = arith.constant dense<[0.0, -1.0, inf, 3.0]> : vector<4xf32>
   call @log2_4xf32(%special_vec) : (vector<4xf32>) -> ()
 
   return
@@ -192,11 +192,11 @@ func.func @log1p() {
   call @log1p_f32(%neg_two) : (f32) -> ()
 
   // CHECK: inf
-  %inf = arith.constant 0x7f800000 : f32
+  %inf = arith.constant inf : f32
   call @log1p_f32(%inf) : (f32) -> ()
 
   // CHECK: -inf, nan, inf, 9.99995e-06
-  %special_vec = arith.constant dense<[-1.0, -1.1, 0x7f800000, 0.00001]> : vector<4xf32>
+  %special_vec = arith.constant dense<[-1.0, -1.1, inf, 0.00001]> : vector<4xf32>
   call @log1p_4xf32(%special_vec) : (vector<4xf32>) -> ()
 
   return
@@ -247,7 +247,7 @@ func.func @erf() {
   call @erf_f32(%val7) : (f32) -> ()
 
   // CHECK: -1
-  %negativeInf = arith.constant 0xff800000 : f32
+  %negativeInf = arith.constant -inf : f32
   call @erf_f32(%negativeInf) : (f32) -> ()
 
   // CHECK: -1, -1, -0.913759, -0.731446
@@ -263,11 +263,11 @@ func.func @erf() {
   call @erf_4xf32(%vecVals3) : (vector<4xf32>) -> ()
 
   // CHECK: 1
-  %inf = arith.constant 0x7f800000 : f32
+  %inf = arith.constant inf : f32
   call @erf_f32(%inf) : (f32) -> ()
 
   // CHECK: nan
-  %nan = arith.constant 0x7fc00000 : f32
+  %nan = arith.constant nan : f32
   call @erf_f32(%nan) : (f32) -> ()
 
   return
@@ -306,15 +306,15 @@ func.func @exp() {
   call @exp_4xf32(%special_vec) : (vector<4xf32>) -> ()
 
   // CHECK: inf
-  %inf = arith.constant 0x7f800000 : f32
+  %inf = arith.constant inf : f32
   call @exp_f32(%inf) : (f32) -> ()
 
   // CHECK: 0
-  %negative_inf = arith.constant 0xff800000 : f32
+  %negative_inf = arith.constant -inf : f32
   call @exp_f32(%negative_inf) : (f32) -> ()
 
   // CHECK: nan
-  %nan = arith.constant 0x7fc00000 : f32
+  %nan = arith.constant nan : f32
   call @exp_f32(%nan) : (f32) -> ()
 
   return
@@ -358,19 +358,19 @@ func.func @expm1() {
   call @expm1_8xf32(%v2) : (vector<8xf32>) -> ()
 
   // CHECK: -1
-  %neg_inf = arith.constant 0xff800000 : f32
+  %neg_inf = arith.constant -inf : f32
   call @expm1_f32(%neg_inf) : (f32) -> ()
 
   // CHECK: inf
-  %inf = arith.constant 0x7f800000 : f32
+  %inf = arith.constant inf : f32
   call @expm1_f32(%inf) : (f32) -> ()
 
   // CHECK: -1, inf, 1e-10
-  %special_vec = arith.constant dense<[0xff800000, 0x7f800000, 1.0e-10]> : vector<3xf32>
+  %special_vec = arith.constant dense<[-inf, inf, 1.0e-10]> : vector<3xf32>
   call @expm1_3xf32(%special_vec) : (vector<3xf32>) -> ()
 
   // CHECK: nan
-  %nan = arith.constant 0x7fc00000 : f32
+  %nan = arith.constant nan : f32
   call @expm1_f32(%nan) : (f32) -> ()
 
   return

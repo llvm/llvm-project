@@ -791,7 +791,7 @@ func.func @fuse_scalar_constant(%arg0 : tensor<?x?xf32>) -> (tensor<?x?xf32>, te
 // CHECK: linalg.generic
 // CHECK: linalg.generic
 func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -> tensor<?xf32> {
-  %cst = arith.constant 0xFF800000 : f32
+  %cst = arith.constant -inf : f32
   %4 = tensor.empty(%arg1, %arg1) : tensor<?x?xf32>
   %5 = linalg.generic {
     indexing_maps = [#map0, #map1],

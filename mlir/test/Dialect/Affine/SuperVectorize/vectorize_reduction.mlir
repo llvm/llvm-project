@@ -30,7 +30,7 @@ func.func @vecdim_reduction(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // -----
 
 func.func @vecdim_reduction_minf(%in: memref<256x512xf32>, %out: memref<256xf32>) {
- %cst = arith.constant 0x7F800000 : f32
+ %cst = arith.constant inf : f32
  affine.for %i = 0 to 256 {
    %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %cst) -> (f32) {
      %ld = affine.load %in[%i, %j] : memref<256x512xf32>
@@ -57,7 +57,7 @@ func.func @vecdim_reduction_minf(%in: memref<256x512xf32>, %out: memref<256xf32>
 // -----
 
 func.func @vecdim_reduction_maxf(%in: memref<256x512xf32>, %out: memref<256xf32>) {
- %cst = arith.constant 0xFF800000 : f32
+ %cst = arith.constant -inf : f32
  affine.for %i = 0 to 256 {
    %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %cst) -> (f32) {
      %ld = affine.load %in[%i, %j] : memref<256x512xf32>
