@@ -776,9 +776,9 @@ static void handleDiagnoseAsBuiltinAttr(Sema &S, Decl *D,
   auto DiagnoseType = [&](unsigned Index, AttributeArgumentNType T) {
     SourceLocation Loc = [&]() {
       auto Union = AL.getArg(Index - 1);
-      if (Union.is<Expr *>())
-        return Union.get<Expr *>()->getBeginLoc();
-      return Union.get<IdentifierLoc *>()->Loc;
+      if (auto *E = dyn_cast<Expr *>(Union))
+        return E->getBeginLoc();
+      return cast<IdentifierLoc *>(Union)->Loc;
     }();
 
     S.Diag(Loc, diag::err_attribute_argument_n_type) << AL << Index << T;
