@@ -61,7 +61,7 @@ int foo(Data* d) {
 // CIR:    cir.call [[RET]]() : (!cir.ptr<!cir.func<!void ()>>) -> ()
 // CIR:    cir.return
 
-// LLVM: declare {{.*}} ptr {{@.*test.*}}()
+// LLVM: declare ptr {{@.*test.*}}()
 // LLVM: define dso_local void {{@.*bar.*}}()
 // LLVM:   [[RET:%.*]] = call ptr {{@.*test.*}}()
 // LLVM:   call void [[RET]]()

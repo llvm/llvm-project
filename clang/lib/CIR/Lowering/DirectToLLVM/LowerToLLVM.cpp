@@ -4402,7 +4402,8 @@ extern void registerCIRDialectTranslation(mlir::MLIRContext &context);
 
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule, LLVMContext &llvmCtx,
-                             bool disableVerifier, bool disableCCLowering) {
+                             bool disableVerifier, bool disableCCLowering,
+                             bool disableDebugInfo) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
   mlir::MLIRContext *mlirCtx = theModule.getContext();
@@ -4412,8 +4413,9 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule, LLVMContext &llvmCtx,
   // This is necessary to have line tables emitted and basic
   // debugger working. In the future we will add proper debug information
   // emission directly from our frontend.
-  pm.addPass(mlir::LLVM::createDIScopeForLLVMFuncOpPass());
-
+  if (!disableDebugInfo) {
+    pm.addPass(mlir::LLVM::createDIScopeForLLVMFuncOpPass());
+  }
   // FIXME(cir): this shouldn't be necessary. It's meant to be a temporary
   // workaround until we understand why some unrealized casts are being
   // emmited and how to properly avoid them.

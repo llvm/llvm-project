@@ -37,5 +37,5 @@ void local(void) {
 // LLVM: call void @llvm.var.annotation.p0.p0(ptr %[[ALLOC2]], ptr @.str.annotation, ptr @.str.1.annotation, i32 24, ptr null)
 // LLVM: %[[ALLOC3:.*]] = alloca i32
 // LLVM: call void @llvm.var.annotation.p0.p0(ptr %[[ALLOC3]], ptr @.str.3.annotation, 
-// LLVM-SAME: ptr @.str.1.annotation, i32 25, ptr @.args.annotation),
+// LLVM-SAME: ptr @.str.1.annotation, i32 25, ptr @.args.annotation)
 }

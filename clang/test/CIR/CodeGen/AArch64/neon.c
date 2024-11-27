@@ -10156,7 +10156,7 @@ uint8x16_t test_vld1q_u8(uint8_t const *a) {
   // CIR: cir.load align(1) %[[CAST]] : !cir.ptr<!cir.vector<!u8i x 16>>, !cir.vector<!u8i x 16>
 
   // LLVM-LABEL: @test_vld1q_u8
-  // LLVM:   [[TMP1:%.*]] = load <16 x i8>, ptr %0, align 1,
+  // LLVM:   [[TMP1:%.*]] = load <16 x i8>, ptr %0, align 1
 }
 
 uint16x8_t test_vld1q_u16(uint16_t const *a) {
@@ -10166,7 +10166,7 @@ uint16x8_t test_vld1q_u16(uint16_t const *a) {
   // CIR: cir.load align(2) %[[CAST]] : !cir.ptr<!cir.vector<!u16i x 8>>, !cir.vector<!u16i x 8>
 
   // LLVM-LABEL: @test_vld1q_u16
-  // LLVM:   [[TMP1:%.*]] = load <8 x i16>, ptr %0, align 2,
+  // LLVM:   [[TMP1:%.*]] = load <8 x i16>, ptr %0, align 2
 }
 
 uint32x4_t test_vld1q_u32(uint32_t const *a) {
@@ -10176,7 +10176,7 @@ uint32x4_t test_vld1q_u32(uint32_t const *a) {
   // CIR: cir.load align(4) %[[CAST]] : !cir.ptr<!cir.vector<!u32i x 4>>, !cir.vector<!u32i x 4>
 
   // LLVM-LABEL: @test_vld1q_u32
-  // LLVM:   [[TMP1:%.*]] = load <4 x i32>, ptr %0, align 4,
+  // LLVM:   [[TMP1:%.*]] = load <4 x i32>, ptr %0, align 4
 }
 
 uint64x2_t test_vld1q_u64(uint64_t const *a) {
@@ -10186,7 +10186,7 @@ uint64x2_t test_vld1q_u64(uint64_t const *a) {
   // CIR: cir.load align(8) %[[CAST]] : !cir.ptr<!cir.vector<!u64i x 2>>, !cir.vector<!u64i x 2>
 
   // LLVM-LABEL: @test_vld1q_u64
-  // LLVM:   [[TMP1:%.*]] = load <2 x i64>, ptr %0, align 8,
+  // LLVM:   [[TMP1:%.*]] = load <2 x i64>, ptr %0, align 8
 }
 
 int8x16_t test_vld1q_s8(int8_t const *a) {
@@ -10196,7 +10196,7 @@ int8x16_t test_vld1q_s8(int8_t const *a) {
   // CIR: cir.load align(1) %[[CAST]] : !cir.ptr<!cir.vector<!s8i x 16>>, !cir.vector<!s8i x 16>
 
   // LLVM-LABEL: @test_vld1q_s8
-  // LLVM:   [[TMP1:%.*]] = load <16 x i8>, ptr %0, align 1,
+  // LLVM:   [[TMP1:%.*]] = load <16 x i8>, ptr %0, align 1
 }
 
 int16x8_t test_vld1q_s16(int16_t const *a) {
@@ -10206,7 +10206,7 @@ int16x8_t test_vld1q_s16(int16_t const *a) {
   // CIR: cir.load align(2) %[[CAST]] : !cir.ptr<!cir.vector<!s16i x 8>>, !cir.vector<!s16i x 8>
 
   // LLVM-LABEL: @test_vld1q_s16
-  // LLVM:   [[TMP1:%.*]] = load <8 x i16>, ptr %0, align 2,
+  // LLVM:   [[TMP1:%.*]] = load <8 x i16>, ptr %0, align 2
 }
 
 int32x4_t test_vld1q_s32(int32_t const *a) {
@@ -10216,7 +10216,7 @@ int32x4_t test_vld1q_s32(int32_t const *a) {
   // CIR: cir.load align(4) %[[CAST]] : !cir.ptr<!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
 
   // LLVM-LABEL: @test_vld1q_s32
-  // LLVM:   [[TMP1:%.*]] = load <4 x i32>, ptr %0, align 4,
+  // LLVM:   [[TMP1:%.*]] = load <4 x i32>, ptr %0, align 4
 }
 
 int64x2_t test_vld1q_s64(int64_t const *a) {
@@ -10226,7 +10226,7 @@ int64x2_t test_vld1q_s64(int64_t const *a) {
   // CIR: cir.load align(8) %[[CAST]] : !cir.ptr<!cir.vector<!s64i x 2>>, !cir.vector<!s64i x 2>
 
   // LLVM-LABEL: @test_vld1q_s64
-  // LLVM:   [[TMP1:%.*]] = load <2 x i64>, ptr %0, align 8,
+  // LLVM:   [[TMP1:%.*]] = load <2 x i64>, ptr %0, align 8
 }
 
 // NYI-LABEL: @test_vld1q_f16(
@@ -11389,7 +11389,7 @@ void test_vst1q_u8(uint8_t *a, uint8x16_t b) {
   // CIR: cir.store align(1) %{{.*}}, %[[CAST]] : !cir.vector<!u8i x 16>, !cir.ptr<!cir.vector<!u8i x 16>>
 
   // LLVM-LABEL: @test_vst1q_u8
-  // LLVM:   store <16 x i8> %{{.*}}, ptr %0, align 1,
+  // LLVM:   store <16 x i8> %{{.*}}, ptr %0, align 1
 }
 
 void test_vst1q_u16(uint16_t *a, uint16x8_t b) {
@@ -11399,7 +11399,7 @@ void test_vst1q_u16(uint16_t *a, uint16x8_t b) {
   // CIR: cir.store align(2) %{{.*}}, %[[CAST]] : !cir.vector<!u16i x 8>, !cir.ptr<!cir.vector<!u16i x 8>>
 
   // LLVM-LABEL: @test_vst1q_u16
-  // LLVM:   store <8 x i16> %{{.*}}, ptr %0, align 2,
+  // LLVM:   store <8 x i16> %{{.*}}, ptr %0, align 2
 }
 
 void test_vst1q_u32(uint32_t *a, uint32x4_t b) {
@@ -11409,7 +11409,7 @@ void test_vst1q_u32(uint32_t *a, uint32x4_t b) {
   // CIR: cir.store align(4) %{{.*}}, %[[CAST]] : !cir.vector<!u32i x 4>, !cir.ptr<!cir.vector<!u32i x 4>>
 
   // LLVM-LABEL: @test_vst1q_u32
-  // LLVM:   store <4 x i32> %{{.*}}, ptr %0, align 4,
+  // LLVM:   store <4 x i32> %{{.*}}, ptr %0, align 4
 }
 
 void test_vst1q_u64(uint64_t *a, uint64x2_t b) {
@@ -11419,7 +11419,7 @@ void test_vst1q_u64(uint64_t *a, uint64x2_t b) {
   // CIR: cir.store align(8) %{{.*}}, %[[CAST]] : !cir.vector<!u64i x 2>, !cir.ptr<!cir.vector<!u64i x 2>>
 
   // LLVM-LABEL: @test_vst1q_u64
-  // LLVM:   store <2 x i64> %{{.*}}, ptr %0, align 8,
+  // LLVM:   store <2 x i64> %{{.*}}, ptr %0, align 8
 }
 
 void test_vst1q_s8(int8_t *a, int8x16_t b) {
@@ -11429,7 +11429,7 @@ void test_vst1q_s8(int8_t *a, int8x16_t b) {
   // CIR: cir.store align(1) %{{.*}}, %[[CAST]] : !cir.vector<!s8i x 16>, !cir.ptr<!cir.vector<!s8i x 16>>
 
   // LLVM-LABEL: @test_vst1q_s8
-  // LLVM:   store <16 x i8> %{{.*}}, ptr %0, align 1,
+  // LLVM:   store <16 x i8> %{{.*}}, ptr %0, align 1
 }
 
 void test_vst1q_s16(int16_t *a, int16x8_t b) {
@@ -11439,7 +11439,7 @@ void test_vst1q_s16(int16_t *a, int16x8_t b) {
   // CIR: cir.store align(2) %{{.*}}, %[[CAST]] : !cir.vector<!s16i x 8>, !cir.ptr<!cir.vector<!s16i x 8>>
 
   // LLVM-LABEL: @test_vst1q_s16
-  // LLVM:   store <8 x i16> %{{.*}}, ptr %0, align 2,
+  // LLVM:   store <8 x i16> %{{.*}}, ptr %0, align 2
 }
 
 void test_vst1q_s32(int32_t *a, int32x4_t b) {
@@ -11449,7 +11449,7 @@ void test_vst1q_s32(int32_t *a, int32x4_t b) {
   // CIR: cir.store align(4) %{{.*}}, %[[CAST]] : !cir.vector<!s32i x 4>, !cir.ptr<!cir.vector<!s32i x 4>>
 
   // LLVM-LABEL: @test_vst1q_s32
-  // LLVM:   store <4 x i32> %{{.*}}, ptr %0, align 4,
+  // LLVM:   store <4 x i32> %{{.*}}, ptr %0, align 4
 }
 
 void test_vst1q_s64(int64_t *a, int64x2_t b) {
@@ -11459,7 +11459,7 @@ void test_vst1q_s64(int64_t *a, int64x2_t b) {
   // CIR: cir.store align(8) %{{.*}}, %[[CAST]] : !cir.vector<!s64i x 2>, !cir.ptr<!cir.vector<!s64i x 2>>
 
   // LLVM-LABEL: @test_vst1q_s64
-  // LLVM:   store <2 x i64> %{{.*}}, ptr %0, align 8,
+  // LLVM:   store <2 x i64> %{{.*}}, ptr %0, align 8
 }
 
 // NYI-LABEL: @test_vst1q_f16(

@@ -20,7 +20,7 @@ char buffer[32] = "This is a largely unused buffer";
 // CIR:  cir.clear_cache %[[VAL_3]] : !cir.ptr<!void>, %[[VAL_8]],
 
 // LLVM-LABEL: main
-// LLVM:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr (i8, ptr @buffer, i64 32)),
+// LLVM:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr (i8, ptr @buffer, i64 32))
 
 int main(void) {
   __builtin___clear_cache(buffer, buffer+32);

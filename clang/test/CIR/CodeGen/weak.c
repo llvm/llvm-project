@@ -18,7 +18,7 @@ void active (void)
 // CIR:      cir.func @active()
 // CIR-NEXT:   cir.call @B() : () -> ()
 
-// LLVM:     declare !dbg !{{.}} extern_weak void @B()
+// LLVM:     declare extern_weak void @B()
 // LLVM:     define dso_local void @active()
 // LLVM-NEXT:  call void @B()
 

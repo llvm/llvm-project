@@ -38,17 +38,17 @@ void fn1() { f f1; }
 // LLVM: %class.f = type { %class.a }
 // LLVM:  %class.a = type { i8 }
 // LLVM: @h = global i32 0
-// LLVM: declare {{.*}} ptr @_ZN1a1bEi(i32)
+// LLVM: declare ptr @_ZN1a1bEi(i32)
 
 // LLVM: define dso_local ptr @_ZN1f1bEv(ptr [[ARG0:%.*]])
 // LLVM: [[ARG0_SAVE:%.*]] = alloca ptr, i64 1, align 8
 // LLVM: [[RET_SAVE:%.*]] = alloca ptr, i64 1, align 8
-// LLVM: store ptr [[ARG0]], ptr [[ARG0_SAVE]], align 8,
+// LLVM: store ptr [[ARG0]], ptr [[ARG0_SAVE]], align 8
 // LLVM: [[ARG0_LOAD:%.*]] = load ptr, ptr [[ARG0_SAVE]], align 8
-// LLVM: [[FUNC_PTR:%.*]] = getelementptr %class.f, ptr [[ARG0_LOAD]], i32 0, i32 0,
+// LLVM: [[FUNC_PTR:%.*]] = getelementptr %class.f, ptr [[ARG0_LOAD]], i32 0, i32 0
 // LLVM: [[VAR_H:%.*]] = load i32, ptr @h, align 4
-// LLVM: [[RET_VAL:%.*]] = call ptr @_ZN1a1bEi(i32 [[VAR_H]]),
-// LLVM: store ptr [[RET_VAL]], ptr [[RET_SAVE]], align 8,
+// LLVM: [[RET_VAL:%.*]] = call ptr @_ZN1a1bEi(i32 [[VAR_H]])
+// LLVM: store ptr [[RET_VAL]], ptr [[RET_SAVE]], align 8
 // LLVM: [[RET_VAL2:%.*]] = load ptr, ptr [[RET_SAVE]], align 8
 // LLVM: ret ptr [[RET_VAL2]]
 

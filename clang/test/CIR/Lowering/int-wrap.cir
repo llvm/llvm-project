@@ -19,6 +19,6 @@ module {
 // MLIR-NEXT: llvm.sub {{.*}}, {{.*}} overflow<nuw>  : i32
 // MLIR-NEXT: llvm.sub {{.*}}, {{.*}}  : i32
 
-// LLVM:      sub nsw i32 {{.*}}, {{.*}}, !dbg !9
-// LLVM-NEXT: sub nuw i32 {{.*}}, {{.*}}, !dbg !10
-// LLVM-NEXT: sub i32 {{.*}}, {{.*}}, !dbg !11
+// LLVM:      sub nsw i32 {{.*}}, {{.*}}
+// LLVM-NEXT: sub nuw i32 {{.*}}, {{.*}}
+// LLVM-NEXT: sub i32 {{.*}}, {{.*}}

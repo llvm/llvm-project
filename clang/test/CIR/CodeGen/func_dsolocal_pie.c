@@ -22,13 +22,13 @@ int main() {
 // CIR: cir.call @foo([[TMP1]]) : (!s32i) -> ()
 
 // LLVM: define dso_local void @foo(i32 [[TMP3:%.*]])
-// LLVM: [[ARG_STACK:%.*]] = alloca i32, i64 1, align 4,
+// LLVM: [[ARG_STACK:%.*]] = alloca i32, i64 1, align 4
 // LLVM: store i32 [[TMP3]], ptr [[ARG_STACK]], align 4
-// LLVM: ret void,
+// LLVM: ret void
 
 // LLVM: define dso_local i32 @main()
-// LLVM: [[TMP4:%.*]] = alloca i32, i64 1, align 4,
-// LLVM: call void @foo(i32 2),
+// LLVM: [[TMP4:%.*]] = alloca i32, i64 1, align 4
+// LLVM: call void @foo(i32 2)
 // LLVM: store i32 0, ptr [[TMP4]], align 4
 // LLVM: [[RET_VAL:%.*]] = load i32, ptr [[TMP4]], align 4
-// LLVM: ret i32 [[RET_VAL]],
+// LLVM: ret i32 [[RET_VAL]]

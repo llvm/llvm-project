@@ -67,27 +67,27 @@ void test() {
 // LLVM: @.str.1 = private constant [3 x i8] c"uv\00"
 
 // LLVM: define linkonce_odr void @_ZSt1fIPKcEvSt16initializer_listIT_E(%"class.std::initializer_list<const char *>" [[ARG0:%.*]])
-// LLVM: [[LOCAL_PTR:%.*]] = alloca %"class.std::initializer_list<const char *>", i64 1, align 8, 
-// LLVM: store %"class.std::initializer_list<const char *>" [[ARG0]], ptr [[LOCAL_PTR]], align 8,
-// LLVM: ret void,
+// LLVM: [[LOCAL_PTR:%.*]] = alloca %"class.std::initializer_list<const char *>", i64 1, align 8
+// LLVM: store %"class.std::initializer_list<const char *>" [[ARG0]], ptr [[LOCAL_PTR]], align 8
+// LLVM: ret void
 // LLVM: }
 
 // LLVM: define dso_local void @_ZSt4testv()
-// LLVM:  [[INIT_STRUCT:%.*]] = alloca %"class.std::initializer_list<const char *>", i64 1, align 8,
-// LLVM:  [[ELEM_ARRAY_PTR:%.*]] = alloca [2 x ptr], i64 1, align 8,
-// LLVM: br label %[[SCOPE_START:.*]],  
+// LLVM:  [[INIT_STRUCT:%.*]] = alloca %"class.std::initializer_list<const char *>", i64 1, align 8
+// LLVM:  [[ELEM_ARRAY_PTR:%.*]] = alloca [2 x ptr], i64 1, align 8
+// LLVM: br label %[[SCOPE_START:.*]]
 // LLVM: [[SCOPE_START]]: ; preds = %0
-// LLVM:  [[PTR_FIRST_ELEM:%.*]] = getelementptr ptr, ptr [[ELEM_ARRAY_PTR]], i32 0,
-// LLVM:  store ptr @.str, ptr [[PTR_FIRST_ELEM]], align 8,
-// LLVM:  [[PTR_SECOND_ELEM:%.*]] = getelementptr ptr, ptr [[PTR_FIRST_ELEM]], i64 1,
-// LLVM:  store ptr @.str.1, ptr [[PTR_SECOND_ELEM]], align 8,
-// LLVM:  [[INIT_START_FLD_PTR:%.*]] = getelementptr %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], i32 0, i32 0,
-// LLVM:  store ptr [[PTR_FIRST_ELEM]], ptr [[INIT_START_FLD_PTR]], align 8,
-// LLVM:  [[ELEM_ARRAY_END:%.*]] = getelementptr ptr, ptr [[PTR_FIRST_ELEM]], i64 2,
-// LLVM:  [[INIT_END_FLD_PTR:%.*]] = getelementptr %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], i32 0, i32 1,
-// LLVM:  store ptr [[ELEM_ARRAY_END]], ptr [[INIT_END_FLD_PTR]], align 8,
-// LLVM:  [[ARG2PASS:%.*]] = load %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], align 8,
-// LLVM:  call void @_ZSt1fIPKcEvSt16initializer_listIT_E(%"class.std::initializer_list<const char *>" [[ARG2PASS]]),
-// LLVM:  br label %[[SCOPE_END:.*]],
+// LLVM:  [[PTR_FIRST_ELEM:%.*]] = getelementptr ptr, ptr [[ELEM_ARRAY_PTR]], i32 0
+// LLVM:  store ptr @.str, ptr [[PTR_FIRST_ELEM]], align 8
+// LLVM:  [[PTR_SECOND_ELEM:%.*]] = getelementptr ptr, ptr [[PTR_FIRST_ELEM]], i64 1
+// LLVM:  store ptr @.str.1, ptr [[PTR_SECOND_ELEM]], align 8
+// LLVM:  [[INIT_START_FLD_PTR:%.*]] = getelementptr %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], i32 0, i32 0
+// LLVM:  store ptr [[PTR_FIRST_ELEM]], ptr [[INIT_START_FLD_PTR]], align 8
+// LLVM:  [[ELEM_ARRAY_END:%.*]] = getelementptr ptr, ptr [[PTR_FIRST_ELEM]], i64 2
+// LLVM:  [[INIT_END_FLD_PTR:%.*]] = getelementptr %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], i32 0, i32 1
+// LLVM:  store ptr [[ELEM_ARRAY_END]], ptr [[INIT_END_FLD_PTR]], align 8
+// LLVM:  [[ARG2PASS:%.*]] = load %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], align 8
+// LLVM:  call void @_ZSt1fIPKcEvSt16initializer_listIT_E(%"class.std::initializer_list<const char *>" [[ARG2PASS]])
+// LLVM:  br label %[[SCOPE_END:.*]]
 // LLVM: [[SCOPE_END]]: ; preds = %[[SCOPE_START]]
 // LLVM:  ret void

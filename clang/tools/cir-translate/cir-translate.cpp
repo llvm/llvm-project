@@ -27,7 +27,8 @@ namespace direct {
 extern void registerCIRDialectTranslation(mlir::DialectRegistry &registry);
 extern std::unique_ptr<llvm::Module> lowerDirectlyFromCIRToLLVMIR(
     mlir::ModuleOp theModule, llvm::LLVMContext &llvmCtx,
-    bool disableVerifier = false, bool disableCCLowering = false);
+    bool disableVerifier = false, bool disableCCLowering = false,
+    bool disableDebugInfo = false);
 } // namespace direct
 } // namespace cir
 

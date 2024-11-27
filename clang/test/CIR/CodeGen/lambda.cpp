@@ -175,13 +175,13 @@ int f() {
 // LLVM-LABEL: _Z1fv
 // LLVM: [[ref_tmp0:%.*]] = alloca %class.anon.4, i64 1, align 8
 // LLVM: [[ret_val:%.*]] = alloca i32, i64 1, align 4
-// LLVM: br label %[[scope_bb:[0-9]+]],
+// LLVM: br label %[[scope_bb:[0-9]+]]
 // LLVM: [[scope_bb]]:
 // LLVM: [[tmp0:%.*]] = call %class.anon.4 @_Z2g2v()
 // LLVM: store %class.anon.4 [[tmp0]], ptr [[ref_tmp0]], align 8
 // LLVM: [[tmp1:%.*]] = call i32 @"_ZZ2g2vENK3$_0clEv"(ptr [[ref_tmp0]])
 // LLVM: store i32 [[tmp1]], ptr [[ret_val]], align 4
-// LLVM: br label %[[ret_bb:[0-9]+]],
+// LLVM: br label %[[ret_bb:[0-9]+]]
 // LLVM: [[ret_bb]]:
 // LLVM: [[tmp2:%.*]] = load i32, ptr [[ret_val]], align 4
 // LLVM: ret i32 [[tmp2]]
@@ -262,21 +262,21 @@ int g3() {
 // LLVM-DAG: [[ret_val:%.*]] = alloca i32, i64 1, align 4
 // LLVM-DAG: [[fn_ptr:%.*]] = alloca ptr, i64 1, align 8
 // LLVM-DAG: [[task:%.*]] = alloca i32, i64 1, align 4
-// LLVM: br label %[[scope0_bb:[0-9]+]],
+// LLVM: br label %[[scope0_bb:[0-9]+]]
 
 // LLVM: [[scope0_bb]]: {{.*}}; preds = %0
 // LLVM: [[call:%.*]] = call ptr @"_ZZ2g3vENK3$_0cvPFiRKiEEv"(ptr [[ref_tmp0]])
-// LLVM: br label %[[scope1_before:[0-9]+]],
+// LLVM: br label %[[scope1_before:[0-9]+]]
 
 // LLVM: [[scope1_before]]: {{.*}}; preds = %[[scope0_bb]]
 // LLVM: [[tmp0:%.*]] = phi ptr [ [[call]], %[[scope0_bb]] ]
-// LLVM: br label %[[scope1_bb:[0-9]+]],
+// LLVM: br label %[[scope1_bb:[0-9]+]]
 
 // LLVM: [[scope1_bb]]: {{.*}}; preds = %[[scope1_before]]
 // LLVM: [[fn:%.*]] = load ptr, ptr [[fn_ptr]], align 8
 // LLVM: store i32 3, ptr [[ref_tmp1]], align 4
 // LLVM: [[call1:%.*]] = call i32 [[fn]](ptr [[ref_tmp1]])
-// LLVM: br label %[[ret_bb:[0-9]+]],
+// LLVM: br label %[[ret_bb:[0-9]+]]
 
 // LLVM: [[ret_bb]]: {{.*}}; preds = %[[scope1_bb]]
 // LLVM: [[tmp1:%.*]] = phi i32 [ [[call1]], %[[scope1_bb]] ]

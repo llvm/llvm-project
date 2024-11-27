@@ -25,7 +25,7 @@ void charInit2() {
 
 // LLVM: %[[PTR:.*]] = alloca [4 x [2 x i8]], i64 1, align 1
 // FIXME: OG uses @llvm.memcpy.p0.p0.i64
-// LLVM: call void @llvm.memcpy.p0.p0.i32(ptr %[[PTR]], ptr @__const.charInit3.arr, i32 8, i1 false), !dbg !16
+// LLVM: call void @llvm.memcpy.p0.p0.i32(ptr %[[PTR]], ptr @__const.charInit3.arr, i32 8, i1 false)
 void charInit3() {
   char arr[4][2] = {"ab", "cd", "ef", "gh"};
 }

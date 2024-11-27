@@ -20,7 +20,7 @@ void *memmove(void *, const void *, unsigned long);
 void testMemmove(void *src, const void *dst, unsigned long size) {
   memmove(dst, src, size);
   // CHECK: cir.libc.memmove %{{.+}} bytes from %{{.+}} to %{{.+}} : !cir.ptr<!void>, !u64i
-  // LLVM: call void @llvm.memmove.{{.+}}.i64(ptr %{{.+}}, ptr %{{.+}}, i64 %{{.+}}, i1 false),
+  // LLVM: call void @llvm.memmove.{{.+}}.i64(ptr %{{.+}}, ptr %{{.+}}, i64 %{{.+}}, i1 false)
 }
 
 // Should generate CIR's builtin memset op.

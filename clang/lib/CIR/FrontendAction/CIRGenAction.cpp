@@ -94,10 +94,11 @@ getBackendActionFromOutputType(CIRGenAction::OutputType action) {
 static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
     const clang::FrontendOptions &feOptions, mlir::ModuleOp mlirMod,
     std::unique_ptr<mlir::MLIRContext> mlirCtx, llvm::LLVMContext &llvmCtx,
-    bool disableVerifier = false, bool disableCCLowering = false) {
+    bool disableVerifier = false, bool disableCCLowering = false,
+    bool disableDebugInfo = false) {
   if (feOptions.ClangIRDirectLowering)
     return direct::lowerDirectlyFromCIRToLLVMIR(
-        mlirMod, llvmCtx, disableVerifier, disableCCLowering);
+        mlirMod, llvmCtx, disableVerifier, disableCCLowering, disableDebugInfo);
   else
     return lowerFromCIRToMLIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
 }
@@ -287,10 +288,12 @@ public:
     case CIRGenAction::OutputType::EmitObj:
     case CIRGenAction::OutputType::EmitAssembly: {
       llvm::LLVMContext llvmCtx;
-      auto llvmModule =
-          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
-                               feOptions.ClangIRDisableCIRVerifier,
-                               !feOptions.ClangIRCallConvLowering);
+      bool disableDebugInfo =
+          codeGenOptions.getDebugInfo() == llvm::codegenoptions::NoDebugInfo;
+      auto llvmModule = lowerFromCIRToLLVMIR(
+          feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
+          feOptions.ClangIRDisableCIRVerifier,
+          !feOptions.ClangIRCallConvLowering, disableDebugInfo);
 
       BackendAction backendAction = getBackendActionFromOutputType(action);
 
@@ -439,10 +442,12 @@ void CIRGenAction::ExecuteAction() {
 
   // FIXME(cir): This compilation path does not account for some flags.
   llvm::LLVMContext llvmCtx;
+  bool disableDebugInfo =
+      ci.getCodeGenOpts().getDebugInfo() == llvm::codegenoptions::NoDebugInfo;
   auto llvmModule = lowerFromCIRToLLVMIR(
       ci.getFrontendOpts(), mlirModule.release(),
       std::unique_ptr<mlir::MLIRContext>(mlirContext), llvmCtx,
-      /*disableVerifier=*/false, /*disableCCLowering=*/true);
+      /*disableVerifier=*/false, /*disableCCLowering=*/true, disableDebugInfo);
 
   if (outstream)
     llvmModule->print(*outstream, nullptr);
@@ -482,7 +487,8 @@ EmitObjAction::EmitObjAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::EmitObj, _MLIRContext) {}
 } // namespace cir
 
-// Used for -fclangir-analysis-only: use CIR analysis but still use original LLVM codegen path
+// Used for -fclangir-analysis-only: use CIR analysis but still use original
+// LLVM codegen path
 void AnalysisOnlyActionBase::anchor() {}
 AnalysisOnlyActionBase::AnalysisOnlyActionBase(unsigned _Act,
                                                llvm::LLVMContext *_VMContext)

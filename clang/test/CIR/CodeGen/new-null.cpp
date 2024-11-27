@@ -68,10 +68,10 @@ namespace test15 {
   // LLVM:         %[[VAL_2:.*]] = load ptr, ptr %[[VAL_0]], align 8
   // LLVM:         %[[VAL_3:.*]] = call ptr @_ZnwmPvb(i64 1, ptr %[[VAL_2]], i8 1)
   // LLVM:         %[[VAL_4:.*]] = icmp ne ptr %[[VAL_3]], null
-  // LLVM:         br i1 %[[VAL_4]], label %[[VAL_5:.*]], label %[[VAL_6:.*]],
+  // LLVM:         br i1 %[[VAL_4]], label %[[VAL_5:.*]], label %[[VAL_6:.*]]
   // LLVM:       [[VAL_5]]:                                                ; preds = %[[VAL_7:.*]]
   // LLVM:         call void @_ZN6test151AC1Ev(ptr %[[VAL_3]])
-  // LLVM:         br label %[[VAL_6]],
+  // LLVM:         br label %[[VAL_6]]
   // LLVM:       [[VAL_6]]:                                                ; preds = %[[VAL_5]], %[[VAL_7]]
   // LLVM:         ret void
 

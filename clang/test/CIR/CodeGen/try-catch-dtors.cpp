@@ -41,11 +41,11 @@ void yo() {
 // LLVM-LABEL: @_Z2yov()
 
 // LLVM:   %[[Vec:.*]] = alloca %struct.Vec
-// LLVM:   br label %[[INVOKE_BB:.*]],
+// LLVM:   br label %[[INVOKE_BB:.*]]
 
 // LLVM: [[INVOKE_BB]]:
 // LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[Vec]])
-// LLVM:           to label %[[DTOR_BB:.*]] unwind label %[[LPAD_BB:.*]],
+// LLVM:           to label %[[DTOR_BB:.*]] unwind label %[[LPAD_BB:.*]]
 
 // LLVM: [[DTOR_BB]]:
 // LLVM:   call void @_ZN3VecD1Ev(ptr %[[Vec]])
@@ -54,12 +54,12 @@ void yo() {
 // LLVM: [[LPAD_BB]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:           catch ptr null
-// LLVM:   br label %[[CATCH_BB:.*]],
+// LLVM:   br label %[[CATCH_BB:.*]]
 
 // LLVM: [[CATCH_BB]]:
 // LLVM:   call ptr @__cxa_begin_catch
 // LLVM:   call void @__cxa_end_catch()
-// LLVM:   br label %[[RET_BB:.*]],
+// LLVM:   br label %[[RET_BB:.*]]
 
 // LLVM: [[RET_BB]]:
 // LLVM:   ret void
@@ -216,50 +216,50 @@ void yo3(bool x) {
 // LLVM:   %[[V2:.*]] = alloca %struct.Vec
 // LLVM:   %[[V3:.*]] = alloca %struct.Vec
 // LLVM:   %[[V4:.*]] = alloca %struct.Vec
-// LLVM:   br label %[[CALL0:.*]],
+// LLVM:   br label %[[CALL0:.*]]
 // LLVM: [[CALL0]]:
 // LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V1]])
-// LLVM:           to label %[[CALL1:.*]] unwind label %[[LPAD0:.*]],
+// LLVM:           to label %[[CALL1:.*]] unwind label %[[LPAD0:.*]]
 // LLVM: [[CALL1]]:
 // LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V2]])
-// LLVM:           to label %[[CALL2:.*]] unwind label %[[LPAD1:.*]],
+// LLVM:           to label %[[CALL2:.*]] unwind label %[[LPAD1:.*]]
 // LLVM: [[CALL2]]:
 // LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V3]])
-// LLVM:           to label %[[CALL3:.*]] unwind label %[[LPAD2:.*]],
+// LLVM:           to label %[[CALL3:.*]] unwind label %[[LPAD2:.*]]
 // LLVM: [[CALL3]]:
 // LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V4]])
-// LLVM:           to label %[[REGULAR_CLEANUP:.*]] unwind label %[[LPAD3:.*]],
+// LLVM:           to label %[[REGULAR_CLEANUP:.*]] unwind label %[[LPAD3:.*]]
 // LLVM: [[REGULAR_CLEANUP]]:
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V4]]),
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V3]]),
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]]),
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
-// LLVM:   br label %[[RET:.*]],
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V4]])
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V3]])
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]])
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]])
+// LLVM:   br label %[[RET:.*]]
 // LLVM: [[LPAD0]]:
 // LLVM:   landingpad { ptr, i32 }
-// LLVM:           catch ptr null,
-// LLVM:   br label %[[CATCH:.*]],
+// LLVM:           catch ptr null
+// LLVM:   br label %[[CATCH:.*]]
 // LLVM: [[LPAD1]]:
 // LLVM:   landingpad { ptr, i32 }
-// LLVM:           catch ptr null,
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
-// LLVM:   br label %[[CATCH]],
+// LLVM:           catch ptr null
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]])
+// LLVM:   br label %[[CATCH]]
 // LLVM: [[LPAD2]]:
 // LLVM:   landingpad { ptr, i32 }
-// LLVM:           catch ptr null,
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]]),
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
-// LLVM:   br label %[[CATCH]],
+// LLVM:           catch ptr null
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]])
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]])
+// LLVM:   br label %[[CATCH]]
 // LLVM: [[LPAD3]]:
 // LLVM:   landingpad { ptr, i32 }
-// LLVM:           catch ptr null,
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V3]]),
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]]),
-// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
-// LLVM:   br label %[[CATCH]],
+// LLVM:           catch ptr null
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V3]])
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]])
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]])
+// LLVM:   br label %[[CATCH]]
 // LLVM: [[CATCH]]:
 // LLVM:   call ptr @__cxa_begin_catch
-// LLVM:   br label %[[RET]],
+// LLVM:   br label %[[RET]]
 // LLVM: [[RET]]:
 // LLVM:   ret void
 

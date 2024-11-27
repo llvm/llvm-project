@@ -21,10 +21,10 @@ void non_convfun(void) {
 // External functions should be assumed convergent.
 void f(void);
 // CIR: cir.func{{.+}} @f(){{.*}} extra(#fn_attr[[CONV_DECL_ATTR]])
-// LLVM: declare {{.+}} spir_func void @f() local_unnamed_addr #[[CONV_ATTR:[0-9]+]]
+// LLVM: declare spir_func void @f() local_unnamed_addr #[[CONV_ATTR:[0-9]+]]
 void g(void);
 // CIR: cir.func{{.+}} @g(){{.*}} extra(#fn_attr[[CONV_DECL_ATTR]])
-// LLVM: declare {{.+}} spir_func void @g() local_unnamed_addr #[[CONV_ATTR]]
+// LLVM: declare spir_func void @g() local_unnamed_addr #[[CONV_ATTR]]
 
 // Test two if's are merged and non_convfun duplicated.
 void test_merge_if(int a) {
@@ -68,7 +68,7 @@ void test_merge_if(int a) {
 
 void convfun(void) __attribute__((convergent));
 // CIR: cir.func{{.+}} @convfun(){{.*}} extra(#fn_attr[[CONV_DECL_ATTR]])
-// LLVM: declare {{.+}} spir_func void @convfun() local_unnamed_addr #[[CONV_ATTR]]
+// LLVM: declare spir_func void @convfun() local_unnamed_addr #[[CONV_ATTR]]
 
 // Test two if's are not merged.
 void test_no_merge_if(int a) {

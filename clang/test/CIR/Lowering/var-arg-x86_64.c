@@ -23,12 +23,12 @@ double f1(int n, ...) {
 // CHECK: [[FP_OFFSET_P:%.+]] = getelementptr {{.*}} [[VA_LIST2]], i32 0, i32 1
 // CHECK: [[FP_OFFSET:%.+]] = load {{.*}}, ptr [[FP_OFFSET_P]]
 // CHECK: [[COMPARED:%.+]] = icmp ule i32 {{.*}}, 160
-// CHECK: br i1 [[COMPARED]], label %[[THEN_BB:.+]], label %[[ELSE_BB:.+]],
+// CHECK: br i1 [[COMPARED]], label %[[THEN_BB:.+]], label %[[ELSE_BB:.+]]
 //
 // CHECK: [[THEN_BB]]:
 // CHECK:   [[UPDATED_FP_OFFSET:%.+]] = add i32 [[FP_OFFSET]], 8
 // CHECK:   store i32 [[UPDATED_FP_OFFSET]], ptr [[FP_OFFSET_P]]
-// CHECK:   br label %[[CONT_BB:.+]],
+// CHECK:   br label %[[CONT_BB:.+]]
 //
 // CHECK: [[ELSE_BB]]:
 // CHECK:   [[OVERFLOW_ARG_AREA_ADDR:%.+]] = getelementptr {{.*}} [[VA_LIST2]], i32 0, i32 2

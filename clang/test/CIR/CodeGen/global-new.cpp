@@ -45,20 +45,20 @@ e *g = new e(0);
 
 // LLVM_EH: define internal void @__cxx_global_var_init() personality ptr @__gxx_personality_v0
 // LLVM_EH:   call ptr @_Znwm(i64 1)
-// LLVM_EH:   br label %[[L2:.*]],
+// LLVM_EH:   br label %[[L2:.*]]
 
 // LLVM_EH: [[L2]]:
 // LLVM_EH:   invoke void @_ZN1eC1Ei
-// LLVM_EH:           to label %[[CONT:.*]] unwind label %[[PAD:.*]],
+// LLVM_EH:           to label %[[CONT:.*]] unwind label %[[PAD:.*]]
 
 // LLVM_EH: [[CONT]]:
-// LLVM_EH:   br label %[[END:.*]],
+// LLVM_EH:   br label %[[END:.*]]
 
 // LLVM_EH: [[PAD]]:
 // LLVM_EH:   landingpad { ptr, i32 }
 // LLVM_EH:      cleanup
 // LLVM_EH:   call void @_ZdlPvm
-// LLVM_EH:   br label %[[RESUME:.*]],
+// LLVM_EH:   br label %[[RESUME:.*]]
 
 // LLVM_EH: [[RESUME]]:
 // LLVM_EH:   resume { ptr, i32 }
