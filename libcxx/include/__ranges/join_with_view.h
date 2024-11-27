@@ -54,18 +54,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 namespace ranges {
-template <class _Range, class _Pattern>
-concept __compatible_joinable_ranges =
-    common_with<range_value_t<_Range>, range_value_t<_Pattern>> &&
-    common_reference_with<range_reference_t<_Range>, range_reference_t<_Pattern>> &&
-    common_reference_with<range_rvalue_reference_t<_Range>, range_rvalue_reference_t<_Pattern>>;
-
 template <class _Range>
 concept __bidirectional_common = bidirectional_range<_Range> && common_range<_Range>;
 
 template <input_range _View, forward_range _Pattern>
   requires view<_View> && input_range<range_reference_t<_View>> && view<_Pattern> &&
-           __compatible_joinable_ranges<range_reference_t<_View>, _Pattern>
+           __concatable<range_reference_t<_View>, _Pattern>
 class join_with_view : public view_interface<join_with_view<_View, _Pattern>> {
   using _InnerRng = range_reference_t<_View>;
 
@@ -121,7 +115,8 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires forward_range<const _View> && forward_range<const _Pattern> &&
-             is_reference_v<range_reference_t<const _View>> && input_range<range_reference_t<const _View>>
+             is_reference_v<range_reference_t<const _View>> && input_range<range_reference_t<const _View>> &&
+             __concatable<range_reference_t<const _View>, const _Pattern>
   {
     return __iterator<true>{*this, ranges::begin(__base_)};
   }
@@ -137,7 +132,8 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires forward_range<const _View> && forward_range<const _Pattern> &&
-             is_reference_v<range_reference_t<const _View>> && input_range<range_reference_t<const _View>>
+             is_reference_v<range_reference_t<const _View>> && input_range<range_reference_t<const _View>> &&
+             __concatable<range_reference_t<const _View>, const _Pattern>
   {
     using _InnerConstRng = range_reference_t<const _View>;
     if constexpr (forward_range<_InnerConstRng> && common_range<const _View> && common_range<_InnerConstRng>)
@@ -187,7 +183,7 @@ public:
 
 template <input_range _View, forward_range _Pattern>
   requires view<_View> && input_range<range_reference_t<_View>> && view<_Pattern> &&
-           __compatible_joinable_ranges<range_reference_t<_View>, _Pattern>
+           __concatable<range_reference_t<_View>, _Pattern>
 template <bool _Const>
 struct join_with_view<_View, _Pattern>::__iterator
     : public __join_with_view_iterator_category<__maybe_const<_Const, _View>, __maybe_const<_Const, _Pattern>> {
@@ -395,7 +391,7 @@ public:
 
 template <input_range _View, forward_range _Pattern>
   requires view<_View> && input_range<range_reference_t<_View>> && view<_Pattern> &&
-           __compatible_joinable_ranges<range_reference_t<_View>, _Pattern>
+           __concatable<range_reference_t<_View>, _Pattern>
 template <bool _Const>
 struct join_with_view<_View, _Pattern>::__sentinel {
 private:

@@ -233,6 +233,10 @@ constexpr bool test() {
     static_assert(std::same_as<Sentinel, ConstSentinel>);
   }
 
+  // Check LWG-4074: compatible-joinable-ranges is underconstrained
+  static_assert(!JoinWithViewHasConstEnd<BasicVectorView<int, ViewProperties{}, forward_iterator>,
+                                         lwg4074::PatternWithProxyConstAccess>);
+
   return true;
 }
 

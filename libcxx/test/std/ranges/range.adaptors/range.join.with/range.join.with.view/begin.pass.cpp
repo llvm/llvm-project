@@ -240,6 +240,11 @@ constexpr void test_const_begin() {
     using JWV = std::ranges::join_with_view<MaybeSimpleForwardView<true>, MaybeSimplePattern<true>>;
     static_assert(std::same_as<std::ranges::iterator_t<JWV&>, std::ranges::iterator_t<const JWV&>>);
   }
+
+  { // Check LWG-4074: compatible-joinable-ranges is underconstrained
+    static_assert(!JoinWithViewHasConstBegin<BasicVectorView<int, ViewProperties{}, forward_iterator>,
+                                             lwg4074::PatternWithProxyConstAccess>);
+  }
 }
 
 constexpr bool test() {

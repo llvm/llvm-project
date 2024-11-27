@@ -9,6 +9,7 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_JOIN_WITH_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_JOIN_WITH_TYPES_H
 
+#include <cstddef>
 #include <initializer_list>
 #include <ranges>
 #include <string>
@@ -35,8 +36,7 @@ struct ViewProperties {
 
 template <std::ranges::input_range Data,
           ViewProperties Prop,
-          template <class...>
-          class It,
+          template <class...> class It,
           template <class...> class ConstIt = It>
 class BasicView : public std::ranges::view_base {
   Data data_;
@@ -204,6 +204,50 @@ struct ConstOppositeView : std::ranges::view_base {
   sentinel_wrapper<Val*> end() const;
 };
 
+namespace lwg4074 { // Helpers for LWG-4074 ("compatible-joinable-ranges is underconstrained")
+struct CommonReference;
+
+struct Value {
+  Value(int);
+};
+
+struct Reference {
+  operator Value() const;
+  operator CommonReference() const;
+};
+
+struct CommonReference {
+  CommonReference(int);
+};
+
+struct Iter {
+  using value_type      = Value;
+  using difference_type = std::ptrdiff_t;
+
+  Iter& operator++();
+  Iter operator++(int);
+  Reference operator*() const;
+  bool operator==(const Iter&) const;
+};
+
+struct PatternWithProxyConstAccess {
+  int* begin();
+  int* end();
+  Iter begin() const;
+  Iter end() const;
+};
+} // namespace lwg4074
+
+template <template <class> class TQual, template <class> class UQual>
+struct std::basic_common_reference<lwg4074::Reference, int, TQual, UQual> {
+  using type = lwg4074::CommonReference;
+};
+
+template <template <class> class TQual, template <class> class UQual>
+struct std::basic_common_reference<int, lwg4074::Reference, TQual, UQual> {
+  using type = lwg4074::CommonReference;
+};
+
 namespace selftest {
 using BV1 = BasicView<std::string, ViewProperties{.simple = true}, forward_iterator>;
 static_assert(std::ranges::forward_range<BV1>);
@@ -262,6 +306,14 @@ static_assert(!std::ranges::common_range<COV>);
 static_assert(!std::ranges::common_range<const COV>);
 static_assert(std::convertible_to<std::ranges::iterator_t<const COV>, std::ranges::iterator_t<COV>>);
 static_assert(!std::convertible_to<std::ranges::iterator_t<COV>, std::ranges::iterator_t<const COV>>);
+
+static_assert(std::common_with<lwg4074::Value, int>);
+static_assert(std::common_with<lwg4074::Value, lwg4074::Reference>);
+static_assert(std::common_reference_with<lwg4074::Reference, int&>);
+static_assert(std::common_reference_with<lwg4074::Reference, lwg4074::CommonReference>);
+static_assert(std::forward_iterator<lwg4074::Iter>);
+static_assert(std::ranges::forward_range<lwg4074::PatternWithProxyConstAccess>);
+static_assert(std::ranges::forward_range<const lwg4074::PatternWithProxyConstAccess>);
 } // namespace selftest
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_JOIN_WITH_TYPES_H

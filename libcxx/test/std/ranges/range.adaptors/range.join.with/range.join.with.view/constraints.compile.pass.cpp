@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "test_iterators.h"
+#include "../types.h"
 
 template <class View, class Pattern>
 concept CanFormJoinWithView = requires { typename std::ranges::join_with_view<View, Pattern>; };
@@ -133,7 +134,7 @@ static_assert(!CanFormJoinWithView<View, Pattern>);
 
 // join_with_view is not valid when `range_reference_t<View>` and pattern
 // does not model together compatible-joinable-ranges
-namespace test_when_used_ranges_are_not_compatible_joinable_ranges {
+namespace test_when_used_ranges_are_not_concatable {
 using std::ranges::range_reference_t;
 using std::ranges::range_rvalue_reference_t;
 using std::ranges::range_value_t;
@@ -144,10 +145,58 @@ struct View : std::ranges::view_base {
   InnerRange* end();
 };
 
-namespace no_common_range_value_type {
+namespace no_concat_reference_t {
+struct ValueType {};
+
 struct InnerRange {
   struct It {
-    using difference_type = ptrdiff_t;
+    using difference_type = std::ptrdiff_t;
+    using value_type      = ValueType;
+    struct reference {
+      operator value_type();
+    };
+
+    It& operator++();
+    void operator++(int);
+    reference operator*() const;
+  };
+
+  It begin();
+  sentinel_wrapper<It> end();
+};
+
+struct Pattern : std::ranges::view_base {
+  struct It {
+    using difference_type = std::ptrdiff_t;
+    using value_type      = ValueType;
+    struct reference {
+      operator value_type();
+    };
+
+    It& operator++();
+    It operator++(int);
+    reference operator*() const;
+    bool operator==(const It&) const;
+    friend value_type&& iter_move(const It&);
+  };
+
+  It begin();
+  It end();
+};
+
+static_assert(std::ranges::input_range<InnerRange>);
+static_assert(std::ranges::forward_range<Pattern>);
+static_assert(std::ranges::view<Pattern>);
+static_assert(!std::common_reference_with<range_reference_t<InnerRange>, range_reference_t<Pattern>>);
+static_assert(std::common_with<range_value_t<InnerRange>, range_value_t<Pattern>>);
+static_assert(std::common_reference_with<range_rvalue_reference_t<InnerRange>, range_rvalue_reference_t<Pattern>>);
+static_assert(!CanFormJoinWithView<View<InnerRange>, Pattern>);
+} // namespace no_concat_reference_t
+
+namespace no_concat_value_t {
+struct InnerRange {
+  struct It {
+    using difference_type = std::ptrdiff_t;
     struct value_type {};
 
     struct reference {
@@ -172,61 +221,13 @@ struct Pattern : std::ranges::view_base {
 static_assert(std::ranges::input_range<InnerRange>);
 static_assert(std::ranges::forward_range<Pattern>);
 static_assert(std::ranges::view<Pattern>);
-static_assert(!std::common_with<range_value_t<InnerRange>, range_value_t<Pattern>>);
 static_assert(std::common_reference_with<range_reference_t<InnerRange>, range_reference_t<Pattern>>);
+static_assert(!std::common_with<range_value_t<InnerRange>, range_value_t<Pattern>>);
 static_assert(std::common_reference_with<range_rvalue_reference_t<InnerRange>, range_rvalue_reference_t<Pattern>>);
 static_assert(!CanFormJoinWithView<View<InnerRange>, Pattern>);
-} // namespace no_common_range_value_type
+} // namespace no_concat_value_t
 
-namespace no_common_range_reference_type {
-struct ValueType {};
-
-struct InnerRange {
-  struct It {
-    using difference_type = ptrdiff_t;
-    using value_type      = ValueType;
-    struct reference {
-      operator value_type();
-    };
-
-    It& operator++();
-    void operator++(int);
-    reference operator*() const;
-  };
-
-  It begin();
-  sentinel_wrapper<It> end();
-};
-
-struct Pattern : std::ranges::view_base {
-  struct It {
-    using difference_type = ptrdiff_t;
-    using value_type      = ValueType;
-    struct reference {
-      operator value_type();
-    };
-
-    It& operator++();
-    It operator++(int);
-    reference operator*() const;
-    bool operator==(const It&) const;
-    friend value_type&& iter_move(const It&);
-  };
-
-  It begin();
-  It end();
-};
-
-static_assert(std::ranges::input_range<InnerRange>);
-static_assert(std::ranges::forward_range<Pattern>);
-static_assert(std::ranges::view<Pattern>);
-static_assert(std::common_with<range_value_t<InnerRange>, range_value_t<Pattern>>);
-static_assert(!std::common_reference_with<range_reference_t<InnerRange>, range_reference_t<Pattern>>);
-static_assert(std::common_reference_with<range_rvalue_reference_t<InnerRange>, range_rvalue_reference_t<Pattern>>);
-static_assert(!CanFormJoinWithView<View<InnerRange>, Pattern>);
-} // namespace no_common_range_reference_type
-
-namespace no_common_range_rvalue_reference_type {
+namespace no_concat_rvalue_reference_t {
 struct InnerRange {
   using It = cpp20_input_iterator<int*>;
   It begin();
@@ -235,7 +236,7 @@ struct InnerRange {
 
 struct Pattern : std::ranges::view_base {
   struct It {
-    using difference_type = ptrdiff_t;
+    using difference_type = std::ptrdiff_t;
     struct value_type {
       operator int() const;
     };
@@ -258,9 +259,31 @@ struct Pattern : std::ranges::view_base {
 static_assert(std::ranges::input_range<InnerRange>);
 static_assert(std::ranges::forward_range<Pattern>);
 static_assert(std::ranges::view<Pattern>);
-static_assert(std::common_with<range_value_t<InnerRange>, range_value_t<Pattern>>);
 static_assert(std::common_reference_with<range_reference_t<InnerRange>, range_reference_t<Pattern>>);
+static_assert(std::common_with<range_value_t<InnerRange>, range_value_t<Pattern>>);
 static_assert(!std::common_reference_with<range_rvalue_reference_t<InnerRange>, range_rvalue_reference_t<Pattern>>);
 static_assert(!CanFormJoinWithView<View<InnerRange>, Pattern>);
-} // namespace no_common_range_rvalue_reference_type
-} // namespace test_when_used_ranges_are_not_compatible_joinable_ranges
+} // namespace no_concat_rvalue_reference_t
+
+namespace not_concat_indirectly_readable { // Required after LWG-4074 ("compatible-joinable-ranges is underconstrained")
+struct InnerRange {
+  using It = cpp20_input_iterator<int*>;
+  It begin();
+  sentinel_wrapper<It> end();
+};
+
+struct Pattern : std::ranges::view_base {
+  lwg4074::Iter begin();
+  lwg4074::Iter end();
+};
+
+static_assert(std::ranges::input_range<InnerRange>);
+static_assert(std::ranges::forward_range<Pattern>);
+static_assert(std::ranges::view<Pattern>);
+static_assert(std::common_reference_with<range_reference_t<InnerRange>, range_reference_t<Pattern>>);
+static_assert(std::common_with<range_value_t<InnerRange>, range_value_t<Pattern>>);
+static_assert(std::common_reference_with<range_rvalue_reference_t<InnerRange>, range_rvalue_reference_t<Pattern>>);
+LIBCPP_STATIC_ASSERT(!std::ranges::__concat_indirectly_readable<InnerRange, Pattern>);
+static_assert(!CanFormJoinWithView<View<InnerRange>, Pattern>);
+} // namespace not_concat_indirectly_readable
+} // namespace test_when_used_ranges_are_not_concatable
