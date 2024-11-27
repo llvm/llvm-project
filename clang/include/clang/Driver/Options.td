@@ -4298,18 +4298,22 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
   Visibility<[CC1Option]>,
   HelpText<"Filename (or -) to write stack usage output to">,
   MarshallingInfoString<CodeGenOpts<"StackUsageOutput">>;
-defm extend_this_ptr : BoolFOption<"extend-this-ptr",
-  CodeGenOpts<"ExtendThisPtr">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Extend the lifetime of the 'this' pointer to improve visibility "
-          "in optimized debugging">,
-  NegFlag<SetFalse>>;
-defm extend_lifetimes : BoolFOption<"extend-lifetimes",
-  CodeGenOpts<"ExtendLifetimes">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Extend the lifetimes of local variables and parameters to improve "
-          "visibility in optimized debugging">,
-  NegFlag<SetFalse>>;
+def fextend_lifetimes_EQ : Joined<["-"], "fextend-lifetimes=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Extend the lifetimes of variables to improve visibility in "
+           "optimized debugging">,
+  Values<"all,this,none">,
+  NormalizedValues<["All", "This", "None"]>,
+  NormalizedValuesScope<"CodeGenOptions::ExtendLifetimesKind">,
+  MarshallingInfoEnum<CodeGenOpts<"ExtendLifetimes">, "None">;
+def fextend_this_ptr : Flag<["-"], "fextend-this-ptr">,
+  Alias<fextend_lifetimes_EQ>, AliasArgs<["this"]>,
+  HelpText<"Extend the lifetime of the 'this' pointer to improve visibility "
+           "in optimized debugging">;
+def fextend_lifetimes : Flag<["-"], "fextend-lifetimes">,
+  Alias<fextend_lifetimes_EQ>, AliasArgs<["all"]>,
+  HelpText<"Extend the lifetimes of local variables and parameters to improve "
+           "visibility in optimized debugging">;
 
 defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
   CodeGenOpts<"UniqueBasicBlockSectionNames">, DefaultFalse,
