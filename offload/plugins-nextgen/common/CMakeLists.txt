@@ -32,10 +32,7 @@ elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
 		target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server})
 		target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
     # We may need to get the headers directly from the 'libc' source directory.
-    target_include_directories(PluginCommon PRIVATE
-                               ${CMAKE_SOURCE_DIR}/../libc/utils/gpu/server
-                               ${CMAKE_SOURCE_DIR}/../libc/
-                               ${CMAKE_SOURCE_DIR}/../libc/include)
+    target_include_directories(PluginCommon PRIVATE ${CMAKE_SOURCE_DIR}/../libc/)
   endif()
 endif()
 
