@@ -136,6 +136,9 @@ private:
 
   /// Applies a prototype modifier to the type.
   void applyModifier(char Mod);
+
+  /// Get the builtin base for this SVEType, e.g, 'Wi' for svint64_t.
+  std::string builtinBaseType() const;
 };
 
 class SVEEmitter;
@@ -433,88 +436,82 @@ const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
 // Type implementation
 //===----------------------------------------------------------------------===//
 
-std::string SVEType::builtin_str() const {
-  std::string OutStr;
-
-  if (isScalarPredicate())
-    return "b";
-
-  if (isSvcount())
+std::string SVEType::builtinBaseType() const {
+  switch (Kind) {
+  case TypeKind::Void:
+    return "v";
+  case TypeKind::Svcount:
     return "Qa";
-
-  if (isVoid()) {
-    OutStr += "v";
-    if (!isPointer())
-      return OutStr;
-  } else if (isFloat()) {
+  case TypeKind::BFloat16:
+    assert(ElementBitwidth == 16 && "Invalid BFloat16!");
+    return "y";
+  case TypeKind::MFloat8:
+    assert(ElementBitwidth == 8 && "Invalid MFloat8!");
+    return "c";
+  case TypeKind::Float:
     switch (ElementBitwidth) {
     case 16:
-      OutStr += "h";
-      break;
+      return "h";
     case 32:
-      OutStr += "f";
-      break;
+      return "f";
     case 64:
-      OutStr += "d";
-      break;
+      return "d";
     default:
-      llvm_unreachable("Unhandled float type!");
+      llvm_unreachable("Unhandled float width!");
     }
-  } else if (isBFloat()) {
-    assert(ElementBitwidth == 16 && "Not a valid BFloat.");
-    OutStr += "y";
-  } else if (isMFloat()) {
-    assert(ElementBitwidth == 8 && "Not a valid MFloat.");
-    OutStr += "m";
-  } else {
+  case TypeKind::Predicate:
+    if (isScalar())
+      return "b";
+    [[fallthrough]];
+  // SInt/UInt, PredicatePattern, PrefetchOp.
+  default:
     switch (ElementBitwidth) {
     case 1:
-      OutStr += "b";
-      break;
+      return "b";
     case 8:
-      OutStr += "c";
-      break;
+      return "c";
     case 16:
-      OutStr += "s";
-      break;
+      return "s";
     case 32:
-      OutStr += "i";
-      break;
+      return "i";
     case 64:
-      OutStr += "Wi";
-      break;
+      return "Wi";
     case 128:
-      OutStr += "LLLi";
-      break;
+      return "LLLi";
     default:
       llvm_unreachable("Unhandled bitwidth!");
     }
   }
+}
+
+std::string SVEType::builtin_str() const {
+
+  std::string Prefix;
+
+  if (isScalableVector())
+    Prefix = "q" + llvm::utostr(getNumElements() * NumVectors);
+  else if (isFixedLengthVector())
+    Prefix = "V" + llvm::utostr(getNumElements() * NumVectors);
+  else if (isImmediate()) {
+    assert(!isFloatingPoint() && "fp immediates are not supported");
+    Prefix = "I";
+  }
 
   // Make chars and integer pointers explicitly signed.
   if ((ElementBitwidth == 8 || isPointer()) && isSignedInteger())
-    OutStr = "S" + OutStr;
+    Prefix += "S";
   else if (isUnsignedInteger())
-    OutStr = "U" + OutStr;
+    Prefix += "U";
 
-  // Constant indices are "int", but have the "constant expression" modifier.
-  if (isImmediate()) {
-    assert(!isFloatingPoint() && "fp immediates are not supported");
-    OutStr = "I" + OutStr;
-  }
+  std::string BuiltinStr = Prefix + builtinBaseType();
+  if (isConstant())
+    BuiltinStr += "C";
+  if (isPointer())
+    BuiltinStr += "*";
 
-  if (isScalar()) {
-    if (Constant)
-      OutStr += "C";
-    if (Pointer)
-      OutStr += "*";
-    return OutStr;
-  }
-
-  if (isFixedLengthVector())
-    return "V" + utostr(getNumElements() * NumVectors) + OutStr;
-  return "q" + utostr(getNumElements() * NumVectors) + OutStr;
+  return BuiltinStr;
 }
+
 std::string SVEType::str() const {
   if (isPredicatePattern())
     return "enum svpattern";
@@ -623,6 +620,7 @@ void SVEType::applyModifier(char Mod) {
   switch (Mod) {
   case 'v':
     Kind = Void;
+    NumVectors = 0;
     break;
   case 'd':
     DefaultType = true;
