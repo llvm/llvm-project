@@ -2407,6 +2407,19 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+/// Compare function by index if it is valid, fall back to the original address
+/// otherwise.
+inline bool compareBinaryFunctionByIndex(const BinaryFunction *A,
+                                         const BinaryFunction *B) {
+  if (A->hasValidIndex() && B->hasValidIndex())
+    return A->getIndex() < B->getIndex();
+  if (A->hasValidIndex() && !B->hasValidIndex())
+    return true;
+  if (!A->hasValidIndex() && B->hasValidIndex())
+    return false;
+  return A->getAddress() < B->getAddress();
+}
+
 } // namespace bolt
 
 // GraphTraits specializations for function basic block graphs (CFGs)
