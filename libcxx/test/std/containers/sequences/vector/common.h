@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EXCEPTION_TEST_HELPERS_H
-#define EXCEPTION_TEST_HELPERS_H
+#ifndef COMMON_H
+#define COMMON_H
+
+#include <cassert>
+#include <cstddef>
+#include <memory>
+#include <type_traits>
 
 #include "count_new.h"
 
@@ -18,7 +23,12 @@ struct throwing_allocator {
 
   bool throw_on_copy_ = false;
 
-  throwing_allocator(bool throw_on_ctor = true, bool throw_on_copy = false) : throw_on_copy_(throw_on_copy) {
+  explicit throwing_allocator(bool throw_on_ctor = true) {
+    if (throw_on_ctor)
+      throw 0;
+  }
+
+  explicit throwing_allocator(bool throw_on_ctor, bool throw_on_copy) : throw_on_copy_(throw_on_copy) {
     if (throw_on_ctor)
       throw 0;
   }
@@ -84,4 +94,4 @@ inline void check_new_delete_called() {
   assert(globalMemCounter.aligned_new_array_called == globalMemCounter.aligned_delete_array_called);
 }
 
-#endif // EXCEPTION_TEST_HELPERS_H
+#endif // COMMON_H
