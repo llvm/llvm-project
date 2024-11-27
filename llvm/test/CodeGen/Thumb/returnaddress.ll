@@ -26,13 +26,11 @@ define void @ra_call() {
 ; FP-AAPCS:       @ %bb.0: @ %entry
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
-; FP-AAPCS-NEXT:    ldr r3, [sp, #4]
-; FP-AAPCS-NEXT:    mov lr, r3
 ; FP-AAPCS-NEXT:    mov r0, lr
 ; FP-AAPCS-NEXT:    bl sink_ptr
 ; FP-AAPCS-NEXT:    pop {r0}
@@ -63,13 +61,11 @@ define ptr @ra_return() {
 ; FP-AAPCS:       @ %bb.0: @ %entry
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
-; FP-AAPCS-NEXT:    ldr r3, [sp, #4]
-; FP-AAPCS-NEXT:    mov lr, r3
 ; FP-AAPCS-NEXT:    mov r0, lr
 ; FP-AAPCS-NEXT:    pop {r1}
 ; FP-AAPCS-NEXT:    mov r11, r1
@@ -104,15 +100,13 @@ define ptr @callee_saved_low() {
 ; FP-AAPCS:       @ %bb.0: @ %entry
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    .save {r4, r5}
 ; FP-AAPCS-NEXT:    push {r4, r5}
-; FP-AAPCS-NEXT:    ldr r5, [sp, #12]
-; FP-AAPCS-NEXT:    mov lr, r5
 ; FP-AAPCS-NEXT:    mov r0, lr
 ; FP-AAPCS-NEXT:    @APP
 ; FP-AAPCS-NEXT:    @NO_APP
@@ -163,17 +157,15 @@ define ptr @callee_saved_high() {
 ; FP-AAPCS:       @ %bb.0: @ %entry
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    mov r3, r9
 ; FP-AAPCS-NEXT:    mov r2, r8
 ; FP-AAPCS-NEXT:    .save {r8, r9}
 ; FP-AAPCS-NEXT:    push {r2, r3}
-; FP-AAPCS-NEXT:    ldr r3, [sp, #12]
-; FP-AAPCS-NEXT:    mov lr, r3
 ; FP-AAPCS-NEXT:    mov r0, lr
 ; FP-AAPCS-NEXT:    @APP
 ; FP-AAPCS-NEXT:    @NO_APP
@@ -237,15 +229,13 @@ define ptr @large_alloca() {
 ; FP-AAPCS:       @ %bb.0: @ %entry
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    .save {r4, r7}
 ; FP-AAPCS-NEXT:    push {r4, r7}
-; FP-AAPCS-NEXT:    ldr r7, [sp, #12]
-; FP-AAPCS-NEXT:    mov lr, r7
 ; FP-AAPCS-NEXT:    ldr r7, .LCPI4_0
 ; FP-AAPCS-NEXT:    .pad #2000
 ; FP-AAPCS-NEXT:    add sp, r7
@@ -318,15 +308,13 @@ define ptr @var_alloca(i32 %size) {
 ; FP-AAPCS:       @ %bb.0: @ %entry
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    .save {r4, r6}
 ; FP-AAPCS-NEXT:    push {r4, r6}
-; FP-AAPCS-NEXT:    ldr r6, [sp, #12]
-; FP-AAPCS-NEXT:    mov lr, r6
 ; FP-AAPCS-NEXT:    mov r6, sp
 ; FP-AAPCS-NEXT:    mov r4, lr
 ; FP-AAPCS-NEXT:    adds r0, r0, #7
@@ -433,9 +421,9 @@ define ptr @ra_depth_1() {
 ; FP-AAPCS:       @ %bb.0: @ %entry
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    mov r0, r11

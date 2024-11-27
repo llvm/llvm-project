@@ -1125,7 +1125,22 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
       SpilledGPRs.insert(Reg);
   }
 
-  pushRegsToStack(MBB, MI, TII, FrameRecord, {ARM::LR}, UsedLRAsTemp);
+  // Determine intermediate registers which can be used for pushing the frame
+  // record:
+  // - Unused argument registers
+  // - LR: This is possible because the first PUSH will save it on the stack,
+  //       so it is free to be used as a temporary for the second. However, it
+  //       is possible for LR to be live-in to the function, in which case we
+  //       will need to restore it later in the prologue, so we only use this
+  //       if there are no free argument registers.
+  std::set<Register> FrameRecordCopyRegs;
+  for (unsigned ArgReg : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
+    if (!MF.getRegInfo().isLiveIn(ArgReg))
+      FrameRecordCopyRegs.insert(ArgReg);
+  if (FrameRecordCopyRegs.empty())
+    FrameRecordCopyRegs.insert(ARM::LR);
+
+  pushRegsToStack(MBB, MI, TII, FrameRecord, FrameRecordCopyRegs, UsedLRAsTemp);
 
   // Determine intermediate registers which can be used for pushing high regs:
   // - Spilled low regs
