@@ -34,6 +34,7 @@ using ::llvm::memprof::CallStackId;
 using ::llvm::memprof::CallStackMap;
 using ::llvm::memprof::Frame;
 using ::llvm::memprof::FrameId;
+using ::llvm::memprof::hashCallStack;
 using ::llvm::memprof::IndexedAllocationInfo;
 using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
@@ -46,8 +47,11 @@ using ::llvm::memprof::RawMemProfReader;
 using ::llvm::memprof::SegmentEntry;
 using ::llvm::object::SectionedAddress;
 using ::llvm::symbolize::SymbolizableModule;
+using ::testing::ElementsAre;
+using ::testing::Pair;
 using ::testing::Return;
 using ::testing::SizeIs;
+using ::testing::UnorderedElementsAre;
 
 class MockSymbolizer : public SymbolizableModule {
 public:
@@ -788,35 +792,31 @@ HeapProfileRecords:
   llvm::SmallVector<FrameId> CS4 = {F7.hash(), F8.hash()};
 
   // Verify the entire contents of MemProfData.Frames.
-  EXPECT_THAT(
-      MemProfData.Frames,
-      ::testing::UnorderedElementsAre(
-          ::testing::Pair(F1.hash(), F1), ::testing::Pair(F2.hash(), F2),
-          ::testing::Pair(F3.hash(), F3), ::testing::Pair(F4.hash(), F4),
-          ::testing::Pair(F5.hash(), F5), ::testing::Pair(F6.hash(), F6),
-          ::testing::Pair(F7.hash(), F7), ::testing::Pair(F8.hash(), F8)));
+  EXPECT_THAT(MemProfData.Frames,
+              UnorderedElementsAre(Pair(F1.hash(), F1), Pair(F2.hash(), F2),
+                                   Pair(F3.hash(), F3), Pair(F4.hash(), F4),
+                                   Pair(F5.hash(), F5), Pair(F6.hash(), F6),
+                                   Pair(F7.hash(), F7), Pair(F8.hash(), F8)));
 
   // Verify the entire contents of MemProfData.Frames.
   EXPECT_THAT(MemProfData.CallStacks,
-              ::testing::UnorderedElementsAre(
-                  ::testing::Pair(llvm::memprof::hashCallStack(CS1), CS1),
-                  ::testing::Pair(llvm::memprof::hashCallStack(CS2), CS2),
-                  ::testing::Pair(llvm::memprof::hashCallStack(CS3), CS3),
-                  ::testing::Pair(llvm::memprof::hashCallStack(CS4), CS4)));
+              UnorderedElementsAre(Pair(hashCallStack(CS1), CS1),
+                                   Pair(hashCallStack(CS2), CS2),
+                                   Pair(hashCallStack(CS3), CS3),
+                                   Pair(hashCallStack(CS4), CS4)));
 
   // Verify the entire contents of MemProfData.Records.
   ASSERT_THAT(MemProfData.Records, SizeIs(1));
   const auto &[GUID, Record] = *MemProfData.Records.begin();
   EXPECT_EQ(GUID, 0xdeadbeef12345678ULL);
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
-  EXPECT_EQ(Record.AllocSites[0].CSId, llvm::memprof::hashCallStack(CS1));
+  EXPECT_EQ(Record.AllocSites[0].CSId, hashCallStack(CS1));
   EXPECT_EQ(Record.AllocSites[0].Info.getAllocCount(), 777U);
   EXPECT_EQ(Record.AllocSites[0].Info.getTotalSize(), 888U);
-  EXPECT_EQ(Record.AllocSites[1].CSId, llvm::memprof::hashCallStack(CS2));
+  EXPECT_EQ(Record.AllocSites[1].CSId, hashCallStack(CS2));
   EXPECT_EQ(Record.AllocSites[1].Info.getAllocCount(), 666U);
   EXPECT_EQ(Record.AllocSites[1].Info.getTotalSize(), 555U);
   EXPECT_THAT(Record.CallSiteIds,
-              ::testing::ElementsAre(llvm::memprof::hashCallStack(CS3),
-                                     llvm::memprof::hashCallStack(CS4)));
+              ElementsAre(hashCallStack(CS3), hashCallStack(CS4)));
 }
 } // namespace

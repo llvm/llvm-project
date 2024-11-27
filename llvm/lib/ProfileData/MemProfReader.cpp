@@ -49,6 +49,20 @@ template <> struct MappingTraits<memprof::Frame> {
     Io.mapRequired("LineOffset", F.LineOffset);
     Io.mapRequired("Column", F.Column);
     Io.mapRequired("Inline", F.IsInlineFrame);
+
+    // Assert that the definition of Frame matches what we expect.  The
+    // structured bindings below detect changes to the number of fields.
+    // static_assert checks the type of each field.
+    const auto &[Function, SymbolName, LineOffset, Column, IsInlineFrame] = F;
+    static_assert(
+        std::is_same_v<remove_cvref_t<decltype(Function)>, GlobalValue::GUID>);
+    static_assert(std::is_same_v<remove_cvref_t<decltype(SymbolName)>,
+                                 std::unique_ptr<std::string>>);
+    static_assert(
+        std::is_same_v<remove_cvref_t<decltype(LineOffset)>, uint32_t>);
+    static_assert(std::is_same_v<remove_cvref_t<decltype(Column)>, uint32_t>);
+    static_assert(
+        std::is_same_v<remove_cvref_t<decltype(IsInlineFrame)>, bool>);
   }
 };
 
