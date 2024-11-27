@@ -44,7 +44,6 @@ The general layout is as follows:
 ```
 Hot functions table
 Cold functions table
-Call continuation landing pads table (optional)
 
 Functions table:
 |------------------|
