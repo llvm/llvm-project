@@ -1,9 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
-// NOTE: The number in type name and whether the struct is packed or not will mostly
-// likely change once subscript operators are properly implemented (llvm/llvm-project#95956) 
-// and theinterim field of the contained type is removed.
-
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", i16, 0, 0) }
 // CHECK: %"class.hlsl::StructuredBuffer.0" = type { target("dx.RawBuffer", i16, 0, 0) }
 // CHECK: %"class.hlsl::StructuredBuffer.1" = type { target("dx.RawBuffer", i32, 0, 0) }
