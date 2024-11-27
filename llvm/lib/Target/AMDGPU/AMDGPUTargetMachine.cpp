@@ -1309,12 +1309,16 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
   if (ST.enableSIScheduler())
     return createSIMachineScheduler(C);
 
-  if (EnableMaxIlpSchedStrategy)
+  Attribute SchedStrategyAttr =
+      C->MF->getFunction().getFnAttribute("amdgpu-sched-strategy");
+  StringRef SchedStrategy =
+      SchedStrategyAttr.isValid() ? SchedStrategyAttr.getValueAsString() : "";
+
+  if (EnableMaxIlpSchedStrategy || SchedStrategy == "max-ilp")
     return createGCNMaxILPMachineScheduler(C);
 
   if (EnableMaxMemoryClauseSchedStrategy ||
-      C->MF->getFunction().hasFnAttribute(
-          "amdgpu-enable-max-memory-clause-scheduling-strategy"))
+      SchedStrategy == "max-memory-clause")
     return createGCNMaxMemoryClauseMachineScheduler(C);
 
   return createGCNMaxOccupancyMachineScheduler(C);
