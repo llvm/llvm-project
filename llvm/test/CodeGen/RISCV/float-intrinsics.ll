@@ -2177,6 +2177,44 @@ define i1 @isnotfinite_fpclass(float %x) {
   ret i1 %1
 }
 
+define float @tan_f32(float %a) nounwind {
+; RV32IF-LABEL: tan_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail tanf
+;
+; RV32IZFINX-LABEL: tan_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail tanf
+;
+; RV64IF-LABEL: tan_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail tanf
+;
+; RV64IZFINX-LABEL: tan_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail tanf
+;
+; RV32I-LABEL: tan_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call tanf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: tan_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call tanf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.tan.f32(float %a)
+  ret float %1
+}
+
 declare float @llvm.maximumnum.f32(float, float)
 
 define float @maximumnum_float(float %x, float %y) {
@@ -2397,4 +2435,270 @@ define {float, i32} @frexp_float(float %x) nounwind {
 ; RV64I-NEXT:    ret
   %a = call {float, i32} @llvm.frexp.f32.i32(float %x)
   ret {float, i32} %a
+}
+
+define float @asin_f32(float %a) nounwind {
+; RV32IF-LABEL: asin_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail asinf
+;
+; RV32IZFINX-LABEL: asin_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail asinf
+;
+; RV64IF-LABEL: asin_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail asinf
+;
+; RV64IZFINX-LABEL: asin_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail asinf
+;
+; RV32I-LABEL: asin_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call asinf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: asin_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call asinf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.asin.f32(float %a)
+  ret float %1
+}
+
+define float @acos_f32(float %a) nounwind {
+; RV32IF-LABEL: acos_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail acosf
+;
+; RV32IZFINX-LABEL: acos_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail acosf
+;
+; RV64IF-LABEL: acos_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail acosf
+;
+; RV64IZFINX-LABEL: acos_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail acosf
+;
+; RV32I-LABEL: acos_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call acosf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: acos_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call acosf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.acos.f32(float %a)
+  ret float %1
+}
+
+define float @atan_f32(float %a) nounwind {
+; RV32IF-LABEL: atan_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail atanf
+;
+; RV32IZFINX-LABEL: atan_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail atanf
+;
+; RV64IF-LABEL: atan_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail atanf
+;
+; RV64IZFINX-LABEL: atan_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail atanf
+;
+; RV32I-LABEL: atan_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call atanf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: atan_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call atanf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.atan.f32(float %a)
+  ret float %1
+}
+
+define float @atan2_f32(float %a, float %b) nounwind {
+; RV32IF-LABEL: atan2_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail atan2f
+;
+; RV32IZFINX-LABEL: atan2_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail atan2f
+;
+; RV64IF-LABEL: atan2_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail atan2f
+;
+; RV64IZFINX-LABEL: atan2_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail atan2f
+;
+; RV32I-LABEL: atan2_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call atan2f
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: atan2_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call atan2f
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.atan2.f32(float %a, float %b)
+  ret float %1
+}
+
+define float @sinh_f32(float %a) nounwind {
+; RV32IF-LABEL: sinh_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail sinhf
+;
+; RV32IZFINX-LABEL: sinh_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail sinhf
+;
+; RV64IF-LABEL: sinh_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail sinhf
+;
+; RV64IZFINX-LABEL: sinh_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail sinhf
+;
+; RV32I-LABEL: sinh_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call sinhf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sinh_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call sinhf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.sinh.f32(float %a)
+  ret float %1
+}
+
+define float @cosh_f32(float %a) nounwind {
+; RV32IF-LABEL: cosh_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail coshf
+;
+; RV32IZFINX-LABEL: cosh_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail coshf
+;
+; RV64IF-LABEL: cosh_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail coshf
+;
+; RV64IZFINX-LABEL: cosh_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail coshf
+;
+; RV32I-LABEL: cosh_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call coshf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: cosh_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call coshf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.cosh.f32(float %a)
+  ret float %1
+}
+
+define float @tanh_f32(float %a) nounwind {
+; RV32IF-LABEL: tanh_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    tail tanhf
+;
+; RV32IZFINX-LABEL: tanh_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    tail tanhf
+;
+; RV64IF-LABEL: tanh_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    tail tanhf
+;
+; RV64IZFINX-LABEL: tanh_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    tail tanhf
+;
+; RV32I-LABEL: tanh_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call tanhf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: tanh_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call tanhf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.tanh.f32(float %a)
+  ret float %1
 }
