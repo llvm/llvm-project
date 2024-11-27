@@ -85,7 +85,9 @@ def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+def loongarch_div_w : SDNode<"LoongArchISD::DIV_W", SDT_LoongArchIntBinOpW>;
 def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
+def loongarch_mod_w : SDNode<"LoongArchISD::MOD_W", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
@@ -481,8 +483,8 @@ def simm12_plus1 : ImmLeaf<GRLenVT,
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // FP immediate patterns.
@@ -538,16 +540,16 @@ def AddiPair : PatLeaf<(imm), [{
 // Return -2048 if immediate is negative or 2047 if positive.
 def AddiPairImmLarge : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
-  return CurDAG->getTargetConstant(Imm, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(Imm, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return imm - (imm < 0 ? -2048 : 2047).
 def AddiPairImmSmall : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue();
   int64_t Adj = Imm < 0 ? -2048 : 2047;
-  return CurDAG->getTargetConstant(Imm - Adj, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(Imm - Adj, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Check if (mul r, imm) can be optimized to (SLLI (ALSL r, r, i0), i1),
@@ -1156,10 +1158,12 @@ def : PatGprGpr<sub, SUB_D>;
 def : PatGprGpr<sdiv, DIV_D>;
 def : PatGprGpr_32<sdiv, DIV_W>;
 def : PatGprGpr<udiv, DIV_DU>;
+def : PatGprGpr<loongarch_div_w, DIV_W>;
 def : PatGprGpr<loongarch_div_wu, DIV_WU>;
 def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr_32<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_DU>;
+def : PatGprGpr<loongarch_mod_w, MOD_W>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<shiftop<rotr>, ROTR_D>;
 def : PatGprGpr<shiftopw<loongarch_rotr_w>, ROTR_W>;

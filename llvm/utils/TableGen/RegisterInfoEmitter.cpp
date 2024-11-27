@@ -953,7 +953,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   OS << "extern const MCRegisterDesc " << TargetName
      << "RegDesc[] = { // Descriptors\n";
-  OS << "  { " << RegStrings.get("") << ", 0, 0, 0, 0, 0, 0, 0 },\n";
+  OS << "  { " << RegStrings.get("") << ", 0, 0, 0, 0, 0, 0 },\n";
 
   // Emit the register descriptors now.
   i = 0;
@@ -968,8 +968,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
-       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
-       << Reg.Artificial << " },\n";
+       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant
+       << " },\n";
     ++i;
   }
   OS << "};\n\n"; // End of register descriptors...

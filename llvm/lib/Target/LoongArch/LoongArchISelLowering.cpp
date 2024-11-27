@@ -141,7 +141,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
-    setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
+    setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM}, MVT::i32,
+                       Custom);
     setOperationAction(ISD::LROUND, MVT::i32, Custom);
   }
 
@@ -1533,7 +1534,7 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
   while (Depth--) {
     int Offset = -(GRLenInBytes * 2);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, VT, FrameAddr,
-                              DAG.getIntPtrConstant(Offset, DL));
+                              DAG.getSignedConstant(Offset, DL, VT));
     FrameAddr =
         DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
   }
@@ -2548,7 +2549,8 @@ SDValue LoongArchTargetLowering::lowerShiftLeftParts(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusGRLen = DAG.getConstant(-(int)Subtarget.getGRLen(), DL, VT);
+  SDValue MinusGRLen =
+      DAG.getSignedConstant(-(int)Subtarget.getGRLen(), DL, VT);
   SDValue GRLenMinus1 = DAG.getConstant(Subtarget.getGRLen() - 1, DL, VT);
   SDValue ShamtMinusGRLen = DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusGRLen);
   SDValue GRLenMinus1Shamt = DAG.getNode(ISD::XOR, DL, VT, Shamt, GRLenMinus1);
@@ -2599,7 +2601,8 @@ SDValue LoongArchTargetLowering::lowerShiftRightParts(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusGRLen = DAG.getConstant(-(int)Subtarget.getGRLen(), DL, VT);
+  SDValue MinusGRLen =
+      DAG.getSignedConstant(-(int)Subtarget.getGRLen(), DL, VT);
   SDValue GRLenMinus1 = DAG.getConstant(Subtarget.getGRLen() - 1, DL, VT);
   SDValue ShamtMinusGRLen = DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusGRLen);
   SDValue GRLenMinus1Shamt = DAG.getNode(ISD::XOR, DL, VT, Shamt, GRLenMinus1);
@@ -2629,8 +2632,12 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case ISD::SDIV:
+    return LoongArchISD::DIV_W;
   case ISD::UDIV:
     return LoongArchISD::DIV_WU;
+  case ISD::SREM:
+    return LoongArchISD::MOD_W;
   case ISD::UREM:
     return LoongArchISD::MOD_WU;
   case ISD::SHL:
@@ -2827,11 +2834,16 @@ void LoongArchTargetLowering::ReplaceNodeResults(
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
     break;
+  case ISD::SDIV:
   case ISD::UDIV:
+  case ISD::SREM:
   case ISD::UREM:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    Results.push_back(customLegalizeToWOp(N, DAG, 2, ISD::SIGN_EXTEND));
+    Results.push_back(customLegalizeToWOp(N, DAG, 2,
+                                          Subtarget.hasDiv32() && VT == MVT::i32
+                                              ? ISD::ANY_EXTEND
+                                              : ISD::SIGN_EXTEND));
     break;
   case ISD::SHL:
   case ISD::SRA:
@@ -4667,7 +4679,9 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(BITREV_W)
     NODE_NAME_CASE(ROTR_W)
     NODE_NAME_CASE(ROTL_W)
+    NODE_NAME_CASE(DIV_W)
     NODE_NAME_CASE(DIV_WU)
+    NODE_NAME_CASE(MOD_W)
     NODE_NAME_CASE(MOD_WU)
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
@@ -6123,8 +6137,8 @@ void LoongArchTargetLowering::LowerAsmOperandForConstraint(
       if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
         uint64_t CVal = C->getSExtValue();
         if (isInt<16>(CVal))
-          Ops.push_back(
-              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
+          Ops.push_back(DAG.getSignedTargetConstant(CVal, SDLoc(Op),
+                                                    Subtarget.getGRLenVT()));
       }
       return;
     case 'I':
@@ -6132,8 +6146,8 @@ void LoongArchTargetLowering::LowerAsmOperandForConstraint(
       if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
         uint64_t CVal = C->getSExtValue();
         if (isInt<12>(CVal))
-          Ops.push_back(
-              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
+          Ops.push_back(DAG.getSignedTargetConstant(CVal, SDLoc(Op),
+                                                    Subtarget.getGRLenVT()));
       }
       return;
     case 'J':

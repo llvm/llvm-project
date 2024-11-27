@@ -299,6 +299,7 @@ class LinkerScript final {
   };
 
   Ctx &ctx;
+  SmallVector<std::unique_ptr<OutputDesc>, 0> descPool;
   llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
   StringRef getOutputSectionName(const InputSectionBase *s) const;

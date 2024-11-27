@@ -90,6 +90,11 @@ class ProgramPoint:
             self.callee_decl = json_pp.get("callee_decl", "None")
         elif self.kind == "BlockEntrance":
             self.block_id = json_pp["block_id"]
+        elif self.kind == "PostInitializer":
+            if "field_decl" in json_pp:
+                self.target = json_pp["field_decl"]
+            else:
+                self.target = json_pp["type"]
 
 
 # A single expression acting as a key in a deserialized Environment.
@@ -626,6 +631,13 @@ class DotDumpVisitor:
                 '<td align="left" width="0">'
                 '<font color="%s">%s</font></td>'
                 '<td align="left">%s</td></tr>' % (color, p.kind, p.callee_decl)
+            )
+        elif p.kind == "PostInitializer":
+            self._dump(
+                '<td width="0"></td>'
+                '<td align="left" width="0">'
+                '<font color="%s">%s</font></td>'
+                '<td align="left">%s</td></tr>' % (color, p.kind, p.target)
             )
         else:
             # TODO: Print more stuff for other kinds of points.
