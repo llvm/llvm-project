@@ -593,6 +593,10 @@ Improvements to Clang's diagnostics
 - Clang now supports using alias templates in deduction guides, aligning with the C++ standard,
   which treats alias templates as synonyms for their underlying types (#GH54909).
 
+- Added ``-Wstatic-downcast`` to diagnose potentially dangerous uses of ``static_cast`` that perform a base-to-derived cast
+  on pointers and references of polymorphic types.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 

@@ -327,6 +327,7 @@ void UseDerivedClass11(DerivedClass12& obj) { obj.deref(); }
 void deleteBase2(BaseClass2* obj) {
   if (obj->isDerived())
     delete static_cast<DerivedClass12*>(obj);
+    // expected-warning@-1 {{static downcast from 'BaseClass2' to 'DerivedClass12'}}
   else
     delete obj;
 }
@@ -356,6 +357,7 @@ void UseDerivedClass11(DerivedClass13& obj) { obj.deref(); }
 void BaseClass3::destory() {
   if (isDerived())
     delete static_cast<DerivedClass13*>(this);
+    // expected-warning@-1 {{static downcast from 'BaseClass3' to 'DerivedClass13'}}
   else
     delete this;
 }

@@ -56,9 +56,9 @@ void test_static_cast(void_ptr vp, void_ptr_1 vp1, void_ptr_2 vp2,
   (void)static_cast<A_ptr_2>(bp2);
 
   // Well-formed downcast
-  (void)static_cast<B_ptr>(ap);
-  (void)static_cast<B_ptr_1>(ap1);
-  (void)static_cast<B_ptr_2>(ap2);
+  (void)static_cast<B_ptr>(ap);  // expected-warning {{static downcast from 'A' to 'B'}}
+  (void)static_cast<B_ptr_1>(ap1);  // expected-warning {{static downcast}}
+  (void)static_cast<B_ptr_2>(ap2);  // expected-warning {{static downcast}}
 
   // Well-formed cast to/from void
   (void)static_cast<void_ptr>(ap);
