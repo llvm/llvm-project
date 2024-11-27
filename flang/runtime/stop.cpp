@@ -173,7 +173,8 @@ static void PrintBacktrace() {
 
 #else
 
-  // TODO: Windows platform implementation
+  // TODO: Need to implement the version for other platforms.
+  Fortran::runtime::Terminator{}.PrintCrashArgs("Handle the case when a backtrace is not available");
 
 #endif
 }
