@@ -96,6 +96,13 @@ struct MAIInstInfo {
   bool is_gfx940_xdl;
 };
 
+struct MFMA_F8F6F4_Info {
+  unsigned Opcode;
+  unsigned F8F8Opcode;
+  uint8_t NumRegsSrcA;
+  uint8_t NumRegsSrcB;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -103,6 +110,8 @@ struct MAIInstInfo {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
+#define GET_MAIInstInfoTable_DECL
+#define GET_isMFMA_F8F6F4Table_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -581,12 +590,8 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc);
 
-struct MFMA_F8F6F4_Info {
-  unsigned Opcode;
-  unsigned F8F8Opcode;
-  uint8_t NumRegsSrcA;
-  uint8_t NumRegsSrcB;
-};
+LLVM_READNONE
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal);
 
 LLVM_READONLY
 const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
