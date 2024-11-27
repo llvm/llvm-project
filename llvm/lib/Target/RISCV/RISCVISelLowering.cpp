@@ -3493,7 +3493,7 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
 static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
                                   SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT && (SplatVal.getOpcode() != RISCVISD::VMV_X_S))
+  if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
     return SDValue();
   SDValue Vec = SplatVal.getOperand(0);
   // Don't perform this optimization for i1 vectors.
