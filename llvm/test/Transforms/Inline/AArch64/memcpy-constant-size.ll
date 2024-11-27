@@ -28,7 +28,11 @@ define void @callee(ptr %dst, ptr %src, i64 %size) {
 define void @caller(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define void @caller
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
-; CHECK-NEXT:    call void @callee(ptr [[DST]], ptr [[SRC]], i64 4)
+; CHECK-NEXT:    [[OBJSIZE_I:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[DST]], i1 false, i1 true, i1 false)
+; CHECK-NEXT:    [[CALL_MEMCPY_I:%.*]] = call ptr @__memcpy_chk(ptr [[DST]], ptr [[SRC]], i64 4, i64 [[OBJSIZE_I]])
+; CHECK-NEXT:    [[CALL_MEMMOVE_I:%.*]] = call ptr @__memmove_chk(ptr [[DST]], ptr [[SRC]], i64 4, i64 [[OBJSIZE_I]])
+; CHECK-NEXT:    [[CALL_MEMPCPY_I:%.*]] = call ptr @__mempcpy_chk(ptr [[DST]], ptr [[SRC]], i64 4, i64 [[OBJSIZE_I]])
+; CHECK-NEXT:    [[CALL_MEMSET_I:%.*]] = call ptr @__memset_chk(ptr [[DST]], i32 0, i64 4, i64 [[OBJSIZE_I]])
 ; CHECK-NEXT:    ret void
 ;
   call void @callee(ptr %dst, ptr %src, i64 4)
