@@ -38,6 +38,19 @@ func.func @affine_max_ub(%a: index) -> (index) {
 
 // -----
 
+// CHECK-LABEL: func @affine_max_const_ub(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[c5]]
+func.func @affine_max_const_ub(%a: index) -> (index) {
+  %0 = affine.min affine_map<(d0) -> (d0, 4)>(%a)
+  %1 = affine.max affine_map<(d0) -> (d0, 2)>(%0)
+  %2 = "test.reify_bound"(%1) {type = "UB"}: (index) -> (index)
+  return %2 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @affine_min_ub(
 //  CHECK-SAME:     %[[a:.*]]: index
 //       CHECK:   %[[c3:.*]] = arith.constant 3 : index
@@ -55,6 +68,19 @@ func.func @affine_min_ub(%a: index) -> (index) {
 func.func @affine_min_lb(%a: index) -> (index) {
   %1 = affine.min affine_map<()[s0] -> (s0, 2)>()[%a]
   // expected-error @below{{could not reify bound}}
+  %2 = "test.reify_bound"(%1) {type = "LB"}: (index) -> (index)
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_min_const_lb(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   return %[[c0]]
+func.func @affine_min_const_lb(%a: index) -> (index) {
+  %0 = affine.max affine_map<(d0) -> (d0, 0)>(%a)
+  %1 = affine.min affine_map<(d0) -> (d0, 2)>(%0)
   %2 = "test.reify_bound"(%1) {type = "LB"}: (index) -> (index)
   return %2 : index
 }
