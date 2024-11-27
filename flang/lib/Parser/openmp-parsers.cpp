@@ -229,8 +229,8 @@ TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
         construct<OmpFromClause::Modifier>(Parser<OmpMapper>{}) ||
         construct<OmpFromClause::Modifier>(Parser<OmpIterator>{})))))
 
-TYPE_PARSER(sourced(construct<OmpGrainsizeClause::Modifier>(
-    Parser<OmpPrescriptiveness>{})))
+TYPE_PARSER(sourced(
+    construct<OmpGrainsizeClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
     sourced(construct<OmpMapClause::Modifier>(Parser<OmpMapTypeModifier>{}) ||
@@ -241,8 +241,8 @@ TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
 TYPE_PARSER(
     sourced(construct<OmpOrderClause::Modifier>(Parser<OmpOrderModifier>{})))
 
-TYPE_PARSER(sourced(construct<OmpNumTasksClause::Modifier>(
-    Parser<OmpPrescriptiveness>{})))
+TYPE_PARSER(sourced(
+    construct<OmpNumTasksClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
 TYPE_PARSER(sourced(construct<OmpReductionClause::Modifier>(sourced(
     construct<OmpReductionClause::Modifier>(Parser<OmpReductionModifier>{}) ||
@@ -405,8 +405,7 @@ TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
         construct<OmpDependClause>(construct<OmpDependClause::TaskDep>(
             maybe(nonemptyList(Parser<OmpDependClause::TaskDep::Modifier>{}) /
                 ": "),
-            Parser<OmpObjectList>{}))
-))
+            Parser<OmpObjectList>{}))))
 
 TYPE_CONTEXT_PARSER("Omp Doacross clause"_en_US,
     construct<OmpDoacrossClause>(Parser<OmpDoacross>{}))
