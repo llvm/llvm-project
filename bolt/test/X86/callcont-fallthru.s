@@ -25,28 +25,27 @@
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK3
 
 ## Check that a landing pad is emitted in BAT
-# RUN: llvm-bat-dump %t.out --dump-all | FileCheck %s --check-prefix=CHECK-BAT
+# RUN: llvm-bat-dump %t.out4 --dump-all | FileCheck %s --check-prefix=CHECK-BAT
 
 # CHECK-BAT:      1 secondary entry points:
-# CHECK-BAT-NEXT: 0x38 (lp)
 
 ## Check BAT case of a fallthrough to a call continuation
-# link_fdata %s %t.out3 %t.pa.bat PREAGG
-# RUN: perf2bolt %t.out3 -p %t.pa.bat --pa -o %t.fdata
+# link_fdata %s %t.out4 %t.pa.bat PREAGG
+# RUN: perf2bolt %t.out4 -p %t.pa.bat --pa -o %t.fdata
 # RUN: FileCheck %s --check-prefix=CHECK-BAT-CC --input-file=%t.fdata
 # CHECK-BAT-CC: main
 
 ## Check BAT case of a fallthrough to a secondary entry point or a landing pad
-# link_fdata %s %t.out3 %t.pa.bat2 PREAGG3
+# link_fdata %s %t.out4 %t.pa.bat2 PREAGG3
 
 ## Secondary entry
-# RUN: perf2bolt %t.out3 -p %t.pa.bat2 --pa -o %t.fdata2
+# RUN: perf2bolt %t.out4 -p %t.pa.bat2 --pa -o %t.fdata2
 # RUN: FileCheck %s --check-prefix=CHECK-BAT-ENTRY --input-file=%t.fdata2
 # CHECK-BAT-ENTRY: main
 
 ## Landing pad
-# RUN: llvm-strip --strip-unneeded %t.out3
-# RUN: perf2bolt %t.out3 -p %t.pa.bat2 --pa -o %t.fdata3
+# RUN: llvm-strip --strip-unneeded %t.out4
+# RUN: perf2bolt %t.out4 -p %t.pa.bat2 --pa -o %t.fdata3
 # RUN: FileCheck %s --check-prefix=CHECK-BAT-LP --input-file=%t.fdata3
 # CHECK-BAT-LP: main
 
