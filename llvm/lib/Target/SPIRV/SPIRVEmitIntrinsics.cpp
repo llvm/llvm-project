@@ -1123,6 +1123,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Value *OpTyVal = PoisonValue::get(KnownElemTy);
     Type *OpTy = Op->getType();
     if (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)) {
+      Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, KnownElemTy);
       // check if KnownElemTy is complete
       if (!Uncomplete)
@@ -1139,7 +1140,6 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
                             {B.getInt32(getPointerAddressSpace(OpTy))}, B);
         GR->addAssignPtrTypeInstr(Op, CI);
       } else {
-        Type *PrevElemTy = GR->findDeducedElementType(Op);
         updateAssignType(AssignCI, Op, OpTyVal);
         DenseSet<std::pair<Value *, Value *>> VisitedSubst{
             std::make_pair(I, Op)};
@@ -2249,12 +2249,15 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
       if (Type *ElemTy = deduceElementTypeHelper(Op, Visited, false, true)) {
         if (ElemTy != KnownTy) {
           DenseSet<std::pair<Value *, Value *>> VisitedSubst;
+          propagateElemType(CI, ElemTy, VisitedSubst);
+          /*
           if (isa<CallInst>(Op)) {
             propagateElemType(CI, ElemTy, VisitedSubst);
           } else {
             updateAssignType(AssignCI, CI, PoisonValue::get(ElemTy));
             propagateElemTypeRec(CI, ElemTy, KnownTy, VisitedSubst);
           }
+          */
           eraseTodoType(Op);
           continue;
         }
