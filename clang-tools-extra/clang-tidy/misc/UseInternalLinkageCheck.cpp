@@ -101,7 +101,7 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                 // 3. template
                 isExplicitTemplateSpecialization(),
                 // 4. friend
-                hasAncestor(friendDecl()))));
+                hasAncestor(decl(anyOf(friendDecl(), exportDecl()))))));
   Finder->addMatcher(
       functionDecl(Common, hasBody(), unless(cxxMethodDecl()), unless(isMain()))
           .bind("fn"),
