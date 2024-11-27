@@ -21,9 +21,9 @@ TEST(LlvmLibcLsearchTest, SearchHead) {
 
   ASSERT_EQ(static_cast<int *>(ret), &list[0]);
   ASSERT_EQ(len, static_cast<size_t>(3));
+  ASSERT_EQ(list[0], 1);
   ASSERT_EQ(list[1], 2);
   ASSERT_EQ(list[2], 3);
-  ASSERT_EQ(list[3], 4);
   ASSERT_EQ(list[3], 4);
 }
 
