@@ -14708,6 +14708,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
+  CheckInvalidBuiltinCountedByRef(VD->getInit(), InitializerKind);
+
   checkAttributesAfterMerging(*this, *VD);
 
   if (VD->isStaticLocal())
