@@ -1217,7 +1217,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
             data().DefaultedDestructorIsDeleted = true;
             // C++20 [dcl.constexpr]p5:
             //   The definition of a constexpr destructor whose function-body is
-            //   [not = delete] shall additionally satisfy...
+            //   not = delete shall additionally satisfy...
             data().DefaultedDestructorIsConstexpr = true;
           }
         }
