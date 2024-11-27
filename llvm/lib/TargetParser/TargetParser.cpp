@@ -479,6 +479,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["bf8-cvt-scale-insts"] = true;
       Features["fp8-cvt-scale-insts"] = true;
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+      Features["f32-to-f16bf16-cvt-sr-insts"] = true;
       Features["prng-inst"] = true;
       Features["permlane16-swap"] = true;
       Features["permlane32-swap"] = true;

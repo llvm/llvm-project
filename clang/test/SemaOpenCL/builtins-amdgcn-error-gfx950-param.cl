@@ -198,6 +198,8 @@ void test_cvt_scalef32(global half2* out_v2f16, global float* out_f32, uint src,
   *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_bf16(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_fp8_bf16' must be a constant integer}}
   *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_f16(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_fp8_f16' must be a constant integer}}
   *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_f32(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_fp8_f32' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_sr_bf16_f32(*out_v2bf16, src0, src, X); // expected-error{{argument to '__builtin_amdgcn_cvt_sr_bf16_f32' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_sr_f16_f32(*out_v2f16, src0, src, X); // expected-error{{argument to '__builtin_amdgcn_cvt_sr_f16_f32' must be a constant integer}}
 }
 
 void test_bitop3_args(global uint* out, uint a, uint b, uint c) {
