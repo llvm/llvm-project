@@ -1376,8 +1376,8 @@ def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "WF(C|K)DB$")>;
 // Vector: Floating-point insertion and extraction
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXb, NormalGr], (instregex "LEFR$")>;
-def : InstRW<[WLat4, FXb, NormalGr], (instregex "LFER$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "LEFR(_16)?$")>;
+def : InstRW<[WLat4, FXb, NormalGr], (instregex "LFER(_16)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: String instructions

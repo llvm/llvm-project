@@ -1014,16 +1014,16 @@ void SystemZInstrInfo::storeRegToStackSlot(
     Register GR64Reg = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
     Register FP64Reg = MRI.createVirtualRegister(&SystemZ::FP64BitRegClass);
     BuildMI(MBB, MBBI, DL, get(SystemZ::COPY))
-      .addReg(FP64Reg, RegState::DefineNoRead, SystemZ::subreg_h16)
-      .addReg(SrcReg, getKillRegState(isKill));
+        .addReg(FP64Reg, RegState::DefineNoRead, SystemZ::subreg_h16)
+        .addReg(SrcReg, getKillRegState(isKill));
     BuildMI(MBB, MBBI, DL, get(SystemZ::LGDR), GR64Reg)
-      .addReg(FP64Reg, RegState::Kill);
+        .addReg(FP64Reg, RegState::Kill);
     BuildMI(MBB, MBBI, DL, get(SystemZ::SRLG), GR64Reg)
-      .addReg(GR64Reg)
-      .addReg(0)
-      .addImm(48);
+        .addReg(GR64Reg)
+        .addReg(0)
+        .addImm(48);
     addFrameReference(BuildMI(MBB, MBBI, DL, get(SystemZ::STH))
-                        .addReg(GR64Reg, RegState::Kill, SystemZ::subreg_l32),
+                          .addReg(GR64Reg, RegState::Kill, SystemZ::subreg_l32),
                       FrameIdx);
     return;
   }
@@ -1051,18 +1051,18 @@ void SystemZInstrInfo::loadRegFromStackSlot(
            "Expected non-SSA form with virtual registers.");
     Register GR64Reg = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
     Register FP64Reg = MRI.createVirtualRegister(&SystemZ::FP64BitRegClass);
-    addFrameReference(BuildMI(MBB, MBBI, DL, get(SystemZ::LH))
-                        .addReg(GR64Reg, RegState::DefineNoRead,
-                                SystemZ::subreg_l32),
-                      FrameIdx);
+    addFrameReference(
+        BuildMI(MBB, MBBI, DL, get(SystemZ::LH))
+            .addReg(GR64Reg, RegState::DefineNoRead, SystemZ::subreg_l32),
+        FrameIdx);
     BuildMI(MBB, MBBI, DL, get(SystemZ::SLLG), GR64Reg)
-      .addReg(GR64Reg)
-      .addReg(0)
-      .addImm(48);
+        .addReg(GR64Reg)
+        .addReg(0)
+        .addImm(48);
     BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), FP64Reg)
-      .addReg(GR64Reg, RegState::Kill);
+        .addReg(GR64Reg, RegState::Kill);
     BuildMI(MBB, MBBI, DL, get(SystemZ::COPY), DestReg)
-      .addReg(FP64Reg, RegState::Kill, SystemZ::subreg_h16);
+        .addReg(FP64Reg, RegState::Kill, SystemZ::subreg_h16);
     return;
   }
 

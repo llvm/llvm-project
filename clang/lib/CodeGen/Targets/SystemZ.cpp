@@ -185,7 +185,7 @@ bool SystemZABIInfo::isFPArgumentType(QualType Ty) const {
 
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
     switch (BT->getKind()) {
-    case BuiltinType::Float16:  // _Float16
+    case BuiltinType::Float16: // _Float16
     case BuiltinType::Float:
     case BuiltinType::Double:
       return true;
@@ -450,9 +450,9 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
     if (isFPArgumentType(SingleElementTy)) {
       assert(Size == 16 || Size == 32 || Size == 64);
       return ABIArgInfo::getDirect(
-          Size == 16 ? llvm::Type::getHalfTy(getVMContext())
-                     : Size == 32 ? llvm::Type::getFloatTy(getVMContext())
-                                  : llvm::Type::getDoubleTy(getVMContext()));
+          Size == 16   ? llvm::Type::getHalfTy(getVMContext())
+          : Size == 32 ? llvm::Type::getFloatTy(getVMContext())
+                       : llvm::Type::getDoubleTy(getVMContext()));
     } else {
       llvm::IntegerType *PassTy = llvm::IntegerType::get(getVMContext(), Size);
       return Size <= 32 ? ABIArgInfo::getNoExtend(PassTy)

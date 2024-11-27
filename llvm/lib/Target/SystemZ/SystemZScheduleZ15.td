@@ -1491,8 +1491,8 @@ def : InstRW<[WLat3, VecDFX, NormalGr], (instregex "WF(C|K)XB$")>;
 // Vector: Floating-point insertion and extraction
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXb, NormalGr], (instregex "LEFR$")>;
-def : InstRW<[WLat3, FXb, NormalGr], (instregex "LFER$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "LEFR(_16)?$")>;
+def : InstRW<[WLat3, FXb, NormalGr], (instregex "LFER(_16)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: String instructions
