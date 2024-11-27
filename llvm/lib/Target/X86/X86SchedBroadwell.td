@@ -615,7 +615,7 @@ def : WriteRes<WriteSystem,     [BWPort0156]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [BWPort0156]> { let Latency = 100; }
 
 // Fence instructions.
-def : WriteRes<WriteFence,  [BWPort23, BWPort4]>;
+def : WriteRes<WriteFence,  [BWPort23, BWPort4]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 
 // Nop, not very useful expect it provides a model for nops!
 def : WriteRes<WriteNop, []>;
@@ -722,7 +722,6 @@ def BWWriteResGroup14 : SchedWriteRes<[BWPort0156]> {
   let ReleaseAtCycles = [2];
 }
 def: InstRW<[BWWriteResGroup14], (instrs LFENCE,
-                                         MFENCE,
                                          WAIT,
                                          XGETBV)>;
 
@@ -739,13 +738,6 @@ def BWWriteResGroup17 : SchedWriteRes<[BWPort01,BWPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup17], (instrs MMX_MOVDQ2Qrr)>;
-
-def BWWriteResGroup18 : SchedWriteRes<[BWPort237,BWPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[BWWriteResGroup18], (instrs SFENCE)>;
 
 def BWWriteResGroup20 : SchedWriteRes<[BWPort06,BWPort0156]> {
   let Latency = 2;
