@@ -590,6 +590,9 @@ Improvements to Clang's diagnostics
 
 - Fixed a false negative ``-Wunused-private-field`` diagnostic when a defaulted comparison operator is defined out of class (#GH116961).
 
+- Clang now supports using alias templates in deduction guides, aligning with the C++ standard,
+  which treats alias templates as synonyms for their underlying types (#GH54909).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
