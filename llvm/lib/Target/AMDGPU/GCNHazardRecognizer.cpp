@@ -43,7 +43,7 @@ struct PaddingRatioParser : public cl::parser<unsigned> {
 static cl::opt<unsigned, false, PaddingRatioParser>
     MFMAPaddingRatio("amdgpu-mfma-padding-ratio", cl::init(0), cl::Hidden,
                      cl::desc("Fill a percentage of the latency between "
-                              "neighboring MFMA with s_nops."));
+                              "neighboring instructions with s_nops."));
 
 static cl::opt<unsigned> MaxExhaustiveHazardSearch(
     "amdgpu-max-exhaustive-hazard-search", cl::init(128), cl::Hidden,
