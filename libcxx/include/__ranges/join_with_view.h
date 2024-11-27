@@ -400,7 +400,7 @@ private:
   using _Parent = __maybe_const<_Const, join_with_view>;
   using _Base   = __maybe_const<_Const, _View>;
 
-  sentinel_t<_Base> __end_ = sentinel_t<_Base>();
+  _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
 
