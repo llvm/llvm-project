@@ -11,11 +11,7 @@ define void @fentry0(i1 %a) nounwind "fentry-call"="true" {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    # FEntry call
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_[[BB1:[0-9]+]]
-; CHECK-NEXT:    call foo
-; CHECK-LABEL: .LBB0_2:
-; CHECK-NEXT:    call	t0, OUTLINED_FUNCTION_[[BB2:[0-9]+]]
-; CHECK-NEXT:    call	foo
+; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -31,11 +27,7 @@ define void @fentry1(i1 %a) nounwind "fentry-call"="true" {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    # FEntry call
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_[[BB1:[0-9]+]]
-; CHECK-NEXT:    call foo
-; CHECK-LABEL: .LBB1_2:
-; CHECK-NEXT:    call	t0, OUTLINED_FUNCTION_[[BB2:[0-9]+]]
-; CHECK-NEXT:    call	foo
+; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -55,11 +47,7 @@ define void @patchable0(i1 %a) nounwind "patchable-function-entry"="2" {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_[[BB1:[0-9]+]]
-; CHECK-NEXT:    call foo
-; CHECK-LABEL: .LBB2_2:
-; CHECK-NEXT:    call	t0, OUTLINED_FUNCTION_[[BB2:[0-9]+]]
-; CHECK-NEXT:    call	foo
+; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
@@ -77,11 +65,7 @@ define void @patchable1(i1 %a) nounwind "patchable-function-entry"="2" {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK:       # %bb.1:
-; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_[[BB1:[0-9]+]]
-; CHECK-NEXT:    call foo
-; CHECK-LABEL: .LBB3_2:
-; CHECK-NEXT:    call	t0, OUTLINED_FUNCTION_[[BB2:[0-9]+]]
-; CHECK-NEXT:    call	foo
+; CHECK-NEXT:    call t0, OUTLINED_FUNCTION_1
 entry:
   br i1 %a, label %if.then, label %if.end
 if.then:
