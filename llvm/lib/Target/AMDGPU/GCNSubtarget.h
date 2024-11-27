@@ -1414,6 +1414,7 @@ public:
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
   bool hasMinimum3Maximum3F32() const {
     return HasMinimum3Maximum3F32;
@@ -1427,13 +1428,7 @@ public:
     return HasMin3Max3PKF16;
   }
 
-  /// \returns true if the target supports using software to avoid hazards
-  /// between VMEM and VALU instructions in some instances.
-  bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
-
   bool hasTanhInsts() const { return HasTanhInsts; }
-
-  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
   bool hasAddPC64Inst() const { return GFX1210Insts; }
 
@@ -1451,6 +1446,10 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  /// \returns true if the target supports using software to avoid hazards
+  /// between VMEM and VALU instructions in some instances.
+  bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that

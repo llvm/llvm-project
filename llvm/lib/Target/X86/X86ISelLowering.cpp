@@ -1711,6 +1711,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(Opc, MVT::v8f16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16f16, MVT::v16f32);
     }
+    setOperationAction(ISD::SETCC, MVT::v8f16, Custom);
+    setOperationAction(ISD::SETCC, MVT::v16f16, Custom);
   }
 
   // This block controls legalization of the mask vector sizes that are
@@ -2046,6 +2048,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v16f32, Custom);
     for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
       setOperationPromotedToType(Opc, MVT::v32f16, MVT::v32f32);
+    setOperationAction(ISD::SETCC, MVT::v32f16, Custom);
 
     for (auto VT : { MVT::v16i32, MVT::v8i64, MVT::v16f32, MVT::v8f64 }) {
       setOperationAction(ISD::MLOAD,               VT, Legal);
@@ -2401,6 +2404,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
+    setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
+    setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
   }
@@ -2411,6 +2416,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setF16Action(MVT::v32bf16, Expand);
     for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
       setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
+    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
@@ -19595,7 +19601,7 @@ static SDValue promoteXINT_TO_FP(SDValue Op, const SDLoc &dl,
   MVT VT = Op.getSimpleValueType();
   MVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
 
-  SDValue Rnd = DAG.getIntPtrConstant(0, dl);
+  SDValue Rnd = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
   if (IsStrict)
     return DAG.getNode(
         ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
@@ -20266,7 +20272,8 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     if (DstVT == MVT::f80)
       return Add;
     return DAG.getNode(ISD::STRICT_FP_ROUND, dl, {DstVT, MVT::Other},
-                       {Add.getValue(1), Add, DAG.getIntPtrConstant(0, dl)});
+                       {Add.getValue(1), Add,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
   }
   unsigned Opc = ISD::FADD;
   // Windows needs the precision control changed to 80bits around this add.
@@ -23396,14 +23403,12 @@ static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   return SSECC;
 }
 
-/// Break a VSETCC 256-bit integer VSETCC into two new 128 ones and then
+/// Break a VSETCC 256/512-bit vector into two new 128/256 ones and then
 /// concatenate the result back.
-static SDValue splitIntVSETCC(EVT VT, SDValue LHS, SDValue RHS,
-                              ISD::CondCode Cond, SelectionDAG &DAG,
-                              const SDLoc &dl) {
-  assert(VT.isInteger() && VT == LHS.getValueType() &&
-         VT == RHS.getValueType() && "Unsupported VTs!");
-
+static SDValue splitVSETCC(EVT VT, SDValue LHS, SDValue RHS, ISD::CondCode Cond,
+                           SelectionDAG &DAG, const SDLoc &dl) {
+  assert(VT.isInteger() && LHS.getValueType() == RHS.getValueType() &&
+         "Unsupported VTs!");
   SDValue CC = DAG.getCondCode(Cond);
 
   // Extract the LHS Lo/Hi vectors
@@ -23544,18 +23549,43 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   SDValue CC = Op.getOperand(IsStrict ? 3 : 2);
   MVT VT = Op->getSimpleValueType(0);
   ISD::CondCode Cond = cast<CondCodeSDNode>(CC)->get();
-  bool isFP = Op1.getSimpleValueType().isFloatingPoint();
+  MVT OpVT = Op0.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (isFP) {
-    MVT EltVT = Op0.getSimpleValueType().getVectorElementType();
+  if (OpVT.isFloatingPoint()) {
+    MVT EltVT = OpVT.getVectorElementType();
     assert(EltVT == MVT::bf16 || EltVT == MVT::f16 || EltVT == MVT::f32 ||
            EltVT == MVT::f64);
-    if (isSoftF16(EltVT, Subtarget))
-      return SDValue();
+
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+    if (isSoftF16(EltVT, Subtarget)) {
+      // Break 256-bit FP vector compare into smaller ones.
+      if (OpVT.is256BitVector() && !Subtarget.useAVX512Regs())
+        return splitVSETCC(VT, Op0, Op1, Cond, DAG, dl);
+
+      // Break 512-bit FP vector compare into smaller ones.
+      if (OpVT.is512BitVector())
+        return splitVSETCC(VT, Op0, Op1, Cond, DAG, dl);
+
+      MVT NVT = OpVT.changeVectorElementType(MVT::f32);
+      if (IsStrict) {
+        Op0 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                          {Chain, Op0});
+        Op1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                          {Chain, Op1});
+        return DAG.getNode(Op.getOpcode(), dl, {VT, MVT::Other},
+                           {Chain, Op0, Op1, CC});
+      }
+      MVT DVT = VT.getVectorElementType() == MVT::i16
+                    ? VT.changeVectorElementType(MVT::i32)
+                    : VT;
+      SDValue Cmp = DAG.getNode(Op.getOpcode(), dl, DVT,
+                                DAG.getNode(ISD::FP_EXTEND, dl, NVT, Op0),
+                                DAG.getNode(ISD::FP_EXTEND, dl, NVT, Op1), CC);
+      return DVT == VT ? Cmp : DAG.getNode(ISD::TRUNCATE, dl, VT, Cmp);
+    }
 
     bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
-    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
 
     // If we have a strict compare with a vXi1 result and the input is 128/256
     // bits we can't use a masked compare unless we have VLX. If we use a wider
@@ -23766,12 +23796,12 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
   // Break 256-bit integer vector compare into smaller ones.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitIntVSETCC(VT, Op0, Op1, Cond, DAG, dl);
+    return splitVSETCC(VT, Op0, Op1, Cond, DAG, dl);
 
   // Break 512-bit integer vector compare into smaller ones.
   // TODO: Try harder to use VPCMPx + VPMOV2x?
   if (VT.is512BitVector())
-    return splitIntVSETCC(VT, Op0, Op1, Cond, DAG, dl);
+    return splitVSETCC(VT, Op0, Op1, Cond, DAG, dl);
 
   // If we have a limit constant, try to form PCMPGT (signed cmp) to avoid
   // not-of-PCMPEQ:
@@ -41469,6 +41499,21 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         return DAG.getBitcast(
             ShuffleVT,
             DAG.getNode(SrcOpcode, DL, OpVT, DAG.getBitcast(OpVT, Res)));
+      }
+      // TODO: We can generalize this for other shuffles/conversions.
+      if (Opc == X86ISD::UNPCKL && SrcOpcode == X86ISD::CVTPH2PS &&
+          N1.getOpcode() == SrcOpcode &&
+          N0.getValueType() == N1.getValueType() &&
+          N0.getOperand(0).getValueType() == N1.getOperand(0).getValueType() &&
+          ShuffleVT.getScalarSizeInBits() == N0.getScalarValueSizeInBits() &&
+          IsSafeToMoveShuffle(N0, SrcOpcode) &&
+          IsSafeToMoveShuffle(N1, SrcOpcode)) {
+        EVT OpSrcVT = N0.getOperand(0).getValueType();
+        EVT OpDstVT = N0.getValueType();
+        SDValue Res =
+            DAG.getNode(Opc, DL, OpSrcVT, N0.getOperand(0), N1.getOperand(0));
+        return DAG.getBitcast(ShuffleVT,
+                              DAG.getNode(SrcOpcode, DL, OpDstVT, Res));
       }
     }
     break;
@@ -59256,6 +59301,15 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
     return Ld->getBasePtr() == St->getBasePtr();
   };
 
+  auto IsFoldableZext = [](SDValue Op) {
+    if (!Op.hasOneUse())
+      return false;
+    SDNode *User = *Op->use_begin();
+    EVT VT = User->getValueType(0);
+    return (User->getOpcode() == ISD::ZERO_EXTEND &&
+            (VT == MVT::i32 || VT == MVT::i64));
+  };
+
   bool Commute = false;
   switch (Op.getOpcode()) {
   default: return false;
@@ -59272,8 +59326,15 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
       return false;
     break;
   }
-  case ISD::ADD:
   case ISD::MUL:
+    // When ZU is enabled, we prefer to not promote for MUL by a constant
+    // when there is an opportunity to fold a zext with imulzu.
+    if (Subtarget.hasZU() && IsFoldableZext(Op) &&
+        (isa<ConstantSDNode>(Op.getOperand(0)) ||
+         isa<ConstantSDNode>(Op.getOperand(1))))
+      return false;
+    [[fallthrough]];
+  case ISD::ADD:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:

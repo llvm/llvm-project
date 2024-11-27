@@ -162,9 +162,9 @@ defm : X86WriteRes<WriteXCHG,      [BWPort0156], 2, [3], 3>;
 
 // Integer shifts and rotates.
 defm : BWWriteResPair<WriteShift,    [BWPort06],  1>;
-defm : BWWriteResPair<WriteShiftCL,  [BWPort06,BWPort0156],  3, [2,1], 3>;
+defm : BWWriteResPair<WriteShiftCL,  [BWPort06],  3, [3], 3>;
 defm : BWWriteResPair<WriteRotate,   [BWPort06],  1, [1], 1>;
-defm : BWWriteResPair<WriteRotateCL, [BWPort06,BWPort0156],  3, [2,1], 3>;
+defm : BWWriteResPair<WriteRotateCL, [BWPort06],  3, [3], 3>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [BWPort1], 3, [1], 1>;
@@ -247,10 +247,10 @@ defm : X86WriteRes<WriteFStoreNT,      [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTX,     [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTY,     [BWPort237,BWPort4], 1, [1,1], 2>;
 
-defm : X86WriteRes<WriteFMaskedStore32,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteFMaskedStore64,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore32,  [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore64,  [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
 
 defm : X86WriteRes<WriteFMove,         [BWPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [BWPort5], 1, [1], 1>;
@@ -420,10 +420,10 @@ defm : X86WriteRes<WriteVecStoreX,       [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [BWPort237,BWPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [BWPort0,BWPort4,BWPort23,BWPort1], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [BWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [BWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [BWPort015], 1, [1], 1>;
@@ -615,7 +615,7 @@ def : WriteRes<WriteSystem,     [BWPort0156]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [BWPort0156]> { let Latency = 100; }
 
 // Fence instructions.
-def : WriteRes<WriteFence,  [BWPort23, BWPort4]>;
+def : WriteRes<WriteFence,  [BWPort23, BWPort4]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 
 // Nop, not very useful expect it provides a model for nops!
 def : WriteRes<WriteNop, []>;
@@ -722,7 +722,6 @@ def BWWriteResGroup14 : SchedWriteRes<[BWPort0156]> {
   let ReleaseAtCycles = [2];
 }
 def: InstRW<[BWWriteResGroup14], (instrs LFENCE,
-                                         MFENCE,
                                          WAIT,
                                          XGETBV)>;
 
@@ -739,13 +738,6 @@ def BWWriteResGroup17 : SchedWriteRes<[BWPort01,BWPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup17], (instrs MMX_MOVDQ2Qrr)>;
-
-def BWWriteResGroup18 : SchedWriteRes<[BWPort237,BWPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[BWWriteResGroup18], (instrs SFENCE)>;
 
 def BWWriteResGroup20 : SchedWriteRes<[BWPort06,BWPort0156]> {
   let Latency = 2;

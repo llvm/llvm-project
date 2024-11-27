@@ -349,6 +349,8 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
 
 const Stmt *ExplodedNode::getNextStmtForDiagnostics() const {
   for (const ExplodedNode *N = getFirstSucc(); N; N = N->getFirstSucc()) {
+    if (N->getLocation().isPurgeKind())
+      continue;
     if (const Stmt *S = N->getStmtForDiagnostics()) {
       // Check if the statement is '?' or '&&'/'||'.  These are "merges",
       // not actual statement points.

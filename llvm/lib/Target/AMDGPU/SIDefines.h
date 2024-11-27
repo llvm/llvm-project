@@ -1144,8 +1144,10 @@ namespace Barrier {
 
 enum Type { CLUSTER_TRAP = -4, CLUSTER = -3, TRAP = -2, WORKGROUP = -1 };
 
-enum {
-  BARRIER_SCOPE_WORKGROUP = 0,
+enum class Scope : unsigned {
+  WORKGROUP = 0,
+  CLUSTER = 1,
+  NUM_SCOPES = 2,
 };
 
 } // namespace Barrier

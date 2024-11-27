@@ -3,10 +3,12 @@
 @bar2 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
 @bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
 @bar1 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
+@ClusterBar = internal addrspace(3) global target("amdgcn.named.barrier", 1) poison
 
 ; CHECK: @bar2 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !0
 ; CHECK-NEXT: @bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !1
 ; CHECK-NEXT: @bar1 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !2
+; CHECK-NEXT: @ClusterBar = internal addrspace(3) global target("amdgcn.named.barrier", 1) poison, !absolute_symbol !3
 ; CHECK-NEXT: @bar1.kernel1 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !2
 
 define void @func1() {
@@ -20,6 +22,9 @@ define void @func2() {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
+    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @ClusterBar, i32 13)
+    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @ClusterBar)
+    call void @llvm.amdgcn.s.barrier.wait(i16 33)
     ret void
 }
 
@@ -64,3 +69,4 @@ attributes #2 = { nounwind readnone }
 ; CHECK: !0 = !{i32 8396816, i32 8396817}
 ; CHECK-NEXT: !1 = !{i32 8396848, i32 8396849}
 ; CHECK-NEXT: !2 = !{i32 8396832, i32 8396833}
+; CHECK-NEXT: !3 = !{i32 8397328, i32 8397329}
