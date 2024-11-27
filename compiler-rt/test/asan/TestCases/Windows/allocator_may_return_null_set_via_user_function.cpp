@@ -3,6 +3,7 @@
 // CHECK: Success
 
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <limits>
 
