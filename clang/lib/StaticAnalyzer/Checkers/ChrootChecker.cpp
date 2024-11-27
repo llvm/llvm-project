@@ -98,9 +98,9 @@ void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
 
   const LocationContext *LCtx = C.getLocationContext();
-  NonLoc RetVal =
-          SVB.conjureSymbolVal(/*SymbolTag=*/nullptr, ChrootCE, LCtx, IntTy, C.blockCount())
-          .castAs<NonLoc>();
+  NonLoc RetVal = SVB.conjureSymbolVal(/*SymbolTag=*/nullptr, ChrootCE, LCtx,
+                                       IntTy, C.blockCount())
+                      .castAs<NonLoc>();
 
   auto [StateChrootFailed, StateChrootSuccess] = state->assume(RetVal);
 
@@ -110,13 +110,15 @@ void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   if (StateChrootFailed) {
     StateChrootFailed = StateChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED);
     StateChrootFailed = StateChrootFailed->set<ChrootCall>(ChrootCE);
-    C.addTransition(StateChrootFailed->BindExpr(CE, LCtx, nonloc::ConcreteInt{Minus1}));
+    C.addTransition(
+        StateChrootFailed->BindExpr(CE, LCtx, nonloc::ConcreteInt{Minus1}));
   }
 
   if (StateChrootSuccess) {
     StateChrootSuccess = StateChrootSuccess->set<ChrootState>(ROOT_CHANGED);
     StateChrootSuccess = StateChrootSuccess->set<ChrootCall>(ChrootCE);
-    C.addTransition(StateChrootSuccess->BindExpr(CE, LCtx, nonloc::ConcreteInt{Zero}));
+    C.addTransition(
+        StateChrootSuccess->BindExpr(CE, LCtx, nonloc::ConcreteInt{Zero}));
   }
 }
 
