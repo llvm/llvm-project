@@ -137,4 +137,25 @@ void foo() {
   // CHECK: #pragma acc kernels loop deviceptr(iPtr, arrayPtr[0])
 #pragma acc kernels loop deviceptr(iPtr, arrayPtr[0])
   for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop wait()
+#pragma acc parallel loop wait()
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop wait(*iPtr, i)
+#pragma acc parallel loop wait(*iPtr, i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop wait(queues: *iPtr, i)
+#pragma acc parallel loop wait(queues:*iPtr, i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop wait(devnum: i : *iPtr, i)
+#pragma acc parallel loop wait(devnum:i:*iPtr, i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop wait(devnum: i : queues: *iPtr, i)
+#pragma acc parallel loop wait(devnum:i:queues:*iPtr, i)
+  for(int i = 0;i<5;++i);
+
 }
