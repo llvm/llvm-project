@@ -2554,20 +2554,21 @@ static void emitIsSubclass(CodeGenTarget &Target,
   OS << "    {0, 0, 0},\n"; // OptionalMatchClass
   for (const auto &A : Infos) {
     SmallVector<bool> SuperClasses;
-    SuperClasses.push_back(false); // InvalidMatchClass
+    SuperClasses.push_back(false);        // InvalidMatchClass
     SuperClasses.push_back(A.IsOptional); // OptionalMatchClass
     for (const auto &B : Infos)
       SuperClasses.push_back(&A != &B && A.isSubsetOf(B));
 
     // Trim leading and trailing zeros.
-    auto End = find_if(reverse(SuperClasses), [](bool B){ return B; }).base();
-    auto Start = std::find_if(SuperClasses.begin(), End, [](bool B){ return B; });
+    auto End = find_if(reverse(SuperClasses), [](bool B) { return B; }).base();
+    auto Start =
+        std::find_if(SuperClasses.begin(), End, [](bool B) { return B; });
 
     unsigned Offset = SuperClassData.size();
     SuperClassData.append(Start, End);
 
-    OS << "    {" << Offset << ", " << (Start - SuperClasses.begin()) << ", " <<
-        (End - Start) << "},\n";
+    OS << "    {" << Offset << ", " << (Start - SuperClasses.begin()) << ", "
+       << (End - Start) << "},\n";
   }
   OS << "  };\n\n";
 
