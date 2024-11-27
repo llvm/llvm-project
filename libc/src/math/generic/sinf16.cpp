@@ -55,7 +55,7 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
 
   // Handle exceptional values
   if (LIBC_UNLIKELY(x_abs == 0x585c || x_abs == 0x5cb0 || x_abs == 0x51f5 ||
-			  x_abs == 0x2b45)) {
+                    x_abs == 0x2b45)) {
     bool x_sign = x_u >> 15;
     if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
@@ -63,7 +63,7 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   }
 
   // Exhaustive tests show that for |x| <= 0x13d0, 1ULP rounding errors occur.
-  // To fix this, the following apply: 
+  // To fix this, the following apply:
   // - When x >= 0, and rounding upward, sin(x) == x.
   // - When x < 0, and rounding downward, sin(x) == x.
   // - When x < 0, and rounding upward, sin(x) == (x - 1ULP)
@@ -83,7 +83,7 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   }
 
   if (xbits.is_inf_or_nan()) {
-     if (xbits.is_inf()){
+    if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
