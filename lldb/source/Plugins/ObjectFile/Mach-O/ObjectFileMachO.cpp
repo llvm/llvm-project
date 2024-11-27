@@ -2235,26 +2235,14 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
   Progress progress("Parsing symbol table", file_name);
 
-  llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
   llvm::MachO::linkedit_data_command exports_trie_load_command = {0, 0, 0, 0};
   llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   llvm::MachO::dysymtab_command dysymtab = m_dysymtab;
+  SymtabCommandLargeOffsets symtab_load_command;
   // The data element of type bool indicates that this entry is thumb
   // code.
   typedef AddressDataArray<lldb::addr_t, bool, 100> FunctionStarts;
-
-  // The virtual address offset from TEXT to the symbol/string tables
-  // in the LINKEDIT section.  The LC_SYMTAB symtab_command `symoff` and
-  // `stroff` are uint32_t's that give the file offset in the binary.
-  // If the binary is laid down in memory with all segments consecutive,
-  // then these are the offsets from the mach-o header aka TEXT segment
-  // to the tables' virtual addresses.
-  // But if the binary is loaded in virtual address space with different
-  // slides for the segments (e.g. a shared cache), the LINKEDIT may be
-  // more than 4GB away from TEXT, and a 32-bit offset is not sufficient.
-  offset_t symbol_table_offset_from_TEXT = 0;
-  offset_t string_table_offset_from_TEXT = 0;
 
   // Record the address of every function/data that we add to the symtab.
   // We add symbols to the table in the order of most information (nlist
@@ -2290,12 +2278,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     case LC_SYMTAB:
       symtab_load_command.cmd = lc.cmd;
       symtab_load_command.cmdsize = lc.cmdsize;
-      // Read in the rest of the symtab load command
-      if (m_data.GetU32(&offset, &symtab_load_command.symoff, 4) ==
-          nullptr) // fill in symoff, nsyms, stroff, strsize fields
-        return;
-      string_table_offset_from_TEXT = symtab_load_command.stroff;
-      symbol_table_offset_from_TEXT = symtab_load_command.symoff;
+      symtab_load_command.symoff = m_data.GetU32(&offset);
+      symtab_load_command.nsyms = m_data.GetU32(&offset);
+      symtab_load_command.stroff = m_data.GetU32(&offset);
+      symtab_load_command.strsize = m_data.GetU32(&offset);
       break;
 
     case LC_DYLD_INFO:
@@ -2417,9 +2403,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
       const addr_t linkedit_file_offset = linkedit_section_sp->GetFileOffset();
       const addr_t symoff_addr = linkedit_load_addr +
-                                 symbol_table_offset_from_TEXT -
+                                 symtab_load_command.symoff -
                                  linkedit_file_offset;
-      strtab_addr = linkedit_load_addr + string_table_offset_from_TEXT -
+      strtab_addr = linkedit_load_addr + symtab_load_command.stroff -
                     linkedit_file_offset;
 
       // Always load dyld - the dynamic linker - from memory if we didn't
@@ -2487,17 +2473,17 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       lldb::addr_t linkedit_offset = linkedit_section_sp->GetFileOffset();
       lldb::offset_t linkedit_slide =
           linkedit_offset - m_linkedit_original_offset;
-      symbol_table_offset_from_TEXT += linkedit_slide;
-      string_table_offset_from_TEXT += linkedit_slide;
+      symtab_load_command.symoff += linkedit_slide;
+      symtab_load_command.stroff += linkedit_slide;
       dyld_info.export_off += linkedit_slide;
       dysymtab.indirectsymoff += linkedit_slide;
       function_starts_load_command.dataoff += linkedit_slide;
       exports_trie_load_command.dataoff += linkedit_slide;
     }
 
-    nlist_data.SetData(m_data, symbol_table_offset_from_TEXT,
+    nlist_data.SetData(m_data, symtab_load_command.symoff,
                        nlist_data_byte_size);
-    strtab_data.SetData(m_data, string_table_offset_from_TEXT,
+    strtab_data.SetData(m_data, symtab_load_command.stroff,
                         strtab_data_byte_size);
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
