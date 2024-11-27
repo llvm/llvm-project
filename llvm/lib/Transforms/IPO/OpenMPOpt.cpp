@@ -1538,7 +1538,7 @@ private:
     // required an RPC server. If its users were all optimized out then we can
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
-    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
       if (!GV->getType()->isPointerTy())
         return false;
 
