@@ -275,6 +275,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       Features.push_back("-lam-bh");
   }
 
+  // Select lamcas feature determined by -m[no-]lamcas.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mlamcas, options::OPT_mno_lamcas)) {
+    if (A->getOption().matches(options::OPT_mlamcas))
+      Features.push_back("+lamcas");
+    else
+      Features.push_back("-lamcas");
+  }
+
   // Select ld-seq-sa feature determined by -m[no-]ld-seq-sa.
   if (const Arg *A = Args.getLastArg(options::OPT_mld_seq_sa,
                                      options::OPT_mno_ld_seq_sa)) {

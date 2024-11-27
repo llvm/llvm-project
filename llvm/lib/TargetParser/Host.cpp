@@ -2027,11 +2027,11 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["frecipe"] = cpucfg2 & (1U << 25); // CPUCFG.2.FRECIPE
   Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
   Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
+  Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
 
   Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
 
   // TODO: Need to complete.
-  // Features["lamcas"] = cpucfg2 & (1U << 28);      // CPUCFG.2.LAMCAS
   // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
   // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
   return Features;
