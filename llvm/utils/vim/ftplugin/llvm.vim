@@ -11,3 +11,4 @@ setlocal softtabstop=2 shiftwidth=2
 setlocal expandtab
 setlocal comments+=:;
 setlocal commentstring=;\ %s
+setlocal iskeyword=%,@-@,$,a-z,A-Z,48-57,_,.,-
