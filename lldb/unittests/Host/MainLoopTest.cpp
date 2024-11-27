@@ -42,7 +42,8 @@ public:
         llvm::formatv("localhost:{0}", listen_socket_up->GetLocalPortNumber())
             .str());
     ASSERT_TRUE(error.Success());
-    ASSERT_TRUE(listen_socket_up->Accept(accept_socket).Success());
+    ASSERT_TRUE(listen_socket_up->Accept(std::chrono::seconds(1), accept_socket)
+                    .Success());
 
     callback_count = 0;
     socketpair[0] = std::move(connect_socket_up);

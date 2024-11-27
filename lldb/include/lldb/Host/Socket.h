@@ -13,6 +13,7 @@
 #include <string>
 
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private.h"
 
 #include "lldb/Host/SocketAddress.h"
@@ -108,7 +109,7 @@ public:
 
   // Accept a single connection and "return" it in the pointer argument. This
   // function blocks until the connection arrives.
-  virtual Status Accept(Socket *&socket);
+  virtual Status Accept(const Timeout<std::micro> &timeout, Socket *&socket);
 
   // Initialize a Tcp Socket object in listening mode.  listen and accept are
   // implemented separately because the caller may wish to manipulate or query
