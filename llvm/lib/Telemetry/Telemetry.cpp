@@ -3,11 +3,9 @@
 namespace llvm {
 namespace telemetry {
 
-llvm::json::Object TelemetryInfo::serializeToJson() const {
-  return json::Object{
-      {"SessionId", SessionId},
-  };
-};
+void TelemetryInfo::serialize(Serializer &serializer) const {
+  serializer.writeString("SessionId", SessionId);
+}
 
 } // namespace telemetry
 } // namespace llvm

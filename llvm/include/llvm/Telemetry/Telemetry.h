@@ -18,14 +18,24 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
-#include <chrono>
-#include <ctime>
 #include <memory>
 #include <optional>
 #include <string>
 
 namespace llvm {
 namespace telemetry {
+
+class Serializer {
+public:
+  virtual llvm::Error start() = 0;
+  virtual void writeBool(StringRef KeyName, bool Value) = 0;
+  virtual void writeInt32(StringRef KeyName, int Value) = 0;
+  virtual void writeSizeT(StringRef KeyName, size_t Value) = 0;
+  virtual void writeString(StringRef KeyName, StringRef Value) = 0;
+  virtual void writeKeyValueMap(StringRef KeyName,
+                                std::map<std::string, std::string> Value) = 0;
+  virtual llvm::Error finish() = 0;
+};
 
 /// Configuration for the Telemeter class.
 /// This stores configurations from both users and vendors and is passed
@@ -36,7 +46,10 @@ namespace telemetry {
 /// points specific to a vendor's implementation.
 struct Config {
   // If true, telemetry will be enabled.
-  bool EnableTelemetry;
+  const bool EnableTelemetry;
+  Config(bool E) : EnableTelemetry(E) {}
+
+  virtual std::string makeSessionId() { return "0"; }
 };
 
 /// For isa, dyn_cast, etc operations on TelemetryInfo.
@@ -74,7 +87,7 @@ struct TelemetryInfo {
   TelemetryInfo() = default;
   virtual ~TelemetryInfo() = default;
 
-  virtual json::Object serializeToJson() const;
+  virtual void serialize(Serializer &serializer) const;
 
   // For isa, dyn_cast, etc, operations.
   virtual KindType getKind() const { return EntryKind::Base; }
@@ -104,11 +117,10 @@ public:
 /// monitored and transmitting the data elsewhere.
 class Manager {
 public:
-  // Invoked upon tool startup
-  virtual void atStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
-
-  // Invoked upon tool exit.
-  virtual void atExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
+  // Dispatch Telemetry data to the Destination(s).
+  // This is non-const because the Manager may add or remove
+  // data from the entry.
+  virtual Error dispatch(TelemetryInfo *Entry) = 0;
 
   virtual void addDestination(std::unique_ptr<Destination> Destination) = 0;
 };
