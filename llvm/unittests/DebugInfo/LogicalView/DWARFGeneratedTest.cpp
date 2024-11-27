@@ -35,16 +35,17 @@ namespace {
 
 // Helper function to get the first compile unit.
 LVScopeCompileUnit *getFirstCompileUnit(LVScopeRoot *Root) {
-  EXPECT_NE(Root, nullptr);
+  if (!Root)
+    return nullptr;
+
   const LVScopes *CompileUnits = Root->getScopes();
-  EXPECT_NE(CompileUnits, nullptr);
-  EXPECT_EQ(CompileUnits->size(), 1u);
+  if (!CompileUnits)
+    return nullptr;
 
   LVScopes::const_iterator Iter = CompileUnits->begin();
-  EXPECT_NE(Iter, nullptr);
-  LVScopeCompileUnit *CompileUnit = static_cast<LVScopeCompileUnit *>(*Iter);
-  EXPECT_NE(CompileUnit, nullptr);
-  return CompileUnit;
+  return (Iter != CompileUnits->end())
+             ? static_cast<LVScopeCompileUnit *>(*Iter)
+             : nullptr;
 }
 
 // Helper function to create a reader.
@@ -58,7 +59,6 @@ std::unique_ptr<LVReader> createReader(LVReaderHandler &ReaderHandler,
       ReaderHandler.createReader(std::string(ObjectName));
   EXPECT_THAT_EXPECTED(ReaderOrErr, Succeeded());
   std::unique_ptr<LVReader> Reader = std::move(*ReaderOrErr);
-  EXPECT_NE(Reader, nullptr);
   return Reader;
 }
 
@@ -215,8 +215,9 @@ void generateDebugInfo(StringRef Path, Triple &Triple) {
 // Check the logical elements basic properties.
 void checkElementAttributes(LVReader *Reader) {
   LVScopeRoot *Root = Reader->getScopesRoot();
-  EXPECT_NE(Root, nullptr);
+  ASSERT_NE(Root, nullptr);
   LVScopeCompileUnit *CompileUnit = getFirstCompileUnit(Root);
+  ASSERT_NE(CompileUnit, nullptr);
 
   const LVScopes *Scopes = CompileUnit->getScopes();
   ASSERT_NE(Scopes, nullptr);
@@ -224,9 +225,9 @@ void checkElementAttributes(LVReader *Reader) {
 
   // Check values.
   LVScopes::const_iterator ScopeIter = Scopes->begin();
-  EXPECT_NE(ScopeIter, nullptr);
+  ASSERT_NE(ScopeIter, Scopes->end());
   LVScope *Scope = static_cast<LVScope *>(*ScopeIter);
-  EXPECT_NE(Scope, nullptr);
+  ASSERT_NE(Scope, nullptr);
   EXPECT_EQ(Scope->getAccessibilityCode(), 1); // Element
   EXPECT_EQ(Scope->getInlineCode(), 2);        // Element
   EXPECT_EQ(Scope->getVirtualityCode(), 3);    // Element
@@ -237,9 +238,9 @@ void checkElementAttributes(LVReader *Reader) {
   EXPECT_EQ(Scope->getDiscriminator(), 8);     // ScopeFunctionInlined
 
   // Check no-values.
-  EXPECT_NE(++ScopeIter, nullptr);
+  ASSERT_NE(++ScopeIter, Scopes->end());
   Scope = static_cast<LVScope *>(*ScopeIter);
-  EXPECT_NE(Scope, nullptr);
+  ASSERT_NE(Scope, nullptr);
   EXPECT_EQ(Scope->getAccessibilityCode(), 0); // Element
   EXPECT_EQ(Scope->getInlineCode(), 0);        // Element
   EXPECT_EQ(Scope->getVirtualityCode(), 0);    // Element
@@ -250,9 +251,9 @@ void checkElementAttributes(LVReader *Reader) {
   EXPECT_EQ(Scope->getDiscriminator(), 0);     // ScopeFunctionInlined
 
   // Check implicit values.
-  EXPECT_NE(++ScopeIter, nullptr);
+  ASSERT_NE(++ScopeIter, Scopes->end());
   Scope = static_cast<LVScope *>(*ScopeIter);
-  EXPECT_NE(Scope, nullptr);
+  ASSERT_NE(Scope, nullptr);
   EXPECT_EQ(Scope->getAccessibilityCode(), 1); // Element
   EXPECT_EQ(Scope->getInlineCode(), 2);        // Element
   EXPECT_EQ(Scope->getVirtualityCode(), 3);    // Element
@@ -266,66 +267,57 @@ void checkElementAttributes(LVReader *Reader) {
   ASSERT_NE(Symbols, nullptr);
   ASSERT_EQ(Symbols->size(), 3u);
 
-  // Check values.
   LVSymbols::const_iterator SymbolIter = Symbols->begin();
-  EXPECT_NE(SymbolIter, nullptr);
+  ASSERT_NE(SymbolIter, Symbols->end());
   LVSymbol *Symbol = static_cast<LVSymbol *>(*SymbolIter);
-  EXPECT_NE(Symbol, nullptr);
+  ASSERT_NE(Symbol, nullptr);
   EXPECT_EQ(Symbol->getBitSize(), 1); // Symbol
 
-  // Check no-values.
-  EXPECT_NE(++SymbolIter, nullptr);
+  ASSERT_NE(++SymbolIter, Symbols->end());
   Symbol = static_cast<LVSymbol *>(*SymbolIter);
-  EXPECT_NE(Symbol, nullptr);
+  ASSERT_NE(Symbol, nullptr);
   EXPECT_EQ(Symbol->getBitSize(), 0); // Symbol
 
-  // Check implicit values.
-  EXPECT_NE(++SymbolIter, nullptr);
+  ASSERT_NE(++SymbolIter, Symbols->end());
   Symbol = static_cast<LVSymbol *>(*SymbolIter);
-  EXPECT_NE(Symbol, nullptr);
+  ASSERT_NE(Symbol, nullptr);
   EXPECT_EQ(Symbol->getBitSize(), 1); // Symbol
 
   const LVTypes *Types = CompileUnit->getTypes();
   ASSERT_NE(Types, nullptr);
   ASSERT_EQ(Types->size(), 6u);
 
-  // Check values.
   LVTypes::const_iterator TypeIter = Types->begin();
-  EXPECT_NE(TypeIter, nullptr);
+  ASSERT_NE(TypeIter, Types->end());
   LVType *Type = static_cast<LVType *>(*TypeIter);
-  EXPECT_NE(Type, nullptr);
+  ASSERT_NE(Type, nullptr);
   EXPECT_EQ(Type->getCount(), 1); // Type
 
-  // Check no-values.
-  EXPECT_NE(++TypeIter, nullptr);
+  ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
-  EXPECT_NE(Type, nullptr);
+  ASSERT_NE(Type, nullptr);
   EXPECT_EQ(Type->getCount(), 0); // Type
 
-  // Check implicit values.
-  EXPECT_NE(++TypeIter, nullptr);
+  ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
-  EXPECT_NE(Type, nullptr);
+  ASSERT_NE(Type, nullptr);
   EXPECT_EQ(Type->getCount(), 1); // Type
 
-  // Check values.
-  EXPECT_NE(++TypeIter, nullptr);
+  ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
-  EXPECT_NE(Type, nullptr);
+  ASSERT_NE(Type, nullptr);
   EXPECT_EQ(Type->getLowerBound(), 1); // Type
   EXPECT_EQ(Type->getUpperBound(), 2); // Type
 
-  // Check no-values.
-  EXPECT_NE(++TypeIter, nullptr);
+  ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
-  EXPECT_NE(Type, nullptr);
+  ASSERT_NE(Type, nullptr);
   EXPECT_EQ(Type->getLowerBound(), 0); // Type
   EXPECT_EQ(Type->getUpperBound(), 0); // Type
 
-  // Check implicit values.
-  EXPECT_NE(++TypeIter, nullptr);
+  ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
-  EXPECT_NE(Type, nullptr);
+  ASSERT_NE(Type, nullptr);
   EXPECT_EQ(Type->getLowerBound(), 5); // Type
   EXPECT_EQ(Type->getUpperBound(), 6); // Type
 }
@@ -362,6 +354,7 @@ TEST(LogicalViewTest, ElementAttributes) {
   // Check logical elements properties.
   std::unique_ptr<LVReader> Reader =
       createReader(ReaderHandler, DirName, Filename);
+  ASSERT_NE(Reader, nullptr);
 
   checkElementAttributes(Reader.get());
 }
