@@ -8122,7 +8122,7 @@ void Parser::ParseParameterDeclarationClause(
       if (getLangOpts().CPlusPlus26) {
         // C++26 [dcl.dcl.fct]p3:
         //   A parameter-declaration-clause of the form
-        //   parameter-list '...' is deprecated
+        //   parameter-list '...' is deprecated.
         Diag(EllipsisLoc, diag::warn_deprecated_missing_comma_before_ellipsis)
             << FixItHint::CreateInsertion(EllipsisLoc, ", ");
       }
