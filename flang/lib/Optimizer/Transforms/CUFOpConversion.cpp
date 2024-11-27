@@ -668,6 +668,16 @@ struct CUFDataTransferOpConversion
       return mlir::success();
     }
 
+    auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
+      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
+        // Materialize the box to memory to be able to call the runtime.
+        mlir::Value box = builder.createTemporary(loc, val.getType());
+        builder.create<fir::StoreOp>(loc, val, box);
+        return box;
+      }
+      return val;
+    };
+
     // Conversion of data transfer involving at least one descriptor.
     if (mlir::isa<fir::BaseBoxType>(dstTy)) {
       // Transfer to a descriptor.
@@ -685,15 +695,7 @@ struct CUFDataTransferOpConversion
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
               loc, builder);
       }
-      auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
-        if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
-          // Materialize the box to memory to be able to call the runtime.
-          mlir::Value box = builder.createTemporary(loc, val.getType());
-          builder.create<fir::StoreOp>(loc, val, box);
-          return box;
-        }
-        return val;
-      };
+
       src = materializeBoxIfNeeded(src);
       dst = materializeBoxIfNeeded(dst);
 
@@ -708,6 +710,7 @@ struct CUFDataTransferOpConversion
     } else {
       // Transfer from a descriptor.
       mlir::Value dst = emboxDst(rewriter, op, symtab);
+      mlir::Value src = materializeBoxIfNeeded(op.getSrc());
 
       mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
           CUFDataTransferDescDescNoRealloc)>(loc, builder);
@@ -716,9 +719,8 @@ struct CUFDataTransferOpConversion
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-      llvm::SmallVector<mlir::Value> args{
-          fir::runtime::createArguments(builder, loc, fTy, dst, op.getSrc(),
-                                        modeValue, sourceFile, sourceLine)};
+      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+          builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
     }
