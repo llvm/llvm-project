@@ -2,21 +2,17 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,-div32 < %s | FileCheck %s --check-prefix=LA64
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,+div32 < %s | FileCheck %s --check-prefix=LA64-DIV32
 
-; TODO: Use div.w/mod.w for sdiv/srem i32
-
 define i32 @divw(i64 %a, i64 %b) {
 ; LA64-LABEL: divw:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    addi.w $a1, $a1, 0
-; LA64-NEXT:    div.d $a0, $a0, $a1
+; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    div.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
 ;
 ; LA64-DIV32-LABEL: divw:
 ; LA64-DIV32:       # %bb.0:
-; LA64-DIV32-NEXT:    addi.w $a0, $a0, 0
-; LA64-DIV32-NEXT:    addi.w $a1, $a1, 0
-; LA64-DIV32-NEXT:    div.d $a0, $a0, $a1
+; LA64-DIV32-NEXT:    div.w $a0, $a0, $a1
 ; LA64-DIV32-NEXT:    ret
   %conv1 = trunc i64 %a to i32
   %conv2 = trunc i64 %b to i32
@@ -45,16 +41,14 @@ define i32  @divwu(i64 %a, i64 %b) {
 define i32 @modw(i64 %a, i64 %b) {
 ; LA64-LABEL: modw:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    addi.w $a1, $a1, 0
-; LA64-NEXT:    mod.d $a0, $a0, $a1
+; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    mod.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
 ;
 ; LA64-DIV32-LABEL: modw:
 ; LA64-DIV32:       # %bb.0:
-; LA64-DIV32-NEXT:    addi.w $a0, $a0, 0
-; LA64-DIV32-NEXT:    addi.w $a1, $a1, 0
-; LA64-DIV32-NEXT:    mod.d $a0, $a0, $a1
+; LA64-DIV32-NEXT:    mod.w $a0, $a0, $a1
 ; LA64-DIV32-NEXT:    ret
   %conv1 = trunc i64 %a to i32
   %conv2 = trunc i64 %b to i32
