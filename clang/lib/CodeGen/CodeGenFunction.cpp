@@ -2947,19 +2947,27 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     // Without checking the length first, we may access an incorrect memory
     // address when using different versions.
     llvm::SmallVector<StringRef, 8> CurrTargetAttrFeats;
+    llvm::SmallVector<std::string, 8> TargetAttrFeats;
 
     for (StringRef Feat : Options[Index].Features) {
-      auto [LHS, RHS] = Feat.rsplit(';');
-      Feat = LHS.starts_with("priority=") ? RHS : LHS;
-      if (Feat.starts_with("arch="))
-        Feat = Feat.drop_front(sizeof("arch=") - 1);
-      if (Feat.starts_with('+'))
-        Feat = Feat.drop_front(1);
-      CurrTargetAttrFeats.push_back(Feat);
+      std::vector<std::string> FeatStr =
+          getContext()
+              .getTargetInfo()
+              .parseTargetAttr(Feat)
+              .Features;
+
+      assert(FeatStr.size() == 1 && "Feature string not delimited");
+
+      std::string &CurrFeat = FeatStr.front();
+      if (CurrFeat[0] == '+')
+        TargetAttrFeats.push_back(CurrFeat.substr(1));
     }
 
-    if (CurrTargetAttrFeats.empty())
+    if (TargetAttrFeats.empty())
       continue;
+
+    for (std::string &Feat : TargetAttrFeats)
+      CurrTargetAttrFeats.push_back(Feat);
 
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *FeatsCondition = EmitRISCVCpuSupports(CurrTargetAttrFeats);
