@@ -2105,7 +2105,6 @@ multiclass binary_atomic_op_bh<string inst, string op> {
 }
 
 let Predicates = [ HasLAM_BH, IsLA64 ] in {
-  
 defm : binary_atomic_op_bh<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_bh<"AMADD", "atomic_load_add">;
 def : Pat<(atomic_load_sub_i8_monotonic GPR:$rj, GPR:$rk),
@@ -2120,7 +2119,6 @@ def : Pat<(atomic_load_sub_i16 GPR:$rj, GPR:$rk),
 } // Predicates = [ IsLA64, HasLAM_BH ]
 
 let Predicates = [ HasLAMCAS, IsLA64 ] in {
-
 def : Pat<(atomic_cmp_swap_i8_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
           (AMCAS_B GPR:$cmp, GPR:$new, GPR:$addr)>;
 def : Pat<(atomic_cmp_swap_i16_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
@@ -2141,7 +2139,6 @@ def : Pat<(atomic_cmp_swap_i64 GPR:$addr, GPR:$cmp, GPR:$new),
 }
 
 let Predicates = [IsLA64] in {
-
 defm : binary_atomic_op_wd<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_wd<"AMADD", "atomic_load_add">;
 defm : binary_atomic_op_wd<"AMAND", "atomic_load_and">;

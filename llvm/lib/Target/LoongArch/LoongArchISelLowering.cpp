@@ -5833,7 +5833,7 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
                       AI->getOperation() == AtomicRMWInst::Or ||
                       AI->getOperation() == AtomicRMWInst::Xor))
       return AtomicExpansionKind::Expand;
-    if ((AI->getOperation() == AtomicRMWInst::Nand || Size < 32))
+    if (AI->getOperation() == AtomicRMWInst::Nand || Size < 32)
       return AtomicExpansionKind::CmpXChg;
   }
 
