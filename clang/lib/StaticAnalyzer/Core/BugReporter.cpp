@@ -589,8 +589,7 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
 
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     const PathDiagnosticConstruct &C) const {
-  if (const Stmt *S =
-          C.getCurrentNode()->getNextStmtForDiagnostics())
+  if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
     return PathDiagnosticLocation(S, getSourceManager(),
                                   C.getCurrLocationContext());
 
