@@ -41500,6 +41500,21 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             ShuffleVT,
             DAG.getNode(SrcOpcode, DL, OpVT, DAG.getBitcast(OpVT, Res)));
       }
+      // TODO: We can generalize this for other shuffles/conversions.
+      if (Opc == X86ISD::UNPCKL && SrcOpcode == X86ISD::CVTPH2PS &&
+          N1.getOpcode() == SrcOpcode &&
+          N0.getValueType() == N1.getValueType() &&
+          N0.getOperand(0).getValueType() == N1.getOperand(0).getValueType() &&
+          ShuffleVT.getScalarSizeInBits() == N0.getScalarValueSizeInBits() &&
+          IsSafeToMoveShuffle(N0, SrcOpcode) &&
+          IsSafeToMoveShuffle(N1, SrcOpcode)) {
+        EVT OpSrcVT = N0.getOperand(0).getValueType();
+        EVT OpDstVT = N0.getValueType();
+        SDValue Res =
+            DAG.getNode(Opc, DL, OpSrcVT, N0.getOperand(0), N1.getOperand(0));
+        return DAG.getBitcast(ShuffleVT,
+                              DAG.getNode(SrcOpcode, DL, OpDstVT, Res));
+      }
     }
     break;
   }
