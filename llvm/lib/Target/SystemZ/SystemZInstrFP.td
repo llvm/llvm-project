@@ -50,9 +50,9 @@ let isMoveReg = 1 in  {
   def LXR : UnaryRRE<"lxr", 0xB365, null_frag, FP128, FP128>;
   // For z13 we prefer LDR over LER to avoid partial register dependencies.
   let isCodeGenOnly = 1 in {
-    def LER16 : UnaryRR <"ler", 0x38, null_frag, FP16, FP16>;
-    def LDR16 : UnaryRR<"ldr",  0x28, null_frag, FP16, FP16>;
-    def LDR32 : UnaryRR<"ldr",  0x28, null_frag, FP32, FP32>;
+    def LER16 : UnaryRR<"ler", 0x38, null_frag, FP16, FP16>;
+    def LDR16 : UnaryRR<"ldr", 0x28, null_frag, FP16, FP16>;
+    def LDR32 : UnaryRR<"ldr", 0x28, null_frag, FP32, FP32>;
   }
 }
 
@@ -136,6 +136,9 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCImm, 15>;
 //===----------------------------------------------------------------------===//
 
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+  let isCodeGenOnly = 1 in
+    // Reload f16 from 4-byte spill slot.
+    defm LE16 : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP16, 4>;
   defm LE : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP32, 4>;
   defm LD : UnaryRXPair<"ld", 0x68, 0xED65, z_load, FP64, 8>;
 
@@ -156,6 +159,9 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
 //===----------------------------------------------------------------------===//
 
 let SimpleBDXStore = 1, mayStore = 1 in {
+  let isCodeGenOnly = 1 in
+    // Spill f16 to 4-byte spill slot.
+    defm STE16 : StoreRXPair<"ste", 0x70, 0xED66, store, FP16, 4>;
   defm STE : StoreRXPair<"ste", 0x70, 0xED66, store, FP32, 4>;
   defm STD : StoreRXPair<"std", 0x60, 0xED67, store, FP64, 8>;
 
@@ -241,7 +247,7 @@ let Uses = [FPC], mayRaiseFPException = 1, Predicates = [FeatureFPExtension] in 
   def CXGBRA : TernaryRRFe<"cxgbra", 0xB3A6, FP128, GR64>;
 }
 
-// Convert am unsigned integer register value to a floating-point one.
+// Convert an unsigned integer register value to a floating-point one.
 let Predicates = [FeatureFPExtension] in {
   let Uses = [FPC], mayRaiseFPException = 1 in {
     def CELFBR : TernaryRRFe<"celfbr", 0xB390, FP32,  GR32>;

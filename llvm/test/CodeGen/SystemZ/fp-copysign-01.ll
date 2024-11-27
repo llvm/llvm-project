@@ -2,10 +2,22 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare half @copysignh(half, half) readnone
 declare float @copysignf(float, float) readnone
 declare double @copysign(double, double) readnone
 ; FIXME: not really the correct prototype for SystemZ.
 declare fp128 @copysignl(fp128, fp128) readnone
+
+; Test f32 copies in which the sign comes from an f16.
+define float @f0(float %a, half %bh) {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: cpsdr %f0, %f0, %f8
+; CHECK: br %r14
+  %b = fpext half %bh to float
+  %res = call float @copysignf(float %a, float %b) readnone
+  ret float %res
+}
 
 ; Test f32 copies in which the sign comes from an f32.
 define float @f1(float %a, float %b) {
@@ -125,4 +137,24 @@ define void @f9(ptr %cptr, ptr %aptr, ptr %bptr) {
   %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
   store fp128 %c, ptr %cptr
   ret void
+}
+
+; Test f16 copies in which the sign comes from an f16.
+define half @f10(half %a, half %b) {
+; CHECK-LABEL: f10:
+; CHECK: brasl %r14, copysignh@PLT
+; CHECK: br %r14
+  %res = call half @copysignh(half %a, half %b) readnone
+  ret half %res
+}
+
+; Test f16 copies in which the sign comes from an f32.
+define half @f11(half %a, float %bf) {
+; CHECK-LABEL: f11:
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: brasl %r14, copysignh@PLT
+; CHECK: br %r14
+  %b = fptrunc float %bf to half
+  %res = call half @copysignh(half %a, half %b) readnone
+  ret half %res
 }

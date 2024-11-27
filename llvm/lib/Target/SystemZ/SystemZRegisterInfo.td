@@ -35,7 +35,9 @@ def subreg_ll32  : ComposedSubRegIndex<subreg_l64, subreg_l32>;
 // If the user provides an alternate order list of regs, it will be used for
 // XPLINK. Otherwise, by default, XPLINK will use the regList ordering as well
 multiclass SystemZRegClass<string name, list<ValueType> types, int size,
-                           dag regList, list<dag> altRegList = [regList], bit allocatable = 1> {
+                           dag regList, list<dag> altRegList = [regList],
+                           bit allocatable = 1,
+                           RegInfoByHwMode RI = RegInfoByHwMode<[], []>> {
   def AsmOperand : AsmOperandClass {
     let Name = name;
     let ParserMethod = "parse"#name;
@@ -49,6 +51,7 @@ multiclass SystemZRegClass<string name, list<ValueType> types, int size,
         const SystemZSubtarget &S = MF.getSubtarget<SystemZSubtarget>();
         return S.isTargetXPLINK64();
       }];
+      let RegInfos = RI;
     }
   def "" : RegisterOperand<!cast<RegisterClass>(name#"Bit")> {
     let ParserMatchClass = !cast<AsmOperandClass>(name#"AsmOperand");
@@ -250,7 +253,11 @@ foreach I = [0, 1, 4, 5, 8, 9, 12, 13] in {
 
 // There's no store-multiple instruction for FPRs, so we're not fussy
 // about the order in which call-saved registers are allocated.
-defm FP16  : SystemZRegClass<"FP16", [f16], 16, (sequence "F%uH", 0, 15)>;
+// Adjust the spill size of f16 to 32 bits in case of no vector support.
+def FP16RI : RegInfoByHwMode<[DefaultMode,       NoVecHwMode],
+                             [RegInfo<16,16,16>, RegInfo<16,32,32>]>;
+defm FP16  : SystemZRegClass<"FP16", [f16], 16, (sequence "F%uH", 0, 15),
+                             [(sequence "F%uH", 0, 15)], 1, FP16RI>;
 defm FP32  : SystemZRegClass<"FP32", [f32], 32, (sequence "F%uS", 0, 15)>;
 defm FP64  : SystemZRegClass<"FP64", [f64], 64, (sequence "F%uD", 0, 15)>;
 defm FP128 : SystemZRegClass<"FP128", [f128], 128,

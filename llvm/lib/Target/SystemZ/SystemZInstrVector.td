@@ -2210,6 +2210,8 @@ let Predicates = [FeatureVector] in {
   def : Pat<(f32 (bitconvert (i32 GR32:$src))), (LEFR GR32:$src)>;
   def : Pat<(i32 (bitconvert (f32 VR32:$src))),
             (EXTRACT_SUBREG (LFER VR32:$src), subreg_l32)>;
+  def LEFR_16 : UnaryAliasVRS<VR16, GR32>;
+  def LFER_16 : UnaryAliasVRS<GR32, VR16>;
 }
 
 // Floating-point values are stored in element 0 of the corresponding

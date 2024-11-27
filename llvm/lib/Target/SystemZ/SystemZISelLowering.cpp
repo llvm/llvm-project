@@ -226,23 +226,25 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SMUL_LOHI, VT, Custom);
       setOperationAction(ISD::UMUL_LOHI, VT, Custom);
 
-      // Only z196 and above have native support for conversions to unsigned.
-      // On z10, promoting to i64 doesn't generate an inexact condition for
-      // values that are outside the i32 range but in the i64 range, so use
-      // the default expansion.
-      if (!Subtarget.hasFPExtension())
-        setOperationAction(ISD::FP_TO_UINT, VT, Expand);
-
-      // Mirror those settings for STRICT_FP_TO_[SU]INT.  Note that these all
-      // default to Expand, so need to be modified to Legal where appropriate.
-      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Legal);
-      if (Subtarget.hasFPExtension())
-        setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Legal);
-
-      // And similarly for STRICT_[SU]INT_TO_FP.
-      setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Legal);
-      if (Subtarget.hasFPExtension())
-        setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Legal);
+      // The fp<=>int conversions are all Legal except for f16 and unsigned
+      // on z10 - only z196 and above have native support for conversions to
+      // unsigned. The Custom handlings for all these nodes only modify f16
+      // cases.
+      for (auto Op : {ISD::FP_TO_SINT, ISD::SINT_TO_FP, ISD::STRICT_FP_TO_SINT,
+                      ISD::STRICT_SINT_TO_FP})
+        setOperationAction(Op, VT, Custom);
+      // On z10, promoting the result to i64 doesn't generate an inexact
+      // condition for values that are outside the i32 range but in the i64
+      // range, so use the default expansion.
+      for (auto Op : {ISD::FP_TO_UINT, ISD::STRICT_FP_TO_UINT})
+        setOperationAction(Op, VT,
+                           Subtarget.hasFPExtension() ? Custom : Expand);
+      for (auto Op : {ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP}) {
+        // Handle unsigned 32-bit input types as signed 64-bit types on z10.
+        auto ActionZ10 = VT == MVT::i32 ? Promote : Expand;
+        setOperationAction(Op, VT,
+                           Subtarget.hasFPExtension() ? Custom : ActionZ10);
+      }
     }
   }
 
@@ -344,15 +346,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Traps are legal, as we will convert them to "j .+2".
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
-
-  // z10 has instructions for signed but not unsigned FP conversion.
-  // Handle unsigned 32-bit types as signed 64-bit types.
-  if (!Subtarget.hasFPExtension()) {
-    setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
-    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Promote);
-    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Expand);
-  }
 
   // We have native support for a 64-bit CTLZ, via FLOGR.
   setOperationAction(ISD::CTLZ, MVT::i32, Promote);
@@ -550,18 +543,22 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   }
 
   // Handle floating-point types.
-  // Promote all f16 operations to float, with some exceptions below.
-  for (unsigned Opc = 0; Opc < ISD::BUILTIN_OP_END; ++Opc)
-    setOperationAction(Opc, MVT::f16, Promote);
-  setOperationAction(ISD::ConstantFP, MVT::f16, Expand);
-  for (MVT VT : {MVT::f32, MVT::f64, MVT::f128}) {
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
-    setTruncStoreAction(VT, MVT::f16, Expand);
+  if (!useSoftFloat()) {
+    // Promote all f16 operations to float, with some exceptions below.
+    for (unsigned Opc = 0; Opc < ISD::BUILTIN_OP_END; ++Opc)
+      setOperationAction(Opc, MVT::f16, Promote);
+    setOperationAction(ISD::ConstantFP, MVT::f16, Expand);
+    for (MVT VT : {MVT::f32, MVT::f64, MVT::f128}) {
+      setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+      setTruncStoreAction(VT, MVT::f16, Expand);
+    }
+    for (auto Op : {ISD::LOAD, ISD::ATOMIC_LOAD, ISD::STORE, ISD::ATOMIC_STORE})
+      setOperationAction(Op, MVT::f16, Subtarget.hasVector() ? Legal : Custom);
+    setOperationAction(ISD::FP_ROUND, MVT::f16, LibCall);
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
+    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+    setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
   }
-  for (auto Op : {ISD::LOAD, ISD::ATOMIC_LOAD, ISD::STORE, ISD::ATOMIC_STORE})
-    setOperationAction(Op, MVT::f16, Subtarget.hasVector() ? Legal : Custom);
-  setOperationAction(ISD::FP_ROUND, MVT::f16, LibCall);
-  setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
 
   for (unsigned I = MVT::FIRST_FP_VALUETYPE;
        I <= MVT::LAST_FP_VALUETYPE;
@@ -590,6 +587,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       // Special treatment.
       setOperationAction(ISD::IS_FPCLASS, VT, Custom);
+      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
 
       // Handle constrained floating-point operations.
       setOperationAction(ISD::STRICT_FADD, VT, Legal);
@@ -833,9 +831,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Default to having -disable-strictnode-mutation on
   IsStrictFPEnabled = true;
-
-  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
 
   if (Subtarget.isTargetzOS()) {
     struct RTLibCallMapping {
@@ -1628,7 +1623,9 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
     case 'f': // Floating-point register
       if (!useSoftFloat()) {
-        if (VT.getSizeInBits() == 64)
+        if (VT.getSizeInBits() == 16)
+          return std::make_pair(0U, &SystemZ::FP16BitRegClass);
+        else if (VT.getSizeInBits() == 64)
           return std::make_pair(0U, &SystemZ::FP64BitRegClass);
         else if (VT.getSizeInBits() == 128)
           return std::make_pair(0U, &SystemZ::FP128BitRegClass);
@@ -1638,6 +1635,8 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
     case 'v': // Vector register
       if (Subtarget.hasVector()) {
+        if (VT.getSizeInBits() == 16)
+          return std::make_pair(0U, &SystemZ::VR16BitRegClass);
         if (VT.getSizeInBits() == 32)
           return std::make_pair(0U, &SystemZ::VR32BitRegClass);
         if (VT.getSizeInBits() == 64)
@@ -1673,6 +1672,9 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
       if (useSoftFloat())
         return std::make_pair(
             0u, static_cast<const TargetRegisterClass *>(nullptr));
+      if (getVTSizeInBits() == 16)
+        return parseRegisterNumber(Constraint, &SystemZ::FP16BitRegClass,
+                                   SystemZMC::FP16Regs, 16);
       if (getVTSizeInBits() == 32)
         return parseRegisterNumber(Constraint, &SystemZ::FP32BitRegClass,
                                    SystemZMC::FP32Regs, 16);
@@ -1686,6 +1688,9 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
       if (!Subtarget.hasVector())
         return std::make_pair(
             0u, static_cast<const TargetRegisterClass *>(nullptr));
+      if (getVTSizeInBits() == 16)
+        return parseRegisterNumber(Constraint, &SystemZ::VR16BitRegClass,
+                                   SystemZMC::VR16Regs, 32);
       if (getVTSizeInBits() == 32)
         return parseRegisterNumber(Constraint, &SystemZ::VR32BitRegClass,
                                    SystemZMC::VR32Regs, 32);
@@ -2766,13 +2771,21 @@ static SDNode *emitIntrinsicWithCCAndChain(SelectionDAG &DAG, SDValue Op,
 static SDNode *emitIntrinsicWithCC(SelectionDAG &DAG, SDValue Op,
                                    unsigned Opcode) {
   // Copy all operands except the intrinsic ID.
+  SDLoc DL(Op);
   unsigned NumOps = Op.getNumOperands();
   SmallVector<SDValue, 6> Ops;
   Ops.reserve(NumOps - 1);
-  for (unsigned I = 1; I < NumOps; ++I)
-    Ops.push_back(Op.getOperand(I));
+  for (unsigned I = 1; I < NumOps; ++I) {
+    SDValue CurrOper = Op.getOperand(I);
+    if (CurrOper.getValueType() == MVT::f16) {
+      assert((Op.getConstantOperandVal(0) == Intrinsic::s390_tdc && I == 1) &&
+             "Unhandled intrinsic with f16 operand.");
+      CurrOper = DAG.getFPExtendOrRound(CurrOper, DL, MVT::f32);
+    }
+    Ops.push_back(CurrOper);
+  }
 
-  SDValue Intr = DAG.getNode(Opcode, SDLoc(Op), Op->getVTList(), Ops);
+  SDValue Intr = DAG.getNode(Opcode, DL, Op->getVTList(), Ops);
   return Intr.getNode();
 }
 
@@ -3913,6 +3926,14 @@ SDValue SystemZTargetLowering::lowerSELECT_CC(SDValue Op,
   SDValue FalseOp  = Op.getOperand(3);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
   SDLoc DL(Op);
+
+  // SELECT_CC involving f16 will not have the cmp-ops promoted by the
+  // legalizer, as it will be handled according to the type of the resulting
+  // value. Extend them here if needed.
+  if (CmpOp0.getSimpleValueType() == MVT::f16) {
+    CmpOp0 = DAG.getFPExtendOrRound(CmpOp0, SDLoc(CmpOp0), MVT::f32);
+    CmpOp1 = DAG.getFPExtendOrRound(CmpOp1, SDLoc(CmpOp1), MVT::f32);
+  }
 
   Comparison C(getCmp(DAG, CmpOp0, CmpOp1, CC, DL));
 
@@ -6786,15 +6807,97 @@ SDValue SystemZTargetLowering::lowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDValue In = Op.getOperand(Op->isStrictFPOpcode() ? 1 : 0);
   if (In.getSimpleValueType() != MVT::f16)
-    return Op;  // Legal
+    return Op;      // Legal
   return SDValue(); // Let legalizer emit the libcall.
 }
 
+SDValue SystemZTargetLowering::lower_FP_TO_INT(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDValue In = Op.getOperand(0);
+  if (In.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: Extend to f32 before the operation.
+  SDLoc DL(Op);
+  SDValue InF32 = DAG.getFPExtendOrRound(In, SDLoc(In), MVT::f32);
+  return DAG.getNode(Op->getOpcode(), DL, Op.getSimpleValueType(), InF32);
+}
+
+SDValue SystemZTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue In = Op.getOperand(1);
+
+  if (In.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: Extend to f32 before the operation.
+  SDLoc DL(Op);
+  SDValue InF32 = DAG.getFPExtendOrRound(In, SDLoc(In), MVT::f32);
+  return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), {Chain, InF32});
+}
+
+SDValue SystemZTargetLowering::lower_INT_TO_FP(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  if (Op.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: first do the operation to f32 and then round to f16.
+  SDLoc DL(Op);
+  SDValue F32Conv =
+      DAG.getNode(Op->getOpcode(), DL, MVT::f32, Op->getOperand(0));
+  return DAG.getFPExtendOrRound(F32Conv, DL, MVT::f16);
+}
+
+SDValue SystemZTargetLowering::lowerSTRICT_INT_TO_FP(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  if (Op.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: first do the operation to f32 and then round to f16.
+  SDLoc DL(Op);
+  SDValue F32Conv =
+      DAG.getNode(Op->getOpcode(), DL, DAG.getVTList(MVT::f32, MVT::Other),
+                  {Op->getOperand(0), Op->getOperand(1)});
+  SDValue F16Res = DAG.getFPExtendOrRound(F32Conv, DL, MVT::f16);
+  return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), F16Res,
+                     F32Conv.getValue(1));
+}
+
+// Shift the lower 2 bytes of Op to the left in order to insert into the
+// upper 2 bytes of the FP register.
+static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::i32 &&
+         "Expexted to convert i32 to f16.");
+  SDLoc DL(Op);
+  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i32, Op,
+                             DAG.getConstant(16, DL, MVT::i32));
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Shft);
+  SDValue F16Val =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
+  return F16Val;
+}
+
+// Extract Op into GPR and shift the 2 f16 bytes to the right.
+static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::f16 &&
+         "Expected to convert f16 to i32.");
+  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f32);
+  SDValue In32 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f32,
+                                           SDValue(U32, 0), Op);
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, In32);
+  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i32, BCast,
+                             DAG.getConstant(16, DL, MVT::i32));
+  return Shft;
+}
+
+// Lower an f16 LOAD in case of no vector support.
 SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
                                             SelectionDAG &DAG) const {
   MVT RegVT = Op.getSimpleValueType();
   assert(RegVT == MVT::f16 && "Expected to lower an f16 load.");
 
+  // Load as integer.
   SDLoc DL(Op);
   SDValue NewLd;
   if (auto *AtomicLd = dyn_cast<AtomicSDNode>(Op.getNode())) {
@@ -6806,43 +6909,29 @@ SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
   } else {
     LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
     assert(EVT(RegVT) == Ld->getMemoryVT() && "Unhandled f16 load");
-    NewLd = DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i32, Ld->getChain(),
-                           Ld->getBasePtr(), Ld->getPointerInfo(),
-                           MVT::i16, Ld->getOriginalAlign(),
-                           Ld->getMemOperand()->getFlags());
+    NewLd =
+        DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i32, Ld->getChain(),
+                       Ld->getBasePtr(), Ld->getPointerInfo(), MVT::i16,
+                       Ld->getOriginalAlign(), Ld->getMemOperand()->getFlags());
   }
-  // Load as integer, shift and then insert into upper 2 bytes of the FP
-  // register.
-  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i32, NewLd,
-                             DAG.getConstant(16, DL, MVT::i32));
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Shft);
-  SDValue F16Val = DAG.getTargetExtractSubreg(SystemZ::subreg_h16,
-                                              DL, MVT::f16, BCast);
+  SDValue F16Val = convertToF16(NewLd, DAG);
   return DAG.getMergeValues({F16Val, NewLd.getValue(1)}, DL);
 }
 
+// Lower an f16 STORE in case of no vector support.
 SDValue SystemZTargetLowering::lowerStoreF16(SDValue Op,
                                              SelectionDAG &DAG) const {
-  SDValue StoredVal = Op->getOperand(1);
-  MVT StoreVT = StoredVal.getSimpleValueType();
-  assert(StoreVT == MVT::f16 && "Expected to lower an f16 store.");
-
-  // Move into a GPR, shift and store the 2 bytes.
   SDLoc DL(Op);
-  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f32);
-  SDValue In32 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL,
-                                           MVT::f32, SDValue(U32, 0), StoredVal);
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, In32);
-  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i32, BCast,
-                             DAG.getConstant(16, DL, MVT::i32));
+  SDValue Shft = convertFromF16(Op->getOperand(1), DL, DAG);
 
   if (auto *AtomicSt = dyn_cast<AtomicSDNode>(Op.getNode()))
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MVT::i16, AtomicSt->getChain(),
-                         Shft, AtomicSt->getBasePtr(), AtomicSt->getMemOperand());
+                         Shft, AtomicSt->getBasePtr(),
+                         AtomicSt->getMemOperand());
 
   StoreSDNode *St = cast<StoreSDNode>(Op.getNode());
-  return DAG.getTruncStore(St->getChain(), DL, Shft, St->getBasePtr(),
-                           MVT::i16, St->getMemOperand());
+  return DAG.getTruncStore(St->getChain(), DL, Shft, St->getBasePtr(), MVT::i16,
+                           St->getMemOperand());
 }
 
 SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
@@ -6875,8 +6964,25 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
     TDCMask |= SystemZ::TDCMASK_ZERO_MINUS;
   SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i64);
 
+  if (Arg.getSimpleValueType() == MVT::f16)
+    Arg = DAG.getFPExtendOrRound(Arg, SDLoc(Arg), MVT::f32);
   SDValue Intr = DAG.getNode(SystemZISD::TDC, DL, ResultVT, Arg, TDCMaskV);
   return getCCResult(DAG, Intr);
+}
+
+SDValue SystemZTargetLowering::lowerFCOPYSIGN(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue SignArg = Op.getOperand(1);
+  if (SignArg.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: Extend SignArg f32. The DAGCombiner removes the fpext without
+  // asking, but it is needed as there is no target instruction handling f16.
+  SDValue SignArgF32 =
+      DAG.getFPExtendOrRound(SignArg, SDLoc(SignArg), MVT::f32);
+  return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(),
+                     {Op.getOperand(0), SignArgF32});
 }
 
 SDValue SystemZTargetLowering::lowerREADCYCLECOUNTER(SDValue Op,
@@ -7034,12 +7140,26 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_EXTEND:
   case ISD::STRICT_FP_EXTEND:
     return lowerFP_EXTEND(Op, DAG);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return lower_FP_TO_INT(Op, DAG);
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+    return lowerSTRICT_FP_TO_INT(Op, DAG);
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    return lower_INT_TO_FP(Op, DAG);
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+    return lowerSTRICT_INT_TO_FP(Op, DAG);
   case ISD::LOAD:
     return lowerLoadF16(Op, DAG);
   case ISD::STORE:
     return lowerStoreF16(Op, DAG);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
+  case ISD::FCOPYSIGN:
+    return lowerFCOPYSIGN(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::READCYCLECOUNTER:
@@ -7101,8 +7221,7 @@ static SDValue expandBitCastF128ToI128(SelectionDAG &DAG, SDValue Src,
   return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i128, Lo, Hi);
 }
 
-// Lower operations with invalid operand or result types (currently used
-// only for 128-bit integer types).
+// Lower operations with invalid operand or result types.
 void
 SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
                                              SmallVectorImpl<SDValue> &Results,
@@ -7162,11 +7281,29 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     break;
   }
   case ISD::BITCAST: {
+    if (useSoftFloat())
+      return;
+    SDLoc DL(N);
     SDValue Src = N->getOperand(0);
-    if (N->getValueType(0) == MVT::i128 && Src.getValueType() == MVT::f128 &&
-        !useSoftFloat()) {
-      SDLoc DL(N);
+    EVT SrcVT = Src.getValueType();
+    EVT ResVT = N->getValueType(0);
+    if (ResVT == MVT::i128 && SrcVT == MVT::f128)
       Results.push_back(expandBitCastF128ToI128(DAG, Src, DL));
+    else if (SrcVT == MVT::i16 && ResVT == MVT::f16) {
+      SDValue In32 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
+      SDValue Res =
+          Subtarget.hasVector()
+              ? SDValue(
+                    DAG.getMachineNode(SystemZ::LEFR_16, DL, MVT::f16, In32), 0)
+              : convertToF16(In32, DAG);
+      Results.push_back(Res);
+    } else if (SrcVT == MVT::f16 && ResVT == MVT::i16) {
+      SDValue ExtractedI32 =
+          Subtarget.hasVector()
+              ? SDValue(DAG.getMachineNode(SystemZ::LFER_16, DL, MVT::i32, Src),
+                        0)
+              : convertFromF16(Src, DL, DAG);
+      Results.push_back(DAG.getZExtOrTrunc(ExtractedI32, DL, ResVT));
     }
     break;
   }

@@ -155,10 +155,19 @@ struct agg_longdouble { long double a; };
 struct agg_longdouble pass_agg_longdouble(struct agg_longdouble arg) { return arg; }
 // CHECK-LABEL: define{{.*}} void @pass_agg_longdouble(ptr dead_on_unwind noalias writable sret(%struct.agg_longdouble) align 8 %{{.*}}, ptr %{{.*}})
 
+struct agg__Float16_a4 { _Float16 a __attribute__((aligned (4))); };
+struct agg__Float16_a4 pass_agg__Float16_a4(struct agg__Float16_a4 arg) { return arg; }
+// HARD-FLOAT-LABEL: define{{.*}} void @pass_agg__Float16_a4(ptr dead_on_unwind noalias writable sret(%struct.agg__Float16_a4) align 4 %{{.*}}, float %{{.*}})
+// SOFT-FLOAT-LABEL: define{{.*}} void @pass_agg__Float16_a4(ptr dead_on_unwind noalias writable sret(%struct.agg__Float16_a4) align 4 %{{.*}}, i32 noext %{{.*}})
+
 struct agg__Float16_a8 { _Float16 a __attribute__((aligned (8))); };
 struct agg__Float16_a8 pass_agg__Float16_a8(struct agg__Float16_a8 arg) { return arg; }
 // HARD-FLOAT-LABEL: define{{.*}} void @pass_agg__Float16_a8(ptr dead_on_unwind noalias writable sret(%struct.agg__Float16_a8) align 8 %{{.*}}, double %{{.*}})
 // SOFT-FLOAT-LABEL: define{{.*}} void @pass_agg__Float16_a8(ptr dead_on_unwind noalias writable sret(%struct.agg__Float16_a8) align 8 %{{.*}}, i64 %{{.*}})
+
+struct agg__Float16_a16 { _Float16 a __attribute__((aligned (16))); };
+struct agg__Float16_a16 pass_agg__Float16_a16(struct agg__Float16_a16 arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_agg__Float16_a16(ptr dead_on_unwind noalias writable sret(%struct.agg__Float16_a16) align 16 %{{.*}}, ptr %{{.*}})
 
 struct agg_float_a8 { float a __attribute__((aligned (8))); };
 struct agg_float_a8 pass_agg_float_a8(struct agg_float_a8 arg) { return arg; }
