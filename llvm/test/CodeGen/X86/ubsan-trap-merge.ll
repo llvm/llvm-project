@@ -4,7 +4,8 @@
 ; This test shows that ubsantrap can, in the absence of nomerge, be merged by
 ; the backend into a single ud1 instruction (thus making debugging difficult).
 ;
-; The LLVM IR was generated from clang/test/CodeGen/ubsan-trap-merge.c.
+; The LLVM IR was generated from clang/test/CodeGen/ubsan-trap-merge.c with
+; 'nomerge' manually removed from ubsantraps.
 ;
 ; ModuleID = '../clang/test/CodeGen/ubsan-trap-merge.c'
 source_filename = "../clang/test/CodeGen/ubsan-trap-merge.c"
@@ -21,14 +22,14 @@ define dso_local range(i32 -2147483523, -2147483648) i32 @f(i32 noundef %x) loca
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %trap
-; CHECK-NEXT:    ud1l 2(%eax), %eax
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 125), !nosanitize !5
   %1 = extractvalue { i32, i1 } %0, 1, !nosanitize !5
   br i1 %1, label %trap, label %cont, !nosanitize !5
 
 trap:                                             ; preds = %entry
-  tail call void @llvm.ubsantrap(i8 2) #4, !nosanitize !5
+  tail call void @llvm.ubsantrap(i8 0) #4, !nosanitize !5
   unreachable, !nosanitize !5
 
 cont:                                             ; preds = %entry
@@ -52,14 +53,14 @@ define dso_local range(i32 -2147483521, -2147483648) i32 @g(i32 noundef %x) loca
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_1: # %trap
-; CHECK-NEXT:    ud1l 2(%eax), %eax
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 127), !nosanitize !5
   %1 = extractvalue { i32, i1 } %0, 1, !nosanitize !5
   br i1 %1, label %trap, label %cont, !nosanitize !5
 
 trap:                                             ; preds = %entry
-  tail call void @llvm.ubsantrap(i8 2) #4, !nosanitize !5
+  tail call void @llvm.ubsantrap(i8 0) #4, !nosanitize !5
   unreachable, !nosanitize !5
 
 cont:                                             ; preds = %entry
@@ -75,23 +76,21 @@ define dso_local range(i32 -2147483521, -2147483648) i32 @h(i32 noundef %x, i32 
 ; CHECK-NEXT:    jo .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %cont
 ; CHECK-NEXT:    addl $129, %esi
-; CHECK-NEXT:    jo .LBB2_4
+; CHECK-NEXT:    jo .LBB2_3
 ; CHECK-NEXT:  # %bb.2: # %cont2
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    cmovll %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB2_3: # %trap
-; CHECK-NEXT:    ud1l 2(%eax), %eax
-; CHECK-NEXT:  .LBB2_4: # %trap1
-; CHECK-NEXT:    ud1l 4(%eax), %eax
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 127), !nosanitize !5
   %1 = extractvalue { i32, i1 } %0, 1, !nosanitize !5
   br i1 %1, label %trap, label %cont, !nosanitize !5
 
 trap:                                             ; preds = %entry
-  tail call void @llvm.ubsantrap(i8 2) #4, !nosanitize !5
+  tail call void @llvm.ubsantrap(i8 0) #4, !nosanitize !5
   unreachable, !nosanitize !5
 
 cont:                                             ; preds = %entry
@@ -100,7 +99,7 @@ cont:                                             ; preds = %entry
   br i1 %3, label %trap1, label %cont2, !nosanitize !5
 
 trap1:                                            ; preds = %cont
-  tail call void @llvm.ubsantrap(i8 4) #4, !nosanitize !5
+  tail call void @llvm.ubsantrap(i8 0) #4, !nosanitize !5
   unreachable, !nosanitize !5
 
 cont2:                                            ; preds = %cont
@@ -126,14 +125,14 @@ define dso_local noundef i32 @m(i32 noundef %x, i32 noundef %y) local_unnamed_ad
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_4: # %trap.i
-; CHECK-NEXT:    ud1l 2(%eax), %eax
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 125), !nosanitize !5
   %1 = extractvalue { i32, i1 } %0, 1, !nosanitize !5
   br i1 %1, label %trap.i, label %f.exit, !nosanitize !5
 
 trap.i:                                           ; preds = %entry
-  tail call void @llvm.ubsantrap(i8 2) #4, !nosanitize !5
+  tail call void @llvm.ubsantrap(i8 0) #4, !nosanitize !5
   unreachable, !nosanitize !5
 
 f.exit:                                           ; preds = %entry
@@ -142,7 +141,7 @@ f.exit:                                           ; preds = %entry
   br i1 %3, label %trap.i2, label %g.exit, !nosanitize !5
 
 trap.i2:                                          ; preds = %f.exit
-  tail call void @llvm.ubsantrap(i8 2) #4, !nosanitize !5
+  tail call void @llvm.ubsantrap(i8 0) #4, !nosanitize !5
   unreachable, !nosanitize !5
 
 g.exit:                                           ; preds = %f.exit
@@ -153,7 +152,7 @@ g.exit:                                           ; preds = %f.exit
   br i1 %7, label %trap, label %cont, !nosanitize !5
 
 trap:                                             ; preds = %g.exit
-  tail call void @llvm.ubsantrap(i8 2) #4, !nosanitize !5
+  tail call void @llvm.ubsantrap(i8 0) #4, !nosanitize !5
   unreachable, !nosanitize !5
 
 cont:                                             ; preds = %g.exit

@@ -74,11 +74,11 @@ char B2[10];
 // CHECK-LABEL: @f8
 void f8(int i, int k) {
   // NOOPTLOCAL: call void @llvm.ubsantrap(i8 3)
-  // NOOPTARRAY: call void @llvm.ubsantrap(i8 2)
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18)
   B[i] = '\0';
 
   // NOOPTLOCAL: call void @llvm.ubsantrap(i8 5)
-  // NOOPTARRAY: call void @llvm.ubsantrap(i8 4)
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18)
   B2[k] = '\0';
 }
 

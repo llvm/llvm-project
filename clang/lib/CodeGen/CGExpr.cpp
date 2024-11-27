@@ -3905,9 +3905,11 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  if (!ClSanitizeDebugDeoptimization &&
-      CGM.getCodeGenOpts().OptimizationLevel && TrapBB &&
-      (!CurCodeDecl || !CurCodeDecl->hasAttr<OptimizeNoneAttr>())) {
+  bool NoMerge = ClSanitizeDebugDeoptimization ||
+                 !CGM.getCodeGenOpts().OptimizationLevel ||
+                 (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+
+  if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
@@ -3919,18 +3921,17 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB);
     EmitBlock(TrapBB);
 
-    llvm::CallInst *TrapCall = Builder.CreateCall(
-        CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-        llvm::ConstantInt::get(CGM.Int8Ty,
-                               ClSanitizeDebugDeoptimization
-                                   ? TrapBB->getParent()->size()
-                                   : static_cast<uint64_t>(CheckHandlerID)));
+    llvm::CallInst *TrapCall =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
                                     CGM.getCodeGenOpts().TrapFuncName);
       TrapCall->addFnAttr(A);
     }
+    if (NoMerge)
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
