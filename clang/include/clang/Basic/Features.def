@@ -156,7 +156,7 @@ FEATURE(objc_class_property, LangOpts.ObjC)
 FEATURE(objc_c_static_assert, LangOpts.C11)
 FEATURE(objc_cxx_static_assert, LangOpts.CPlusPlus11)
 EXTENSION(objc_c_static_assert, true)
-// C11 features 
+// C11 features
 FEATURE(c_alignas, LangOpts.C11)
 FEATURE(c_alignof, LangOpts.C11)
 FEATURE(c_atomic, LangOpts.C11)
