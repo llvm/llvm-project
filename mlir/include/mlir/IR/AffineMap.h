@@ -595,10 +595,7 @@ AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 /// potentially empty maps. Assumes each of the underlying map has 0 symbols.
 /// The resulting map has a number of dims equal to the max of `maps`' dims and
 /// the concatenated results as its results.
-///
-/// This method asserts when `maps` is empty.
-/// TODO: this should return an empty map when `maps` is empty but there is no
-/// way to get the MLIRContext needed to construct it.
+/// Returns an empty map if all input `maps` are empty.
 ///
 /// Example:
 /// When applied to the following list of 3 affine maps,
@@ -616,7 +613,7 @@ AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 /// ```mlir
 ///     (i, j, k) -> (i, k, k, j, i, j)
 /// ```
-AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
+AffineMap concatAffineMaps(ArrayRef<AffineMap> maps, MLIRContext *context);
 
 /// Returns the map that results from projecting out the dimensions specified in
 /// `projectedDimensions`. The projected dimensions are set to 0.
