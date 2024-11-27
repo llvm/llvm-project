@@ -20,14 +20,14 @@
 // DISASM-NEXT:   leaq -4(%r15), %r15
 // DISASM-NEXT:   addq $-4, %rsp
 // DISASM-NEXT:   addq $-4, %r12
- # EPGR
+# EGPR
 // DISASM-NEXT:   movq $-8, %r16
 // DISASM-NEXT:   movq $-8, %r20
 // DISASM-NEXT:   movq $-4, %r16
 // DISASM-NEXT:   addq $-8, %r16
 // DISASM-NEXT:   addq $-8, %r28
 // DISASM-NEXT:   addq $-4, %r16
- # NDD
+# NDD
 // DISASM-NEXT:   addq $-10, %r16, %r16
 // DISASM-NEXT:   addq $-10, %r16, %r20
 // DISASM-NEXT:   addq $-10, %r16, %rax
