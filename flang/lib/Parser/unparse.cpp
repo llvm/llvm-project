@@ -2834,6 +2834,7 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
+  WALK_NESTED_ENUM(OmpBindClause, Type) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, Type) // OMP PROC_BIND
   WALK_NESTED_ENUM(OmpDefaultClause, Type) // OMP DEFAULT
   WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP DEFAULTMAP
