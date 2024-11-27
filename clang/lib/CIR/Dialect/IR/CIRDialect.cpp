@@ -3197,21 +3197,7 @@ LogicalResult cir::ConstArrayAttr::verify(
   // Make sure both number of elements and subelement types match type.
   if (at.getSize() != arrayAttr.size() + trailingZerosNum)
     return emitError() << "constant array size should match type size";
-  LogicalResult eltTypeCheck = success();
-  arrayAttr.walkImmediateSubElements(
-      [&](Attribute attr) {
-        // Once we find a mismatch, stop there.
-        if (eltTypeCheck.failed())
-          return;
-        auto typedAttr = mlir::dyn_cast<TypedAttr>(attr);
-        if (!typedAttr || typedAttr.getType() != at.getEltType()) {
-          eltTypeCheck = failure();
-          emitError()
-              << "constant array element should match array element type";
-        }
-      },
-      [&](Type type) {});
-  return eltTypeCheck;
+  return success();
 }
 
 ::mlir::Attribute cir::ConstArrayAttr::parse(::mlir::AsmParser &parser,

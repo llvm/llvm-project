@@ -12,12 +12,10 @@ void foo(int x) {
   A a = {.x = x};
 }
 
-// CHECK-DAG: ![[TY_U:.*]] = !cir.struct<union "U" {!s32i}>
-// CHECK-DAG: ![[anon0:.*]] = !cir.struct<struct {{.*}}{!u32i}
-// CHECK-DAG: ![[TY_u:.*]] = !cir.struct<union {{.*}}{!s32i, !cir.float}
+// CHECK-DAG: ![[anon0:.*]] = !cir.struct<struct  {!u32i}>
+// CHECK-DAG: ![[anon:.*]] = !cir.struct<struct  {!s32i}>
 // CHECK-DAG: #[[bfi_x:.*]] = #cir.bitfield_info<name = "x", storage_type = !u32i, size = 16, offset = 0, is_signed = true>
 // CHECK-DAG: #[[bfi_y:.*]] = #cir.bitfield_info<name = "y", storage_type = !u32i, size = 16, offset = 16, is_signed = true>
-// CHECK-DAG: ![[TY_A:.*]] = !cir.struct<union "A" {!s32i, ![[anon0]]}>
 // CHECK-DAG: ![[anon1:.*]] = !cir.struct<union "{{.*}}" {!u32i, !cir.array<!u8i x 4>}
 
 // CHECK-LABEL:   cir.func @foo(
@@ -34,7 +32,7 @@ void foo(int x) {
 // CHECK:  cir.return
 
 union { int i; float f; } u = { };
-// CHECK: cir.global external @u = #cir.zero : ![[TY_u]]
+// CHECK: cir.global external @u = #cir.zero : ![[anon]]
 
 unsigned is_little(void) {
   const union {
@@ -45,8 +43,9 @@ unsigned is_little(void) {
 }
 
 // CHECK: cir.func @is_little
-// CHECK: %[[VAL_1:.*]] = cir.get_global @is_little.one : !cir.ptr<![[anon1]]>
-// CHECK: %[[VAL_2:.*]] = cir.get_member %[[VAL_1]][1] {name = "c"} : !cir.ptr<![[anon1]]> -> !cir.ptr<!cir.array<!u8i x 4>>
+// CHECK: %[[VAL_1:.*]] = cir.get_global @is_little.one : !cir.ptr<![[anon0]]>
+// CHECK: %[[VAL_2:.*]] = cir.cast(bitcast, %[[VAL_1]] : !cir.ptr<![[anon0]]>), !cir.ptr<![[anon1]]>
+// CHECK: %[[VAL_3:.*]] = cir.get_member %[[VAL_2]][1] {name = "c"} : !cir.ptr<![[anon1]]> -> !cir.ptr<!cir.array<!u8i x 4>>
 
 typedef union {
   int x;

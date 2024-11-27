@@ -297,9 +297,6 @@ public:
       return true;
     }
 
-    if (mlir::isa<cir::InactiveUnionFieldAttr>(attr))
-      return true;
-
     llvm_unreachable("NYI");
   }
 

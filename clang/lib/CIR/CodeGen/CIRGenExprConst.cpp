@@ -377,31 +377,7 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   CharUnits AlignedSize = Size.alignTo(Align);
 
   bool Packed = false;
-  ArrayRef<mlir::Attribute> UnpackedElems;
-
-  // Fill the init elements for union. This comes from a fundamental
-  // difference between CIR and LLVM IR. In LLVM IR, the union is simply a
-  // struct with the largest member. So it is fine to have only one init
-  // element. But in CIR, the union has the information for all members. So if
-  // we only pass a single init element, we may be in trouble. We solve the
-  // problem by appending placeholder attribute for the uninitialized fields.
-  llvm::SmallVector<mlir::Attribute, 32> UnionElemsStorage;
-  if (auto desired = dyn_cast<cir::StructType>(DesiredTy);
-      desired && desired.isUnion() &&
-      Elems.size() != desired.getNumElements()) {
-    for (auto elemTy : desired.getMembers()) {
-      if (auto Ty = mlir::dyn_cast<mlir::TypedAttr>(Elems.back());
-          Ty && Ty.getType() == elemTy)
-        UnionElemsStorage.push_back(Elems.back());
-      else
-        UnionElemsStorage.push_back(cir::InactiveUnionFieldAttr::get(
-            CGM.getBuilder().getContext(), elemTy));
-    }
-
-    UnpackedElems = UnionElemsStorage;
-  } else {
-    UnpackedElems = Elems;
-  }
+  ArrayRef<mlir::Attribute> UnpackedElems = Elems;
 
   llvm::SmallVector<mlir::Attribute, 32> UnpackedElemStorage;
   if (DesiredSize < AlignedSize || DesiredSize.alignTo(Align) != DesiredSize) {
@@ -1048,8 +1024,6 @@ public:
         return {};
       if (i == 0)
         CommonElementType = C.getType();
-      else if (C.getType() != CommonElementType)
-        CommonElementType = nullptr;
       Elts.push_back(std::move(C));
     }
 

@@ -328,7 +328,8 @@ cir.func @cast27(%p : !u64i) {
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
 module {
-  // expected-error@+1 {{constant array element should match array element type}}
+  // FIXME: The check for equality of the array element type is currently disabled due to https://github.com/llvm/clangir/pull/1007
+  // expected error {{constant array element should match array element type}}
   cir.global external @a = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<23> : !u8i, #cir.int<33> : !u8i] : !cir.array<!u32i x 3>>
 }
 
