@@ -198,4 +198,6 @@ add_libc_unittest(
     libc.include.signal
     libc.src.stdlib.exit
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.sleep)
+    libc.src.__support.threads.sleep
+    libc.test.UnitTest.ErrnoSetterMatcher
+    )
