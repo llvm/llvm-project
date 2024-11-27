@@ -3643,6 +3643,206 @@ bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
   return true;
 }
 
+// Match BITOP3 operation and return a number of matched instructions plus
+// truth table.
+static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
+                                              SmallVectorImpl<Register> &Src,
+                                              const MachineRegisterInfo &MRI) {
+  unsigned NumOpcodes = 0;
+  uint8_t LHSBits, RHSBits;
+
+  auto getOperandBits = [&Src, R, &MRI](Register Op, uint8_t &Bits) -> bool {
+    // Define truth table given Src0, Src1, Src2 bits permutations:
+    //                          0     0     0
+    //                          0     0     1
+    //                          0     1     0
+    //                          0     1     1
+    //                          1     0     0
+    //                          1     0     1
+    //                          1     1     0
+    //                          1     1     1
+    const uint8_t SrcBits[3] = { 0xf0, 0xcc, 0xaa };
+
+    if (mi_match(Op, MRI, m_AllOnesInt())) {
+      Bits = 0xff;
+      return true;
+    }
+    if (mi_match(Op, MRI, m_ZeroInt())) {
+      Bits = 0;
+      return true;
+    }
+
+    for (unsigned I = 0; I < Src.size(); ++I) {
+      // Try to find existing reused operand
+      if (Src[I] == Op) {
+        Bits = SrcBits[I];
+        return true;
+      }
+      // Try to replace parent operator
+      if (Src[I] == R) {
+        Bits = SrcBits[I];
+        Src[I] = Op;
+        return true;
+      }
+    }
+
+    if (Src.size() == 3) {
+      // No room left for operands. Try one last time, there can be a 'not' of
+      // one of our source operands. In this case we can compute the bits
+      // without growing Src vector.
+      Register LHS;
+      if (mi_match(Op, MRI, m_Not(m_Reg(LHS)))) {
+        LHS = getSrcRegIgnoringCopies(LHS, MRI);
+        for (unsigned I = 0; I < Src.size(); ++I) {
+          if (Src[I] == LHS) {
+            Bits = ~SrcBits[I];
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
+    Bits = SrcBits[Src.size()];
+    Src.push_back(Op);
+    return true;
+  };
+
+  MachineInstr *MI = MRI.getVRegDef(R);
+  switch (MI->getOpcode()) {
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR: {
+    Register LHS = getSrcRegIgnoringCopies(MI->getOperand(1).getReg(), MRI);
+    Register RHS = getSrcRegIgnoringCopies(MI->getOperand(2).getReg(), MRI);
+
+    SmallVector<Register, 3> Backup(Src.begin(), Src.end());
+    if (!getOperandBits(LHS, LHSBits) ||
+        !getOperandBits(RHS, RHSBits)) {
+      Src = Backup;
+      return std::make_pair(0, 0);
+    }
+
+    // Recursion is naturally limited by the size of the operand vector.
+    auto Op = BitOp3_Op(LHS, Src, MRI);
+    if (Op.first) {
+      NumOpcodes += Op.first;
+      LHSBits = Op.second;
+    }
+
+    Op = BitOp3_Op(RHS, Src, MRI);
+    if (Op.first) {
+      NumOpcodes += Op.first;
+      RHSBits = Op.second;
+    }
+    break;
+  }
+  default:
+    return std::make_pair(0, 0);
+  }
+
+  uint8_t TTbl;
+  switch (MI->getOpcode()) {
+  case TargetOpcode::G_AND:
+    TTbl = LHSBits & RHSBits;
+    break;
+  case TargetOpcode::G_OR:
+    TTbl = LHSBits | RHSBits;
+    break;
+  case TargetOpcode::G_XOR:
+    TTbl = LHSBits ^ RHSBits;
+    break;
+  default:
+    break;
+  }
+
+  return std::make_pair(NumOpcodes + 1, TTbl);
+}
+
+bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
+  if (!Subtarget->hasBitOp3Insts())
+    return false;
+
+  SmallVector<Register, 3> Src;
+  uint8_t TTbl;
+  unsigned NumOpcodes;
+  Register DstReg = MI.getOperand(0).getReg();
+
+  std::tie(NumOpcodes, TTbl) = BitOp3_Op(DstReg, Src, *MRI);
+
+  // Src.empty() case can happen if all operands are all zero or all ones.
+  // Normally it shall be optimized out before reaching this.
+  if (NumOpcodes < 2 || Src.empty())
+    return false;
+
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
+
+  // For a uniform case threshold should be higher to account for moves between
+  // VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be in SGPRs
+  // and a readtfirstlane after.
+  if (NumOpcodes < 4 && !IsVALU)
+    return false;
+
+  bool IsB32 = MRI->getType(DstReg) == LLT::scalar(32);
+  if (NumOpcodes == 2 && IsB32) {
+    // Avoid using BITOP3 for OR3, XOR3, AND_OR. This is not faster but makes
+    // asm more readable. This cannot be modeled with AddedComplexity because
+    // selector does not know how many operations did we match.
+    if (mi_match(MI, *MRI, m_GXor(m_GXor(m_Reg(), m_Reg()), m_Reg())) ||
+        mi_match(MI, *MRI, m_GOr(m_GOr(m_Reg(), m_Reg()), m_Reg())) ||
+        mi_match(MI, *MRI, m_GOr(m_GAnd(m_Reg(), m_Reg()), m_Reg())))
+      return false;
+  }
+
+  unsigned Opc = IsB32 ? AMDGPU::V_BITOP3_B32_e64 : AMDGPU::V_BITOP3_B16_e64;
+  unsigned CBL = STI.getConstantBusLimit(Opc);
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  for (unsigned I = 0; I < Src.size(); ++I) {
+    const RegisterBank *RB = RBI.getRegBank(Src[I], *MRI, TRI);
+    if (RB->getID() != AMDGPU::SGPRRegBankID)
+      continue;
+    if (CBL > 0) {
+      --CBL;
+      continue;
+    }
+    Register NewReg =  MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::COPY), NewReg)
+        .addReg(Src[I]);
+    Src[I] = NewReg;
+  }
+
+  // Last operand can be ignored, turning a ternary operation into a binary.
+  // For example: (~a & b & c) | (~a & b & ~c) -> (~a & b). We can replace
+  // 'c' with 'a' here without changing the answer. In some pathological
+  // cases it should be possible to get an operation with a single operand
+  // too if optimizer would not catch it.
+  while (Src.size() < 3)
+    Src.push_back(Src[0]);
+
+  auto MIB = BuildMI(*MBB, MI, DL, TII.get(Opc), DstReg);
+  if (!IsB32)
+    MIB.addImm(0); // src_mod0
+  MIB.addReg(Src[0]);
+  if (!IsB32)
+    MIB.addImm(0); // src_mod1
+  MIB.addReg(Src[1]);
+  if (!IsB32)
+    MIB.addImm(0); // src_mod2
+  MIB.addReg(Src[2])
+     .addImm(TTbl);
+  if (!IsB32)
+    MIB.addImm(0); // op_sel
+
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  MI.eraseFromParent();
+
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
   Register SrcReg = MI.getOperand(0).getReg();
   if (!RBI.constrainGenericRegister(SrcReg, AMDGPU::SReg_32RegClass, *MRI))
@@ -3682,6 +3882,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
+    if (selectBITOP3(I))
+      return true;
     if (selectImpl(I, *CoverageInfo))
       return true;
     return selectG_AND_OR_XOR(I);
