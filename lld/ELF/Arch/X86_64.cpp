@@ -396,6 +396,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
@@ -547,44 +548,69 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-// In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
-// R_X86_64_TPOFF32 so that it does not use GOT.
+// In some conditions, R_X86_64_GOTTPOFF/R_X86_64_CODE_4_GOTTPOFF relocation can
+// be optimized to R_X86_64_TPOFF32 so that it does not use GOT.
 void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
   uint8_t *inst = loc - 3;
   uint8_t reg = loc[-1] >> 3;
   uint8_t *regSlot = loc - 1;
 
-  // Note that ADD with RSP or R12 is converted to ADD instead of LEA
-  // because LEA with these registers needs 4 bytes to encode and thus
-  // wouldn't fit the space.
+  if (rel.type == R_X86_64_GOTTPOFF) {
+    // Note that ADD with RSP or R12 is converted to ADD instead of LEA
+    // because LEA with these registers needs 4 bytes to encode and thus
+    // wouldn't fit the space.
 
-  if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
-    // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
-    memcpy(inst, "\x48\x81\xc4", 3);
-  } else if (memcmp(inst, "\x4c\x03\x25", 3) == 0) {
-    // "addq foo@gottpoff(%rip),%r12" -> "addq $foo,%r12"
-    memcpy(inst, "\x49\x81\xc4", 3);
-  } else if (memcmp(inst, "\x4c\x03", 2) == 0) {
-    // "addq foo@gottpoff(%rip),%r[8-15]" -> "leaq foo(%r[8-15]),%r[8-15]"
-    memcpy(inst, "\x4d\x8d", 2);
-    *regSlot = 0x80 | (reg << 3) | reg;
-  } else if (memcmp(inst, "\x48\x03", 2) == 0) {
-    // "addq foo@gottpoff(%rip),%reg -> "leaq foo(%reg),%reg"
-    memcpy(inst, "\x48\x8d", 2);
-    *regSlot = 0x80 | (reg << 3) | reg;
-  } else if (memcmp(inst, "\x4c\x8b", 2) == 0) {
-    // "movq foo@gottpoff(%rip),%r[8-15]" -> "movq $foo,%r[8-15]"
-    memcpy(inst, "\x49\xc7", 2);
+    if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
+      // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
+      memcpy(inst, "\x48\x81\xc4", 3);
+    } else if (memcmp(inst, "\x4c\x03\x25", 3) == 0) {
+      // "addq foo@gottpoff(%rip),%r12" -> "addq $foo,%r12"
+      memcpy(inst, "\x49\x81\xc4", 3);
+    } else if (memcmp(inst, "\x4c\x03", 2) == 0) {
+      // "addq foo@gottpoff(%rip),%r[8-15]" -> "leaq foo(%r[8-15]),%r[8-15]"
+      memcpy(inst, "\x4d\x8d", 2);
+      *regSlot = 0x80 | (reg << 3) | reg;
+    } else if (memcmp(inst, "\x48\x03", 2) == 0) {
+      // "addq foo@gottpoff(%rip),%reg -> "leaq foo(%reg),%reg"
+      memcpy(inst, "\x48\x8d", 2);
+      *regSlot = 0x80 | (reg << 3) | reg;
+    } else if (memcmp(inst, "\x4c\x8b", 2) == 0) {
+      // "movq foo@gottpoff(%rip),%r[8-15]" -> "movq $foo,%r[8-15]"
+      memcpy(inst, "\x49\xc7", 2);
+      *regSlot = 0xc0 | reg;
+    } else if (memcmp(inst, "\x48\x8b", 2) == 0) {
+      // "movq foo@gottpoff(%rip),%reg" -> "movq $foo,%reg"
+      memcpy(inst, "\x48\xc7", 2);
+      *regSlot = 0xc0 | reg;
+    } else {
+      Err(ctx)
+          << getErrorLoc(ctx, loc - 3)
+          << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
+    }
+  } else if (rel.type == R_X86_64_CODE_4_GOTTPOFF) {
+    if (loc[-4] != 0xd5) {
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "Invalid prefix with R_X86_64_CODE_4_GOTTPOFF!";
+      return;
+    }
+    const uint8_t rex = loc[-3];
+    loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
     *regSlot = 0xc0 | reg;
-  } else if (memcmp(inst, "\x48\x8b", 2) == 0) {
-    // "movq foo@gottpoff(%rip),%reg" -> "movq $foo,%reg"
-    memcpy(inst, "\x48\xc7", 2);
-    *regSlot = 0xc0 | reg;
+
+    if (loc[-2] == 0x8b) {
+      // "movq foo@gottpoff(%rip),%r[16-31]" -> "movq $foo,%r[16-31]"
+      loc[-2] = 0xc7;
+    } else if (loc[-2] == 0x03) {
+      // "addq foo@gottpoff(%rip),%r[16-31]" -> "addq $foo,%r[16-31]"
+      loc[-2] = 0x81;
+    } else {
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ "
+                  "instructions only";
+    }
   } else {
-    ErrAlways(ctx)
-        << getErrorLoc(ctx, loc - 3)
-        << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
+    llvm_unreachable("Unsupported relocation type!");
   }
 
   // The original code used a PC relative relocation.
@@ -741,6 +767,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:
   case R_X86_64_TLSLD:
@@ -850,6 +877,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
     break;
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
     if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
