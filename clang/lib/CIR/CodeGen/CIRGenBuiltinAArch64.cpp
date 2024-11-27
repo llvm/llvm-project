@@ -4264,7 +4264,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NEON::BI__builtin_neon_vaddlvq_u8 NYI");
   }
   case NEON::BI__builtin_neon_vaddlvq_u16: {
-    llvm_unreachable("NEON::BI__builtin_neon_vaddlvq_u16 NYI");
+    mlir::Type argTy = cir::VectorType::get(builder.getContext(), UInt16Ty, 8);
+    llvm::SmallVector<mlir::Value, 1> argOps = {emitScalarExpr(E->getArg(0))};
+    return emitNeonCall(builder, {argTy}, argOps, "aarch64.neon.uaddlv",
+                        UInt32Ty, getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vaddlv_s8: {
     llvm_unreachable("NEON::BI__builtin_neon_vaddlv_s8 NYI");

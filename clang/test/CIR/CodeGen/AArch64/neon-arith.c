@@ -882,3 +882,14 @@ float64x2_t test_vabsq_f64(float64x2_t a) {
   // LLVM: [[VABS_F:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[a]])
   // LLVM: ret <2 x double> [[VABS_F]]
 }
+
+uint32_t test_vaddlvq_u16(uint16x8_t a) {
+  return vaddlvq_u16(a);
+
+  // CIR-LABEL: vaddlvq_u16
+  // CIR: cir.llvm.intrinsic "aarch64.neon.uaddlv" {{%.*}}: (!cir.vector<!u16i x 8>) -> !u32i
+
+  // LLVM: {{.*}}test_vaddlvq_u16(<8 x i16>{{.*}}[[A:%.*]])
+  // LLVM: [[VADDLV_I:%.*]] = call i32 @llvm.aarch64.neon.uaddlv.i32.v8i16(<8 x i16> [[A]])
+  // LLVM: ret i32 [[VADDLV_I]]
+}
