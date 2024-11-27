@@ -2433,10 +2433,10 @@ LogicalResult DistributeOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
-// DeclareMapperOp
+// DeclareMapperInfoOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult DeclareMapperOp::verify() {
+LogicalResult DeclareMapperInfoOp::verify() {
   return verifyMapClause(*this, getMapVars());
 }
 

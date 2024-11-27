@@ -653,7 +653,7 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
     will be executed in parallel by threads in the current context. These
     iterations are spread across threads that already exist in the enclosing
     region.
-    
+
     The body region can only contain a single block which must contain a single
     operation. This operation must be another compatible loop wrapper or an
     `omp.loop_nest`.
@@ -1752,27 +1752,31 @@ def ScanOp : OpenMP_Op<"scan", [
 //===----------------------------------------------------------------------===//
 // 2.19.7.3 Declare Mapper Directive
 //===----------------------------------------------------------------------===//
-def DeclareMapperOp : OpenMP_Op<"declare_mapper", traits = [
-  Symbol], clauses = [
-    OpenMP_MapClause
-  ]> {
+def DeclareMapperOp : OpenMP_Op<"declare_mapper", singleRegion = 1> {
   let summary = "declare mapper directive";
   let description = [{
     The declare mapper directive declares a user-defined mapper for a given
     type, and defines a mapper-identifier that can be used in a map clause.
   }] # clausesDescription;
 
-  let arguments = !con((ins SymbolNameAttr:$sym_name,
-                            OpenMP_PointerLikeType:$var_ptr,
-                            TypeAttr:$var_type), clausesArgs);
+  let arguments = (ins  SymbolNameAttr:$sym_name,
+                        TypeAttr:$var_type);
+
+  let assemblyFormat = "$sym_name `:` $var_type $region attr-dict";
+}
+
+def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper_info", clauses = [
+    OpenMP_MapClause
+    ]> {
+  let summary = "declare mapper info";
+  let description = [{
+    This Op is used to capture the map information related to it's
+    parent DeclareMapperOp.]>
+  }] # clausesDescription;
 
   let builders = [
-    OpBuilder<(ins CArg<"const DeclareMapperOperands &">:$clauses)>
+    OpBuilder<(ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>
   ];
-
-  // Override clause-based assemblyFormat.
-  let assemblyFormat = "$sym_name `:` $var_ptr `:` type($var_ptr) `:` $var_type" # " oilist(" #
-    clausesOptAssemblyFormat # ")  attr-dict";
 
   let hasVerifier = 1;
 }
@@ -1889,7 +1893,7 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
   ], singleRegion = 1> {
   let summary = "masked construct";
   let description = [{
-    Masked construct allows to specify a structured block to be executed by a subset of 
+    Masked construct allows to specify a structured block to be executed by a subset of
     threads of the current team.
   }] # clausesDescription;
 
