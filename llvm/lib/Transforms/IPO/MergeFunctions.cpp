@@ -491,8 +491,7 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
 DenseMap<Function *, Function *>
 MergeFunctions::runOnFunctions(ArrayRef<Function *> F) {
   bool MergeResult = this->run(F);
-  if (!MergeResult)
-    this->DelToNewMap = DenseMap<Function *, Function *>();
+  assert(MergeResult == !DelToNewMap.empty());
   return this->DelToNewMap;
 }
 
