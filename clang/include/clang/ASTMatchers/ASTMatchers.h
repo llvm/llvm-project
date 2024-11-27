@@ -1236,6 +1236,17 @@ AST_MATCHER_P(TemplateArgument, equalsIntegralValue,
 extern const internal::VariadicDynCastAllOfMatcher<Stmt,
        ObjCAutoreleasePoolStmt> autoreleasePoolStmt;
 
+/// Matches any export declaration.
+///
+/// Example matches following declarations.
+/// \code
+///   export void foo();
+///   export { void foo(); }
+///   export namespace { void foo(); }
+///   export int v;
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, ExportDecl> exportDecl;
+
 /// Matches any value declaration.
 ///
 /// Example matches A, B, C and F

@@ -926,6 +926,8 @@ AST Matchers
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
 
+- Add ``exportDecl`` matches export declaration.
+
 clang-format
 ------------
 
