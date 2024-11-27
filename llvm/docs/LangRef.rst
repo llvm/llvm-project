@@ -1406,7 +1406,7 @@ Currently, only the following parameter attributes are defined:
     which may be ``none``, or a combination of:
 
     - ``address``: The integral address of the pointer.
-    - ``address_is_null`` (subet of ``address``): Whether the address is null.
+    - ``address_is_null`` (subset of ``address``): Whether the address is null.
     - ``provenance``: The ability to access the pointer for both read and write
       after the function returns.
     - ``read_provenance`` (subset of ``provenance``): The ability to access the
