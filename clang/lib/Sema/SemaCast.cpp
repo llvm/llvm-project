@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -1765,7 +1766,8 @@ TryStaticDowncast(Sema &Self, CanQualType SrcType, CanQualType DestType,
         << SrcType << DestType
         << OpRange
         << Self.LangOpts.RTTI;
-    if(Self.LangOpts.RTTI)
+
+    if (Self.LangOpts.RTTI)
        D << FixItHint::CreateReplacement(OpRange.getBegin(), "dynamic_cast");
   }
 

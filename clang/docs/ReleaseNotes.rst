@@ -596,7 +596,6 @@ Improvements to Clang's diagnostics
 - Added ``-Wstatic-downcast`` to diagnose potentially dangerous uses of ``static_cast`` that perform a base-to-derived cast
   on pointers and references of polymorphic types.
 
-
 Improvements to Clang's time-trace
 ----------------------------------
 
