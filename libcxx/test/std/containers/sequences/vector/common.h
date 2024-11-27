@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef TEST_STD_CONTAINERS_SEQUENCES_VECTOR_COMMON_H
+#define TEST_STD_CONTAINERS_SEQUENCES_VECTOR_COMMON_H
 
 #include <cassert>
 #include <cstddef>
