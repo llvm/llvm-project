@@ -143,19 +143,11 @@ private:
   /// Write the serialized address translation table for a function.
   template <bool Cold> void writeMaps(uint64_t &PrevAddress, raw_ostream &OS);
 
-  /// Write call continuation landing pad addresses.
-  void writeCallContLandingPads(raw_ostream &OS);
-
   /// Read the serialized address translation table for a function.
   /// Return a parse error if failed.
   template <bool Cold>
   void parseMaps(uint64_t &PrevAddress, DataExtractor &DE, uint64_t &Offset,
                  Error &Err);
-
-
-  /// Read the table with call continuation landing pad offsets.
-  void parseCallContLandingPads(DataExtractor &DE, uint64_t &Offset,
-                                Error &Err);
 
   /// Returns the bitmask with set bits corresponding to indices of BRANCHENTRY
   /// entries in function address translation map.
@@ -176,14 +168,6 @@ private:
   /// Map a function to its secondary entry points vector
   std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
 
-  /// Vector with call continuation landing pads input addresses (pre-BOLT
-  /// binary).
-  std::vector<uint64_t> CallContLandingPadAddrs;
-
-  /// Return a secondary entry point ID for a function located at \p Address and
-  /// \p Offset within that function.
-  unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
-
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
@@ -195,13 +179,9 @@ private:
   const static uint32_t BRANCHENTRY = 0x1;
 
 public:
-  /// Returns whether a given \p Offset is a secondary entry point in function
-  /// with address \p Address.
-  bool isSecondaryEntry(uint64_t Address, uint32_t Offset) const;
-
-  /// Returns whether a given \p Offset is a call continuation landing pad in
-  /// function with address \p Address.
-  bool isCallContinuationLandingPad(uint64_t Address, uint32_t Offset) const;
+  /// Return a secondary entry point ID for a function located at \p Address and
+  /// \p Offset within that function.
+  unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
 
   /// Map basic block input offset to a basic block index and hash pair.
   class BBHashMapTy {

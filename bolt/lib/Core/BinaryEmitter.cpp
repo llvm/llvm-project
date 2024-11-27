@@ -257,7 +257,8 @@ void BinaryEmitter::emitFunctions() {
       Streamer.setAllowAutoPadding(OriginalAllowAutoPadding);
 
       if (Emitted)
-        Function->setEmitted(/*KeepCFG=*/opts::PrintCacheMetrics);
+        Function->setEmitted(/*KeepCFG=*/opts::PrintCacheMetrics ||
+                             opts::EnableBAT);
     }
   };
 

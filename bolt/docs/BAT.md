@@ -115,21 +115,13 @@ Deleted basic blocks are emitted as having `OutputOffset` equal to the size of
 the function. They don't affect address translation and only participate in
 input basic block mapping.
 
-### Secondary Entry Points table
+### Secondary Entry Points and Call Continuation Landing Pads table
 The table is emitted for hot fragments only. It contains `NumSecEntryPoints`
-offsets denoting secondary entry points, delta encoded, implicitly starting at zero.
+offsets, delta encoded, implicitly starting at zero.
 | Entry | Encoding | Description |
 | ----- | -------- | ----------- |
-| `SecEntryPoint` | Delta, ULEB128 | Secondary entry point offset |
+| `OutputOffset` | Delta, ULEB128 | An offset of secondary entry point or a call continuation landing pad\*|
 
-### Call continuation landing pads table
-This table contains the addresses of call continuation blocks that are also
-landing pads, to aid pre-aggregated profile conversion. The table is optional
-for backwards compatibility, but new versions of BOLT will always emit it.
-
-| Entry | Encoding | Description |
-| ----- | -------- | ----------- |
-| `NumEntries` | ULEB128 | Number of addresses |
-| `InputAddress` | Delta, ULEB128 | `NumEntries` input addresses of call continuation landing pad blocks |
-
-Addresses are delta encoded, implicitly starting at zero.
+Call continuation landing pads offsets are shifted by the size of the function
+for backwards compatibility (treated as entry points past the end of the
+function).
