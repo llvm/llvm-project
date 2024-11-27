@@ -530,7 +530,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
-      .clampScalar(ST.hasStdExtF(), 0, sXLen, sXLen);
+      .clampScalar(0, sXLen, sXLen)
+      .libcallFor({{sXLen, s32}, {sXLen, s64}});
 
   // TODO: Support vector version of G_IS_FPCLASS.
   getActionDefinitionsBuilder(G_IS_FPCLASS)
