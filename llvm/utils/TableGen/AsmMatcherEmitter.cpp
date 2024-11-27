@@ -2541,39 +2541,57 @@ static void emitIsSubclass(CodeGenTarget &Target,
   OS << "  if (A == B)\n";
   OS << "    return true;\n\n";
 
+  // TODO: Use something like SequenceToOffsetTable to allow sequences to
+  // overlap in this table.
+  SmallVector<bool> SuperClassData;
+
+  OS << "  [[maybe_unused]] static constexpr struct {\n";
+  OS << "    uint32_t Offset;\n";
+  OS << "    uint16_t Start;\n";
+  OS << "    uint16_t Length;\n";
+  OS << "  } Table[] = {\n";
+  OS << "    {0, 0, 0},\n"; // InvalidMatchClass
+  OS << "    {0, 0, 0},\n"; // OptionalMatchClass
   for (const auto &A : Infos) {
-    std::vector<StringRef> SuperClasses;
-    if (A.IsOptional)
-      SuperClasses.push_back("OptionalMatchClass");
-    for (const auto &B : Infos) {
-      if (&A != &B && A.isSubsetOf(B))
-        SuperClasses.push_back(B.Name);
-    }
+    SmallVector<bool> SuperClasses;
+    SuperClasses.push_back(false); // InvalidMatchClass
+    SuperClasses.push_back(A.IsOptional); // OptionalMatchClass
+    for (const auto &B : Infos)
+      SuperClasses.push_back(&A != &B && A.isSubsetOf(B));
 
-    if (SuperClasses.empty()) {
-      OS << "  static constexpr ArrayRef<uint16_t> " << A.Name
-         << "_SuperClasses;\n";
-      continue;
-    }
+    // Trim leading and trailing zeros.
+    auto End = find_if(reverse(SuperClasses), [](bool B){ return B; }).base();
+    auto Start = std::find_if(SuperClasses.begin(), End, [](bool B){ return B; });
 
-    OS << "  static constexpr uint16_t " << A.Name << "_SuperClasses[] = {";
-    ListSeparator LS;
-    for (auto &SC : SuperClasses)
-      OS << LS << SC;
-    OS << "};\n";
+    unsigned Offset = SuperClassData.size();
+    SuperClassData.append(Start, End);
+
+    OS << "    {" << Offset << ", " << (Start - SuperClasses.begin()) << ", " <<
+        (End - Start) << "},\n";
   }
-  OS << "\n";
-
-  OS << "  static constexpr ArrayRef<uint16_t> SuperClassTable[] = {\n";
-  OS << "    {}, // InvalidMatchClass\n";
-  OS << "    {}, // OptionalMatchClass\n";
-  for (const auto &A : Infos)
-    OS << "    " << A.Name << "_SuperClasses,\n";
   OS << "  };\n\n";
 
-  OS << "  ArrayRef<uint16_t> SuperClasses = SuperClassTable[A];\n";
-  OS << "  return binary_search(SuperClasses, B);\n";
+  if (SuperClassData.empty()) {
+    OS << "  return false;\n";
+  } else {
+    // Dump the boolean data packed into bytes.
+    SuperClassData.append(-SuperClassData.size() % 8, false);
+    OS << "  static constexpr uint8_t Data[] = {\n";
+    for (unsigned I = 0, E = SuperClassData.size(); I < E; I += 8) {
+      unsigned Byte = 0;
+      for (unsigned J = 0; J < 8; ++J)
+        Byte |= (unsigned)SuperClassData[I + J] << J;
+      OS << formatv("    {:X2},\n", Byte);
+    }
+    OS << "  };\n\n";
 
+    OS << "  auto &Entry = Table[A];\n";
+    OS << "  unsigned Idx = B - Entry.Start;\n";
+    OS << "  if (Idx >= Entry.Length)\n";
+    OS << "    return false;\n";
+    OS << "  Idx += Entry.Offset;\n";
+    OS << "  return (Data[Idx / 8] >> (Idx % 8)) & 1;\n";
+  }
   OS << "}\n\n";
 }
 
