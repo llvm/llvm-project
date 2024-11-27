@@ -487,13 +487,15 @@ static void getDeclareTargetInfo(
   } else if (const auto *clauseList{
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     List<Clause> clauses = makeClauses(*clauseList, semaCtx);
-    if (clauses.empty() &&
-        (!eval.getOwningProcedure()->isMainProgram() ||
-         eval.getOwningProcedure()->getMainProgramSymbol())) {
-      // Case: declare target, implicit capture of function
-      symbolAndClause.emplace_back(
-          mlir::omp::DeclareTargetCaptureClause::to,
-          eval.getOwningProcedure()->getSubprogramSymbol());
+    if (clauses.empty()) {
+      Fortran::lower::pft::FunctionLikeUnit *owningProc =
+          eval.getOwningProcedure();
+      if (owningProc && (!owningProc->isMainProgram() ||
+                         owningProc->getMainProgramSymbol())) {
+        // Case: declare target, implicit capture of function
+        symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
+                                     owningProc->getSubprogramSymbol());
+      }
     }
 
     ClauseProcessor cp(converter, semaCtx, clauses);
@@ -1349,8 +1351,8 @@ static void genTaskClauses(lower::AbstractConverter &converter,
   cp.processUntied(clauseOps);
   // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Affinity, clause::Detach, clause::InReduction,
-                 clause::Mergeable>(loc, llvm::omp::Directive::OMPD_task);
+  cp.processTODO<clause::Affinity, clause::Detach, clause::InReduction>(
+      loc, llvm::omp::Directive::OMPD_task);
 }
 
 static void genTaskgroupClauses(lower::AbstractConverter &converter,
