@@ -10005,12 +10005,16 @@ poly16x8_t test_vmull_p8(poly8x8_t a, poly8x8_t b) {
 //   return vqrdmulhh_s16(a, b);
 // }
 
-// NYI-LABEL: @test_vqrdmulhs_s32(
-// NYI:   [[VQRDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %a, i32 %b)
-// NYI:   ret i32 [[VQRDMULHS_S32_I]]
-// int32_t test_vqrdmulhs_s32(int32_t a, int32_t b) {
-//   return vqrdmulhs_s32(a, b);
-// }
+int32_t test_vqrdmulhs_s32(int32_t a, int32_t b) {
+  return vqrdmulhs_s32(a, b);
+
+  // CIR-LABEL: vqrdmulhs_s32
+  // CIR: cir.llvm.intrinsic "aarch64.neon.sqrdmulh" {{%.*}}, {{%.*}} : (!s32i, !s32i) -> !s32i
+
+  // LLVM: {{.*}}test_vqrdmulhs_s32(i32{{.*}}[[a:%.*]], i32{{.*}}[[b:%.*]])
+  // LLVM:   [[VQRDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 [[a]], i32 [[b]])
+  // LLVM:   ret i32 [[VQRDMULHS_S32_I]]
+}
 
 // NYI-LABEL: @test_vmulxs_f32(
 // NYI:   [[VMULXS_F32_I:%.*]] = call float @llvm.aarch64.neon.fmulx.f32(float %a, float %b)

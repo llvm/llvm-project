@@ -2611,8 +2611,12 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
 
 static mlir::Value emitCommonNeonSISDBuiltinExpr(
     CIRGenFunction &cgf, const ARMVectorIntrinsicInfo &info,
-    llvm::SmallVectorImpl<mlir::Value> &args, const CallExpr *expr) {
+    llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
   unsigned builtinID = info.BuiltinID;
+  clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Type resultTy = cgf.convertType(expr->getType());
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+
   switch (builtinID) {
   default:
     llvm::errs() << getAArch64SIMDIntrinsicString(builtinID) << " ";
@@ -2860,7 +2864,8 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vqrdmulhh_s16:
     llvm_unreachable(" neon_vqrdmulhh_s16 NYI ");
   case NEON::BI__builtin_neon_vqrdmulhs_s32:
-    llvm_unreachable(" neon_vqrdmulhs_s32 NYI ");
+    return emitNeonCall(builder, {resultTy, resultTy}, ops,
+                        "aarch64.neon.sqrdmulh", resultTy, loc);
   case NEON::BI__builtin_neon_vqrshlb_s8:
     llvm_unreachable(" neon_vqrshlb_s8 NYI ");
   case NEON::BI__builtin_neon_vqrshlb_u8:
