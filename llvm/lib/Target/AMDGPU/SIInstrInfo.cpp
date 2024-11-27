@@ -60,6 +60,11 @@ static cl::opt<bool> Fix16BitCopies(
   cl::init(true),
   cl::ReallyHidden);
 
+static cl::opt<unsigned> MaxMemoryClusterDWORDS(
+    "amdgpu-max-memory-cluster-dwords", cl::Hidden, cl::init(8),
+    cl::desc(
+        "Restrict the maximum dwords for memory cluster during scheduler"));
+
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
   : AMDGPUGenInstrInfo(AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
     RI(ST), ST(ST) {
@@ -565,12 +570,14 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
   }
 
   // In order to avoid register pressure, on an average, the number of DWORDS
-  // loaded together by all clustered mem ops should not exceed 8. This is an
-  // empirical value based on certain observations and performance related
-  // experiments.
+  // loaded together by all clustered mem ops should not exceed
+  // MaxMemoryClusterDWORDS. This is an empirical value based on certain
+  // observations and performance related experiments.
   // The good thing about this heuristic is - it avoids clustering of too many
   // sub-word loads, and also avoids clustering of wide loads. Below is the
-  // brief summary of how the heuristic behaves for various `LoadSize`.
+  // brief summary of how the heuristic behaves for various `LoadSize` when
+  // MaxMemoryClusterDWORDS is 8.
+  //
   // (1) 1 <= LoadSize <= 4: cluster at max 8 mem ops
   // (2) 5 <= LoadSize <= 8: cluster at max 4 mem ops
   // (3) 9 <= LoadSize <= 12: cluster at max 2 mem ops
@@ -578,7 +585,7 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
   // (5) LoadSize >= 17: do not cluster
   const unsigned LoadSize = NumBytes / ClusterSize;
   const unsigned NumDWORDs = ((LoadSize + 3) / 4) * ClusterSize;
-  return NumDWORDs <= 8;
+  return NumDWORDs <= MaxMemoryClusterDWORDS;
 }
 
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
