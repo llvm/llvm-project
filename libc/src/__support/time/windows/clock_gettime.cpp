@@ -23,15 +23,16 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 static long long get_ticks_per_second() {
   static cpp::Atomic<long long> frequency = 0;
-  if (!frequency) {
+  auto freq = frequency.load(cpp::MemoryOrder::RELAXED);
+  if (!freq) {
     UNINITIALIZED LARGE_INTEGER buffer;
     // On systems that run Windows XP or later, the function will always
     // succeed and will thus never return zero.
     ::QueryPerformanceFrequency(&buffer);
-    frequency = buffer.QuadPart;
+    frequency.store(buffer.QuadPart, cpp::MemoryOrder::RELAXED);
     return buffer.QuadPart;
   }
-  return frequency.load(cpp::MemoryOrder::RELAXED);
+  return freq;
 }
 
 ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
