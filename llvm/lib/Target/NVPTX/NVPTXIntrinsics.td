@@ -1096,6 +1096,18 @@ def INT_NVVM_DIV_RM_D : F_MATH_2<"div.rm.f64 \t$dst, $src0, $src1;",
 def INT_NVVM_DIV_RP_D : F_MATH_2<"div.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_div_rp_d>;
 
+def : Pat<(int_nvvm_div_full Float32Regs:$a, Float32Regs:$b),
+          (FDIV32rr Float32Regs:$a, Float32Regs:$b)>;
+
+def : Pat<(int_nvvm_div_full Float32Regs:$a, fpimm:$b),
+          (FDIV32ri Float32Regs:$a, f32imm:$b)>;
+
+def : Pat<(int_nvvm_div_full_ftz Float32Regs:$a, Float32Regs:$b),
+          (FDIV32rr_ftz Float32Regs:$a, Float32Regs:$b)>;
+
+def : Pat<(int_nvvm_div_full_ftz Float32Regs:$a, fpimm:$b),
+          (FDIV32ri_ftz Float32Regs:$a, f32imm:$b)>;
+
 //
 // Sad
 //

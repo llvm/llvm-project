@@ -156,6 +156,8 @@ protected:
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
   bool HasDot11Insts = false;
+  bool HasDot12Insts = false;
+  bool HasDot13Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
@@ -245,8 +247,11 @@ protected:
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
+  bool HasAshrPkInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+  bool HasMinimum3Maximum3PKF16 = false;
+
   bool RequiresCOV6 = false;
 
   // Dummy feature to use for assembler in tablegen.
@@ -823,6 +828,14 @@ public:
     return HasDot11Insts;
   }
 
+  bool hasDot12Insts() const {
+    return HasDot12Insts;
+  }
+
+  bool hasDot13Insts() const {
+    return HasDot13Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -1326,6 +1339,7 @@ public:
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
   bool hasMinimum3Maximum3F32() const {
     return HasMinimum3Maximum3F32;
@@ -1333,6 +1347,10 @@ public:
 
   bool hasMinimum3Maximum3F16() const {
     return HasMinimum3Maximum3F16;
+  }
+
+  bool hasMinimum3Maximum3PKF16() const {
+    return HasMinimum3Maximum3PKF16;
   }
 
   /// \returns The maximum number of instructions that can be enclosed in an

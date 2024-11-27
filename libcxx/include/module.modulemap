@@ -87,6 +87,7 @@ module std_core [system] {
     module decay                                      { header "__type_traits/decay.h" }
     module dependent_type                             { header "__type_traits/dependent_type.h" }
     module desugars_to                                { header "__type_traits/desugars_to.h" }
+    module detected_or                                { header "__type_traits/detected_or.h" }
     module disjunction                                { header "__type_traits/disjunction.h" }
     module enable_if                                  { header "__type_traits/enable_if.h" }
     module extent                                     { header "__type_traits/extent.h" }

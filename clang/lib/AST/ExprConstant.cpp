@@ -11005,6 +11005,7 @@ namespace {
     bool VisitUnaryImag(const UnaryOperator *E);
     bool VisitBinaryOperator(const BinaryOperator *E);
     bool VisitUnaryOperator(const UnaryOperator *E);
+    bool VisitCallExpr(const CallExpr *E);
     bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
     bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
 
@@ -11300,6 +11301,35 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
   Info.FFDiag(E, diag::err_convertvector_constexpr_unsupported_vector_cast)
       << SourceTy << DestTy;
   return false;
+}
+
+bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
+  if (!IsConstantEvaluatedBuiltinCall(E))
+    return ExprEvaluatorBaseTy::VisitCallExpr(E);
+
+  switch (E->getBuiltinCallee()) {
+  default:
+    return false;
+  case Builtin::BI__builtin_elementwise_popcount: {
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = Source.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APSInt Elt = Source.getVectorElt(EltNum).getInt();
+      ResultElements.push_back(
+          APValue(APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), Elt.popcount()),
+                         DestEltTy->isUnsignedIntegerOrEnumerationType())));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  }
 }
 
 bool VectorExprEvaluator::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
@@ -13118,6 +13148,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
   case Builtin::BI__builtin_popcountg:
+  case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64: {

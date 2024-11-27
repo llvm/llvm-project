@@ -925,6 +925,14 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::ctpop, MVT::i16, 19},
     {Intrinsic::ctpop, MVT::i32, 20},
     {Intrinsic::ctpop, MVT::i64, 21},
+    {Intrinsic::ctlz, MVT::i8, 19},
+    {Intrinsic::ctlz, MVT::i16, 28},
+    {Intrinsic::ctlz, MVT::i32, 31},
+    {Intrinsic::ctlz, MVT::i64, 35},
+    {Intrinsic::cttz, MVT::i8, 16},
+    {Intrinsic::cttz, MVT::i16, 23},
+    {Intrinsic::cttz, MVT::i32, 24},
+    {Intrinsic::cttz, MVT::i64, 25},
     {Intrinsic::vp_ctpop, MVT::i8, 12},
     {Intrinsic::vp_ctpop, MVT::i16, 19},
     {Intrinsic::vp_ctpop, MVT::i32, 20},
@@ -1114,39 +1122,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     assert(FOp.has_value());
     return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
-  }
-  // vp int cast ops.
-  case Intrinsic::vp_trunc:
-  case Intrinsic::vp_zext:
-  case Intrinsic::vp_sext:
-  // vp float cast ops.
-  case Intrinsic::vp_fptoui:
-  case Intrinsic::vp_fptosi:
-  case Intrinsic::vp_uitofp:
-  case Intrinsic::vp_sitofp:
-  case Intrinsic::vp_fptrunc:
-  case Intrinsic::vp_fpext: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value() && !ICA.getArgTypes().empty());
-    return getCastInstrCost(*FOp, RetTy, ICA.getArgTypes()[0],
-                            TTI::CastContextHint::None, CostKind);
-    break;
-  }
-
-  // vp compare
-  case Intrinsic::vp_icmp:
-  case Intrinsic::vp_fcmp: {
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    // We can only handle vp_cmp intrinsics with underlying instructions.
-    if (!ICA.getInst())
-      break;
-
-    assert(FOp);
-    auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
-    return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
-                              UI->getPredicate(), CostKind);
   }
   case Intrinsic::vp_select: {
     Intrinsic::ID IID = ICA.getID();
