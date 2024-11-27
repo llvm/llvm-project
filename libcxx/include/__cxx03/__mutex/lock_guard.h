@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___MUTEX_LOCK_GUARD_H
 #define _LIBCPP___MUTEX_LOCK_GUARD_H
 
-#include <__config>
-#include <__mutex/tag_types.h>
+#include <__cxx03/__config>
+#include <__cxx03/__mutex/tag_types.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -10,22 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLEMANAGER_H
-#define LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLEMANAGER_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
+#define LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/Support/StringSaver.h"
 
+#include <atomic>
+
 namespace llvm {
 namespace orc {
 
-class JITLinkRedirectableSymbolManager : public RedirectableSymbolManager,
-                                         public ResourceManager {
+class JITLinkRedirectableSymbolManager : public RedirectableSymbolManager {
 public:
   /// Create redirection manager that uses JITLink based implementaion.
   static Expected<std::unique_ptr<RedirectableSymbolManager>>
-  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &JD) {
+  Create(ObjectLinkingLayer &ObjLinkingLayer) {
     auto AnonymousPtrCreator(jitlink::getAnonymousPointerCreator(
         ObjLinkingLayer.getExecutionSession().getTargetTriple()));
     auto PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
@@ -35,72 +36,30 @@ public:
                                      inconvertibleErrorCode());
     return std::unique_ptr<RedirectableSymbolManager>(
         new JITLinkRedirectableSymbolManager(
-            ObjLinkingLayer, JD, AnonymousPtrCreator, PtrJumpStubCreator));
+            ObjLinkingLayer, AnonymousPtrCreator, PtrJumpStubCreator));
   }
 
   void emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> R,
-                               const SymbolAddrMap &InitialDests) override;
+                               SymbolMap InitialDests) override;
 
-  Error redirect(JITDylib &TargetJD, const SymbolAddrMap &NewDests) override;
-
-  Error handleRemoveResources(JITDylib &TargetJD, ResourceKey K) override;
-
-  void handleTransferResources(JITDylib &TargetJD, ResourceKey DstK,
-                               ResourceKey SrcK) override;
+  Error redirect(JITDylib &JD, const SymbolMap &NewDests) override;
 
 private:
-  using StubHandle = unsigned;
-  constexpr static unsigned StubBlockSize = 256;
-  constexpr static StringRef JumpStubPrefix = "$__IND_JUMP_STUBS";
-  constexpr static StringRef StubPtrPrefix = "$IND_JUMP_PTR_";
-  constexpr static StringRef JumpStubTableName = "$IND_JUMP_";
-  constexpr static StringRef StubPtrTableName = "$__IND_JUMP_PTRS";
-
   JITLinkRedirectableSymbolManager(
-      ObjectLinkingLayer &ObjLinkingLayer, JITDylib &JD,
+      ObjectLinkingLayer &ObjLinkingLayer,
       jitlink::AnonymousPointerCreator &AnonymousPtrCreator,
       jitlink::PointerJumpStubCreator &PtrJumpStubCreator)
-      : ObjLinkingLayer(ObjLinkingLayer), JD(JD),
+      : ObjLinkingLayer(ObjLinkingLayer),
         AnonymousPtrCreator(std::move(AnonymousPtrCreator)),
-        PtrJumpStubCreator(std::move(PtrJumpStubCreator)) {
-    ObjLinkingLayer.getExecutionSession().registerResourceManager(*this);
-  }
-
-  ~JITLinkRedirectableSymbolManager() {
-    ObjLinkingLayer.getExecutionSession().deregisterResourceManager(*this);
-  }
-
-  StringRef JumpStubSymbolName(unsigned I) {
-    return *ObjLinkingLayer.getExecutionSession().intern(
-        (JumpStubPrefix + Twine(I)).str());
-  }
-
-  StringRef StubPtrSymbolName(unsigned I) {
-    return *ObjLinkingLayer.getExecutionSession().intern(
-        (StubPtrPrefix + Twine(I)).str());
-  }
-
-  unsigned GetNumAvailableStubs() const { return AvailableStubs.size(); }
-
-  Error redirectInner(JITDylib &TargetJD, const SymbolAddrMap &NewDests);
-  Error grow(unsigned Need);
+        PtrJumpStubCreator(std::move(PtrJumpStubCreator)) {}
 
   ObjectLinkingLayer &ObjLinkingLayer;
-  JITDylib &JD;
   jitlink::AnonymousPointerCreator AnonymousPtrCreator;
   jitlink::PointerJumpStubCreator PtrJumpStubCreator;
-
-  std::vector<StubHandle> AvailableStubs;
-  using SymbolToStubMap = DenseMap<SymbolStringPtr, StubHandle>;
-  DenseMap<JITDylib *, SymbolToStubMap> SymbolToStubs;
-  std::vector<ExecutorSymbolDef> JumpStubs;
-  std::vector<ExecutorSymbolDef> StubPointers;
-  DenseMap<ResourceKey, std::vector<SymbolStringPtr>> TrackedResources;
-
-  std::mutex Mutex;
+  std::atomic_size_t StubGraphIdx{0};
 };
 
 } // namespace orc
 } // namespace llvm
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H

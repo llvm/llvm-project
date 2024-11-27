@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"
-#include "Opcode.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;

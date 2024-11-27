@@ -14,12 +14,12 @@ define void @test(ptr %a, i64 %0) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, <2 x ptr> [[TMP2]], <2 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[ARRAYIDX17_I28_1:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[TMP6]], i32 8, <2 x i1> <i1 true, i1 true>, <2 x double> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[TMP6]], i32 8, <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = fsub <2 x double> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v2f64.p0.i64(<2 x double> [[TMP11]], ptr align 8 [[ARRAYIDX17_I28_1]], i64 -8, <2 x i1> <i1 true, i1 true>, i32 2)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v2f64.p0.i64(<2 x double> [[TMP11]], ptr align 8 [[ARRAYIDX17_I28_1]], i64 -8, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    br label %[[BB]]
 ;
 entry:

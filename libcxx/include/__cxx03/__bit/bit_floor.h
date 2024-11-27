@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___BIT_BIT_FLOOR_H
 #define _LIBCPP___BIT_BIT_FLOOR_H
 
-#include <__bit/bit_log2.h>
-#include <__concepts/arithmetic.h>
-#include <__config>
-#include <limits>
+#include <__cxx03/__bit/bit_log2.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

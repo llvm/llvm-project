@@ -78,7 +78,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
                                const uint8_t *loc) const {
   // See comment in the calculateMipsRelChain.
   if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
-    type &= 0xff;
+    type.v &= 0xff;
 
   switch (type) {
   case R_MIPS_JALR:
@@ -87,9 +87,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // (e.g. a table of function pointers). When we encounter this, ignore the
     // relocation and emit a warning instead.
     if (!s.isFunc() && s.type != STT_NOTYPE) {
-      warn(getErrorLoc(ctx, loc) +
-           "found R_MIPS_JALR relocation against non-function symbol " +
-           toString(s) + ". This is invalid and most likely a compiler bug.");
+      Warn(ctx) << getErrorLoc(ctx, loc)
+                << "found R_MIPS_JALR relocation against non-function symbol "
+                << &s << ". This is invalid and most likely a compiler bug.";
       return R_NONE;
     }
 
@@ -191,8 +191,8 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -475,14 +475,13 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
 
 static std::pair<uint32_t, uint64_t>
-calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
+calculateMipsRelChain(Ctx &ctx, uint8_t *loc, uint32_t type, uint64_t val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -495,16 +494,16 @@ calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
   // relocations used to modify result of the first one: extend it to
   // 64-bit, extract high or low part etc. For details, see part 2.9 Relocation
   // at the https://dmz-portal.mips.com/mw/images/8/82/007-4658-001.pdf
-  RelType type2 = (type >> 8) & 0xff;
-  RelType type3 = (type >> 16) & 0xff;
+  uint32_t type2 = (type >> 8) & 0xff;
+  uint32_t type3 = (type >> 16) & 0xff;
   if (type2 == R_MIPS_NONE && type3 == R_MIPS_NONE)
     return std::make_pair(type, val);
   if (type2 == R_MIPS_64 && type3 == R_MIPS_NONE)
     return std::make_pair(type2, val);
   if (type2 == R_MIPS_SUB && (type3 == R_MIPS_HI16 || type3 == R_MIPS_LO16))
     return std::make_pair(type3, -val);
-  error(getErrorLoc(ctx, loc) + "unsupported relocations combination " +
-        Twine(type));
+  Err(ctx) << getErrorLoc(ctx, loc) << "unsupported relocations combination "
+           << type;
   return std::make_pair(type & 0xff, val);
 }
 
@@ -562,9 +561,10 @@ static uint64_t fixupCrossModeJump(Ctx &ctx, uint8_t *loc, RelType type,
     llvm_unreachable("unexpected jump/branch relocation");
   }
 
-  error(getErrorLoc(ctx, loc) +
-        "unsupported jump/branch instruction between ISA modes referenced by " +
-        toString(type) + " relocation");
+  ErrAlways(ctx)
+      << getErrorLoc(ctx, loc)
+      << "unsupported jump/branch instruction between ISA modes referenced by "
+      << type << " relocation";
   return val;
 }
 

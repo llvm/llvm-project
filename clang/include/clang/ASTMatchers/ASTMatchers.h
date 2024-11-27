@@ -3226,7 +3226,7 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
 
   return Builder->removeBindings(
       [this, MemberName](const BoundNodesMap &Nodes) {
-        const auto &BN = Nodes.getNode(this->BindingID);
+        const DynTypedNode &BN = Nodes.getNode(this->BindingID);
         if (const auto *ND = BN.get<NamedDecl>()) {
           if (!isa<FieldDecl, CXXMethodDecl, VarDecl>(ND))
             return true;
@@ -6750,7 +6750,8 @@ AST_POLYMORPHIC_MATCHER(isTemplateInstantiation,
 ///   matches 'A(int) {...};' and 'A(unsigned) {...}'.
 AST_MATCHER_FUNCTION(internal::Matcher<Decl>, isInstantiated) {
   auto IsInstantiation = decl(anyOf(cxxRecordDecl(isTemplateInstantiation()),
-                                    functionDecl(isTemplateInstantiation())));
+                                    functionDecl(isTemplateInstantiation()),
+                                    varDecl(isTemplateInstantiation())));
   return decl(anyOf(IsInstantiation, hasAncestor(IsInstantiation)));
 }
 
@@ -6769,9 +6770,9 @@ AST_MATCHER_FUNCTION(internal::Matcher<Decl>, isInstantiated) {
 ///   will NOT match j += 42; as it's shared between the template definition and
 ///   instantiation.
 AST_MATCHER_FUNCTION(internal::Matcher<Stmt>, isInTemplateInstantiation) {
-  return stmt(
-      hasAncestor(decl(anyOf(cxxRecordDecl(isTemplateInstantiation()),
-                             functionDecl(isTemplateInstantiation())))));
+  return stmt(hasAncestor(decl(anyOf(cxxRecordDecl(isTemplateInstantiation()),
+                                     functionDecl(isTemplateInstantiation()),
+                                     varDecl(isTemplateInstantiation())))));
 }
 
 /// Matches explicit template specializations of function, class, or

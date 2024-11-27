@@ -2772,7 +2772,17 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
         allow_completion);
 
   case clang::Type::MemberPointer:
-    return !qual_type.getTypePtr()->isIncompleteType();
+    // MS C++ ABI requires type of the class to be complete of which the pointee
+    // is a member.
+    if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
+      auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
+      if (MPT->getClass()->isRecordType())
+        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
+                              allow_completion);
+
+      return !qual_type.getTypePtr()->isIncompleteType();
+    }
+    break;
 
   default:
     break;
@@ -9116,7 +9126,7 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
     clang::NamedDecl *nd =
         llvm::dyn_cast<NamedDecl>((clang::Decl *)opaque_decl);
     if (nd != nullptr)
-      return ConstString(nd->getDeclName().getAsString());
+      return ConstString(GetTypeNameForDecl(nd, /*qualified=*/false));
   }
   return ConstString();
 }

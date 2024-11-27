@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=51
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
@@ -476,14 +476,14 @@ use omp_lib
 ! 2.13.1 master
 
   !$omp parallel
-  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !$omp master
   a=3.14
   !$omp end master
   !$omp end parallel
 
   !$omp parallel
-  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !ERROR: NUM_THREADS clause is not allowed on the MASTER directive
   !$omp master num_threads(4)
   a=3.14
@@ -495,7 +495,7 @@ use omp_lib
   !$omp taskyield
   !$omp barrier
   !$omp taskwait
-  !ERROR: DEPEND(SOURCE) or DEPEND(SINK : vec) can be used only with the ordered directive. Used here in the TASKWAIT construct.
+  !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
   !$omp taskwait depend(source)
   ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
@@ -507,7 +507,6 @@ use omp_lib
   !$omp flush acquire
   !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
-  !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
   !$omp flush seq_cst
   !ERROR: RELAXED clause is not allowed on the FLUSH directive
   !$omp flush relaxed

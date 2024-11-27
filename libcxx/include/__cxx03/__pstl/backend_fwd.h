@@ -9,14 +9,14 @@
 #ifndef _LIBCPP___PSTL_BACKEND_FWD_H
 #define _LIBCPP___PSTL_BACKEND_FWD_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 //
 // This header declares available PSTL backends and the functions that must be implemented in order for the

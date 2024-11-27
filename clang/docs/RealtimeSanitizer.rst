@@ -11,10 +11,15 @@ RealtimeSanitizer (a.k.a. RTSan) is a real-time safety testing tool for C and C+
 projects. RTSan can be used to detect real-time violations, i.e. calls to methods
 that are not safe for use in functions with deterministic run time requirements.
 RTSan considers any function marked with the ``[[clang::nonblocking]]`` attribute
-to be a real-time function. If RTSan detects a call to ``malloc``, ``free``,
-``pthread_mutex_lock``, or anything else that could have a non-deterministic
-execution time in a function marked ``[[clang::nonblocking]]``
-RTSan raises an error.
+to be a real-time function. At run-time, if RTSan detects a call to ``malloc``, 
+``free``, ``pthread_mutex_lock``, or anything else known to have a 
+non-deterministic execution time in a function marked ``[[clang::nonblocking]]``
+it raises an error. 
+
+RTSan performs its analysis at run-time but shares the ``[[clang::nonblocking]]`` 
+attribute with the :doc:`FunctionEffectAnalysis` system, which operates at 
+compile-time to detect potential real-time safety violations. For comprehensive 
+detection of real-time safety issues, it is recommended to use both systems together.
 
 The runtime slowdown introduced by RealtimeSanitizer is negligible.
 
@@ -162,7 +167,11 @@ A **partial** list of flags RealtimeSanitizer respects:
    * - ``halt_on_error``
      - ``true``
      - boolean
-     - Exit after first reported error. If false (continue after a detected error), deduplicates error stacks so errors appear only once.
+     - Exit after first reported error.
+   * - ``suppress_equal_stacks``
+     - ``true``
+     - boolean
+     - If true, suppress duplicate reports (i.e. only print each unique error once). Only particularly useful when ``halt_on_error=false``.
    * - ``print_stats_on_exit``
      - ``false``
      - boolean
@@ -197,6 +206,44 @@ Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
    WARNING: found 1 unrecognized flag(s):
    misspelled_flag
    ...
+
+Additional customization
+------------------------
+
+In addition to ``__rtsan_default_options`` outlined above, you can provide definitions of other functions that affect how RTSan operates.
+
+To be notified on every error reported by RTsan, provide a definition of ``__sanitizer_report_error_summary``.
+
+.. code-block:: c
+
+   extern "C" void __sanitizer_report_error_summary(const char *error_summary) {
+      fprintf(stderr, "%s %s\n", "In custom handler! ", error_summary);
+      /* do other custom things */
+   }
+
+The error summary will be of the form: 
+
+.. code-block:: console
+
+   SUMMARY: RealtimeSanitizer: unsafe-library-call main.cpp:8 in process(std::__1::vector<int, std::__1::allocator<int>>&)
+
+To register a callback which will be invoked before a RTSan kills the process:
+
+.. code-block:: c
+
+  extern "C" void __sanitizer_set_death_callback(void (*callback)(void));
+
+  void custom_on_die_callback() {
+    fprintf(stderr, "In custom handler!")
+    /* do other custom things */
+  }
+
+  int main()
+  {
+    __sanitizer_set_death_callback(custom_on_die_callback);
+    ...
+  }
+
 
 Disabling and suppressing
 -------------------------

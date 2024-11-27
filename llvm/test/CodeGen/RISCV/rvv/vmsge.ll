@@ -1084,6 +1084,45 @@ entry:
   ret <vscale x 4 x i1> %a
 }
 
+define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i8_i8_1(<vscale x 4 x i1> %0, <vscale x 4 x i8> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_mask_vx_nxv4i8_i8_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmv1r.v v10, v0
+; CHECK-NEXT:    li a1, 99
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vmsgt.vx v10, v8, a1, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.mask.nxv4i8.i8(
+    <vscale x 4 x i1> %0,
+    <vscale x 4 x i8> %1,
+    i8 100,
+    <vscale x 4 x i1> %2,
+    iXLen %3)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmsge_mask_vx_nxv4i8_i8_2(<vscale x 4 x i1> %0, <vscale x 4 x i8> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_mask_vx_nxv4i8_i8_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vmor.mm v0, v9, v0
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.mask.nxv4i8.i8(
+    <vscale x 4 x i1> %0,
+    <vscale x 4 x i8> %1,
+    i8 -128,
+    <vscale x 4 x i1> %2,
+    iXLen %3)
+
+  ret <vscale x 4 x i1> %a
+}
+
+
 declare <vscale x 8 x i1> @llvm.riscv.vmsge.nxv8i8.i8(
   <vscale x 8 x i8>,
   i8,
@@ -1965,6 +2004,37 @@ entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.nxv4i8.i8(
     <vscale x 4 x i8> %0,
     i8 -11,
+    iXLen %1)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmsge_vi_nxv4i8_i8_1(<vscale x 4 x i8> %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_vi_nxv4i8_i8_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 99
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vmsgt.vx v0, v8, a1
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.nxv4i8.i8(
+    <vscale x 4 x i8> %0,
+    i8 100,
+    iXLen %1)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmsge_vi_nxv4i8_i8_2(<vscale x 4 x i8> %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vmsge_vi_nxv4i8_i8_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmsge.nxv4i8.i8(
+    <vscale x 4 x i8> %0,
+    i8 -128,
     iXLen %1)
 
   ret <vscale x 4 x i1> %a

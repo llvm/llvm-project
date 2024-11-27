@@ -10,23 +10,23 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_UTILITY_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_UTILITY_H
 
-#include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_unsigned.h>
-#include <__type_traits/is_volatile.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
-#include <__utility/integer_sequence.h>
-#include <cstddef>
-#include <cstdint>
-#include <experimental/__config>
-#include <limits>
+#include <__cxx03/__type_traits/is_arithmetic.h>
+#include <__cxx03/__type_traits/is_const.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_unsigned.h>
+#include <__cxx03/__type_traits/is_volatile.h>
+#include <__cxx03/__type_traits/void_t.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/integer_sequence.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/limits>
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 

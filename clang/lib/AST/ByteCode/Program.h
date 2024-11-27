@@ -171,7 +171,7 @@ private:
   llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
   /// Custom allocator for global storage.
-  using PoolAllocTy = llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator>;
+  using PoolAllocTy = llvm::BumpPtrAllocator;
 
   /// Descriptor + storage for a global object.
   ///

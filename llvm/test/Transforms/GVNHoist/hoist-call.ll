@@ -2,14 +2,14 @@
 ; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 
 ; Check that the call and fcmp are hoisted.
-define void @fun(float %__b) minsize {
+define void @fun(float %__b, i1 %arg) minsize {
 ; CHECK-LABEL: @fun(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.fabs.f32(float [[__B:%.*]])
 ; CHECK-NEXT:    [[CMPINF7:%.*]] = fcmp oeq float [[TMP0]], 0x7FF0000000000000
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN8:%.*]], label [[LOR_LHS_FALSE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN8:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.then8:
@@ -19,7 +19,7 @@ entry:
   br label %if.then
 
 if.then:                                          ; preds = %entry
-  br i1 undef, label %if.then8, label %lor.lhs.false
+  br i1 %arg, label %if.then8, label %lor.lhs.false
 
 lor.lhs.false:                                    ; preds = %if.then
   %0 = call float @llvm.fabs.f32(float %__b) #2

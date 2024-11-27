@@ -22,18 +22,15 @@ namespace orc {
 /// runtime.
 class RedirectionManager {
 public:
-  /// Symbol name to symbol definition map.
-  using SymbolAddrMap = DenseMap<SymbolStringPtr, ExecutorSymbolDef>;
-
   virtual ~RedirectionManager() = default;
   /// Change the redirection destination of given symbols to new destination
   /// symbols.
-  virtual Error redirect(JITDylib &JD, const SymbolAddrMap &NewDests) = 0;
+  virtual Error redirect(JITDylib &JD, const SymbolMap &NewDests) = 0;
 
   /// Change the redirection destination of given symbol to new destination
   /// symbol.
-  virtual Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
-                         ExecutorSymbolDef NewDest) {
+  Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
+                 ExecutorSymbolDef NewDest) {
     return redirect(JD, {{Symbol, NewDest}});
   }
 
@@ -47,8 +44,7 @@ class RedirectableSymbolManager : public RedirectionManager {
 public:
   /// Create redirectable symbols with given symbol names and initial
   /// desitnation symbol addresses.
-  Error createRedirectableSymbols(ResourceTrackerSP RT,
-                                  const SymbolMap &InitialDests);
+  Error createRedirectableSymbols(ResourceTrackerSP RT, SymbolMap InitialDests);
 
   /// Create a single redirectable symbol with given symbol name and initial
   /// desitnation symbol address.
@@ -60,7 +56,7 @@ public:
   /// Emit redirectable symbol
   virtual void
   emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> MR,
-                          const SymbolMap &InitialDests) = 0;
+                          SymbolMap InitialDests) = 0;
 };
 
 /// RedirectableMaterializationUnit materializes redirectable symbol
@@ -68,9 +64,9 @@ public:
 class RedirectableMaterializationUnit : public MaterializationUnit {
 public:
   RedirectableMaterializationUnit(RedirectableSymbolManager &RM,
-                                  const SymbolMap &InitialDests)
+                                  SymbolMap InitialDests)
       : MaterializationUnit(convertToFlags(InitialDests)), RM(RM),
-        InitialDests(InitialDests) {}
+        InitialDests(std::move(InitialDests)) {}
 
   StringRef getName() const override {
     return "RedirectableSymbolMaterializationUnit";

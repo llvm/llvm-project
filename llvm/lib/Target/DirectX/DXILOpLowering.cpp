@@ -204,6 +204,25 @@ public:
     CleanupCasts.clear();
   }
 
+  // Remove the resource global associated with the handleFromBinding call
+  // instruction and their uses as they aren't needed anymore.
+  // TODO: We should verify that all the globals get removed.
+  // It's expected we'll need a custom pass in the future that will eliminate
+  // the need for this here.
+  void removeResourceGlobals(CallInst *CI) {
+    for (User *User : make_early_inc_range(CI->users())) {
+      if (StoreInst *Store = dyn_cast<StoreInst>(User)) {
+        Value *V = Store->getOperand(1);
+        Store->eraseFromParent();
+        if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+          if (GV->use_empty()) {
+            GV->removeDeadConstantUsers();
+            GV->eraseFromParent();
+          }
+      }
+    }
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -217,9 +236,14 @@ public:
       dxil::ResourceInfo &RI = *It;
       const auto &Binding = RI.getBinding();
 
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
-          ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
+          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -227,6 +251,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -236,6 +262,7 @@ public:
 
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -245,6 +272,12 @@ public:
       dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
+
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
@@ -255,8 +288,7 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(
           Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
-      std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
-                                      CI->getArgOperand(4)};
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -271,6 +303,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -463,6 +497,30 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerUpdateCounter(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Op1 = CI->getArgOperand(1);
+
+      std::array<Value *, 2> Args{Handle, Op1};
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
+
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -599,6 +657,9 @@ public:
         break;
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_bufferUpdateCounter:
+        HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when
       // https://github.com/llvm/llvm-project/issues/113192 is fixed

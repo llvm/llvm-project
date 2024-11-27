@@ -27,7 +27,7 @@ define i8 @n1(i8 %x) {
 
 define <2 x i8> @t2_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @t2_vec_splat(
-; CHECK-NEXT:    [[DIV_NEG:%.*]] = ashr exact <2 x i8> [[X:%.*]], <i8 5, i8 5>
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = ashr exact <2 x i8> [[X:%.*]], splat (i8 5)
 ; CHECK-NEXT:    [[DIV:%.*]] = sub nsw <2 x i8> zeroinitializer, [[DIV_NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
@@ -100,8 +100,8 @@ define i8 @not_prove_exact_with_high_mask(i8 %x, i8 %y) {
 
 define <2 x i8> @prove_exact_with_high_mask_splat_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask_splat_vec(
-; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[D_NEG:%.*]] = ashr exact <2 x i8> [[A]], <i8 4, i8 4>
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 5)
+; CHECK-NEXT:    [[D_NEG:%.*]] = ashr exact <2 x i8> [[A]], splat (i8 4)
 ; CHECK-NEXT:    [[D:%.*]] = sub nsw <2 x i8> zeroinitializer, [[D_NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;

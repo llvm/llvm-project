@@ -15,6 +15,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_array_ref_test.cpp
   sanitizer_atomic_test.cpp
   sanitizer_bitvector_test.cpp
+  sanitizer_block_signals.cpp
   sanitizer_bvgraph_test.cpp
   sanitizer_chained_origin_depot_test.cpp
   sanitizer_common_test.cpp

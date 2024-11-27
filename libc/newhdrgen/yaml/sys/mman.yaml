@@ -55,6 +55,16 @@ functions:
       - type: int
       - type: int
       - type: off_t
+  - name: mremap
+    standards:
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: size_t
+      - type: int
+      - type: '...'
   - name: mprotect
     standards:
       - POSIX

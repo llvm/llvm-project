@@ -38,6 +38,8 @@ public:
   void adjustStackPtr(unsigned SP, int64_t Amount, MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator I) const;
 
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
   // Return the XtensaRegisterInfo, which this class owns.
   const XtensaRegisterInfo &getRegisterInfo() const { return RI; }
 
@@ -77,6 +79,11 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
+  MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
+
+  bool isBranchOffsetInRange(unsigned BranchOpc,
+                             int64_t BrOffset) const override;
+
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
@@ -90,11 +97,21 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
+  void insertIndirectBranch(MachineBasicBlock &MBB, MachineBasicBlock &DestBB,
+                            MachineBasicBlock &RestoreBB, const DebugLoc &DL,
+                            int64_t BrOffset = 0,
+                            RegScavenger *RS = nullptr) const override;
+
   unsigned insertBranchAtInst(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I,
                               MachineBasicBlock *TBB,
                               ArrayRef<MachineOperand> Cond, const DebugLoc &DL,
                               int *BytesAdded) const;
+
+  unsigned insertConstBranchAtInst(MachineBasicBlock &MBB, MachineInstr *I,
+                                   int64_t offset,
+                                   ArrayRef<MachineOperand> Cond, DebugLoc DL,
+                                   int *BytesAdded) const;
 
   // Return true if MI is a conditional or unconditional branch.
   // When returning true, set Cond to the mask of condition-code

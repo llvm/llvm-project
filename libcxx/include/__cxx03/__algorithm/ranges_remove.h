@@ -8,25 +8,25 @@
 
 #ifndef _LIBCPP___ALGORITHM_RANGES_REMOVE_H
 #define _LIBCPP___ALGORITHM_RANGES_REMOVE_H
-#include <__config>
+#include <__cxx03/__config>
 
-#include <__algorithm/ranges_remove_if.h>
-#include <__functional/identity.h>
-#include <__functional/ranges_operations.h>
-#include <__iterator/concepts.h>
-#include <__iterator/permutable.h>
-#include <__iterator/projected.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__ranges/subrange.h>
-#include <__utility/move.h>
+#include <__cxx03/__algorithm/ranges_remove_if.h>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/ranges_operations.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/permutable.h>
+#include <__cxx03/__iterator/projected.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__ranges/subrange.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 

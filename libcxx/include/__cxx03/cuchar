@@ -36,9 +36,9 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <uchar.h>
+#include <__cxx03/uchar.h>
 
 #ifndef _LIBCPP_UCHAR_H
 #   error <cuchar> tried including <uchar.h> but didn't find libc++'s <uchar.h> header. \

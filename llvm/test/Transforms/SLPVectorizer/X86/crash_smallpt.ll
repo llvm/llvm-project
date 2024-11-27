@@ -27,7 +27,7 @@ define void @main() {
 ; CHECK-NEXT:    [[ADD_I276_US:%.*]] = fadd double 0.000000e+00, 0x3EB0C6F7A0B5ED8D
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double 0xBFA5CC2D1960285F>, double [[ADD_I276_US]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> <double 0.000000e+00, double 1.000000e-01>, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 1.400000e+02, double 1.400000e+02>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], splat (double 1.400000e+02)
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 5.000000e+01, double 5.200000e+01>
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr undef, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> <double 2.000000e-01, double 3.000000e-01>, [[TMP1]]

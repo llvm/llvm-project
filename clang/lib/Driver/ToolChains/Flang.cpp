@@ -203,6 +203,32 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+void Flang::AddPPCTargetArgs(const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  bool VecExtabi = false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "vec-extabi")
+      VecExtabi = true;
+    else if (V == "vec-default")
+      VecExtabi = false;
+    else
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << V;
+  }
+
+  const llvm::Triple &T = getToolChain().getTriple();
+  if (VecExtabi) {
+    if (!T.isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-mabi=vec-extabi" << T.str();
+    }
+    CmdArgs.push_back("-mabi=vec-extabi");
+  }
+}
+
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
@@ -382,6 +408,14 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddX86_64TargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    AddPPCTargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::loongarch64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
   }
 
@@ -713,6 +747,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   } else if (isa<AssembleJobAction>(JA)) {
     CmdArgs.push_back("-emit-obj");
+  } else if (isa<PrecompileJobAction>(JA)) {
+    // The precompile job action is only needed for options such as -mcpu=help.
+    // Those will already have been handled by the fc1 driver.
   } else {
     assert(false && "Unexpected action class for Flang tool.");
   }
@@ -877,8 +914,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Output.getFilename());
   }
 
-  assert(Input.isFilename() && "Invalid input.");
-
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
@@ -898,7 +933,18 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  CmdArgs.push_back(Input.getFilename());
+  // The input could be Ty_Nothing when "querying" options such as -mcpu=help
+  // are used.
+  ArrayRef<InputInfo> FrontendInputs = Input;
+  if (Input.isNothing())
+    FrontendInputs = {};
+
+  for (const InputInfo &Input : FrontendInputs) {
+    if (Input.isFilename())
+      CmdArgs.push_back(Input.getFilename());
+    else
+      Input.getInputArg().renderAsInput(Args, CmdArgs);
+  }
 
   const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,

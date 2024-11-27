@@ -12,13 +12,13 @@
 
 namespace lldb_dap {
 
-FunctionBreakpoint::FunctionBreakpoint(const llvm::json::Object &obj)
-    : Breakpoint(obj), functionName(std::string(GetString(obj, "name"))) {}
+FunctionBreakpoint::FunctionBreakpoint(DAP &d, const llvm::json::Object &obj)
+    : Breakpoint(d, obj), functionName(std::string(GetString(obj, "name"))) {}
 
 void FunctionBreakpoint::SetBreakpoint() {
   if (functionName.empty())
     return;
-  bp = g_dap.target.BreakpointCreateByName(functionName.c_str());
+  bp = dap.target.BreakpointCreateByName(functionName.c_str());
   Breakpoint::SetBreakpoint();
 }
 

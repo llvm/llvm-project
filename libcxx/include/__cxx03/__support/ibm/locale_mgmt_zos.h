@@ -11,8 +11,8 @@
 #define _LIBCPP___SUPPORT_IBM_LOCALE_MGMT_ZOS_H
 
 #if defined(__MVS__)
-#  include <locale.h>
-#  include <string>
+#  include <__cxx03/locale.h>
+#  include <__cxx03/string>
 
 #  ifdef __cplusplus
 extern "C" {

@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK
 #define _LIBCPP___COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK
 
-#include <__compare/ordering.h>
-#include <__compare/partial_order.h>
-#include <__config>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_same.h>
-#include <__utility/forward.h>
-#include <__utility/priority_tag.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/partial_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/priority_tag.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header

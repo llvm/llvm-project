@@ -345,7 +345,7 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
-    YamlMF.VirtualRegisters.push_back(VReg);
+    YamlMF.VirtualRegisters.push_back(std::move(VReg));
   }
 
   // Print the live ins.
@@ -354,7 +354,7 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     printRegMIR(LI.first, LiveIn.Register, TRI);
     if (LI.second)
       printRegMIR(LI.second, LiveIn.VirtualRegister, TRI);
-    YamlMF.LiveIns.push_back(LiveIn);
+    YamlMF.LiveIns.push_back(std::move(LiveIn));
   }
 
   // Prints the callee saved registers.
@@ -364,9 +364,9 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     for (const MCPhysReg *I = CalleeSavedRegs; *I; ++I) {
       yaml::FlowStringValue Reg;
       printRegMIR(*I, Reg, TRI);
-      CalleeSavedRegisters.push_back(Reg);
+      CalleeSavedRegisters.push_back(std::move(Reg));
     }
-    YamlMF.CalleeSavedRegisters = CalleeSavedRegisters;
+    YamlMF.CalleeSavedRegisters = std::move(CalleeSavedRegisters);
   }
 }
 
@@ -837,6 +837,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "disjoint ";
   if (MI.getFlag(MachineInstr::NoUSWrap))
     OS << "nusw ";
+  if (MI.getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

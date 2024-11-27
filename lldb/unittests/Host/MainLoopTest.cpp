@@ -15,6 +15,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <chrono>
 #include <future>
 #include <thread>
 
@@ -41,7 +42,8 @@ public:
         llvm::formatv("localhost:{0}", listen_socket_up->GetLocalPortNumber())
             .str());
     ASSERT_TRUE(error.Success());
-    ASSERT_TRUE(listen_socket_up->Accept(accept_socket).Success());
+    ASSERT_TRUE(listen_socket_up->Accept(std::chrono::seconds(1), accept_socket)
+                    .Success());
 
     callback_count = 0;
     socketpair[0] = std::move(connect_socket_up);
@@ -106,13 +108,9 @@ TEST_F(MainLoopTest, NoSpuriousReads) {
       error);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   // Terminate the loop after one second.
-  std::thread terminate_thread([&loop] {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    loop.AddPendingCallback(
-        [](MainLoopBase &loop) { loop.RequestTermination(); });
-  });
+  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                   std::chrono::seconds(1));
   ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
-  terminate_thread.join();
 
   // Make sure the callback was called only once.
   ASSERT_EQ(1u, callback_count);
@@ -223,6 +221,61 @@ TEST_F(MainLoopTest, ManyPendingCallbacks) {
   ASSERT_TRUE(loop.Run().Success());
 }
 
+TEST_F(MainLoopTest, CallbackWithTimeout) {
+  MainLoop loop;
+  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                   std::chrono::seconds(2));
+  auto start = std::chrono::steady_clock::now();
+  ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
+  EXPECT_GE(std::chrono::steady_clock::now() - start, std::chrono::seconds(2));
+}
+
+TEST_F(MainLoopTest, TimedCallbacksRunInOrder) {
+  MainLoop loop;
+  auto start = std::chrono::steady_clock::now();
+  std::chrono::milliseconds epsilon(10);
+  std::vector<int> order;
+  auto add_cb = [&](int id) {
+    loop.AddCallback([&order, id](MainLoopBase &) { order.push_back(id); },
+                     start + id * epsilon);
+  };
+  add_cb(3);
+  add_cb(2);
+  add_cb(4);
+  add_cb(1);
+  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                   start + 5 * epsilon);
+  ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
+  EXPECT_GE(std::chrono::steady_clock::now() - start, 5 * epsilon);
+  ASSERT_THAT(order, testing::ElementsAre(1, 2, 3, 4));
+}
+
+TEST_F(MainLoopTest, TimedCallbackShortensSleep) {
+  MainLoop loop;
+  auto start = std::chrono::steady_clock::now();
+  bool long_callback_called = false;
+  loop.AddCallback(
+      [&](MainLoopBase &loop) {
+        long_callback_called = true;
+        loop.RequestTermination();
+      },
+      std::chrono::seconds(30));
+  std::future<Status> async_run =
+      std::async(std::launch::async, &MainLoop::Run, std::ref(loop));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  bool short_callback_called = false;
+  loop.AddCallback(
+      [&](MainLoopBase &loop) {
+        short_callback_called = true;
+        loop.RequestTermination();
+      },
+      std::chrono::seconds(1));
+  ASSERT_THAT_ERROR(async_run.get().takeError(), llvm::Succeeded());
+  EXPECT_LT(std::chrono::steady_clock::now() - start, std::chrono::seconds(10));
+  EXPECT_TRUE(short_callback_called);
+  EXPECT_FALSE(long_callback_called);
+}
+
 #ifdef LLVM_ON_UNIX
 TEST_F(MainLoopTest, DetectsEOF) {
 
@@ -250,6 +303,17 @@ TEST_F(MainLoopTest, Signal) {
   auto handle = loop.RegisterSignal(SIGUSR1, make_callback(), error);
   ASSERT_TRUE(error.Success());
   kill(getpid(), SIGUSR1);
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
+TEST_F(MainLoopTest, SignalOnOtherThread) {
+  MainLoop loop;
+  Status error;
+
+  auto handle = loop.RegisterSignal(SIGUSR1, make_callback(), error);
+  ASSERT_TRUE(error.Success());
+  std::thread([] { pthread_kill(pthread_self(), SIGUSR1); }).join();
   ASSERT_TRUE(loop.Run().Success());
   ASSERT_EQ(1u, callback_count);
 }

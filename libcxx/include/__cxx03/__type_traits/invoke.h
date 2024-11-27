@@ -10,20 +10,20 @@
 #ifndef _LIBCPP___TYPE_TRAITS_INVOKE_H
 #define _LIBCPP___TYPE_TRAITS_INVOKE_H
 
-#include <__config>
-#include <__type_traits/conditional.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_base_of.h>
-#include <__type_traits/is_core_convertible.h>
-#include <__type_traits/is_member_pointer.h>
-#include <__type_traits/is_reference_wrapper.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/nat.h>
-#include <__utility/declval.h>
-#include <__utility/forward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_base_of.h>
+#include <__cxx03/__type_traits/is_core_convertible.h>
+#include <__cxx03/__type_traits/is_member_pointer.h>
+#include <__cxx03/__type_traits/is_reference_wrapper.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/nat.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

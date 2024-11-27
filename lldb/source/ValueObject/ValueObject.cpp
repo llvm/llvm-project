@@ -1639,6 +1639,18 @@ addr_t ValueObject::GetPointerValue(AddressType *address_type) {
   return address;
 }
 
+static const char *ConvertBoolean(lldb::LanguageType language_type,
+                                  const char *value_str) {
+  if (Language *language = Language::FindPlugin(language_type))
+    if (auto boolean = language->GetBooleanFromString(value_str))
+      return *boolean ? "1" : "0";
+
+  return llvm::StringSwitch<const char *>(value_str)
+      .Case("true", "1")
+      .Case("false", "0")
+      .Default(value_str);
+}
+
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
   // Make sure our value is up to date first so that our location and location
@@ -1659,6 +1671,9 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
     // If the value is already a scalar, then let the scalar change itself:
     m_value.GetScalar().SetValueFromCString(value_str, encoding, byte_size);
   } else if (byte_size <= 16) {
+    if (GetCompilerType().IsBoolean())
+      value_str = ConvertBoolean(GetObjectRuntimeLanguage(), value_str);
+
     // If the value fits in a scalar, then make a new scalar and again let the
     // scalar code do the conversion, then figure out where to put the new
     // value.
@@ -2907,15 +2922,6 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
   AddressType address_type = eAddressTypeInvalid;
   const bool scalar_is_load_address = false;
-
-  // For reference type we need to get the address of the object that
-  // it refers to.
-  if (GetCompilerType().IsReferenceType()) {
-    ValueObjectSP deref_obj = Dereference(error);
-    if (error.Fail() || !deref_obj)
-      return ValueObjectSP();
-    return deref_obj->AddressOf(error);
-  }
   addr_t addr = GetAddressOf(scalar_is_load_address, &address_type);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {

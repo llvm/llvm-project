@@ -20,6 +20,8 @@
 #define CG_DATA_DEFINED
 CG_DATA_SECT_ENTRY(CG_outline, CG_DATA_QUOTE(CG_DATA_OUTLINE_COMMON),
                    CG_DATA_OUTLINE_COFF, "__DATA,")
+CG_DATA_SECT_ENTRY(CG_merge, CG_DATA_QUOTE(CG_DATA_MERGE_COMMON),
+                   CG_DATA_MERGE_COFF, "__DATA,")
 
 #undef CG_DATA_SECT_ENTRY
 #endif
@@ -27,20 +29,24 @@ CG_DATA_SECT_ENTRY(CG_outline, CG_DATA_QUOTE(CG_DATA_OUTLINE_COMMON),
 /* section name strings common to all targets other
    than WIN32 */
 #define CG_DATA_OUTLINE_COMMON __llvm_outline
+#define CG_DATA_MERGE_COMMON __llvm_merge
 /* Since cg data sections are not allocated, we don't need to
  * access them at runtime.
  */
 #define CG_DATA_OUTLINE_COFF ".loutline"
+#define CG_DATA_MERGE_COFF ".lmerge"
 
 #ifdef _WIN32
 /* Runtime section names and name strings.  */
-#define CG_DATA_SECT_NAME CG_DATA_OUTLINE_COFF
+#define CG_DATA_OUTLINE_SECT_NAME CG_DATA_OUTLINE_COFF
+#define CG_DATA_MERGE_SECT_NAME CG_DATA_MERGE_COFF
 
 #else
 /* Runtime section names and name strings.  */
-#define CG_DATA_SECT_NAME CG_DATA_QUOTE(CG_DATA_OUTLINE_COMMON)
+#define CG_DATA_OUTLINE_SECT_NAME CG_DATA_QUOTE(CG_DATA_OUTLINE_COMMON)
+#define CG_DATA_MERGE_SECT_NAME CG_DATA_QUOTE(CG_DATA_MERGE_COMMON)
 
 #endif
 
 /* Indexed codegen data format version (start from 1). */
-#define CG_DATA_INDEX_VERSION 1
+#define CG_DATA_INDEX_VERSION 2
