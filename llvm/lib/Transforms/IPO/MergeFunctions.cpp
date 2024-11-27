@@ -197,8 +197,7 @@ public:
   }
 
   template <typename FuncContainer> bool run(FuncContainer &Functions);
-  std::pair<bool, DenseMap<Function *, Function *>>
-  runOnFunctions(std::set<Function *> &F);
+  DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> F);
 
   SmallPtrSet<GlobalValue *, 4> &getUsed();
 
@@ -325,8 +324,8 @@ bool MergeFunctionsPass::runOnModule(Module &M) {
   return MF.run(M);
 }
 
-std::pair<bool, DenseMap<Function *, Function *>>
-MergeFunctionsPass::runOnFunctions(std::set<Function *> &F) {
+DenseMap<Function *, Function *>
+MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> F) {
   MergeFunctions MF;
   return MF.runOnFunctions(F);
 }
@@ -455,7 +454,7 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
     // If the hash value matches the previous value or the next one, we must
     // consider merging it. Otherwise it is dropped and never considered again.
     if ((I != S && std::prev(I)->first == I->first) ||
-        (std::next(I) != IE && std::next(I)->first == I->first) ) {
+        (std::next(I) != IE && std::next(I)->first == I->first)) {
       Deferred.push_back(WeakTrackingVH(I->second));
     }
   }
@@ -489,11 +488,12 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
   return Changed;
 }
 
-std::pair<bool, DenseMap<Function *, Function *>>
-MergeFunctions::runOnFunctions(std::set<Function *> &F) {
-  bool MergeResult = false;
-  MergeResult = this->run(F);
-  return {MergeResult, this->DelToNewMap};
+DenseMap<Function *, Function *>
+MergeFunctions::runOnFunctions(ArrayRef<Function *> F) {
+  bool MergeResult = this->run(F);
+  if (!MergeResult)
+    this->DelToNewMap = DenseMap<Function *, Function *>();
+  return this->DelToNewMap;
 }
 
 // Replace direct callers of Old with New.

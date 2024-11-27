@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/MergeFunctions.h"
+
+#include "llvm/ADT/SetVector.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -116,22 +118,18 @@ TEST(MergeFunctions, TrueOutputFunctionsTest) {
     )invalid",
                                                 Err, Ctx));
 
-  std::set<Function *> FunctionsSet;
+  SetVector<Function *> FunctionsSet;
   for (Function &F : *M)
     FunctionsSet.insert(&F);
 
-  std::pair<bool, DenseMap<Function *, Function *>> MergeResult =
-      MergeFunctionsPass::runOnFunctions(FunctionsSet);
-
-  // Expects true after merging _slice_add10 and _slice_add10_alt
-  EXPECT_TRUE(MergeResult.first);
+  DenseMap<Function *, Function *> MergeResult =
+      MergeFunctionsPass::runOnFunctions(FunctionsSet.getArrayRef());
 
   // Expects that both functions (_slice_add10 and _slice_add10_alt)
   // be mapped to the same new function
-  EXPECT_TRUE(MergeResult.second.size() > 0);
-  DenseMap<Function *, Function *> DelToNew = MergeResult.second;
+  EXPECT_TRUE(!MergeResult.empty());
   Function *NewFunction = M->getFunction("_slice_add10");
-  for (auto P : DelToNew)
+  for (auto P : MergeResult)
     if (P.second)
       EXPECT_EQ(P.second, NewFunction);
 }
@@ -234,21 +232,18 @@ TEST(MergeFunctions, FalseOutputFunctionsTest) {
     )invalid",
                                                 Err, Ctx));
 
-  std::set<Function *> FunctionsSet;
+  SetVector<Function *> FunctionsSet;
   for (Function &F : *M)
     FunctionsSet.insert(&F);
 
-  std::pair<bool, DenseMap<Function *, Function *>> MergeResult =
-      MergeFunctionsPass::runOnFunctions(FunctionsSet);
+  DenseMap<Function *, Function *> MergeResult =
+      MergeFunctionsPass::runOnFunctions(FunctionsSet.getArrayRef());
 
-  for (auto P : MergeResult.second)
+  for (auto P : MergeResult)
     std::cout << P.first << " " << P.second << "\n";
 
-  // Expects false after trying to merge _slice_add10 and _slice_add10_alt
-  EXPECT_FALSE(MergeResult.first);
-
   // Expects empty map
-  EXPECT_EQ(MergeResult.second.size(), 0u);
+  EXPECT_EQ(MergeResult.size(), 0u);
 }
 
 } // namespace
