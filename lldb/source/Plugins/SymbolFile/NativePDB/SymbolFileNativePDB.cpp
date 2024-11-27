@@ -424,7 +424,7 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
         m_index->MakeVirtualAddress(block.Segment, block.CodeOffset);
     lldb::addr_t func_base =
         func->GetAddressRange().GetBaseAddress().GetFileAddress();
-    BlockSP child_block = std::make_shared<Block>(opaque_block_uid);
+    BlockSP child_block = parent_block->CreateChild(opaque_block_uid);
     if (block_base >= func_base)
       child_block->AddRange(Block::Range(block_base - func_base, block.CodeSize));
     else {
@@ -437,7 +437,6 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
           block_id.modi, block_id.offset, block_base,
           block_base + block.CodeSize, func_base);
     }
-    parent_block->AddChild(child_block);
     ast_builder->GetOrCreateBlockDecl(block_id);
     m_blocks.insert({opaque_block_uid, child_block});
     break;
@@ -450,8 +449,7 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     Block *parent_block = GetOrCreateBlock(inline_site->parent_id);
     if (!parent_block)
       return nullptr;
-    BlockSP child_block = std::make_shared<Block>(opaque_block_uid);
-    parent_block->AddChild(child_block);
+    BlockSP child_block = parent_block->CreateChild(opaque_block_uid);
     ast_builder->GetOrCreateInlinedFunctionDecl(block_id);
     // Copy ranges from InlineSite to Block.
     for (size_t i = 0; i < inline_site->ranges.GetSize(); ++i) {
