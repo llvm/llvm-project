@@ -26,7 +26,11 @@
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
@@ -44,7 +48,7 @@ public:
   AMDGPUAnnotateVaryingBranchWeightsImpl(const GCNSubtarget &ST,
                                          const TargetTransformInfo &GCNTTI,
                                          UniformityInfo &UA)
-      : ST(ST), GCNTTI(GCNTTI), UA(UA) {
+      : ST(ST), UA(UA) {
     // Determine weights that signal that a branch is very likely to be
     // predicted correctly, i.e., whose ratio exceeds
     // TTI.getPredictableBranchThreshold().
@@ -59,11 +63,13 @@ public:
 
 private:
   const GCNSubtarget &ST;
-  const TargetTransformInfo &GCNTTI;
   const UniformityInfo &UA;
   uint32_t LikelyWeight;
   uint32_t UnlikelyWeight;
   ValueMap<const Value *, bool> LikelyVaryingCache;
+  unsigned HighestLikelyVaryingDimension = 0;
+
+  bool isRelevantSourceOfDivergence(const Value *V) const;
 
   /// Heuristically check if it is likely that a wavefront has dynamically
   /// varying values for V.
@@ -72,7 +78,7 @@ private:
   /// Set branch weights that signal that the "true" successor of Term is the
   /// likely destination, if no prior weights are present.
   /// Return true if weights were set.
-  bool setTrueSuccessorLikely(BranchInst *Term);
+  bool setTrueSuccessorLikely(BranchInst *Term) const;
 };
 
 class AMDGPUAnnotateVaryingBranchWeightsLegacy : public FunctionPass {
@@ -137,13 +143,43 @@ AMDGPUAnnotateVaryingBranchWeightsPass::run(Function &F,
   return PA;
 }
 
+bool AMDGPUAnnotateVaryingBranchWeightsImpl::isRelevantSourceOfDivergence(
+    const Value *V) const {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::amdgcn_workitem_id_z:
+  case Intrinsic::r600_read_tidig_z:
+    return HighestLikelyVaryingDimension >= 2;
+  case Intrinsic::amdgcn_workitem_id_y:
+  case Intrinsic::r600_read_tidig_y:
+    return HighestLikelyVaryingDimension >= 1;
+  case Intrinsic::amdgcn_workitem_id_x:
+  case Intrinsic::r600_read_tidig_x:
+  case Intrinsic::amdgcn_mbcnt_hi:
+  case Intrinsic::amdgcn_mbcnt_lo:
+    return true;
+  }
+
+  return false;
+}
+
 bool AMDGPUAnnotateVaryingBranchWeightsImpl::isLikelyVarying(const Value *V) {
   // Check if V is a source of divergence or if it transitively uses one.
-  if (GCNTTI.isSourceOfDivergence(V))
+  if (isRelevantSourceOfDivergence(V))
     return true;
 
-  auto *U = dyn_cast<User>(V);
-  if (!U)
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+
+  // ExtractValueInst and IntrinsicInst enable looking through the
+  // amdgcn_if/else intrinsics inserted by SIAnnotateControlFlow.
+  // This condition excludes PHINodes, which prevents infinite recursion.
+  if (!isa<BinaryOperator>(I) && !isa<UnaryOperator>(I) && !isa<CastInst>(I) &&
+      !isa<CmpInst>(I) && !isa<ExtractValueInst>(I) && !isa<IntrinsicInst>(I))
     return false;
 
   // Have we already checked V?
@@ -153,7 +189,7 @@ bool AMDGPUAnnotateVaryingBranchWeightsImpl::isLikelyVarying(const Value *V) {
 
   // Does it use a likely varying Value?
   bool Result = false;
-  for (const auto &Use : U->operands()) {
+  for (const auto &Use : I->operands()) {
     Result |= isLikelyVarying(Use);
     if (Result)
       break;
@@ -164,7 +200,7 @@ bool AMDGPUAnnotateVaryingBranchWeightsImpl::isLikelyVarying(const Value *V) {
 }
 
 bool AMDGPUAnnotateVaryingBranchWeightsImpl::setTrueSuccessorLikely(
-    BranchInst *Term) {
+    BranchInst *Term) const {
   assert(Term->isConditional());
 
   // Don't overwrite existing branch weights.
@@ -177,9 +213,33 @@ bool AMDGPUAnnotateVaryingBranchWeightsImpl::setTrueSuccessorLikely(
 }
 
 bool AMDGPUAnnotateVaryingBranchWeightsImpl::run(Function &F) {
+  unsigned MinWGSize = ST.getFlatWorkGroupSizes(F).first;
+  bool MustHaveMoreThanOneThread = MinWGSize > 1;
+
+  // reqd_work_group_size determines the size of the work group in every
+  // dimension. If it is present, identify the dimensions where the workitem id
+  // differs between the threads of the same wavefront. Otherwise assume that
+  // only dimension 0, i.e., x, varies.
+  //
+  // TODO can/should we assume that workitems are grouped into waves like that?
+  auto *Node = F.getMetadata("reqd_work_group_size");
+  if (Node && Node->getNumOperands() == 3) {
+    unsigned WavefrontSize = ST.getWavefrontSize();
+    unsigned ThreadsSoFar = 1;
+    unsigned Dim = 0;
+    for (; Dim < 3; ++Dim) {
+      ThreadsSoFar *=
+          mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
+      if (ThreadsSoFar >= WavefrontSize)
+        break;
+    }
+    HighestLikelyVaryingDimension = Dim;
+    LLVM_DEBUG(dbgs() << "Highest Likely Varying Dimension: " << Dim << '\n');
+    MustHaveMoreThanOneThread |= ThreadsSoFar > 1;
+  }
+
   // If the workgroup has only a single thread, the condition cannot vary.
-  const auto WGSizes = ST.getFlatWorkGroupSizes(F);
-  if (WGSizes.first <= 1)
+  if (!MustHaveMoreThanOneThread)
     return false;
 
   bool Changed = false;
