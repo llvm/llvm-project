@@ -158,4 +158,8 @@ void foo() {
 #pragma acc parallel loop wait(devnum:i:queues:*iPtr, i)
   for(int i = 0;i<5;++i);
 
+  // CHECK: #pragma acc serial loop attach(iPtr, arrayPtr[0])
+#pragma acc serial loop attach(iPtr, arrayPtr[0])
+  for(int i = 0;i<5;++i);
+
 }
