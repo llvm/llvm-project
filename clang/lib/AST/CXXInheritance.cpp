@@ -134,7 +134,7 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
         return false;
 
       CXXRecordDecl *Base =
-          cast_if_present<CXXRecordDecl>(Ty->getDecl()->getDefinition());
+            cast_or_null<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!Base ||
           (Base->isDependentContext() &&
            !Base->isCurrentInstantiation(Record))) {
@@ -169,21 +169,13 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
     QualType BaseType =
         Context.getCanonicalType(BaseSpec.getType()).getUnqualifiedType();
 
-    bool isCurrentInstantiation = isa<InjectedClassNameType>(BaseType);
-    if (!isCurrentInstantiation) {
-      if (auto *BaseRecord = cast_if_present<CXXRecordDecl>(
-              BaseSpec.getType()->getAsRecordDecl()))
-        isCurrentInstantiation = BaseRecord->isDependentContext() &&
-                                 BaseRecord->isCurrentInstantiation(Record);
-    }
     // C++ [temp.dep]p3:
     //   In the definition of a class template or a member of a class template,
     //   if a base class of the class template depends on a template-parameter,
     //   the base class scope is not examined during unqualified name lookup
     //   either at the point of definition of the class template or member or
     //   during an instantiation of the class tem- plate or member.
-    if (!LookupInDependent &&
-        (BaseType->isDependentType() && !isCurrentInstantiation))
+    if (!LookupInDependent && BaseType->isDependentType())
       continue;
 
     // Determine whether we need to visit this base class at all,
@@ -251,8 +243,9 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
         return FoundPath;
       }
     } else if (VisitBase) {
-      CXXRecordDecl *BaseRecord = nullptr;
+      CXXRecordDecl *BaseRecord;
       if (LookupInDependent) {
+        BaseRecord = nullptr;
         const TemplateSpecializationType *TST =
             BaseSpec.getType()->getAs<TemplateSpecializationType>();
         if (!TST) {
@@ -271,7 +264,8 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
             BaseRecord = nullptr;
         }
       } else {
-        BaseRecord = cast<CXXRecordDecl>(BaseSpec.getType()->getAsRecordDecl());
+        BaseRecord = cast<CXXRecordDecl>(
+            BaseSpec.getType()->castAs<RecordType>()->getDecl());
       }
       if (BaseRecord &&
           lookupInBases(Context, BaseRecord, BaseMatches, LookupInDependent)) {

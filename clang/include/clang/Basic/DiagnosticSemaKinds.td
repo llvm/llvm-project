@@ -6417,7 +6417,7 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
-  "consider making the bitfield type %select{unsigned|signed}0">;
+  "consider making the bit-field type %select{unsigned|signed}0">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,
@@ -12787,5 +12787,5 @@ def err_acc_loop_not_monotonic
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
-def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;
+def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 } // end of sema component.

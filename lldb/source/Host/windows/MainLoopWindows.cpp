@@ -28,7 +28,7 @@ static DWORD ToTimeout(std::optional<MainLoopWindows::TimePoint> point) {
     return WSA_INFINITE;
 
   nanoseconds dur = (std::max)(*point - steady_clock::now(), nanoseconds(0));
-  return duration_cast<milliseconds>(dur).count();
+  return ceil<milliseconds>(dur).count();
 }
 
 MainLoopWindows::MainLoopWindows() {

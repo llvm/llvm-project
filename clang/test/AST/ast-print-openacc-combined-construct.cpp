@@ -122,4 +122,19 @@ void foo() {
 #pragma acc kernels loop async
   for(int i = 0;i<5;++i);
 
+// CHECK: #pragma acc parallel loop present(i, array[1], array, array[1:2])
+#pragma acc parallel loop present(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+// CHECK: #pragma acc serial loop present(i, array[1], array, array[1:2])
+#pragma acc serial loop present(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+// CHECK: #pragma acc kernels loop present(i, array[1], array, array[1:2])
+#pragma acc kernels loop present(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
+  float *arrayPtr[5];
+
+  // CHECK: #pragma acc kernels loop deviceptr(iPtr, arrayPtr[0])
+#pragma acc kernels loop deviceptr(iPtr, arrayPtr[0])
+  for(int i = 0;i<5;++i);
 }
