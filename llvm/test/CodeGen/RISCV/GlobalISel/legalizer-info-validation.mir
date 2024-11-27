@@ -477,29 +477,35 @@
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FPOW (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FPOWI (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FEXP (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FEXP2 (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FEXP10 (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FLOG (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FLOG2 (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FLOG10 (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FLDEXP (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
@@ -677,11 +683,12 @@
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FCOS (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FSIN (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FSINCOS (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
