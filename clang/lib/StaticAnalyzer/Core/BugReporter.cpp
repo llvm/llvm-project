@@ -590,7 +590,7 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     const PathDiagnosticConstruct &C) const {
   if (const Stmt *S =
-          C.getCurrentNode()->getNextStmtForDiagnostics(/*skipPurge=*/true))
+          C.getCurrentNode()->getNextStmtForDiagnostics())
     return PathDiagnosticLocation(S, getSourceManager(),
                                   C.getCurrLocationContext());
 
@@ -883,8 +883,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
   case Stmt::GotoStmtClass:
   case Stmt::IndirectGotoStmtClass: {
-    if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics(
-            /*skipPurge=*/false))
+    if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
       C.getActivePath().push_front(generateDiagForGotoOP(C, S, Start));
     break;
   }
@@ -2432,7 +2431,7 @@ findReasonableStmtCloseToFunctionExit(const ExplodedNode *N) {
   if (exitingDestructor(N)) {
     // If we are exiting a destructor call, it is more useful to point to
     // the next stmt which is usually the temporary declaration.
-    if (const Stmt *S = N->getNextStmtForDiagnostics(/*skipPurge=*/false))
+    if (const Stmt *S = N->getNextStmtForDiagnostics())
       return S;
     // If next stmt is not found, it is likely the end of a top-level
     // function analysis. find the last execution statement then.
@@ -2460,7 +2459,7 @@ PathSensitiveBugReport::getLocation() const {
       S = findReasonableStmtCloseToFunctionExit(ErrorNode);
     }
     if (!S)
-      S = ErrorNode->getNextStmtForDiagnostics(/*skipPurge=*/false);
+      S = ErrorNode->getNextStmtForDiagnostics();
   }
 
   if (S) {
