@@ -37,13 +37,12 @@ cir::BrOp CIRGenFunction::emitBranchThroughCleanup(mlir::Location Loc,
                                                    JumpDest Dest) {
   // Remove this once we go for making sure unreachable code is
   // well modeled (or not).
-  assert(builder.getInsertionBlock() && "not yet implemented");
   assert(!cir::MissingFeatures::ehStack());
 
   // Insert a branch: to the cleanup block (unsolved) or to the already
   // materialized label. Keep track of unsolved goto's.
-  auto brOp = builder.create<BrOp>(
-      Loc, Dest.isValid() ? Dest.getBlock() : ReturnBlock().getBlock());
+  assert(Dest.getBlock() && "assumes incoming valid dest");
+  auto brOp = builder.create<BrOp>(Loc, Dest.getBlock());
 
   // Calculate the innermost active normal cleanup.
   EHScopeStack::stable_iterator TopCleanup =
@@ -70,7 +69,33 @@ cir::BrOp CIRGenFunction::emitBranchThroughCleanup(mlir::Location Loc,
     return brOp;
   }
 
-  // FIXME(cir): otherwise, thread through all the normal cleanups in scope.
+  // Otherwise, thread through all the normal cleanups in scope.
+  auto index = builder.getUInt32(Dest.getDestIndex(), Loc);
+  assert(!cir::MissingFeatures::cleanupIndexAndBIAdjustment());
+
+  // Add this destination to all the scopes involved.
+  EHScopeStack::stable_iterator I = TopCleanup;
+  EHScopeStack::stable_iterator E = Dest.getScopeDepth();
+  if (E.strictlyEncloses(I)) {
+    while (true) {
+      EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.find(I));
+      assert(Scope.isNormalCleanup());
+      I = Scope.getEnclosingNormalCleanup();
+
+      // If this is the last cleanup we're propagating through, tell it
+      // that there's a resolved jump moving through it.
+      if (!E.strictlyEncloses(I)) {
+        Scope.addBranchAfter(index, Dest.getBlock());
+        break;
+      }
+
+      // Otherwise, tell the scope that there's a jump propagating
+      // through it.  If this isn't new information, all the rest of
+      // the work has been done before.
+      if (!Scope.addBranchThrough(Dest.getBlock()))
+        break;
+    }
+  }
   return brOp;
 }
 
@@ -305,6 +330,18 @@ static void emitCleanup(CIRGenFunction &CGF, EHScopeStack::Cleanup *Fn,
   // No need to emit continuation block because CIR uses a cir.if.
 }
 
+static mlir::Block *createNormalEntry(CIRGenFunction &cgf,
+                                      EHCleanupScope &scope) {
+  assert(scope.isNormalCleanup());
+  mlir::Block *entry = scope.getNormalBlock();
+  if (!entry) {
+    mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
+    entry = cgf.currLexScope->getOrCreateCleanupBlock(cgf.getBuilder());
+    scope.setNormalBlock(entry);
+  }
+  return entry;
+}
+
 /// Pops a cleanup block. If the block includes a normal cleanup, the
 /// current insertion point is threaded through the cleanup, as are
 /// any branch fixups on the cleanup.
@@ -341,7 +378,8 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // - whether there's a fallthrough
   auto *FallthroughSource = builder.getInsertionBlock();
-  bool HasFallthrough = (FallthroughSource != nullptr && IsActive);
+  bool HasFallthrough =
+      (FallthroughSource != nullptr && (IsActive || HasExistingBranches));
 
   // Branch-through fall-throughs leave the insertion point set to the
   // end of the last cleanup, which points to the current scope.  The
@@ -442,7 +480,131 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       // Otherwise, the best approach is to thread everything through
       // the cleanup block and then try to clean up after ourselves.
     } else {
-      llvm_unreachable("NYI");
+      // Force the entry block to exist.
+      mlir::Block *normalEntry = createNormalEntry(*this, Scope);
+
+      // I.  Set up the fallthrough edge in.
+      mlir::OpBuilder::InsertPoint savedInactiveFallthroughIP;
+
+      // If there's a fallthrough, we need to store the cleanup
+      // destination index. For fall-throughs this is always zero.
+      if (HasFallthrough) {
+        if (!HasPrebranchedFallthrough) {
+          assert(!cir::MissingFeatures::cleanupDestinationIndex());
+        }
+
+        // Otherwise, save and clear the IP if we don't have fallthrough
+        // because the cleanup is inactive.
+      } else if (FallthroughSource) {
+        assert(!IsActive && "source without fallthrough for active cleanup");
+        savedInactiveFallthroughIP = getBuilder().saveInsertionPoint();
+      }
+
+      // II.  Emit the entry block.  This implicitly branches to it if
+      // we have fallthrough.  All the fixups and existing branches
+      // should already be branched to it.
+      builder.setInsertionPointToEnd(normalEntry);
+
+      // intercept normal cleanup to mark SEH scope end
+      if (IsEHa) {
+        llvm_unreachable("NYI");
+      }
+
+      // III.  Figure out where we're going and build the cleanup
+      // epilogue.
+      bool HasEnclosingCleanups =
+          (Scope.getEnclosingNormalCleanup() != EHStack.stable_end());
+
+      // Compute the branch-through dest if we need it:
+      //   - if there are branch-throughs threaded through the scope
+      //   - if fall-through is a branch-through
+      //   - if there are fixups that will be optimistically forwarded
+      //     to the enclosing cleanup
+      mlir::Block *branchThroughDest = nullptr;
+      if (Scope.hasBranchThroughs() ||
+          (FallthroughSource && FallthroughIsBranchThrough) ||
+          (HasFixups && HasEnclosingCleanups)) {
+        llvm_unreachable("NYI");
+      }
+
+      mlir::Block *fallthroughDest = nullptr;
+
+      // If there's exactly one branch-after and no other threads,
+      // we can route it without a switch.
+      // Skip for SEH, since ExitSwitch is used to generate code to indicate
+      // abnormal termination. (SEH: Except _leave and fall-through at
+      // the end, all other exits in a _try (return/goto/continue/break)
+      // are considered as abnormal terminations, using NormalCleanupDestSlot
+      // to indicate abnormal termination)
+      if (!Scope.hasBranchThroughs() && !HasFixups && !HasFallthrough &&
+          !currentFunctionUsesSEHTry() && Scope.getNumBranchAfters() == 1) {
+        llvm_unreachable("NYI");
+        // Build a switch-out if we need it:
+        //   - if there are branch-afters threaded through the scope
+        //   - if fall-through is a branch-after
+        //   - if there are fixups that have nowhere left to go and
+        //     so must be immediately resolved
+      } else if (Scope.getNumBranchAfters() ||
+                 (HasFallthrough && !FallthroughIsBranchThrough) ||
+                 (HasFixups && !HasEnclosingCleanups)) {
+        assert(!cir::MissingFeatures::cleanupBranchAfterSwitch());
+      } else {
+        // We should always have a branch-through destination in this case.
+        assert(branchThroughDest);
+        assert(!cir::MissingFeatures::cleanupAlwaysBranchThrough());
+      }
+
+      // IV.  Pop the cleanup and emit it.
+      Scope.markEmitted();
+      EHStack.popCleanup();
+      assert(EHStack.hasNormalCleanups() == HasEnclosingCleanups);
+
+      emitCleanup(*this, Fn, cleanupFlags, NormalActiveFlag);
+
+      // Append the prepared cleanup prologue from above.
+      assert(!cir::MissingFeatures::cleanupAppendInsts());
+
+      // Optimistically hope that any fixups will continue falling through.
+      for (unsigned I = FixupDepth, E = EHStack.getNumBranchFixups(); I < E;
+           ++I) {
+        llvm_unreachable("NYI");
+      }
+
+      // V.  Set up the fallthrough edge out.
+
+      // Case 1: a fallthrough source exists but doesn't branch to the
+      // cleanup because the cleanup is inactive.
+      if (!HasFallthrough && FallthroughSource) {
+        // Prebranched fallthrough was forwarded earlier.
+        // Non-prebranched fallthrough doesn't need to be forwarded.
+        // Either way, all we need to do is restore the IP we cleared before.
+        assert(!IsActive);
+        llvm_unreachable("NYI");
+
+        // Case 2: a fallthrough source exists and should branch to the
+        // cleanup, but we're not supposed to branch through to the next
+        // cleanup.
+      } else if (HasFallthrough && fallthroughDest) {
+        llvm_unreachable("NYI");
+
+        // Case 3: a fallthrough source exists and should branch to the
+        // cleanup and then through to the next.
+      } else if (HasFallthrough) {
+        // Everything is already set up for this.
+
+        // Case 4: no fallthrough source exists.
+      } else {
+        // FIXME(cir): should we clear insertion point here?
+      }
+
+      // VI.  Assorted cleaning.
+
+      // Check whether we can merge NormalEntry into a single predecessor.
+      // This might invalidate (non-IR) pointers to NormalEntry.
+      //
+      // If it did invalidate those pointers, and NormalEntry was the same
+      // as NormalExit, go back and patch up the fixups.
+      assert(!cir::MissingFeatures::simplifyCleanupEntry());
     }
   }
 

@@ -59,7 +59,6 @@ struct MissingFeatures {
   static bool emitTypeCheck() { return false; }
   static bool tbaa() { return false; }
   static bool tbaa_struct() { return false; }
-  static bool cleanups() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool ptrAuth() { return false; }
 
@@ -160,12 +159,22 @@ struct MissingFeatures {
   static bool fastMathFlags() { return false; }
   static bool fastMathFuncAttributes() { return false; }
 
+  // Cleanup
+  static bool cleanups() { return false; }
+  static bool simplifyCleanupEntry() { return false; }
+  static bool requiresCleanups() { return false; }
+  static bool cleanupBranchAfterSwitch() { return false; }
+  static bool cleanupAlwaysBranchThrough() { return false; }
+  static bool cleanupDestinationIndex() { return false; }
+  static bool cleanupDestroyNRVOVariable() { return false; }
+  static bool cleanupAppendInsts() { return false; }
+  static bool cleanupIndexAndBIAdjustment() { return false; }
+
   // Exception handling
   static bool isSEHTryScope() { return false; }
   static bool ehStack() { return false; }
   static bool emitStartEHSpec() { return false; }
   static bool emitEndEHSpec() { return false; }
-  static bool simplifyCleanupEntry() { return false; }
 
   // Type qualifiers.
   static bool atomicTypes() { return false; }
@@ -208,7 +217,6 @@ struct MissingFeatures {
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
   static bool loopInfoStack() { return false; }
-  static bool requiresCleanups() { return false; }
   static bool constantFoldsToSimpleInteger() { return false; }
   static bool checkFunctionCallABI() { return false; }
   static bool zeroInitializer() { return false; }
