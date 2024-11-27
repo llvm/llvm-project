@@ -555,7 +555,7 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
 
-     if (!CanBeVisited(BB)) {
+    if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
       continue;
     }
