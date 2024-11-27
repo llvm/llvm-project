@@ -9,6 +9,7 @@
 #include "RPC.h"
 
 #include "Shared/Debug.h"
+#include "Shared/RPCOpcodes.h"
 
 #include "PluginInterface.h"
 
@@ -90,6 +91,22 @@ Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
     Port->recv([&](rpc::Buffer *Buffer, uint32_t) {
       Device.free(reinterpret_cast<void *>(Buffer->data[0]),
                   TARGET_ALLOC_DEVICE_NON_BLOCKING);
+    });
+    break;
+  }
+  case OFFLOAD_HOST_CALL: {
+    uint64_t Sizes[64] = {0};
+    unsigned long long Results[64] = {0};
+    void *Args[64] = {nullptr};
+    Port->recv_n(Args, Sizes, [&](uint64_t Size) { return new char[Size]; });
+    Port->recv([&](rpc::Buffer *buffer, uint32_t ID) {
+      using FuncPtrTy = unsigned long long (*)(void *);
+      auto Func = reinterpret_cast<FuncPtrTy>(buffer->data[0]);
+      Results[ID] = Func(Args[ID]);
+    });
+    Port->send([&](rpc::Buffer *Buffer, uint32_t ID) {
+      Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
+      delete[] reinterpret_cast<char *>(Args[ID]);
     });
     break;
   }
