@@ -141,7 +141,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
-    setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
+    setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM}, MVT::i32,
+                       Custom);
     setOperationAction(ISD::LROUND, MVT::i32, Custom);
   }
 
@@ -2631,8 +2632,12 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case ISD::SDIV:
+    return LoongArchISD::DIV_W;
   case ISD::UDIV:
     return LoongArchISD::DIV_WU;
+  case ISD::SREM:
+    return LoongArchISD::MOD_W;
   case ISD::UREM:
     return LoongArchISD::MOD_WU;
   case ISD::SHL:
@@ -2829,7 +2834,9 @@ void LoongArchTargetLowering::ReplaceNodeResults(
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
     break;
+  case ISD::SDIV:
   case ISD::UDIV:
+  case ISD::SREM:
   case ISD::UREM:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
@@ -4672,7 +4679,9 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(BITREV_W)
     NODE_NAME_CASE(ROTR_W)
     NODE_NAME_CASE(ROTL_W)
+    NODE_NAME_CASE(DIV_W)
     NODE_NAME_CASE(DIV_WU)
+    NODE_NAME_CASE(MOD_W)
     NODE_NAME_CASE(MOD_WU)
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
