@@ -1583,6 +1583,45 @@ define i1 @isnan_d_fpclass(double %x) {
   ret i1 %1
 }
 
+define double @tan_f64(double %a) nounwind {
+; CHECKIFD-LABEL: tan_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail tan
+;
+; RV32IZFINXZDINX-LABEL: tan_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call tan
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: tan_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail tan
+;
+; RV32I-LABEL: tan_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call tan
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: tan_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call tan
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.tan.f64(double %a)
+  ret double %1
+}
+
 declare double @llvm.maximumnum.f64(double, double)
 
 define double @maximumnum_double(double %x, double %y) {
@@ -1807,4 +1846,277 @@ define {double, i32} @frexp_double(double %x) nounwind {
 ; RV64I-NEXT:    ret
   %a = call {double, i32} @llvm.frexp.f64.i32(double %x)
   ret {double, i32} %a
+}
+
+define double @asin_f64(double %a) nounwind {
+; CHECKIFD-LABEL: asin_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail asin
+;
+; RV32IZFINXZDINX-LABEL: asin_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call asin
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: asin_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail asin
+;
+; RV32I-LABEL: asin_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call asin
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: asin_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call asin
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.asin.f64(double %a)
+  ret double %1
+}
+
+define double @acos_f64(double %a) nounwind {
+; CHECKIFD-LABEL: acos_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail acos
+;
+; RV32IZFINXZDINX-LABEL: acos_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call acos
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: acos_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail acos
+;
+; RV32I-LABEL: acos_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call acos
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: acos_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call acos
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.acos.f64(double %a)
+  ret double %1
+}
+
+define double @atan_f64(double %a) nounwind {
+; CHECKIFD-LABEL: atan_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail atan
+;
+; RV32IZFINXZDINX-LABEL: atan_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call atan
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: atan_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail atan
+;
+; RV32I-LABEL: atan_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call atan
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: atan_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call atan
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.atan.f64(double %a)
+  ret double %1
+}
+
+define double @atan2_f64(double %a, double %b) nounwind {
+; CHECKIFD-LABEL: atan2_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail atan2
+;
+; RV32IZFINXZDINX-LABEL: atan2_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call atan2
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: atan2_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail atan2
+;
+; RV32I-LABEL: atan2_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call atan2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: atan2_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call atan2
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.atan2.f64(double %a, double %b)
+  ret double %1
+}
+
+define double @sinh_f64(double %a) nounwind {
+; CHECKIFD-LABEL: sinh_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail sinh
+;
+; RV32IZFINXZDINX-LABEL: sinh_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call sinh
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: sinh_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail sinh
+;
+; RV32I-LABEL: sinh_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call sinh
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sinh_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call sinh
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.sinh.f64(double %a)
+  ret double %1
+}
+
+define double @cosh_f64(double %a) nounwind {
+; CHECKIFD-LABEL: cosh_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail cosh
+;
+; RV32IZFINXZDINX-LABEL: cosh_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call cosh
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: cosh_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail cosh
+;
+; RV32I-LABEL: cosh_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call cosh
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: cosh_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call cosh
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.cosh.f64(double %a)
+  ret double %1
+}
+
+define double @tanh_f64(double %a) nounwind {
+; CHECKIFD-LABEL: tanh_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail tanh
+;
+; RV32IZFINXZDINX-LABEL: tanh_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call tanh
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: tanh_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    tail tanh
+;
+; RV32I-LABEL: tanh_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call tanh
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: tanh_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call tanh
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.tanh.f64(double %a)
+  ret double %1
 }
