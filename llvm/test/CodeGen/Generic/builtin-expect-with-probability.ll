@@ -1,4 +1,5 @@
 ; RUN: llc < %s
+; RUN: llc -global-isel < %s
 
 declare i32 @llvm.expect.with.probability(i32, i32, double)
 
