@@ -280,6 +280,8 @@ function(llvm_distribution_add_targets)
 	# bolt optimized clang is built with the rest of the distribution.
 	if (target STREQUAL "clang" AND TARGET clang-bolt)
 	  add_dependencies(${distribution_target} clang-bolt)
+	  add_dependencies(install-${distribution_target} clang-bolt)
+	  add_dependencies(install-${distribution_target}-stripped clang-bolt)
 	endif()
       endif()
 
