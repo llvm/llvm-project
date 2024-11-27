@@ -391,6 +391,8 @@ public:
     return ST->useFixedOverScalableIfEqualCost();
   }
 
+  unsigned getEpilogueVectorizationMinVF() const;
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
   bool supportsScalableVectors() const {

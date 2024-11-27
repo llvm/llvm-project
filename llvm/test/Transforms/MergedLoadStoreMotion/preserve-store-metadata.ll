@@ -3,7 +3,6 @@
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 
-; FIXME: Can preserve common metadata on the sunk store.
 define void @perserve_common_metadata(i1 %c, ptr %dst, ptr %min) {
 ; CHECK-LABEL: define void @perserve_common_metadata(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[DST:%.*]], ptr [[MIN:%.*]]) {
@@ -19,7 +18,7 @@ define void @perserve_common_metadata(i1 %c, ptr %dst, ptr %min) {
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[DST]], %[[THEN]] ], [ null, %[[ELSE]] ]
-; CHECK-NEXT:    store ptr [[DOTSINK]], ptr [[GEP_DST_16]], align 8
+; CHECK-NEXT:    store ptr [[DOTSINK]], ptr [[GEP_DST_16]], align 8, !tbaa [[TBAA4:![0-9]+]], !alias.scope [[META6:![0-9]+]], !noalias [[META6]], !llvm.access.group [[ACC_GRP9:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -48,7 +47,7 @@ define void @clear_different_metadata(i1 %c, ptr %dst, ptr %min) {
 ; CHECK-NEXT:    [[GEP_DST_16:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 16
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    store ptr [[DST]], ptr [[MIN]], align 8, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    store ptr [[DST]], ptr [[MIN]], align 8, !tbaa [[TBAA10:![0-9]+]]
 ; CHECK-NEXT:    br label %[[RETURN:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[GEP_DST_24:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 24
@@ -99,6 +98,12 @@ return:
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
 ; CHECK: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0, i64 0}
-; CHECK: [[META5]] = !{!"p2 _Foo", [[META6:![0-9]+]]}
-; CHECK: [[META6]] = !{!"any pointer", [[META2]], i64 0}
+; CHECK: [[META5]] = !{!"long", [[META2]]}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]]}
+; CHECK: [[ACC_GRP9]] = distinct !{}
+; CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0, i64 0}
+; CHECK: [[META11]] = !{!"p2 _Foo", [[META12:![0-9]+]]}
+; CHECK: [[META12]] = !{!"any pointer", [[META2]], i64 0}
 ;.

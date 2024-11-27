@@ -20,14 +20,14 @@ define void @t2(ptr %P) nounwind {
 }
 
 ; PR7562
-define void @fannkuch() nounwind {
+define void @fannkuch(i1 %arg) nounwind {
 entry:                                              ; preds = %entry
   br label %bb12
 
 bb12:                                             ; preds = %bb29, %entry
   %i.1 = phi i32 [ undef, %entry ], [ %i.0, %bb29 ] ; <i32> [#uses=2]
   %r.1 = phi i32 [ undef, %entry ], [ %r.0, %bb29 ] ; <i32> [#uses=2]
-  br i1 undef, label %bb13, label %bb24
+  br i1 %arg, label %bb13, label %bb24
 
 bb13:                                             ; preds = %bb12
   br label %bb24
@@ -47,7 +47,7 @@ bb28:                                             ; preds = %bb27, %bb26
   br i1 %1, label %bb27, label %bb29
 
 bb29:                                             ; preds = %bb28
-  br i1 undef, label %bb12, label %bb30
+  br i1 %arg, label %bb12, label %bb30
 
 bb30:                                             ; preds = %bb29
   %2 = add nsw i32 %r.0, 1                        ; <i32> [#uses=1]
@@ -114,7 +114,7 @@ bb9:
 }
 
 ; PR12536
-define void @fn1() noreturn nounwind {
+define void @fn1(i1 %arg) noreturn nounwind {
 entry:
   br label %for.cond
 
@@ -124,7 +124,7 @@ for.cond:                                         ; preds = %for.end, %entry
 
 for.cond1:                                        ; preds = %for.cond1, %for.cond
   %c.0 = phi i32 [ %b.0, %for.cond1 ], [ 0, %for.cond ]
-  br i1 undef, label %for.cond1, label %for.end
+  br i1 %arg, label %for.cond1, label %for.end
 
 for.end:                                          ; preds = %for.cond1
   %cmp2 = icmp slt i32 %c.0, 1
