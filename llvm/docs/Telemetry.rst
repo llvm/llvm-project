@@ -87,89 +87,113 @@ How to implement and interact with the API
 
 To use Telemetry in your tool, you need to provide a concrete implementation of the ``Manager`` class and ``Destination``.
 
-1) Define a custom ``Manager`` and ``Destination``
+1) Define a custom ``Serializer``, ``Manager`` and ``Destination``
 
 .. code-block:: c++
 
-    // This destination just prints the given entry to stdout.
-    // In "real life", this would be where you forward the data to your
-    // custom data storage.
-    class MyStdoutDestination : public llvm::telemetry::Destination {
-    public:
-      Error emitEntry(const TelemetryInfo* Entry) override {
-         return sendToBlackBox(Entry);
-      }
-      
-    private:
-      Error sendToBlackBox(const TelemetryInfo* Entry) {
-          // This could send the data anywhere, but we're simply sending it to
-	  // stdout for the example.
-          llvm::outs() << entryToString(Entry) << "\n";
-          return llvm::success();
-      }
-      
-      std::string entryToString(const TelemetryInfo* Entry) {
-        // make a string-representation of the given entry.
-      }
-    };
+class JsonSerializer : public Serializer {
+public:
+  json::Object *getOutputObject() { return object.get(); }
+
+  llvm::Error start() override {
+    if (started)
+      return createStringError("Serializer already in use");
+    started = true;
+    object = std::make_unique<json::Object>();
+    return Error::success();
+  }
+
+  void writeBool(StringRef KeyName, bool Value) override {
+    writeHelper(KeyName, Value);
+  }
+
+  void writeInt32(StringRef KeyName, int Value) override {
+    writeHelper(KeyName, Value);
+  }
+
+  void writeSizeT(StringRef KeyName, size_t Value) override {
+    writeHelper(KeyName, Value);
+  }
+  void writeString(StringRef KeyName, StringRef Value) override {
+    writeHelper(KeyName, Value);
+  }
+
+  void writeKeyValueMap(StringRef KeyName,
+                        std::map<std::string, std::string> Value) override {
+    json::Object Inner;
+    for (auto kv : Value) {
+      Inner.try_emplace(kv.first, kv.second);
+    }
+    writeHelper(KeyName, json::Value(std::move(Inner)));
+  }
+
+  llvm::Error finish() override {
+    if (!started)
+      return createStringError("Serializer not currently in use");
+    started = false;
+    return Error::success();
+  }
+
+private:
+  template <typename T> void writeHelper(StringRef Name, T Value) {
+    assert(started && "serializer not started");
+    object->try_emplace(Name, Value);
+  }
+  bool started = false;
+  std::unique_ptr<json::Object> object;
+};		
     
-    // This defines a custom TelemetryInfo that has an addition Msg field.
-    struct MyTelemetryInfo : public telemetry::TelemetryInfo {
-      std::string Msg;
+// This defines a custom TelemetryInfo that has an addition Msg field.
+struct MyTelemetryInfo : public telemetry::TelemetryInfo {
+  std::string Msg;
+
+  Error serialize(Serializer& serializer) const override {
+    TelemetryInfo::serialize(serializer);
+    serializer.writeString("MyMsg", Msg);
+  }
       
-      json::Object serializeToJson() oconst {
-        json::Object Ret = ManageryInfo::serializeToJson();
-        Ret.emplace_back("MyMsg", Msg);
-        return std::move(Ret);
-      }
-      
-      // TODO: implement getKind() and classof() to support dyn_cast operations.
-    };
+  // Note: implement getKind() and classof() to support dyn_cast operations.
+};
     
-    class MyManager : public telemery::Manager {
-    public:
-      static std::unique_ptr<MyManager> createInstatnce(telemetry::Config* config) {
-        // If Telemetry is not enabled, then just return null;
-        if (!config->EnableTelemetry) return nullptr;
-        
-        std::make_unique<MyManager>();
-      }
-      MyManager() = default;
+class MyManager : public telemery::Manager {
+public:
+static std::unique_ptr<MyManager> createInstatnce(telemetry::Config* config) {
+  // If Telemetry is not enabled, then just return null;
+  if (!config->EnableTelemetry) return nullptr;
+
+  return std::make_unique<MyManager>();
+}
+MyManager() = default;
+
+Error dispatch(TelemetryInfo* Entry) const override {
+  Entry->SessionId = SessionId;
+  emitToAllDestinations(Entry);
+}
+
+Error logStartup(MyTelemetryInfo* Entry) {
+  // Optionally add additional field
+  Entry->Msg = "CustomMsg";
+  return dispatch(Entry);
+
+}
       
-      void logStartup(StringRef ToolName, TelemetryInfo* Entry) override {
-        if (MyTelemetryInfo* M = dyn_cast<MyTelemetryInfo>(Entry)) {
-          M->Msg = "Starting up tool with name: " + ToolName;
-          emitToAllDestinations(M);
-        } else {
-          emitToAllDestinations(Entry);
-        }
-      }
+void addDestination(std::unique_ptr<Destination> dest) override {
+  destinations.push_back(std::move(dest));
+}
       
-      void logExit(StringRef ToolName, TelemetryInfo* Entry) override {
-        if (MyTelemetryInfo* M = dyn_cast<MyTelemetryInfo>(Entry)) {
-          M->Msg = "Exiting tool with name: " + ToolName;
-          emitToAllDestinations(M);
-        } else {
-          emitToAllDestinations(Entry);
-        }
-      }
-      
-      void addDestination(Destination* dest) override {
-        destinations.push_back(dest);
-      }
-      
-      // You can also define additional instrumentation points.
-      void logAdditionalPoint(TelemetryInfo* Entry) {
-          // .... code here
-      }
-    private:
-      void emitToAllDestinations(const TelemetryInfo* Entry) {
-        // Note: could do this in parallel, if needed.
-        for (Destination* Dest : Destinations)
-          Dest->emitEntry(Entry);
-      }
-      std::vector<Destination> Destinations;
-    };
+// You can also define additional instrumentation points.
+void logAdditionalPoint(TelemetryInfo* Entry) {
+// .... code here
+}
+private:
+void emitToAllDestinations(const TelemetryInfo* Entry) {
+// Note: could do this in parallel, if needed.
+for (Destination* Dest : Destinations)
+Dest->receiveEntry(Entry);
+}
+std::vector<Destination> Destinations;
+const std::string SessionId;
+};
     
 2) Use the library in your tool.
 
@@ -181,7 +205,7 @@ Logging the tool init-process:
   auto StartTime = std::chrono::time_point<std::chrono::steady_clock>::now();
   telemetry::Config MyConfig = makeConfig(); // Build up the appropriate Config struct here.
   auto Manager = MyManager::createInstance(&MyConfig);
-  std::string CurrentSessionId = ...; // Make some unique ID corresponding to the current session here.
+
   
   // Any other tool's init code can go here
   // ...
@@ -190,23 +214,9 @@ Logging the tool init-process:
   // init process to finish
   auto EndTime = std::chrono::time_point<std::chrono::steady_clock>::now();
   MyTelemetryInfo Entry;
-  Entry.SessionId = CurrentSessionId ; // Assign some unique ID here.
+
   Entry.Stats = {StartTime, EndTime};
   Manager->logStartup("MyTool", &Entry);
 
 Similar code can be used for logging the tool's exit.
 
-Additionally, at any other point in the tool's lifetime, it can also log telemetry:
-
-.. code-block:: c++
-
-   // At some execution point:
-   auto StartTime = std::chrono::time_point<std::chrono::steady_clock>::now();
-   
-   // ... other events happening here
-   
-   auto EndTime = std::chrono::time_point<std::chrono::steady_clock>::now();
-  MyTelemetryInfo Entry;
-  Entry.SessionId = CurrentSessionId ; // Assign some unique ID here.
-  Entry.Stats = {StartTime, EndTime};
-  Manager->logAdditionalPoint(&Entry);
