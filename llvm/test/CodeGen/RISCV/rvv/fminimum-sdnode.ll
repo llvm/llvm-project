@@ -153,6 +153,7 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vv(<vscale x 32 x bfloat> %a, <vs
 ; ZVFH-NEXT:    slli a0, a0, 1
 ; ZVFH-NEXT:    add a0, a0, a1
 ; ZVFH-NEXT:    sub sp, sp, a0
+; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; ZVFH-NEXT:    vmv8r.v v24, v16
 ; ZVFH-NEXT:    csrr a0, vlenb
 ; ZVFH-NEXT:    slli a0, a0, 3
@@ -228,6 +229,7 @@ define <vscale x 32 x bfloat> @vfmin_nxv32bf16_vv(<vscale x 32 x bfloat> %a, <vs
 ; ZVFHMIN-NEXT:    li a1, 24
 ; ZVFHMIN-NEXT:    mul a0, a0, a1
 ; ZVFHMIN-NEXT:    sub sp, sp, a0
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; ZVFHMIN-NEXT:    vmv8r.v v24, v16
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
@@ -498,6 +500,7 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    li a1, 24
 ; ZVFHMIN-NEXT:    mul a0, a0, a1
 ; ZVFHMIN-NEXT:    sub sp, sp, a0
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; ZVFHMIN-NEXT:    vmv8r.v v24, v16
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
