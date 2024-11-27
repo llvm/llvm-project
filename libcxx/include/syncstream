@@ -119,17 +119,17 @@ namespace std {
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
+#  include <__mutex/lock_guard.h>
 #  include <__utility/move.h>
 #  include <ios>
 #  include <iosfwd> // required for declaration of default arguments
 #  include <streambuf>
 #  include <string>
 
-#  ifndef _LIBCPP_HAS_NO_THREADS
+#  if _LIBCPP_HAS_THREADS
 #    include <map>
-#    include <mutex>
 #    include <shared_mutex>
 #  endif
 
@@ -160,7 +160,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //
 // This helper singleton is used to implement the required
 // synchronisation guarantees.
-#    ifndef _LIBCPP_HAS_NO_THREADS
+#    if _LIBCPP_HAS_THREADS
 class __wrapped_streambuf_mutex {
   _LIBCPP_HIDE_FROM_ABI __wrapped_streambuf_mutex() = default;
 
@@ -233,7 +233,7 @@ private:
     return __it;
   }
 };
-#    endif // _LIBCPP_HAS_NO_THREADS
+#    endif // _LIBCPP_HAS_THREADS
 
 // basic_syncbuf
 
@@ -373,7 +373,7 @@ private:
     if (!__wrapped_)
       return false;
 
-#    ifndef _LIBCPP_HAS_NO_THREADS
+#    if _LIBCPP_HAS_THREADS
     lock_guard<mutex> __lock = __wrapped_streambuf_mutex::__instance().__get_lock(__wrapped_);
 #    endif
 
@@ -407,14 +407,14 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI void __inc_reference() {
-#    ifndef _LIBCPP_HAS_NO_THREADS
+#    if _LIBCPP_HAS_THREADS
     if (__wrapped_)
       __wrapped_streambuf_mutex::__instance().__inc_reference(__wrapped_);
 #    endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __dec_reference() noexcept {
-#    ifndef _LIBCPP_HAS_NO_THREADS
+#    if _LIBCPP_HAS_THREADS
     if (__wrapped_)
       __wrapped_streambuf_mutex::__instance().__dec_reference(__wrapped_);
 #    endif
@@ -422,7 +422,7 @@ private:
 };
 
 using std::syncbuf;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 using std::wsyncbuf;
 #    endif
 
@@ -505,7 +505,7 @@ private:
 };
 
 using std::osyncstream;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 using std::wosyncstream;
 #    endif
 
@@ -515,6 +515,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP_SYNCSTREAM

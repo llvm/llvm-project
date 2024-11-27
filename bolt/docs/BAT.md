@@ -44,6 +44,7 @@ The general layout is as follows:
 ```
 Hot functions table
 Cold functions table
+Call continuation landing pads table (optional)
 
 Functions table:
 |------------------|
@@ -54,7 +55,7 @@ Functions table:
 |      table       |
 |                  |
 | Secondary entry  |
-|  points and LPs  |
+|      points      |
 |------------------|
 
 ```
@@ -80,7 +81,7 @@ Hot indices are delta encoded, implicitly starting at zero.
 | `HotIndex` | Delta, ULEB128 | Index of corresponding hot function in hot functions table | Cold |
 | `FuncHash` | 8b | Function hash for input function | Hot |
 | `NumBlocks` | ULEB128 | Number of basic blocks in the original function | Hot |
-| `NumSecEntryPoints` | ULEB128 | Number of secondary entry points and landing pads in the original function | Hot |
+| `NumSecEntryPoints` | ULEB128 | Number of secondary entry points in the original function | Hot |
 | `ColdInputSkew` | ULEB128 | Skew to apply to all input offsets | Cold |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function | Both |
 | `EqualElems` | ULEB128 | Number of equal offsets in the beginning of a function | Both |
@@ -116,11 +117,19 @@ input basic block mapping.
 
 ### Secondary Entry Points table
 The table is emitted for hot fragments only. It contains `NumSecEntryPoints`
-offsets denoting secondary entry points and landing pads, delta encoded,
-implicitly starting at zero.
+offsets denoting secondary entry points, delta encoded, implicitly starting at zero.
 | Entry | Encoding | Description |
 | ----- | -------- | ----------- |
-| `SecEntryPoint` | Delta, ULEB128 | Secondary entry point offset with `LPENTRY` LSB bit |
+| `SecEntryPoint` | Delta, ULEB128 | Secondary entry point offset |
 
-`LPENTRY` bit denotes whether a given offset is a landing pad block. If not set,
-the offset is a secondary entry point.
+### Call continuation landing pads table
+This table contains the addresses of call continuation blocks that are also
+landing pads, to aid pre-aggregated profile conversion. The table is optional
+for backwards compatibility, but new versions of BOLT will always emit it.
+
+| Entry | Encoding | Description |
+| ----- | -------- | ----------- |
+| `NumEntries` | ULEB128 | Number of addresses |
+| `InputAddress` | Delta, ULEB128 | `NumEntries` input addresses of call continuation landing pad blocks |
+
+Addresses are delta encoded, implicitly starting at zero.

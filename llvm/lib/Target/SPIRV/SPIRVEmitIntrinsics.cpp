@@ -76,8 +76,8 @@ class SPIRVEmitIntrinsics
   SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // a register of Instructions that don't have a complete type definition
-  SmallPtrSet<Value *, 8> UncompleteTypeInfo;
-  SmallVector<Instruction *> PostprocessWorklist;
+  DenseMap<Value *, unsigned> UncompleteTypeInfo;
+  SmallVector<Value *> PostprocessWorklist;
 
   // well known result types of builtins
   enum WellKnownTypes { Event };
@@ -147,6 +147,7 @@ class SPIRVEmitIntrinsics
                                   std::unordered_set<Function *> &FVisited);
   void replaceWithPtrcasted(Instruction *CI, Type *NewElemTy, Type *KnownElemTy,
                             CallInst *AssignCI);
+  void replaceAllUsesWith(Value *Src, Value *Dest, bool DeleteOld = true);
 
   bool runOnFunction(Function &F);
   bool postprocessTypes();
@@ -270,6 +271,27 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
     report_fatal_error("A token is encountered but SPIR-V without extensions "
                        "does not support token type",
                        false);
+}
+
+void SPIRVEmitIntrinsics::replaceAllUsesWith(Value *Src, Value *Dest,
+                                             bool DeleteOld) {
+  Src->replaceAllUsesWith(Dest);
+  // Update deduced type records
+  GR->updateIfExistDeducedElementType(Src, Dest, DeleteOld);
+  GR->updateIfExistAssignPtrTypeInstr(Src, Dest, DeleteOld);
+  // Update uncomplete type records if any
+  auto It = UncompleteTypeInfo.find(Src);
+  if (It == UncompleteTypeInfo.end())
+    return;
+  if (DeleteOld) {
+    unsigned Pos = It->second;
+    UncompleteTypeInfo.erase(Src);
+    UncompleteTypeInfo[Dest] = Pos;
+    PostprocessWorklist[Pos] = Dest;
+  } else {
+    UncompleteTypeInfo[Dest] = PostprocessWorklist.size();
+    PostprocessWorklist.push_back(Dest);
+  }
 }
 
 static bool IsKernelArgInt8(Function *F, StoreInst *SI) {
@@ -434,7 +456,7 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
     if (!UnknownElemTypeI8)
       return;
     if (auto *I = dyn_cast<Instruction>(Op)) {
-      UncompleteTypeInfo.insert(I);
+      UncompleteTypeInfo[I] = PostprocessWorklist.size();
       PostprocessWorklist.push_back(I);
     }
   }
@@ -640,7 +662,7 @@ Type *SPIRVEmitIntrinsics::deduceElementType(Value *I, bool UnknownElemTypeI8) {
   if (!UnknownElemTypeI8)
     return nullptr;
   if (auto *Instr = dyn_cast<Instruction>(I)) {
-    UncompleteTypeInfo.insert(Instr);
+    UncompleteTypeInfo[Instr] = PostprocessWorklist.size();
     PostprocessWorklist.push_back(Instr);
   }
   return IntegerType::getInt8Ty(I->getContext());
@@ -1062,7 +1084,7 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
                                      {I.getOperand(0)->getType()}, {Args});
   // remove switch to avoid its unneeded and undesirable unwrap into branches
   // and conditions
-  I.replaceAllUsesWith(NewI);
+  replaceAllUsesWith(&I, NewI);
   I.eraseFromParent();
   // insert artificial and temporary instruction to preserve valid CFG,
   // it will be removed after IR translation pass
@@ -1084,7 +1106,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   for (auto &Op : I.operands())
     Args.push_back(Op);
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
-  I.replaceAllUsesWith(NewI);
+  replaceAllUsesWith(&I, NewI);
   I.eraseFromParent();
   return NewI;
 }
@@ -1099,7 +1121,7 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
   // such bitcasts do not provide sufficient information, should be just skipped
   // here, and handled in insertPtrCastOrAssignTypeInstr.
   if (isPointerTy(I.getType())) {
-    I.replaceAllUsesWith(Source);
+    replaceAllUsesWith(&I, Source);
     I.eraseFromParent();
     return nullptr;
   }
@@ -1108,7 +1130,7 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_bitcast, {Types}, {Args});
   std::string InstName = I.hasName() ? I.getName().str() : "";
-  I.replaceAllUsesWith(NewI);
+  replaceAllUsesWith(&I, NewI);
   I.eraseFromParent();
   NewI->setName(InstName);
   return NewI;
@@ -1219,6 +1241,8 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   SmallVector<Value *, 2> Args = {Pointer, VMD, B.getInt32(AddressSpace)};
   auto *PtrCastI = B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
   I->setOperand(OperandToReplace, PtrCastI);
+  // We need to set up a pointee type for the newly created spv_ptrcast.
+  buildAssignPtr(B, ExpectedElementType, PtrCastI);
 }
 
 void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
@@ -1331,7 +1355,7 @@ Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
   std::string InstName = I.hasName() ? I.getName().str() : "";
-  I.replaceAllUsesWith(NewI);
+  replaceAllUsesWith(&I, NewI);
   I.eraseFromParent();
   NewI->setName(InstName);
   return NewI;
@@ -1346,7 +1370,7 @@ SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
   SmallVector<Value *, 2> Args = {I.getVectorOperand(), I.getIndexOperand()};
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
   std::string InstName = I.hasName() ? I.getName().str() : "";
-  I.replaceAllUsesWith(NewI);
+  replaceAllUsesWith(&I, NewI);
   I.eraseFromParent();
   NewI->setName(InstName);
   return NewI;
@@ -1382,7 +1406,7 @@ Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
     Args.push_back(B.getInt32(Op));
   auto *NewI =
       B.CreateIntrinsic(Intrinsic::spv_extractv, {I.getType()}, {Args});
-  I.replaceAllUsesWith(NewI);
+  replaceAllUsesWith(&I, NewI);
   I.eraseFromParent();
   return NewI;
 }
@@ -1443,7 +1467,7 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
                                     {PtrTy, ArraySize->getType()}, {ArraySize})
                 : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
   std::string InstName = I.hasName() ? I.getName().str() : "";
-  I.replaceAllUsesWith(NewI);
+  replaceAllUsesWith(&I, NewI);
   I.eraseFromParent();
   NewI->setName(InstName);
   return NewI;
@@ -1613,7 +1637,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     auto *NewOp =
         buildIntrWithMD(Intrinsic::spv_track_constant,
                         {II->getType(), II->getType()}, t->second, I, {}, B);
-    I->replaceAllUsesWith(NewOp);
+    replaceAllUsesWith(I, NewOp, false);
     NewOp->setArgOperand(0, I);
   }
   bool IsPhi = isa<PHINode>(I), BPrepared = false;

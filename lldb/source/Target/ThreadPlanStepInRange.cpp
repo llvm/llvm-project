@@ -489,7 +489,8 @@ bool ThreadPlanStepInRange::DoWillResume(lldb::StateType resume_state,
 bool ThreadPlanStepInRange::IsVirtualStep() {
   if (m_virtual_step == eLazyBoolCalculate) {
     Thread &thread = GetThread();
-    if (thread.GetCurrentInlinedDepth() == UINT32_MAX)
+    uint32_t cur_inline_depth = thread.GetCurrentInlinedDepth();
+    if (cur_inline_depth == UINT32_MAX || cur_inline_depth == 0)
       m_virtual_step = eLazyBoolNo;
     else
       m_virtual_step = eLazyBoolYes;

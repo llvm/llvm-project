@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___CONCEPTS_DESTRUCTIBLE_H
 #define _LIBCPP___CONCEPTS_DESTRUCTIBLE_H
 
-#include <__config>
-#include <__type_traits/is_nothrow_destructible.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_nothrow_destructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

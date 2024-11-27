@@ -162,9 +162,9 @@ define <4 x i32> @test_x86_sse2_cvtpd2dq(<2 x double> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> [[A0:%.*]])
@@ -183,9 +183,9 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext(<2 x double> %a0) nounwind #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> [[A0:%.*]])
@@ -206,9 +206,9 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    [[A0:%.*]] = load <2 x double>, ptr [[P0:%.*]], align 16
@@ -218,9 +218,9 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSLD]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> [[A0]])
@@ -243,9 +243,9 @@ define <4 x float> @test_x86_sse2_cvtpd2ps(<2 x double> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse2.cvtpd2ps(<2 x double> [[A0:%.*]])
@@ -263,9 +263,9 @@ define <4 x float> @test_x86_sse2_cvtpd2ps_zext(<2 x double> %a0) nounwind #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x float> @llvm.x86.sse2.cvtpd2ps(<2 x double> [[A0:%.*]])
@@ -283,9 +283,9 @@ define <4 x float> @test_x86_sse2_cvtpd2ps_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    [[A0:%.*]] = load <2 x double>, ptr [[P0:%.*]], align 16
@@ -295,9 +295,9 @@ define <4 x float> @test_x86_sse2_cvtpd2ps_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSLD]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x float> @llvm.x86.sse2.cvtpd2ps(<2 x double> [[A0]])
@@ -317,9 +317,9 @@ define <4 x i32> @test_x86_sse2_cvtps2dq(<4 x float> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> [[A0:%.*]])
@@ -338,9 +338,9 @@ define i32 @test_x86_sse2_cvtsd2si(<2 x double> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> [[A0:%.*]])
@@ -361,9 +361,9 @@ define <4 x float> @test_x86_sse2_cvtsd2ss(<4 x float> %a0, <2 x double> %a1) #0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> [[A0:%.*]], <2 x double> [[A1:%.*]])
@@ -382,9 +382,9 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, ptr %p1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1:%.*]] = load <2 x double>, ptr [[P1:%.*]], align 16
@@ -395,9 +395,9 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, ptr %p1) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[_MSLD]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP8]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> [[A0:%.*]], <2 x double> [[A1]])
@@ -416,9 +416,9 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, ptr %p1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1:%.*]] = load <2 x double>, ptr [[P1:%.*]], align 16
@@ -429,9 +429,9 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, ptr %p1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[_MSLD]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP2]], i32 0, i32 0
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP8]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF1]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> [[A0:%.*]], <2 x double> [[A1]])
@@ -450,9 +450,9 @@ define <4 x i32> @test_x86_sse2_cvttpd2dq(<2 x double> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> [[A0:%.*]])
@@ -471,9 +471,9 @@ define <2 x i64> @test_mm_cvttpd_epi32_zext(<2 x double> %a0) nounwind #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> [[A0:%.*]])
@@ -494,9 +494,9 @@ define <2 x i64> @test_mm_cvttpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    [[A0:%.*]] = load <2 x double>, ptr [[P0:%.*]], align 16
@@ -506,9 +506,9 @@ define <2 x i64> @test_mm_cvttpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSLD]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> [[A0]])
@@ -531,9 +531,9 @@ define <4 x i32> @test_x86_sse2_cvttps2dq(<4 x float> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> [[A0:%.*]])
@@ -552,9 +552,9 @@ define i32 @test_x86_sse2_cvttsd2si(<2 x double> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> [[A0:%.*]])
@@ -639,9 +639,9 @@ define i32 @test_x86_sse2_movmsk_pd(<2 x double> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> [[A0:%.*]])
@@ -810,9 +810,9 @@ define i32 @test_x86_sse2_pmovmskb_128(<16 x i8> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> [[A0:%.*]])
@@ -866,7 +866,7 @@ define <2 x i64> @test_x86_sse2_psad_bw(<16 x i8> %a0, <16 x i8> %a1) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i64> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <2 x i1> [[TMP5]] to <2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr <2 x i64> [[TMP6]], <i64 48, i64 48>
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr <2 x i64> [[TMP6]], splat (i64 48)
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> [[A0:%.*]], <16 x i8> [[A1:%.*]])
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
@@ -1139,9 +1139,9 @@ define <8 x i16> @test_x86_sse2_psrl_w_load(<8 x i16> %a0, ptr %p) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 16
@@ -1365,9 +1365,9 @@ define void @clflush(ptr %p) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    tail call void @llvm.x86.sse2.clflush(ptr [[P:%.*]])

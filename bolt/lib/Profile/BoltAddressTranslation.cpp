@@ -86,16 +86,21 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     if (Function.isIgnored() || (!BC.HasRelocations && !Function.isSimple()))
       continue;
 
+    uint32_t NumSecondaryEntryPoints = 0;
+    Function.forEachEntryPoint([&](uint64_t Offset, const MCSymbol *) {
+      if (!Offset)
+        return true;
+      ++NumSecondaryEntryPoints;
+      SecondaryEntryPointsMap[OutputAddress].push_back(Offset);
+      return true;
+    });
+
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
     LLVM_DEBUG(dbgs() << " Address reference: 0x"
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
     LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(InputAddress)));
-    LLVM_DEBUG({
-      uint32_t NumSecondaryEntryPoints = 0;
-      if (SecondaryEntryPointsMap.count(InputAddress))
-        NumSecondaryEntryPoints = SecondaryEntryPointsMap[InputAddress].size();
-      dbgs() << " Secondary Entry Points: " << NumSecondaryEntryPoints << '\n';
-    });
+    LLVM_DEBUG(dbgs() << " Secondary Entry Points: " << NumSecondaryEntryPoints
+                      << '\n');
 
     MapTy Map;
     for (const BinaryBasicBlock *const BB :
@@ -140,6 +145,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
   uint64_t PrevAddress = 0;
   writeMaps</*Cold=*/false>(PrevAddress, OS);
   writeMaps</*Cold=*/true>(PrevAddress, OS);
+  writeCallContLandingPads(OS);
 
   BC.outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
   BC.outs() << "BOLT-INFO: Wrote " << FuncHashes.getNumFunctions()
@@ -201,9 +207,10 @@ void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
                       << Twine::utohexstr(Address) << ".\n");
     encodeULEB128(Address - PrevAddress, OS);
     PrevAddress = Address;
-    uint32_t NumSecondaryEntryPoints = 0;
-    if (SecondaryEntryPointsMap.count(HotInputAddress))
-      NumSecondaryEntryPoints = SecondaryEntryPointsMap[HotInputAddress].size();
+    const uint32_t NumSecondaryEntryPoints =
+        SecondaryEntryPointsMap.count(Address)
+            ? SecondaryEntryPointsMap[Address].size()
+            : 0;
     uint32_t Skew = 0;
     if (Cold) {
       auto HotEntryIt = llvm::lower_bound(HotFuncs, ColdPartSource[Address]);
@@ -275,13 +282,22 @@ void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
     if (!Cold && NumSecondaryEntryPoints) {
       LLVM_DEBUG(dbgs() << "Secondary entry points: ");
       // Secondary entry point offsets, delta-encoded
-      for (uint32_t Offset : SecondaryEntryPointsMap[HotInputAddress]) {
+      for (uint32_t Offset : SecondaryEntryPointsMap[Address]) {
         encodeULEB128(Offset - PrevOffset, OS);
         LLVM_DEBUG(dbgs() << formatv("{0:x} ", Offset));
         PrevOffset = Offset;
       }
       LLVM_DEBUG(dbgs() << '\n');
     }
+  }
+}
+
+void BoltAddressTranslation::writeCallContLandingPads(raw_ostream &OS) {
+  encodeULEB128(CallContLandingPadAddrs.size(), OS);
+  uint64_t PrevAddress = 0;
+  for (const uint64_t Address : CallContLandingPadAddrs) {
+    encodeULEB128(Address - PrevAddress, OS);
+    PrevAddress = Address;
   }
 }
 
@@ -309,6 +325,8 @@ std::error_code BoltAddressTranslation::parse(raw_ostream &OS, StringRef Buf) {
   parseMaps</*Cold=*/false>(PrevAddress, DE, Offset, Err);
   parseMaps</*Cold=*/true>(PrevAddress, DE, Offset, Err);
   OS << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
+  if (Offset < Buf.size())
+    parseCallContLandingPads(DE, Offset, Err);
   return errorToErrorCode(std::move(Err));
 }
 
@@ -428,6 +446,21 @@ void BoltAddressTranslation::parseMaps(uint64_t &PrevAddress, DataExtractor &DE,
   }
 }
 
+void BoltAddressTranslation::parseCallContLandingPads(DataExtractor &DE,
+                                                      uint64_t &Offset,
+                                                      Error &Err) {
+  const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
+  LLVM_DEBUG(dbgs() << "Parsing " << NumEntries
+                    << " call continuation landing pad entries\n");
+  CallContLandingPadAddrs.reserve(NumEntries);
+  uint64_t PrevAddress = 0;
+  for (uint32_t I = 0; I < NumEntries; ++I) {
+    const uint64_t Address = PrevAddress + DE.getULEB128(&Offset, &Err);
+    CallContLandingPadAddrs.emplace_back(Address);
+    PrevAddress = Address;
+  }
+}
+
 void BoltAddressTranslation::dump(raw_ostream &OS) const {
   const size_t NumTables = Maps.size();
   OS << "BAT tables for " << NumTables << " functions:\n";
@@ -463,12 +496,8 @@ void BoltAddressTranslation::dump(raw_ostream &OS) const {
       const std::vector<uint32_t> &SecondaryEntryPoints =
           SecondaryEntryPointsIt->second;
       OS << SecondaryEntryPoints.size() << " secondary entry points:\n";
-      for (uint32_t EntryPointOffset : SecondaryEntryPoints) {
-        OS << formatv("{0:x}", EntryPointOffset >> 1);
-        if (EntryPointOffset & LPENTRY)
-          OS << " (lp)";
-        OS << '\n';
-      }
+      for (uint32_t EntryPointOffset : SecondaryEntryPoints)
+        OS << formatv("{0:x}\n", EntryPointOffset);
     }
     OS << "\n";
   }
@@ -585,15 +614,19 @@ void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
     FuncHashes.addEntry(FuncAddress, BF.computeHash());
     BF.computeBlockHashes();
     BBHashMapTy &BBHashMap = getBBHashMap(FuncAddress);
-    std::vector<uint32_t> SecondaryEntryPoints;
     // Set BF/BB metadata
     for (const BinaryBasicBlock &BB : BF) {
-      BBHashMap.addEntry(BB.getInputOffset(), BB.getIndex(), BB.getHash());
-      bool IsLandingPad = BB.isLandingPad();
-      if (IsLandingPad || BF.getSecondaryEntryPointSymbol(BB))
-        SecondaryEntryPoints.emplace_back(BB.getOffset() << 1 | IsLandingPad);
+      const uint32_t BlockOffset = BB.getInputOffset();
+      BBHashMap.addEntry(BlockOffset, BB.getIndex(), BB.getHash());
+      // Set CallContLandingPads
+      if (!BB.isEntryPoint() && BB.isLandingPad()) {
+        const BinaryBasicBlock *PrevBB =
+            BF.getLayout().getBlock(BB.getIndex() - 1);
+        const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
+        if (Instr && BC.MIB->isCall(*Instr))
+          CallContLandingPadAddrs.emplace_back(FuncAddress + BlockOffset);
+      }
     }
-    SecondaryEntryPointsMap.emplace(FuncAddress, SecondaryEntryPoints);
     NumBasicBlocksMap.emplace(FuncAddress, BF.size());
   }
 }
@@ -604,20 +637,13 @@ BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
   auto FunctionIt = SecondaryEntryPointsMap.find(Address);
   if (FunctionIt == SecondaryEntryPointsMap.end())
     return 0;
-  unsigned EntryPoints = 0;
-  // Note we need to scan the vector to get the entry point id because it
-  // contains both entry points and landing pads.
-  for (uint32_t Off : FunctionIt->second) {
-    // Skip landing pads.
-    if (Off & LPENTRY)
-      continue;
-    // Adding one here because main entry point is not stored in BAT, and
-    // enumeration for secondary entry points starts with 1.
-    if (Off >> 1 == Offset)
-      return EntryPoints + 1;
-    ++EntryPoints;
-  }
-  return 0;
+  const std::vector<uint32_t> &Offsets = FunctionIt->second;
+  auto OffsetIt = std::find(Offsets.begin(), Offsets.end(), Offset);
+  if (OffsetIt == Offsets.end())
+    return 0;
+  // Adding one here because main entry point is not stored in BAT, and
+  // enumeration for secondary entry points starts with 1.
+  return OffsetIt - Offsets.begin() + 1;
 }
 
 std::pair<const BinaryFunction *, unsigned>
@@ -649,15 +675,29 @@ BoltAddressTranslation::translateSymbol(const BinaryContext &BC,
   return std::pair(ParentBF, SecondaryEntryId);
 }
 
-bool BoltAddressTranslation::isSecondaryEntry(uint64_t Address,
+bool BoltAddressTranslation::isSecondaryEntry(uint64_t OutputAddress,
                                               uint32_t Offset) const {
+  const uint64_t InputOffset =
+      translate(OutputAddress, Offset, /*IsBranchSrc*/ false);
+
+  const uint64_t HotAddress = fetchParentAddress(OutputAddress);
+  auto MapsIter = Maps.find(HotAddress ? HotAddress : OutputAddress);
+  if (MapsIter == Maps.end())
+    return false;
+
+  const uint64_t InputAddress = MapsIter->second.begin()->second;
+
   auto FunctionIt = SecondaryEntryPointsMap.find(Address);
   if (FunctionIt == SecondaryEntryPointsMap.end())
     return false;
   const std::vector<uint32_t> &Offsets = FunctionIt->second;
-  uint64_t InputOffset = translate(Address, Offset, /*IsBranchSrc*/ false);
+  uint64_t InputOffset = translate(OutputAddress, Offset, /*IsBranchSrc*/ false);
   auto OffsetIt = llvm::lower_bound(Offsets, InputOffset << 1);
   return OffsetIt != Offsets.end() && *OffsetIt >> 1 == InputOffset;
+}
+
+bool BoltAddressTranslation::isCallContinuationLandingPad(
+    uint64_t Address, uint32_t Offset) const {
 }
 
 } // namespace bolt

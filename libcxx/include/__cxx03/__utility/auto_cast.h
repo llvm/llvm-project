@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___UTILITY_AUTO_CAST_H
 #define _LIBCPP___UTILITY_AUTO_CAST_H
 
-#include <__config>
-#include <__type_traits/decay.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/decay.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

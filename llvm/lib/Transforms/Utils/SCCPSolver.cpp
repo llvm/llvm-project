@@ -1923,6 +1923,12 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       return (void)mergeInValue(IV, &CB, CopyOfVal);
     }
 
+    if (II->getIntrinsicID() == Intrinsic::vscale) {
+      unsigned BitWidth = CB.getType()->getScalarSizeInBits();
+      const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
+      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+    }
+
     if (ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
       // Compute result range for intrinsics supported by ConstantRange.
       // Do this even if we don't know a range for all operands, as we may

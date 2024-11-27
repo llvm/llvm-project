@@ -9,14 +9,14 @@
 #ifndef _LIBCPP___OSTREAM_PRINT_H
 #define _LIBCPP___OSTREAM_PRINT_H
 
-#include <__config>
-#include <__fwd/ostream.h>
-#include <__iterator/ostreambuf_iterator.h>
-#include <__ostream/basic_ostream.h>
-#include <format>
-#include <ios>
-#include <locale>
-#include <print>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/ostream.h>
+#include <__cxx03/__iterator/ostreambuf_iterator.h>
+#include <__cxx03/__ostream/basic_ostream.h>
+#include <__cxx03/format>
+#include <__cxx03/ios>
+#include <__cxx03/locale>
+#include <__cxx03/print>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

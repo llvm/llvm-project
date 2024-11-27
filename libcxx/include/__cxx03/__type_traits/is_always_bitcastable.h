@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
 #define _LIBCPP___TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_object.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_cv.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_object.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
+#include <__cxx03/__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

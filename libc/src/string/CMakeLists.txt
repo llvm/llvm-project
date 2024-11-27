@@ -239,7 +239,7 @@ add_entrypoint_object(
   DEPENDS
     .memory_utils.inline_memcpy
     .string_utils
-    libc.include.stdlib
+    libc.hdr.stdlib_macros
     libc.src.errno.errno
     libc.include.llvm-libc-types.size_t
 )

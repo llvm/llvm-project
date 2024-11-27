@@ -6,35 +6,35 @@
 define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %n) {
 ; CHECK-LABEL: compare_bytes_simple:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a4, a2, 1
-; CHECK-NEXT:    bltu a3, a4, .LBB0_7
+; CHECK-NEXT:    addiw a5, a2, 1
+; CHECK-NEXT:    bltu a3, a5, .LBB0_7
 ; CHECK-NEXT:  # %bb.1: # %mismatch_mem_check
-; CHECK-NEXT:    slli a2, a4, 32
+; CHECK-NEXT:    slli a2, a5, 32
+; CHECK-NEXT:    slli a4, a3, 32
 ; CHECK-NEXT:    srli a2, a2, 32
-; CHECK-NEXT:    slli a5, a3, 32
-; CHECK-NEXT:    srli a5, a5, 32
+; CHECK-NEXT:    srli a4, a4, 32
 ; CHECK-NEXT:    add a6, a0, a2
-; CHECK-NEXT:    add a7, a0, a5
+; CHECK-NEXT:    add a7, a0, a4
 ; CHECK-NEXT:    srli a6, a6, 12
 ; CHECK-NEXT:    srli a7, a7, 12
 ; CHECK-NEXT:    bne a6, a7, .LBB0_7
 ; CHECK-NEXT:  # %bb.2: # %mismatch_mem_check
 ; CHECK-NEXT:    add a6, a1, a2
-; CHECK-NEXT:    add a7, a1, a5
+; CHECK-NEXT:    add a7, a1, a4
 ; CHECK-NEXT:    srli a6, a6, 12
 ; CHECK-NEXT:    srli a7, a7, 12
 ; CHECK-NEXT:    bne a6, a7, .LBB0_7
 ; CHECK-NEXT:  .LBB0_3: # %mismatch_vec_loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub a4, a5, a2
-; CHECK-NEXT:    vsetvli a4, a4, e8, m2, ta, ma
+; CHECK-NEXT:    sub a5, a4, a2
 ; CHECK-NEXT:    add a6, a0, a2
+; CHECK-NEXT:    add a7, a1, a2
+; CHECK-NEXT:    vsetvli a5, a5, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a6)
-; CHECK-NEXT:    add a6, a1, a2
-; CHECK-NEXT:    vle8.v v10, (a6)
+; CHECK-NEXT:    vle8.v v10, (a7)
 ; CHECK-NEXT:    vmsne.vv v12, v8, v10
 ; CHECK-NEXT:    vfirst.m a7, v12
-; CHECK-NEXT:    mv a6, a4
+; CHECK-NEXT:    mv a6, a5
 ; CHECK-NEXT:    bltz a7, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %mismatch_vec_loop
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
@@ -42,30 +42,30 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:  .LBB0_5: # %mismatch_vec_loop
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    sext.w a7, a6
-; CHECK-NEXT:    bne a7, a4, .LBB0_11
+; CHECK-NEXT:    bne a7, a5, .LBB0_11
 ; CHECK-NEXT:  # %bb.6: # %mismatch_vec_loop_inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    add a2, a2, a4
-; CHECK-NEXT:    bne a2, a5, .LBB0_3
+; CHECK-NEXT:    add a2, a2, a5
+; CHECK-NEXT:    bne a2, a4, .LBB0_3
 ; CHECK-NEXT:    j .LBB0_9
 ; CHECK-NEXT:  .LBB0_7: # %mismatch_loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    slli a2, a4, 32
+; CHECK-NEXT:    slli a2, a5, 32
 ; CHECK-NEXT:    srli a2, a2, 32
-; CHECK-NEXT:    add a5, a0, a2
-; CHECK-NEXT:    lbu a5, 0(a5)
+; CHECK-NEXT:    add a4, a0, a2
 ; CHECK-NEXT:    add a2, a1, a2
+; CHECK-NEXT:    lbu a4, 0(a4)
 ; CHECK-NEXT:    lbu a2, 0(a2)
-; CHECK-NEXT:    bne a5, a2, .LBB0_10
+; CHECK-NEXT:    bne a4, a2, .LBB0_10
 ; CHECK-NEXT:  # %bb.8: # %mismatch_loop_inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_7 Depth=1
-; CHECK-NEXT:    addiw a4, a4, 1
-; CHECK-NEXT:    bne a3, a4, .LBB0_7
+; CHECK-NEXT:    addiw a5, a5, 1
+; CHECK-NEXT:    bne a3, a5, .LBB0_7
 ; CHECK-NEXT:  .LBB0_9: # %while.end
 ; CHECK-NEXT:    mv a0, a3
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_10:
-; CHECK-NEXT:    mv a0, a4
+; CHECK-NEXT:    mv a0, a5
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_11: # %mismatch_vec_loop_found
 ; CHECK-NEXT:    slli a6, a6, 32

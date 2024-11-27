@@ -25,8 +25,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sbfx w8, w0, #0, #4
 ; CHECK-NEXT:    add w8, w8, w8, lsl #1
-; CHECK-NEXT:    ubfx w9, w8, #7, #1
-; CHECK-NEXT:    add w8, w9, w8, lsr #4
+; CHECK-NEXT:    lsr w9, w8, #4
+; CHECK-NEXT:    add w8, w9, w8, lsr #31
 ; CHECK-NEXT:    mov w9, #6 // =0x6
 ; CHECK-NEXT:    msub w8, w8, w9, w0
 ; CHECK-NEXT:    and w8, w8, #0xf

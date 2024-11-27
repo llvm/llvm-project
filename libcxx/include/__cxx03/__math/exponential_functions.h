@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___MATH_EXPONENTIAL_FUNCTIONS_H
 #define _LIBCPP___MATH_EXPONENTIAL_FUNCTIONS_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/promote.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_arithmetic.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/promote.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

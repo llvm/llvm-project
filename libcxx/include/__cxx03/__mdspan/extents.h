@@ -17,28 +17,28 @@
 #ifndef _LIBCPP___MDSPAN_EXTENTS_H
 #define _LIBCPP___MDSPAN_EXTENTS_H
 
-#include <__assert>
-#include <__config>
-#include <__type_traits/common_type.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/make_unsigned.h>
-#include <__utility/integer_sequence.h>
-#include <__utility/unreachable.h>
-#include <array>
-#include <cinttypes>
-#include <concepts>
-#include <cstddef>
-#include <limits>
-#include <span>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/__utility/integer_sequence.h>
+#include <__cxx03/__utility/unreachable.h>
+#include <__cxx03/array>
+#include <__cxx03/cinttypes>
+#include <__cxx03/concepts>
+#include <__cxx03/cstddef>
+#include <__cxx03/limits>
+#include <__cxx03/span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

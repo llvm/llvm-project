@@ -9,7 +9,6 @@
 #include "MipsABIInfo.h"
 #include "Mips.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
 

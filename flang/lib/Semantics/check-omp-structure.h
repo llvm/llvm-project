@@ -60,6 +60,9 @@ class OmpStructureChecker
     : public DirectiveStructureChecker<llvm::omp::Directive, llvm::omp::Clause,
           parser::OmpClause, llvm::omp::Clause_enumSize> {
 public:
+  using Base = DirectiveStructureChecker<llvm::omp::Directive,
+      llvm::omp::Clause, parser::OmpClause, llvm::omp::Clause_enumSize>;
+
   OmpStructureChecker(SemanticsContext &context)
       : DirectiveStructureChecker(context,
 #define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
@@ -90,6 +93,8 @@ public:
   void Leave(const parser::OpenMPDeclareSimdConstruct &);
   void Enter(const parser::OpenMPDeclarativeAllocate &);
   void Leave(const parser::OpenMPDeclarativeAllocate &);
+  void Enter(const parser::OpenMPDeclareMapperConstruct &);
+  void Leave(const parser::OpenMPDeclareMapperConstruct &);
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPDepobjConstruct &);
@@ -131,6 +136,9 @@ public:
   void Enter(const parser::OmpAtomicCapture &);
   void Leave(const parser::OmpAtomic &);
 
+  void Enter(const parser::DoConstruct &);
+  void Leave(const parser::DoConstruct &);
+
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
@@ -138,6 +146,7 @@ private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
   bool IsExtendedListItem(const Symbol &sym);
+  std::optional<bool> IsContiguous(const parser::OmpObject &object);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -150,18 +159,22 @@ private:
   void HasInvalidTeamsNesting(
       const llvm::omp::Directive &dir, const parser::CharBlock &source);
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
+  void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
-  bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
-      const parser::OmpScheduleModifierType::ModType &);
-  void CheckAllowedMapTypes(const parser::OmpMapClause::Type &,
-      const std::list<parser::OmpMapClause::Type> &);
-  template <typename T> const T *FindDuplicateEntry(const std::list<T> &);
+  void CheckAllowedMapTypes(const parser::OmpMapType::Value &,
+      const std::list<parser::OmpMapType::Value> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
+
+  template < //
+      typename LessTy, typename RangeTy,
+      typename IterTy = decltype(std::declval<RangeTy>().begin())>
+  std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   void CheckDependList(const parser::DataRef &);
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
+  void CheckDoacross(const parser::OmpDoacross &doa);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
   void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
@@ -185,7 +198,7 @@ private:
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
-  void CheckIteratorModifier(const parser::OmpIteratorModifier &x);
+  void CheckIteratorModifier(const parser::OmpIterator &x);
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -201,6 +214,8 @@ private:
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
+  void CheckDependenceType(const parser::OmpDependenceType::Value &x);
+  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -208,10 +223,11 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
-  void CheckReductionModifier(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const parser::OmpReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
+  void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);
   void ChecksOnOrderedAsStandalone();
   void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
   void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
@@ -221,6 +237,8 @@ private:
       const parser::Name &name, const llvm::omp::Clause clause);
   void CheckSharedBindingInOuterContext(
       const parser::OmpObjectList &ompObjectList);
+  void CheckIfContiguous(const parser::OmpObject &object);
+  const parser::Name *GetObjectName(const parser::OmpObject &object);
   const parser::OmpObjectList *GetOmpObjectList(const parser::OmpClause &);
   void CheckPredefinedAllocatorRestriction(const parser::CharBlock &source,
       const parser::OmpObjectList &ompObjectList);
@@ -249,27 +267,26 @@ private:
   int directiveNest_[LastType + 1] = {0};
 
   SymbolSourceMap deferredNonVariables_;
+
+  using LoopConstruct = std::variant<const parser::DoConstruct *,
+      const parser::OpenMPLoopConstruct *>;
+  std::vector<LoopConstruct> loopStack_;
 };
 
-template <typename T>
-const T *OmpStructureChecker::FindDuplicateEntry(const std::list<T> &list) {
-  // Add elements of the list to a set. If the insertion fails, return
-  // the address of the failing element.
-
-  // The objects of type T may not be copyable, so add their addresses
-  // to the set. The set will need to compare the actual objects, so
-  // the custom comparator is provided.
-  struct less {
-    bool operator()(const T *a, const T *b) const { return *a < *b; }
-  };
-  std::set<const T *, less> uniq;
-
-  for (const T &item : list) {
-    if (!uniq.insert(&item).second) {
-      return &item;
+/// Find a duplicate entry in the range, and return an iterator to it.
+/// If there are no duplicate entries, return nullopt.
+template <typename LessTy, typename RangeTy, typename IterTy>
+std::optional<IterTy> OmpStructureChecker::FindDuplicate(RangeTy &&range) {
+  // Deal with iterators, since the actual elements may be rvalues (i.e.
+  // have no addresses), for example with custom-constructed ranges that
+  // are not simple c.begin()..c.end().
+  std::set<IterTy, LessTy> uniq;
+  for (auto it{range.begin()}, end{range.end()}; it != end; ++it) {
+    if (!uniq.insert(it).second) {
+      return it;
     }
   }
-  return nullptr;
+  return std::nullopt;
 }
 
 } // namespace Fortran::semantics

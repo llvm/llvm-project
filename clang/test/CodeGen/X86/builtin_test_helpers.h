@@ -4,6 +4,30 @@
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 
+constexpr bool match_m64(__m64 _v, unsigned long long a) {
+  __v1du v = (__v1du)_v;
+  return v[0] == a;
+}
+
+constexpr bool match_v1di(__m64 v, long long a) {
+  return v[0] == a;
+}
+
+constexpr bool match_v2si(__m64 _v, int a, int b) {
+  __v2si v = (__v2si)_v;
+  return v[0] == a && v[1] == b;
+}
+
+constexpr bool match_v4hi(__m64 _v, short a, short b, short c, short d) {
+  __v4hi v = (__v4hi)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
+}
+
+constexpr bool match_v8qi(__m64 _v, char a, char b, char c, char d, char e, char f, char g, char h) {
+  __v8qi v = (__v8qi)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
+}
+
 constexpr bool match_m128(__m128 v, float a, float b, float c, float d) {
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }
@@ -12,7 +36,8 @@ constexpr bool match_m128d(__m128d v, double a, double b) {
   return v[0] == a && v[1] == b;
 }
 
-constexpr bool match_m128i(__m128i v, unsigned long long a, unsigned long long b) {
+constexpr bool match_m128i(__m128i _v, unsigned long long a, unsigned long long b) {
+  __v2du v = (__v2du)_v;
   return v[0] == a && v[1] == b;
 }
 
@@ -43,7 +68,8 @@ constexpr bool match_m256d(__m256d v, double a, double b, double c, double d) {
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }
 
-constexpr bool match_m256i(__m256i v, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d) {
+constexpr bool match_m256i(__m256i _v, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d) {
+  __v4du v = (__v4du)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }
 
@@ -55,7 +81,8 @@ constexpr bool match_m512d(__m512d v, double a, double b, double c, double d, do
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
 }
 
-constexpr bool match_m512i(__m512i v, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long g, unsigned long long h) {
+constexpr bool match_m512i(__m512i _v, unsigned long long a, unsigned long long b, unsigned long long c, unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long g, unsigned long long h) {
+  __v8du v = (__v8du)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
 }
 

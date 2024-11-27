@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Type.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
@@ -142,8 +140,8 @@ LLVM_DUMP_METHOD void SeedContainer::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
 template <typename LoadOrStoreT> static bool isValidMemSeed(LoadOrStoreT *LSI) {
-  if (LSI->isSimple())
-    return true;
+  if (!LSI->isSimple())
+    return false;
   auto *Ty = Utils::getExpectedType(LSI);
   // Omit types that are architecturally unvectorizable
   if (Ty->isX86_FP80Ty() || Ty->isPPC_FP128Ty())
@@ -161,13 +159,19 @@ template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
 
 SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
     : StoreSeeds(SE), LoadSeeds(SE), Ctx(BB->getContext()) {
-  // TODO: Register a callback for updating the Collector data structures upon
-  // instr removal
 
   bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
   bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
   if (!CollectStores && !CollectLoads)
     return;
+
+  EraseCallbackID = Ctx.registerEraseInstrCallback([this](Instruction *I) {
+    if (auto SI = dyn_cast<StoreInst>(I))
+      StoreSeeds.erase(SI);
+    else if (auto LI = dyn_cast<LoadInst>(I))
+      LoadSeeds.erase(LI);
+  });
+
   // Actually collect the seeds.
   for (auto &I : *BB) {
     if (StoreInst *SI = dyn_cast<StoreInst>(&I))
@@ -183,8 +187,7 @@ SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
 }
 
 SeedCollector::~SeedCollector() {
-  // TODO: Unregister the callback for updating the seed datastructures upon
-  // instr removal
+  Ctx.unregisterEraseInstrCallback(EraseCallbackID);
 }
 
 #ifndef NDEBUG

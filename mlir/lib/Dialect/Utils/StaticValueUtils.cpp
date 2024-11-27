@@ -58,6 +58,20 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
   staticVec.push_back(ShapedType::kDynamic);
 }
 
+std::pair<int64_t, OpFoldResult>
+getSimplifiedOfrAndStaticSizePair(OpFoldResult tileSizeOfr, Builder &b) {
+  int64_t tileSizeForShape =
+      getConstantIntValue(tileSizeOfr).value_or(ShapedType::kDynamic);
+
+  OpFoldResult tileSizeOfrSimplified =
+      (tileSizeForShape != ShapedType::kDynamic)
+          ? b.getIndexAttr(tileSizeForShape)
+          : tileSizeOfr;
+
+  return std::pair<int64_t, OpFoldResult>(tileSizeForShape,
+                                          tileSizeOfrSimplified);
+}
+
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec) {

@@ -90,11 +90,11 @@ def SDT_PPCxxperm : SDTypeProfile<1, 3, [
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstxvd2x : SDNode<"PPCISD::STXVD2X", SDT_PPCstxvd2x,
-                        [SDNPHasChain, SDNPMayStore]>;
+                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCld_vec_be  : SDNode<"PPCISD::LOAD_VEC_BE", SDT_PPCld_vec_be,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCst_vec_be : SDNode<"PPCISD::STORE_VEC_BE", SDT_PPCst_vec_be,
-                        [SDNPHasChain, SDNPMayStore]>;
+                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCxxswapd : SDNode<"PPCISD::XXSWAPD", SDT_PPCxxswapd, [SDNPHasChain]>;
 def PPCmfvsr : SDNode<"PPCISD::MFVSR", SDTUnaryOp, []>;
 def PPCmtvsra : SDNode<"PPCISD::MTVSRA", SDTUnaryOp, []>;

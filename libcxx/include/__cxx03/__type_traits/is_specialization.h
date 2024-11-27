@@ -22,7 +22,7 @@
 //
 // Note a cvref qualified _Tp is never considered a specialization.
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

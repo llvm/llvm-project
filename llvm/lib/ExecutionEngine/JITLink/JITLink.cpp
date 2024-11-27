@@ -17,8 +17,6 @@
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -204,9 +202,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 
     auto TransferSymbol = [](Symbol &Sym, Block &B) {
       Sym.setOffset(Sym.getAddress() - B.getAddress());
+      Sym.setBlock(B);
       if (Sym.getSize() > B.getSize())
         Sym.setSize(B.getSize() - Sym.getOffset());
-      Sym.setBlock(B);
     };
 
     // Transfer symbols to all blocks except the last one.
@@ -291,11 +289,18 @@ void LinkGraph::dump(raw_ostream &OS) {
       return false;
     });
 
-  for (auto &Sec : sections()) {
-    OS << "section " << Sec.getName() << ":\n\n";
+  std::vector<Section *> SortedSections;
+  for (auto &Sec : sections())
+    SortedSections.push_back(&Sec);
+  llvm::sort(SortedSections, [](const Section *LHS, const Section *RHS) {
+    return LHS->getName() < RHS->getName();
+  });
+
+  for (auto *Sec : SortedSections) {
+    OS << "section " << Sec->getName() << ":\n\n";
 
     std::vector<Block *> SortedBlocks;
-    llvm::copy(Sec.blocks(), std::back_inserter(SortedBlocks));
+    llvm::copy(Sec->blocks(), std::back_inserter(SortedBlocks));
     llvm::sort(SortedBlocks, [](const Block *LHS, const Block *RHS) {
       return LHS->getAddress() < RHS->getAddress();
     });

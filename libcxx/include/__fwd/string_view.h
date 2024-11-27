@@ -28,14 +28,14 @@ typedef basic_string_view<char8_t> u8string_view;
 #endif
 typedef basic_string_view<char16_t> u16string_view;
 typedef basic_string_view<char32_t> u32string_view;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef basic_string_view<wchar_t> wstring_view;
 #endif
 
 // clang-format off
 template <class _CharT, class _Traits>
 class _LIBCPP_PREFERRED_NAME(string_view)
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
       _LIBCPP_PREFERRED_NAME(wstring_view)
 #endif
 #if _LIBCPP_HAS_CHAR8_T

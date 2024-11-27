@@ -10,18 +10,18 @@
 #ifndef _LIBCPP___MEMORY_ALLOCATION_GUARD_H
 #define _LIBCPP___MEMORY_ALLOCATION_GUARD_H
 
-#include <__config>
-#include <__memory/addressof.h>
-#include <__memory/allocator_traits.h>
-#include <__utility/move.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

@@ -40,7 +40,7 @@ define i32 @usub_sat_C1_C2_produce_0_too(i32 %a){
 ; vector tests
 define <2 x i16> @usub_sat_C1_C2_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @usub_sat_C1_C2_splat(
-; CHECK-NEXT:    [[COND:%.*]] = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> <i16 50, i16 50>, <2 x i16> [[A:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> splat (i16 50), <2 x i16> [[A:%.*]])
 ; CHECK-NEXT:    ret <2 x i16> [[COND]]
 ;
   %add = sub nuw <2 x i16> <i16 64, i16 64>, %a

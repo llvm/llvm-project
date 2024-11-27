@@ -32,8 +32,8 @@ define i16 @t1(i16 %x) {
 ; Vectors
 define <2 x i8> @t2_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> <i8 7, i8 7>, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = lshr <2 x i8> <i8 -1, i8 -1>, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> splat (i8 7), [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <2 x i8> splat (i8 -1), [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[MASK]]
 ;
   %bitmask = shl <2 x i8> <i8 1, i8 1>, %x
@@ -43,8 +43,8 @@ define <2 x i8> @t2_vec(<2 x i8> %x) {
 }
 define <3 x i8> @t3_vec_poison0(<3 x i8> %x) {
 ; CHECK-LABEL: @t3_vec_poison0(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> splat (i8 7), [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> splat (i8 -1), [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
   %bitmask = shl <3 x i8> <i8 1, i8 poison, i8 1>, %x
@@ -54,8 +54,8 @@ define <3 x i8> @t3_vec_poison0(<3 x i8> %x) {
 }
 define <3 x i8> @t4_vec_poison1(<3 x i8> %x) {
 ; CHECK-LABEL: @t4_vec_poison1(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> splat (i8 7), [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> splat (i8 -1), [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
   %bitmask = shl <3 x i8> <i8 1, i8 1, i8 1>, %x
@@ -65,8 +65,8 @@ define <3 x i8> @t4_vec_poison1(<3 x i8> %x) {
 }
 define <3 x i8> @t5_vec_poison2(<3 x i8> %x) {
 ; CHECK-LABEL: @t5_vec_poison2(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> splat (i8 7), [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> splat (i8 -1), [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
   %bitmask = shl <3 x i8> <i8 1, i8 1, i8 poison>, %x

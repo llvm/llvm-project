@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___TYPE_TRAITS_MAYBE_CONST_H
 #define _LIBCPP___TYPE_TRAITS_MAYBE_CONST_H
 
-#include <__config>
-#include <__type_traits/conditional.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conditional.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

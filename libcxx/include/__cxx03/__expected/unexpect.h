@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___EXPECTED_UNEXPECT_H
 #define _LIBCPP___EXPECTED_UNEXPECT_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

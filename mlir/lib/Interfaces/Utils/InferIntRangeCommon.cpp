@@ -319,9 +319,8 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivUIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto ceilDivUIFix = [](const APInt &lhs, const APInt &rhs,
+                         const APInt &result) -> std::optional<APInt> {
     if (!lhs.urem(rhs).isZero()) {
       bool overflowed = false;
       APInt corrected =
@@ -368,14 +367,22 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivSIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto ceilDivSIFix = [](const APInt &lhs, const APInt &rhs,
+                         const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() == rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
           result.sadd_ov(APInt(result.getBitWidth(), 1), overflowed);
       return overflowed ? std::optional<APInt>() : corrected;
+    }
+    // Special case where the usual implementation of ceilDiv causes
+    // INT_MIN / [positive number] to be positive. This doesn't match the
+    // definition of signed ceiling division mathematically, but it prevents
+    // inconsistent constant-folding results. This arises because (-int_min) is
+    // still negative, so -(-int_min / b) is -(int_min / b), which is
+    // positive See #115293.
+    if (lhs.isMinSignedValue() && rhs.sgt(1)) {
+      return -result;
     }
     return result;
   };
@@ -386,9 +393,8 @@ ConstantIntRanges
 mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn floorDivSIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto floorDivSIFix = [](const APInt &lhs, const APInt &rhs,
+                          const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() != rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
@@ -552,6 +558,20 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
+  // TODO: The code below doesn't work for bitwidths > i1.
+  // For input ranges lhs=[2060639849, 2060639850], rhs=[2060639849, 2060639849]
+  // widenBitwiseBounds will produce:
+  // lhs:
+  // 2060639848  01111010110100101101111001101000
+  // 2060639851  01111010110100101101111001101011
+  // rhs:
+  // 2060639849  01111010110100101101111001101001
+  // 2060639849  01111010110100101101111001101001
+  // None of those combinations xor to 0, while intermediate values does.
+  unsigned width = argRanges[0].umin().getBitWidth();
+  if (width > 1)
+    return ConstantIntRanges::maxRange(width);
+
   auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
   auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
   auto xori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
@@ -603,8 +623,7 @@ ConstantIntRanges
 mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn ashr = [](const APInt &l,
-                         const APInt &r) -> std::optional<APInt> {
+  auto ashr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.ashr(r);
   };
 
@@ -616,8 +635,7 @@ ConstantIntRanges
 mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn lshr = [](const APInt &l,
-                         const APInt &r) -> std::optional<APInt> {
+  auto lshr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.lshr(r);
   };
   return minMaxBy(lshr, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},

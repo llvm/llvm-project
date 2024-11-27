@@ -180,6 +180,15 @@ public:
     auto It = AssignPtrTypeInstr.find(Val);
     return It == AssignPtrTypeInstr.end() ? nullptr : It->second;
   }
+  // - Find a record and update its key or add a new record, if found.
+  void updateIfExistAssignPtrTypeInstr(Value *OldVal, Value *NewVal,
+                                       bool DeleteOld) {
+    if (CallInst *CI = findAssignPtrTypeInstr(OldVal)) {
+      if (DeleteOld)
+        AssignPtrTypeInstr.erase(OldVal);
+      AssignPtrTypeInstr[NewVal] = CI;
+    }
+  }
 
   // A registry of mutated values
   // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`):
@@ -213,6 +222,15 @@ public:
   Type *findDeducedElementType(const Value *Val) {
     auto It = DeducedElTys.find(Val);
     return It == DeducedElTys.end() ? nullptr : It->second;
+  }
+  // - Find a record and update its key or add a new record, if found.
+  void updateIfExistDeducedElementType(Value *OldVal, Value *NewVal,
+                                       bool DeleteOld) {
+    if (Type *Ty = findDeducedElementType(OldVal)) {
+      if (DeleteOld)
+        DeducedElTys.erase(OldVal);
+      DeducedElTys[NewVal] = Ty;
+    }
   }
   // - Add a record to the map of deduced composite types.
   void addDeducedCompositeType(Value *Val, Type *Ty) {
@@ -353,6 +371,9 @@ public:
   SPIRVType *getSPIRVTypeForVReg(Register VReg,
                                  const MachineFunction *MF = nullptr) const;
 
+  // Return the result type of the instruction defining the register.
+  SPIRVType *getResultType(Register VReg);
+
   // Whether the given VReg has a SPIR-V type mapped to it yet.
   bool hasSPIRVTypeForVReg(Register VReg) const {
     return getSPIRVTypeForVReg(VReg) != nullptr;
@@ -387,6 +408,12 @@ public:
   // a vector type. Return 1 for a scalar type, and 0 for a missing type.
   unsigned getScalarOrVectorComponentCount(Register VReg) const;
   unsigned getScalarOrVectorComponentCount(SPIRVType *Type) const;
+
+  // Return the component type in a vector if the argument is associated with
+  // a vector type. Returns the argument itself for other types, and nullptr
+  // for a missing type.
+  SPIRVType *getScalarOrVectorComponentType(Register VReg) const;
+  SPIRVType *getScalarOrVectorComponentType(SPIRVType *Type) const;
 
   // For vectors or scalars of booleans, integers and floats, return the scalar
   // type's bitwidth. Otherwise calls llvm_unreachable().

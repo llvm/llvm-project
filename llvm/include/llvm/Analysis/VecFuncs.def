@@ -56,6 +56,8 @@ TLI_DEFINE_VECFUNC("acosf", "vacosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.acos.f32", "vacosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atanf", "vatanf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.atan.f32", "vatanf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("atan2f", "vatan2f", FIXED(4), "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "vatan2f", FIXED(4), "_ZGV_LLVM_N4vv")
 
 // Hyperbolic Functions
 TLI_DEFINE_VECFUNC("sinhf", "vsinhf", FIXED(4), "_ZGV_LLVM_N4v")
@@ -289,7 +291,9 @@ TLI_DEFINE_VECFUNC("acosf", "__acosf4", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atan", "__atand2", FIXED(2), "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("atanf", "__atanf4", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atan2", "__atan2d2", FIXED(2), "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "__atan2d2", FIXED(2), "_ZGV_LLVM_N2vv")
 TLI_DEFINE_VECFUNC("atan2f", "__atan2f4", FIXED(4), "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "__atan2f4", FIXED(4), "_ZGV_LLVM_N4vv")
 
 // Hyperbolic Functions
 TLI_DEFINE_VECFUNC("sinh", "__sinhd2", FIXED(2), "_ZGV_LLVM_N2v")
