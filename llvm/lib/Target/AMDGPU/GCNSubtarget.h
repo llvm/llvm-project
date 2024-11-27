@@ -270,6 +270,7 @@ protected:
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasVNBREncoding = false;
   bool HasSWC = false;
+  bool HasIndexedResources = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1444,6 +1445,8 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  bool hasIndexedResources() const { return HasIndexedResources; }
 
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
