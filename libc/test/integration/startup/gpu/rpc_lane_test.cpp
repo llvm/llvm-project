@@ -25,8 +25,8 @@ static void test_add() {
         cnt = reinterpret_cast<uint64_t *>(buffer->data)[0];
       });
   port.close();
-  ASSERT_TRUE(cnt == gpu::get_lane_id() + 1 && "Incorrect sum");
-  ASSERT_TRUE(gpu::get_thread_id() == gpu::get_lane_id() && "Not in same lane");
+  EXPECT_EQ(cnt, gpu::get_lane_id() + 1);
+  EXPECT_EQ(gpu::get_thread_id(), gpu::get_lane_id());
 }
 
 TEST_MAIN(int argc, char **argv, char **envp) {
