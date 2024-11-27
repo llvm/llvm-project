@@ -635,6 +635,25 @@ class CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
         ImmArg<ArgIndex<FlagsStartIdx>>];
 }
 
+class CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode, string op> {
+  string Suffix = op # "_" # mode # "_" # dim # "d";
+  string Name = "int_nvvm_cp_async_bulk_tensor_reduce_" # Suffix;
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -4933,6 +4952,16 @@ foreach dim = [1, 2, 3, 4, 5] in {
       def s2g.Name : DefaultAttrsIntrinsic<[], s2g.ArgsTy, s2g.IntrProp>;
     foreach prefetch = [CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>] in
       def prefetch.Name : DefaultAttrsIntrinsic<[], prefetch.ArgsTy, prefetch.IntrProp>;
+  }
+}
+
+// Intrinsics for TMA Copy with reduction
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in {
+      foreach reduce = [CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode, red_op>] in
+        def reduce.Name : DefaultAttrsIntrinsic<[], reduce.ArgsTy, reduce.IntrProp>;
+    }
   }
 }
 
