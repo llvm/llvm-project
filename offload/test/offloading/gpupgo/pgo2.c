@@ -2,10 +2,10 @@
 // RUN:      -fprofile-generate-gpu
 // RUN: env LLVM_PROFILE_FILE=%basename_t.llvm.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %basename_t.llvm.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-HOST"
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %target_triple.%basename_t.llvm.profraw \
 // RUN:     | %fcheck-generic --check-prefix="LLVM-DEVICE"
 
@@ -13,10 +13,10 @@
 // RUN:     -fprofile-instr-generate-gpu
 // RUN: env LLVM_PROFILE_FILE=%basename_t.clang.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %basename_t.clang.profraw | %fcheck-generic \
 // RUN:     --check-prefix="CLANG-HOST"
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %target_triple.%basename_t.clang.profraw | \
 // RUN:     %fcheck-generic --check-prefix="CLANG-DEV"
 
