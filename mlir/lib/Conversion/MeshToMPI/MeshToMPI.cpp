@@ -72,7 +72,6 @@ Value multiToLinearIndex(Location loc, OpBuilder b, ValueRange multiIndex,
   return linearIndex;
 }
 
-// This pattern converts the mesh.update_halo operation to MPI calls
 struct ConvertProcessMultiIndexOp
     : public mlir::OpRewritePattern<mlir::mesh::ProcessMultiIndexOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -80,6 +79,9 @@ struct ConvertProcessMultiIndexOp
   mlir::LogicalResult
   matchAndRewrite(mlir::mesh::ProcessMultiIndexOp op,
                   mlir::PatternRewriter &rewriter) const override {
+
+    // Currently converts its linear index to a multi-dimensional index.
+
     SymbolTableCollection symbolTableCollection;
     auto loc = op.getLoc();
     auto meshOp = getMesh(op, symbolTableCollection);
@@ -112,9 +114,6 @@ struct ConvertProcessMultiIndexOp
   }
 };
 
-// This pattern converts the mesh.update_halo operation to MPI calls.
-// If it finds a global named "static_mpi_rank" it will use that splat value.
-// Otherwise it defaults to mpi.comm_rank.
 struct ConvertProcessLinearIndexOp
     : public mlir::OpRewritePattern<mlir::mesh::ProcessLinearIndexOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -122,6 +121,10 @@ struct ConvertProcessLinearIndexOp
   mlir::LogicalResult
   matchAndRewrite(mlir::mesh::ProcessLinearIndexOp op,
                   mlir::PatternRewriter &rewriter) const override {
+
+    // Finds a global named "static_mpi_rank" it will use that splat value.
+    // Otherwise it defaults to mpi.comm_rank.
+
     auto loc = op.getLoc();
     auto rankOpName = StringAttr::get(op->getContext(), "static_mpi_rank");
     if (auto globalOp = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
@@ -145,7 +148,6 @@ struct ConvertProcessLinearIndexOp
   }
 };
 
-// This pattern converts the mesh.update_halo operation to MPI calls
 struct ConvertNeighborsLinearIndicesOp
     : public mlir::OpRewritePattern<mlir::mesh::NeighborsLinearIndicesOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -153,6 +155,11 @@ struct ConvertNeighborsLinearIndicesOp
   mlir::LogicalResult
   matchAndRewrite(mlir::mesh::NeighborsLinearIndicesOp op,
                   mlir::PatternRewriter &rewriter) const override {
+
+    // Computes the neighbors indices along a split axis by simply
+    // adding/subtracting 1 to the current index in that dimension.
+    // Assigns -1 if neighbor is out of bounds.
+
     auto axes = op.getSplitAxes();
     // For now only single axis sharding is supported
     if (axes.size() != 1) {
@@ -209,7 +216,6 @@ struct ConvertNeighborsLinearIndicesOp
   }
 };
 
-// This pattern converts the mesh.update_halo operation to MPI calls
 struct ConvertUpdateHaloOp
     : public mlir::OpRewritePattern<mlir::mesh::UpdateHaloOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -217,6 +223,7 @@ struct ConvertUpdateHaloOp
   mlir::LogicalResult
   matchAndRewrite(mlir::mesh::UpdateHaloOp op,
                   mlir::PatternRewriter &rewriter) const override {
+
     // The input/output memref is assumed to be in C memory order.
     // Halos are exchanged as 2 blocks per dimension (one for each side: down
     // and up). For each haloed dimension `d`, the exchanged blocks are
