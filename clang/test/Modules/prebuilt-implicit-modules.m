@@ -25,7 +25,7 @@
 // RUN: mkdir -p %t2
 // RUN: %clang_cc1 -x objective-c -fmodules %S/Inputs/prebuilt-implicit-module/module.modulemap -emit-module -fmodule-name=module_a -fmodules-cache-path=%t
 // RUN: %clang_cc1 -x objective-c -fmodules %S/Inputs/prebuilt-implicit-module/module.modulemap -emit-module -fmodule-name=module_a -o %t/module_a.pcm -fno-signed-char
-// RUN: %clang_cc1 -x objective-c %s -I%S/Inputs/prebuilt-implicit-module -fmodules -fmodule-map-file=%S/Inputs/prebuilt-implicit-module/module.modulemap -fprebuilt-implicit-modules -fprebuilt-module-path=%t -fmodules-cache-path=%t2
+// RUN: not %clang_cc1 -x objective-c %s -I%S/Inputs/prebuilt-implicit-module -fmodules -fmodule-map-file=%S/Inputs/prebuilt-implicit-module/module.modulemap -fprebuilt-implicit-modules -fprebuilt-module-path=%t -fmodules-cache-path=%t2
 // RUN: find %t2 -name "module_a*.pcm" | not grep module_a
 
 // expected-no-diagnostics

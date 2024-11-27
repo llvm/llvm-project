@@ -11,11 +11,11 @@
 // RUN: %clang -x c++ -include %t.h -std=c++98 -fsyntax-only %s -Xclang -print-stats 2> %t.cpplog
 // RUN: FileCheck -check-prefix=CHECK-CPP %s < %t.cpplog
 
-// RUN: %clang -x c++ -std=c++11 -include %t.h -fsyntax-only %s 2> %t.cpp11log
-// RUN: FileCheck %s --check-prefix=CHECK-OPT-DIFF < %t.cpp11log
+// RUN: not %clang -x c++ -std=c++11 -include %t.h -fsyntax-only %s 2> %t.cpp11log
+// RUN: FileCheck -check-prefix=CHECK-NO-SUITABLE %s < %t.cpp11log
 
-// RUN: %clang -include %t.h -fsyntax-only %s 2> %t.missinglog2
-// RUN: FileCheck --check-prefix=CHECK-OPT-DIFF %s < %t.missinglog2
+// RUN: not %clang -include %t.h -fsyntax-only %s 2> %t.missinglog2
+// RUN: FileCheck -check-prefix=CHECK-NO-SUITABLE %s < %t.missinglog2
 // RUN: not %clang -include %t.h -DFOO=foo -DBAR=bar -fsyntax-only %s 2> %t.missinglog2
 // RUN: FileCheck -check-prefix=CHECK-NO-SUITABLE %s < %t.missinglog2
 
@@ -40,8 +40,6 @@ int get(void) {
   return j;
 #endif
 }
-
-// CHECK-OPT-DIFF: warning: {{.*}} was disabled in AST file{{.*}} but is currently enabled
 
 // CHECK-NO-SUITABLE: no suitable precompiled header file found in directory
 
