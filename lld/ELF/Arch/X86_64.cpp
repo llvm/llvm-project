@@ -632,7 +632,13 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
       return;
     }
     if (loc[-2] == 0x3 || loc[-2] == 0x1) {
-      // "addq foo@gottpoff(%rip), %reg1, %reg2" -> "addq $foo, %reg1, %reg2"
+      // "addq %reg1, foo@GOTTPOFF(%rip), %reg2" -> "addq $foo, %reg1, %reg2"
+      // "addq foo@GOTTPOFF(%rip), %reg1, %reg2" -> "addq $foo, %reg1, %reg2"
+      // "{nf} addq %reg1, foo@GOTTPOFF(%rip), %reg2"
+      //   -> "{nf} addq $foo, %reg1, %reg2"
+      // "{nf} addq name@GOTTPOFF(%rip), %reg1, %reg2"
+      //    -> "{nf} addq $foo, %reg1, %reg2"
+      // "{nf} addq name@GOTTPOFF(%rip), %reg" -> "{nf} addq $foo, %reg"
       loc[-2] = 0x81;
       // Move R bits to B bits in EVEX payloads and ModRM byte.
       if ((loc[-5] & (1 << 7)) == 0)
