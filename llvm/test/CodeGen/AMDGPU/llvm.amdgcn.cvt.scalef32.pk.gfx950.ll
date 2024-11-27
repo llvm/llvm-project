@@ -10,6 +10,8 @@ declare <2 x half> @llvm.amdgcn.cvt.scalef32.f16.bf8(<2 x half>, i32, float, i32
 declare float @llvm.amdgcn.cvt.scalef32.f32.bf8(i32, float, i32)
 declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.fp8.f32(<2 x i16>, float, float, float, i1)
 declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.bf8.f32(<2 x i16>, float, float, float, i1)
+declare <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.fp8(i32, float, i1)
+declare <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.bf8(i32, float, i1)
 
 define amdgpu_ps void @test_scalef32_pk32_fp6_f32_vv(<16 x float> %src, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_pk32_fp6_f32_vv:
@@ -517,4 +519,44 @@ define <2 x i16> @test_cvt_scalef32_pk_bf8_f32_word1_fabs_fneg(<2 x i16> %old, f
   %fneg.src1 = fneg float %src1
   %ret = tail call <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.bf8.f32(<2 x i16> %old, float %fabs.src0, float %fneg.src1, float %scale, i1 true)
   ret <2 x i16> %ret
+}
+
+define <2 x float> @test_cvt_scalef32_pk_f32_fp8_word0(i32 %src, float %scale) {
+; GCN-LABEL: test_cvt_scalef32_pk_f32_fp8_word0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_scalef32_pk_f32_fp8 v[0:1], v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.fp8(i32 %src, float %scale, i1 false)
+  ret <2 x float> %ret
+}
+
+define <2 x float> @test_cvt_scalef32_pk_f32_fp8_word1(i32 %src, float %scale) {
+; GCN-LABEL: test_cvt_scalef32_pk_f32_fp8_word1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_scalef32_pk_f32_fp8 v[0:1], v0, v1 op_sel:[1,0,0]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.fp8(i32 %src, float %scale, i1 true)
+  ret <2 x float> %ret
+}
+
+define <2 x float> @test_cvt_scalef32_pk_f32_bf8_word0(i32 %src, float %scale) {
+; GCN-LABEL: test_cvt_scalef32_pk_f32_bf8_word0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_scalef32_pk_f32_bf8 v[0:1], v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.bf8(i32 %src, float %scale, i1 false)
+  ret <2 x float> %ret
+}
+
+define <2 x float> @test_cvt_scalef32_pk_f32_bf8_word1(i32 %src, float %scale) {
+; GCN-LABEL: test_cvt_scalef32_pk_f32_bf8_word1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_scalef32_pk_f32_bf8 v[0:1], v0, v1 op_sel:[1,0,0]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.bf8(i32 %src, float %scale, i1 true)
+  ret <2 x float> %ret
 }
