@@ -4569,13 +4569,27 @@ LogicalResult AffineDelinearizeIndexOp::verify() {
   return success();
 }
 
-/// Give mixed basis of affine.delinearize_index/linearize_index replace
-/// constant SSA values with the constant integer value and returns the
-/// new static basis.
-static SmallVector<int64_t>
+/// Given mixed basis of affine.delinearize_index/linearize_index replace
+/// constant SSA values with the constant integer value and return the new
+/// static basis. In case no such candidate for replacement exists, this utility
+/// returns std::nullopt.
+static std::optional<SmallVector<int64_t>>
 foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
                            MutableOperandRange mutableDynamicBasis,
                            ArrayRef<Attribute> dynamicBasis) {
+  int64_t dynamicBasisIndex = 0;
+  for (OpFoldResult basis : dynamicBasis) {
+    if (basis) {
+      mutableDynamicBasis.erase(dynamicBasisIndex);
+    } else {
+      ++dynamicBasisIndex;
+    }
+  }
+
+  // No constant SSA value exists.
+  if (dynamicBasisIndex == dynamicBasis.size())
+    return std::nullopt;
+
   SmallVector<int64_t> staticBasis;
   for (OpFoldResult basis : mixedBasis) {
     std::optional<int64_t> basisVal = getConstantIntValue(basis);
@@ -4585,22 +4599,19 @@ foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
       staticBasis.push_back(*basisVal);
   }
 
-  int64_t dynamicBasisIndex = 0;
-  for (OpFoldResult basis : dynamicBasis) {
-    if (basis) {
-      mutableDynamicBasis.erase(dynamicBasisIndex);
-    } else {
-      ++dynamicBasisIndex;
-    }
-  }
   return staticBasis;
 }
 
 LogicalResult
 AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
                                SmallVectorImpl<OpFoldResult> &result) {
-  setStaticBasis(foldCstValueToCstAttrBasis(
-      getMixedBasis(), getDynamicBasisMutable(), adaptor.getDynamicBasis()));
+  std::optional<SmallVector<int64_t>> maybeStaticBasis =
+      foldCstValueToCstAttrBasis(getMixedBasis(), getDynamicBasisMutable(),
+                                 adaptor.getDynamicBasis());
+  if (maybeStaticBasis) {
+    setStaticBasis(*maybeStaticBasis);
+    return success();
+  }
   // If we won't be doing any division or modulo (no basis or the one basis
   // element is purely advisory), simply return the input value.
   if (getNumResults() == 1) {
@@ -4818,8 +4829,15 @@ LogicalResult AffineLinearizeIndexOp::verify() {
 }
 
 OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
-  setStaticBasis(foldCstValueToCstAttrBasis(
-      getMixedBasis(), getDynamicBasisMutable(), adaptor.getDynamicBasis()));
+  std::optional<SmallVector<int64_t>> maybeStaticBasis =
+      foldCstValueToCstAttrBasis(getMixedBasis(), getDynamicBasisMutable(),
+                                 adaptor.getDynamicBasis());
+  if (maybeStaticBasis) {
+    setStaticBasis(*maybeStaticBasis);
+    return getResult();
+  }
+  // setStaticBasis(foldCstValueToCstAttrBasis(
+  //     getMixedBasis(), getDynamicBasisMutable(), adaptor.getDynamicBasis()));
   // No indices linearizes to zero.
   if (getMultiIndex().empty())
     return IntegerAttr::get(getResult().getType(), 0);
