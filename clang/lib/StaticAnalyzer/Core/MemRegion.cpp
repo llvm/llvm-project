@@ -1068,10 +1068,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     llvm::PointerUnion<const StackFrameContext *, const VarRegion *> V =
       getStackOrCaptureRegionForDeclContext(LC, DC, D);
 
-    if (V.is<const VarRegion*>())
-      return V.get<const VarRegion*>();
+    if (isa<const VarRegion *>(V))
+      return cast<const VarRegion *>(V);
 
-    const auto *STC = V.get<const StackFrameContext *>();
+    const auto *STC = cast<const StackFrameContext *>(V);
 
     if (!STC) {
       // FIXME: Assign a more sensible memory space to static locals

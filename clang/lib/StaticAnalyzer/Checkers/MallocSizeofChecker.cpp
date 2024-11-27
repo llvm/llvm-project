@@ -211,8 +211,8 @@ public:
           continue;
 
         const TypeSourceInfo *TSI = nullptr;
-        if (CallRec.CastedExprParent.is<const VarDecl *>()) {
-          TSI = CallRec.CastedExprParent.get<const VarDecl *>()
+        if (isa<const VarDecl *>(CallRec.CastedExprParent)) {
+          TSI = cast<const VarDecl *>(CallRec.CastedExprParent)
                     ->getTypeSourceInfo();
         } else {
           TSI = CallRec.ExplicitCastType;
