@@ -34,3 +34,16 @@ void m(int, ...);
 void n(int x...); // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
 void o(int x, ...);
 
+struct S {
+  void p(this S...) {} // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
+};
+
+template<class ...Ts>
+void q(Ts......) {} // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}} \
+                    // expected-warning {{'...' in this location creates a C-style varargs function}} \
+                    // expected-note {{preceding '...' declares a function parameter pack}} \
+                    // expected-note {{insert ',' before '...' to silence this warning}}
+
+template<class T>
+void r(T...) {} // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
+
