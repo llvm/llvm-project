@@ -6,8 +6,11 @@
 // XFAIL: *
 
 typedef int vint4 __attribute__((ext_vector_type(4)));
+typedef float vfloat4 __attribute__((ext_vector_type(4)));
+typedef double vdouble4 __attribute__((ext_vector_type(4)));
 
-void test_builtin_elementwise_abs(vint4 vi4, int i, float f, double d) {
+void test_builtin_elementwise_abs(vint4 vi4, int i, float f, double d, 
+                                  vfloat4 vf4, vdouble4  vd4) {
     // CIR-LABEL: test_builtin_elementwise_abs
     // LLVM-LABEL: test_builtin_elementwise_abs
     // CIR: {{%.*}} = cir.fabs {{%.*}} : !cir.float
@@ -25,4 +28,12 @@ void test_builtin_elementwise_abs(vint4 vi4, int i, float f, double d) {
     // CIR: {{%.*}} = cir.abs {{%.*}} : !s32
     // LLVM: {{%.*}} = call i32 @llvm.abs.i32(i32 {{%.*}}, i1 false)
     i = __builtin_elementwise_abs(i);
+
+    // CIR: {{%.*}} = cir.fabs {{%.*}} : !cir.vector<!cir.float x 4>
+    // LLVM: {{%.*}} = call <4 x float> @llvm.fabs.v4f32(<4 x float> {{%.*}})
+    vf4 = __builtin_elementwise_abs(vf4);
+
+    // CIR: {{%.*}} = cir.fabs {{%.*}} : !cir.vector<!cir.double x 4>
+    // LLVM: {{%.*}} = call <4 x double> @llvm.fabs.v4f64(<4 x double> {{%.*}})
+    vd4 = __builtin_elementwise_abs(vd4);
 }

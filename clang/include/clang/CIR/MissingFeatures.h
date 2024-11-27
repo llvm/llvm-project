@@ -330,9 +330,6 @@ struct MissingFeatures {
 
   //-- Other missing features
 
-  // We need to extend fpUnaryOPs to support vector types.
-  static bool fpUnaryOPsSupportVectorType() { return false; }
-
   // We need to track the parent record types that represent a field
   // declaration. This is necessary to determine the layout of a class.
   static bool fieldDeclAbstraction() { return false; }

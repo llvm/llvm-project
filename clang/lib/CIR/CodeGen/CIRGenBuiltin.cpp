@@ -1309,10 +1309,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     mlir::Type cirTy = ConvertType(E->getArg(0)->getType());
     bool isIntTy = cir::isIntOrIntVectorTy(cirTy);
     if (!isIntTy) {
-      if (cir::isAnyFloatingPointType(cirTy)) {
+      mlir::Type eltTy = cirTy;
+      if (mlir::isa<cir::VectorType>(cirTy))
+        eltTy = mlir::cast<cir::VectorType>(cirTy).getEltType();
+      if (mlir::isa<cir::SingleType, cir::DoubleType>(eltTy)) {
         return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *E);
       }
-      assert(!MissingFeatures::fpUnaryOPsSupportVectorType());
       llvm_unreachable("unsupported type for BI__builtin_elementwise_abs");
     }
     mlir::Value arg = emitScalarExpr(E->getArg(0));
