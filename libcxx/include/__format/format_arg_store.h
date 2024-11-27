@@ -17,6 +17,7 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>
 #include <__type_traits/conditional.h>
@@ -31,6 +32,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 namespace __format {
+
+template <class _Arr, class _Elem>
+inline constexpr bool __is_bounded_array_of = false;
+
+template <class _Elem, size_t _Len>
+inline constexpr bool __is_bounded_array_of<_Elem[_Len], _Elem> = true;
 
 /// \returns The @c __arg_t based on the type of the formatting argument.
 ///
@@ -101,12 +108,18 @@ consteval __arg_t __determine_arg_t() {
   return __arg_t::__long_double;
 }
 
-// Char pointer or array
+// Char pointer
 template <class _Context, class _Tp>
-  requires(same_as<typename _Context::char_type*, _Tp> || same_as<const typename _Context::char_type*, _Tp>) ||
-          (is_array_v<_Tp> && same_as<_Tp, typename _Context::char_type[extent_v<_Tp>]>)
+  requires(same_as<typename _Context::char_type*, _Tp> || same_as<const typename _Context::char_type*, _Tp>)
 consteval __arg_t __determine_arg_t() {
   return __arg_t::__const_char_type_ptr;
+}
+
+// Char array
+template <class _Context, class _Tp>
+  requires __is_bounded_array_of<_Tp, typename _Context::char_type>
+consteval __arg_t __determine_arg_t() {
+  return __arg_t::__string_view;
 }
 
 // String view
@@ -162,13 +175,14 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
   static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
   static_assert(__formattable_with<_Tp, _Context>);
 
+  using __context_char_type = _Context::char_type;
   // Not all types can be used to directly initialize the
   // __basic_format_arg_value.  First handle all types needing adjustment, the
   // final else requires no adjustment.
   if constexpr (__arg == __arg_t::__char_type)
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-    if constexpr (same_as<typename _Context::char_type, wchar_t> && same_as<_Dp, char>)
+    if constexpr (same_as<__context_char_type, wchar_t> && same_as<_Dp, char>)
       return basic_format_arg<_Context>{__arg, static_cast<wchar_t>(static_cast<unsigned char>(__value))};
     else
 #  endif
@@ -182,8 +196,17 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
   else if constexpr (__arg == __arg_t::__unsigned_long_long)
     return basic_format_arg<_Context>{__arg, static_cast<unsigned long long>(__value)};
   else if constexpr (__arg == __arg_t::__string_view)
-    return basic_format_arg<_Context>{
-        __arg, basic_string_view<typename _Context::char_type>{__value.data(), __value.size()}};
+    // Using std::size on a character array will add the NUL-terminator to the size.
+    if constexpr (__is_bounded_array_of<_Dp, __context_char_type>) {
+      if (const auto __pzero = char_traits<__context_char_type>::find(__value, extent_v<_Dp>, __context_char_type{}))
+        return basic_format_arg<_Context>{
+            __arg, basic_string_view<__context_char_type>{__value, static_cast<size_t>(__pzero - __value)}};
+      else
+        // The behavior is undefined in this case.
+        return basic_format_arg<_Context>{__arg, basic_string_view<__context_char_type>{__value, extent_v<_Dp>}};
+    } else
+      // When the _Traits or _Allocator are different an implicit conversion will fail.
+      return basic_format_arg<_Context>{__arg, basic_string_view<__context_char_type>{__value.data(), __value.size()}};
   else if constexpr (__arg == __arg_t::__ptr)
     return basic_format_arg<_Context>{__arg, static_cast<const void*>(__value)};
   else if constexpr (__arg == __arg_t::__handle)
