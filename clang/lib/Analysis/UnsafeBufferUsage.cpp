@@ -2326,7 +2326,8 @@ static StringRef getEndOfLine() {
 }
 
 // Returns the text indicating that the user needs to provide input there:
-std::string getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
+static std::string
+getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
   std::string s = std::string("<# ");
   s += HintTextToUser;
   s += " #>";

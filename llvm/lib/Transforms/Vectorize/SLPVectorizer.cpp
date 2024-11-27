@@ -9614,8 +9614,20 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
     Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, {}, CostKind,
                              Idx, getWidenedType(ScalarTy, Sz));
   }
-  Cost += TTI->getScalarizationOverhead(VecTy, DemandedElts, /*Insert=*/true,
-                                        /*Extract=*/false, CostKind);
+  if (auto *FTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+    assert(SLPReVec && "Only supported by REVEC.");
+    // If ScalarTy is FixedVectorType, we should use CreateInsertVector instead
+    // of CreateInsertElement.
+    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+    for (unsigned I : seq<unsigned>(TE.Scalars.size()))
+      if (DemandedElts[I])
+        Cost +=
+            TTI->getShuffleCost(TTI::SK_InsertSubvector, VecTy, std::nullopt,
+                                CostKind, I * ScalarTyNumElements, FTy);
+  } else {
+    Cost += TTI->getScalarizationOverhead(VecTy, DemandedElts, /*Insert=*/true,
+                                          /*Extract=*/false, CostKind);
+  }
   int Sz = TE.Scalars.size();
   SmallVector<int> ReorderMask(TE.ReorderIndices.begin(),
                                TE.ReorderIndices.end());
@@ -12034,7 +12046,14 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (VectorizableTree.back()->isGather() &&
       VectorizableTree.back()->isAltShuffle() &&
       VectorizableTree.back()->getVectorFactor() > 2 &&
-      allSameBlock(VectorizableTree.back()->Scalars))
+      allSameBlock(VectorizableTree.back()->Scalars) &&
+      !VectorizableTree.back()->Scalars.front()->getType()->isVectorTy() &&
+      TTI->getScalarizationOverhead(
+          getWidenedType(VectorizableTree.back()->Scalars.front()->getType(),
+                         VectorizableTree.back()->getVectorFactor()),
+          APInt::getAllOnes(VectorizableTree.back()->getVectorFactor()),
+          /*Insert=*/true, /*Extract=*/false,
+          TTI::TCK_RecipThroughput) > -SLPCostThreshold)
     return false;
 
   // Otherwise, we can't vectorize the tree. It is both tiny and not fully
