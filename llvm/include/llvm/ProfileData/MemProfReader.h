@@ -209,6 +209,12 @@ private:
   // A mapping of the hash to symbol name, only used if KeepSymbolName is true.
   llvm::DenseMap<uint64_t, std::string> GuidToSymbolName;
 };
+
+class YAMLMemProfReader final : public MemProfReader {
+public:
+  YAMLMemProfReader() = default;
+  void parse(StringRef YAMLData);
+};
 } // namespace memprof
 } // namespace llvm
 
