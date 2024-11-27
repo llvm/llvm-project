@@ -31,6 +31,13 @@ class DialectRegistry;
 class PassPipelineCLParser;
 class PassManager;
 
+/// enum class to indicate the verbosity level of the diagnostic filter.
+enum class VerbosityLevel {
+  ErrorsOnly = 0,
+  ErrorsAndWarnings,
+  ErrorsWarningsAndRemarks
+};
+
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
 /// supported options.
@@ -74,6 +81,11 @@ public:
     dumpPassPipelineFlag = dump;
     return *this;
   }
+
+  VerbosityLevel getDiagnosticVerbosityLevel() const {
+    return diagnosticVerbosityLevelFlag;
+  }
+
   bool shouldDumpPassPipeline() const { return dumpPassPipelineFlag; }
 
   /// Set the output format to bytecode instead of textual IR.
@@ -83,11 +95,11 @@ public:
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
 
-  bool shouldDisableDiagnostic() const { return disableDiagnosticFlag; }
-
   bool shouldElideResourceDataFromBytecode() const {
     return elideResourceDataFromBytecodeFlag;
   }
+
+  bool shouldShowNotes() const { return !disableDiagnosticNotesFlag; }
 
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
@@ -171,8 +183,9 @@ public:
   }
   bool shouldUseExplicitModule() const { return useExplicitModuleFlag; }
 
-  /// Set whether to check that emitted diagnostics match `expected-*` lines on
-  /// the corresponding line. This is meant for implementing diagnostic tests.
+  /// Set whether to check that emitted diagnostics match `expected-*` lines
+  /// on the corresponding line. This is meant for implementing diagnostic
+  /// tests.
   MlirOptMainConfig &verifyDiagnostics(bool verify) {
     verifyDiagnosticsFlag = verify;
     return *this;
@@ -205,15 +218,16 @@ protected:
   /// Configuration for the debugging hooks.
   tracing::DebugConfig debugConfig;
 
+  /// Verbosity level of diagnostic information. 0: Errors only,
+  /// 1: Errors and warnings, 2: Errors, warnings and remarks.
+  VerbosityLevel diagnosticVerbosityLevelFlag =
+      VerbosityLevel::ErrorsAndWarnings;
+
   /// Print the pipeline that will be run.
   bool dumpPassPipelineFlag = false;
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
-
-  /// Disable the diagnostic handlers. Warnings, errors, remarks, etc. will not
-  /// be printed.
-  bool disableDiagnosticFlag = false;
 
   /// Elide resources when generating bytecode.
   bool elideResourceDataFromBytecodeFlag = false;
@@ -242,6 +256,11 @@ protected:
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
 
+  /// Show the notes in diagnostic information. Notes can be included in
+  /// any diagnostic information, so it is not specified in the verbosity
+  /// level.
+  bool disableDiagnosticNotesFlag = true;
+
   /// Split the input file based on the given marker into chunks and process
   /// each chunk independently. Input is not split if empty.
   std::string splitInputFileFlag = "";
@@ -252,8 +271,9 @@ protected:
   /// Use an explicit top-level module op during parsing.
   bool useExplicitModuleFlag = false;
 
-  /// Set whether to check that emitted diagnostics match `expected-*` lines on
-  /// the corresponding line. This is meant for implementing diagnostic tests.
+  /// Set whether to check that emitted diagnostics match `expected-*` lines
+  /// on the corresponding line. This is meant for implementing diagnostic
+  /// tests.
   bool verifyDiagnosticsFlag = false;
 
   /// Run the verifier after each transformation pass.
@@ -267,13 +287,14 @@ protected:
 };
 
 /// This defines the function type used to setup the pass manager. This can be
-/// used to pass in a callback to setup a default pass pipeline to be applied on
-/// the loaded IR.
+/// used to pass in a callback to setup a default pass pipeline to be applied
+/// on the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
 
 /// Register and parse command line options.
 /// - toolName is used for the header displayed by `--help`.
-/// - registry should contain all the dialects that can be parsed in the source.
+/// - registry should contain all the dialects that can be parsed in the
+/// source.
 /// - return std::pair<std::string, std::string> for
 ///   inputFilename and outputFilename command line option values.
 std::pair<std::string, std::string>
@@ -283,7 +304,8 @@ registerAndParseCLIOptions(int argc, char **argv, llvm::StringRef toolName,
 /// Perform the core processing behind `mlir-opt`.
 /// - outputStream is the stream where the resulting IR is printed.
 /// - buffer is the in-memory file to parser and process.
-/// - registry should contain all the dialects that can be parsed in the source.
+/// - registry should contain all the dialects that can be parsed in the
+/// source.
 /// - config contains the configuration options for the tool.
 LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           std::unique_ptr<llvm::MemoryBuffer> buffer,
@@ -292,7 +314,8 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
-/// - registry should contain all the dialects that can be parsed in the source.
+/// - registry should contain all the dialects that can be parsed in the
+/// source.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry);
 
@@ -301,7 +324,8 @@ LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
 /// CLI options can be accessed before running MlirOptMain.
 /// - inputFilename is the name of the input mlir file.
 /// - outputFilename is the name of the output file.
-/// - registry should contain all the dialects that can be parsed in the source.
+/// - registry should contain all the dialects that can be parsed in the
+/// source.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef inputFilename,
                           llvm::StringRef outputFilename,
                           DialectRegistry &registry);
