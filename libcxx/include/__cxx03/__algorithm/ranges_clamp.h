@@ -9,21 +9,21 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_CLAMP_H
 #define _LIBCPP___ALGORITHM_RANGES_CLAMP_H
 
-#include <__assert>
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/invoke.h>
-#include <__functional/ranges_operations.h>
-#include <__iterator/concepts.h>
-#include <__iterator/projected.h>
-#include <__utility/forward.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/ranges_operations.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/projected.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 

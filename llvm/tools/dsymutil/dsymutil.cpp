@@ -714,7 +714,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     Expected<OutputLocation> OutputLocationOrErr =
         getOutputFileName(InputFile, Options);
     if (!OutputLocationOrErr) {
-      WithColor::error() << toString(OutputLocationOrErr.takeError());
+      WithColor::error() << toString(OutputLocationOrErr.takeError()) << "\n";
       return EXIT_FAILURE;
     }
     Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
@@ -792,7 +792,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
               Options.LinkOpts.NoOutput ? "-" : OutputFile, EC,
               sys::fs::OF_None);
           if (EC) {
-            WithColor::error() << OutputFile << ": " << EC.message();
+            WithColor::error() << OutputFile << ": " << EC.message() << "\n";
             AllOK.fetch_and(false);
             return;
           }

@@ -14,13 +14,10 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Lex/HeaderMapTypes.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include <cstring>
 #include <memory>

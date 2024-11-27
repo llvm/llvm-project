@@ -70,6 +70,7 @@ private:
   // The primitive representing the integral.
   using ReprT = typename Repr<Bits, Signed>::Type;
   ReprT V;
+  static_assert(std::is_trivially_copyable_v<ReprT>);
 
   /// Primitive representing limits.
   static const auto Min = std::numeric_limits<ReprT>::min();
@@ -152,6 +153,18 @@ public:
 
   ComparisonCategoryResult compare(const Integral &RHS) const {
     return Compare(V, RHS.V);
+  }
+
+  void bitcastToMemory(std::byte *Dest) const {
+    std::memcpy(Dest, &V, sizeof(V));
+  }
+
+  static Integral bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
+    assert(BitWidth == sizeof(ReprT) * 8);
+    ReprT V;
+
+    std::memcpy(&V, Src, sizeof(ReprT));
+    return Integral(V);
   }
 
   std::string toDiagnosticString(const ASTContext &Ctx) const {

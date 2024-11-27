@@ -962,7 +962,7 @@ void test_builtin_elementwise_copysign(float f1, float f2, double d1, double d2,
   f1 = __builtin_elementwise_copysign(2.0f, f1);
 
   // CHECK:      [[V2F64:%.+]] = load <2 x double>, ptr %v2f64.addr, align 16
-  // CHECK-NEXT: call <2 x double> @llvm.copysign.v2f64(<2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x double> [[V2F64]])
+  // CHECK-NEXT: call <2 x double> @llvm.copysign.v2f64(<2 x double> splat (double 1.000000e+00), <2 x double> [[V2F64]])
   v2f64 = __builtin_elementwise_copysign((double2)1.0, v2f64);
 }
 
@@ -1035,7 +1035,7 @@ void test_builtin_elementwise_fma(float f32, double f64,
 
   // CHECK:      [[V2F16_0:%.+]] = load <2 x half>, ptr %v2f16.addr
   // CHECK-NEXT: [[V2F16_1:%.+]] = load <2 x half>, ptr %v2f16.addr
-  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> <half 0xH4400, half 0xH4400>)
+  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> splat (half 0xH4400))
   half2 tmp2_v2f16 = __builtin_elementwise_fma(v2f16, v2f16, (half2)4.0);
 
 }

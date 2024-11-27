@@ -60,7 +60,7 @@ mfloat8x8_t test_ret_mfloat8x8_t(mfloat8x8_t v) {
 // CHECK-C-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[ARRAYIDX1]], align 1
 // CHECK-C-NEXT:    ret <1 x i8> [[TMP1]]
 //
-// CHECK-CXX-LABEL: define dso_local <1 x i8> @_Z6func1nu11__MFloat8_t(
+// CHECK-CXX-LABEL: define dso_local <1 x i8> @_Z6func1nu6__mfp8(
 // CHECK-CXX-SAME: <1 x i8> [[MFP8:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    [[MFP8_ADDR:%.*]] = alloca <1 x i8>, align 1

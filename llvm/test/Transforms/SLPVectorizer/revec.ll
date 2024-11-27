@@ -355,3 +355,95 @@ entry:
   %10 = icmp ne <2 x i8> %8, zeroinitializer
   ret void
 }
+
+define void @test12() {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr null, i64 33
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr null, i64 50
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr null, i64 75
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call <32 x float> @llvm.vector.insert.v32f32.v8f32(<32 x float> poison, <8 x float> [[TMP4]], i64 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <32 x float> @llvm.vector.insert.v32f32.v8f32(<32 x float> [[TMP6]], <8 x float> [[TMP3]], i64 8)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <32 x float> @llvm.vector.insert.v32f32.v16f32(<32 x float> [[TMP7]], <16 x float> [[TMP5]], i64 16)
+; CHECK-NEXT:    [[TMP9:%.*]] = fpext <32 x float> [[TMP8]] to <32 x double>
+; CHECK-NEXT:    [[TMP10:%.*]] = call <32 x double> @llvm.vector.insert.v32f64.v8f64(<32 x double> poison, <8 x double> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <32 x double> @llvm.vector.insert.v32f64.v8f64(<32 x double> [[TMP10]], <8 x double> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <32 x double> @llvm.vector.insert.v32f64.v8f64(<32 x double> [[TMP11]], <8 x double> zeroinitializer, i64 16)
+; CHECK-NEXT:    [[TMP13:%.*]] = call <32 x double> @llvm.vector.insert.v32f64.v8f64(<32 x double> [[TMP12]], <8 x double> zeroinitializer, i64 24)
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd <32 x double> [[TMP13]], [[TMP9]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fptrunc <32 x double> [[TMP14]] to <32 x float>
+; CHECK-NEXT:    [[TMP16:%.*]] = call <32 x float> @llvm.vector.insert.v32f32.v8f32(<32 x float> poison, <8 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP17:%.*]] = call <32 x float> @llvm.vector.insert.v32f32.v8f32(<32 x float> [[TMP16]], <8 x float> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP18:%.*]] = call <32 x float> @llvm.vector.insert.v32f32.v8f32(<32 x float> [[TMP17]], <8 x float> zeroinitializer, i64 16)
+; CHECK-NEXT:    [[TMP19:%.*]] = call <32 x float> @llvm.vector.insert.v32f32.v8f32(<32 x float> [[TMP18]], <8 x float> zeroinitializer, i64 24)
+; CHECK-NEXT:    [[TMP20:%.*]] = fcmp ogt <32 x float> [[TMP19]], [[TMP15]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = getelementptr float, ptr null, i64 33
+  %1 = getelementptr float, ptr null, i64 41
+  %2 = getelementptr float, ptr null, i64 50
+  %3 = getelementptr float, ptr null, i64 75
+  %4 = load <8 x float>, ptr %0, align 4
+  %5 = load <8 x float>, ptr %1, align 4
+  %6 = load <8 x float>, ptr %2, align 4
+  %7 = load <8 x float>, ptr %3, align 4
+  %8 = fpext <8 x float> %4 to <8 x double>
+  %9 = fpext <8 x float> %5 to <8 x double>
+  %10 = fpext <8 x float> %6 to <8 x double>
+  %11 = fpext <8 x float> %7 to <8 x double>
+  %12 = fadd <8 x double> zeroinitializer, %8
+  %13 = fadd <8 x double> zeroinitializer, %9
+  %14 = fadd <8 x double> zeroinitializer, %10
+  %15 = fadd <8 x double> zeroinitializer, %11
+  %16 = fptrunc <8 x double> %12 to <8 x float>
+  %17 = fptrunc <8 x double> %13 to <8 x float>
+  %18 = fptrunc <8 x double> %14 to <8 x float>
+  %19 = fptrunc <8 x double> %15 to <8 x float>
+  %20 = fcmp ogt <8 x float> zeroinitializer, %16
+  %21 = fcmp ogt <8 x float> zeroinitializer, %17
+  %22 = fcmp ogt <8 x float> zeroinitializer, %18
+  %23 = fcmp ogt <8 x float> zeroinitializer, %19
+  ret void
+}
+
+define void @test13(<8 x i32> %0, ptr %out0, ptr %out1, ptr %out2) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v8i32(<32 x i32> poison, <8 x i32> [[TMP0:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <16 x i32> [ [[TMP4]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP5]], i64 12)
+; CHECK-NEXT:    [[OR0:%.*]] = or <4 x i32> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    store <4 x i32> [[OR0]], ptr [[OUT0:%.*]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP4]], i64 0)
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[OUT1:%.*]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP4]], i64 8)
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT2:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %4 = shufflevector <8 x i32> %0, <8 x i32> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  br label %for.end.loopexit
+
+for.end.loopexit:
+  %phi0 = phi <4 x i32> [ %1, %entry ]
+  %phi1 = phi <4 x i32> [ %2, %entry ]
+  %phi2 = phi <4 x i32> [ %3, %entry ]
+  %phi3 = phi <4 x i32> [ %4, %entry ]
+  %or0 = or <4 x i32> %phi1, zeroinitializer
+  store <4 x i32> %or0, ptr %out0, align 4
+  store <4 x i32> %1, ptr %out1, align 4
+  store <4 x i32> %4, ptr %out2, align 4
+  ret void
+}

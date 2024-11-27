@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___ALGORITHM_FOR_EACH_N_H
 #define _LIBCPP___ALGORITHM_FOR_EACH_N_H
 
-#include <__config>
-#include <__utility/convert_to_integral.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/convert_to_integral.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

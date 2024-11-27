@@ -14,6 +14,7 @@
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
+#include <stdlib.h>
 
 using namespace fuzzer;
 

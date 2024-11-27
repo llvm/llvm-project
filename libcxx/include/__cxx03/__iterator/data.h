@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___ITERATOR_DATA_H
 #define _LIBCPP___ITERATOR_DATA_H
 
-#include <__config>
-#include <cstddef>
-#include <initializer_list>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
+#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

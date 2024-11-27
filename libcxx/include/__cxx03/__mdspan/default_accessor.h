@@ -17,20 +17,20 @@
 #ifndef _LIBCPP___MDSPAN_DEFAULT_ACCESSOR_H
 #define _LIBCPP___MDSPAN_DEFAULT_ACCESSOR_H
 
-#include <__config>
-#include <__type_traits/is_abstract.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/remove_const.h>
-#include <cinttypes>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_abstract.h>
+#include <__cxx03/__type_traits/is_array.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/remove_const.h>
+#include <__cxx03/cinttypes>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

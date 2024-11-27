@@ -86,12 +86,16 @@ public:
   // MemprofGenerateRandomHotness is enabled. The random seed can be either
   // provided by MemprofGenerateRandomHotnessSeed, or if that is 0, one will be
   // generated in the writer using the current time.
-  InstrProfWriter(
-      bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
-      uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
-      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
-      bool MemProfFullSchema = false, bool MemprofGenerateRandomHotness = false,
-      unsigned MemprofGenerateRandomHotnessSeed = 0);
+  InstrProfWriter(bool Sparse = false,
+                  uint64_t TemporalProfTraceReservoirSize = 0,
+                  uint64_t MaxTemporalProfTraceLength = 0,
+                  bool WritePrevVersion = false,
+                  memprof::IndexedVersion MemProfVersionRequested =
+                      static_cast<memprof::IndexedVersion>(
+                          memprof::MinimumSupportedVersion),
+                  bool MemProfFullSchema = false,
+                  bool MemprofGenerateRandomHotness = false,
+                  unsigned MemprofGenerateRandomHotnessSeed = 0);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -125,6 +129,10 @@ public:
   bool addMemProfCallStack(const memprof::CallStackId CSId,
                            const llvm::SmallVector<memprof::FrameId> &CallStack,
                            function_ref<void(Error)> Warn);
+
+  /// Add the entire MemProfData \p Incoming to the writer context.
+  bool addMemProfData(memprof::IndexedMemProfData Incoming,
+                      function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);

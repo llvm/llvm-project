@@ -14,7 +14,7 @@
     experimental/type_traits synopsis
 
 // C++1y
-#include <type_traits>
+#include <__cxx03/type_traits>
 
 namespace std {
 namespace experimental {
@@ -68,12 +68,12 @@ inline namespace fundamentals_v1 {
 
  */
 
-#include <experimental/__config>
+#include <__cxx03/experimental/__config>
 
 #if _LIBCPP_STD_VER >= 14
 
-#  include <initializer_list>
-#  include <type_traits>
+#  include <__cxx03/initializer_list>
+#  include <__cxx03/type_traits>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

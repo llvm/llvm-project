@@ -24,7 +24,7 @@ define i8 @scmp_0(i32 %x, i32 %y) {
 define i8 @ucmp_1(i32 %x, i32 %y) {
   ; X is within [4, 8)
 ; CHECK-LABEL: @ucmp_1(
-; CHECK-NEXT:    [[COND1:%.*]] = icmp uge i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[COND1:%.*]] = icmp samesign uge i32 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[X]], 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])

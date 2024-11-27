@@ -52,9 +52,9 @@ int feupdateenv(const fenv_t* envp);
 }  // std
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <fenv.h>
+#include <__cxx03/fenv.h>
 
 #ifndef _LIBCPP_FENV_H
 #   error <cfenv> tried including <fenv.h> but didn't find libc++'s <fenv.h> header. \

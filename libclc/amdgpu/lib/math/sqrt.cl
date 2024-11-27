@@ -20,9 +20,9 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
-#include "../../../generic/lib/clcmacro.h"
 #include "math/clc_sqrt.h"
+#include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 _CLC_DEFINE_UNARY_BUILTIN(float, sqrt, __clc_sqrt, float)
 

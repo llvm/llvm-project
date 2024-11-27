@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm::sandboxir {
 
@@ -95,9 +96,11 @@ SchedBundle *Scheduler::createBundle(ArrayRef<Instruction *> Instrs) {
     Nodes.push_back(DAG.getNode(I));
   auto BndlPtr = std::make_unique<SchedBundle>(std::move(Nodes));
   auto *Bndl = BndlPtr.get();
-  Bndls.push_back(std::move(BndlPtr));
+  Bndls[Bndl] = std::move(BndlPtr);
   return Bndl;
 }
+
+void Scheduler::eraseBundle(SchedBundle *SB) { Bndls.erase(SB); }
 
 bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
   // Use a set of instructions, instead of `Instrs` for fast lookups.
@@ -133,29 +136,89 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
   return false;
 }
 
+Scheduler::BndlSchedState
+Scheduler::getBndlSchedState(ArrayRef<Instruction *> Instrs) const {
+  assert(!Instrs.empty() && "Expected non-empty bundle");
+  bool PartiallyScheduled = false;
+  bool FullyScheduled = true;
+  for (auto *I : Instrs) {
+    auto *N = DAG.getNode(I);
+    if (N != nullptr && N->scheduled())
+      PartiallyScheduled = true;
+    else
+      FullyScheduled = false;
+  }
+  if (FullyScheduled) {
+    // If not all instrs in the bundle are in the same SchedBundle then this
+    // should be considered as partially-scheduled, because we will need to
+    // re-schedule.
+    SchedBundle *SB = DAG.getNode(Instrs[0])->getSchedBundle();
+    assert(SB != nullptr && "FullyScheduled assumes that there is an SB!");
+    if (any_of(drop_begin(Instrs), [this, SB](sandboxir::Value *SBV) {
+          return DAG.getNode(cast<sandboxir::Instruction>(SBV))
+                     ->getSchedBundle() != SB;
+        }))
+      FullyScheduled = false;
+  }
+  return FullyScheduled       ? BndlSchedState::FullyScheduled
+         : PartiallyScheduled ? BndlSchedState::PartiallyOrDifferentlyScheduled
+                              : BndlSchedState::NoneScheduled;
+}
+
+void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
+  Instruction *TopI = &*ScheduleTopItOpt.value();
+  Instruction *LowestI = VecUtils::getLowest(Instrs);
+  // Destroy the schedule bundles from LowestI all the way to the top.
+  for (auto *I = LowestI, *E = TopI->getPrevNode(); I != E;
+       I = I->getPrevNode()) {
+    auto *N = DAG.getNode(I);
+    if (auto *SB = N->getSchedBundle())
+      eraseBundle(SB);
+  }
+  // TODO: For now we clear the DAG. Trim view once it gets implemented.
+  Bndls.clear();
+  DAG.clear();
+
+  // Since we are scheduling NewRegion from scratch, we clear the ready lists.
+  // The nodes currently in the list may not be ready after clearing the View.
+  ReadyList.clear();
+}
+
 bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
   assert(all_of(drop_begin(Instrs),
                 [Instrs](Instruction *I) {
                   return I->getParent() == (*Instrs.begin())->getParent();
                 }) &&
          "Instrs not in the same BB!");
-  // Extend the DAG to include Instrs.
-  Interval<Instruction> Extension = DAG.extend(Instrs);
-  // TODO: Set the window of the DAG that we are interested in.
-  // We start scheduling at the bottom instr of Instrs.
-  auto getBottomI = [](ArrayRef<Instruction *> Instrs) -> Instruction * {
-    return *min_element(Instrs,
-                        [](auto *I1, auto *I2) { return I1->comesBefore(I2); });
-  };
-  ScheduleTopItOpt = std::next(getBottomI(Instrs)->getIterator());
-  // Add nodes to ready list.
-  for (auto &I : Extension) {
-    auto *N = DAG.getNode(&I);
-    if (N->ready())
-      ReadyList.insert(N);
+  auto SchedState = getBndlSchedState(Instrs);
+  switch (SchedState) {
+  case BndlSchedState::FullyScheduled:
+    // Nothing to do.
+    return true;
+  case BndlSchedState::PartiallyOrDifferentlyScheduled:
+    // If one or more instrs are already scheduled we need to destroy the
+    // top-most part of the schedule that includes the instrs in the bundle and
+    // re-schedule.
+    trimSchedule(Instrs);
+    [[fallthrough]];
+  case BndlSchedState::NoneScheduled: {
+    // TODO: Set the window of the DAG that we are interested in.
+    // We start scheduling at the bottom instr of Instrs.
+    ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
+
+    // Extend the DAG to include Instrs.
+    Interval<Instruction> Extension = DAG.extend(Instrs);
+    // Add nodes to ready list.
+    for (auto &I : Extension) {
+      auto *N = DAG.getNode(&I);
+      if (N->ready())
+        ReadyList.insert(N);
+    }
+    // Try schedule all nodes until we can schedule Instrs back-to-back.
+    return tryScheduleUntil(Instrs);
   }
-  // Try schedule all nodes until we can schedule Instrs back-to-back.
-  return tryScheduleUntil(Instrs);
+  }
+  llvm_unreachable("Unhandled BndlSchedState enum");
 }
 
 #ifndef NDEBUG

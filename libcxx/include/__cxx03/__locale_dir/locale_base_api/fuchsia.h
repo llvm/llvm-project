@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
 
-#include <__support/xlocale/__posix_l_fallback.h>
-#include <__support/xlocale/__strtonum_fallback.h>
-#include <cstdlib>
-#include <cwchar>
+#include <__cxx03/__support/xlocale/__posix_l_fallback.h>
+#include <__cxx03/__support/xlocale/__strtonum_fallback.h>
+#include <__cxx03/cstdlib>
+#include <__cxx03/cwchar>
 
 #endif // _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H

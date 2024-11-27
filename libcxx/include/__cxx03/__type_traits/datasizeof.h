@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___TYPE_TRAITS_DATASIZEOF_H
 #define _LIBCPP___TYPE_TRAITS_DATASIZEOF_H
 
-#include <__config>
-#include <__type_traits/is_class.h>
-#include <__type_traits/is_final.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_class.h>
+#include <__cxx03/__type_traits/is_final.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

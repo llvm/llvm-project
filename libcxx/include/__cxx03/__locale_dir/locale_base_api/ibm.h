@@ -11,19 +11,19 @@
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
 
 #if defined(__MVS__)
-#  include <__support/ibm/locale_mgmt_zos.h>
+#  include <__cxx03/__support/ibm/locale_mgmt_zos.h>
 #endif // defined(__MVS__)
 
-#include <locale.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <__cxx03/locale.h>
+#include <__cxx03/stdarg.h>
+#include <__cxx03/stdio.h>
 
 #include "cstdlib"
 
 #if defined(__MVS__)
-#  include <wctype.h>
+#  include <__cxx03/wctype.h>
 // POSIX routines
-#  include <__support/xlocale/__posix_l_fallback.h>
+#  include <__cxx03/__support/xlocale/__posix_l_fallback.h>
 #endif // defined(__MVS__)
 
 namespace {

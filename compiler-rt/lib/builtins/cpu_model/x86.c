@@ -103,6 +103,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ARROWLAKE_S,
   INTEL_COREI7_PANTHERLAKE,
   AMDFAM1AH_ZNVER5,
+  INTEL_COREI7_DIAMONDRAPIDS,
   CPU_SUBTYPE_MAX
 };
 
@@ -597,6 +598,19 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
 
     default: // Unknown family 6 CPU.
+      break;
+    }
+    break;
+  case 19:
+    switch (Model) {
+    // Diamond Rapids:
+    case 0x01:
+      CPU = "diamondrapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_DIAMONDRAPIDS;
+      break;
+
+    default: // Unknown family 19 CPU.
       break;
     }
     break;

@@ -343,22 +343,6 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
-  let summary = "Finalize a partial bufferization";
-  let description = [{
-    A bufferize pass that finalizes a partial bufferization by removing
-    remaining `bufferization.to_tensor` and `bufferization.to_buffer` operations.
-
-    The removal of those operations is only possible if the operations only
-    exist in pairs, i.e., all uses of `bufferization.to_tensor` operations are
-    `bufferization.to_buffer` operations.
-
-    This pass will fail if not all operations can be removed or if any operation
-    with tensor typed operands remains.
-  }];
-  let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
-}
-
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
   let summary = "Remove MemRef return values that are equivalent to a bbArg";
   let description = [{
@@ -584,7 +568,7 @@ def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
     ```
     %0 = tensor.empty() : tensor<10xf32>
     %1 = linalg.fill ... outs(%0 : tensor<10xf32>)
-    %2 = tensor.insert_slice %0 into %t ...
+    %2 = tensor.insert_slice %1 into %t ...
     ```
 
     In the above example, the subset op is "tensor.insert_slice". When tracing

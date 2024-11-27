@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___FWD_QUEUE_H
 #define _LIBCPP___FWD_QUEUE_H
 
-#include <__config>
-#include <__functional/operations.h>
-#include <__fwd/deque.h>
-#include <__fwd/vector.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__fwd/deque.h>
+#include <__cxx03/__fwd/vector.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

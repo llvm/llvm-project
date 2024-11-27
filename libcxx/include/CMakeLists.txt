@@ -205,7 +205,6 @@ set(files
   __assert
   __atomic/aliases.h
   __atomic/atomic.h
-  __atomic/atomic_base.h
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
@@ -489,21 +488,24 @@ set(files
   __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
+  __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
-  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
-  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
+  __locale_dir/pad_and_output.h
+  __locale_dir/support/apple.h
+  __locale_dir/support/bsd_like.h
+  __locale_dir/support/freebsd.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -555,6 +557,7 @@ set(files
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
+  __memory/shared_count.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
   __memory/temp_value.h
@@ -593,6 +596,7 @@ set(files
   __numeric/transform_reduce.h
   __ostream/basic_ostream.h
   __ostream/print.h
+  __ostream/put_character_sequence.h
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
@@ -713,6 +717,7 @@ set(files
   __system_error/error_code.h
   __system_error/error_condition.h
   __system_error/system_error.h
+  __system_error/throw_system_error.h
   __thread/formatter.h
   __thread/id.h
   __thread/jthread.h
@@ -737,12 +742,10 @@ set(files
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
-  __type_traits/add_const.h
-  __type_traits/add_cv.h
+  __type_traits/add_cv_quals.h
   __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
   __type_traits/add_rvalue_reference.h
-  __type_traits/add_volatile.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
@@ -880,6 +883,7 @@ set(files
   __utility/priority_tag.h
   __utility/private_constructor_tag.h
   __utility/rel_ops.h
+  __utility/scope_guard.h
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
@@ -1058,7 +1062,7 @@ endforeach()
 # "include" for dependency tracking.
 add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
   COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
-  DEPENDS ${_all_includes}
+  DEPENDS "${LIBCXX_SOURCE_DIR}/utils/libcxx/header_information.py"
   COMMENT "Generate the mapping file for include-what-you-use"
 )
 list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")

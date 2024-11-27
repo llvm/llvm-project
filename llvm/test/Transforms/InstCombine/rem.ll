@@ -79,7 +79,7 @@ define i8 @urem_with_sext_bool_divisor(i1 %x, i8 %y) {
 define <2 x i8> @urem_with_sext_bool_divisor_vec(<2 x i1> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @urem_with_sext_bool_divisor_vec(
 ; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze <2 x i8> [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[Y_FROZEN]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[Y_FROZEN]], splat (i8 -1)
 ; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> zeroinitializer, <2 x i8> [[Y_FROZEN]]
 ; CHECK-NEXT:    ret <2 x i8> [[REM]]
 ;
@@ -91,8 +91,8 @@ define <2 x i8> @urem_with_sext_bool_divisor_vec(<2 x i1> %x, <2 x i8> %y) {
 define <2 x i4> @big_divisor_vec(<2 x i4> %x) {
 ; CHECK-LABEL: @big_divisor_vec(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze <2 x i4> [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i4> [[X_FR]], <i4 -3, i4 -3>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i4> [[X_FR]], <i4 3, i4 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i4> [[X_FR]], splat (i4 -3)
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i4> [[X_FR]], splat (i4 3)
 ; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i4> [[X_FR]], <2 x i4> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[REM]]
 ;
@@ -198,7 +198,7 @@ define i32 @test3(i32 %A) {
 
 define <2 x i32> @vec_power_of_2_constant_splat_divisor(<2 x i32> %A) {
 ; CHECK-LABEL: @vec_power_of_2_constant_splat_divisor(
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 7)
 ; CHECK-NEXT:    ret <2 x i32> [[B]]
 ;
   %B = urem <2 x i32> %A, <i32 8, i32 8>
@@ -207,7 +207,7 @@ define <2 x i32> @vec_power_of_2_constant_splat_divisor(<2 x i32> %A) {
 
 define <2 x i19> @weird_vec_power_of_2_constant_splat_divisor(<2 x i19> %A) {
 ; CHECK-LABEL: @weird_vec_power_of_2_constant_splat_divisor(
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i19> [[A:%.*]], <i19 7, i19 7>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i19> [[A:%.*]], splat (i19 7)
 ; CHECK-NEXT:    ret <2 x i19> [[B]]
 ;
   %B = urem <2 x i19> %A, <i19 8, i19 8>
@@ -227,7 +227,7 @@ define i1 @test3a(i32 %A) {
 
 define <2 x i1> @test3a_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test3a_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 7)
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -669,8 +669,8 @@ define i32 @test22(i32 %A) {
 
 define <2 x i32> @test23(<2 x i32> %A) {
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[MUL:%.*]] = urem <2 x i32> [[AND]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
+; CHECK-NEXT:    [[MUL:%.*]] = urem <2 x i32> [[AND]], splat (i32 2147483647)
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %and = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
@@ -691,7 +691,7 @@ define i1 @test24(i32 %A) {
 
 define <2 x i1> @test24_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test24_vec(
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[B]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -713,7 +713,7 @@ define i1 @test25(i32 %A) {
 
 define <2 x i1> @test25_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test25_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -997,7 +997,8 @@ define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 
 define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_vec_ub1(
-; CHECK-NEXT:    ret <2 x i8> <i8 42, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 poison, i8 -42>, <2 x i8> <i8 42, i8 2>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 0, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = urem <2 x i8> <i8 42, i8 -42>, %s
@@ -1033,7 +1034,7 @@ define i32 @urem_select_of_constants_divisor(i1 %b, i32 %x) {
 define <2 x i32> @PR62401(<2 x i1> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @PR62401(
 ; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze <2 x i32> [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[Y_FROZEN]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[Y_FROZEN]], splat (i32 -1)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> zeroinitializer, <2 x i32> [[Y_FROZEN]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;

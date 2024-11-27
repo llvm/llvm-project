@@ -13,9 +13,7 @@
 
 #include "LoongArchAsmPrinter.h"
 #include "LoongArch.h"
-#include "LoongArchInstrInfo.h"
 #include "LoongArchMachineFunctionInfo.h"
-#include "LoongArchTargetMachine.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"

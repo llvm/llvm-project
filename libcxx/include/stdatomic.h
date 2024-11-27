@@ -161,7 +161,7 @@ using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
 #  endif
 using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;
 using std::atomic_char32_t _LIBCPP_USING_IF_EXISTS;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 using std::atomic_wchar_t _LIBCPP_USING_IF_EXISTS;
 #  endif
 

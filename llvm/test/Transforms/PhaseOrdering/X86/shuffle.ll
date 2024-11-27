@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define <2 x i64> @shuffle_32_add_16_shuffle_32_masks_are_eq(<2 x i64> %v) {
 ; CHECK-LABEL: @shuffle_32_add_16_shuffle_32_masks_are_eq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <8 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i16> [[TMP1]], splat (i16 1)
 ; CHECK-NEXT:    [[BC5:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[BC5]]
 ;
@@ -31,7 +31,7 @@ define <2 x i64> @shuffle_32_add_16_shuffle_32_masks_are_eq(<2 x i64> %v) {
 define <2 x i64> @shuffle_32_add_8_shuffle_32_masks_are_eq(<2 x i64> %v) {
 ; CHECK-LABEL: @shuffle_32_add_8_shuffle_32_masks_are_eq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <16 x i8> [[TMP1]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <16 x i8> [[TMP1]], splat (i8 1)
 ; CHECK-NEXT:    [[BC5:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[BC5]]
 ;
@@ -52,7 +52,7 @@ define <2 x i64> @shuffle_32_add_8_shuffle_32_masks_are_eq(<2 x i64> %v) {
 define <2 x i64> @shuffle_8_add_32_shuffle_8_masks_are_eq(<2 x i64> %v) {
 ; CHECK-LABEL: @shuffle_8_add_32_shuffle_8_masks_are_eq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], splat (i32 1)
 ; CHECK-NEXT:    [[BC5:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[BC5]]
 ;

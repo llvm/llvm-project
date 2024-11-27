@@ -760,11 +760,6 @@ Error RISCVISAInfo::checkDependency() {
   if (XLen != 32 && Exts.count("zcf"))
     return getError("'zcf' is only supported for 'rv32'");
 
-  if (!(Exts.count("a") || Exts.count("zaamo")))
-    for (auto Ext : {"zacas", "zabha"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "a' or 'zaamo");
-
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)
       return getError("'xwchc' is only supported for 'rv32'");

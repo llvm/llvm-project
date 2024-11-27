@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_ROTATE_COPY_H
 #define _LIBCPP___ALGORITHM_ROTATE_COPY_H
 
-#include <__algorithm/copy.h>
-#include <__config>
+#include <__cxx03/__algorithm/copy.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -20,12 +20,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -37,7 +36,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -49,7 +47,6 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Assumptions.h"
 #include <optional>
-#include <set>
 
 using namespace clang;
 using namespace llvm::omp;
@@ -7684,7 +7681,7 @@ struct LoopIterationSpace final {
 /// Scan an AST subtree, checking that no decls in the CollapsedLoopVarDecls
 /// set are referenced.  Used for verifying loop nest structure before
 /// performing a loop collapse operation.
-class ForSubExprChecker final : public RecursiveASTVisitor<ForSubExprChecker> {
+class ForSubExprChecker : public DynamicRecursiveASTVisitor {
   const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls;
   VarDecl *ForbiddenVar = nullptr;
   SourceRange ErrLoc;
@@ -7692,13 +7689,13 @@ class ForSubExprChecker final : public RecursiveASTVisitor<ForSubExprChecker> {
 public:
   explicit ForSubExprChecker(
       const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls)
-      : CollapsedLoopVarDecls(CollapsedLoopVarDecls) {}
+      : CollapsedLoopVarDecls(CollapsedLoopVarDecls) {
+    // We want to visit implicit code, i.e. synthetic initialisation statements
+    // created during range-for lowering.
+    ShouldVisitImplicitCode = true;
+  }
 
-  // We want to visit implicit code, i.e. synthetic initialisation statements
-  // created during range-for lowering.
-  bool shouldVisitImplicitCode() const { return true; }
-
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     ValueDecl *VD = E->getDecl();
     if (!isa<VarDecl, BindingDecl>(VD))
       return true;
@@ -9581,7 +9578,7 @@ static Expr *buildPostUpdate(Sema &S, ArrayRef<Expr *> PostUpdates) {
 /// Look for variables declared in the body parts of a for-loop nest.  Used
 /// for verifying loop nest structure before performing a loop collapse
 /// operation.
-class ForVarDeclFinder final : public RecursiveASTVisitor<ForVarDeclFinder> {
+class ForVarDeclFinder : public DynamicRecursiveASTVisitor {
   int NestingDepth = 0;
   llvm::SmallPtrSetImpl<const Decl *> &VarDecls;
 
@@ -9589,21 +9586,21 @@ public:
   explicit ForVarDeclFinder(llvm::SmallPtrSetImpl<const Decl *> &VD)
       : VarDecls(VD) {}
 
-  bool VisitForStmt(ForStmt *F) {
+  bool VisitForStmt(ForStmt *F) override {
     ++NestingDepth;
     TraverseStmt(F->getBody());
     --NestingDepth;
     return false;
   }
 
-  bool VisitCXXForRangeStmt(CXXForRangeStmt *RF) {
+  bool VisitCXXForRangeStmt(CXXForRangeStmt *RF) override {
     ++NestingDepth;
     TraverseStmt(RF->getBody());
     --NestingDepth;
     return false;
   }
 
-  bool VisitVarDecl(VarDecl *D) {
+  bool VisitVarDecl(VarDecl *D) override {
     Decl *C = D->getCanonicalDecl();
     if (NestingDepth > 0)
       VarDecls.insert(C);
@@ -11105,7 +11102,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
   for (const OMPClause *C : Clauses) {
     if (C->getClauseKind() == OMPC_acq_rel ||
         C->getClauseKind() == OMPC_acquire ||
-        C->getClauseKind() == OMPC_release) {
+        C->getClauseKind() == OMPC_release ||
+        C->getClauseKind() == OMPC_seq_cst /*OpenMP 5.1*/) {
       if (MemOrderKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
             << getOpenMPDirectiveName(OMPD_flush) << 1
@@ -17156,7 +17154,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPHasDeviceAddrClause(VarList, Locs);
     break;
   case OMPC_allocate:
-    Res = ActOnOpenMPAllocateClause(Data.DepModOrTailExpr, VarList, StartLoc,
+    Res = ActOnOpenMPAllocateClause(Data.DepModOrTailExpr,
+                                    Data.AllocClauseModifier, VarList, StartLoc,
                                     LParenLoc, ColonLoc, EndLoc);
     break;
   case OMPC_nontemporal:
@@ -18187,7 +18186,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
             Lookups, [&SemaRef, Ty, Loc](ValueDecl *D) -> ValueDecl * {
               if (!D->isInvalidDecl() &&
                   SemaRef.IsDerivedFrom(Loc, Ty, D->getType()) &&
-                  !Ty.isMoreQualifiedThan(D->getType()))
+                  !Ty.isMoreQualifiedThan(D->getType(),
+                                          SemaRef.getASTContext()))
                 return D;
               return nullptr;
             })) {
@@ -21037,7 +21037,8 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
           Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
             if (!D->isInvalidDecl() &&
                 SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
-                !Type.isMoreQualifiedThan(D->getType()))
+                !Type.isMoreQualifiedThan(D->getType(),
+                                          SemaRef.getASTContext()))
               return D;
             return nullptr;
           })) {
@@ -21208,7 +21209,7 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
       Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
         if (!D->isInvalidDecl() &&
             SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
-            !Type.isMoreQualifiedThan(D->getType()))
+            !Type.isMoreQualifiedThan(D->getType(), SemaRef.getASTContext()))
           return D;
         return nullptr;
       });
@@ -23162,9 +23163,17 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
-    Expr *Allocator, ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-    SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc) {
+    Expr *Allocator, OpenMPAllocateClauseModifier AllocClauseModifier,
+    ArrayRef<Expr *> VarList, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation ColonLoc, SourceLocation EndLoc) {
+
   if (Allocator) {
+    // Allocator expression is dependent - skip it for now and build the
+    // allocator when instantiated.
+    if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
+        Allocator->isInstantiationDependent() ||
+        Allocator->containsUnexpandedParameterPack())
+      return nullptr;
     // OpenMP [2.11.4 allocate Clause, Description]
     // allocator is an expression of omp_allocator_handle_t type.
     if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
@@ -23220,8 +23229,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
 
   if (Allocator)
     DSAStack->addInnerAllocatorExpr(Allocator);
+
+  OpenMPAllocateClauseModifier AllocatorModifier = AllocClauseModifier;
+  SourceLocation AllocatorModifierLoc;
   return OMPAllocateClause::Create(getASTContext(), StartLoc, LParenLoc,
-                                   Allocator, ColonLoc, EndLoc, Vars);
+                                   Allocator, ColonLoc, AllocatorModifier,
+                                   AllocatorModifierLoc, EndLoc, Vars);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,

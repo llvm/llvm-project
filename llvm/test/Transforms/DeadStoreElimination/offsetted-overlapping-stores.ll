@@ -79,7 +79,7 @@ define void @VectorTestPartiallyOverlapping(ptr %arg, i32 %i) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I2]]
-; CHECK-NEXT:    store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr [[I3]], align 16
+; CHECK-NEXT:    store <2 x float> splat (float 1.000000e+00), ptr [[I3]], align 16
 ; CHECK-NEXT:    [[I5:%.*]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i32 [[I5]] to i64
 ; CHECK-NEXT:    [[I7:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[I6]]

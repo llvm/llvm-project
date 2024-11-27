@@ -22,14 +22,8 @@
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK3
 
 ## Check fallthrough to a landing pad case.
-# RUN: llvm-bolt %t.exe --pa -p %t.pa4 -o %t.out --enable-bat \
+# RUN: llvm-bolt %t.exe --pa -p %t.pa4 -o %t.out \
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK4
-
-## Check that a landing pad is emitted in BAT
-# RUN: llvm-bat-dump %t.out --dump-all | FileCheck %s --check-prefix=CHECK-BAT
-
-# CHECK-BAT:      1 secondary entry points:
-# CHECK-BAT-NEXT: 0x38 (lp)
 
   .globl foo
   .type foo, %function
