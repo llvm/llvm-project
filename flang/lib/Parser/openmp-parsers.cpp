@@ -10,6 +10,7 @@
 // See OpenMP-4.5-grammar.txt for documentation.
 
 #include "basic-parsers.h"
+#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
@@ -912,10 +913,15 @@ TYPE_PARSER("ATOMIC" >>
         Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
         statement(assignmentStmt), Parser<OmpEndAtomic>{} / endOmpLine)))
 
+TYPE_PARSER(construct<OmpAtomicCompareIfStmt>(indirect(Parser<IfStmt>{})) ||
+    construct<OmpAtomicCompareIfStmt>(indirect(Parser<IfConstruct>{})))
+
+// OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] COMPARE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
     sourced(construct<OmpAtomicCompare>(
         Parser<OmpAtomicClauseList>{} / maybe(","_tok), verbatim("COMPARE"_tok),
-        Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
+        Parser<OmpAtomicClauseList>{} / endOmpLine,
+        Parser<OmpAtomicCompareIfStmt>{},
         maybe(Parser<OmpEndAtomic>{} / endOmpLine))))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] UPDATE [MEMORY-ORDER-CLAUSE-LIST]

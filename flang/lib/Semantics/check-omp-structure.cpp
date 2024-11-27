@@ -2411,9 +2411,8 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
 void OmpStructureChecker::CheckAtomicCompareConstruct(
     const parser::OmpAtomicCompare &atomicCompareConstruct) {
 
-  CheckAtomicWriteStmt(std::get<parser::Statement<parser::AssignmentStmt>>(
-      atomicCompareConstruct.t)
-                           .statement);
+  // TODO: Check that the if-stmt is `if (var == expr) var = new`
+  //       [with or without then/end-do]
 
   unsigned version{context_.langOptions().OpenMPVersion};
   if (version < 51) {

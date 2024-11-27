@@ -2528,7 +2528,7 @@ public:
     Walk(std::get<2>(x.t));
     Put("\n");
     EndOpenMP();
-    Walk(std::get<Statement<AssignmentStmt>>(x.t));
+    Walk(std::get<OmpAtomicCompareIfStmt>(x.t));
   }
   void Unparse(const OmpAtomicRead &x) {
     BeginOpenMP();

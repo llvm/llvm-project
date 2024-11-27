@@ -485,6 +485,7 @@ public:
   NODE(OmpAtomicCapture, Stmt1)
   NODE(OmpAtomicCapture, Stmt2)
   NODE(parser, OmpAtomicCompare)
+  NODE(parser, OmpAtomicCompareIfStmt)
   NODE(parser, OmpAtomicRead)
   NODE(parser, OmpAtomicUpdate)
   NODE(parser, OmpAtomicWrite)

@@ -6,71 +6,73 @@
   ! higher openmp version than the others, so need a separate file.
   
 
-  real a, b
-  logical r
+  real a, b, c
   a = 1.0
   b = 2.0
+  c = 3.0
   !$omp parallel num_threads(4)
   ! First a few things that should compile without error.
   !$omp atomic seq_cst, compare
-  r = b .ne. a
+  if (b .eq. a) then
+     b = c
+  end if
 
   !$omp atomic seq_cst compare
-  r = a .ge. b
+  if (a .eq. b) a = c
   !$omp end atomic
 
   !$omp atomic compare acquire hint(OMP_LOCK_HINT_CONTENDED)
-  r = a .lt. b
+  if (b .eq. a) b = c
 
   !$omp atomic release hint(OMP_LOCK_HINT_UNCONTENDED) compare
-  r = a .gt. b
+  if (b .eq. a) b = c
 
   !$omp atomic compare seq_cst
-  r = b .ne. a
+  if (b .eq. c) b = a
 
   !$omp atomic hint(1) acq_rel compare
-  r = b .eq. a
+  if (b .eq. a) b = c
   !$omp end atomic
 
   ! Check for error conidtions:
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
   !$omp atomic seq_cst seq_cst compare
-  r = a .le. b
+  if (b .eq. c) b = a
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
   !$omp atomic compare seq_cst seq_cst
-  r = b .gt. a
+  if (b .eq. c) b = a
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
   !$omp atomic seq_cst compare seq_cst
-  r = b .ge. b
+  if (b .eq. c) b = a
 
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one ACQUIRE clause can appear on the COMPARE directive
   !$omp atomic acquire acquire compare
-  r = a .le. b
+  if (b .eq. c) b = a
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one ACQUIRE clause can appear on the COMPARE directive
   !$omp atomic compare acquire acquire
-  r = b .gt. a
+  if (b .eq. c) b = a
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one ACQUIRE clause can appear on the COMPARE directive
   !$omp atomic acquire compare acquire
-  r = b .ge. b
+  if (b .eq. c) b = a
 
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELAXED clause can appear on the COMPARE directive
   !$omp atomic relaxed relaxed compare
-  r = a .le. b
+  if (b .eq. c) b = a
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELAXED clause can appear on the COMPARE directive
   !$omp atomic compare relaxed relaxed
-  r = b .gt. a
+  if (b .eq. c) b = a
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELAXED clause can appear on the COMPARE directive
   !$omp atomic relaxed compare relaxed
-  r = b .ge. b
+  if (b .eq. c) b = a
 
   !$omp end parallel
 end

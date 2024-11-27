@@ -3,7 +3,7 @@
 program main
    implicit none
    integer :: i, j = 10
-   logical :: k
+   integer :: k
 !READ
 !$omp atomic read
    i = j
@@ -124,27 +124,46 @@ program main
 
 !COMPARE
 !$omp atomic compare
-   r = i .eq. j
+   if (k == i) k = j
 !$omp atomic seq_cst compare
-   r = i .eq. j
+   if (k == j) then
+      k = i
+   end if
 !$omp atomic compare seq_cst
-   r = i .eq. j
+   if (k .eq. j) then
+      k = i
+   end if
 !$omp atomic release compare
-   r = i .eq. j
+   if (i .eq. j) k = i
 !$omp atomic compare release
-   r = i .eq. j
+   if (i .eq. j) then
+      i = k
+   end if
 !$omp atomic acq_rel compare
-   r = i .eq. j
+   if (k .eq. j) then
+      j = i
+   end if
 !$omp atomic compare acq_rel
-   r = i .eq. j
+   if (i .eq. j) then
+      i = k
+   end if
 !$omp atomic acquire compare
-   r = i .eq. j
+   if (i .eq. j + 1) then
+      i = j
+   end if
+   
 !$omp atomic compare acquire
-   r = i .eq. j
+   if (i .eq. j) then
+      i = k
+   end if
 !$omp atomic relaxed compare
-   r = i .eq. j
+   if (i .eq. j) then
+      i = k
+   end if
 !$omp atomic compare relaxed
-   r = i .eq. j
+   if (i .eq. k) then
+      i = j
+   end if
 
 !ATOMIC
 !$omp atomic
