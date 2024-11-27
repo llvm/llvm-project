@@ -509,27 +509,6 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
       continue;
     if (!VisitedSubst.insert(std::make_pair(U, Op)).second)
       continue;
-    /*
-    if (auto *Ref = dyn_cast<GetElementPtrInst>(U)) {
-      CallInst *AssignCI = GR->findAssignPtrTypeInstr(Ref);
-      if (AssignCI && Ref->getPointerOperand() == Op) {
-        Type *PrevElemTy = GR->findDeducedElementType(Ref);
-        assert(PrevElemTy && "Expected valid element type");
-        // evaluate a new GEP type
-        Type *NewElemTy = PtrElemTy;
-        for (Use &RefUse : drop_begin(Ref->indices()))
-          NewElemTy =
-              GetElementPtrInst::getTypeAtIndex(NewElemTy, RefUse.get());
-        // record the new GEP type
-        assert(NewElemTy && "Expected valid GEP indices");
-        updateAssignType(AssignCI, Ref, PoisonValue::get(NewElemTy));
-        // recursively propagate change
-        propagateElemTypeRec(Ref, NewElemTy, PrevElemTy, VisitedSubst, Visited,
-                             Ptrcasts);
-      }
-      continue;
-    }
-    */
     Instruction *UI = dyn_cast<Instruction>(U);
     // If the instruction was validated already, we need to keep it valid by
     // keeping current Op type.
@@ -652,25 +631,6 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     } else {
       Ty = Ref->getResultElementType();
     }
-    /*
-    if (Type *PtrElemTy = GR->findDeducedElementType(Ref->getPointerOperand()))
-    { Ty = PtrElemTy; for (Use &U : drop_begin(Ref->indices())) Ty =
-    GetElementPtrInst::getTypeAtIndex(Ty, U.get()); if
-    (isTodoType(Ref->getPointerOperand())) insertTodoType(Ref); } else if
-    (isNestedPointer(Ref->getSourceElementType())) { Ty =
-    Ref->getSourceElementType(); for (Use &U : drop_begin(Ref->indices())) Ty =
-    GetElementPtrInst::getTypeAtIndex(Ty, U.get()); } else { Ty =
-    Ref->getResultElementType();
-    }
-    */
-    /*
-    if (isNestedPointer(Ref->getSourceElementType())) {
-      Type *PtrElemTy = GR->findDeducedElementType(Ref->getPointerOperand());
-      Ty = PtrElemTy ? PtrElemTy : Ref->getSourceElementType();
-      for (Use &U : drop_begin(Ref->indices()))
-        Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
-    }
-    */
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     Value *Op = Ref->getPointerOperand();
     Type *KnownTy = GR->findDeducedElementType(Op);
@@ -1493,22 +1453,18 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
   if (SI) {
     Value *Op = SI->getValueOperand();
     Value *Pointer = SI->getPointerOperand();
-    // if (!GR->findDeducedElementType(Pointer) || isTodoType(Pointer)) {
     Type *OpTy = Op->getType();
     if (auto *OpI = dyn_cast<Instruction>(Op))
       OpTy = restoreMutatedType(GR, OpI, OpTy);
     if (OpTy == Op->getType())
       OpTy = deduceElementTypeByValueDeep(OpTy, Op, false);
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 1, B);
-    //}
     return;
   }
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     Value *Pointer = LI->getPointerOperand();
-    // if (!GR->findDeducedElementType(Pointer) || isTodoType(Pointer)) {
     Type *OpTy = LI->getType();
     if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-      // TODO: isNestedPointer() instead of dyn_cast<PointerType>
       if (Type *ElemTy = GR->findDeducedElementType(LI)) {
         OpTy = getTypedPointerWrapper(ElemTy, PtrTy->getAddressSpace());
       } else {
@@ -1519,7 +1475,6 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
       }
     }
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
-    //}
     return;
   }
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
@@ -2250,14 +2205,6 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
         if (ElemTy != KnownTy) {
           DenseSet<std::pair<Value *, Value *>> VisitedSubst;
           propagateElemType(CI, ElemTy, VisitedSubst);
-          /*
-          if (isa<CallInst>(Op)) {
-            propagateElemType(CI, ElemTy, VisitedSubst);
-          } else {
-            updateAssignType(AssignCI, CI, PoisonValue::get(ElemTy));
-            propagateElemTypeRec(CI, ElemTy, KnownTy, VisitedSubst);
-          }
-          */
           eraseTodoType(Op);
           continue;
         }
