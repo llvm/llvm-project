@@ -2089,6 +2089,17 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     }
     return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
   }
+
+  case Intrinsic::thread_pointer: {
+    MVT PtrVT = getPointerTy(DAG.getDataLayout());
+    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                                       : WebAssembly::GLOBAL_GET_I32;
+    const char *TlsBase = MF.createExternalSymbolName("__tls_base");
+    return SDValue(
+        DAG.getMachineNode(GlobalGet, DL, PtrVT,
+                           DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
+        0);
+  }
   }
 }
 
