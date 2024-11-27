@@ -701,10 +701,16 @@ static bool isValidWaveSizeValue(unsigned Value) {
 }
 
 void SemaHLSL::handleHLSLRootSignature(Decl *D, const ParsedAttr &AL) {
-  Expr *X = AL.getArgAsExpr(0);
-  if (const StringLiteral *ST = dyn_cast<StringLiteral>(X)){
-    auto str = ST->getString();
-  }
+
+  unsigned NumArgs = AL.getNumArgs();
+  if (NumArgs == 0 || NumArgs > 1)
+    return;
+  
+  StringRef Signature;
+  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Signature))
+    return;
+
+  
 }
 
 void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
