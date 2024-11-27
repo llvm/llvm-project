@@ -129,6 +129,51 @@ module {
     %214 = cir.sqrt %arg2 : !cir.vector<!cir.float x 4>
     // CHECK: llvm.intr.sqrt(%arg2)  : (vector<4xf32>) -> vector<4xf32>
 
+    %15 = cir.copysign %arg0, %arg0 : !cir.float
+    // CHECK: llvm.intr.copysign(%arg0, %arg0) : (f32, f32) -> f32
+
+    %115 = cir.copysign %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.copysign(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+
+    %215 = cir.copysign %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.copysign(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+
+    %16 = cir.fmax %arg0, %arg0 : !cir.float
+    // CHECK: llvm.intr.maxnum(%arg0, %arg0) : (f32, f32) -> f32
+
+    %116 = cir.fmax %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.maxnum(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+
+    %216 = cir.fmax %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.maxnum(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+
+    %17 = cir.fmin %arg0, %arg0 : !cir.float
+    // CHECK: llvm.intr.minnum(%arg0, %arg0) : (f32, f32) -> f32
+
+    %117 = cir.fmin %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.minnum(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+
+    %217 = cir.fmin %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.minnum(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+
+    %18 = cir.fmod %arg0, %arg0 : !cir.float
+    // CHECK: llvm.frem %arg0, %arg0 : f32
+
+    %118 = cir.fmod %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.frem %arg1, %arg1 : vector<2xf64>
+
+    %218 = cir.fmod %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.frem %arg2, %arg2 : vector<4xf32>
+
+    %19 = cir.pow %arg0, %arg0 : !cir.float
+    // CHECK: llvm.intr.pow(%arg0, %arg0) : (f32, f32) -> f32
+
+    %119 = cir.pow %arg1, %arg1 : !cir.vector<!cir.double x 2>
+    // CHECK: llvm.intr.pow(%arg1, %arg1) : (vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+
+    %219 = cir.pow %arg2, %arg2 : !cir.vector<!cir.float x 4>
+    // CHECK: llvm.intr.pow(%arg2, %arg2) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+
     cir.return
   }
 }

@@ -4425,8 +4425,9 @@ class BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     libc builtin equivalent ignoring floating-point exceptions and errno.
   }];
 
-  let arguments = (ins CIR_AnyFloat:$lhs, CIR_AnyFloat:$rhs);
-  let results = (outs CIR_AnyFloat:$result);
+  let arguments = (ins  CIR_AnyFloatOrVecOfFloat:$lhs,
+                         CIR_AnyFloatOrVecOfFloat:$rhs);
+  let results = (outs  CIR_AnyFloatOrVecOfFloat:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
