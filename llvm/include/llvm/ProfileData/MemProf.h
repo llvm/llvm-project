@@ -19,6 +19,10 @@
 #include <optional>
 
 namespace llvm {
+namespace yaml {
+template <typename T> struct CustomMappingTraits;
+} // namespace yaml
+
 namespace memprof {
 
 struct MemProfRecord;
@@ -193,6 +197,9 @@ struct PortableMemInfoBlock {
     return Result;
   }
 
+  // Give YAML access to the individual MIB fields.
+  friend struct yaml::CustomMappingTraits<memprof::PortableMemInfoBlock>;
+
 private:
   // The set of available fields, indexed by Meta::Name.
   std::bitset<llvm::to_underlying(Meta::Size)> Schema;
@@ -362,6 +369,8 @@ struct IndexedAllocationInfo {
   IndexedAllocationInfo(CallStackId CSId, const MemInfoBlock &MB,
                         const MemProfSchema &Schema = getFullSchema())
       : CSId(CSId), Info(MB, Schema) {}
+  IndexedAllocationInfo(CallStackId CSId, const PortableMemInfoBlock &MB)
+      : CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(const MemProfSchema &Schema,
@@ -496,6 +505,19 @@ struct MemProfRecord {
       }
     }
   }
+};
+
+// Helper struct for AllMemProfData.  In YAML, we treat the GUID and the fields
+// within MemProfRecord at the same level as if the GUID were part of
+// MemProfRecord.
+struct GUIDMemProfRecordPair {
+  GlobalValue::GUID GUID;
+  MemProfRecord Record;
+};
+
+// The top-level data structure, only used with YAML for now.
+struct AllMemProfData {
+  std::vector<GUIDMemProfRecordPair> HeapProfileRecords;
 };
 
 // Reads a memprof schema from a buffer. All entries in the buffer are
