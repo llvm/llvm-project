@@ -1392,3 +1392,67 @@ func.func @test_rfft2d_width_input_output_match(%arg0: tensor<1x4x8xf16>) -> (te
   %0, %1 = tosa.rfft2d %arg0 {inverse = false} : (tensor<1x4x8xf16>) -> (tensor<1x4x3xf16>, tensor<1x4x3xf16>)
   return %0, %1 : tensor<1x4x3xf16>, tensor<1x4x3xf16>
 }
+
+// -----
+
+// CHECK-LABEL: test_negate_same_element_type
+func.func @test_negate_same_element_type(%arg0: tensor<1x16x16x8xf16>, %arg1: tensor<1xf16>, %arg2: tensor<1xf16>) -> tensor<1x16x16x8xf32> {
+  // expected-error@+1 {{'tosa.negate' op expect input and output to have same element type, got 'f16' and 'f32'}}
+  %0 = tosa.negate %arg0, %arg1, %arg2
+      : (tensor<1x16x16x8xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x16x16x8xf32>
+  return %0 : tensor<1x16x16x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_same_shape
+func.func @test_negate_same_shape(%arg0: tensor<1x16x16x16xf16>, %arg1: tensor<1xf16>, %arg2: tensor<1xf16>) -> tensor<1x16x16x8xf16> {
+  // expected-error@+1 {{'tosa.negate' op requires the same shape for input1 and output}}
+  %0 = tosa.negate %arg0, %arg1, %arg2
+      : (tensor<1x16x16x16xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x16x16x8xf16>
+  return %0 : tensor<1x16x16x8xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_input_zp_same_element_type
+func.func @test_negate_input_zp_same_element_type(%arg0: tensor<1x16x16x8xf16>, %arg1: tensor<1xi8>, %arg2: tensor<1xf16>) -> tensor<1x16x16x8xf16> {
+  // expected-error@+1 {{'tosa.negate' op expect both input1 and its zero point are the same element type, got 'f16' and 'i8'}}
+  %0 = tosa.negate %arg0, %arg1, %arg2
+      : (tensor<1x16x16x8xf16>, tensor<1xi8>, tensor<1xf16>) -> tensor<1x16x16x8xf16>
+  return %0 : tensor<1x16x16x8xf16>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_output_zp_same_element_type
+func.func @test_negate_output_zp_same_element_type(%arg0: tensor<1x16x16x8xi8>, %arg1: tensor<1xi8>, %arg2: tensor<1xf16>) -> tensor<1x16x16x8xi8> {
+  // expected-error@+1 {{'tosa.negate' op expect both output and its zero point are the same element type, got 'i8' and 'f16'}}
+  %0 = tosa.negate %arg0, %arg1, %arg2
+      : (tensor<1x16x16x8xi8>, tensor<1xi8>, tensor<1xf16>) -> tensor<1x16x16x8xi8>
+  return %0 : tensor<1x16x16x8xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_input_zp_non_zero
+func.func @test_negate_input_zp_non_zero(%arg0: tensor<1x16x16x8xf32>) -> tensor<1x16x16x8xf32> {
+  %input_zp = "tosa.const"() {value = dense<-1.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() {value = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.negate' op input1 zero point must be zero for non-int8 integer types}}
+  %0 = tosa.negate %arg0, %input_zp, %output_zp
+      : (tensor<1x16x16x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x16x16x8xf32>
+  return %0 : tensor<1x16x16x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_output_zp_non_zero
+func.func @test_negate_output_zp_non_zero(%arg0: tensor<1x16x16x8xf32>) -> tensor<1x16x16x8xf32> {
+  %input_zp = "tosa.const"() {value = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() {value = dense<-1.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.negate' op output zero point must be zero for non-int8 integer types}}
+  %0 = tosa.negate %arg0, %input_zp, %output_zp
+      : (tensor<1x16x16x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x16x16x8xf32>
+  return %0 : tensor<1x16x16x8xf32>
+}
