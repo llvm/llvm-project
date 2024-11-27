@@ -1,22 +1,41 @@
-// RUN: %clang_cc1 %s -O2 -emit-llvm -fextend-lifetimes -o - | FileCheck %s
-// Make sure we don't generate fake.use for non-scalar variables.
+// RUN: %clang_cc1 %s -O0 -disable-O0-optnone -emit-llvm -fextend-lifetimes -o - | FileCheck %s --implicit-check-not=fake.use
+// Make sure we don't generate fake.use for non-scalar variables, unless they
+// are small enough that they may be represented as a scalar in LLVM IR.
 // Make sure we don't generate fake.use for volatile variables
 // and parameters even when they are scalar.
 
-struct A {
+struct BigAggr {
   unsigned long t;
   char c[1024];
   unsigned char r[32];
 };
 
+struct SmallAggr {
+  int i;
+  int j;
+};
 
-int foo(volatile int param)
+int foo(volatile int vol_param, int param)
 {
-  struct A s;
-  volatile int vloc;
-  struct A v[128];
-  char c[33];
+  struct BigAggr big;
+  struct SmallAggr small;
+  volatile int vol_local;
+  int local;
+  char long_arr[17];
+  char short_arr[16];
   return 0;
 }
 
-// CHECK-NOT:  fake.use
+// CHECK: [[SMALL_ARR_FAKE_USE:%.+]] = load [16 x i8], ptr %short_arr
+// CHECK: call void (...) @llvm.fake.use([16 x i8] [[SMALL_ARR_FAKE_USE]])
+
+// CHECK: [[LOCAL_FAKE_USE:%.+]] = load i32, ptr %local
+// CHECK: call void (...) @llvm.fake.use(i32 [[LOCAL_FAKE_USE]])
+
+// CHECK: [[SMALL_FAKE_USE:%.+]] = load %struct.SmallAggr, ptr %small
+// CHECK: call void (...) @llvm.fake.use(%struct.SmallAggr [[SMALL_FAKE_USE]])
+
+// CHECK: [[PARAM_FAKE_USE:%.+]] = load i32, ptr %param.addr
+// CHECK: call void (...) @llvm.fake.use(i32 [[PARAM_FAKE_USE]])
+
+// CHECK: declare void @llvm.fake.use

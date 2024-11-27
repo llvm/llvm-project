@@ -27,17 +27,17 @@ int func(int param) {
 // The mangled function name contains a $_0, followed by 'cl'.
 // This lambda is an orphaned lambda, i.e. one without lexical parent.
 //
-// CHECK:     define internal {{.+\"_Z.+\$_0.*cl.*\"}}
-// CHECK-NOT: ret
-// CHECK:     fake.use(i32
-// CHECK-NOT: ret
-// CHECK:     fake.use(ptr
+// CHECK-LABEL: define internal {{.+\"_Z.+\$_0.*cl.*\"}}
+// CHECK-NOT:   ret
+// CHECK:       fake.use(i32
+// CHECK-NOT:   ret
+// CHECK:       fake.use(ptr
 
 // The second lambda. We are looking for 3 fake uses.
-// CHECK:     define internal {{.+\"_Z.+\$_0.*cl.*\"}}
-// CHECK-NOT: ret
-// CHECK:     fake.use(i32
-// CHECK-NOT: ret
-// CHECK:     fake.use(i32
-// CHECK-NOT: ret
-// CHECK:     fake.use(ptr
+// CHECK-LABEL: define internal {{.+\"_Z.+\$_0.*cl.*\"}}
+// CHECK-NOT:   ret
+// CHECK:       fake.use(i32
+// CHECK-NOT:   ret
+// CHECK:       fake.use(i32
+// CHECK-NOT:   ret
+// CHECK:       fake.use(ptr

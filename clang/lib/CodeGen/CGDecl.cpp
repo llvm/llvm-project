@@ -1353,6 +1353,11 @@ void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr) {
 }
 
 void CodeGenFunction::EmitFakeUse(Address Addr) {
+  // We do not emit a fake use if we want to apply optnone to this function,
+  // even if we might not apply it anyway due to minsize or similar attributes.
+  if (!CGM.getCodeGenOpts().DisableO0ImplyOptNone &&
+      CGM.getCodeGenOpts().OptimizationLevel == 0)
+    return;
   auto NL = ApplyDebugLocation::CreateEmpty(*this);
   llvm::Value *V = Builder.CreateLoad(Addr, "fake.use");
   llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMFakeUseFn(), {V});
@@ -1446,8 +1451,8 @@ static bool extendLifetime(const ASTContext &Context, const Decl *FuncDecl,
   // Don't extend variables that exceed a certain size.
   if (Context.getTypeSize(Ty) > maxFakeUseAggregateSize(Context))
     return false;
-  // Do not extend variables in nodebug functions.
-  if (FuncDecl->hasAttr<NoDebugAttr>())
+  // Do not extend variables in nodebug or optnone functions.
+  if (FuncDecl->hasAttr<NoDebugAttr>() || FuncDecl->hasAttr<OptimizeNoneAttr>())
     return false;
   return true;
 }

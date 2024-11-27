@@ -1,29 +1,29 @@
-// RUN: %clang_cc1 %s -O2 -emit-llvm -fextend-lifetimes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O0 -disable-O0-optnone -emit-llvm -fextend-lifetimes -o - | FileCheck %s --implicit-check-not=llvm.fake.use
 // Check that fake use calls are emitted at the correct locations, i.e.
 // at the end of lexical blocks and at the end of the function.
 
-extern int use(int);
-int glob1;
-int glob2;
-float globf;
+int glob_i;
+char glob_c;
+float glob_f;
 
 int foo(int i) {
-  // CHECK: define{{.*}}foo
+  // CHECK-LABEL: define{{.*}}foo
   if (i < 4) {
-    int j = i * 3;
-    if (glob1 > 3) {
-      float f = globf;
-      // CHECK: [[SSAVAL:%[a-z0-9]*]] = load float{{.*}}globf
+    char j = i * 3;
+    if (glob_i > 3) {
+      float f = glob_f;
       j = f;
-      glob2 = j;
-      // CHECK: store{{.*}}glob2
-      // CHECK-NEXT: call void (...) @llvm.fake.use(float [[SSAVAL]])
+      glob_c = j;
+      // CHECK: call void (...) @llvm.fake.use(float %
+      // CHECK-NEXT: br label %
     }
-    glob1 = j;
-    // CHECK: store{{.*}}glob1
-    // CHECK-NEXT: call void (...) @llvm.fake.use(i32 %j.
+    glob_i = j;
+    // CHECK: call void (...) @llvm.fake.use(i8 %
+    // CHECK-NEXT: br label %
   }
-  // CHECK: call void (...) @llvm.fake.use(i32 %i)
+  // CHECK: call void (...) @llvm.fake.use(i32 %
   // CHECK-NEXT: ret
   return 4;
 }
+
+// CHECK: declare void @llvm.fake.use(...)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -O3 -emit-llvm -fextend-lifetimes -fexceptions -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O0 -disable-O0-optnone -emit-llvm -fextend-lifetimes -fexceptions -o - | FileCheck %s --implicit-check-not=landingpad
 
 // Check that fake uses do not mistakenly cause a landing pad to be generated when
 // exceptions are enabled.
@@ -11,6 +11,4 @@ void foo(int p) {
 
 // CHECK:      define {{.*}} @foo
 // CHECK-NOT:  personality
-// CHECK:      entry:
-// CHECK:      llvm.fake.use
-// CHECK-NOT:  landingpad
+// CHECK:      call void (...) @llvm.fake.use
