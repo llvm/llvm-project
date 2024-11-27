@@ -74,6 +74,9 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  /// Returns the size of the platform's va_list object.
+  unsigned getVaListSizeInBits(const DataLayout &DL) const override;
+
   const char *getTargetNodeName(unsigned Opcode) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
@@ -147,6 +150,12 @@ private:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
 
