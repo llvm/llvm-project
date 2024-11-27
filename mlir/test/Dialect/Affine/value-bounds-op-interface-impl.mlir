@@ -155,3 +155,40 @@ func.func @compare_maps(%a: index, %b: index) {
       : (index, index, index, index) -> ()
   return
 }
+
+// -----
+
+func.func @compare_affine_linearize_index(%a: index, %b: index) {
+  %0 = affine.linearize_index [%a, %b] by (2, 4) : index
+  %1 = affine.linearize_index [%a, %b] by (4) : index
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %a, %b) {rhs_map = affine_map<(a, b) -> (a * 4 + b)>}
+      : (index, index, index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%1, %a, %b) {rhs_map = affine_map<(a, b) -> (a * 4 + b)>}
+      : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+// CHECK: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 4)>
+// CHECK: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 mod 4)>
+
+// CHECK-LABEL: func @affine_delinearize_index(
+//  CHECK-SAME:   %[[a:.*]]: index
+func.func @affine_delinearize_index(%a: index) -> (index, index, index, index) {
+  %0:2 = affine.delinearize_index %a into (2, 4) : index, index
+  %1:2 = affine.delinearize_index %a into (4) : index, index
+
+  // CHECK: %[[BOUND0:.+]] = affine.apply #[[$MAP]]()[%[[a]]]
+  %2 = "test.reify_bound"(%0#0) {type = "EQ"} : (index) -> (index)
+  // CHECK: %[[BOUND1:.+]] = affine.apply #[[$MAP1]]()[%[[a]]]
+  %3 = "test.reify_bound"(%0#1) {type = "EQ"} : (index) -> (index)
+  // CHECK: %[[BOUND2:.+]] = affine.apply #[[$MAP]]()[%[[a]]]
+  %4 = "test.reify_bound"(%0#0) {type = "EQ"} : (index) -> (index)
+  // CHECK: %[[BOUND3:.+]] = affine.apply #[[$MAP1]]()[%[[a]]]
+  %5 = "test.reify_bound"(%0#1) {type = "EQ"} : (index) -> (index)
+  // CHECK: return %[[BOUND0]], %[[BOUND1]], %[[BOUND2]], %[[BOUND3]]
+  return %2, %3, %4, %5: index, index, index, index
+}
