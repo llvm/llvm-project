@@ -208,12 +208,9 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.OnlyTopDown = false;
   Policy.OnlyBottomUp = false;
 
-  // Enabling or Disabling the latency heuristic is a close call: It seems to
-  // help nearly no benchmark on out-of-order architectures, on the other hand
-  // it regresses register pressure on a few benchmarking.
-  // FIXME: This is from AArch64, but we haven't evaluated it on RISC-V.
-  // TODO: We may disable it for out-of-order architectures only.
-  Policy.DisableLatencyHeuristic = true;
+  // Disabling the latency heuristic can reduce the number of spills/reloads but
+  // will cause some regressions on some cores.
+  Policy.DisableLatencyHeuristic = DisableLatencySchedHeuristic;
 
   // Spilling is generally expensive on all RISC-V cores, so always enable
   // register-pressure tracking. This will increase compile time.

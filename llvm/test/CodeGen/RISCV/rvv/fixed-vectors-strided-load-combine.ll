@@ -255,14 +255,14 @@ define void @strided_runtime_mismatch_4xv4i16(ptr %x, ptr %z, i64 %s, i64 %t) {
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV32-NEXT:    vle16.v v8, (a0)
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    add a4, a0, a4
-; RV32-NEXT:    vle16.v v10, (a4)
-; RV32-NEXT:    add a2, a4, a2
-; RV32-NEXT:    vle16.v v9, (a2)
+; RV32-NEXT:    vle16.v v9, (a0)
+; RV32-NEXT:    add a0, a0, a4
+; RV32-NEXT:    vle16.v v10, (a0)
+; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    vle16.v v11, (a0)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v10, v9, 4
-; RV32-NEXT:    vslideup.vi v8, v11, 4
+; RV32-NEXT:    vslideup.vi v8, v9, 4
+; RV32-NEXT:    vslideup.vi v10, v11, 4
 ; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 8
 ; RV32-NEXT:    vse16.v v8, (a1)
@@ -273,14 +273,14 @@ define void @strided_runtime_mismatch_4xv4i16(ptr %x, ptr %z, i64 %s, i64 %t) {
 ; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV64-NEXT:    vle16.v v8, (a0)
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a3, a0, a3
-; RV64-NEXT:    vle16.v v10, (a3)
-; RV64-NEXT:    add a2, a3, a2
-; RV64-NEXT:    vle16.v v9, (a2)
+; RV64-NEXT:    vle16.v v9, (a0)
+; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    vle16.v v10, (a0)
+; RV64-NEXT:    add a0, a0, a2
 ; RV64-NEXT:    vle16.v v11, (a0)
 ; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vslideup.vi v10, v9, 4
-; RV64-NEXT:    vslideup.vi v8, v11, 4
+; RV64-NEXT:    vslideup.vi v8, v9, 4
+; RV64-NEXT:    vslideup.vi v10, v11, 4
 ; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 8
 ; RV64-NEXT:    vse16.v v8, (a1)
@@ -291,14 +291,14 @@ define void @strided_runtime_mismatch_4xv4i16(ptr %x, ptr %z, i64 %s, i64 %t) {
 ; ZVE64F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVE64F-NEXT:    vle16.v v8, (a0)
 ; ZVE64F-NEXT:    add a0, a0, a2
-; ZVE64F-NEXT:    add a3, a0, a3
-; ZVE64F-NEXT:    vle16.v v10, (a3)
-; ZVE64F-NEXT:    add a2, a3, a2
-; ZVE64F-NEXT:    vle16.v v9, (a2)
+; ZVE64F-NEXT:    vle16.v v9, (a0)
+; ZVE64F-NEXT:    add a0, a0, a3
+; ZVE64F-NEXT:    vle16.v v10, (a0)
+; ZVE64F-NEXT:    add a0, a0, a2
 ; ZVE64F-NEXT:    vle16.v v11, (a0)
 ; ZVE64F-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVE64F-NEXT:    vslideup.vi v10, v9, 4
-; ZVE64F-NEXT:    vslideup.vi v8, v11, 4
+; ZVE64F-NEXT:    vslideup.vi v8, v9, 4
+; ZVE64F-NEXT:    vslideup.vi v10, v11, 4
 ; ZVE64F-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVE64F-NEXT:    vslideup.vi v8, v10, 8
 ; ZVE64F-NEXT:    vse16.v v8, (a1)

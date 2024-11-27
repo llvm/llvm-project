@@ -755,15 +755,15 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32VLA-NEXT:    vle64.v v8, (a0)
 ; RV32VLA-NEXT:    addi a0, sp, 128
+; RV32VLA-NEXT:    csrr a2, vlenb
+; RV32VLA-NEXT:    addi a3, sp, 64
+; RV32VLA-NEXT:    slli a2, a2, 3
 ; RV32VLA-NEXT:    vse64.v v8, (a0)
-; RV32VLA-NEXT:    csrr a0, vlenb
-; RV32VLA-NEXT:    slli a0, a0, 3
-; RV32VLA-NEXT:    addi a2, sp, 64
-; RV32VLA-NEXT:    add a3, a2, a0
-; RV32VLA-NEXT:    vl8re64.v v8, (a3)
-; RV32VLA-NEXT:    vl8re64.v v16, (a2)
-; RV32VLA-NEXT:    add a0, a1, a0
-; RV32VLA-NEXT:    vs8r.v v8, (a0)
+; RV32VLA-NEXT:    add a0, a3, a2
+; RV32VLA-NEXT:    vl8re64.v v8, (a0)
+; RV32VLA-NEXT:    vl8re64.v v16, (a3)
+; RV32VLA-NEXT:    add a2, a1, a2
+; RV32VLA-NEXT:    vs8r.v v8, (a2)
 ; RV32VLA-NEXT:    vs8r.v v16, (a1)
 ; RV32VLA-NEXT:    addi sp, s0, -80
 ; RV32VLA-NEXT:    .cfi_def_cfa sp, 80
@@ -792,15 +792,15 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64VLA-NEXT:    vle64.v v8, (a0)
 ; RV64VLA-NEXT:    addi a0, sp, 128
+; RV64VLA-NEXT:    csrr a2, vlenb
+; RV64VLA-NEXT:    addi a3, sp, 64
+; RV64VLA-NEXT:    slli a2, a2, 3
 ; RV64VLA-NEXT:    vse64.v v8, (a0)
-; RV64VLA-NEXT:    csrr a0, vlenb
-; RV64VLA-NEXT:    slli a0, a0, 3
-; RV64VLA-NEXT:    addi a2, sp, 64
-; RV64VLA-NEXT:    add a3, a2, a0
-; RV64VLA-NEXT:    vl8re64.v v8, (a3)
-; RV64VLA-NEXT:    vl8re64.v v16, (a2)
-; RV64VLA-NEXT:    add a0, a1, a0
-; RV64VLA-NEXT:    vs8r.v v8, (a0)
+; RV64VLA-NEXT:    add a0, a3, a2
+; RV64VLA-NEXT:    vl8re64.v v8, (a0)
+; RV64VLA-NEXT:    vl8re64.v v16, (a3)
+; RV64VLA-NEXT:    add a2, a1, a2
+; RV64VLA-NEXT:    vs8r.v v8, (a2)
 ; RV64VLA-NEXT:    vs8r.v v16, (a1)
 ; RV64VLA-NEXT:    addi sp, s0, -80
 ; RV64VLA-NEXT:    .cfi_def_cfa sp, 80

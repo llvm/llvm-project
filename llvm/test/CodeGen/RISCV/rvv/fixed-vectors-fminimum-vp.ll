@@ -63,11 +63,9 @@ define <2 x half> @vfmin_vv_v2f16_unmasked(<2 x half> %va, <2 x half> %vb, i32 z
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v0, v10, v10
-; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v10, v10
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v11, v11
 ; ZVFHMIN-NEXT:    vmerge.vvm v9, v10, v11, v0
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v8
@@ -135,11 +133,9 @@ define <4 x half> @vfmin_vv_v4f16_unmasked(<4 x half> %va, <4 x half> %vb, i32 z
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v0, v10, v10
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v10, v10
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v11, v11
 ; ZVFHMIN-NEXT:    vmerge.vvm v9, v10, v11, v0
 ; ZVFHMIN-NEXT:    vmv.v.v v0, v8
@@ -209,11 +205,9 @@ define <8 x half> @vfmin_vv_v8f16_unmasked(<8 x half> %va, <8 x half> %vb, i32 z
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v0, v10, v10
-; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v9
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v10, v10
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
 ; ZVFHMIN-NEXT:    vmerge.vvm v14, v10, v12, v0
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v8
@@ -285,11 +279,9 @@ define <16 x half> @vfmin_vv_v16f16_unmasked(<16 x half> %va, <16 x half> %vb, i
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v0, v12, v12
-; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v12, v12
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v16, v16
 ; ZVFHMIN-NEXT:    vmerge.vvm v20, v12, v16, v0
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v8

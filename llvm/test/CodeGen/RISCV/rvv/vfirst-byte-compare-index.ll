@@ -10,8 +10,8 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:    bltu a3, a5, .LBB0_7
 ; CHECK-NEXT:  # %bb.1: # %mismatch_mem_check
 ; CHECK-NEXT:    slli a2, a5, 32
-; CHECK-NEXT:    srli a2, a2, 32
 ; CHECK-NEXT:    slli a4, a3, 32
+; CHECK-NEXT:    srli a2, a2, 32
 ; CHECK-NEXT:    srli a4, a4, 32
 ; CHECK-NEXT:    add a6, a0, a2
 ; CHECK-NEXT:    add a7, a0, a4
@@ -27,11 +27,11 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:  .LBB0_3: # %mismatch_vec_loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub a5, a4, a2
-; CHECK-NEXT:    vsetvli a5, a5, e8, m2, ta, ma
 ; CHECK-NEXT:    add a6, a0, a2
+; CHECK-NEXT:    add a7, a1, a2
+; CHECK-NEXT:    vsetvli a5, a5, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a6)
-; CHECK-NEXT:    add a6, a1, a2
-; CHECK-NEXT:    vle8.v v10, (a6)
+; CHECK-NEXT:    vle8.v v10, (a7)
 ; CHECK-NEXT:    vmsne.vv v12, v8, v10
 ; CHECK-NEXT:    vfirst.m a7, v12
 ; CHECK-NEXT:    mv a6, a5
@@ -53,8 +53,8 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:    slli a2, a5, 32
 ; CHECK-NEXT:    srli a2, a2, 32
 ; CHECK-NEXT:    add a4, a0, a2
-; CHECK-NEXT:    lbu a4, 0(a4)
 ; CHECK-NEXT:    add a2, a1, a2
+; CHECK-NEXT:    lbu a4, 0(a4)
 ; CHECK-NEXT:    lbu a2, 0(a2)
 ; CHECK-NEXT:    bne a4, a2, .LBB0_10
 ; CHECK-NEXT:  # %bb.8: # %mismatch_loop_inc

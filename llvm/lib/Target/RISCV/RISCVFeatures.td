@@ -1390,6 +1390,10 @@ def FeaturePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
+def FeatureDisableLatencySchedHeuristic
+    : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
+                       "Disable latency scheduling heuristic">;
+
 def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"

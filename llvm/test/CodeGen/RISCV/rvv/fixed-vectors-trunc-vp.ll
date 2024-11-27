@@ -68,11 +68,11 @@ define <128 x i7> @vtrunc_v128i7_v128i16(<128 x i16> %a, <128 x i1> %m, i32 zero
 ; CHECK-NEXT:    sltu a0, a0, a2
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v24, v16, 0, v0.t
-; CHECK-NEXT:    li a0, 128
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v24, a1
 ; CHECK-NEXT:    ret
   %v = call <128 x i7> @llvm.vp.trunc.v128i7.v128i16(<128 x i16> %a, <128 x i1> %m, i32 %vl)
@@ -246,17 +246,17 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v25, v0, 8
 ; CHECK-NEXT:    addi a2, a1, 512
+; CHECK-NEXT:    addi a3, a1, 640
+; CHECK-NEXT:    addi a4, a7, -64
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v27, v25, 4
-; CHECK-NEXT:    addi a3, a1, 640
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a3)
+; CHECK-NEXT:    sltu a3, a7, a4
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v27, 2
-; CHECK-NEXT:    addi a3, a7, -64
-; CHECK-NEXT:    sltu a4, a7, a3
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a4, a4, a3
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a4, a3, a4
 ; CHECK-NEXT:    addi a3, a4, -32
 ; CHECK-NEXT:    sltu a5, a4, a3
 ; CHECK-NEXT:    addi a5, a5, -1
@@ -545,11 +545,11 @@ define <32 x i32> @vtrunc_v32i32_v32i64(<32 x i64> %a, <32 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v24, v16, 0, v0.t
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v24, 16
 ; CHECK-NEXT:    ret
   %v = call <32 x i32> @llvm.vp.trunc.v32i32.v32i64(<32 x i64> %a, <32 x i1> %m, i32 %vl)

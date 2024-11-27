@@ -929,18 +929,18 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call f
-; RV32I-NEXT:    lw a0, 12(s7)
-; RV32I-NEXT:    lw a1, 8(s7)
-; RV32I-NEXT:    add a0, a0, s4
+; RV32I-NEXT:    lw a0, 8(s7)
+; RV32I-NEXT:    lw a1, 12(s7)
 ; RV32I-NEXT:    addi s5, s5, 1
 ; RV32I-NEXT:    seqz a2, s5
 ; RV32I-NEXT:    add s6, s6, a2
 ; RV32I-NEXT:    xor a2, s5, s2
+; RV32I-NEXT:    add a1, a1, s4
 ; RV32I-NEXT:    xor a3, s6, s1
 ; RV32I-NEXT:    or a2, a2, a3
-; RV32I-NEXT:    add s3, a1, s3
-; RV32I-NEXT:    sltu s4, s3, a1
-; RV32I-NEXT:    add s4, a0, s4
+; RV32I-NEXT:    add s3, a0, s3
+; RV32I-NEXT:    sltu s4, s3, a0
+; RV32I-NEXT:    add s4, a1, s4
 ; RV32I-NEXT:    bnez a2, .LBB20_5
 ; RV32I-NEXT:  .LBB20_6: # %for.cond.cleanup
 ; RV32I-NEXT:    mv a0, s3
@@ -994,18 +994,18 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-MEDIUM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-MEDIUM-NEXT:    mv a0, s0
 ; RV32I-MEDIUM-NEXT:    call f
-; RV32I-MEDIUM-NEXT:    lw a0, 12(s7)
-; RV32I-MEDIUM-NEXT:    lw a1, 8(s7)
-; RV32I-MEDIUM-NEXT:    add a0, a0, s4
+; RV32I-MEDIUM-NEXT:    lw a0, 8(s7)
+; RV32I-MEDIUM-NEXT:    lw a1, 12(s7)
 ; RV32I-MEDIUM-NEXT:    addi s5, s5, 1
 ; RV32I-MEDIUM-NEXT:    seqz a2, s5
 ; RV32I-MEDIUM-NEXT:    add s6, s6, a2
 ; RV32I-MEDIUM-NEXT:    xor a2, s5, s2
+; RV32I-MEDIUM-NEXT:    add a1, a1, s4
 ; RV32I-MEDIUM-NEXT:    xor a3, s6, s1
 ; RV32I-MEDIUM-NEXT:    or a2, a2, a3
-; RV32I-MEDIUM-NEXT:    add s3, a1, s3
-; RV32I-MEDIUM-NEXT:    sltu s4, s3, a1
-; RV32I-MEDIUM-NEXT:    add s4, a0, s4
+; RV32I-MEDIUM-NEXT:    add s3, a0, s3
+; RV32I-MEDIUM-NEXT:    sltu s4, s3, a0
+; RV32I-MEDIUM-NEXT:    add s4, a1, s4
 ; RV32I-MEDIUM-NEXT:    bnez a2, .LBB20_5
 ; RV32I-MEDIUM-NEXT:  .LBB20_6: # %for.cond.cleanup
 ; RV32I-MEDIUM-NEXT:    mv a0, s3

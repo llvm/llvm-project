@@ -28,8 +28,8 @@ define <8 x i1> @icmp_eq_vx_v8i7(<8 x i7> %va, i7 %b, <8 x i1> %m, i32 zeroext %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vand.vx v9, v9, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
@@ -45,8 +45,8 @@ define <8 x i1> @icmp_eq_vx_swap_v8i7(<8 x i7> %va, i7 %b, <8 x i1> %m, i32 zero
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vand.vx v9, v9, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v9, v8, v0.t
@@ -605,11 +605,11 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    li a1, 128
+; CHECK-NEXT:    addi a4, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    addi a2, a0, 128
-; CHECK-NEXT:    vle8.v v8, (a2)
 ; CHECK-NEXT:    addi a2, a3, -128
+; CHECK-NEXT:    vle8.v v8, (a4)
 ; CHECK-NEXT:    sltu a4, a3, a2
 ; CHECK-NEXT:    vle8.v v24, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
