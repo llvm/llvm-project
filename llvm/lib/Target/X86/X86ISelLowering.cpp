@@ -45880,8 +45880,7 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
   // with those here.
   // FIXME: This is restricted to pre type legalization. If we loosen this we
   // need to convert vector bool to a scalar bool.
-  if (DCI.getDAGCombineLevel() < llvm::AfterLegalizeTypes &&
-      Vec.getOpcode() == ISD::VSELECT &&
+  if (DCI.isBeforeLegalize() && Vec.getOpcode() == ISD::VSELECT &&
       Vec.getOperand(0).getOpcode() == ISD::SETCC &&
       Vec.getOperand(0).getOperand(0).getValueType() == VecVT) {
     assert(Vec.getOperand(0).getValueType().getScalarType() == MVT::i1 &&
