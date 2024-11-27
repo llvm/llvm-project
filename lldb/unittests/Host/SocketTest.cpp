@@ -12,7 +12,9 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/UriParser.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <chrono>
 
 using namespace lldb_private;
 
@@ -131,6 +133,27 @@ TEST_P(SocketTest, TCPListen0ConnectAccept) {
   std::unique_ptr<TCPSocket> socket_b_up;
   CreateTCPConnectedSockets(GetParam().localhost_ip, &socket_a_up,
                             &socket_b_up);
+}
+
+TEST_P(SocketTest, TCPAcceptTimeout) {
+  if (!HostSupportsProtocol())
+    return;
+
+  const bool child_processes_inherit = false;
+  auto listen_socket_up =
+      std::make_unique<TCPSocket>(true, child_processes_inherit);
+  Status error = listen_socket_up->Listen(
+      llvm::formatv("[{0}]:0", GetParam().localhost_ip).str(), 5);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
+
+  Socket *socket;
+  ASSERT_THAT_ERROR(
+      listen_socket_up->Accept(std::chrono::milliseconds(10), socket)
+          .takeError(),
+      llvm::Failed<llvm::ErrorInfoBase>(
+          testing::Property(&llvm::ErrorInfoBase::convertToErrorCode,
+                            std::make_error_code(std::errc::timed_out))));
 }
 
 TEST_P(SocketTest, TCPMainLoopAccept) {

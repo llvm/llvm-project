@@ -163,21 +163,12 @@ std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
   return func(arg->v);
 }
 
-template <
-    typename FuncTy, //
-    typename ArgTy,  //
-    typename ResultTy = std::invoke_result_t<FuncTy, typename ArgTy::Value>>
-std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
-  if (!arg)
-    return std::nullopt;
-  return std::move(func(arg->v));
-}
-
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx);
 
 namespace clause {
 using Range = tomp::type::RangeT<ExprTy>;
+using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
 using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;

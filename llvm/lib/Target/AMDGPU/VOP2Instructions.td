@@ -567,6 +567,12 @@ def VOP_DOT_ACC_F32_V2F16 : VOP_DOT_ACC<f32, v2f16> {
   let HasClamp = 1;
 }
 
+def VOP_DOT_ACC_F32_V2BF16 : VOP_DOT_ACC<f32, v2bf16> {
+  let Src0ModDPP = FPVRegInputMods;
+  let Src1ModDPP = FPVRegInputMods;
+  let HasClamp = 1;
+}
+
 def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
   let HasExtVOP3DPP = 0;
   let HasSrc0Mods = 1;
@@ -1182,6 +1188,9 @@ let Constraints = "$vdst = $src2",
     defm V_DOT2C_I32_I16 : VOP2Inst<"v_dot2c_i32_i16", VOP_DOT_ACC_I32_I32>;
   let SubtargetPredicate = HasDot3Insts in
     defm V_DOT8C_I32_I4  : VOP2Inst<"v_dot8c_i32_i4",  VOP_DOT_ACC_I32_I32>;
+
+  let SubtargetPredicate = HasDot13Insts in
+    defm V_DOT2C_F32_BF16 : VOP2Inst<"v_dot2c_f32_bf16", VOP_DOT_ACC_F32_V2BF16>;
 }
 
 let AddedComplexity = 30 in {
@@ -1190,6 +1199,12 @@ let AddedComplexity = 30 in {
     (f32 (V_DOT2C_F32_F16_e32 $src0, $src1, $src2))
   > {
     let SubtargetPredicate = HasDot5Insts;
+  }
+  def : GCNPat<
+    (f32 (int_amdgcn_fdot2_f32_bf16 v2bf16:$src0, v2bf16:$src1, f32:$src2, (i1 DSTCLAMP.NONE))),
+    (f32 (V_DOT2C_F32_BF16_e32 $src0, $src1, $src2))
+  > {
+    let SubtargetPredicate = HasDot13Insts;
   }
   def : GCNPat<
     (i32 (int_amdgcn_sdot4 i32:$src0, i32:$src1, i32:$src2, (i1 DSTCLAMP.NONE))),
@@ -2669,4 +2684,9 @@ let SubtargetPredicate = HasDot3Insts in {
   // NB: Opcode conflicts with V_DOT2C_F32_F16
   let DecoderNamespace = "GFX10_B" in
   defm V_DOT8C_I32_I4 : VOP2_Real_DOT_ACC_gfx10<0x02>;
+}
+
+let OtherPredicates = [HasDot13Insts] in {
+  let DecoderNamespace = "GFX950" in
+  defm V_DOT2C_F32_BF16 : VOP2_Real_DOT_ACC_gfx9<0x16>;
 }
