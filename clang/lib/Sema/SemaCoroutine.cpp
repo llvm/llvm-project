@@ -1433,8 +1433,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
         // scope of the promise type.
         // - If any declarations are found, ...
         // - If no declarations are found in the scope of the promise type, a
-        // search is performed in the global scope or via ADL for typed
-        // allocation.
+        //   search is performed in the global scope.
         if (NewScope == Sema::AFS_Both)
           NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
 

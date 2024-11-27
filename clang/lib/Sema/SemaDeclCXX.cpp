@@ -10865,9 +10865,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       // first parameter, perform that conversion now.
       if (OperatorDelete->isDestroyingOperatorDelete()) {
         unsigned PointerParam = 0;
-        if (isTypeAwareOperatorNewOrDelete(OperatorDelete)) {
+        if (isTypeAwareOperatorNewOrDelete(OperatorDelete))
           ++PointerParam;
-        }
         QualType ParamType =
             OperatorDelete->getParamDecl(PointerParam)->getType();
         if (!declaresSameEntity(ParamType->getAsCXXRecordDecl(), RD)) {
