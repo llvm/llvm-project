@@ -548,7 +548,7 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
 
   // C++20 [dcl.constexpr]p5:
   //  The definition of a constexpr destructor whose function-body is not
-  //  = delete [shall] additionally satisfy the following requirement:
+  //  = delete shall additionally satisfy the following requirement:
   //   -- for every subobject of class type or (possibly multi-dimensional)
   //      array thereof, that class type shall have a constexpr destructor
   if (!Subobj->hasConstexprDestructor())

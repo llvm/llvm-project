@@ -160,8 +160,8 @@ C++ Specific Potentially Breaking Changes
 
 - Clang will now consider the implicitly deleted destructor of a union or
   a non-union class without virtual base class to be ``constexpr`` in C++20
-  mode. Previously, Clang does so since C++23, but the standard specification
-  for this changed in C++20. (GH#85550)
+  mode (Clang 19 only did so in C++23 mode but the standard specification for
+  this changed in C++20). (#GH85550)
 
   .. code-block:: c++
 

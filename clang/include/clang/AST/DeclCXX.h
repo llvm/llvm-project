@@ -895,7 +895,7 @@ public:
     //   any virtual base classes.
     // C++20 [dcl.constexpr]p5:
     //   The definition of a constexpr destructor whose function-body is
-    //   [not = delete] shall additionally satisfy...
+    //   not = delete shall additionally satisfy...
     data().DefaultedDestructorIsConstexpr = data().NumVBases == 0;
   }
 
