@@ -40,6 +40,21 @@ PlatformVecT &Platforms() {
   return Platforms;
 }
 
+// TODO: Some plugins expect to be linked into libomptarget which defines these
+// symbols to implement ompt callbacks. The least invasive workaround here is to
+// define them in libLLVMOffload as false/null so they are never used. In future
+// it would be better to allow the plugins to implement callbacks without
+// pulling in details from libomptarget.
+#ifdef OMPT_SUPPORT
+namespace llvm::omp::target {
+namespace ompt {
+bool Initialized = false;
+ompt_get_callback_t lookupCallbackByCode = nullptr;
+ompt_function_lookup_t lookupCallbackByName = nullptr;
+} // namespace ompt
+} // namespace llvm::omp::target
+#endif
+
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
