@@ -513,53 +513,56 @@ std::string SVEType::builtin_str() const {
 }
 
 std::string SVEType::str() const {
-  if (isPredicatePattern())
-    return "enum svpattern";
+  std::string TypeStr;
 
-  if (isPrefetchOp())
+  switch (Kind) {
+  case TypeKind::PrefetchOp:
     return "enum svprfop";
-
-  if (isFpm())
-    return "fpm_t";
-
-  std::string S;
-  if (isVoid())
-    S += "void";
-  else {
-    if (isScalableVector() || isSvcount())
-      S += "sv";
-
-    if (isFloat())
-      S += "float";
-    else if (isSvcount())
-      S += "count";
-    else if (isPredicate())
-      S += "bool";
-    else if (isBFloat())
-      S += "bfloat";
-    else if (isMFloat())
-      S += "mfloat";
-    else if (isSignedInteger())
-      S += "int";
-    else if (isUnsignedInteger())
-      S += "uint";
-
-    if (!isPredicate() && !isSvcount())
-      S += utostr(ElementBitwidth);
-    if (isFixedLengthVector())
-      S += "x" + utostr(getNumElements());
-    if (NumVectors > 1)
-      S += "x" + utostr(NumVectors);
-    if (!isScalarPredicate())
-      S += "_t";
+  case TypeKind::PredicatePattern:
+    return "enum svpattern";
+  case TypeKind::Fpm:
+    TypeStr += "fpm";
+    break;
+  case TypeKind::Void:
+    TypeStr += "void";
+    break;
+  case TypeKind::Float:
+    TypeStr += "float" + llvm::utostr(ElementBitwidth);
+    break;
+  case TypeKind::Svcount:
+    TypeStr += "svcount";
+    break;
+  case TypeKind::Predicate:
+    TypeStr += "bool";
+    break;
+  case TypeKind::BFloat16:
+    TypeStr += "bfloat16";
+    break;
+  case TypeKind::MFloat8:
+    TypeStr += "mfloat8";
+    break;
+  case TypeKind::SInt:
+    TypeStr += "int" + llvm::utostr(ElementBitwidth);
+    break;
+  case TypeKind::UInt:
+    TypeStr += "uint" + llvm::utostr(ElementBitwidth);
   }
 
-  if (Constant)
-    S += " const";
-  if (Pointer)
-    S += " *";
+  if (isFixedLengthVector())
+    TypeStr += "x" + llvm::utostr(getNumElements());
+  else if (isScalableVector())
+    TypeStr = "sv" + TypeStr;
 
-  return S;
+  if (NumVectors > 1)
+    TypeStr += "x" + llvm::utostr(NumVectors);
+  if (!isScalarPredicate() && !isVoid())
+    TypeStr += "_t";
+  if (isConstant())
+    TypeStr += " const";
+  if (isPointer())
+    TypeStr += " *";
+
+  return TypeStr;
 }
 
 void SVEType::applyTypespec(StringRef TS) {
