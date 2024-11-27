@@ -1059,6 +1059,10 @@ def FeatureStdExtSha
                       FeatureStdExtShvstvala, FeatureStdExtShtvala, FeatureStdExtShvstvecd,
                       FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
 
+def FeatureStdExtSvukte
+    : RISCVExperimentalExtension<"svukte", 0, 3,
+                                 "'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)">;
+
 // Pointer Masking extensions
 
 // A supervisor-level extension that provides pointer masking for the next lower
