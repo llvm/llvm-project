@@ -1753,8 +1753,12 @@ Critical section handling functions modeled by this checker:
 .. _unix-Chroot:
 
 unix.Chroot (C)
-"""""""""""""""""""""
-Check improper use of chroot.
+"""""""""""""""
+Check improper use of chroot described by SEI Cert C recommendation `POS05-C.
+Limit access to files by creating a jail
+<https://wiki.sei.cmu.edu/confluence/display/c/POS05-C.+Limit+access+to+files+by+creating+a+jail>`_.
+The checker finds usage patterns where chdir() is not called immediately
+after a call to chroot().
 
 .. code-block:: c
 
@@ -1763,6 +1767,12 @@ Check improper use of chroot.
  void test() {
    chroot("/usr/local");
    f(); // warn: no call of chdir("/") immediately after chroot
+ }
+
+ void test() {
+   chroot("/usr/local");
+   chdir("/"); // no warning
+   f();
  }
 
 .. _unix-Errno:

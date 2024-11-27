@@ -87,14 +87,10 @@ bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 
 void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef state = C.getState();
-  ProgramStateManager &Mgr = state->getStateManager();
-  const TargetInfo &TI = C.getASTContext().getTargetInfo();
   SValBuilder &SVB = C.getSValBuilder();
   BasicValueFactory &BVF = SVB.getBasicValueFactory();
-  ConstraintManager &CM = Mgr.getConstraintManager();
 
-  const QualType sIntTy = C.getASTContext().getIntTypeForBitwidth(
-      /*DestWidth=*/TI.getIntWidth(), /*Signed=*/true);
+  const QualType IntTy = C.getASTContext().IntTy;
 
   const Expr *ChrootCE = Call.getOriginExpr();
   if (!ChrootCE)
@@ -103,30 +99,24 @@ void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
 
   const LocationContext *LCtx = C.getLocationContext();
   NonLoc RetVal =
-      C.getSValBuilder()
-          .conjureSymbolVal(nullptr, ChrootCE, LCtx, sIntTy, C.blockCount())
+          SVB.conjureSymbolVal(/*SymbolTag=*/nullptr, ChrootCE, LCtx, IntTy, C.blockCount())
           .castAs<NonLoc>();
 
-  ProgramStateRef StateChrootFailed, StateChrootSuccess;
-  std::tie(StateChrootFailed, StateChrootSuccess) = state->assume(RetVal);
+  auto [StateChrootFailed, StateChrootSuccess] = state->assume(RetVal);
 
-  const llvm::APSInt &Zero = BVF.getValue(0, sIntTy);
-  const llvm::APSInt &Minus1 = BVF.getValue(-1, sIntTy);
+  const llvm::APSInt &Zero = BVF.getValue(0, IntTy);
+  const llvm::APSInt &Minus1 = BVF.getValue(-1, IntTy);
 
   if (StateChrootFailed) {
-    StateChrootFailed = CM.assumeInclusiveRange(StateChrootFailed, RetVal,
-                                                Minus1, Minus1, true);
     StateChrootFailed = StateChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED);
     StateChrootFailed = StateChrootFailed->set<ChrootCall>(ChrootCE);
-    C.addTransition(StateChrootFailed->BindExpr(CE, LCtx, RetVal));
+    C.addTransition(StateChrootFailed->BindExpr(CE, LCtx, nonloc::ConcreteInt{Minus1}));
   }
 
   if (StateChrootSuccess) {
-    StateChrootSuccess =
-        CM.assumeInclusiveRange(StateChrootSuccess, RetVal, Zero, Zero, true);
     StateChrootSuccess = StateChrootSuccess->set<ChrootState>(ROOT_CHANGED);
     StateChrootSuccess = StateChrootSuccess->set<ChrootCall>(ChrootCE);
-    C.addTransition(StateChrootSuccess->BindExpr(CE, LCtx, RetVal));
+    C.addTransition(StateChrootSuccess->BindExpr(CE, LCtx, nonloc::ConcreteInt{Zero}));
   }
 }
 
@@ -158,8 +148,9 @@ void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
 const ExplodedNode *ChrootChecker::getAcquisitionSite(const ExplodedNode *N,
                                                       CheckerContext &C) {
   ProgramStateRef State = N->getState();
-  // When bug type is resource leak, exploded node N may not have state info
-  // for leaked file descriptor, but predecessor should have it.
+  // When a chroot() issue is found, the current exploded node may not
+  // have state info for where chroot() was called for the bug report but
+  // a predecessor should have it.
   if (!State->get<ChrootCall>())
     N = N->getFirstPred();
 
@@ -202,7 +193,7 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
 
     std::unique_ptr<PathSensitiveBugReport> R =
         std::make_unique<PathSensitiveBugReport>(
-            BT_BreakJail, "No call of chdir(\"/\") immediately after chroot",
+            BT_BreakJail, R"(No call of chdir("/") immediately after chroot)",
             Err, LocUsedForUniqueing,
             ChrootCallNode->getLocationContext()->getDecl());
 
