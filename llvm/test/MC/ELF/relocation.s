@@ -18,7 +18,7 @@ bar:
         movl	bar, %edx         # R_X86_64_32S
         movq	bar, %rdx         # R_X86_64_32S
 .long bar                         # R_X86_64_32
-        leaq	foo@GOTTPOFF(%rip), %rax # R_X86_64_GOTTPOFF
+        movq    foo@GOTTPOFF(%rip), %rax # R_X86_64_GOTTPOFF
         movq    foo@GOTTPOFF(%rip), %r31 # R_X86_64_CODE_4_GOTTPOFF
         addq    foo@GOTTPOFF(%rip), %r31 # R_X86_64_CODE_4_GOTTPOFF
         # NDD

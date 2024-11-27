@@ -2,15 +2,16 @@
 
 // Test that all symbols are of type STT_TLS.
 
-	leaq	foo1@TLSGD(%rip), %rdi
-        leaq    foo2@GOTTPOFF(%rip), %rdi
-        leaq    foo3@TLSLD(%rip), %rdi
-	.long foo4@GOTTPOFF
-	.long foo5@TLSLD
-	.long foo6@TLSGD
-	.section	.zed,"awT",@progbits
+    leaq    foo1@TLSGD(%rip), %rdi
+    movq    foo2@GOTTPOFF(%rip), %rdi
+    leaq    foo3@TLSLD(%rip), %rdi
+
+    .long foo4@GOTTPOFF
+    .long foo5@TLSLD
+    .long foo6@TLSGD
+    .section    .zed,"awT",@progbits
 foobar:
-	.long	43
+    .long    43
 
 // CHECK:        Symbol {
 // CHECK:          Name: foobar
