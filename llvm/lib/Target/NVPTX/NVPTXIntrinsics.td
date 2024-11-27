@@ -1962,41 +1962,41 @@ multiclass F_ATOMIC_2_NEG<ValueType regT, NVPTXRegClass regclass, string SpaceSt
 
 // has 3 operands
 multiclass F_ATOMIC_3_imp<ValueType ptrT, NVPTXRegClass ptrclass,
-  ValueType regT, NVPTXRegClass regclass,
+  ValueType regT, NVPTXRegClass regclass, string SemStr,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   Operand IMMType, list<Predicate> Pred> {
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
     def reg : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, regclass:$b, regclass:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), (regT regclass:$c)))]>,
     Requires<Pred>;
 
     def imm1 : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, IMMType:$b, regclass:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, (regT regclass:$c)))]>,
     Requires<Pred>;
 
     def imm2 : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, regclass:$b, IMMType:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), imm:$c))]>,
     Requires<Pred>;
 
     def imm3 : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, IMMType:$b, IMMType:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, imm:$c))]>,
     Requires<Pred>;
   }
 }
-multiclass F_ATOMIC_3<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
-  string OpcStr, PatFrag IntOp, Operand IMMType, list<Predicate> Pred = []> {
-  defm p32 : F_ATOMIC_3_imp<i32, Int32Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-    IntOp, IMMType, Pred>;
-  defm p64 : F_ATOMIC_3_imp<i64, Int64Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-    IntOp, IMMType, Pred>;
+multiclass F_ATOMIC_3<ValueType regT, NVPTXRegClass regclass, string SemStr, string SpaceStr,
+  string TypeStr, string OpcStr, PatFrag IntOp, Operand IMMType, list<Predicate> Pred = []> {
+  defm p32 : F_ATOMIC_3_imp<i32, Int32Regs, regT, regclass, SemStr, SpaceStr, TypeStr,
+    OpcStr, IntOp, IMMType, Pred>;
+  defm p64 : F_ATOMIC_3_imp<i64, Int64Regs, regT, regclass, SemStr, SpaceStr, TypeStr,
+    OpcStr, IntOp, IMMType, Pred>;
 }
 
 // atom_add
@@ -2378,51 +2378,86 @@ defm INT_PTX_ATOM_XOR_GEN_64 : F_ATOMIC_2<i64, Int64Regs, "", ".b64", ".xor",
 defm INT_PTX_ATOM_XOR_GEN_64_USE_G : F_ATOMIC_2<i64, Int64Regs, ".global", ".b64",
   ".xor", atomic_load_xor_i64_gen, i64imm, imm, [hasSM<32>]>;
 
-// atom_cas
+multiclass ternary_atomic_op_as {
+  // one record per address space
+  def NAME#_gen: PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val),
+      AS_match.generic>;
 
-def atomic_cmp_swap_i16_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i16_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i16_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i32_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i32 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i32_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i32 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i32_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i32 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i64_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i64_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i64_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
+  def NAME#_g: PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val),
+      AS_match.global>;
 
-defm INT_PTX_ATOM_CAS_G_16 : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
+  def NAME#_s: PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val),
+      AS_match.shared>;
+}
+
+// generate pattern fragments for size x memory order
+// NOTE: i8 cmpxchg is not supported in ptx, and AtomicExpandPass will emulate all i8 cmpxchgs
+// using larger-bitwidth cas
+foreach size = ["i16", "i32", "i64"] in {
+  foreach order = ["", "_monotonic", "_acquire", "_release", "_acq_rel", "_seq_cst"] in {
+    defm atomic_cmp_swap#_#size#order: ternary_atomic_op_as;
+  }
+}
+
+multiclass INT_PTX_ATOM_CAS_AS<string atomic_cmp_swap_without_as, string type, string order> {
+  // eg. with type = 32, order = .acquire, atomic_cmp_swap_without_as = atomic_cmp_swap_i32_acquire, and _GEN becomes
+  // F_ATOMIC_3<i32, Int32Regs, ".acquire", ".b32", ".cas", atomic_cmp_swap_i32_acquire, i32imm>
+
+
+  // For SM70, PTX63 +, memory orders are supported
+  defm _GEN: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, "", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
+
+  defm _GEN_USE_G: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".global", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
+
+  defm _G: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".global", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_g), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
+
+  defm _S: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".shared", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_s), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
+
+  // For older archs, we fall back to lowering to relaxed atom.cas
+  defm _GEN_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", "", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm")>;
+
+  defm _GEN_USE_G_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", ".global", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm")>;
+
+  defm _G_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", ".global", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_g), !cast<Operand>("i"#type#"imm")>;
+
+  defm _S_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", ".shared", ".b"#type, ".cas",
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_s), !cast<Operand>("i"#type#"imm")>;
+}
+
+// Define atom.cas for all combinations of size x memory order supported in PTX *and* on the hardware.
+foreach size = ["32", "64"] in {
+  // We enumerate the instructions with specific memory orders ["acquire", "release", "acq_rel"]
+  // *before* the instructions with the unspecified memory order [""]. 
+  // This ensures that `cmpxchg ... acquire` is lowered to "atom.acquire.cas" instead of "atom.cas"
+  // Note that AtomicExpand will convert cmpxchg seq_cst to a cmpxchg monotonic with fences around it.
+  foreach order = ["acquire", "release", "acq_rel", ""] in {
+    if !eq(order, "") then {
+      defm INT_PTX_ATOM_CAS_#size : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size, size, ".relaxed">;
+    } else {
+      defm INT_PTX_ATOM_CAS_#size#_#order : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size#_#order, size, "."#order>;
+    }
+  }
+}
+
+// Note that 16-bit CAS support in PTX is *emulated*. (TODO: public?)
+defm INT_PTX_ATOM_CAS_G_16 : F_ATOMIC_3<i16, Int16Regs, "", ".global", ".b16", ".cas",
   atomic_cmp_swap_i16_g, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_S_16 : F_ATOMIC_3<i16, Int16Regs, ".shared", ".b16", ".cas",
+defm INT_PTX_ATOM_CAS_S_16 : F_ATOMIC_3<i16, Int16Regs, "", ".shared", ".b16", ".cas",
   atomic_cmp_swap_i16_s, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_GEN_16 : F_ATOMIC_3<i16, Int16Regs, "", ".b16", ".cas",
+defm INT_PTX_ATOM_CAS_GEN_16 : F_ATOMIC_3<i16, Int16Regs, "", "", ".b16", ".cas",
   atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_GEN_16_USE_G : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
+defm INT_PTX_ATOM_CAS_GEN_16_USE_G : F_ATOMIC_3<i16, Int16Regs, "", ".global", ".b16", ".cas",
   atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_G_32 : F_ATOMIC_3<i32, Int32Regs, ".global", ".b32", ".cas",
-  atomic_cmp_swap_i32_g, i32imm>;
-defm INT_PTX_ATOM_CAS_S_32 : F_ATOMIC_3<i32, Int32Regs, ".shared", ".b32", ".cas",
-  atomic_cmp_swap_i32_s, i32imm>;
-defm INT_PTX_ATOM_CAS_GEN_32 : F_ATOMIC_3<i32, Int32Regs, "", ".b32", ".cas",
-  atomic_cmp_swap_i32_gen, i32imm>;
-defm INT_PTX_ATOM_CAS_GEN_32_USE_G : F_ATOMIC_3<i32, Int32Regs, ".global", ".b32",
-  ".cas", atomic_cmp_swap_i32_gen, i32imm>;
-defm INT_PTX_ATOM_CAS_G_64 : F_ATOMIC_3<i64, Int64Regs, ".global", ".b64", ".cas",
-  atomic_cmp_swap_i64_g, i64imm>;
-defm INT_PTX_ATOM_CAS_S_64 : F_ATOMIC_3<i64, Int64Regs, ".shared", ".b64", ".cas",
-  atomic_cmp_swap_i64_s, i64imm>;
-defm INT_PTX_ATOM_CAS_GEN_64 : F_ATOMIC_3<i64, Int64Regs, "", ".b64", ".cas",
-  atomic_cmp_swap_i64_gen, i64imm>;
-defm INT_PTX_ATOM_CAS_GEN_64_USE_G : F_ATOMIC_3<i64, Int64Regs, ".global", ".b64",
-  ".cas", atomic_cmp_swap_i64_gen, i64imm>;
 
 // Support for scoped atomic operations.  Matches
 // int_nvvm_atomic_{op}_{space}_{type}_{scope}
