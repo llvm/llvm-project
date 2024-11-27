@@ -2185,7 +2185,7 @@ def Vector_CompressStoreOp :
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
 
-    Note that the index increment is done conditionally.
+    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 
