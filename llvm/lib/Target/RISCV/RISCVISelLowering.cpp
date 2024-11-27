@@ -3493,13 +3493,12 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
 static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
                                   SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+  if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT && (SplatVal.getOpcode() != RISCVISD::VMV_X_S))
     return SDValue();
   SDValue Vec = SplatVal.getOperand(0);
-  // Only perform this optimization on vectors of the same size for simplicity.
   // Don't perform this optimization for i1 vectors.
   // FIXME: Support i1 vectors, maybe by promoting to i8?
-  if (Vec.getValueType() != VT || VT.getVectorElementType() == MVT::i1)
+  if (VT.getVectorElementType() == MVT::i1)
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
@@ -3507,10 +3506,12 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
     return SDValue();
 
   MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector()) {
+  if (VT.isFixedLengthVector())
     ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
-  }
+
+  Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
+                    DAG.getUNDEF(ContainerVT), Vec,
+                    DAG.getVectorIdxConstant(0, DL));
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
