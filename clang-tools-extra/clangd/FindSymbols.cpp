@@ -54,9 +54,19 @@ bool approximateScopeMatch(llvm::StringRef Scope, llvm::StringRef Query) {
   return Query.empty();
 }
 
+Range indexToLSPRange(const SymbolPosition &SrcStart,
+                      const SymbolPosition &SrcEnd) {
+  Position Start, End;
+  Start.line = SrcStart.line();
+  Start.character = SrcStart.column();
+  End.line = SrcEnd.line();
+  End.character = SrcEnd.column();
+  return {Start, End};
+}
+
 } // namespace
 
-llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
+llvm::Expected<Location> indexToLSPLocation(const SymbolNameLocation &Loc,
                                             llvm::StringRef TUPath) {
   auto Path = URI::resolve(Loc.FileURI, TUPath);
   if (!Path)
@@ -64,17 +74,21 @@ llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
                  Path.takeError());
   Location L;
   L.uri = URIForFile::canonicalize(*Path, TUPath);
-  Position Start, End;
-  Start.line = Loc.Start.line();
-  Start.character = Loc.Start.column();
-  End.line = Loc.End.line();
-  End.character = Loc.End.column();
-  L.range = {Start, End};
+  L.range = indexToLSPRange(Loc.Start, Loc.End);
   return L;
 }
 
-llvm::Expected<Location> symbolToLocation(const Symbol &Sym,
-                                          llvm::StringRef TUPath) {
+llvm::Expected<std::pair<Location, Range>>
+indexToLSPLocation(const SymbolDeclDefLocation &Loc, StringRef TUPath) {
+  auto L = indexToLSPLocation(Loc.NameLocation, TUPath);
+  if (!L)
+    return L.takeError();
+  return std::make_pair(L.get(),
+                        indexToLSPRange(Loc.DeclDefStart, Loc.DeclDefEnd));
+}
+
+llvm::Expected<std::pair<Location, Range>>
+symbolToLocation(const Symbol &Sym, llvm::StringRef TUPath) {
   // Prefer the definition over e.g. a function declaration in a header
   return indexToLSPLocation(
       Sym.Definition ? Sym.Definition : Sym.CanonicalDeclaration, TUPath);
@@ -152,7 +166,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     SymbolInformation Info;
     Info.name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
     Info.kind = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
-    Info.location = *Loc;
+    Info.location = Loc->first;
     Scope.consume_back("::");
     Info.containerName = Scope.str();
 

@@ -51,10 +51,10 @@ MATCHER_P(refRange, Range, "") {
 }
 MATCHER_P(fileURI, F, "") { return llvm::StringRef(arg.Location.FileURI) == F; }
 MATCHER_P(declURI, U, "") {
-  return llvm::StringRef(arg.CanonicalDeclaration.FileURI) == U;
+  return llvm::StringRef(arg.CanonicalDeclaration.fileURI()) == U;
 }
 MATCHER_P(defURI, U, "") {
-  return llvm::StringRef(arg.Definition.FileURI) == U;
+  return llvm::StringRef(arg.Definition.fileURI()) == U;
 }
 MATCHER_P(qName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 MATCHER_P(numReferences, N, "") { return arg.References == N; }
@@ -133,9 +133,9 @@ TEST(FileSymbolsTest, MergeOverlap) {
     return std::make_unique<SymbolSlab>(std::move(S).build());
   };
   auto X1 = symbol("x");
-  X1.CanonicalDeclaration.FileURI = "file:///x1";
+  X1.CanonicalDeclaration.NameLocation.FileURI = "file:///x1";
   auto X2 = symbol("x");
-  X2.Definition.FileURI = "file:///x2";
+  X2.Definition.NameLocation.FileURI = "file:///x2";
 
   FS.update("f1", OneSymboSlab(X1), nullptr, nullptr, false);
   FS.update("f2", OneSymboSlab(X2), nullptr, nullptr, false);
@@ -610,11 +610,11 @@ TEST(FileShardedIndexTest, Sharding) {
   auto BSourceUri = URI::create(testPath("b.cc")).toString();
 
   auto Sym1 = symbol("1");
-  Sym1.CanonicalDeclaration.FileURI = AHeaderUri.c_str();
+  Sym1.CanonicalDeclaration.NameLocation.FileURI = AHeaderUri.c_str();
 
   auto Sym2 = symbol("2");
-  Sym2.CanonicalDeclaration.FileURI = BHeaderUri.c_str();
-  Sym2.Definition.FileURI = BSourceUri.c_str();
+  Sym2.CanonicalDeclaration.NameLocation.FileURI = BHeaderUri.c_str();
+  Sym2.Definition.NameLocation.FileURI = BSourceUri.c_str();
 
   auto Sym3 = symbol("3"); // not stored
 

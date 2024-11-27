@@ -64,9 +64,9 @@ MATCHER_P(templateArgs, TemplArgs, "") {
 }
 MATCHER_P(hasKind, Kind, "") { return arg.SymInfo.Kind == Kind; }
 MATCHER_P(declURI, P, "") {
-  return StringRef(arg.CanonicalDeclaration.FileURI) == P;
+  return StringRef(arg.CanonicalDeclaration.fileURI()) == P;
 }
-MATCHER_P(defURI, P, "") { return StringRef(arg.Definition.FileURI) == P; }
+MATCHER_P(defURI, P, "") { return StringRef(arg.Definition.fileURI()) == P; }
 MATCHER(includeHeader, "") { return !arg.IncludeHeaders.empty(); }
 MATCHER_P(includeHeader, P, "") {
   return (arg.IncludeHeaders.size() == 1) &&
@@ -75,16 +75,18 @@ MATCHER_P(includeHeader, P, "") {
 MATCHER_P2(IncludeHeaderWithRef, includeHeader, References, "") {
   return (arg.IncludeHeader == includeHeader) && (arg.References == References);
 }
-bool rangesMatch(const SymbolLocation &Loc, const Range &R) {
+bool rangesMatch(const SymbolNameLocation &Loc, const Range &R) {
   return std::make_tuple(Loc.Start.line(), Loc.Start.column(), Loc.End.line(),
                          Loc.End.column()) ==
          std::make_tuple(R.start.line, R.start.character, R.end.line,
                          R.end.character);
 }
 MATCHER_P(declRange, Pos, "") {
-  return rangesMatch(arg.CanonicalDeclaration, Pos);
+  return rangesMatch(arg.CanonicalDeclaration.NameLocation, Pos);
 }
-MATCHER_P(defRange, Pos, "") { return rangesMatch(arg.Definition, Pos); }
+MATCHER_P(defRange, Pos, "") {
+  return rangesMatch(arg.Definition.NameLocation, Pos);
+}
 MATCHER_P(refCount, R, "") { return int(arg.References) == R; }
 MATCHER_P(forCodeCompletion, IsIndexedForCodeCompletion, "") {
   return static_cast<bool>(arg.Flags & Symbol::IndexedForCodeCompletion) ==

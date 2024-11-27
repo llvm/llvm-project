@@ -11,21 +11,22 @@
 namespace clang {
 namespace clangd {
 
-constexpr uint32_t SymbolLocation::Position::MaxLine;
-constexpr uint32_t SymbolLocation::Position::MaxColumn;
+constexpr uint32_t SymbolPosition::MaxLine;
+constexpr uint32_t SymbolPosition::MaxColumn;
 
-void SymbolLocation::Position::setLine(uint32_t L) {
+void SymbolPosition::setLine(uint32_t L) {
   if (L > MaxLine)
     L = MaxLine;
   LineColumnPacked = (L << ColumnBits) | column();
 }
-void SymbolLocation::Position::setColumn(uint32_t Col) {
+void SymbolPosition::setColumn(uint32_t Col) {
   if (Col > MaxColumn)
     Col = MaxColumn;
   LineColumnPacked = (LineColumnPacked & ~MaxColumn) | Col;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolLocation &L) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const SymbolNameLocation &L) {
   if (!L)
     return OS << "(none)";
   return OS << L.FileURI << "[" << L.Start.line() << ":" << L.Start.column()

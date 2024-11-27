@@ -84,8 +84,10 @@ using clang::clangd::RefKind;
 using clang::clangd::Relation;
 using clang::clangd::RelationKind;
 using clang::clangd::Symbol;
+using clang::clangd::SymbolDeclDefLocation;
 using clang::clangd::SymbolID;
-using clang::clangd::SymbolLocation;
+using clang::clangd::SymbolNameLocation;
+using clang::clangd::SymbolPosition;
 using clang::index::SymbolInfo;
 using clang::index::SymbolKind;
 using clang::index::SymbolLanguage;
@@ -132,15 +134,14 @@ template <> struct MappingTraits<YPosition> {
 };
 
 struct NormalizedPosition {
-  using Position = clang::clangd::SymbolLocation::Position;
   NormalizedPosition(IO &) {}
-  NormalizedPosition(IO &, const Position &Pos) {
+  NormalizedPosition(IO &, const SymbolPosition &Pos) {
     P.Line = Pos.line();
     P.Column = Pos.column();
   }
 
-  Position denormalize(IO &) {
-    Position Pos;
+  SymbolPosition denormalize(IO &) {
+    SymbolPosition Pos;
     Pos.setLine(P.Line);
     Pos.setColumn(P.Column);
     return Pos;
@@ -163,16 +164,28 @@ struct NormalizedFileURI {
   std::string URI;
 };
 
-template <> struct MappingTraits<SymbolLocation> {
-  static void mapping(IO &IO, SymbolLocation &Value) {
+template <> struct MappingTraits<SymbolNameLocation> {
+  static void mapping(IO &IO, SymbolNameLocation &Value) {
     MappingNormalization<NormalizedFileURI, const char *> NFile(IO,
                                                                 Value.FileURI);
     IO.mapRequired("FileURI", NFile->URI);
-    MappingNormalization<NormalizedPosition, SymbolLocation::Position> NStart(
+    MappingNormalization<NormalizedPosition, SymbolPosition> NStart(
         IO, Value.Start);
     IO.mapRequired("Start", NStart->P);
-    MappingNormalization<NormalizedPosition, SymbolLocation::Position> NEnd(
-        IO, Value.End);
+    MappingNormalization<NormalizedPosition, SymbolPosition> NEnd(IO,
+                                                                  Value.End);
+    IO.mapRequired("End", NEnd->P);
+  }
+};
+
+template <> struct MappingTraits<SymbolDeclDefLocation> {
+  static void mapping(IO &IO, SymbolDeclDefLocation &Value) {
+    IO.mapRequired("NameLoc", Value.NameLocation);
+    MappingNormalization<NormalizedPosition, SymbolPosition> NStart(
+        IO, Value.DeclDefStart);
+    IO.mapRequired("Start", NStart->P);
+    MappingNormalization<NormalizedPosition, SymbolPosition> NEnd(
+        IO, Value.DeclDefEnd);
     IO.mapRequired("End", NEnd->P);
   }
 };
@@ -235,8 +248,8 @@ template <> struct MappingTraits<Symbol> {
     IO.mapRequired("Scope", Sym.Scope);
     IO.mapRequired("SymInfo", Sym.SymInfo);
     IO.mapOptional("CanonicalDeclaration", Sym.CanonicalDeclaration,
-                   SymbolLocation());
-    IO.mapOptional("Definition", Sym.Definition, SymbolLocation());
+                   SymbolDeclDefLocation());
+    IO.mapOptional("Definition", Sym.Definition, SymbolDeclDefLocation());
     IO.mapOptional("References", Sym.References, 0u);
     IO.mapOptional("Flags", NSymbolFlag->Flag);
     IO.mapOptional("Signature", Sym.Signature);

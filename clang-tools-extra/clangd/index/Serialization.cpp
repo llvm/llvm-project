@@ -263,7 +263,7 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
 //  - enums encode as the underlying type
 //  - most numbers encode as varint
 
-void writeLocation(const SymbolLocation &Loc, const StringTableOut &Strings,
+void writeLocation(const SymbolNameLocation &Loc, const StringTableOut &Strings,
                    llvm::raw_ostream &OS) {
   writeVar(Strings.index(Loc.FileURI), OS);
   for (const auto &Endpoint : {Loc.Start, Loc.End}) {
@@ -272,11 +272,31 @@ void writeLocation(const SymbolLocation &Loc, const StringTableOut &Strings,
   }
 }
 
-SymbolLocation readLocation(Reader &Data,
-                            llvm::ArrayRef<llvm::StringRef> Strings) {
-  SymbolLocation Loc;
+SymbolNameLocation readNameLocation(Reader &Data,
+                                    llvm::ArrayRef<llvm::StringRef> Strings) {
+  SymbolNameLocation Loc;
   Loc.FileURI = Data.consumeString(Strings).data();
   for (auto *Endpoint : {&Loc.Start, &Loc.End}) {
+    Endpoint->setLine(Data.consumeVar());
+    Endpoint->setColumn(Data.consumeVar());
+  }
+  return Loc;
+}
+
+void writeLocation(const SymbolDeclDefLocation &Loc,
+                   const StringTableOut &Strings, llvm::raw_ostream &OS) {
+  writeLocation(Loc.NameLocation, Strings, OS);
+  for (const auto &Endpoint : {Loc.DeclDefStart, Loc.DeclDefEnd}) {
+    writeVar(Endpoint.line(), OS);
+    writeVar(Endpoint.column(), OS);
+  }
+}
+
+SymbolDeclDefLocation
+readDeclDefLocation(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
+  SymbolDeclDefLocation Loc;
+  Loc.NameLocation = readNameLocation(Data, Strings);
+  for (auto *Endpoint : {&Loc.DeclDefStart, &Loc.DeclDefEnd}) {
     Endpoint->setLine(Data.consumeVar());
     Endpoint->setColumn(Data.consumeVar());
   }
@@ -347,8 +367,8 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings,
   Sym.Name = Data.consumeString(Strings);
   Sym.Scope = Data.consumeString(Strings);
   Sym.TemplateSpecializationArgs = Data.consumeString(Strings);
-  Sym.Definition = readLocation(Data, Strings);
-  Sym.CanonicalDeclaration = readLocation(Data, Strings);
+  Sym.Definition = readDeclDefLocation(Data, Strings);
+  Sym.CanonicalDeclaration = readDeclDefLocation(Data, Strings);
   Sym.References = Data.consumeVar();
   Sym.Flags = static_cast<Symbol::SymbolFlag>(Data.consume8());
   Sym.Origin = Origin;
@@ -394,7 +414,7 @@ readRefs(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
     return Result;
   for (auto &Ref : Result.second) {
     Ref.Kind = static_cast<RefKind>(Data.consume8());
-    Ref.Location = readLocation(Data, Strings);
+    Ref.Location = readNameLocation(Data, Strings);
     Ref.Container = Data.consumeID();
   }
   return Result;

@@ -41,7 +41,14 @@ SymInfo:
   Kind:            Function
   Lang:            Cpp
 CanonicalDeclaration:
-  FileURI:        file:///path/foo.h
+  NameLoc:
+    FileURI:        file:///path/foo.h
+    Start:
+      Line: 1
+      Column: 0
+    End:
+      Line: 1
+      Column: 1
   Start:
     Line: 1
     Column: 0
@@ -74,7 +81,14 @@ SymInfo:
   Kind:            Function
   Lang:            Cpp
 CanonicalDeclaration:
-  FileURI:        file:///path/bar.h
+  NameLoc:
+    FileURI:        file:///path/bar.h
+    Start:
+      Line: 1
+      Column: 0
+    End:
+      Line: 1
+      Column: 1
   Start:
     Line: 1
     Column: 0
@@ -155,7 +169,8 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_EQ(Sym1.Signature, "");
   EXPECT_EQ(Sym1.Documentation, "Foo doc");
   EXPECT_EQ(Sym1.ReturnType, "int");
-  EXPECT_EQ(StringRef(Sym1.CanonicalDeclaration.FileURI), "file:///path/foo.h");
+  EXPECT_EQ(StringRef(Sym1.CanonicalDeclaration.fileURI()),
+            "file:///path/foo.h");
   EXPECT_EQ(Sym1.Origin, SymbolOrigin::Static);
   EXPECT_EQ(static_cast<uint8_t>(Sym1.Flags), 129);
   EXPECT_TRUE(Sym1.Flags & Symbol::IndexedForCodeCompletion);
@@ -172,7 +187,7 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_THAT(Sym2, qName("clang::Foo2"));
   EXPECT_EQ(Sym2.Signature, "-sig");
   EXPECT_EQ(Sym2.ReturnType, "");
-  EXPECT_EQ(llvm::StringRef(Sym2.CanonicalDeclaration.FileURI),
+  EXPECT_EQ(llvm::StringRef(Sym2.CanonicalDeclaration.fileURI()),
             "file:///path/bar.h");
   EXPECT_FALSE(Sym2.Flags & Symbol::IndexedForCodeCompletion);
   EXPECT_TRUE(Sym2.Flags & Symbol::Deprecated);

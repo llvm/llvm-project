@@ -155,12 +155,12 @@ SymbolSlab filter(SymbolSlab Slab, const StdLibLocation &Loc) {
   for (const Symbol &S : Slab) {
     if (!S.IncludeHeaders.empty() &&
         StandardHeaders.contains(S.IncludeHeaders.front().IncludeHeader)) {
-      GoodHeader[S.CanonicalDeclaration.FileURI] = true;
-      GoodHeader[S.Definition.FileURI] = true;
+      GoodHeader[S.CanonicalDeclaration.fileURI()] = true;
+      GoodHeader[S.Definition.fileURI()] = true;
       continue;
     }
     for (const char *URI :
-         {S.CanonicalDeclaration.FileURI, S.Definition.FileURI}) {
+         {S.CanonicalDeclaration.fileURI(), S.Definition.fileURI()}) {
       auto R = GoodHeader.try_emplace(URI, false);
       if (R.second) {
         R.first->second = llvm::any_of(
@@ -180,10 +180,10 @@ SymbolSlab filter(SymbolSlab Slab, const StdLibLocation &Loc) {
   auto IsGoodHeader = [&](const char *C) { return *C && GoodHeader.lookup(C); };
 
   for (const Symbol &S : Slab) {
-    if (!(IsGoodHeader(S.CanonicalDeclaration.FileURI) ||
-          IsGoodHeader(S.Definition.FileURI))) {
+    if (!(IsGoodHeader(S.CanonicalDeclaration.fileURI()) ||
+          IsGoodHeader(S.Definition.fileURI()))) {
       dlog("Ignoring wrong-header symbol {0}{1} in {2}", S.Scope, S.Name,
-           S.CanonicalDeclaration.FileURI);
+           S.CanonicalDeclaration.fileURI());
       continue;
     }
     Result.insert(S);

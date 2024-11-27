@@ -114,14 +114,14 @@ const NamedDecl *getDefinition(const NamedDecl *D) {
   return nullptr; // except cases above
 }
 
-void logIfOverflow(const SymbolLocation &Loc) {
+void logIfOverflow(const SymbolNameLocation &Loc) {
   if (Loc.Start.hasOverflow() || Loc.End.hasOverflow())
     log("Possible overflow in symbol location: {0}", Loc);
 }
 
 // Convert a SymbolLocation to LSP's Location.
 // TUPath is used to resolve the path of URI.
-std::optional<Location> toLSPLocation(const SymbolLocation &Loc,
+std::optional<Location> toLSPLocation(const SymbolNameLocation &Loc,
                                       llvm::StringRef TUPath) {
   if (!Loc)
     return std::nullopt;
@@ -134,8 +134,9 @@ std::optional<Location> toLSPLocation(const SymbolLocation &Loc,
   return *LSPLoc;
 }
 
-SymbolLocation toIndexLocation(const Location &Loc, std::string &URIStorage) {
-  SymbolLocation SymLoc;
+SymbolNameLocation toIndexLocation(const Location &Loc,
+                                   std::string &URIStorage) {
+  SymbolNameLocation SymLoc;
   URIStorage = Loc.uri.uri();
   SymLoc.FileURI = URIStorage.c_str();
   SymLoc.Start.setLine(Loc.range.start.line);
@@ -146,17 +147,17 @@ SymbolLocation toIndexLocation(const Location &Loc, std::string &URIStorage) {
 }
 
 // Returns the preferred location between an AST location and an index location.
-SymbolLocation getPreferredLocation(const Location &ASTLoc,
-                                    const SymbolLocation &IdxLoc,
-                                    std::string &Scratch) {
+SymbolNameLocation getPreferredLocation(const Location &ASTLoc,
+                                        const SymbolNameLocation &IdxLoc,
+                                        std::string &Scratch) {
   // Also use a mock symbol for the index location so that other fields (e.g.
   // definition) are not factored into the preference.
   Symbol ASTSym, IdxSym;
   ASTSym.ID = IdxSym.ID = SymbolID("mock_symbol_id");
-  ASTSym.CanonicalDeclaration = toIndexLocation(ASTLoc, Scratch);
-  IdxSym.CanonicalDeclaration = IdxLoc;
+  ASTSym.CanonicalDeclaration.NameLocation = toIndexLocation(ASTLoc, Scratch);
+  IdxSym.CanonicalDeclaration.NameLocation = IdxLoc;
   auto Merged = mergeSymbol(ASTSym, IdxSym);
-  return Merged.CanonicalDeclaration;
+  return Merged.CanonicalDeclaration.NameLocation;
 }
 
 std::vector<std::pair<const NamedDecl *, DeclRelationSet>>
@@ -309,8 +310,8 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
   Req.Subjects = std::move(IDs);
   std::vector<LocatedSymbol> Results;
   Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
-    auto DeclLoc =
-        indexToLSPLocation(Object.CanonicalDeclaration, MainFilePath);
+    auto DeclLoc = indexToLSPLocation(Object.CanonicalDeclaration.NameLocation,
+                                      MainFilePath);
     if (!DeclLoc) {
       elog("Find overrides: {0}", DeclLoc.takeError());
       return;
@@ -318,7 +319,8 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
     Results.emplace_back();
     Results.back().Name = Object.Name.str();
     Results.back().PreferredDeclaration = *DeclLoc;
-    auto DefLoc = indexToLSPLocation(Object.Definition, MainFilePath);
+    auto DefLoc =
+        indexToLSPLocation(Object.Definition.NameLocation, MainFilePath);
     if (!DefLoc) {
       elog("Failed to convert location: {0}", DefLoc.takeError());
       return;
@@ -350,23 +352,26 @@ void enhanceLocatedSymbolsFromIndex(llvm::MutableArrayRef<LocatedSymbol> Result,
     if (R.Definition) { // from AST
       // Special case: if the AST yielded a definition, then it may not be
       // the right *declaration*. Prefer the one from the index.
-      if (auto Loc = toLSPLocation(Sym.CanonicalDeclaration, MainFilePath))
+      if (auto Loc = toLSPLocation(Sym.CanonicalDeclaration.NameLocation,
+                                   MainFilePath))
         R.PreferredDeclaration = *Loc;
 
       // We might still prefer the definition from the index, e.g. for
       // generated symbols.
       if (auto Loc = toLSPLocation(
-              getPreferredLocation(*R.Definition, Sym.Definition, Scratch),
+              getPreferredLocation(*R.Definition, Sym.Definition.NameLocation,
+                                   Scratch),
               MainFilePath))
         R.Definition = *Loc;
     } else {
-      R.Definition = toLSPLocation(Sym.Definition, MainFilePath);
+      R.Definition = toLSPLocation(Sym.Definition.NameLocation, MainFilePath);
 
       // Use merge logic to choose AST or index declaration.
-      if (auto Loc = toLSPLocation(
-              getPreferredLocation(R.PreferredDeclaration,
-                                   Sym.CanonicalDeclaration, Scratch),
-              MainFilePath))
+      if (auto Loc =
+              toLSPLocation(getPreferredLocation(
+                                R.PreferredDeclaration,
+                                Sym.CanonicalDeclaration.NameLocation, Scratch),
+                            MainFilePath))
         R.PreferredDeclaration = *Loc;
     }
   });
@@ -592,7 +597,7 @@ std::vector<LocatedSymbol> locateSymbolTextually(const SpelledWord &Word,
       return;
 
     auto MaybeDeclLoc =
-        indexToLSPLocation(Sym.CanonicalDeclaration, MainFilePath);
+        indexToLSPLocation(Sym.CanonicalDeclaration.NameLocation, MainFilePath);
     if (!MaybeDeclLoc) {
       log("locateSymbolNamedTextuallyAt: {0}", MaybeDeclLoc.takeError());
       return;
@@ -602,7 +607,8 @@ std::vector<LocatedSymbol> locateSymbolTextually(const SpelledWord &Word,
     Located.Name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
     Located.ID = Sym.ID;
     if (Sym.Definition) {
-      auto MaybeDefLoc = indexToLSPLocation(Sym.Definition, MainFilePath);
+      auto MaybeDefLoc =
+          indexToLSPLocation(Sym.Definition.NameLocation, MainFilePath);
       if (!MaybeDefLoc) {
         log("locateSymbolNamedTextuallyAt: {0}", MaybeDefLoc.takeError());
         return;
@@ -1481,9 +1487,10 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
           Results.HasMore = true;
           return;
         }
-        const auto LSPLocDecl =
-            toLSPLocation(Object.CanonicalDeclaration, MainFilePath);
-        const auto LSPLocDef = toLSPLocation(Object.Definition, MainFilePath);
+        const auto LSPLocDecl = toLSPLocation(
+            Object.CanonicalDeclaration.NameLocation, MainFilePath);
+        const auto LSPLocDef =
+            toLSPLocation(Object.Definition.NameLocation, MainFilePath);
         if (LSPLocDecl && LSPLocDecl != LSPLocDef) {
           ReferencesResult::Reference Result;
           Result.Loc = {std::move(*LSPLocDecl), std::nullopt};
@@ -1742,11 +1749,9 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   HI.name = std::string(S.Name);
   HI.detail = (S.Scope + S.Name).str();
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
-  HI.selectionRange = Loc->range;
-  // FIXME: Populate 'range' correctly
-  // (https://github.com/clangd/clangd/issues/59).
-  HI.range = HI.selectionRange;
-  HI.uri = Loc->uri;
+  HI.selectionRange = Loc->first.range;
+  HI.range = Loc->second;
+  HI.uri = Loc->first.uri;
 
   return HI;
 }

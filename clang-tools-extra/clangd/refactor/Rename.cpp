@@ -40,7 +40,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-std::optional<std::string> filePath(const SymbolLocation &Loc,
+std::optional<std::string> filePath(const SymbolNameLocation &Loc,
                                     llvm::StringRef HintFilePath) {
   if (!Loc)
     return std::nullopt;
@@ -831,7 +831,7 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
   return FilteredChanges;
 }
 
-Range toRange(const SymbolLocation &L) {
+Range toRange(const SymbolNameLocation &L) {
   Range R;
   R.start.line = L.Start.line();
   R.start.character = L.Start.column();

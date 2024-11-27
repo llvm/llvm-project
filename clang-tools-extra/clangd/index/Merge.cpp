@@ -26,7 +26,7 @@ bool isIndexAuthoritative(const SymbolIndex::IndexedFiles &Index,
   // We expect the definition to see the canonical declaration, so it seems to
   // be enough to check only the definition if it exists.
   const char *OwningFile =
-      S.Definition ? S.Definition.FileURI : S.CanonicalDeclaration.FileURI;
+      S.Definition ? S.Definition.fileURI() : S.CanonicalDeclaration.fileURI();
   return (Index(OwningFile) & IndexContents::Symbols) != IndexContents::None;
 }
 } // namespace
@@ -223,15 +223,16 @@ void MergedIndex::relations(
 
 // Returns true if \p L is (strictly) preferred to \p R (e.g. by file paths). If
 // neither is preferred, this returns false.
-static bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
+static bool prefer(const SymbolDeclDefLocation &L,
+                   const SymbolDeclDefLocation &R) {
   if (!L)
     return false;
   if (!R)
     return true;
-  auto HasCodeGenSuffix = [](const SymbolLocation &Loc) {
+  auto HasCodeGenSuffix = [](const SymbolDeclDefLocation &Loc) {
     constexpr static const char *CodegenSuffixes[] = {".proto"};
     return llvm::any_of(CodegenSuffixes, [&](llvm::StringRef Suffix) {
-      return llvm::StringRef(Loc.FileURI).ends_with(Suffix);
+      return llvm::StringRef(Loc.fileURI()).ends_with(Suffix);
     });
   };
   return HasCodeGenSuffix(L) && !HasCodeGenSuffix(R);
@@ -245,9 +246,9 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
   bool PreferR = R.Definition && !L.Definition;
   // Merge include headers only if both have definitions or both have no
   // definition; otherwise, only accumulate references of common includes.
-  assert(L.Definition.FileURI && R.Definition.FileURI);
+  assert(L.Definition.fileURI() && R.Definition.fileURI());
   bool MergeIncludes =
-      bool(*L.Definition.FileURI) == bool(*R.Definition.FileURI);
+      bool(*L.Definition.fileURI()) == bool(*R.Definition.fileURI());
   Symbol S = PreferR ? R : L;        // The target symbol we're merging into.
   const Symbol &O = PreferR ? L : R; // The "other" less-preferred symbol.
 

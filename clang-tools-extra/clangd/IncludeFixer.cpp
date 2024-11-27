@@ -289,7 +289,7 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
   if (!Syms.empty()) {
     auto &Matched = *Syms.begin();
     if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
-        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
+        Matched.CanonicalDeclaration.fileURI() == Matched.Definition.fileURI())
       Fixes = fixesForSymbols(Syms);
   }
   return Fixes;
@@ -299,7 +299,7 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   auto Inserted = [&](const Symbol &Sym, llvm::StringRef Header)
       -> llvm::Expected<std::pair<std::string, bool>> {
     auto ResolvedDeclaring =
-        URI::resolve(Sym.CanonicalDeclaration.FileURI, File);
+        URI::resolve(Sym.CanonicalDeclaration.fileURI(), File);
     if (!ResolvedDeclaring)
       return ResolvedDeclaring.takeError();
     auto ResolvedInserted = toHeaderFile(Header, File);
@@ -616,7 +616,7 @@ IncludeFixer::lookupCached(const SymbolID &ID) const {
   if (!Syms.empty()) {
     auto &Matched = *Syms.begin();
     if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
-        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
+        Matched.CanonicalDeclaration.fileURI() == Matched.Definition.fileURI())
       Fixes = fixesForSymbols(Syms);
   }
   auto E = LookupCache.try_emplace(ID, std::move(Syms));
