@@ -86,39 +86,38 @@ bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 }
 
 void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
+  ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
   BasicValueFactory &BVF = SVB.getBasicValueFactory();
 
   const QualType IntTy = C.getASTContext().IntTy;
 
+  // Using CallDescriptions to match on CallExpr, so no need
+  // to do null checks.
   const Expr *ChrootCE = Call.getOriginExpr();
-  if (!ChrootCE)
-    return;
-  const auto *CE = cast<CallExpr>(Call.getOriginExpr());
+  const auto *CE = cast<CallExpr>(ChrootCE);
 
   const LocationContext *LCtx = C.getLocationContext();
-  NonLoc RetVal = SVB.conjureSymbolVal(/*SymbolTag=*/nullptr, ChrootCE, LCtx,
-                                       IntTy, C.blockCount())
-                      .castAs<NonLoc>();
-
-  auto [StateChrootFailed, StateChrootSuccess] = state->assume(RetVal);
 
   const llvm::APSInt &Zero = BVF.getValue(0, IntTy);
   const llvm::APSInt &Minus1 = BVF.getValue(-1, IntTy);
 
+  // Setup path where chroot fails, returning -1
+  ProgramStateRef StateChrootFailed =
+      State->BindExpr(CE, LCtx, nonloc::ConcreteInt{Minus1});
   if (StateChrootFailed) {
     StateChrootFailed = StateChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED);
     StateChrootFailed = StateChrootFailed->set<ChrootCall>(ChrootCE);
-    C.addTransition(
-        StateChrootFailed->BindExpr(CE, LCtx, nonloc::ConcreteInt{Minus1}));
+    C.addTransition(StateChrootFailed);
   }
 
+  // Setup path where chroot succeeds, returning 0
+  ProgramStateRef StateChrootSuccess =
+      State->BindExpr(CE, LCtx, nonloc::ConcreteInt{Zero});
   if (StateChrootSuccess) {
     StateChrootSuccess = StateChrootSuccess->set<ChrootState>(ROOT_CHANGED);
     StateChrootSuccess = StateChrootSuccess->set<ChrootCall>(ChrootCE);
-    C.addTransition(
-        StateChrootSuccess->BindExpr(CE, LCtx, nonloc::ConcreteInt{Zero}));
+    C.addTransition(StateChrootSuccess);
   }
 }
 
@@ -137,8 +136,7 @@ void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
   if (const MemRegion *R = ArgVal.getAsRegion()) {
     R = R->StripCasts();
     if (const StringRegion* StrRegion= dyn_cast<StringRegion>(R)) {
-      const StringLiteral* Str = StrRegion->getStringLiteral();
-      if (Str->getString() == "/") {
+      if (StrRegion->getStringLiteral()->getString() == "/") {
         state = state->set<ChrootState>(JAIL_ENTERED);
       }
     }
@@ -175,37 +173,32 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
   if (matchesAny(Call, Chroot, Chdir))
     return;
 
-  // If jail state is ROOT_CHANGED, generate BugReport.
-  const ChrootKind k = C.getState()->get<ChrootState>();
-  if (k == ROOT_CHANGED) {
-    ExplodedNode *Err =
-        C.generateNonFatalErrorNode(C.getState(), C.getPredecessor());
-    if (!Err)
-      return;
-    const Expr *ChrootExpr = C.getState()->get<ChrootCall>();
+  // If jail state is not ROOT_CHANGED just return.
+  if (C.getState()->get<ChrootState>() != ROOT_CHANGED)
+    return;
 
-    const ExplodedNode *ChrootCallNode = getAcquisitionSite(Err, C);
-    assert(ChrootCallNode && "Could not find place of stream opening.");
+  // Generate bug report.
+  ExplodedNode *Err =
+      C.generateNonFatalErrorNode(C.getState(), C.getPredecessor());
+  if (!Err)
+    return;
+  const Expr *ChrootExpr = C.getState()->get<ChrootCall>();
+  assert(ChrootExpr && "Expected to find chroot call expansion.");
 
-    PathDiagnosticLocation LocUsedForUniqueing;
-    if (const Stmt *ChrootStmt = ChrootCallNode->getStmtForDiagnostics())
-      LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-          ChrootStmt, C.getSourceManager(),
-          ChrootCallNode->getLocationContext());
+  const ExplodedNode *ChrootCallNode = getAcquisitionSite(Err, C);
+  assert(ChrootCallNode && "Could not find node invoking chroot.");
 
-    std::unique_ptr<PathSensitiveBugReport> R =
-        std::make_unique<PathSensitiveBugReport>(
-            BT_BreakJail, R"(No call of chdir("/") immediately after chroot)",
-            Err, LocUsedForUniqueing,
-            ChrootCallNode->getLocationContext()->getDecl());
+  std::unique_ptr<PathSensitiveBugReport> R =
+      std::make_unique<PathSensitiveBugReport>(
+          BT_BreakJail, R"(No call of chdir("/") immediately after chroot)",
+          Err);
 
-    R->addNote("chroot called here",
-               PathDiagnosticLocation::create(ChrootCallNode->getLocation(),
-                                              C.getSourceManager()),
-               {ChrootExpr->getSourceRange()});
+  R->addNote("chroot called here",
+             PathDiagnosticLocation::create(ChrootCallNode->getLocation(),
+                                            C.getSourceManager()),
+             {ChrootExpr->getSourceRange()});
 
-    C.emitReport(std::move(R));
-  }
+  C.emitReport(std::move(R));
 }
 
 } // namespace
