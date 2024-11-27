@@ -6049,8 +6049,9 @@ ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
 
   // Check if SCEV exprs for instructions are identical.
   const SCEV *CommonSCEV = getSCEV(CommonInst);
-  bool SCEVExprsIdentical = all_of(drop_begin(PN->incoming_values()),
-      [this, CommonSCEV](Value *V) { return CommonSCEV == getSCEV(V); });
+  bool SCEVExprsIdentical =
+      all_of(drop_begin(PN->incoming_values()),
+             [this, CommonSCEV](Value *V) { return CommonSCEV == getSCEV(V); });
   return SCEVExprsIdentical ? CommonSCEV : nullptr;
 }
 
