@@ -344,7 +344,7 @@ extern const short *_tolower_tab_;
 #ifndef COMMON_INTERCEPTOR_STRNDUP_IMPL
 #define COMMON_INTERCEPTOR_STRNDUP_IMPL(ctx, s, size)                         \
   COMMON_INTERCEPTOR_ENTER(ctx, strndup, s, size);                            \
-  uptr copy_length = internal_strnlen(s, size);                               \
+  usize copy_length = internal_strnlen(s, size);                              \
   char *new_mem = (char *)WRAP(malloc)(copy_length + 1);                      \
   if (common_flags()->intercept_strndup) {                                    \
     COMMON_INTERCEPTOR_READ_STRING(ctx, s, Min(size, copy_length + 1));       \
@@ -445,7 +445,7 @@ INTERCEPTOR(SIZE_T, strnlen, const char *s, SIZE_T maxlen) {
 #endif
 
 #if SANITIZER_INTERCEPT_STRNDUP
-INTERCEPTOR(char*, strndup, const char *s, uptr size) {
+INTERCEPTOR(char*, strndup, const char *s, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_STRNDUP_IMPL(ctx, s, size);
 }
@@ -455,7 +455,7 @@ INTERCEPTOR(char*, strndup, const char *s, uptr size) {
 #endif // SANITIZER_INTERCEPT_STRNDUP
 
 #if SANITIZER_INTERCEPT___STRNDUP
-INTERCEPTOR(char*, __strndup, const char *s, uptr size) {
+INTERCEPTOR(char*, __strndup, const char *s, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_STRNDUP_IMPL(ctx, s, size);
 }
@@ -494,7 +494,7 @@ INTERCEPTOR(int, strcmp, const char *s1, const char *s2) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strcmp, s1, s2);
   unsigned char c1, c2;
-  uptr i;
+  usize i;
   for (i = 0;; i++) {
     c1 = (unsigned char)s1[i];
     c2 = (unsigned char)s2[i];
@@ -511,23 +511,23 @@ INTERCEPTOR(int, strcmp, const char *s1, const char *s2) {
 }
 
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_strncmp, uptr called_pc,
-                              const char *s1, const char *s2, uptr n,
+                              const char *s1, const char *s2, usize n,
                               int result)
 
-INTERCEPTOR(int, strncmp, const char *s1, const char *s2, uptr size) {
+INTERCEPTOR(int, strncmp, const char *s1, const char *s2, usize size) {
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return internal_strncmp(s1, s2, size);
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strncmp, s1, s2, size);
   unsigned char c1 = 0, c2 = 0;
-  uptr i;
+  usize i;
   for (i = 0; i < size; i++) {
     c1 = (unsigned char)s1[i];
     c2 = (unsigned char)s2[i];
     if (c1 != c2 || c1 == '\0') break;
   }
-  uptr i1 = i;
-  uptr i2 = i;
+  usize i1 = i;
+  usize i2 = i;
   if (common_flags()->strict_string_checks) {
     for (; i1 < size && s1[i1]; i1++) {}
     for (; i2 < size && s2[i2]; i2++) {}
@@ -561,7 +561,7 @@ INTERCEPTOR(int, strcasecmp, const char *s1, const char *s2) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strcasecmp, s1, s2);
   unsigned char c1 = 0, c2 = 0;
-  uptr i;
+  usize i;
   for (i = 0;; i++) {
     c1 = (unsigned char)s1[i];
     c2 = (unsigned char)s2[i];
@@ -576,21 +576,21 @@ INTERCEPTOR(int, strcasecmp, const char *s1, const char *s2) {
 }
 
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_strncasecmp, uptr called_pc,
-                              const char *s1, const char *s2, uptr size,
+                              const char *s1, const char *s2, usize size,
                               int result)
 
 INTERCEPTOR(int, strncasecmp, const char *s1, const char *s2, SIZE_T size) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strncasecmp, s1, s2, size);
   unsigned char c1 = 0, c2 = 0;
-  uptr i;
+  usize i;
   for (i = 0; i < size; i++) {
     c1 = (unsigned char)s1[i];
     c2 = (unsigned char)s2[i];
     if (CharCaseCmp(c1, c2) != 0 || c1 == '\0') break;
   }
-  uptr i1 = i;
-  uptr i2 = i;
+  usize i1 = i;
+  usize i2 = i;
   if (common_flags()->strict_string_checks) {
     for (; i1 < size && s1[i1]; i1++) {}
     for (; i2 < size && s2[i2]; i2++) {}
@@ -613,8 +613,8 @@ INTERCEPTOR(int, strncasecmp, const char *s1, const char *s2, SIZE_T size) {
 #if SANITIZER_INTERCEPT_STRSTR || SANITIZER_INTERCEPT_STRCASESTR
 static inline void StrstrCheck(void *ctx, char *r, const char *s1,
                                const char *s2) {
-    uptr len1 = internal_strlen(s1);
-    uptr len2 = internal_strlen(s2);
+    usize len1 = internal_strlen(s1);
+    usize len2 = internal_strlen(s2);
     COMMON_INTERCEPTOR_READ_STRING(ctx, s1, r ? r - s1 + len2 : len1 + 1);
     COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, len2 + 1);
 }
@@ -758,7 +758,7 @@ INTERCEPTOR(char*, strchrnul, const char *s, int c) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strchrnul, s, c);
   char *result = REAL(strchrnul)(s, c);
-  uptr len = result - s + 1;
+  usize len = result - s + 1;
   if (common_flags()->intercept_strchr)
     COMMON_INTERCEPTOR_READ_STRING(ctx, s, len);
   return result;
@@ -833,13 +833,13 @@ INTERCEPTOR(char *, strpbrk, const char *s1, const char *s2) {
 
 #if SANITIZER_INTERCEPT_MEMCMP
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_memcmp, uptr called_pc,
-                              const void *s1, const void *s2, uptr n,
+                              const void *s1, const void *s2, usize n,
                               int result)
 
 // Common code for `memcmp` and `bcmp`.
 int MemcmpInterceptorCommon(void *ctx,
-                            int (*real_fn)(const void *, const void *, uptr),
-                            const void *a1, const void *a2, uptr size) {
+                            int (*real_fn)(const void *, const void *, usize),
+                            const void *a1, const void *a2, usize size) {
   if (common_flags()->intercept_memcmp) {
     if (common_flags()->strict_memcmp) {
       // Check the entire regions even if the first bytes of the buffers are
@@ -851,7 +851,7 @@ int MemcmpInterceptorCommon(void *ctx,
       unsigned char c1 = 0, c2 = 0;
       const unsigned char *s1 = (const unsigned char*)a1;
       const unsigned char *s2 = (const unsigned char*)a2;
-      uptr i;
+      usize i;
       for (i = 0; i < size; i++) {
         c1 = s1[i];
         c2 = s2[i];
@@ -871,7 +871,7 @@ int MemcmpInterceptorCommon(void *ctx,
   return result;
 }
 
-INTERCEPTOR(int, memcmp, const void *a1, const void *a2, uptr size) {
+INTERCEPTOR(int, memcmp, const void *a1, const void *a2, usize size) {
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return internal_memcmp(a1, a2, size);
   void *ctx;
@@ -885,7 +885,7 @@ INTERCEPTOR(int, memcmp, const void *a1, const void *a2, uptr size) {
 #endif
 
 #if SANITIZER_INTERCEPT_BCMP
-INTERCEPTOR(int, bcmp, const void *a1, const void *a2, uptr size) {
+INTERCEPTOR(int, bcmp, const void *a1, const void *a2, usize size) {
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return internal_memcmp(a1, a2, size);
   void *ctx;
@@ -914,7 +914,7 @@ INTERCEPTOR(void*, memchr, const void *s, int c, SIZE_T n) {
 #else
   void *res = REAL(memchr)(s, c, n);
 #endif
-  uptr len = res ? (char *)res - (const char *)s + 1 : n;
+  usize len = res ? (char *)res - (const char *)s + 1 : n;
   COMMON_INTERCEPTOR_READ_RANGE(ctx, s, len);
   return res;
 }
@@ -1138,7 +1138,7 @@ INTERCEPTOR(SSIZE_T, write, int fd, void *ptr, SIZE_T count) {
 #endif
 
 #if SANITIZER_INTERCEPT_FWRITE
-INTERCEPTOR(SIZE_T, fwrite, const void *p, uptr size, uptr nmemb, void *file) {
+INTERCEPTOR(SIZE_T, fwrite, const void *p, usize size, usize nmemb, void *file) {
   // libc file streams can call user-supplied functions, see fopencookie.
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, fwrite, p, size, nmemb, file);
@@ -6553,12 +6553,12 @@ static void MlockIsUnsupported() {
           SanitizerToolName);
 }
 
-INTERCEPTOR(int, mlock, const void *addr, uptr len) {
+INTERCEPTOR(int, mlock, const void *addr, usize len) {
   MlockIsUnsupported();
   return 0;
 }
 
-INTERCEPTOR(int, munlock, const void *addr, uptr len) {
+INTERCEPTOR(int, munlock, const void *addr, usize len) {
   MlockIsUnsupported();
   return 0;
 }
