@@ -5,7 +5,6 @@ declare i32 @setjmp() returns_twice
 declare void @longjmp()
 declare ptr @malloc(i64)
 
-; FIXME: This is a miscompile.
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
 ; CHECK-NEXT:    [[MALLOC:%.*]] = call noalias ptr @malloc(i64 4)
@@ -18,7 +17,8 @@ define i32 @test() {
 ; CHECK-NEXT:    call void @longjmp()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[MALLOC]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %malloc = call noalias ptr @malloc(i64 4)
   store i32 10, ptr %malloc, align 4

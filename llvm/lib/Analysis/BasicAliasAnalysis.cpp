@@ -947,8 +947,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   //
   // Make sure the object has not escaped here, and then check that none of the
   // call arguments alias the object below.
+  //
+  // We model calls that can return twice (setjmp) as clobbering non-escaping
+  // objects, to model any accesses that may occur prior to the second return.
   if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false)) {
+      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false) &&
+      !Call->hasFnAttr(Attribute::ReturnsTwice)) {
 
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
