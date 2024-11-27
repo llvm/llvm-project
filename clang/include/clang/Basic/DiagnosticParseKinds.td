@@ -414,7 +414,7 @@ def err_function_scope_depth_exceeded : Error<
 def err_missing_comma_before_ellipsis : Error<
   "C requires a comma prior to the ellipsis in a variadic function type">;
 def warn_deprecated_missing_comma_before_ellipsis : Warning<
-  "variadic parameters that are not preceded by a comma are deprecated">,
+  "declaration of a variadic function without a comma before '...' is deprecated">,
   InGroup<DeprecatedMissingCommaVariadicParam>;
 def err_unexpected_typedef_ident : Error<
   "unexpected type name %0: expected identifier">;
