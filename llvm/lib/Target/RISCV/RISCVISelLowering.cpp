@@ -5168,7 +5168,7 @@ static bool isCompressMask(ArrayRef<int> Mask) {
     }
     if (SawUndef)
       return false;
-    if (i > (unsigned)Mask[i])
+    if (i > Mask[i])
       return false;
     if (Mask[i] <= Last)
       return false;
@@ -5399,13 +5399,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // into them.  The mask constants are also smaller than the index vector
     // constants, and thus easier to materialize.
     if (isCompressMask(Mask)) {
-      SmallVector<SDValue> MaskVals;
-      MaskVals.resize(NumElts, DAG.getConstant(false, DL, XLenVT));
-      for (const auto &Idx : enumerate(Mask)) {
-        if (Idx.value() == -1)
+      SmallVector<SDValue> MaskVals(NumElts,
+                                    DAG.getConstant(false, DL, XLenVT));
+      for (auto Idx : Mask) {
+        if (Idx == -1)
           break;
-        assert(Idx.value() >= 0 && (unsigned)Idx.value() < NumElts);
-        MaskVals[Idx.value()] = DAG.getConstant(true, DL, XLenVT);
+        assert(Idx >= 0 && (unsigned)Idx < NumElts);
+        MaskVals[Idx] = DAG.getConstant(true, DL, XLenVT);
       }
       MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
       SDValue CompressMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
