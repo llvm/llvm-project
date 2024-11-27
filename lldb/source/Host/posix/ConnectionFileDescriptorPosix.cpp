@@ -543,7 +543,7 @@ lldb::ConnectionStatus ConnectionFileDescriptor::AcceptSocket(
 
   if (!error.Fail()) {
     post_listen_callback(*listening_socket);
-    error = listening_socket->Accept(accepted_socket);
+    error = listening_socket->Accept(/*timeout=*/std::nullopt, accepted_socket);
   }
 
   if (!error.Fail()) {
