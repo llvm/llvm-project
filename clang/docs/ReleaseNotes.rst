@@ -725,6 +725,7 @@ Bug Fixes to C++ Support
 - Clang now uses valid deduced type locations when diagnosing functions with trailing return type
   missing placeholder return type. (#GH78694)
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
+- Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
