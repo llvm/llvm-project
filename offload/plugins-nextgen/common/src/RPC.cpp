@@ -31,7 +31,7 @@ RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
-  return Handler.isSymbolInImage(Device, Image, "__llvm_libc_rpc_client");
+  return Handler.isSymbolInImage(Device, Image, "__llvm_rpc_client");
 #else
   return false;
 #endif
@@ -51,19 +51,14 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
         "Failed to initialize RPC server for device %d", Device.getDeviceId());
 
   // Get the address of the RPC client from the device.
-  void *ClientPtr;
-  plugin::GlobalTy ClientGlobal("__llvm_libc_rpc_client", sizeof(void *));
+  plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));
   if (auto Err =
           Handler.getGlobalMetadataFromDevice(Device, Image, ClientGlobal))
     return Err;
 
-  if (auto Err = Device.dataRetrieve(&ClientPtr, ClientGlobal.getPtr(),
-                                     sizeof(void *), nullptr))
-    return Err;
-
   rpc::Client client(NumPorts, RPCBuffer);
-  if (auto Err =
-          Device.dataSubmit(ClientPtr, &client, sizeof(rpc::Client), nullptr))
+  if (auto Err = Device.dataSubmit(ClientGlobal.getPtr(), &client,
+                                   sizeof(rpc::Client), nullptr))
     return Err;
   Buffers[Device.getDeviceId()] = RPCBuffer;
 
