@@ -1594,7 +1594,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return false;
 
   SmallVector<Expr *, 3> NewArgs;
-  auto BuildTypeIdentityArg = [PromiseType] (Sema& S, SourceLocation Loc) -> Expr * {
+  auto BuildTypeIdentityArg = [PromiseType](Sema &S,
+                                            SourceLocation Loc) -> Expr * {
     std::optional<QualType> SpecializedTypeIdentity =
         S.instantiateSpecializedTypeIdentity(PromiseType);
     if (!SpecializedTypeIdentity)
