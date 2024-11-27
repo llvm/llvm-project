@@ -520,6 +520,7 @@ bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
 
 size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
   size_t result = 0;
+
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore back-edges.
     if (DT.dominates(BB, P))

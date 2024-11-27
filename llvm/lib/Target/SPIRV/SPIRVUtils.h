@@ -84,11 +84,10 @@ class PartialOrderingVisitor {
   // Visits |BB| with the current rank being |Rank|.
   size_t visit(BasicBlock *BB, size_t Rank);
 
+  size_t GetNodeRank(BasicBlock *BB) const;
   bool CanBeVisited(BasicBlock *BB) const;
 
 public:
-  size_t GetNodeRank(BasicBlock *BB) const;
-
   // Build the visitor to operate on the function F.
   PartialOrderingVisitor(Function &F);
 
