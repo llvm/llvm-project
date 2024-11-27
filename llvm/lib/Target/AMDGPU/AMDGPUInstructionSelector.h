@@ -335,6 +335,35 @@ private:
   void renderOpSelTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
 
+  void renderSrcAndDstSelToOpSelXForm_0_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_0_1(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_1_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_1_1(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderDstSelToOpSelXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
+
+  void renderSrcSelToOpSelXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_2_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderDstSelToOpSel3XFormXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
+
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
 
