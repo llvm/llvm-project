@@ -41,24 +41,18 @@ protected:
     return sortBlocks(*F);
   }
 
-  void checkBasicBlockOrder(
-      std::vector<std::pair<const char *, size_t>> &&Expected) {
+  void checkBasicBlockOrder(std::vector<const char *> &&Expected) {
     llvm::Function *F = M->getFunction("main");
-    PartialOrderingVisitor Visitor(*F);
-
     auto It = F->begin();
-    for (const auto &[Name, Rank] : Expected) {
+    for (const char *Name : Expected) {
       ASSERT_TRUE(It != F->end())
           << "Expected block \"" << Name
           << "\" but reached the end of the function instead.";
       ASSERT_TRUE(It->getName() == Name)
           << "Error: expected block \"" << Name << "\" got \"" << It->getName()
           << "\"";
-      ASSERT_EQ(Rank, Visitor.GetNodeRank(&*It))
-          << "Bad rank for BB \"" << It->getName() << "\"";
       It++;
     }
-    EXPECT_TRUE(It == F->end());
     ASSERT_TRUE(It == F->end())
         << "No more blocks were expected, but function has more.";
   }
@@ -75,6 +69,7 @@ TEST_F(SPIRVSortBlocksTest, DefaultRegion) {
     }
   )";
 
+  // No sorting is required.
   EXPECT_FALSE(run(Assembly));
 }
 
@@ -91,7 +86,7 @@ TEST_F(SPIRVSortBlocksTest, BasicBlockSwap) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder({{"entry", 0}, {"middle", 1}, {"exit", 2}});
+  checkBasicBlockOrder({"entry", "middle", "exit"});
 }
 
 // Skip condition:
@@ -112,7 +107,7 @@ TEST_F(SPIRVSortBlocksTest, SkipCondition) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder({{"entry", 0}, {"a", 1}, {"c", 2}});
+  checkBasicBlockOrder({"entry", "a", "c"});
 }
 
 // Simple loop:
@@ -137,8 +132,7 @@ TEST_F(SPIRVSortBlocksTest, LoopOrdering) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder(
-      {{"entry", 0}, {"header", 1}, {"body", 2}, {"continue", 3}, {"end", 4}});
+  checkBasicBlockOrder({"entry", "header", "end", "body", "continue"});
 }
 
 // Diamond condition:
@@ -153,7 +147,7 @@ TEST_F(SPIRVSortBlocksTest, DiamondCondition) {
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
     entry:
       %1 = icmp ne i32 0, 0
-      br i1 %1, label %a, label %b
+      br i1 %1, label %b, label %a
     c:
       ret void
     b:
@@ -164,7 +158,7 @@ TEST_F(SPIRVSortBlocksTest, DiamondCondition) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder({{"entry", 0}, {"a", 1}, {"b", 1}, {"c", 2}});
+  checkBasicBlockOrder({"entry", "a", "b", "c"});
 }
 
 // Crossing conditions:
@@ -182,7 +176,7 @@ TEST_F(SPIRVSortBlocksTest, CrossingCondition) {
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
     entry:
       %1 = icmp ne i32 0, 0
-      br i1 %1, label %a, label %b
+      br i1 %1, label %b, label %a
     e:
       ret void
     c:
@@ -192,13 +186,12 @@ TEST_F(SPIRVSortBlocksTest, CrossingCondition) {
     d:
       br label %e
     a:
-      br i1 %1, label %c, label %d
+      br i1 %1, label %d, label %c
     }
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder(
-      {{"entry", 0}, {"a", 1}, {"b", 1}, {"c", 2}, {"d", 2}, {"e", 3}});
+  checkBasicBlockOrder({"entry", "a", "b", "c", "d", "e"});
 }
 
 // Irreducible CFG
@@ -238,7 +231,7 @@ TEST_F(SPIRVSortBlocksTest, IrreducibleOrdering) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder({{"entry", 0}, {"a", 1}, {"b", 2}, {"c", 3}});
+  checkBasicBlockOrder({"entry", "a", "b", "c"});
 }
 
 TEST_F(SPIRVSortBlocksTest, IrreducibleOrderingBeforeReduction) {
@@ -249,7 +242,7 @@ TEST_F(SPIRVSortBlocksTest, IrreducibleOrderingBeforeReduction) {
       br label %a
 
     c:
-      br i1 %1, label %d, label %e
+      br i1 %1, label %e, label %d
 
     e:
       ret void
@@ -267,8 +260,7 @@ TEST_F(SPIRVSortBlocksTest, IrreducibleOrderingBeforeReduction) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder(
-      {{"entry", 0}, {"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}, {"e", 5}});
+  checkBasicBlockOrder({"entry", "a", "b", "c", "d", "e"});
 }
 
 TEST_F(SPIRVSortBlocksTest, LoopDiamond) {
@@ -280,11 +272,11 @@ TEST_F(SPIRVSortBlocksTest, LoopDiamond) {
     header:
       br i1 %1, label %body, label %end
     body:
-      br i1 %1, label %inside_a, label %break
+      br i1 %1, label %break, label %inside_a
     inside_a:
       br label %inside_b
     inside_b:
-      br i1 %1, label %inside_c, label %inside_d
+      br i1 %1, label %inside_d, label %inside_c
     inside_c:
       br label %continue
     inside_d:
@@ -299,16 +291,8 @@ TEST_F(SPIRVSortBlocksTest, LoopDiamond) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder({{"entry", 0},
-                        {"header", 1},
-                        {"body", 2},
-                        {"inside_a", 3},
-                        {"inside_b", 4},
-                        {"inside_c", 5},
-                        {"inside_d", 5},
-                        {"continue", 6},
-                        {"break", 7},
-                        {"end", 8}});
+  checkBasicBlockOrder({"entry", "header", "body", "inside_a", "inside_b",
+                        "inside_c", "inside_d", "continue", "break", "end"});
 }
 
 TEST_F(SPIRVSortBlocksTest, LoopNested) {
@@ -337,34 +321,60 @@ TEST_F(SPIRVSortBlocksTest, LoopNested) {
   )";
 
   EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder({{"entry", 0},
-                        {"a", 1},
-                        {"b", 2},
-                        {"c", 3},
-                        {"e", 4},
-                        {"f", 5},
-                        {"d", 6},
-                        {"g", 7},
-                        {"h", 8}});
+  checkBasicBlockOrder({"entry", "a", "b", "c", "e", "f", "d", "g", "h"});
 }
 
 TEST_F(SPIRVSortBlocksTest, IfNested) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
     entry:
-      br i1 true, label %a, label %d
+      br i1 true, label %d, label %a
+    i:
+      br label %j
+    j:
+      ret void
     a:
+      br i1 true, label %b, label %c
+    d:
+      br i1 true, label %f, label %e
+    e:
+      br label %i
+    b:
+      br label %c
+    f:
+      br i1 true, label %h, label %g
+    g:
+      br label %h
+    c:
+      br label %j
+    h:
+      br label %i
+    }
+  )";
+  EXPECT_TRUE(run(Assembly));
+  checkBasicBlockOrder(
+      {"entry", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j"});
+}
+
+// Same as above, but this time blocks are already sorted, so no need to reorder
+// them.
+TEST_F(SPIRVSortBlocksTest, IfNestedSorted) {
+  StringRef Assembly = R"(
+    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+    entry:
+      br i1 true, label %d, label %z
+    z:
       br i1 true, label %b, label %c
     b:
       br label %c
     c:
       br label %j
     d:
-      br i1 true, label %e, label %f
+      br i1 true, label %f, label %e
     e:
       br label %i
     f:
-      br i1 true, label %g, label %h
+      br i1 true, label %h, label %g
     g:
       br label %h
     h:
@@ -375,16 +385,5 @@ TEST_F(SPIRVSortBlocksTest, IfNested) {
       ret void
     }
   )";
-  EXPECT_TRUE(run(Assembly));
-  checkBasicBlockOrder({{"entry", 0},
-                        {"a", 1},
-                        {"d", 1},
-                        {"b", 2},
-                        {"e", 2},
-                        {"f", 2},
-                        {"c", 3},
-                        {"g", 3},
-                        {"h", 4},
-                        {"i", 5},
-                        {"j", 6}});
+  EXPECT_FALSE(run(Assembly));
 }
