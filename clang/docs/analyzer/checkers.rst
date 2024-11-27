@@ -1899,6 +1899,29 @@ Check the size argument passed into C string functions for common erroneous patt
      // warn: potential buffer overflow
  }
 
+.. _unix-cstring-NotNullTerminated:
+
+unix.cstring.NotNullTerminated (C)
+""""""""""""""""""""""""""""""""""
+Check for arguments which are not null-terminated strings;
+applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
+
+Only very fundamental cases are detected where the passed memory block is
+absolutely different from a null-terminated string. This checker does not
+find if a memory buffer is passed where the terminating zero character
+is missing.
+
+.. code-block:: c
+
+ void test1() {
+   int l = strlen((char *)&test1); // warn
+ }
+
+ void test2() {
+ label:
+   int l = strlen((char *)&&label); // warn
+ }
+
 .. _unix-cstring-NullArg:
 
 unix.cstring.NullArg (C)
@@ -3365,29 +3388,6 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmem
  void test() {
    int a[4] = {0};
    memcpy(a + 2, a + 1, 8); // warn
- }
-
-.. _alpha-unix-cstring-NotNullTerminated:
-
-alpha.unix.cstring.NotNullTerminated (C)
-""""""""""""""""""""""""""""""""""""""""
-Check for arguments which are not null-terminated strings;
-applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
-
-Only very fundamental cases are detected where the passed memory block is
-absolutely different from a null-terminated string. This checker does not
-find if a memory buffer is passed where the terminating zero character
-is missing.
-
-.. code-block:: c
-
- void test1() {
-   int l = strlen((char *)&test); // warn
- }
-
- void test2() {
- label:
-   int l = strlen((char *)&&label); // warn
  }
 
 .. _alpha-unix-cstring-OutOfBounds:
