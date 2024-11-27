@@ -719,10 +719,8 @@ def warn_empty_init_statement : Warning<
 def err_keyword_as_parameter : Error <
   "invalid parameter name: '%0' is a keyword">;
 def warn_pre_cxx26_ambiguous_pack_indexing_type : Warning<
-  "parameter packs without specifying a name would become a pack indexing "
-  "declaration in C++2c onwards">, InGroup<CXXPre26Compat>;
-def note_add_a_name_to_pre_cxx26_parameter_packs : Note<
-  "add a name to disambiguate">;
+  "%0 is no longer a pack expansion but a pack "
+  "indexing type; add a name to specify a pack expansion">, InGroup<CXXPre26Compat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;
