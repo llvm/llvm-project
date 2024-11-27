@@ -4196,6 +4196,38 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
   if ((Desc.TSFlags & SIInstrFlags::IsMAI) == 0)
     return true;
 
+  int BlgpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
+  if (BlgpIdx != -1) {
+    if (const MFMA_F8F6F4_Info *Info = AMDGPU::isMFMA_F8F6F4(Opc)) {
+      int CbszIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
+
+      unsigned CBSZ = Inst.getOperand(CbszIdx).getImm();
+      unsigned BLGP = Inst.getOperand(BlgpIdx).getImm();
+
+      // Validate the correct register size was used for the floating point
+      // format operands
+
+      bool Success = true;
+      if (Info->NumRegsSrcA != mfmaScaleF8F6F4FormatToNumRegs(CBSZ)) {
+        int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+        Error(getRegLoc(mc2PseudoReg(Inst.getOperand(Src0Idx).getReg()),
+                        Operands),
+              "wrong register tuple size for cbsz value " + Twine(CBSZ));
+        Success = false;
+      }
+
+      if (Info->NumRegsSrcB != mfmaScaleF8F6F4FormatToNumRegs(BLGP)) {
+        int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+        Error(getRegLoc(mc2PseudoReg(Inst.getOperand(Src1Idx).getReg()),
+                        Operands),
+              "wrong register tuple size for blgp value " + Twine(BLGP));
+        Success = false;
+      }
+
+      return Success;
+    }
+  }
+
   const int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
   if (Src2Idx == -1)
     return true;
