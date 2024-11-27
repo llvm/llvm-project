@@ -177,8 +177,9 @@ static void *ReturnNullptrOnOOMOrDie(uptr size, const char *mem_type,
   //  This does not seem to be officially documented, but is corroborated here:
   //  https://stackoverflow.com/questions/45833674/why-does-virtualalloc-fail-for-lpaddress-greater-than-0x6ffffffffff
 
-  // Note - It's possible that 'ERROR_COMMITMENT_LIMIT' needs to be handled here as well.
-  // It is currently not handled due to the lack of a reproducer that induces the error code.
+  // Note - It's possible that 'ERROR_COMMITMENT_LIMIT' needs to be handled here
+  // as well. It is currently not handled due to the lack of a reproducer that
+  // induces the error code.
   if (last_error == ERROR_NOT_ENOUGH_MEMORY ||
       last_error == ERROR_INVALID_PARAMETER)
     return nullptr;
