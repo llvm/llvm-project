@@ -23,7 +23,7 @@
 !ty_f128  = !fir.type<tf128{i:f128}>
 !ty_bf16  = !fir.type<tbf16{i:bf16}>
 !ty_char1 = !fir.type<tchar1{i:!fir.char<1>}>
-!ty_char2 = !fir.type<tchar2{i:!fir.char<2>}>
+!ty_char2 = !fir.type<tchar2{i:!fir.char<1,2>}>
 !ty_log1  = !fir.type<tlog1{i:!fir.logical<1>}>
 !ty_log2  = !fir.type<tlog2{i:!fir.logical<2>}>
 !ty_log4  = !fir.type<tlog4{i:!fir.logical<4>}>

@@ -1183,20 +1183,25 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
                       "VALUE derived type argument and type return");
         })
         .template Case<fir::LogicalType>([&](fir::LogicalType logicalTy) {
-          const auto width = kindMap.getLogicalBitsize(logicalTy.getFKind());
+          const unsigned width =
+              kindMap.getLogicalBitsize(logicalTy.getFKind());
           if (width != 0)
             flatTypes.push_back(
                 mlir::IntegerType::get(type.getContext(), width));
         })
         .template Case<fir::CharacterType>([&](fir::CharacterType charTy) {
-          flatTypes.push_back(mlir::IntegerType::get(type.getContext(), 8));
+          assert(kindMap.getCharacterBitsize(charTy.getFKind()) <= 8 &&
+                 "the bit size of characterType as an interoperable type must "
+                 "not exceed 8");
+          for (unsigned i = 0; i < charTy.getLen(); ++i)
+            flatTypes.push_back(mlir::IntegerType::get(type.getContext(), 8));
         })
         .template Case<fir::SequenceType>([&](fir::SequenceType seqTy) {
           if (!seqTy.hasDynamicExtents()) {
             std::size_t numOfEle = seqTy.getConstantArraySize();
-            auto eleTy = seqTy.getEleTy();
+            mlir::Type eleTy = seqTy.getEleTy();
             if (!mlir::isa<mlir::IntegerType, mlir::FloatType>(eleTy)) {
-              auto subTypeList = flattenTypeList(loc, eleTy);
+              std::vector<mlir::Type> subTypeList = flattenTypeList(loc, eleTy);
               if (subTypeList.size() != 0)
                 for (std::size_t i = 0; i < numOfEle; ++i)
                   llvm::copy(subTypeList, std::back_inserter(flatTypes));
@@ -1209,18 +1214,18 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
                       "VALUE derived type argument and type return");
         })
         .template Case<fir::RecordType>([&](fir::RecordType recTy) {
-          for (auto component : recTy.getTypeList()) {
+          for (auto &component : recTy.getTypeList()) {
             mlir::Type eleTy = component.second;
-            auto subTypeList = flattenTypeList(loc, eleTy);
+            std::vector<mlir::Type> subTypeList = flattenTypeList(loc, eleTy);
             if (subTypeList.size() != 0)
               llvm::copy(subTypeList, std::back_inserter(flatTypes));
           }
         })
         .template Case<fir::VectorType>([&](fir::VectorType vecTy) {
           std::size_t numOfEle = vecTy.getLen();
-          auto eleTy = vecTy.getEleTy();
+          mlir::Type eleTy = vecTy.getEleTy();
           if (!(mlir::isa<mlir::IntegerType, mlir::FloatType>(eleTy))) {
-            auto subTypeList = flattenTypeList(loc, eleTy);
+            std::vector<mlir::Type> subTypeList = flattenTypeList(loc, eleTy);
             if (subTypeList.size() != 0)
               for (std::size_t i = 0; i < numOfEle; ++i)
                 llvm::copy(subTypeList, std::back_inserter(flatTypes));
@@ -1244,11 +1249,11 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
   /// when flattened it contains a single fp value, fp+fp, or int+fp of
   /// appropriate size).
   bool detectFARsEligibleStruct(mlir::Location loc, fir::RecordType recTy,
-                                mlir::Type &Field1Ty,
-                                mlir::Type &Field2Ty) const {
+                                mlir::Type &field1Ty,
+                                mlir::Type &field2Ty) const {
 
-    Field1Ty = Field2Ty = nullptr;
-    auto flatTypes = flattenTypeList(loc, recTy);
+    field1Ty = field2Ty = nullptr;
+    std::vector<mlir::Type> flatTypes = flattenTypeList(loc, recTy);
     size_t flatSize = flatTypes.size();
 
     // Cannot be eligible if the number of flattened types is equal to 0 or
@@ -1259,31 +1264,31 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     bool isFirstAvaliableFloat = false;
 
     assert((mlir::isa<mlir::IntegerType, mlir::FloatType>(flatTypes[0])) &&
-           "Type must be int or float after flattening");
+           "Type must be integerType or floatType after flattening");
     if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(flatTypes[0])) {
-      auto Size = floatTy.getWidth();
+      const unsigned Size = floatTy.getWidth();
       // Can't be eligible if larger than the FP registers. Half precision isn't
       // currently supported on LoongArch and the ABI hasn't been confirmed, so
       // default to the integer ABI in that case.
       if (Size > FRLen || Size < 32)
         return false;
       isFirstAvaliableFloat = true;
-      Field1Ty = floatTy;
+      field1Ty = floatTy;
     } else if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(flatTypes[0])) {
       if (intTy.getWidth() > GRLen)
         return false;
-      Field1Ty = intTy;
+      field1Ty = intTy;
     }
 
     // flatTypes has two elements
     if (flatSize == 2) {
       assert((mlir::isa<mlir::IntegerType, mlir::FloatType>(flatTypes[1])) &&
-             "Type must be integer or float after flattening");
+             "Type must be integerType or floatType after flattening");
       if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(flatTypes[1])) {
-        auto Size = floatTy.getWidth();
+        const unsigned Size = floatTy.getWidth();
         if (Size > FRLen || Size < 32)
           return false;
-        Field2Ty = floatTy;
+        field2Ty = floatTy;
         return true;
       } else if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(flatTypes[1])) {
         // Can't be eligible if an integer type was already found (int+int pairs
@@ -1292,7 +1297,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
           return false;
         if (intTy.getWidth() > GRLen)
           return false;
-        Field2Ty = intTy;
+        field2Ty = intTy;
         return true;
       }
     }
@@ -1308,9 +1313,10 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
     llvm::TypeSwitch<mlir::Type>(type)
         .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
-          const auto width = intTy.getWidth();
-          assert(width <= 128 &&
-                 "integer type with width more than 128 bits is unexpected");
+          const unsigned width = intTy.getWidth();
+          if (width > 128)
+            TODO(loc,
+                 "integerType with width exceeding 128 bits is unsupported");
           if (width == 0)
             return;
           if (width <= GRLen)
@@ -1319,9 +1325,9 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
             GARsLeft = GARsLeft - 2;
         })
         .template Case<mlir::FloatType>([&](mlir::FloatType floatTy) {
-          const auto width = floatTy.getWidth();
-          assert(width <= 128 &&
-                 "float type with width more than 128 bits is unexpected");
+          const unsigned width = floatTy.getWidth();
+          if (width > 128)
+            TODO(loc, "floatType with width exceeding 128 bits is unsupported");
           if (width == 0)
             return;
           if (width == 32 || width == 64)
@@ -1344,10 +1350,10 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
   bool hasEnoughRegisters(mlir::Location loc, int GARsLeft, int FARsLeft,
                           const Marshalling &previousArguments,
-                          const mlir::Type &Field1Ty,
-                          const mlir::Type &Field2Ty) const {
+                          const mlir::Type &field1Ty,
+                          const mlir::Type &field2Ty) const {
 
-    for (auto typeAndAttr : previousArguments) {
+    for (auto &typeAndAttr : previousArguments) {
       const auto &attr = std::get<Attributes>(typeAndAttr);
       if (attr.isByVal()) {
         // Previous argument passed on the stack, and its address is passed in
@@ -1358,7 +1364,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
       // Previous aggregate arguments were marshalled into simpler arguments.
       const auto &type = std::get<mlir::Type>(typeAndAttr);
-      auto flatTypes = flattenTypeList(loc, type);
+      std::vector<mlir::Type> flatTypes = flattenTypeList(loc, type);
 
       for (auto &flatTy : flatTypes) {
         if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, flatTy))
@@ -1366,9 +1372,9 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
       }
     }
 
-    if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, Field1Ty))
+    if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, field1Ty))
       return false;
-    if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, Field2Ty))
+    if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, field2Ty))
       return false;
     return true;
   }
@@ -1383,7 +1389,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
     auto [recSize, recAlign] = fir::getTypeSizeAndAlignmentOrCrash(
         loc, recTy, getDataLayout(), kindMap);
-    auto context = recTy.getContext();
+    mlir::MLIRContext *context = recTy.getContext();
 
     if (recSize == 0) {
       TODO(loc, "unsupported empty struct type for BIND(C), "
@@ -1398,25 +1404,25 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     }
 
     // Pass by FARs(and GARs)
-    mlir::Type Field1Ty = nullptr, Field2Ty = nullptr;
-    if (detectFARsEligibleStruct(loc, recTy, Field1Ty, Field2Ty)) {
+    mlir::Type field1Ty = nullptr, field2Ty = nullptr;
+    if (detectFARsEligibleStruct(loc, recTy, field1Ty, field2Ty)) {
       if (hasEnoughRegisters(loc, GARsLeft, FARsLeft, previousArguments,
-                             Field1Ty, Field2Ty)) {
+                             field1Ty, field2Ty)) {
         if (!isResult) {
-          if (Field1Ty)
-            marshal.emplace_back(Field1Ty, AT{});
-          if (Field2Ty)
-            marshal.emplace_back(Field2Ty, AT{});
+          if (field1Ty)
+            marshal.emplace_back(field1Ty, AT{});
+          if (field2Ty)
+            marshal.emplace_back(field2Ty, AT{});
         } else {
-          // Field1Ty is always preferred over Field2Ty for assignment, so there
-          // will never be a case where Field1Ty == nullptr and Field2Ty !=
+          // field1Ty is always preferred over field2Ty for assignment, so there
+          // will never be a case where field1Ty == nullptr and field2Ty !=
           // nullptr.
-          if (Field1Ty && !Field2Ty)
-            marshal.emplace_back(Field1Ty, AT{});
-          else if (Field1Ty && Field2Ty)
+          if (field1Ty && !field2Ty)
+            marshal.emplace_back(field1Ty, AT{});
+          else if (field1Ty && field2Ty)
             marshal.emplace_back(
                 mlir::TupleType::get(context,
-                                     mlir::TypeRange{Field1Ty, Field2Ty}),
+                                     mlir::TypeRange{field1Ty, field2Ty}),
                 AT{/*alignment=*/0, /*byval=*/true});
         }
         return marshal;
