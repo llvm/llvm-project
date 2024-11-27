@@ -1163,8 +1163,7 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
   // copy to LR.
   if (LRLiveIn && UsedLRAsTemp) {
     auto CopyRegIt = getNextOrderedReg(OrderedCopyRegs.rbegin(),
-                                       OrderedCopyRegs.rend(),
-                                       CopyRegs);
+                                       OrderedCopyRegs.rend(), CopyRegs);
     assert(CopyRegIt != OrderedCopyRegs.rend());
     unsigned NumRegsPushed = FrameRecord.size() + SpilledGPRs.size();
     LLVM_DEBUG(
