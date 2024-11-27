@@ -540,7 +540,6 @@ define <vscale x 16 x double> @vpload_nxv16f64(ptr %ptr, <vscale x 16 x i1> %m, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB44_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
@@ -602,7 +601,6 @@ define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a4, a3
 ; CHECK-NEXT:  .LBB45_6:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t

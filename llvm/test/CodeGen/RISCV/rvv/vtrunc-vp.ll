@@ -175,7 +175,6 @@ define <vscale x 15 x i16> @vtrunc_nxv15i16_nxv15i64(<vscale x 15 x i64> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB12_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v20, v8, 0, v0.t
@@ -235,7 +234,6 @@ define <vscale x 32 x i7> @vtrunc_nxv32i7_nxv32i32(<vscale x 32 x i32> %a, <vsca
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB15_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v20, v8, 0, v0.t
@@ -271,7 +269,6 @@ define <vscale x 32 x i8> @vtrunc_nxv32i8_nxv32i32(<vscale x 32 x i32> %a, <vsca
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB16_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v20, v8, 0, v0.t
@@ -329,7 +326,6 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a5, a1
 ; CHECK-NEXT:  .LBB17_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v6, v7, a3
@@ -343,7 +339,6 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    sltu a3, a2, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a0, a3, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    addi a3, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a3) # Unknown-size Folded Reload
@@ -353,7 +348,6 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB17_6:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3

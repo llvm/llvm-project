@@ -2127,7 +2127,6 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB46_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; RV32-NEXT:    vmv1r.v v0, v7
 ; RV32-NEXT:    li a3, 24
 ; RV32-NEXT:    mul a1, a1, a3
@@ -2312,7 +2311,6 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; CHECK-ZVBB-NEXT:  # %bb.1:
 ; CHECK-ZVBB-NEXT:    mv a0, a1
 ; CHECK-ZVBB-NEXT:  .LBB46_2:
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-ZVBB-NEXT:    vmv1r.v v0, v24
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t

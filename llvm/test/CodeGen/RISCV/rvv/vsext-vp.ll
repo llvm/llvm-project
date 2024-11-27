@@ -168,7 +168,6 @@ define <vscale x 32 x i32> @vsext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB12_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vsext.vf4 v24, v8, v0.t

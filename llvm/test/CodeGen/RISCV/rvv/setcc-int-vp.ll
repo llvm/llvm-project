@@ -1118,7 +1118,6 @@ define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB96_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -1161,7 +1160,6 @@ define <vscale x 128 x i1> @icmp_eq_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB97_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t
@@ -1193,7 +1191,6 @@ define <vscale x 128 x i1> @icmp_eq_vx_swap_nxv128i8(<vscale x 128 x i8> %va, i8
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB98_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t
@@ -2278,7 +2275,6 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB189_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -2324,7 +2320,6 @@ define <vscale x 32 x i1> @icmp_eq_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:  .LBB190_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t
@@ -2359,7 +2354,6 @@ define <vscale x 32 x i1> @icmp_eq_vx_swap_nxv32i32(<vscale x 32 x i32> %va, i32
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:  .LBB191_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t

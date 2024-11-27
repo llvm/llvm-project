@@ -71,7 +71,6 @@ define <vscale x 16 x i64> @llrint_nxv16i64_nxv16f32(<vscale x 16 x float> %x, <
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v24, v8, v0.t

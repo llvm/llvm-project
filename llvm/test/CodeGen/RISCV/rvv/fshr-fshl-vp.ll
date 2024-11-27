@@ -1107,7 +1107,6 @@ define <vscale x 16 x i64> @fshr_v16i64(<vscale x 16 x i64> %a, <vscale x 16 x i
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a1
 ; CHECK-NEXT:  .LBB46_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 40
@@ -1267,7 +1266,6 @@ define <vscale x 16 x i64> @fshl_v16i64(<vscale x 16 x i64> %a, <vscale x 16 x i
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a3
 ; CHECK-NEXT:  .LBB47_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5

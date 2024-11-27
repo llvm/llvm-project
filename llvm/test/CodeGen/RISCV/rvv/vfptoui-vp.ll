@@ -525,7 +525,6 @@ define <vscale x 32 x i16> @vfptoui_nxv32i16_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB34_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.xu.f.w v24, v8, v0.t
@@ -557,7 +556,6 @@ define <vscale x 32 x i32> @vfptoui_nxv32i32_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB35_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8, v0.t

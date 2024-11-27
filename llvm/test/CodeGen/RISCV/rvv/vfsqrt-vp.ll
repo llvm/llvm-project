@@ -767,7 +767,6 @@ define <vscale x 16 x double> @vfsqrt_vv_nxv16f64(<vscale x 16 x double> %va, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB44_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t

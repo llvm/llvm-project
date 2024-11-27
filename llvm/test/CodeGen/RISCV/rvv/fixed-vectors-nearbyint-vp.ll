@@ -592,7 +592,6 @@ define <32 x double> @vp_nearbyint_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    lui a2, %hi(.LCPI26_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI26_0)(a2)

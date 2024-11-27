@@ -1610,7 +1610,6 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB32_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -1650,7 +1649,6 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x
 ; CHECK-ZVKB-NEXT:  # %bb.1:
 ; CHECK-ZVKB-NEXT:    mv a0, a1
 ; CHECK-ZVKB-NEXT:  .LBB32_2:
-; CHECK-ZVKB-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-ZVKB-NEXT:    vmv1r.v v0, v24
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t

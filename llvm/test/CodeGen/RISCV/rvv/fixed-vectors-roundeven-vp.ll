@@ -767,7 +767,6 @@ define <32 x double> @vp_roundeven_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v8, v0.t

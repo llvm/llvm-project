@@ -3122,7 +3122,6 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16(<vscale x 64 x i16> %va, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a3
 ; CHECK-NEXT:  .LBB46_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 3
@@ -3177,7 +3176,6 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16(<vscale x 64 x i16> %va, <vsc
 ; CHECK-ZVBB-NEXT:  # %bb.1:
 ; CHECK-ZVBB-NEXT:    mv a0, a1
 ; CHECK-ZVBB-NEXT:  .LBB46_2:
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-ZVBB-NEXT:    vmv1r.v v0, v24
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t

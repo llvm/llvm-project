@@ -648,7 +648,6 @@ define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB24_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    li a3, 24

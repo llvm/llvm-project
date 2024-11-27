@@ -429,7 +429,6 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:  .LBB32_6:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a1), v0.t

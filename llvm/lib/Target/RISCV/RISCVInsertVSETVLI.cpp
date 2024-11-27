@@ -1793,6 +1793,10 @@ static bool isRVVCopy(const MachineInstr &MI) {
 void RISCVInsertVSETVLI::enableVTYPEBeforeMove(MachineBasicBlock &MBB) {
   bool NeedVSETVL = true;
 
+  if (!BlockInfo[MBB.getNumber()].Pred.isUnknown() &&
+      BlockInfo[MBB.getNumber()].Pred.isValid())
+    NeedVSETVL = false;
+
   for (auto &MI : MBB) {
     if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags))
       NeedVSETVL = false;

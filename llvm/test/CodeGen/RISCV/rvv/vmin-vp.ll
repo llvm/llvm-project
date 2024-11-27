@@ -428,7 +428,6 @@ define <vscale x 128 x i8> @vmin_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB34_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t
@@ -993,7 +992,6 @@ define <vscale x 32 x i32> @vmin_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB80_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t
@@ -1055,7 +1053,6 @@ define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i3
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB82_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t

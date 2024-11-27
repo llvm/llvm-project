@@ -3749,7 +3749,6 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a1
 ; CHECK-NEXT:  .LBB128_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
@@ -9029,7 +9028,6 @@ define <vscale x 32 x half> @vfmsub_vf_nxv32f16(<vscale x 32 x half> %va, half %
 ; ZVFHMIN-NEXT:  # %bb.1:
 ; ZVFHMIN-NEXT:    mv a3, a2
 ; ZVFHMIN-NEXT:  .LBB282_2:
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; ZVFHMIN-NEXT:    vmv8r.v v16, v8
 ; ZVFHMIN-NEXT:    addi a4, sp, 16
 ; ZVFHMIN-NEXT:    vs8r.v v8, (a4) # Unknown-size Folded Spill

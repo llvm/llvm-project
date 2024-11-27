@@ -525,7 +525,6 @@ define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFH-NEXT:  # %bb.1:
 ; ZVFH-NEXT:    mv a0, a1
 ; ZVFH-NEXT:  .LBB34_2:
-; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; ZVFH-NEXT:    vmv1r.v v0, v24
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFH-NEXT:    vfncvt.f.x.w v24, v8, v0.t
@@ -553,7 +552,6 @@ define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFHMIN-NEXT:  # %bb.1:
 ; ZVFHMIN-NEXT:    mv a0, a1
 ; ZVFHMIN-NEXT:  .LBB34_2:
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v7
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -587,7 +585,6 @@ define <vscale x 32 x float> @vsitofp_nxv32f32_nxv32i32(<vscale x 32 x i32> %va,
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB35_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8, v0.t

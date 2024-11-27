@@ -581,7 +581,6 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB50_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
@@ -1362,7 +1361,6 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB118_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
@@ -1420,7 +1418,6 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB120_2:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t

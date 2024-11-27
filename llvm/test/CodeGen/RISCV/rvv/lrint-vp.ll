@@ -133,7 +133,6 @@ define <vscale x 16 x iXLen> @lrint_nxv16f32(<vscale x 16 x float> %x, <vscale x
 ; RV64-i64-NEXT:  # %bb.1:
 ; RV64-i64-NEXT:    mv a0, a1
 ; RV64-i64-NEXT:  .LBB4_2:
-; RV64-i64-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; RV64-i64-NEXT:    vmv1r.v v0, v24
 ; RV64-i64-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v24, v8, v0.t
