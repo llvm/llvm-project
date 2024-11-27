@@ -19,17 +19,18 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-constexpr size_t N_EXCEPTS = 3;
+constexpr size_t N_EXCEPTS = 4;
 
 constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
     // (input, RZ output, RU offset, RD offset, RN offset)
+    {0x2b45, 0x2b43, 1, 0, 1},
     {0x585c, 0x3ba3, 1, 0, 1},
     {0x5cb0, 0xbbff, 0, 1, 0},
     {0x51f5, 0xb80f, 0, 1, 0},
 }};
 
 LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
-  using FPBits = typename fputil::FPBits<float16>;
+  using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
 
   uint16_t x_u = xbits.uintval();
@@ -37,7 +38,7 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   float xf = x;
 
   // Range reduction:
-  // For !x| > pi/32, we perform range reduction as follows:
+  // For |x| > pi/32, we perform range reduction as follows:
   // Find k and y such that:
   //   x = (k + y) * pi/32
   //   k is an integer, |y| < 0.5
@@ -53,13 +54,19 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   	        sin(y * pi/32) * cos(k * pi/32)
 
   // Handle exceptional values
-  if (LIBC_UNLIKELY(x_abs == 0x585C || x_abs == 0x5cb0 || x_abs == 0x51f5)) {
+  if (LIBC_UNLIKELY(x_abs == 0x585c || x_abs == 0x5cb0 || x_abs == 0x51f5 ||
+			  x_abs == 0x2b45)) {
     bool x_sign = x_u >> 15;
     if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
   }
 
+  // Exhaustive tests show that for |x| <= 0x13d0, 1ULP rounding errors occur.
+  // To fix this, the following apply: 
+  // - When x >= 0, and rounding upward, sin(x) == x.
+  // - When x < 0, and rounding downward, sin(x) == x.
+  // - When x < 0, and rounding upward, sin(x) == (x - 1ULP)
   int rounding = fputil::quick_get_round();
   if (LIBC_UNLIKELY(x_abs <= 0x13d0)) {
     if (LIBC_UNLIKELY(x_abs == 0U))
@@ -75,16 +82,8 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
     }
   }
 
-  if (LIBC_UNLIKELY(x_abs == 0x2b45)) {
-    if (rounding == FE_DOWNWARD && xbits.is_neg()) {
-      x_u--;
-      return FPBits(x_u).get_val();
-    }
-  }
-
-  if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
-    // If value is equal to infinity
-    if (x_abs == 0x7c00) {
+  if (xbits.is_inf_or_nan()) {
+     if (xbits.is_inf()){
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
