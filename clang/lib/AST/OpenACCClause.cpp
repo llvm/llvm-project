@@ -44,6 +44,7 @@ bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
 bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
   return OpenACCNumWorkersClause::classof(C) ||
          OpenACCVectorLengthClause::classof(C) ||
+         OpenACCVectorClause::classof(C) || OpenACCWorkerClause::classof(C) ||
          OpenACCCollapseClause::classof(C) || OpenACCAsyncClause::classof(C);
 }
 OpenACCDefaultClause *OpenACCDefaultClause::Create(const ASTContext &C,
@@ -403,18 +404,44 @@ OpenACCGangClause::Create(const ASTContext &C, SourceLocation BeginLoc,
       OpenACCGangClause(BeginLoc, LParenLoc, GangKinds, IntExprs, EndLoc);
 }
 
+OpenACCWorkerClause::OpenACCWorkerClause(SourceLocation BeginLoc,
+                                         SourceLocation LParenLoc,
+                                         Expr *IntExpr, SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Worker, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((!IntExpr || IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "Int expression type not scalar/dependent");
+}
+
 OpenACCWorkerClause *OpenACCWorkerClause::Create(const ASTContext &C,
                                                  SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 Expr *IntExpr,
                                                  SourceLocation EndLoc) {
-  void *Mem = C.Allocate(sizeof(OpenACCWorkerClause));
-  return new (Mem) OpenACCWorkerClause(BeginLoc, EndLoc);
+  void *Mem =
+      C.Allocate(sizeof(OpenACCWorkerClause), alignof(OpenACCWorkerClause));
+  return new (Mem) OpenACCWorkerClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
+OpenACCVectorClause::OpenACCVectorClause(SourceLocation BeginLoc,
+                                         SourceLocation LParenLoc,
+                                         Expr *IntExpr, SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Vector, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((!IntExpr || IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "Int expression type not scalar/dependent");
 }
 
 OpenACCVectorClause *OpenACCVectorClause::Create(const ASTContext &C,
                                                  SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 Expr *IntExpr,
                                                  SourceLocation EndLoc) {
-  void *Mem = C.Allocate(sizeof(OpenACCVectorClause));
-  return new (Mem) OpenACCVectorClause(BeginLoc, EndLoc);
+  void *Mem =
+      C.Allocate(sizeof(OpenACCVectorClause), alignof(OpenACCVectorClause));
+  return new (Mem) OpenACCVectorClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -635,6 +662,26 @@ void OpenACCClausePrinter::VisitGangClause(const OpenACCGangClause &C) {
       OS << C.getExpr(I).first << ": ";
       printExpr(C.getExpr(I).second);
     }
+    OS << ")";
+  }
+}
+
+void OpenACCClausePrinter::VisitWorkerClause(const OpenACCWorkerClause &C) {
+  OS << "worker";
+
+  if (C.hasIntExpr()) {
+    OS << "(num: ";
+    printExpr(C.getIntExpr());
+    OS << ")";
+  }
+}
+
+void OpenACCClausePrinter::VisitVectorClause(const OpenACCVectorClause &C) {
+  OS << "vector";
+
+  if (C.hasIntExpr()) {
+    OS << "(length: ";
+    printExpr(C.getIntExpr());
     OS << ")";
   }
 }

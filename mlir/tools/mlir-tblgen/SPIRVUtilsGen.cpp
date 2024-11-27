@@ -1184,7 +1184,7 @@ static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
       utilsString;
   raw_string_ostream dSerFn(dSerFnString), dDesFn(dDesFnString),
       serFn(serFnString), deserFn(deserFnString);
-  Record *attrClass = records.getClass("Attr");
+  const Record *attrClass = records.getClass("Attr");
 
   // Emit the serialization and deserialization functions simultaneously.
   StringRef opVar("op");

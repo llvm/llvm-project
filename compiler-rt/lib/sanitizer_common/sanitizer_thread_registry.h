@@ -52,6 +52,7 @@ class ThreadContextBase {
   ThreadType thread_type;
 
   u32 parent_tid;
+  u32 stack_id;
   ThreadContextBase *next;  // For storing thread contexts in a list.
 
   atomic_uint32_t thread_destroyed; // To address race of Joined vs Finished
@@ -63,7 +64,7 @@ class ThreadContextBase {
   void SetFinished();
   void SetStarted(tid_t _os_id, ThreadType _thread_type, void *arg);
   void SetCreated(uptr _user_id, u64 _unique_id, bool _detached,
-                  u32 _parent_tid, void *arg);
+                  u32 _parent_tid, u32 _stack_tid, void *arg);
   void Reset();
 
   void SetDestroyed();
@@ -106,7 +107,11 @@ class SANITIZER_MUTEX ThreadRegistry {
 
   u32 NumThreadsLocked() const { return threads_.size(); }
 
-  u32 CreateThread(uptr user_id, bool detached, u32 parent_tid, void *arg);
+  u32 CreateThread(uptr user_id, bool detached, u32 parent_tid, u32 stack_tid,
+                   void *arg);
+  u32 CreateThread(uptr user_id, bool detached, u32 parent_tid, void *arg) {
+    return CreateThread(user_id, detached, parent_tid, 0, arg);
+  }
 
   typedef void (*ThreadCallback)(ThreadContextBase *tctx, void *arg);
   // Invokes callback with a specified arg for each thread context.

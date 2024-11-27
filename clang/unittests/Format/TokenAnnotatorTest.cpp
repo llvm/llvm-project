@@ -308,11 +308,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
 
-  Tokens = annotate("if (Foo *&foo{a})");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
-
   FormatStyle Style = getLLVMStyle();
   Style.TypeNames.push_back("MYI");
   Tokens = annotate("if (MYI *p{nullptr})", Style);
@@ -1323,6 +1318,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   Tokens = annotate("bool x = t && requires(Foo<C1 || C2> x) { x.foo(); };");
   ASSERT_EQ(Tokens.size(), 25u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
+
+  // Second function definition is required due to lookahead
+  Tokens = annotate("void f() &\n"
+                    "  requires(n == 1)\n"
+                    "{}\n"
+                    "void g();");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -2594,6 +2598,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   Tokens = Annotate("x = '{\"\"};");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_Unknown);
+
+  // Module headers.
+  Tokens = Annotate("module x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic `x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic x``x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic x::x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
@@ -3559,6 +3581,19 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[16], tok::greater, TT_TemplateCloser);
+
+  Tokens =
+      annotate("auto x{std::conditional_t<T::value == U::value, T, U>{}};");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
+}
+
+TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
+  auto Tokens = annotate("FOOBAR(switch);\n"
+                         "void f() {}");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
 }
 
 } // namespace

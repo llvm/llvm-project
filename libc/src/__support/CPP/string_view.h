@@ -31,8 +31,8 @@ private:
 
   LIBC_INLINE static int compareMemory(const char *Lhs, const char *Rhs,
                                        size_t Length) {
-    for (size_t I = 0; I < Length; ++I)
-      if (int Diff = (int)Lhs[I] - (int)Rhs[I])
+    for (size_t i = 0; i < Length; ++i)
+      if (int Diff = (int)Lhs[i] - (int)Rhs[i])
         return Diff;
     return 0;
   }

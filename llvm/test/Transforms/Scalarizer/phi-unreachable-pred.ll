@@ -47,7 +47,7 @@ define void @f2() {
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[E_SROA_3_2:%.*]] = phi <2 x i64> [ <i64 1, i64 1>, [[FOR_END]] ], [ [[E_SROA_3_2]], [[FOR_BODY2:%.*]] ]
+; CHECK-NEXT:    [[E_SROA_3_2:%.*]] = phi <2 x i64> [ splat (i64 1), [[FOR_END]] ], [ [[E_SROA_3_2]], [[FOR_BODY2:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 6, [[FOR_END]] ], [ [[TMP0]], [[FOR_BODY2]] ]
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY2]], label [[FOR_COND1_FOR_END7_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond1.for.end7_crit_edge:

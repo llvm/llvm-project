@@ -103,7 +103,7 @@ float defined_func_f32(float a, float b, float c) {
 // CFINITEONLY-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = call nnan ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// CFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// CFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // CFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -111,7 +111,7 @@ float defined_func_f32(float a, float b, float c) {
 // CLFINITEONLY-SAME: (<2 x double> noundef nofpclass(nan inf) [[A:%.*]], <2 x double> noundef nofpclass(nan inf) [[B:%.*]], <2 x double> noundef nofpclass(nan inf) [[C:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[A]], <2 x double> [[B]], <2 x double> [[C]])
-// CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP0]], <double 4.000000e+00, double 4.000000e+00>
+// CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP0]], splat (double 4.000000e+00)
 // CLFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
@@ -128,7 +128,7 @@ float defined_func_f32(float a, float b, float c) {
 // NONANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // NONANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // NONANS-NEXT:    [[TMP3:%.*]] = call nnan <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// NONANS-NEXT:    [[ADD:%.*]] = fadd nnan <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// NONANS-NEXT:    [[ADD:%.*]] = fadd nnan <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // NONANS-NEXT:    ret <2 x double> [[ADD]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
@@ -145,7 +145,7 @@ float defined_func_f32(float a, float b, float c) {
 // NOINFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // NOINFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // NOINFS-NEXT:    [[TMP3:%.*]] = call ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// NOINFS-NEXT:    [[ADD:%.*]] = fadd ninf <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// NOINFS-NEXT:    [[ADD:%.*]] = fadd ninf <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // NOINFS-NEXT:    ret <2 x double> [[ADD]]
 //
 double2 defined_func_v2f64(double2 a, double2 b, double2 c) {

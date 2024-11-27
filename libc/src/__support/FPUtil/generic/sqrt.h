@@ -139,7 +139,8 @@ sqrt(InType x) {
       for (InStorageType current_bit = ONE >> 1; current_bit;
            current_bit >>= 1) {
         r <<= 1;
-        InStorageType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
+        // 2*y(n - 1) + 2^(-n-1)
+        InStorageType tmp = static_cast<InStorageType>((y << 1) + current_bit);
         if (r >= tmp) {
           r -= tmp;
           y += current_bit;

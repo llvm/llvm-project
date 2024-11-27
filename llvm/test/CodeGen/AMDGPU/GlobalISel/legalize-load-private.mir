@@ -16860,106 +16860,117 @@ body: |
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[COPY]](p5) :: (load (p3), align 8, addrspace 5)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), align 8, addrspace 5)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; SI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; SI-NEXT: [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD]](p5) :: (load (p3) from unknown-address + 4, addrspace 5)
-    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[LOAD]](p3), [[LOAD1]](p3)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    ; SI-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from unknown-address + 4, addrspace 5)
+    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; CI-LABEL: name: test_load_private_v2p3_align8
     ; CI: liveins: $vgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; CI-NEXT: [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[COPY]](p5) :: (load (p3), align 8, addrspace 5)
+    ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), align 8, addrspace 5)
     ; CI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; CI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; CI-NEXT: [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD]](p5) :: (load (p3) from unknown-address + 4, addrspace 5)
-    ; CI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[LOAD]](p3), [[LOAD1]](p3)
-    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    ; CI-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from unknown-address + 4, addrspace 5)
+    ; CI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
+    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; VI-LABEL: name: test_load_private_v2p3_align8
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; VI-NEXT: [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[COPY]](p5) :: (load (p3), align 8, addrspace 5)
+    ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), align 8, addrspace 5)
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; VI-NEXT: [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD]](p5) :: (load (p3) from unknown-address + 4, addrspace 5)
-    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[LOAD]](p3), [[LOAD1]](p3)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    ; VI-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from unknown-address + 4, addrspace 5)
+    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; GFX9-LABEL: name: test_load_private_v2p3_align8
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[COPY]](p5) :: (load (p3), align 8, addrspace 5)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), align 8, addrspace 5)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; GFX9-NEXT: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; GFX9-NEXT: [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD]](p5) :: (load (p3) from unknown-address + 4, addrspace 5)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[LOAD]](p3), [[LOAD1]](p3)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    ; GFX9-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from unknown-address + 4, addrspace 5)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; GFX10-LABEL: name: test_load_private_v2p3_align8
     ; GFX10: liveins: $vgpr0
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[COPY]](p5) :: (load (p3), align 8, addrspace 5)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), align 8, addrspace 5)
     ; GFX10-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; GFX10-NEXT: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; GFX10-NEXT: [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD]](p5) :: (load (p3) from unknown-address + 4, addrspace 5)
-    ; GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[LOAD]](p3), [[LOAD1]](p3)
-    ; GFX10-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    ; GFX10-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from unknown-address + 4, addrspace 5)
+    ; GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
+    ; GFX10-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; GFX10-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; GFX11-LABEL: name: test_load_private_v2p3_align8
     ; GFX11: liveins: $vgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX11-NEXT: [[LOAD:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[COPY]](p5) :: (load (<2 x p3>), addrspace 5)
-    ; GFX11-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x p3>)
+    ; GFX11-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[COPY]](p5) :: (load (<2 x s32>), addrspace 5)
+    ; GFX11-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[LOAD]](<2 x s32>)
+    ; GFX11-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; GFX12-LABEL: name: test_load_private_v2p3_align8
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[COPY]](p5) :: (load (<2 x p3>), addrspace 5)
-    ; GFX12-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x p3>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[COPY]](p5) :: (load (<2 x s32>), addrspace 5)
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[LOAD]](<2 x s32>)
+    ; GFX12-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; UNALIGNED_GFX9-LABEL: name: test_load_private_v2p3_align8
     ; UNALIGNED_GFX9: liveins: $vgpr0
     ; UNALIGNED_GFX9-NEXT: {{  $}}
     ; UNALIGNED_GFX9-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; UNALIGNED_GFX9-NEXT: [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[COPY]](p5) :: (load (p3), align 8, addrspace 5)
+    ; UNALIGNED_GFX9-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), align 8, addrspace 5)
     ; UNALIGNED_GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; UNALIGNED_GFX9-NEXT: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; UNALIGNED_GFX9-NEXT: [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD]](p5) :: (load (p3) from unknown-address + 4, addrspace 5)
-    ; UNALIGNED_GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[LOAD]](p3), [[LOAD1]](p3)
-    ; UNALIGNED_GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    ; UNALIGNED_GFX9-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from unknown-address + 4, addrspace 5)
+    ; UNALIGNED_GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
+    ; UNALIGNED_GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; UNALIGNED_GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; UNALIGNED_GFX10-LABEL: name: test_load_private_v2p3_align8
     ; UNALIGNED_GFX10: liveins: $vgpr0
     ; UNALIGNED_GFX10-NEXT: {{  $}}
     ; UNALIGNED_GFX10-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; UNALIGNED_GFX10-NEXT: [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[COPY]](p5) :: (load (p3), align 8, addrspace 5)
+    ; UNALIGNED_GFX10-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), align 8, addrspace 5)
     ; UNALIGNED_GFX10-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; UNALIGNED_GFX10-NEXT: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; UNALIGNED_GFX10-NEXT: [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD]](p5) :: (load (p3) from unknown-address + 4, addrspace 5)
-    ; UNALIGNED_GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[LOAD]](p3), [[LOAD1]](p3)
-    ; UNALIGNED_GFX10-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    ; UNALIGNED_GFX10-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from unknown-address + 4, addrspace 5)
+    ; UNALIGNED_GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
+    ; UNALIGNED_GFX10-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; UNALIGNED_GFX10-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; UNALIGNED_GFX11-LABEL: name: test_load_private_v2p3_align8
     ; UNALIGNED_GFX11: liveins: $vgpr0
     ; UNALIGNED_GFX11-NEXT: {{  $}}
     ; UNALIGNED_GFX11-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; UNALIGNED_GFX11-NEXT: [[LOAD:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[COPY]](p5) :: (load (<2 x p3>), addrspace 5)
-    ; UNALIGNED_GFX11-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x p3>)
+    ; UNALIGNED_GFX11-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[COPY]](p5) :: (load (<2 x s32>), addrspace 5)
+    ; UNALIGNED_GFX11-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[LOAD]](<2 x s32>)
+    ; UNALIGNED_GFX11-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     ;
     ; UNALIGNED_GFX12-LABEL: name: test_load_private_v2p3_align8
     ; UNALIGNED_GFX12: liveins: $vgpr0
     ; UNALIGNED_GFX12-NEXT: {{  $}}
     ; UNALIGNED_GFX12-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; UNALIGNED_GFX12-NEXT: [[LOAD:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[COPY]](p5) :: (load (<2 x p3>), addrspace 5)
-    ; UNALIGNED_GFX12-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](<2 x p3>)
+    ; UNALIGNED_GFX12-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[COPY]](p5) :: (load (<2 x s32>), addrspace 5)
+    ; UNALIGNED_GFX12-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p3>) = G_BITCAST [[LOAD]](<2 x s32>)
+    ; UNALIGNED_GFX12-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x p3>)
     %0:_(p5) = COPY $vgpr0
     %1:_(<2 x p3>) = G_LOAD %0 :: (load (<2 x p3>), align 8, addrspace 5)
     $vgpr0_vgpr1 = COPY %1

@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoroInternal.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/StackLifetime.h"
@@ -290,8 +289,8 @@ public:
     return Fields.size() - 1;
   }
 
-  /// Finish the layout and set the body on the given type.
-  void finish(StructType *Ty);
+  /// Finish the layout and create the struct type with the given name.
+  StructType *finish(StringRef Name);
 
   uint64_t getStructSize() const {
     assert(IsFinished && "not yet finished!");
@@ -464,7 +463,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
   });
 }
 
-void FrameTypeBuilder::finish(StructType *Ty) {
+StructType *FrameTypeBuilder::finish(StringRef Name) {
   assert(!IsFinished && "already finished!");
 
   // Prepare the optimal-layout field array.
@@ -526,7 +525,7 @@ void FrameTypeBuilder::finish(StructType *Ty) {
     LastOffset = Offset + F.Size;
   }
 
-  Ty->setBody(FieldTypes, Packed);
+  StructType *Ty = StructType::create(Context, FieldTypes, Name, Packed);
 
 #ifndef NDEBUG
   // Check that the IR layout matches the offsets we expect.
@@ -538,6 +537,8 @@ void FrameTypeBuilder::finish(StructType *Ty) {
 #endif
 
   IsFinished = true;
+
+  return Ty;
 }
 
 static void cacheDIVar(FrameDataInfo &FrameData,
@@ -866,11 +867,6 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
                                   bool OptimizeFrame) {
   LLVMContext &C = F.getContext();
   const DataLayout &DL = F.getDataLayout();
-  StructType *FrameTy = [&] {
-    SmallString<32> Name(F.getName());
-    Name.append(".Frame");
-    return StructType::create(C, Name);
-  }();
 
   // We will use this value to cap the alignment of spilled values.
   std::optional<Align> MaxFrameAlignment;
@@ -931,7 +927,12 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     FrameData.setFieldIndex(S.first, Id);
   }
 
-  B.finish(FrameTy);
+  StructType *FrameTy = [&] {
+    SmallString<32> Name(F.getName());
+    Name.append(".Frame");
+    return B.finish(Name);
+  }();
+
   FrameData.updateLayoutIndex(B);
   Shape.FrameAlign = B.getStructAlign();
   Shape.FrameSize = B.getStructSize();

@@ -20,12 +20,12 @@
 #include <array>
 
 namespace lld {
-std::string toString(elf::RelType type);
-
 namespace elf {
 class Defined;
 class InputFile;
 class Symbol;
+
+std::string toStr(Ctx &, RelType type);
 
 class TargetInfo {
 public:
@@ -211,8 +211,8 @@ static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
 void processArmCmseSymbols(Ctx &);
 
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
+uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
+                         uint8_t newFlag);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
@@ -229,7 +229,7 @@ unsigned getPPCDSFormOp(unsigned secondaryOp);
 // offset between GEP and LEP is encoded in a function's st_other flags.
 // This function will return the offset (in bytes) from the global entry-point
 // to the local entry-point.
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
+unsigned getPPC64GlobalEntryToLocalEntryOffset(Ctx &, uint8_t stOther);
 
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in
@@ -246,8 +246,8 @@ void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
-void sortArmMappingSymbols();
-void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
+void sortArmMappingSymbols(Ctx &);
+void convertArmInstructionstoBE8(Ctx &, InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(Ctx &);
 void initSymbolAnchors(Ctx &);
 
@@ -255,26 +255,30 @@ void setTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
+const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
+
 void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
                       const Twine &v, int64_t min, uint64_t max);
 void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                       const Symbol &sym, const Twine &msg);
 
 // Make sure that V can be represented as an N bit signed integer.
-inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
+inline void checkInt(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                     const Relocation &rel) {
   if (v != llvm::SignExtend64(v, n))
     reportRangeError(ctx, loc, rel, Twine(v), llvm::minIntN(n),
                      llvm::maxIntN(n));
 }
 
 // Make sure that V can be represented as an N bit unsigned integer.
-inline void checkUInt(uint8_t *loc, uint64_t v, int n, const Relocation &rel) {
+inline void checkUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
+                      const Relocation &rel) {
   if ((v >> n) != 0)
     reportRangeError(ctx, loc, rel, Twine(v), 0, llvm::maxUIntN(n));
 }
 
 // Make sure that V can be represented as an N bit signed or unsigned integer.
-inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
+inline void checkIntUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                          const Relocation &rel) {
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
@@ -283,36 +287,36 @@ inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
                      llvm::maxUIntN(n));
 }
 
-inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
+inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                            const Relocation &rel) {
   if ((v & (n - 1)) != 0)
-    error(getErrorLoc(ctx, loc) + "improper alignment for relocation " +
-          lld::toString(rel.type) + ": 0x" + llvm::utohexstr(v) +
-          " is not aligned to " + Twine(n) + " bytes");
+    Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
+             << rel.type << ": 0x" << llvm::utohexstr(v)
+             << " is not aligned to " << n << " bytes";
 }
 
 // Endianness-aware read/write.
-inline uint16_t read16(const void *p) {
+inline uint16_t read16(Ctx &ctx, const void *p) {
   return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
-inline uint32_t read32(const void *p) {
+inline uint32_t read32(Ctx &ctx, const void *p) {
   return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
-inline uint64_t read64(const void *p) {
+inline uint64_t read64(Ctx &ctx, const void *p) {
   return llvm::support::endian::read64(p, ctx.arg.endianness);
 }
 
-inline void write16(void *p, uint16_t v) {
+inline void write16(Ctx &ctx, void *p, uint16_t v) {
   llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
-inline void write32(void *p, uint32_t v) {
+inline void write32(Ctx &ctx, void *p, uint32_t v) {
   llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
-inline void write64(void *p, uint64_t v) {
+inline void write64(Ctx &ctx, void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 

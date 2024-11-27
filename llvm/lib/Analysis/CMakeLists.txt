@@ -80,6 +80,7 @@ add_llvm_component_library(LLVMAnalysis
   InstructionSimplify.cpp
   InteractiveModelRunner.cpp
   KernelInfo.cpp
+  LastRunTrackingAnalysis.cpp
   LazyBranchProbabilityInfo.cpp
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp

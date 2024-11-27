@@ -14,10 +14,10 @@
 
 #include "AMDGPUMCResourceInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -91,95 +91,54 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
 }
 
-// The (partially complete) expression should have no recursion in it. After
-// all, we're trying to avoid recursion using this codepath. Returns true if
-// Sym is found within Expr without recursing on Expr, false otherwise.
-static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
-                             SmallVectorImpl<const MCExpr *> &Exprs,
-                             SmallPtrSetImpl<const MCExpr *> &Visited) {
-  // Assert if any of the expressions is already visited (i.e., there is
-  // existing recursion).
-  if (!Visited.insert(Expr).second)
-    llvm_unreachable("already visited expression");
-
-  switch (Expr->getKind()) {
-  default:
-    return false;
-  case MCExpr::ExprKind::SymbolRef: {
-    const MCSymbolRefExpr *SymRefExpr = cast<MCSymbolRefExpr>(Expr);
-    const MCSymbol &SymRef = SymRefExpr->getSymbol();
-    if (Sym == &SymRef)
-      return true;
-    if (SymRef.isVariable())
-      Exprs.push_back(SymRef.getVariableValue(/*isUsed=*/false));
-    return false;
-  }
-  case MCExpr::ExprKind::Binary: {
-    const MCBinaryExpr *BExpr = cast<MCBinaryExpr>(Expr);
-    Exprs.push_back(BExpr->getLHS());
-    Exprs.push_back(BExpr->getRHS());
-    return false;
-  }
-  case MCExpr::ExprKind::Unary: {
-    const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
-    Exprs.push_back(UExpr->getSubExpr());
-    return false;
-  }
-  case MCExpr::ExprKind::Target: {
-    const AMDGPUMCExpr *AGVK = cast<AMDGPUMCExpr>(Expr);
-    for (const MCExpr *E : AGVK->getArgs())
-      Exprs.push_back(E);
-    return false;
-  }
-  }
-}
-
-// Symbols whose values eventually are used through their defines (i.e.,
-// recursive) must be avoided. Do a walk over Expr to see if Sym will occur in
-// it. The Expr is an MCExpr given through a callee's equivalent MCSymbol so if
-// no recursion is found Sym can be safely assigned to a (sub-)expr which
-// contains the symbol Expr is associated with. Returns true if Sym exists
-// in Expr or its sub-expressions, false otherwise.
-static bool foundRecursiveSymbolDef(MCSymbol *Sym, const MCExpr *Expr) {
-  SmallVector<const MCExpr *, 8> WorkList;
-  SmallPtrSet<const MCExpr *, 8> Visited;
-  WorkList.push_back(Expr);
-
-  while (!WorkList.empty()) {
-    const MCExpr *CurExpr = WorkList.pop_back_val();
-    if (findSymbolInExpr(Sym, CurExpr, WorkList, Visited))
-      return true;
-  }
-
-  return false;
-}
-
 void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
     MCContext &OutContext) {
+  const TargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   const MCConstantExpr *LocalConstExpr =
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
-  MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
+  MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
   if (!Callees.empty()) {
     SmallVector<const MCExpr *, 8> ArgExprs;
-    // Avoid recursive symbol assignment.
     SmallPtrSet<const Function *, 8> Seen;
     ArgExprs.push_back(LocalConstExpr);
-    const Function &F = MF.getFunction();
-    Seen.insert(&F);
 
     for (const Function *Callee : Callees) {
       if (!Seen.insert(Callee).second)
         continue;
-      MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
-      bool CalleeIsVar = CalleeValSym->isVariable();
-      if (!CalleeIsVar ||
-          (CalleeIsVar &&
-           !foundRecursiveSymbolDef(
-               Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
+
+      MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
+      MCSymbol *CalleeValSym =
+          getSymbol(CalleeFnSym->getName(), RIK, OutContext);
+
+      // Avoid constructing recursive definitions by detecting whether `Sym` is
+      // found transitively within any of its `CalleeValSym`.
+      if (!CalleeValSym->isVariable() ||
+          !CalleeValSym->getVariableValue(/*isUsed=*/false)
+               ->isSymbolUsedInExpression(Sym)) {
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+      } else {
+        // In case of recursion: make sure to use conservative register counts
+        // (i.e., specifically for VGPR/SGPR/AGPR).
+        switch (RIK) {
+        default:
+          break;
+        case RIK_NumVGPR:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxVGPRSymbol(OutContext), OutContext));
+          break;
+        case RIK_NumSGPR:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxSGPRSymbol(OutContext), OutContext));
+          break;
+        case RIK_NumAGPR:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxAGPRSymbol(OutContext), OutContext));
+          break;
+        }
       }
     }
     if (ArgExprs.size() > 1)
@@ -203,6 +162,9 @@ void MCResourceInfo::gatherResourceInfo(
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
   }
 
+  const TargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
+
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
@@ -210,7 +172,7 @@ void MCResourceInfo::gatherResourceInfo(
                              FRI.Callees, OutContext);
     } else {
       const MCExpr *SymRef = MCSymbolRefExpr::create(MaxSym, OutContext);
-      MCSymbol *LocalNumSym = getSymbol(MF.getName(), RIK, OutContext);
+      MCSymbol *LocalNumSym = getSymbol(FnSym->getName(), RIK, OutContext);
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
@@ -225,7 +187,7 @@ void MCResourceInfo::gatherResourceInfo(
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
     SmallVector<const MCExpr *, 8> ArgExprs;
-    MCSymbol *Sym = getSymbol(MF.getName(), RIK_PrivateSegSize, OutContext);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext);
     if (FRI.CalleeSegmentSize)
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
@@ -236,13 +198,15 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
       if (!Callee->isDeclaration()) {
+        MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
         MCSymbol *CalleeValSym =
-            getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
-        bool CalleeIsVar = CalleeValSym->isVariable();
-        if (!CalleeIsVar ||
-            (CalleeIsVar &&
-             !foundRecursiveSymbolDef(
-                 Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
+            getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext);
+
+        // Avoid constructing recursive definitions by detecting whether `Sym`
+        // is found transitively within any of its `CalleeValSym`.
+        if (!CalleeValSym->isVariable() ||
+            !CalleeValSym->getVariableValue(/*isUsed=*/false)
+                 ->isSymbolUsedInExpression(Sym)) {
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
         }
       }
@@ -259,7 +223,7 @@ void MCResourceInfo::gatherResourceInfo(
   }
 
   auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
-    MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
     Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
   };
 
@@ -289,18 +253,23 @@ void MCResourceInfo::gatherResourceInfo(
 
 const MCExpr *MCResourceInfo::createTotalNumVGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
+  const TargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   return AMDGPUMCExpr::createTotalNumVGPR(
-      getSymRefExpr(MF.getName(), RIK_NumAGPR, Ctx),
-      getSymRefExpr(MF.getName(), RIK_NumVGPR, Ctx), Ctx);
+      getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx),
+      getSymRefExpr(FnSym->getName(), RIK_NumVGPR, Ctx), Ctx);
 }
 
 const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
                                                   bool hasXnack,
                                                   MCContext &Ctx) {
+  const TargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   return MCBinaryExpr::createAdd(
-      getSymRefExpr(MF.getName(), RIK_NumSGPR, Ctx),
+      getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx),
       AMDGPUMCExpr::createExtraSGPRs(
-          getSymRefExpr(MF.getName(), RIK_UsesVCC, Ctx),
-          getSymRefExpr(MF.getName(), RIK_UsesFlatScratch, Ctx), hasXnack, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx), hasXnack,
+          Ctx),
       Ctx);
 }

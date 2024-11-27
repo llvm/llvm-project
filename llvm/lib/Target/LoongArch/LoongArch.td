@@ -112,6 +112,23 @@ def FeatureFrecipe
                        "Support frecipe.{s/d} and frsqrte.{s/d} instructions.">;
 def HasFrecipe : Predicate<"Subtarget->hasFrecipe()">;
 
+// Atomic memory swap and add instructions for byte and half word
+def FeatureLAM_BH
+    : SubtargetFeature<"lam-bh", "HasLAM_BH", "true",
+                        "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
+def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
+
+def FeatureLD_SEQ_SA
+    : SubtargetFeature<"ld-seq-sa", "HasLD_SEQ_SA", "true",
+                        "Don't use load-load barrier (dbar 0x700).">;
+def HasLD_SEQ_SA : Predicate<"Subtarget->hasLD_SEQ_SA()">;
+
+// Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
+def FeatureDiv32
+    : SubtargetFeature<"div32", "HasDiv32", "true",
+                        "Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended">;
+def HasDiv32 : Predicate<"Subtarget->hasDiv32()">;
+
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
@@ -129,7 +146,9 @@ include "LoongArchInstrInfo.td"
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
-def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit, FeatureUAL]>;
+def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
+                                                    FeatureUAL,
+                                                    FeatureExtLSX]>;
 
 // Generic 64-bit processor with double-precision floating-point support.
 def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
@@ -151,7 +170,9 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
                                              FeatureExtLBT,
-                                             FeatureFrecipe]>;
+                                             FeatureFrecipe,
+                                             FeatureLAM_BH,
+                                             FeatureDiv32]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.

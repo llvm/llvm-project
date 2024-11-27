@@ -12,7 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/endian.h"
+#include "src/__support/endian_internal.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"

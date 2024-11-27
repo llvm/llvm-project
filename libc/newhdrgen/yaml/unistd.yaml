@@ -204,6 +204,13 @@ functions:
     return_type: int
     arguments:
       - type: int *
+  - name: pipe2
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: int *
+      - type: int
   - name: pread
     standards:
       - POSIX

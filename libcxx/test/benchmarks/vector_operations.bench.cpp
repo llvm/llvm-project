@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "benchmark/benchmark.h"
@@ -49,6 +53,16 @@ BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_string, std::vector<std::string>
     ->Arg(TestNumInputs);
 
 BENCHMARK_CAPTURE(BM_Pushback_no_grow, vector_int, std::vector<int>{})->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_erase_iter_in_middle, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+BENCHMARK_CAPTURE(BM_erase_iter_in_middle, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+
+BENCHMARK_CAPTURE(BM_erase_iter_at_start, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+BENCHMARK_CAPTURE(BM_erase_iter_at_start, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+    ->Range(TestNumInputs, TestNumInputs * 10);
 
 template <class T>
 void bm_grow(benchmark::State& state) {

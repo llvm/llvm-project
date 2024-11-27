@@ -27,9 +27,13 @@ set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
 set(LIBCXXABI_ENABLE_THREADS OFF CACHE BOOL "")
 set(LIBCXXABI_USE_LLVM_UNWINDER OFF CACHE BOOL "")
 
+# Test configuration.
+set(LIBCXX_TEST_CONFIG "amdgpu-libc++-shared.cfg.in" CACHE STRING "")
+set(LIBCXX_TEST_PARAMS "optimization=none;long_tests=False;executor=amdhsa-loader" CACHE STRING "")
+
 # Necessary compile flags for AMDGPU.
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS
-    "-nogpulib;-flto;-fconvergent-functions;-Xclang;-mcode-object-version=none" CACHE STRING "")
+    "-nogpulib;-flto;-fconvergent-functions;SHELL:-Xclang -mcode-object-version=none" CACHE STRING "")
 set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS
-    "-nogpulib;-flto;-fconvergent-functions;-Xclang;-mcode-object-version=none" CACHE STRING "")
+    "-nogpulib;-flto;-fconvergent-functions;SHELL:-Xclang -mcode-object-version=none" CACHE STRING "")
 set(CMAKE_REQUIRED_FLAGS "-nogpulib" CACHE STRING "")

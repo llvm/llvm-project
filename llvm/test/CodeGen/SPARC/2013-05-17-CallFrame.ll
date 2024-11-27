@@ -5,14 +5,10 @@
 ; (this should ideally be doing "add 4+7; and -8", instead of
 ;  "add 7; and -8; add 8"; see comments in LowerDYNAMIC_STACKALLOC)
 
-define void @variable_alloca_with_adj_call_stack(i32 %num) {
+define void @variable_alloca_with_adj_call_stack(i32 %num) nounwind {
 ; V8-LABEL: variable_alloca_with_adj_call_stack:
-; V8:         .cfi_startproc
-; V8-NEXT:  ! %bb.0: ! %entry
+; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    save %sp, -96, %sp
-; V8-NEXT:    .cfi_def_cfa_register %fp
-; V8-NEXT:    .cfi_window_save
-; V8-NEXT:    .cfi_register %o7, %i7
 ; V8-NEXT:    add %i0, 7, %i0
 ; V8-NEXT:    and %i0, -8, %i0
 ; V8-NEXT:    sub %sp, %i0, %i0
@@ -34,12 +30,8 @@ define void @variable_alloca_with_adj_call_stack(i32 %num) {
 ; V8-NEXT:    restore
 ;
 ; SPARC64-LABEL: variable_alloca_with_adj_call_stack:
-; SPARC64:         .cfi_startproc
-; SPARC64-NEXT:  ! %bb.0: ! %entry
+; SPARC64:       ! %bb.0: ! %entry
 ; SPARC64-NEXT:    save %sp, -128, %sp
-; SPARC64-NEXT:    .cfi_def_cfa_register %fp
-; SPARC64-NEXT:    .cfi_window_save
-; SPARC64-NEXT:    .cfi_register %o7, %i7
 ; SPARC64-NEXT:    srl %i0, 0, %i0
 ; SPARC64-NEXT:    add %i0, 15, %i0
 ; SPARC64-NEXT:    sethi 4194303, %i1

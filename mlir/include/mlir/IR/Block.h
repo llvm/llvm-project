@@ -16,6 +16,8 @@
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/Visitors.h"
 
+#include "llvm/ADT/SmallPtrSet.h"
+
 namespace llvm {
 class BitVector;
 class raw_ostream;
@@ -263,6 +265,19 @@ public:
   succ_iterator succ_begin() { return getSuccessors().begin(); }
   succ_iterator succ_end() { return getSuccessors().end(); }
   SuccessorRange getSuccessors() { return SuccessorRange(this); }
+
+  /// Return "true" if there is a path from this block to the given block
+  /// (according to the successors relationship). Both blocks must be in the
+  /// same region. Paths that contain a block from `except` do not count.
+  /// This function returns "false" if `other` is in `except`.
+  ///
+  /// Note: This function performs a block graph traversal and its complexity
+  /// linear in the number of blocks in the parent region.
+  ///
+  /// Note: Reachability is a necessary but insufficient condition for
+  /// dominance. Do not use this function in places where you need to check for
+  /// dominance.
+  bool isReachable(Block *other, SmallPtrSet<Block *, 16> &&except = {});
 
   //===--------------------------------------------------------------------===//
   // Walkers

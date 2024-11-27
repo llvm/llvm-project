@@ -6,9 +6,6 @@ func.func @one_3d_nest() {
   // upper bound is also the number of iterations.
   // CHECK-DAG: %[[orig_lb:.*]] = arith.constant 0
   // CHECK-DAG: %[[orig_step:.*]] = arith.constant 1
-  // CHECK-DAG: %[[orig_ub_k:.*]] = arith.constant 3
-  // CHECK-DAG: %[[orig_ub_i:.*]] = arith.constant 42
-  // CHECK-DAG: %[[orig_ub_j:.*]] = arith.constant 56
   // CHECK-DAG: %[[range:.*]] = arith.constant 7056
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -25,7 +22,7 @@ func.func @one_3d_nest() {
 
     // Reconstruct original IVs from the linearized one.
     // CHECK: %[[delinearize:.+]]:3 = affine.delinearize_index %[[i]]
-    // CHECK-SAME: into (%[[orig_ub_i]], %[[orig_ub_j]], %[[orig_ub_k]])
+    // CHECK-SAME: into (42, 56, 3)
     scf.for %j = %c0 to %c56 step %c1 {
       scf.for %k = %c0 to %c3 step %c1 {
         // CHECK: "use"(%[[delinearize]]#0, %[[delinearize]]#1, %[[delinearize]]#2)
@@ -73,11 +70,6 @@ func.func @unnormalized_loops() {
   // Normalized lower bound and step for the outer scf.
   // CHECK-DAG: %[[lb_i:.*]] = arith.constant 0
   // CHECK-DAG: %[[step_i:.*]] = arith.constant 1
-  // CHECK-DAG: %[[orig_step_j_and_numiter_i:.*]] = arith.constant 3
-
-  // Number of iterations in the inner loop, the pattern is the same as above,
-  // only capture the final result.
-  // CHECK-DAG: %[[numiter_j:.*]] = arith.constant 4
 
   // CHECK-DAG: %[[range:.*]] = arith.constant 12
 
@@ -97,7 +89,7 @@ func.func @unnormalized_loops() {
     scf.for %j = %c7 to %c17 step %c3 {
       // The IVs are rewritten.
       // CHECK: %[[delinearize:.+]]:2 = affine.delinearize_index %[[i]]
-      // CHECK-SAME: into (%[[orig_step_j_and_numiter_i]], %[[numiter_j]])
+      // CHECK-SAME: into (3, 4)
       // CHECK: %[[orig_j:.*]] = affine.apply affine_map<(d0) -> (d0 * 3 + 7)>(%[[delinearize]]#1)
       // CHECK: %[[orig_i:.*]] = affine.apply affine_map<(d0) -> (d0 * 2 + 5)>(%[[delinearize]]#0)
       // CHECK: "use"(%[[orig_i]], %[[orig_j]])
@@ -111,10 +103,7 @@ func.func @unnormalized_loops() {
 
 func.func @noramalized_loops_with_yielded_iter_args() {
   // CHECK-DAG: %[[orig_lb:.*]] = arith.constant 0
-  // CHECK-DAG: %[[orig_ub_i:.*]] = arith.constant 42
   // CHECK-DAG: %[[orig_step:.*]] = arith.constant 1
-  // CHECK-DAG: %[[orig_ub_j:.*]] = arith.constant 56
-  // CHECK-DAG: %[[orig_ub_k:.*]] = arith.constant 3
   // CHECK-DAG: %[[range:.*]] = arith.constant 7056
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -130,7 +119,7 @@ func.func @noramalized_loops_with_yielded_iter_args() {
     // CHECK-NOT: scf.for
 
     // Reconstruct original IVs from the linearized one.
-    // CHECK: %[[delinearize:.+]]:3 = affine.delinearize_index %[[i]] into (%[[orig_ub_i]], %[[orig_ub_j]], %[[orig_ub_k]])
+    // CHECK: %[[delinearize:.+]]:3 = affine.delinearize_index %[[i]] into (42, 56, 3)
     %1:1 = scf.for %j = %c0 to %c56 step %c1 iter_args(%arg1 = %arg0) -> (index){
       %0:1 = scf.for %k = %c0 to %c3 step %c1 iter_args(%arg2 = %arg1) -> (index) {
         // CHECK: "use"(%[[delinearize]]#0, %[[delinearize]]#1, %[[delinearize]]#2)
@@ -150,9 +139,6 @@ func.func @noramalized_loops_with_yielded_iter_args() {
 func.func @noramalized_loops_with_shuffled_yielded_iter_args() {
   // CHECK-DAG: %[[orig_lb:.*]] = arith.constant 0
   // CHECK-DAG: %[[orig_step:.*]] = arith.constant 1
-  // CHECK-DAG: %[[orig_ub_k:.*]] = arith.constant 3
-  // CHECK-DAG: %[[orig_ub_i:.*]] = arith.constant 42
-  // CHECK-DAG: %[[orig_ub_j:.*]] = arith.constant 56
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -169,7 +155,7 @@ func.func @noramalized_loops_with_shuffled_yielded_iter_args() {
 
     // Reconstruct original IVs from the linearized one.
     // CHECK: %[[delinearize:.+]]:3 = affine.delinearize_index %[[i]]
-    // CHECK-SAME: into (%[[orig_ub_i]], %[[orig_ub_j]], %[[orig_ub_k]])
+    // CHECK-SAME: into (42, 56, 3)
     %1:2 = scf.for %j = %c0 to %c56 step %c1 iter_args(%arg2 = %arg0, %arg3 = %arg1) -> (index, index){
       %0:2 = scf.for %k = %c0 to %c3 step %c1 iter_args(%arg4 = %arg2, %arg5 = %arg3) -> (index, index) {
         // CHECK: "use"(%[[delinearize]]#0, %[[delinearize]]#1, %[[delinearize]]#2)
@@ -189,9 +175,6 @@ func.func @noramalized_loops_with_shuffled_yielded_iter_args() {
 func.func @noramalized_loops_with_yielded_non_iter_args() {
   // CHECK-DAG: %[[orig_lb:.*]] = arith.constant 0
   // CHECK-DAG: %[[orig_step:.*]] = arith.constant 1
-  // CHECK-DAG: %[[orig_ub_k:.*]] = arith.constant 3
-  // CHECK-DAG: %[[orig_ub_i:.*]] = arith.constant 42
-  // CHECK-DAG: %[[orig_ub_j:.*]] = arith.constant 56
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -208,7 +191,7 @@ func.func @noramalized_loops_with_yielded_non_iter_args() {
 
     // Reconstruct original IVs from the linearized one.
     // CHECK: %[[delinearize:.+]]:3 = affine.delinearize_index %[[i]]
-    // CHECK-SAME: into (%[[orig_ub_i]], %[[orig_ub_j]], %[[orig_ub_k]])
+    // CHECK-SAME: into (42, 56, 3)
     %1:1 = scf.for %j = %c0 to %c56 step %c1 iter_args(%arg1 = %arg0) -> (index){
       %0:1 = scf.for %k = %c0 to %c3 step %c1 iter_args(%arg2 = %arg1) -> (index) {
         // CHECK: %[[res:.*]] = "use"(%[[delinearize]]#0, %[[delinearize]]#1, %[[delinearize]]#2)

@@ -237,12 +237,10 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       else
         NewIntrinID = Intrinsic::amdgcn_image_msaa_load_2darraymsaa;
 
-      Function *NewIntrin = Intrinsic::getOrInsertDeclaration(
-          IIList.front()->getModule(), NewIntrinID, OverloadTys);
       Args[ImageDimIntr->DMaskIndex] =
           ConstantInt::get(DMask->getType(), NewMaskVal);
       Args[FragIdIndex] = ConstantInt::get(FragId->getType(), NewFragIdVal);
-      CallInst *NewCall = B.CreateCall(NewIntrin, Args);
+      CallInst *NewCall = B.CreateIntrinsic(NewIntrinID, OverloadTys, Args);
       LLVM_DEBUG(dbgs() << "Optimize: " << *NewCall << "\n");
 
       NewCalls.push_back(NewCall);

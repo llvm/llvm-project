@@ -125,8 +125,9 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
       const bool force_live_memory = true;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-          module_sp->GetArchitecture(), nullptr, flavor, *target_sp,
-          m_opaque_ptr->GetAddressRange(), force_live_memory));
+          module_sp->GetArchitecture(), nullptr, flavor,
+          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+          *target_sp, m_opaque_ptr->GetAddressRange(), force_live_memory));
     }
   }
   return sb_instructions;

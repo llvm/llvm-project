@@ -151,8 +151,8 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
   case R_386_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -181,7 +181,7 @@ void X86::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void X86::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An x86 entry is the address of the ifunc resolver function.
-  write32le(buf, s.getVA());
+  write32le(buf, s.getVA(ctx));
 }
 
 RelType X86::getDynRel(RelType type) const {
@@ -280,8 +280,7 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
@@ -292,15 +291,15 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkIntUInt(loc, val, 8, rel);
+    checkIntUInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_PC8:
-    checkInt(loc, val, 8, rel);
+    checkInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_386_PC16:
@@ -314,7 +313,7 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // current location subtracted from it.
     // We just check that Val fits in 17 bits. This misses some cases, but
     // should have no false positives.
-    checkInt(loc, val, 17, rel);
+    checkInt(ctx, loc, val, 17, rel);
     write16le(loc, val);
     break;
   case R_386_32:
@@ -338,7 +337,7 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_386_TLS_LE_32:
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_386_TLS_DESC:
@@ -372,8 +371,9 @@ void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     //
     // Note: call *x@tlsdesc(%eax) may not immediately follow this instruction.
     if (memcmp(loc - 2, "\x8d\x83", 2)) {
-      error(getErrorLoc(ctx, loc - 2) +
-            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      ErrAlways(ctx)
+          << getErrorLoc(ctx, loc - 2)
+          << "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax";
       return;
     }
     loc[-1] = 0x05;
@@ -405,8 +405,9 @@ void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   } else if (rel.type == R_386_TLS_GOTDESC) {
     // Convert leal x@tlsdesc(%ebx), %eax to movl x@gotntpoff(%ebx), %eax.
     if (memcmp(loc - 2, "\x8d\x83", 2)) {
-      error(getErrorLoc(ctx, loc - 2) +
-            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      ErrAlways(ctx)
+          << getErrorLoc(ctx, loc - 2)
+          << "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax";
       return;
     }
     loc[-2] = 0x8b;

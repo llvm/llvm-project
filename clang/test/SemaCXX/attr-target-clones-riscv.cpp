@@ -33,6 +33,9 @@ void __attribute__((target_clones("default;priority=2", "arch=+c"))) UnsupportDe
 // expected-warning@+1 {{unsupported 'priority=2;default' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("priority=2;default", "arch=+c"))) UnsupportDefaultPriority2() {}
 
+// expected-warning@+1 {{unsupported 'arch=+c;priority=-1' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
+void __attribute__((target_clones("default", "arch=+c;priority=-1"))) UnsupportNegativePriority() {}
+
 // expected-warning@+1 {{unsupported 'arch=+c,zbb' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("default", "arch=+c,zbb"))) WithoutAddSign() {}
 
