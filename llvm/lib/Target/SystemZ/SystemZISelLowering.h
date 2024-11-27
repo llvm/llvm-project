@@ -746,10 +746,15 @@ private:
   SDValue lowerFSHL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFSHR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSTRICT_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLoadF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerStoreF16(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
