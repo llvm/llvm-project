@@ -460,7 +460,8 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
   return sock;
 }
 
-Status Socket::Accept(Socket *&socket) {
+Status Socket::Accept(const Timeout<std::micro> &timeout, Socket *&socket) {
+  socket = nullptr;
   MainLoop accept_loop;
   llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
       Accept(accept_loop,
@@ -470,7 +471,15 @@ Status Socket::Accept(Socket *&socket) {
              });
   if (!expected_handles)
     return Status::FromError(expected_handles.takeError());
-  return accept_loop.Run();
+  if (timeout) {
+    accept_loop.AddCallback(
+        [](MainLoopBase &loop) { loop.RequestTermination(); }, *timeout);
+  }
+  if (Status status = accept_loop.Run(); status.Fail())
+    return status;
+  if (socket)
+    return Status();
+  return Status(std::make_error_code(std::errc::timed_out));
 }
 
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
