@@ -25,7 +25,7 @@ int pidfd_open(pid_t pid, unsigned int flags) {
   return LIBC_NAMESPACE::syscall_impl(SYS_pidfd_open, pid, flags);
 }
 
-TEST(LlvmLibcMProcessMReleaseTest, NoError) {
+TEST(LlvmLibcProcessMReleaseTest, NoError) {
   pid_t child_pid = fork();
   EXPECT_GE(child_pid, 0);
 
@@ -49,7 +49,7 @@ TEST(LlvmLibcMProcessMReleaseTest, NoError) {
   }
 }
 
-TEST(LlvmLibcMProcessMReleaseTest, ErrorNotKilled) {
+TEST(LlvmLibcProcessMReleaseTest, ErrorNotKilled) {
   pid_t child_pid = fork();
   EXPECT_GE(child_pid, 0);
 
@@ -69,6 +69,6 @@ TEST(LlvmLibcMProcessMReleaseTest, ErrorNotKilled) {
   }
 }
 
-TEST(LlvmLibcMProcessMReleaseTest, ErrorNonExistingPidfd) {
+TEST(LlvmLibcProcessMReleaseTest, ErrorNonExistingPidfd) {
   EXPECT_THAT(LIBC_NAMESPACE::process_mrelease(-1, 0), Fails(EBADF));
 }
