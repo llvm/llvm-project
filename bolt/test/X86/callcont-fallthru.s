@@ -21,33 +21,39 @@
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK3
 
 ## Check fallthrough to a landing pad case.
-# RUN: llvm-bolt %t.exe --pa -p %t.pa3 -o %t.out4 --enable-bat \
+# RUN: llvm-bolt %t.exe --pa -p %t.pa3 -o %t.out4 \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK3
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --defsym GLOBL=1 \
+# RUN:   %s -o %t.o
+# RUN: %clangxx %cxxflags %t.o -o %t2 -Wl,-q -nostdlib 
+# RUN: llvm-bolt %t2 --pa -p %t.pa3 -o %t.bat --enable-bat \
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK3
 
 ## Check that a landing pad is emitted in BAT
-# RUN: llvm-bat-dump %t.out4 --dump-all | FileCheck %s --check-prefix=CHECK-BAT
+# RUN: llvm-bat-dump %t.bat --dump-all | FileCheck %s --check-prefix=CHECK-BAT
 
-# CHECK-BAT:      1 secondary entry points:
-
-## Check BAT case of a fallthrough to a call continuation
-# link_fdata %s %t.out4 %t.pa.bat PREAGG
-# RUN: perf2bolt %t.out4 -p %t.pa.bat --pa -o %t.fdata
-# RUN: FileCheck %s --check-prefix=CHECK-BAT-CC --input-file=%t.fdata
-# CHECK-BAT-CC: main
+# CHECK-BAT:      secondary entry points:
 
 ## Check BAT case of a fallthrough to a secondary entry point or a landing pad
-# link_fdata %s %t.out4 %t.pa.bat2 PREAGG3
+# RUN: link_fdata %s %t.bat %t.pa.bat2 PREAGG3
 
 ## Secondary entry
-# RUN: perf2bolt %t.out4 -p %t.pa.bat2 --pa -o %t.fdata2
+# RUN: perf2bolt %t.bat -p %t.pa.bat2 --pa -o %t.fdata2
 # RUN: FileCheck %s --check-prefix=CHECK-BAT-ENTRY --input-file=%t.fdata2
 # CHECK-BAT-ENTRY: main
 
 ## Landing pad
-# RUN: llvm-strip --strip-unneeded %t.out4
-# RUN: perf2bolt %t.out4 -p %t.pa.bat2 --pa -o %t.fdata3
+# RUN: llvm-strip --strip-unneeded %t.bat
+# RUN: perf2bolt %t.bat -p %t.pa.bat2 --pa -o %t.fdata3
 # RUN: FileCheck %s --check-prefix=CHECK-BAT-LP --input-file=%t.fdata3
 # CHECK-BAT-LP: main
+
+## Check BAT case of a fallthrough to a call continuation
+# link_fdata %s %t.bat %t.pa.bat PREAGG
+# RUN: perf2bolt %t.bat -p %t.pa.bat --pa -o %t.fdata
+# RUN: FileCheck %s --check-prefix=CHECK-BAT-CC --input-file=%t.fdata
+# CHECK-BAT-CC: main
 
   .globl foo
   .type foo, %function
@@ -107,6 +113,9 @@ Ltmp4:
 # CHECK3:      callq foo
 # CHECK3-NEXT: count: 0
 
+.ifdef GLOBL
+.globl Ltmp3
+.endif
 Ltmp3:
 	cmpl	$0x0, -0x18(%rbp)
 Ltmp3_br:

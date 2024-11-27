@@ -87,6 +87,11 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       continue;
 
     uint32_t NumSecondaryEntryPoints = 0;
+    // Offset call continuation landing pads by max input offset + 1 to prevent
+    // confusing them with real entry points. Note we can't use the input size
+    // as it's not available in BOLTed binary.
+    const BBHashMapTy &BBHashMap = getBBHashMap(InputAddress);
+    const uint32_t CallContLPOffset = std::prev(BBHashMap.end())->first + 1;
     for (const BinaryBasicBlock &BB : llvm::drop_begin(Function)) {
       if (BB.isEntryPoint()) {
         ++NumSecondaryEntryPoints;
@@ -104,8 +109,8 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       if (!Instr || !BC.MIB->isCall(*Instr))
         continue;
       ++NumSecondaryEntryPoints;
-      SecondaryEntryPointsMap[OutputAddress].push_back(
-          Function.getOutputSize() + BB.getOffset());
+      SecondaryEntryPointsMap[OutputAddress].push_back(CallContLPOffset +
+                                                       BB.getOffset());
     }
     if (NumSecondaryEntryPoints)
       llvm::sort(SecondaryEntryPointsMap[OutputAddress]);
@@ -124,7 +129,6 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     // Add entries for deleted blocks. They are still required for correct BB
     // mapping of branches modified by SCTC. By convention, they would have the
     // end of the function as output address.
-    const BBHashMapTy &BBHashMap = getBBHashMap(InputAddress);
     if (BBHashMap.size() != Function.size()) {
       const uint64_t EndOffset = Function.getOutputSize();
       std::unordered_set<uint32_t> MappedInputOffsets;

@@ -810,10 +810,13 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
 
     if (!Func.hasCFG()) {
       const uint64_t Address = Func.getAddress();
+      if (!BAT)
+        return false;
+      const uint32_t InputOffset = BAT->translate(Address, Offset, false);
       // Check if offset is a secondary entry point or a call continuation
       // landing pad (offset shifted by function size).
-      return BAT && !BAT->getSecondaryEntryPointId(Address, Offset) &&
-             !BAT->getSecondaryEntryPointId(Address, Func.getSize() + Offset);
+      return !BAT->getSecondaryEntryPointId(Address, InputOffset) &&
+             !BAT->getSecondaryEntryPointId(Address, Func.getSize() + InputOffset);
     }
 
     // The offset should not be an entry point or a landing pad.
