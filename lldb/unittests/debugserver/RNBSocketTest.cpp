@@ -120,7 +120,8 @@ void TestSocketConnect(const char *addr) {
     ASSERT_EQ(bye, goodbye);
   } else {
     Socket *connected_socket;
-    Status err = server_socket->Accept(connected_socket);
+    Status err =
+        server_socket->Accept(std::chrono::seconds(10), connected_socket);
     if (err.Fail()) {
       llvm::errs() << err.AsCString();
       abort();
