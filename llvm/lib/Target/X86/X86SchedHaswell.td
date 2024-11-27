@@ -164,9 +164,9 @@ defm : X86WriteRes<WriteXCHG, [HWPort0156], 2, [3], 3>;
 
 // Integer shifts and rotates.
 defm : HWWriteResPair<WriteShift,    [HWPort06],  1>;
-defm : HWWriteResPair<WriteShiftCL,  [HWPort06, HWPort0156],  3, [2,1], 3>;
+defm : HWWriteResPair<WriteShiftCL,  [HWPort06],  3, [3], 3>;
 defm : HWWriteResPair<WriteRotate,   [HWPort06],  1, [1], 1>;
-defm : HWWriteResPair<WriteRotateCL, [HWPort06, HWPort0156],  3, [2,1], 3>;
+defm : HWWriteResPair<WriteRotateCL, [HWPort06],  3, [3], 3>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [HWPort1], 3, [1], 1>;
