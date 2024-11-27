@@ -530,7 +530,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
-      .clampScalar(ST.hasStdExtF(), 0, sXLen, sXLen);
+      .clampScalar(0, sXLen, sXLen)
+      .libcallFor({{sXLen, s32}, {sXLen, s64}});
 
   // TODO: Support vector version of G_IS_FPCLASS.
   getActionDefinitionsBuilder(G_IS_FPCLASS)
@@ -571,6 +572,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
                                G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
                                G_INTRINSIC_ROUNDEVEN})
+      .libcallFor({s32, s64});
+
+  getActionDefinitionsBuilder(
+      {G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2, G_FLOG10, G_FEXP, G_FEXP2})
       .libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
