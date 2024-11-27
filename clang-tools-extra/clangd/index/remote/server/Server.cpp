@@ -258,6 +258,53 @@ private:
     return grpc::Status::OK;
   }
 
+  grpc::Status
+  ContainedRefs(grpc::ServerContext *Context,
+                const ContainedRefsRequest *Request,
+                grpc::ServerWriter<ContainedRefsReply> *Reply) override {
+    auto StartTime = stopwatch::now();
+    WithContextValue WithRequestContext(CurrentRequest, Context);
+    logRequest(*Request);
+    trace::Span Tracer("ContainedRefsRequest");
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse ContainedRefsRequest from protobuf: {0}",
+           Req.takeError());
+      return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for ContainedRefs request from {0} to "
+          "{1}.",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
+    }
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    bool HasMore =
+        Index.containedRefs(*Req, [&](const clangd::ContainedRefsResult &Item) {
+          auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
+          if (!SerializedItem) {
+            elog("Unable to convert ContainedRefsResult to protobuf: {0}",
+                 SerializedItem.takeError());
+            ++FailedToSend;
+            return;
+          }
+          ContainedRefsReply NextMessage;
+          *NextMessage.mutable_stream_result() = *SerializedItem;
+          logResponse(NextMessage);
+          Reply->Write(NextMessage);
+          ++Sent;
+        });
+    ContainedRefsReply LastMessage;
+    LastMessage.mutable_final_result()->set_has_more(HasMore);
+    logResponse(LastMessage);
+    Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
+    logRequestSummary("v1/ContainedRefs", Sent, StartTime);
+    return grpc::Status::OK;
+  }
+
   grpc::Status Relations(grpc::ServerContext *Context,
                          const RelationsRequest *Request,
                          grpc::ServerWriter<RelationsReply> *Reply) override {
