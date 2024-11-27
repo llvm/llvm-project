@@ -3524,7 +3524,6 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   return convertFromScalableVector(VT, Gather, DAG, Subtarget);
 }
 
-
 /// Try and optimize BUILD_VECTORs with "dominant values" - these are values
 /// which constitute a large proportion of the elements. In such cases we can
 /// splat a vector with the dominant element and make up the shortfall with
