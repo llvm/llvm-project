@@ -3033,22 +3033,6 @@ public:
   }
 };
 
-class PartialReduceAddSDNode : public SDNode {
-public:
-  friend class SelectionDAG;
-
-  PartialReduceAddSDNode(const DebugLoc &dl, SDVTList VTs)
-      : SDNode(ISD::PARTIAL_REDUCE_ADD, 0, dl, VTs) {}
-
-  const SDValue &getChain() const { return getOperand(0); }
-  const SDValue &getAcc() const { return getOperand(1); }
-  const SDValue &getInput() const { return getOperand(2); }
-
-  static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::PARTIAL_REDUCE_ADD;
-  }
-};
-
 class FPStateAccessSDNode : public MemSDNode {
 public:
   friend class SelectionDAG;

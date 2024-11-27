@@ -6422,16 +6422,6 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   DAG.setRoot(Histogram);
 }
 
-void SelectionDAGBuilder::visitPartialReduceAdd(const CallInst &I,
-                                                unsigned IntrinsicID) {
-  SDLoc dl = getCurSDLoc();
-  SDValue Acc = getValue(I.getOperand(0));
-  SDValue Input = getValue(I.getOperand(1));
-  SDValue Chain = getRoot();
-
-  setValue(&I, DAG.getPartialReduceAddSDNode(dl, Chain, Acc, Input));
-}
-
 void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
                                                        unsigned Intrinsic) {
   assert(Intrinsic == Intrinsic::experimental_vector_extract_last_active &&
@@ -8128,15 +8118,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
+    SDLoc dl = getCurSDLoc();
+    SDValue Acc = getValue(I.getOperand(0));
+    EVT AccVT = Acc.getValueType();
+    SDValue Input = getValue(I.getOperand(1));
 
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
-      visitPartialReduceAdd(I, Intrinsic);
+      setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_ADD, dl, AccVT, Acc, Input));
       return;
     }
-
-    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
-                                         getValue(I.getOperand(0)),
-                                         getValue(I.getOperand(1))));
+    setValue(&I, DAG.expandPartialReduceAdd(dl, AccVT, Acc, Input));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

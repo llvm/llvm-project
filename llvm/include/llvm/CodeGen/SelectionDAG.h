@@ -1604,15 +1604,10 @@ public:
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Get a partial reduction SD node for the DAG. This is done when the input
-  /// and output types can be legalised for wide add(s) or dot product(s)
-  SDValue getPartialReduceAddSDNode(SDLoc DL, SDValue Chain, SDValue Acc,
-                                    SDValue Input);
-
-  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
-  /// its operands and ReducedTY is the intrinsic's return type.
-  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                              SDValue Op2);
+  /// Expands partial reduce node which can't be lowered to wide add or dot
+  /// product instruction(s)
+  SDValue expandPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                                 SDValue Op2);
 
   /// Expands a node with multiple results to an FP or vector libcall. The
   /// libcall is expected to take all the operands of the \p Node followed by

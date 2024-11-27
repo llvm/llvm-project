@@ -2467,14 +2467,8 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
-SDValue SelectionDAG::getPartialReduceAddSDNode(SDLoc DL, SDValue Chain,
-                                                SDValue Acc, SDValue Input) {
-  return getNode(ISD::PARTIAL_REDUCE_ADD, DL, Acc.getValueType(), Chain, Acc,
-                 Input);
-}
-
-SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                                          SDValue Op2) {
+SDValue SelectionDAG::expandPartialReduceAdd(SDLoc DL, EVT ReducedTy,
+                                             SDValue Op1, SDValue Op2) {
   EVT FullTy = Op2.getValueType();
 
   unsigned Stride = ReducedTy.getVectorMinNumElements();
