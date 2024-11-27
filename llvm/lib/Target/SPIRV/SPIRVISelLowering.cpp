@@ -394,11 +394,11 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       case SPIRV::OpGenericCastToPtr:
         validateAccessChain(STI, MRI, GR, MI);
         break;
-      case SPIRV::OpPtrAccessChain:
-      case SPIRV::OpInBoundsPtrAccessChain:
-        if (MI.getNumOperands() == 4)
-          validateAccessChain(STI, MRI, GR, MI);
-        break;
+//      case SPIRV::OpPtrAccessChain:
+//      case SPIRV::OpInBoundsPtrAccessChain:
+//        if (MI.getNumOperands() == 4)
+//          validateAccessChain(STI, MRI, GR, MI);
+//        break;
 
       case SPIRV::OpFunctionCall:
         // ensure there is no mismatch between actual and expected arg types:

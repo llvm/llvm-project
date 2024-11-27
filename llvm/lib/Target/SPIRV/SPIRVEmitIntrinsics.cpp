@@ -17,6 +17,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -80,7 +81,8 @@ class SPIRVEmitIntrinsics
   unsigned TodoTypeSz = 0;
   DenseMap<Value *, bool> TodoType;
   void insertTodoType(Value *Op) {
-    if (CanTodoType) {
+    // TODO: add isa<CallInst>(Op) to no-insert
+    if (CanTodoType && !isa<GetElementPtrInst>(Op)) {
       auto It = TodoType.try_emplace(Op, true);
       if (It.second)
         ++TodoTypeSz;
@@ -94,9 +96,14 @@ class SPIRVEmitIntrinsics
     }
   }
   bool isTodoType(Value *Op) {
+    if (isa<GetElementPtrInst>(Op))
+      return false;
     auto It = TodoType.find(Op);
     return It != TodoType.end() && It->second;
   }
+  // a register of Instructions that were visited by deduceOperandElementType()
+  // to validate operand types with an instruction
+  std::unordered_set<Instruction *> TypeValidated;
 
   // well known result types of builtins
   enum WellKnownTypes { Event };
@@ -178,10 +185,17 @@ class SPIRVEmitIntrinsics
       Type *&KnownElemTy, bool IsPostprocessing);
 
   CallInst *buildSpvPtrcast(Function *F, Value *Op, Type *ElemTy);
-  void propagateElemType(Value *Op, Type *ElemTy);
-  void propagateElemTypeRec(Value *Op, Type *PtrElemTy, Type *CastElemTy);
+  void replaceUsesOfWithSpvPtrcast(Value *Op, Type *ElemTy, Instruction *I,
+                                   DenseMap<Function *, CallInst *> Ptrcasts);
+  void propagateElemType(Value *Op, Type *ElemTy,
+                         DenseSet<std::pair<Value *, Value *>> &VisitedSubst);
+  void
+  propagateElemTypeRec(Value *Op, Type *PtrElemTy, Type *CastElemTy,
+                       DenseSet<std::pair<Value *, Value *>> &VisitedSubst);
   void propagateElemTypeRec(Value *Op, Type *PtrElemTy, Type *CastElemTy,
-                            std::unordered_set<Value *> &Visited);
+                            DenseSet<std::pair<Value *, Value *>> &VisitedSubst,
+                            std::unordered_set<Value *> &Visited,
+                            DenseMap<Function *, CallInst *> Ptrcasts);
 
   void replaceAllUsesWith(Value *Src, Value *Dest, bool DeleteOld = true);
 
@@ -439,38 +453,63 @@ CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Function *F, Value *Op,
   return PtrCasted;
 }
 
-void SPIRVEmitIntrinsics::propagateElemType(Value *Op, Type *ElemTy) {
-  SmallVector<User *> Users(Op->users());
-  for (auto *U : Users) {
-    if (!isa<Instruction>(U))
-      continue;
-    if (isa<BitCastInst>(U) || isa<GetElementPtrInst>(U) || isSpvIntrinsic(U))
-      continue;
-    U->replaceUsesOfWith(
-        Op, buildSpvPtrcast(dyn_cast<Instruction>(U)->getParent()->getParent(),
-                            Op, ElemTy));
+void SPIRVEmitIntrinsics::replaceUsesOfWithSpvPtrcast(
+    Value *Op, Type *ElemTy, Instruction *I,
+    DenseMap<Function *, CallInst *> Ptrcasts) {
+  Function *F = I->getParent()->getParent();
+  CallInst *PtrCastedI = nullptr;
+  auto It = Ptrcasts.find(F);
+  if (It == Ptrcasts.end()) {
+    PtrCastedI = buildSpvPtrcast(F, Op, ElemTy);
+    Ptrcasts[F] = PtrCastedI;
+  } else {
+    PtrCastedI = It->second;
   }
+  I->replaceUsesOfWith(Op, PtrCastedI);
 }
 
-void SPIRVEmitIntrinsics::propagateElemTypeRec(Value *Op, Type *PtrElemTy,
-                                               Type *CastElemTy) {
-  if (!isNestedPointer(PtrElemTy))
-    return;
-  std::unordered_set<Value *> Visited;
-  propagateElemTypeRec(Op, PtrElemTy, CastElemTy, Visited);
+void SPIRVEmitIntrinsics::propagateElemType(
+    Value *Op, Type *ElemTy,
+    DenseSet<std::pair<Value *, Value *>> &VisitedSubst) {
+  DenseMap<Function *, CallInst *> Ptrcasts;
+  SmallVector<User *> Users(Op->users());
+  for (auto *U : Users) {
+    if (!isa<Instruction>(U) || isa<BitCastInst>(U) || isSpvIntrinsic(U))
+      continue;
+    if (!VisitedSubst.insert(std::make_pair(U, Op)).second)
+      continue;
+    Instruction *UI = dyn_cast<Instruction>(U);
+    // If the instruction was validated already, we need to keep it valid by
+    // keeping current Op type.
+    if (isa<GetElementPtrInst>(UI) ||
+        TypeValidated.find(UI) != TypeValidated.end())
+      replaceUsesOfWithSpvPtrcast(Op, ElemTy, UI, Ptrcasts);
+  }
 }
 
 void SPIRVEmitIntrinsics::propagateElemTypeRec(
     Value *Op, Type *PtrElemTy, Type *CastElemTy,
-    std::unordered_set<Value *> &Visited) {
+    DenseSet<std::pair<Value *, Value *>> &VisitedSubst) {
+  std::unordered_set<Value *> Visited;
+  DenseMap<Function *, CallInst *> Ptrcasts;
+  propagateElemTypeRec(Op, PtrElemTy, CastElemTy, VisitedSubst, Visited,
+                       Ptrcasts);
+}
+
+void SPIRVEmitIntrinsics::propagateElemTypeRec(
+    Value *Op, Type *PtrElemTy, Type *CastElemTy,
+    DenseSet<std::pair<Value *, Value *>> &VisitedSubst,
+    std::unordered_set<Value *> &Visited,
+    DenseMap<Function *, CallInst *> Ptrcasts) {
   if (!Visited.insert(Op).second)
     return;
   SmallVector<User *> Users(Op->users());
   for (auto *U : Users) {
-    if (!isa<Instruction>(U))
+    if (!isa<Instruction>(U) || isa<BitCastInst>(U) || isSpvIntrinsic(U))
       continue;
-    if (isa<BitCastInst>(U) || isSpvIntrinsic(U))
+    if (!VisitedSubst.insert(std::make_pair(U, Op)).second)
       continue;
+    /*
     if (auto *Ref = dyn_cast<GetElementPtrInst>(U)) {
       CallInst *AssignCI = GR->findAssignPtrTypeInstr(Ref);
       if (AssignCI && Ref->getPointerOperand() == Op) {
@@ -485,14 +524,18 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
         assert(NewElemTy && "Expected valid GEP indices");
         updateAssignType(AssignCI, Ref, PoisonValue::get(NewElemTy));
         // recursively propagate change
-        if (isNestedPointer(NewElemTy))
-          propagateElemTypeRec(Ref, NewElemTy, PrevElemTy, Visited);
+        propagateElemTypeRec(Ref, NewElemTy, PrevElemTy, VisitedSubst, Visited,
+                             Ptrcasts);
       }
       continue;
     }
-    U->replaceUsesOfWith(
-        Op, buildSpvPtrcast(dyn_cast<Instruction>(U)->getParent()->getParent(),
-                            Op, CastElemTy));
+    */
+    Instruction *UI = dyn_cast<Instruction>(U);
+    // If the instruction was validated already, we need to keep it valid by
+    // keeping current Op type.
+    if (isa<GetElementPtrInst>(UI) ||
+        TypeValidated.find(UI) != TypeValidated.end())
+      replaceUsesOfWithSpvPtrcast(Op, CastElemTy, UI, Ptrcasts);
   }
 }
 
@@ -600,13 +643,34 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
   if (auto *Ref = dyn_cast<AllocaInst>(I)) {
     maybeAssignPtrType(Ty, I, Ref->getAllocatedType(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
-    Ty = Ref->getResultElementType();
+    // TODO: not sure if GetElementPtrInst::getTypeAtIndex() does anything
+    // useful here
+    if (isNestedPointer(Ref->getSourceElementType())) {
+      Ty = Ref->getSourceElementType();
+      for (Use &U : drop_begin(Ref->indices()))
+        Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
+    } else {
+      Ty = Ref->getResultElementType();
+    }
+    /*
+    if (Type *PtrElemTy = GR->findDeducedElementType(Ref->getPointerOperand()))
+    { Ty = PtrElemTy; for (Use &U : drop_begin(Ref->indices())) Ty =
+    GetElementPtrInst::getTypeAtIndex(Ty, U.get()); if
+    (isTodoType(Ref->getPointerOperand())) insertTodoType(Ref); } else if
+    (isNestedPointer(Ref->getSourceElementType())) { Ty =
+    Ref->getSourceElementType(); for (Use &U : drop_begin(Ref->indices())) Ty =
+    GetElementPtrInst::getTypeAtIndex(Ty, U.get()); } else { Ty =
+    Ref->getResultElementType();
+    }
+    */
+    /*
     if (isNestedPointer(Ref->getSourceElementType())) {
       Type *PtrElemTy = GR->findDeducedElementType(Ref->getPointerOperand());
       Ty = PtrElemTy ? PtrElemTy : Ref->getSourceElementType();
       for (Use &U : drop_begin(Ref->indices()))
         Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
     }
+    */
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     Value *Op = Ref->getPointerOperand();
     Type *KnownTy = GR->findDeducedElementType(Op);
@@ -934,7 +998,6 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Uncomplete = isTodoType(I);
     Ops.push_back(std::make_pair(Ref->getPointerOperand(), 0));
   } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
-    // TODO: ensure that getPointerOperand() and GEP result type are consistent
     if (GR->findDeducedElementType(Ref->getPointerOperand()))
       return;
     KnownElemTy = Ref->getSourceElementType();
@@ -992,6 +1055,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
         GR->addDeducedElementType(CurrF, OpElemTy);
         GR->addReturnType(CurrF, TypedPointerType::get(
                                      OpElemTy, getPointerAddressSpace(RetTy)));
+        DenseSet<std::pair<Value *, Value *>> VisitedSubst{
+            std::make_pair(I, Op)};
         for (User *U : CurrF->users()) {
           CallInst *CI = dyn_cast<CallInst>(U);
           if (!CI || CI->getCalledFunction() != CurrF)
@@ -999,10 +1064,11 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
           if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(CI)) {
             if (Type *PrevElemTy = GR->findDeducedElementType(CI)) {
               updateAssignType(AssignCI, CI, PoisonValue::get(OpElemTy));
-              propagateElemType(CI, PrevElemTy);
+              propagateElemType(CI, PrevElemTy, VisitedSubst);
             }
           }
         }
+        TypeValidated.insert(I);
       }
       return;
     }
@@ -1075,7 +1141,9 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       } else {
         Type *PrevElemTy = GR->findDeducedElementType(Op);
         updateAssignType(AssignCI, Op, OpTyVal);
-        propagateElemTypeRec(Op, KnownElemTy, PrevElemTy);
+        DenseSet<std::pair<Value *, Value *>> VisitedSubst{
+            std::make_pair(I, Op)};
+        propagateElemTypeRec(Op, KnownElemTy, PrevElemTy, VisitedSubst);
       }
     } else {
       eraseTodoType(Op);
@@ -1087,6 +1155,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
         I->setOperand(OpIt.second, PtrCastI);
     }
   }
+  TypeValidated.insert(I);
 }
 
 void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
@@ -1293,10 +1362,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
   Type *VTy = V->getType();
 
   // A couple of sanity checks.
-  assert((isPointerTy(VTy) ||
-          (isa<TargetExtType>(VTy) &&
-           isTypedPointerWrapper(dyn_cast<TargetExtType>(VTy)))) &&
-         "Expect a pointer type!");
+  assert((isPointerTy(VTy)) && "Expect a pointer type!");
   if (Type *ElemTy = getPointeeType(VTy))
     if (ElemTy != AssignedType)
       report_fatal_error("Unexpected pointer element type!");
@@ -1329,6 +1395,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
 void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
     Instruction *I, Value *Pointer, Type *ExpectedElementType,
     unsigned OperandToReplace, IRBuilder<> &B) {
+  TypeValidated.insert(I);
   // If Pointer is the result of nop BitCastInst (ptr -> ptr), use the source
   // pointer instead. The BitCastInst should be later removed when visited.
   while (BitCastInst *BC = dyn_cast<BitCastInst>(Pointer))
@@ -1392,8 +1459,11 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
         //  uncomplete, update spv_assign_ptr_type arguments.
         if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Pointer)) {
           Type *PrevElemTy = GR->findDeducedElementType(Pointer);
+          assert(PrevElemTy);
+          DenseSet<std::pair<Value *, Value *>> VisitedSubst{
+              std::make_pair(I, Pointer)};
           updateAssignType(AssignCI, Pointer, ExpectedElementVal);
-          propagateElemTypeRec(Pointer, ExpectedElementType, PrevElemTy);
+          propagateElemType(Pointer, PrevElemTy, VisitedSubst);
         } else {
           buildAssignPtr(B, ExpectedElementType, Pointer);
         }
@@ -1422,15 +1492,20 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
   }
   if (SI) {
     Value *Op = SI->getValueOperand();
+    Value *Pointer = SI->getPointerOperand();
+    // if (!GR->findDeducedElementType(Pointer) || isTodoType(Pointer)) {
     Type *OpTy = Op->getType();
     if (auto *OpI = dyn_cast<Instruction>(Op))
       OpTy = restoreMutatedType(GR, OpI, OpTy);
     if (OpTy == Op->getType())
       OpTy = deduceElementTypeByValueDeep(OpTy, Op, false);
-    return replacePointerOperandWithPtrCast(I, SI->getPointerOperand(), OpTy, 1,
-                                            B);
-  } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+    replacePointerOperandWithPtrCast(I, Pointer, OpTy, 1, B);
+    //}
+    return;
+  }
+  if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     Value *Pointer = LI->getPointerOperand();
+    // if (!GR->findDeducedElementType(Pointer) || isTodoType(Pointer)) {
     Type *OpTy = LI->getType();
     if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
       // TODO: isNestedPointer() instead of dyn_cast<PointerType>
@@ -1443,8 +1518,11 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
           insertTodoType(Pointer);
       }
     }
-    return replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
-  } else if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
+    replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
+    //}
+    return;
+  }
+  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
     Value *Pointer = GEPI->getPointerOperand();
     Type *OpTy = GEPI->getSourceElementType();
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
@@ -1522,7 +1600,8 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     if (!ExpectedType || ExpectedType->isVoidTy())
       continue;
 
-    if (ExpectedType->isTargetExtTy())
+    if (ExpectedType->isTargetExtTy() &&
+        !isTypedPointerWrapper(cast<TargetExtType>(ExpectedType)))
       insertAssignPtrTypeTargetExt(cast<TargetExtType>(ExpectedType),
                                    ArgOperand, B);
     else
@@ -2155,6 +2234,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
   unsigned SzTodo = TodoTypeSz;
   DenseMap<Value *, SmallPtrSet<Value *, 4>> ToProcess;
   for (auto [Op, Enabled] : TodoType) {
+    // TODO: add isa<CallInst>(Op) to continue
     if (!Enabled || isa<GetElementPtrInst>(Op))
       continue;
     CallInst *AssignCI = GR->findAssignPtrTypeInstr(Op);
@@ -2168,11 +2248,12 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
       std::unordered_set<Value *> Visited;
       if (Type *ElemTy = deduceElementTypeHelper(Op, Visited, false, true)) {
         if (ElemTy != KnownTy) {
+          DenseSet<std::pair<Value *, Value *>> VisitedSubst;
           if (isa<CallInst>(Op)) {
-            propagateElemType(CI, ElemTy);
+            propagateElemType(CI, ElemTy, VisitedSubst);
           } else {
             updateAssignType(AssignCI, CI, PoisonValue::get(ElemTy));
-            propagateElemTypeRec(CI, ElemTy, KnownTy);
+            propagateElemTypeRec(CI, ElemTy, KnownTy, VisitedSubst);
           }
           eraseTodoType(Op);
           continue;

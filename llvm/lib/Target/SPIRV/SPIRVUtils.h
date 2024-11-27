@@ -285,6 +285,13 @@ inline bool isTypedPointerWrapper(const TargetExtType *ExtTy) {
          ExtTy->getNumTypeParameters() == 1;
 }
 
+// True if this is an instance of PointerType or TypedPointerType.
+inline bool isPointerTyOrWrapper(const Type *Ty) {
+  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
+    return isTypedPointerWrapper(ExtTy);
+  return isPointerTy(Ty);
+}
+
 inline Type *applyWrappers(Type *Ty) {
   if (auto *ExtTy = dyn_cast<TargetExtType>(Ty)) {
     if (isTypedPointerWrapper(ExtTy))
