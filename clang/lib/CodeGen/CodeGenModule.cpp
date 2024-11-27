@@ -5162,7 +5162,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
   }
 
   if (D)
-    SanitizerMD->reportGlobalToASan(GV, *D);
+    SanitizerMD->reportGlobal(GV, *D);
 
   LangAS ExpectedAS =
       D ? D->getType().getAddressSpace()
@@ -5728,8 +5728,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (NeedsGlobalCtor || NeedsGlobalDtor)
     EmitCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
 
-  SanitizerMD->reportGlobalToASan(GV, *D, NeedsGlobalCtor);
-  SanitizerMD->reportGlobalToTySan(GV, *D);
+  SanitizerMD->reportGlobal(GV, *D, NeedsGlobalCtor);
 
   // Emit global variable debug information.
   if (CGDebugInfo *DI = getModuleDebugInfo())
@@ -6619,8 +6618,7 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
   if (Entry)
     *Entry = GV;
 
-  SanitizerMD->reportGlobalToASan(GV, S->getStrTokenLoc(0), "<string literal>");
-  // FIXME: Should we also report to the TySan?
+  SanitizerMD->reportGlobal(GV, S->getStrTokenLoc(0), "<string literal>");
 
   return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
                          GV->getValueType(), Alignment);
