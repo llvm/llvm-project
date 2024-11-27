@@ -631,7 +631,8 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                << "Invalid prefix with R_X86_64_CODE_6_GOTTPOFF!";
       return;
     }
-    if (loc[-2] == 0x3 || loc[-2] == 0x1) {
+    if (((loc[-4] & 0x80) != 0) && ((loc[-3] & 0x14) != 0) &&
+        (loc[-2] == 0x3 || loc[-2] == 0x1) && ((loc[-1] & 0xc7) == 0x5)) {
       // "addq %reg1, foo@GOTTPOFF(%rip), %reg2" -> "addq $foo, %reg1, %reg2"
       // "addq foo@GOTTPOFF(%rip), %reg1, %reg2" -> "addq $foo, %reg1, %reg2"
       // "{nf} addq %reg1, foo@GOTTPOFF(%rip), %reg2"
@@ -641,15 +642,16 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
       // "{nf} addq name@GOTTPOFF(%rip), %reg" -> "{nf} addq $foo, %reg"
       loc[-2] = 0x81;
       // Move R bits to B bits in EVEX payloads and ModRM byte.
-      if ((loc[-5] & (1 << 7)) == 0)
-        loc[-5] = (loc[-5] | (1 << 7)) & ~(1 << 5);
-      if ((loc[-5] & (1 << 4)) == 0)
-        loc[-5] = loc[-5] | (1 << 4) | (1 << 3);
+      const uint8_t evexPayload0 = loc[-5];
+      if ((evexPayload0 & (1 << 7)) == 0)
+        loc[-5] = (evexPayload0 | (1 << 7)) & ~(1 << 5);
+      if ((evexPayload0 & (1 << 4)) == 0)
+        loc[-5] = evexPayload0 | (1 << 4) | (1 << 3);
       *regSlot = 0xc0 | reg;
     } else {
-      Err(ctx)
-          << getErrorLoc(ctx, loc - 6)
-          << "R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions only";
+      Err(ctx) << getErrorLoc(ctx, loc - 6)
+               << "R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions "
+                  "with NDD/NF/NDD+NF only";
     }
   } else {
     llvm_unreachable("Unsupported relocation type!");
