@@ -294,7 +294,6 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_mov_b32 s52, 0
 ; CHECK-NEXT:    s_inst_prefetch 0x1
-; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB0_19: ; Parent Loop BB0_5 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v44, v58
@@ -913,7 +912,6 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    s_mov_b32 s47, 0
 ; CHECK-NEXT:    s_inst_prefetch 0x1
-; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB1_7: ; %.103
 ; CHECK-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2

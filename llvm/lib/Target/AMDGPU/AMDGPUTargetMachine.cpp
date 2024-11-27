@@ -481,6 +481,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAttributorLegacyPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
+  initializeAMDGPUAnnotateVaryingBranchWeightsLegacyPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
@@ -501,7 +502,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUReserveWWMRegsPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
-  initializeAMDGPUAnnotateVaryingBranchWeightsLegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
@@ -1312,11 +1312,11 @@ bool GCNPassConfig::addPreISel() {
 
   addPass(createAMDGPUAnnotateUniformValuesLegacy());
   addPass(createSIAnnotateControlFlowLegacyPass());
+  addPass(createAMDGPUAnnotateVaryingBranchWeightsLegacyPass());
   // TODO: Move this right after structurizeCFG to avoid extra divergence
   // analysis. This depends on stopping SIAnnotateControlFlow from making
   // control flow modifications.
   addPass(createAMDGPURewriteUndefForPHILegacyPass());
-  addPass(createAMDGPUAnnotateVaryingBranchWeightsLegacyPass());
 
   addPass(createLCSSAPass());
 
@@ -2000,12 +2000,12 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
   addPass(SIAnnotateControlFlowPass(TM));
 
+  addPass(AMDGPUAnnotateVaryingBranchWeightsPass(TM));
+
   // TODO: Move this right after structurizeCFG to avoid extra divergence
   // analysis. This depends on stopping SIAnnotateControlFlow from making
   // control flow modifications.
   addPass(AMDGPURewriteUndefForPHIPass());
-
-  addPass(AMDGPUAnnotateVaryingBranchWeightsPass(TM));
 
   addPass(LCSSAPass());
 

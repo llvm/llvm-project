@@ -22,14 +22,11 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
-#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
@@ -45,12 +42,13 @@ class AMDGPUAnnotateVaryingBranchWeightsImpl {
 public:
   AMDGPUAnnotateVaryingBranchWeightsImpl() = delete;
   AMDGPUAnnotateVaryingBranchWeightsImpl(const GCNSubtarget &ST,
-                                         const TargetTransformInfo &TTI)
-      : ST(ST), TTI(TTI) {
+                                         const TargetTransformInfo &GCNTTI,
+                                         UniformityInfo &UA)
+      : ST(ST), GCNTTI(GCNTTI), UA(UA) {
     // Determine weights that signal that a branch is very likely to be
     // predicted correctly, i.e., whose ratio exceeds
     // TTI.getPredictableBranchThreshold().
-    auto BranchProbThreshold = TTI.getPredictableBranchThreshold();
+    auto BranchProbThreshold = GCNTTI.getPredictableBranchThreshold();
     LikelyWeight = BranchProbThreshold.getNumerator();
     UnlikelyWeight = BranchProbThreshold.getDenominator() - LikelyWeight;
     if (UnlikelyWeight > 0)
@@ -61,7 +59,8 @@ public:
 
 private:
   const GCNSubtarget &ST;
-  const TargetTransformInfo &TTI;
+  const TargetTransformInfo &GCNTTI;
+  const UniformityInfo &UA;
   uint32_t LikelyWeight;
   uint32_t UnlikelyWeight;
   ValueMap<const Value *, bool> LikelyVaryingCache;
@@ -89,16 +88,21 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+
     AU.setPreservesCFG();
+    AU.addPreserved<UniformityInfoWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override {
     TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+    UniformityInfo &UA =
+        getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
     const TargetMachine &TM = TPC.getTM<TargetMachine>();
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
-    return AMDGPUAnnotateVaryingBranchWeightsImpl(ST, TTI).run(F);
+    const TargetTransformInfo &GCNTTI = TM.getTargetTransformInfo(F);
+    return AMDGPUAnnotateVaryingBranchWeightsImpl(ST, GCNTTI, UA).run(F);
   }
 };
 
@@ -108,6 +112,7 @@ char AMDGPUAnnotateVaryingBranchWeightsLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AMDGPUAnnotateVaryingBranchWeightsLegacy, DEBUG_TYPE,
                       "Annotate Varying Branch Weights", false, false)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUAnnotateVaryingBranchWeightsLegacy, DEBUG_TYPE,
                     "Annotate Varying Branch Weights", false, false)
 
@@ -119,20 +124,22 @@ PreservedAnalyses
 AMDGPUAnnotateVaryingBranchWeightsPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
-  bool Changed = AMDGPUAnnotateVaryingBranchWeightsImpl(ST, TTI).run(F);
+  const TargetTransformInfo &GCNTTI = TM.getTargetTransformInfo(F);
+  UniformityInfo &UA = AM.getResult<UniformityInfoAnalysis>(F);
+  bool Changed = AMDGPUAnnotateVaryingBranchWeightsImpl(ST, GCNTTI, UA).run(F);
 
   if (!Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<UniformityInfoAnalysis>();
   return PA;
 }
 
 bool AMDGPUAnnotateVaryingBranchWeightsImpl::isLikelyVarying(const Value *V) {
   // Check if V is a source of divergence or if it transitively uses one.
-  if (TTI.isSourceOfDivergence(V))
+  if (GCNTTI.isSourceOfDivergence(V))
     return true;
 
   auto *U = dyn_cast<User>(V);
@@ -175,26 +182,15 @@ bool AMDGPUAnnotateVaryingBranchWeightsImpl::run(Function &F) {
   if (WGSizes.first <= 1)
     return false;
 
-  using namespace PatternMatch;
-
   bool Changed = false;
   for (auto &BB : F) {
-    auto *Term = BB.getTerminator();
-    // Look for conditional branches whose condition is an ExtractValueInst
-    // that extracts the return value of a call to the amdgcn_if or amdgcn_else
-    // intrinsic.
-    if (match(Term, m_Br(m_ExtractValue<0>(m_CombineOr(
-                             m_Intrinsic<Intrinsic::amdgcn_if>(),
-                             m_Intrinsic<Intrinsic::amdgcn_else>())),
-                         m_Value(), m_Value()))) {
-      // The this condition is an artificial value resulting from the control
-      // flow intrinsic, not the actual branch condition. However, the
-      // intrinsics connect it via data flow with the actual condition
-      // (even for the amdgcn_else intrinsic, via the matching amdgcn_if
-      // intrinsic), so isLikelyVarying still produces meaningful results.
-      if (isLikelyVarying(cast<BranchInst>(Term)->getCondition()))
-        Changed |= setTrueSuccessorLikely(cast<BranchInst>(Term));
-    }
+    auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
+    // Only consider statically non-uniform conditional branches.
+    if (!Br || !Br->isConditional() || UA.isUniform(Br))
+      continue;
+
+    if (isLikelyVarying(Br->getCondition()))
+      Changed |= setTrueSuccessorLikely(Br);
   }
 
   return Changed;
