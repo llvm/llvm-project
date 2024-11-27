@@ -1058,6 +1058,11 @@ public:
     return registeredDummySymbols.contains(sym);
   }
 
+  const Fortran::lower::pft::FunctionLikeUnit *
+  getCurrentFunctionUnit() const override final {
+    return currentFunctionUnit;
+  }
+
   void registerTypeInfo(mlir::Location loc,
                         Fortran::lower::SymbolRef typeInfoSym,
                         const Fortran::semantics::DerivedTypeSpec &typeSpec,
@@ -4411,6 +4416,7 @@ private:
     bool hasCUDAImplicitTransfer =
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
     llvm::SmallVector<mlir::Value> implicitTemps;
+
     if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
@@ -5595,6 +5601,7 @@ private:
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
+    setCurrentFunctionUnit(&funit);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -5604,6 +5611,7 @@ private:
       endNewFunction(funit);
     }
     funit.setActiveEntry(0);
+    setCurrentFunctionUnit(nullptr);
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -5967,12 +5975,17 @@ private:
   /// Reset all registered dummy symbols.
   void resetRegisteredDummySymbols() { registeredDummySymbols.clear(); }
 
+  void setCurrentFunctionUnit(Fortran::lower::pft::FunctionLikeUnit *unit) {
+    currentFunctionUnit = unit;
+  }
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
   Fortran::evaluate::FoldingContext foldingContext;
   fir::FirOpBuilder *builder = nullptr;
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
+  Fortran::lower::pft::FunctionLikeUnit *currentFunctionUnit = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;

@@ -1498,15 +1498,17 @@ static Operation *findPayloadOp(Block *body, bool initFirst = false) {
 
 void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   SmallVector<StringRef> elidedAttrs;
-  std::string attrToElide;
   p << " { " << payloadOp->getName().getStringRef();
   for (const auto &attr : payloadOp->getAttrs()) {
-    auto fastAttr =
-        llvm::dyn_cast<mlir::arith::FastMathFlagsAttr>(attr.getValue());
-    if (fastAttr && fastAttr.getValue() == mlir::arith::FastMathFlags::none) {
-      attrToElide = attr.getName().str();
-      elidedAttrs.push_back(attrToElide);
-      break;
+    if (auto fastAttr = dyn_cast<arith::FastMathFlagsAttr>(attr.getValue())) {
+      if (fastAttr.getValue() == arith::FastMathFlags::none) {
+        elidedAttrs.push_back(attr.getName());
+      }
+    }
+    if (auto denormAttr = dyn_cast<arith::DenormalModeAttr>(attr.getValue())) {
+      if (denormAttr.getValue() == arith::DenormalMode::ieee) {
+        elidedAttrs.push_back(attr.getName());
+      }
     }
   }
   p.printOptionalAttrDict(payloadOp->getAttrs(), elidedAttrs);
