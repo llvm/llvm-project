@@ -2951,10 +2951,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 
     for (StringRef Feat : Options[Index].Features) {
       std::vector<std::string> FeatStr =
-          getContext()
-              .getTargetInfo()
-              .parseTargetAttr(Feat)
-              .Features;
+          getContext().getTargetInfo().parseTargetAttr(Feat).Features;
 
       assert(FeatStr.size() == 1 && "Feature string not delimited");
 
