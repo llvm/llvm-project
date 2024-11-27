@@ -3,6 +3,30 @@
 ;
 ; Test inline assembly where the operand is bitcasted.
 
+define signext i16 @short_and_f(i16 signext %cc_dep1) {
+; CHECK-LABEL: short_and_f:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    aghi %r15, -168
+; CHECK-NEXT:    .cfi_def_cfa_offset 328
+; CHECK-NEXT:    sth %r2, 164(%r15)
+; CHECK-NEXT:    lh %r0, 164(%r15)
+; CHECK-NEXT:    sll %r0, 16
+; CHECK-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; CHECK-NEXT:    ldgr %f0, %r0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    lgdr %r0, %f0
+; CHECK-NEXT:    risblg %r0, %r0, 0, 159, 32
+; CHECK-NEXT:    srl %r0, 16
+; CHECK-NEXT:    sth %r0, 166(%r15)
+; CHECK-NEXT:    lgh %r2, 166(%r15)
+; CHECK-NEXT:    aghi %r15, 168
+; CHECK-NEXT:    br %r14
+entry:
+  %0 = tail call i16 asm sideeffect "", "=f,0"(i16 %cc_dep1)
+  ret i16 %0
+}
+
 define signext i32 @int_and_f(i32 signext %cc_dep1) {
 ; CHECK-LABEL: int_and_f:
 ; CHECK:       # %bb.0: # %entry
@@ -47,6 +71,28 @@ entry:
   %1 = tail call i128 asm sideeffect "", "=f,0"(i128 %cc_dep1)
   store i128 %1, ptr %agg.result, align 8
   ret void
+}
+
+define half @half_and_r(half %cc_dep1) {
+; CHECK-LABEL: half_and_r:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    aghi %r15, -168
+; CHECK-NEXT:    .cfi_def_cfa_offset 328
+; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
+; CHECK-NEXT:    lgdr %r0, %f0
+; CHECK-NEXT:    risblg %r0, %r0, 0, 159, 32
+; CHECK-NEXT:    srl %r0, 16
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    sll %r0, 16
+; CHECK-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; CHECK-NEXT:    ldgr %f0, %r0
+; CHECK-NEXT:    # kill: def $f0h killed $f0h killed $f0d
+; CHECK-NEXT:    aghi %r15, 168
+; CHECK-NEXT:    br %r14
+entry:
+  %0 = tail call half asm sideeffect "", "=r,0"(half %cc_dep1)
+  ret half %0
 }
 
 define float @float_and_r(float %cc_dep1) {
