@@ -153,14 +153,16 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
 }
 
 multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
-                        bit isVGPR = 0, bit isAGPR = 0> {
+                        bit isVGPR = 0, bit isAGPR = 0,
+                        list<int> DwarfEncodings = [-1, -1]> {
   def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR>;
   def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isVGPR, isAGPR,
                     /* isHi16 */ 1> {
     let isArtificial = ArtificialHigh;
   }
   def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
-                                   !cast<Register>(NAME#"_HI16")]> {
+                                   !cast<Register>(NAME#"_HI16")]>,
+           DwarfRegNum<DwarfEncodings> {
     let Namespace = "AMDGPU";
     let SubRegIndices = [lo16, hi16];
     let CoveredBySubRegs = !not(ArtificialHigh);
@@ -197,7 +199,8 @@ def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let HWEncoding = VCC_LO.HWEncoding;
 }
 
-defm EXEC_LO : SIRegLoHi16<"exec_lo", 126>, DwarfRegNum<[1, 1]>;
+defm EXEC_LO : SIRegLoHi16<"exec_lo", 126, /*ArtificialHigh=*/1, /*isVGPR=*/0,
+                           /*isAGPR=*/0, /*DwarfEncodings=*/[1, 1]>;
 defm EXEC_HI : SIRegLoHi16<"exec_hi", 127>;
 
 def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]> {
@@ -337,25 +340,26 @@ def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 // SGPR registers
 foreach Index = 0...105 in {
   defm SGPR#Index :
-     SIRegLoHi16 <"s"#Index, Index>,
-     DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
-                  !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
+     SIRegLoHi16 <"s"#Index, Index, /*ArtificialHigh=*/1,
+                  /*isVGPR=*/0, /*isAGPR=*/0, /*DwarfEncodings=*/
+                  [!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
+                   !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
 }
 
 // VGPR registers
 foreach Index = 0...255 in {
   defm VGPR#Index :
-    SIRegLoHi16 <"v"#Index, Index, /* ArtificialHigh= */ 0,
-                 /* isVGPR= */ 1, /* isAGPR= */ 0>,
-    DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]>;
+    SIRegLoHi16 <"v"#Index, Index, /*ArtificialHigh=*/ 0,
+                 /*isVGPR=*/ 1, /*isAGPR=*/ 0, /*DwarfEncodings=*/
+                 [!add(Index, 2560), !add(Index, 1536)]>;
 }
 
 // AccVGPR registers
 foreach Index = 0...255 in {
   defm AGPR#Index :
-      SIRegLoHi16 <"a"#Index, Index, /* ArtificialHigh= */ 1,
-                   /* isVGPR= */ 0, /* isAGPR= */ 1>,
-      DwarfRegNum<[!add(Index, 3072), !add(Index, 2048)]>;
+      SIRegLoHi16 <"a"#Index, Index, /*ArtificialHigh=*/ 1,
+                   /*isVGPR=*/ 0, /*isAGPR=*/ 1, /*DwarfEncodings=*/
+                   [!add(Index, 3072), !add(Index, 2048)]>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -11,15 +11,15 @@ body:             |
     ; GFX908: liveins: $vgpr0, $vgpr1
     ; GFX908-NEXT: {{  $}}
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7_lo16
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
     ; GFX908-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
     ; GFX908-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec
     ; GFX908-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
@@ -51,14 +51,14 @@ body:             |
     ; GFX908-LABEL: name: src_is_spill
     ; GFX908: liveins: $vgpr0, $vgpr1
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3_lo16
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; GFX908-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
     ; GFX908-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
     ; GFX908-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr0_agpr1
@@ -84,11 +84,11 @@ body:             |
     ; GFX908: liveins: $agpr0_agpr1_agpr2_agpr3
     ; GFX908-NEXT: {{  $}}
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3_lo16
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4_lo16
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
+    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; GFX908-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GFX908-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit-def $agpr1_agpr2_agpr3_agpr4
     ; GFX908-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3

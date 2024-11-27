@@ -18,9 +18,9 @@ body:             |
     ; GCN-LABEL: name: vgpr_use_after_prolog_spill
     ; GCN: liveins: $sgpr42, $vgpr0, $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 8192, killed $vgpr0, implicit $exec
     ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr42, 0, $vgpr0
     ; GCN-NEXT: S_NOP 0, implicit-def $vgpr0
@@ -45,9 +45,9 @@ body:             |
     ; GCN-LABEL: name: livein_vgpr_def_after_prolog_spill
     ; GCN: liveins: $sgpr42, $vgpr0, $vgpr1, $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 8192, killed $vgpr1, implicit $exec
     ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr42, 0, $vgpr0
     ; GCN-NEXT: S_NOP 0, implicit-def $vgpr0
@@ -71,9 +71,9 @@ body:             |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr42, $vgpr0, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
