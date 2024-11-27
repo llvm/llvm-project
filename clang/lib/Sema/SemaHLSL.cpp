@@ -705,12 +705,10 @@ void SemaHLSL::handleHLSLRootSignature(Decl *D, const ParsedAttr &AL) {
   unsigned NumArgs = AL.getNumArgs();
   if (NumArgs == 0 || NumArgs > 1)
     return;
-  
+
   StringRef Signature;
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Signature))
     return;
-
-  
 }
 
 void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
