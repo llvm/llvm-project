@@ -22,7 +22,7 @@ typedef half __attribute__((ext_vector_type(32))) half32;
 typedef __bf16 __attribute__((ext_vector_type(32))) bfloat32;
 
 void test(global uint* out, global uint2* out_v2u32, uint a, uint b, global half2* out_v2f16, global float* out_f32, float scale, global short2* out_v2i16, float src0, float src1,
-          global float2* out_v2f32, half2 src0_v2f16, bfloat2 src0_v2bf16, global bfloat2* out_v2bf16, global float32* out_v32f32, uint6 src_v6i32,
+          float2 src0_v2f32, global float2* out_v2f32, half2 src0_v2f16, bfloat2 src0_v2bf16, global bfloat2* out_v2bf16, global float32* out_v32f32, uint6 src_v6i32,
           global half32 *out_v32f16, global bfloat32 *out_v32bf16) {
   *out = __builtin_amdgcn_prng_b32(a); // expected-error{{'__builtin_amdgcn_prng_b32' needs target feature prng-inst}}
   *out_v2u32 = __builtin_amdgcn_permlane16_swap(a, b, false, false); // expected-error{{'__builtin_amdgcn_permlane16_swap' needs target feature permlane16-swap}}
@@ -55,4 +55,7 @@ void test(global uint* out, global uint2* out_v2u32, uint a, uint b, global half
   *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_bf8(a, scale, true); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_bf16_bf8' needs target feature bf8-cvt-scale-insts}}
   *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_f16(*out, src0_v2f16, scale, 3); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_fp4_f16' needs target feature fp4-cvt-scale-insts}}
   *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_bf16(*out, src0_v2bf16, scale, 3); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_fp4_bf16' needs target feature fp4-cvt-scale-insts}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f16(*out, src0_v2f16, 0, scale, 0); // expected-error{{'__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f16' needs target feature fp4-cvt-scale-insts}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_bf16(*out, src0_v2bf16, 0, scale, 0); // expected-error{{'__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_bf16' needs target feature fp4-cvt-scale-insts}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f32(*out, src0_v2f32, 0, scale, 0); // expected-error{{'__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f32' needs target feature fp4-cvt-scale-insts}}
 }
