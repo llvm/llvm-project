@@ -14,6 +14,7 @@
 
 #include <ranges>
 
+#include <memory>
 #include <span>
 #include <string_view>
 #include <utility>

@@ -13,8 +13,9 @@
 
 // This test ensures that we use `[[no_unique_address]]` in `join_with_view::iterator`.
 
-#include <iterator>
+#include <cstddef>
 #include <ranges>
+#include <variant>
 
 struct IntRange : std::ranges::view_base {
   int* begin();
