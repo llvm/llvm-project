@@ -859,10 +859,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNoCreateClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitPresentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -939,10 +940,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCreateClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAttachClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // ActOnVar ensured that everything is a valid variable reference, but we
@@ -960,10 +962,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAttachClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   // ActOnVar ensured that everything is a valid variable reference, but we
@@ -982,10 +985,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   return OpenACCWaitClause::Create(

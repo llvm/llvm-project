@@ -498,7 +498,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
-                        ISD::FLOG10},
+                        ISD::FLOG10, ISD::FLDEXP, ISD::FFREXP},
                        MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
@@ -506,7 +506,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::STRICT_FCEIL, ISD::STRICT_FFLOOR,
                         ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT,
                         ISD::STRICT_FROUND, ISD::STRICT_FROUNDEVEN,
-                        ISD::STRICT_FTRUNC},
+                        ISD::STRICT_FTRUNC, ISD::STRICT_FLDEXP},
                        MVT::f16, Promote);
 
     // We need to custom promote this.
@@ -2093,7 +2093,7 @@ bool RISCVTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
   // Assume target opcodes can't be scalarized.
   // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
+  if (Opc >= ISD::BUILTIN_OP_END)
     return false;
 
   // If the vector op is not supported, try to convert to scalar.

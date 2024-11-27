@@ -641,28 +641,25 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
-    // There is only one `type' allowed, but it's parsed as a list. Multiple
-    // types are diagnosed in the semantic checks for OpenMP.
-    if (const auto &mapType{
-            std::get<std::optional<std::list<parser::OmpMapClause::Type>>>(
-                x.t)}) {
-      switch (mapType->front()) {
-      case parser::OmpMapClause::Type::To:
+    auto &mods{OmpGetModifiers(x)};
+    if (auto *mapType{OmpGetUniqueModifier<parser::OmpMapType>(mods)}) {
+      switch (mapType->v) {
+      case parser::OmpMapType::Value::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case parser::OmpMapClause::Type::From:
+      case parser::OmpMapType::Value::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case parser::OmpMapClause::Type::Tofrom:
+      case parser::OmpMapType::Value::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case parser::OmpMapClause::Type::Alloc:
+      case parser::OmpMapType::Value::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case parser::OmpMapClause::Type::Release:
+      case parser::OmpMapType::Value::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case parser::OmpMapClause::Type::Delete:
+      case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }

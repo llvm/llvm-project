@@ -760,7 +760,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
     unsigned ConditionIdx;
   };
 
-  std::map<Value *, SelectLikeInfo> SelectInfo;
+  DenseMap<Value *, SelectLikeInfo> SelectInfo;
 
   // Check if the instruction is SelectLike or might be part of SelectLike
   // expression, put information into SelectInfo and return the iterator to the
@@ -792,10 +792,11 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       for (unsigned Idx = 0; Idx < 2; Idx++) {
         auto *Op = BO->getOperand(Idx);
         auto It = SelectInfo.find(Op);
-        if (It != SelectInfo.end() && It->second.IsAuxiliary)
-          return SelectInfo
-              .insert({I, {It->second.Cond, false, It->second.IsInverted, Idx}})
-              .first;
+        if (It != SelectInfo.end() && It->second.IsAuxiliary) {
+          Cond = It->second.Cond;
+          bool Inverted = It->second.IsInverted;
+          return SelectInfo.insert({I, {Cond, false, Inverted, Idx}}).first;
+        }
       }
     }
     return SelectInfo.end();
@@ -803,7 +804,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
   bool AlreadyProcessed = false;
   BasicBlock::iterator BBIt = BB.begin();
-  std::map<Value *, SelectLikeInfo>::iterator It;
+  DenseMap<Value *, SelectLikeInfo>::iterator It;
   while (BBIt != BB.end()) {
     Instruction *I = &*BBIt++;
     if (I->isDebugOrPseudoInst())
@@ -825,7 +826,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
     if (!Cond->getType()->isIntegerTy(1))
       continue;
 
-    SelectGroup SIGroup{Cond};
+    SelectGroup SIGroup = {Cond, {}};
     SIGroup.Selects.emplace_back(I, It->second.IsInverted,
                                  It->second.ConditionIdx);
 

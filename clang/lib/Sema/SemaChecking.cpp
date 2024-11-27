@@ -5664,6 +5664,45 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
   return false;
 }
 
+/// The result of __builtin_counted_by_ref cannot be assigned to a variable.
+/// It allows leaking and modification of bounds safety information.
+bool Sema::CheckInvalidBuiltinCountedByRef(const Expr *E,
+                                           BuiltinCountedByRefKind K) {
+  const CallExpr *CE =
+      E ? dyn_cast<CallExpr>(E->IgnoreParenImpCasts()) : nullptr;
+  if (!CE || CE->getBuiltinCallee() != Builtin::BI__builtin_counted_by_ref)
+    return false;
+
+  switch (K) {
+  case AssignmentKind:
+  case InitializerKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 0 << E->getSourceRange();
+    break;
+  case FunctionArgKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 1 << E->getSourceRange();
+    break;
+  case ReturnArgKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 2 << E->getSourceRange();
+    break;
+  case ArraySubscriptKind:
+    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 0 << E->getSourceRange();
+    break;
+  case BinaryExprKind:
+    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 1 << E->getSourceRange();
+    break;
+  }
+
+  return true;
+}
+
 namespace {
 
 class UncoveredArgHandler {

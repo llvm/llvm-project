@@ -332,6 +332,8 @@ C23 Feature Support
 
 - Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
 - Clang now officially supports `N3030 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_ Enhancements to Enumerations. Clang already supported it as an extension, so there were no changes to compiler behavior.
+- Fixed the value of ``BOOL_WIDTH`` in ``<limits.h>`` to return ``1``
+  explicitly, as mandated by the standard. Fixes #GH117348
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -370,6 +372,7 @@ Non-comprehensive list of changes in this release
 - ``__builtin_reduce_mul`` function can now be used in constant expressions.
 - ``__builtin_reduce_and`` function can now be used in constant expressions.
 - ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
+- ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -585,6 +588,11 @@ Improvements to Clang's diagnostics
 - For an rvalue reference bound to a temporary struct with an integer member, Clang will detect constant integer overflow
   in the initializer for the integer member (#GH46755).
 
+- Fixed a false negative ``-Wunused-private-field`` diagnostic when a defaulted comparison operator is defined out of class (#GH116961).
+
+- Clang now supports using alias templates in deduction guides, aligning with the C++ standard,
+  which treats alias templates as synonyms for their underlying types (#GH54909).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -717,6 +725,7 @@ Bug Fixes to C++ Support
 - Clang now uses valid deduced type locations when diagnosing functions with trailing return type
   missing placeholder return type. (#GH78694)
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
+- Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 - Fixed an assertion failure caused by invalid default argument substitutions in non-defining
   friend declarations. (#GH113324)
 
@@ -728,6 +737,8 @@ Bug Fixes to AST Handling
   sometimes incorrectly return null even if a comment was present. (#GH108145)
 - Clang now correctly parses the argument of the ``relates``, ``related``, ``relatesalso``,
   and ``relatedalso`` comment commands.
+- Clang now uses the location of the begin of the member expression for ``CallExpr``
+  involving deduced ``this``. (#GH116928)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
