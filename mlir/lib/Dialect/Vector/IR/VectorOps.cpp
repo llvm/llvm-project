@@ -5184,6 +5184,19 @@ std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
+static LogicalResult isContiguousIndices(Value val) {
+  auto vecType = dyn_cast<VectorType>(val.getType());
+  if (!vecType || vecType.getRank() != 1 || vecType.isScalable())
+    return failure();
+
+  DenseIntElementsAttr elements;
+  if (!matchPattern(val, m_Constant(&elements)))
+    return failure();
+
+  return success(
+      llvm::equal(elements, llvm::seq<int64_t>(0, vecType.getNumElements())));
+}
+
 namespace {
 class GatherFolder final : public OpRewritePattern<GatherOp> {
 public:
@@ -5202,11 +5215,26 @@ public:
     llvm_unreachable("Unexpected 1DMaskFormat on GatherFolder");
   }
 };
+
+class GatherTrivialIndices final : public OpRewritePattern<GatherOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(GatherOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isContiguousIndices(op.getIndexVec())))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
+                                              op.getIndices(), op.getMask(),
+                                              op.getPassThru());
+    return success();
+  }
+};
 } // namespace
 
 void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<GatherFolder>(context);
+  results.add<GatherFolder, GatherTrivialIndices>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5248,11 +5276,25 @@ public:
     llvm_unreachable("Unexpected 1DMaskFormat on ScatterFolder");
   }
 };
+
+class ScatterTrivialIndices final : public OpRewritePattern<ScatterOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(ScatterOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isContiguousIndices(op.getIndexVec())))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<MaskedStoreOp>(
+        op, op.getBase(), op.getIndices(), op.getMask(), op.getValueToStore());
+    return success();
+  }
+};
 } // namespace
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ScatterFolder>(context);
+  results.add<ScatterFolder, ScatterTrivialIndices>(context);
 }
 
 //===----------------------------------------------------------------------===//
