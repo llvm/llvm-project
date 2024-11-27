@@ -636,14 +636,6 @@ shardedBlockArgumentTypes(Block &block,
   return res;
 }
 
-void spmdizeTriviallyShardableOperation(Operation &op,
-                                        ArrayRef<Value> spmdizedOperands,
-                                        ArrayRef<MeshSharding> operandShardings,
-                                        ArrayRef<MeshSharding> resultShardings,
-                                        IRMapping &spmdizationMap,
-                                        SymbolTableCollection &symbolTable,
-                                        OpBuilder &builder);
-
 static LogicalResult spmdizeOperation(
     Operation &op, ArrayRef<Value> spmdizedOperands,
     ArrayRef<MeshSharding> operandShardings,
@@ -697,14 +689,15 @@ static std::vector<MeshSharding> getResultShardings(Operation &op) {
   std::vector<MeshSharding> res;
   res.reserve(op.getNumResults());
   llvm::transform(op.getResults(), std::back_inserter(res),
-                  [](OpResult result) {
+                  [&op](OpResult result) {
                     TypedValue<RankedTensorType> rankedTensor =
                         dyn_cast<TypedValue<RankedTensorType>>(result);
-                    if (!rankedTensor) {
+                    if (!rankedTensor || op.hasTrait<OpTrait::ConstantLike>()) {
                       return MeshSharding();
                     }
-
-                    assert(result.hasOneUse());
+                    if (!result.hasOneUse()) {
+                      return MeshSharding();
+                    }
                     Operation *userOp = *result.getUsers().begin();
                     ShardOp shardOp = llvm::cast<ShardOp>(userOp);
                     return MeshSharding(shardOp.getSharding());
@@ -765,6 +758,7 @@ spmdizeOperation(Operation &op, IRMapping &spmdizationMap,
 static LogicalResult spmdizeBlock(Block &block, IRMapping &spmdizationMap,
                                   SymbolTableCollection &symbolTableCollection,
                                   OpBuilder &builder) {
+
   SmallVector<Location> argLocations;
   llvm::transform(block.getArguments(), std::back_inserter(argLocations),
                   [](BlockArgument arg) { return arg.getLoc(); });
@@ -796,8 +790,12 @@ spmdizeFuncOp(FunctionOpInterface op, IRMapping &spmdizationMap,
   // Snapshot the original blocks to not mess up the iteration when adding new
   // blocks.
   SmallVector<Block *> originalBlocks;
-  llvm::transform(op.getBlocks(), std::back_inserter(originalBlocks),
-                  [](Block &b) { return &b; });
+  for (Block &b : op.getBlocks()) {
+    if (llvm::any_of(b.getOperations(),
+                     [](Operation &op) { return isa<ShardOp>(op); })) {
+      originalBlocks.push_back(&b);
+    }
+  }
 
   for (Block *block : originalBlocks) {
     if (failed(spmdizeBlock(*block, spmdizationMap, symbolTableCollection,
@@ -823,10 +821,11 @@ spmdizeFuncOp(FunctionOpInterface op, IRMapping &spmdizationMap,
       break;
     }
   }
-  assert(returnOp);
-  op.setType(FunctionType::get(op->getContext(),
-                               op.getFunctionBody().front().getArgumentTypes(),
-                               returnOp->getOperandTypes()));
+  if (returnOp) {
+    op.setType(FunctionType::get(
+        op->getContext(), op.getFunctionBody().front().getArgumentTypes(),
+        returnOp->getOperandTypes()));
+  }
 
   return success();
 }

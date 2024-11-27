@@ -62,7 +62,7 @@ public:
                           ArrayRef<Value> dynamic_halo_sizes_ = {},
                           ArrayRef<Value> dynamic_sharded_dims_offsets_ = {});
   ::mlir::FlatSymbolRefAttr getMeshAttr() const { return mesh; }
-  ::llvm::StringRef getMesh() const { return mesh.getValue(); }
+  ::llvm::StringRef getMesh() const { return mesh ? mesh.getValue() : ""; }
   ArrayRef<MeshAxesAttr> getSplitAxes() const { return split_axes; }
   ArrayRef<MeshAxis> getPartialAxes() const { return partial_axes; }
   ReductionKind getPartialType() const { return partial_type; }

@@ -316,9 +316,13 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
                                                      OpBuilder &builder) {
   OpBuilder::InsertionGuard insertionGuard(builder);
   Value operandValue = operand.get();
-  Operation *operandOp = operand.getOwner();
   Operation *operandSrcOp = operandValue.getDefiningOp();
   bool isBlockArg = !operandSrcOp;
+  if(!isBlockArg && operandSrcOp->hasTrait<OpTrait::ConstantLike>()) {
+    return;
+  }
+
+  Operation *operandOp = operand.getOwner();
   ShardOp shardOp = dyn_cast_or_null<ShardOp>(operandSrcOp);
 
   if (shardOp && sharding == shardOp.getSharding() &&
@@ -710,8 +714,13 @@ bool MeshSharding::operator!=(const MeshSharding &rhs) const {
 MeshSharding::MeshSharding(Value rhs) {
   auto shardingOp = mlir::dyn_cast<ShardingOp>(rhs.getDefiningOp());
   assert(shardingOp && "expected sharding op");
-  *this = get(shardingOp.getMeshAttr(), shardingOp.getSplitAxes().getAxes(),
-              shardingOp.getPartialAxes().value_or(ArrayRef<MeshAxis>()),
+  auto splitAxes = shardingOp.getSplitAxes().getAxes();
+  auto partialAxes = shardingOp.getPartialAxes().value_or(ArrayRef<MeshAxis>());
+  if(splitAxes.empty() && partialAxes.empty()) {
+    *this = MeshSharding();
+    return;
+  }
+  *this = get(shardingOp.getMeshAttr(), splitAxes, partialAxes,
               shardingOp.getPartialType().value_or(ReductionKind::Sum),
               shardingOp.getStaticHaloSizes(),
               shardingOp.getStaticShardedDimsOffsets(),
@@ -727,6 +736,10 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
                                ArrayRef<int64_t> static_sharded_dims_offsets_,
                                ArrayRef<Value> dynamic_halo_sizes_,
                                ArrayRef<Value> dynamic_sharded_dims_offsets_) {
+  if(split_axes_.empty() && partial_axes_.empty()) {
+    return MeshSharding();
+  }
+
   MeshSharding res;
   res.mesh = mesh_;
   res.split_axes.resize(split_axes_.size());
