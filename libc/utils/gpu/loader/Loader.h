@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 #define LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 
-#include "utils/gpu/server/llvmlibc_rpc_server.h"
-
 #include "include/llvm-libc-types/test_rpc_opcodes_t.h"
 
 #include "shared/rpc.h"
@@ -183,7 +181,7 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
     break;
   }
   default:
-    status = libc_handle_rpc_port(&*port, num_lanes);
+    status = handle_libc_opcodes(*port, num_lanes);
     break;
   }
 

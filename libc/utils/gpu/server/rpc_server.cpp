@@ -17,8 +17,6 @@
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
 
-#include "llvmlibc_rpc_server.h"
-
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/parser.h"
@@ -445,15 +443,19 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
   return rpc::SUCCESS;
 }
 
-int libc_handle_rpc_port(void *port, uint32_t num_lanes) {
+namespace rpc {
+// The implementation of this function currently lives in the utility directory
+// at 'utils/gpu/server/rpc_server.cpp'.
+rpc::Status handle_libc_opcodes(rpc::Server::Port &port, uint32_t num_lanes) {
   switch (num_lanes) {
   case 1:
-    return handle_port_impl<1>(*reinterpret_cast<rpc::Server::Port *>(port));
+    return handle_port_impl<1>(port);
   case 32:
-    return handle_port_impl<32>(*reinterpret_cast<rpc::Server::Port *>(port));
+    return handle_port_impl<32>(port);
   case 64:
-    return handle_port_impl<64>(*reinterpret_cast<rpc::Server::Port *>(port));
+    return handle_port_impl<64>(port);
   default:
     return rpc::ERROR;
   }
 }
+} // namespace rpc
