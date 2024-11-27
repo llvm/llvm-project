@@ -1594,18 +1594,25 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return false;
 
   SmallVector<Expr *, 3> NewArgs;
-  if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+  auto BuildTypeIdentityArg = [PromiseType] (Sema& S, SourceLocation Loc) -> Expr * {
     std::optional<QualType> SpecializedTypeIdentity =
         S.instantiateSpecializedTypeIdentity(PromiseType);
     if (!SpecializedTypeIdentity)
-      return false;
+      return nullptr;
     TypeSourceInfo *SpecializedTypeInfo =
         S.Context.getTrivialTypeSourceInfo(*SpecializedTypeIdentity, Loc);
     ExprResult TypeIdentity =
         S.BuildCXXTypeConstructExpr(SpecializedTypeInfo, Loc, {}, Loc, false);
     if (TypeIdentity.isInvalid())
+      return nullptr;
+    return TypeIdentity.get();
+  };
+
+  if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+    Expr *TypeIdentity = BuildTypeIdentityArg(S, Loc);
+    if (!TypeIdentity)
       return false;
-    NewArgs.push_back(TypeIdentity.get());
+    NewArgs.push_back(TypeIdentity);
   }
   NewArgs.push_back(FrameSize);
   if (S.getLangOpts().CoroAlignedAllocation &&
@@ -1633,7 +1640,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   Expr *CoroFree =
       S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_free, {FramePtr});
 
-  SmallVector<Expr *, 2> DeleteArgs{CoroFree};
+  SmallVector<Expr *, 2> DeleteArgs{};
 
   // [dcl.fct.def.coroutine]p12
   //   The selected deallocation function shall be called with the address of
@@ -1642,6 +1649,15 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   //   used, the size of the block is passed as the corresponding argument.
   const auto *OpDeleteType =
       OpDeleteQualType.getTypePtr()->castAs<FunctionProtoType>();
+  if (S.isTypeAwareOperatorNewOrDelete(OperatorDelete)) {
+    Expr *TypeIdentity = BuildTypeIdentityArg(S, Loc);
+    if (!TypeIdentity)
+      return false;
+    DeleteArgs.push_back(TypeIdentity);
+  }
+
+  DeleteArgs.push_back(CoroFree);
+
   if (OpDeleteType->getNumParams() > DeleteArgs.size() &&
       S.getASTContext().hasSameUnqualifiedType(
           OpDeleteType->getParamType(DeleteArgs.size()), FrameSize->getType()))

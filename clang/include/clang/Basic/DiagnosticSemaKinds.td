@@ -9727,7 +9727,7 @@ def err_unsupported_type_aware_allocator : Error<
   "type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'">;
 def warn_type_aware_cleanup_deallocator_context_mismatch : Warning<
   "type aware %0 requires matching %1 in %2">,
-  InGroup<StrictTypeAwareAllocators>;
+  InGroup<StrictTypeAwareAllocators>, DefaultError;
 def err_type_aware_operator_found : Note<
   "type aware %0 found in %1">;
 def warn_mismatching_type_aware_cleanup_deallocator : Warning<
