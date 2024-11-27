@@ -277,7 +277,8 @@ def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
                                        FeatureUnalignedScalarMem,
                                        FeatureUnalignedVectorMem]),
                                       !listconcat(SiFiveP400TuneFeatures,
-                                                  [TuneNoSinkSplatOperands])>;
+                                                  [TuneNoSinkSplatOperands,
+                                                   TuneVXRMPipelineFlush])>;
 
 
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
@@ -298,6 +299,7 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        TuneLUIADDIFusion,
                                        TuneAUIPCADDIFusion,
                                        TuneNoSinkSplatOperands,
+                                       TuneVXRMPipelineFlush,
                                        FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
@@ -510,7 +512,8 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                        [TuneDLenFactor2,
                                         TuneOptimizedNF2SegmentLoadStore,
                                         TuneOptimizedNF3SegmentLoadStore,
-                                        TuneOptimizedNF4SegmentLoadStore]> {
+                                        TuneOptimizedNF4SegmentLoadStore,
+                                        TuneVXRMPipelineFlush]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
   let MImpID = 0x1000000049772200;
