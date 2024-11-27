@@ -16,9 +16,9 @@
 ; CHECK-NEXT: remark: test.c:17:5: in artificial function '[[OFF_FUNC]]_debug__', direct call to defined function, callee is 'g'
 ; CHECK-NEXT: remark: test.c:18:3: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is '@__kmpc_target_deinit'
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', ExternalNotKernel = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[0] = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[1] = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[2] = 0
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[0] = 4294967295
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[1] = 4294967295
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[2] = 4294967295
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-flat-work-group-size[0] = 1
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-flat-work-group-size[1] = 1024
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-waves-per-eu[0] = 4
@@ -39,9 +39,9 @@
 ; CHECK-NEXT: remark: test.c:12:1: in artificial function '[[OFF_FUNC]]', direct call to defined function, callee is artificial '[[OFF_FUNC]]_debug__'
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', ExternalNotKernel = 0
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', omp_target_thread_limit = 256
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[0] = 0
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[1] = 0
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[2] = 0
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[0] = 4294967295
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[1] = 4294967295
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[2] = 4294967295
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-flat-work-group-size[0] = 1
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-flat-work-group-size[1] = 256
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-waves-per-eu[0] = 1
@@ -61,9 +61,9 @@
 ; CHECK-NEXT: remark: test.c:6:3: in function 'g', direct call, callee is '@f'
 ; CHECK-NEXT: remark: test.c:7:3: in function 'g', direct call to defined function, callee is 'g'
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', ExternalNotKernel = 1
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[0] = 0
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[1] = 0
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[2] = 0
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[0] = 4294967295
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[1] = 4294967295
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[2] = 4294967295
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-flat-work-group-size[0] = 1
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-flat-work-group-size[1] = 1024
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-waves-per-eu[0] = 4
