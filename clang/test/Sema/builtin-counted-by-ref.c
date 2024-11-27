@@ -48,21 +48,21 @@ void test4(struct fam_struct *ptr, int idx) {
 }
 
 void *test5(struct fam_struct *ptr, int size, int idx) {
-  char *ref = __builtin_counted_by_ref(ptr->array);                 // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
+  char *ref = __builtin_counted_by_ref(ptr->array);                 // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable}}
   char *int_ptr;
   char *p;
 
-  ref = __builtin_counted_by_ref(ptr->array);                       // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
-  g(__builtin_counted_by_ref(ptr->array));                          // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
-  g(ref = __builtin_counted_by_ref(ptr->array));                    // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
+  ref = __builtin_counted_by_ref(ptr->array);                       // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable}}
+  g(__builtin_counted_by_ref(ptr->array));                          // expected-error {{value returned by '__builtin_counted_by_ref' cannot be passed into a function}}
+  g(ref = __builtin_counted_by_ref(ptr->array));                    // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable}}
 
-  if ((ref = __builtin_counted_by_ref(ptr->array)))                 // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
+  if ((ref = __builtin_counted_by_ref(ptr->array)))                 // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable}}
     ;
 
-  for (p = __builtin_counted_by_ref(ptr->array); p && *p; ++p)      // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
+  for (p = __builtin_counted_by_ref(ptr->array); p && *p; ++p)      // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable}}
     ;
 
-  return __builtin_counted_by_ref(ptr->array);                      // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
+  return __builtin_counted_by_ref(ptr->array);                      // expected-error {{value returned by '__builtin_counted_by_ref' cannot be returned from a function}}
 }
 
 void test6(struct fam_struct *ptr, int size, int idx) {

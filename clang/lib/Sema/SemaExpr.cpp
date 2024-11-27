@@ -4894,11 +4894,7 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return ExprError();
   }
 
-  // We cannot use __builtin_counted_by_ref in a binary expression. It's
-  // possible to leak the reference and violate bounds security.
-  if (IsBuiltinCountedByRef(base))
-    Diag(base->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
-        << 0 << base->getSourceRange();
+  CheckInvalidBuiltinCountedByRef(base, ArraySubscriptKind);
 
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
@@ -6495,12 +6491,8 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // The result of __builtin_counted_by_ref cannot be used as a function
   // argument. It allows leaking and modification of bounds safety information.
   for (const Expr *Arg : ArgExprs)
-    if (IsBuiltinCountedByRef(Arg)) {
-      Diag(Arg->getExprLoc(),
-           diag::err_builtin_counted_by_ref_cannot_leak_reference)
-          << Arg->getSourceRange();
+    if (CheckInvalidBuiltinCountedByRef(Arg, FunctionArgKind))
       return ExprError();
-    }
 
   if (getLangOpts().CPlusPlus) {
     // If this is a pseudo-destructor expression, build the call immediately.
@@ -15222,22 +15214,11 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   if (Kind == tok::TokenKind::slash)
     DetectPrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
 
-  // We cannot use __builtin_counted_by_ref in a binary expression. It's
-  // possible to leak the reference and violate bounds security.
-  auto CheckBuiltinCountedByRef = [&](const Expr *E) {
-    if (IsBuiltinCountedByRef(E)) {
-      if (BinaryOperator::isAssignmentOp(Opc))
-        Diag(E->getExprLoc(),
-             diag::err_builtin_counted_by_ref_cannot_leak_reference)
-            << E->getSourceRange();
-      else
-        Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
-            << 1 << E->getSourceRange();
-    }
-  };
+  BuiltinCountedByRefKind K =
+      BinaryOperator::isAssignmentOp(Opc) ? AssignmentKind : BinaryExprKind;
 
-  CheckBuiltinCountedByRef(LHSExpr);
-  CheckBuiltinCountedByRef(RHSExpr);
+  CheckInvalidBuiltinCountedByRef(LHSExpr, K);
+  CheckInvalidBuiltinCountedByRef(RHSExpr, K);
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }
