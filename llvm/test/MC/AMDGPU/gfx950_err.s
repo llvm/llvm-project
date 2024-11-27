@@ -392,3 +392,9 @@ v_pk_minimum3_f16 v0, s1, s2, v3
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_pk_maximum3_f16 v0, s1, s2, v3
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_sr_f16_f32 v1, v2, v3 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_sr_bf16_f32 v1, v2, v3 clamp
