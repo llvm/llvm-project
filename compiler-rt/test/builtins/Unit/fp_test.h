@@ -255,7 +255,7 @@ static inline int compareResultF80(xf_float result, uint16_t expectedHi,
                                    uint64_t expectedLo) {
     uqwords rep = F80ToRep80(result);
     // F80 high occupies the lower 16 bits of high.
-    assert((rep.high.all & ((1UL << (80 - 64)) - 1)) == rep.high.all);
+    assert((uint64_t)(uint16_t)rep.high.all == rep.high.all);
     return !(rep.high.all == expectedHi && rep.low.all == expectedLo);
 }
 
