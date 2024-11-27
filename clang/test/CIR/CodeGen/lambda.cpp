@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -Wno-return-stack-address -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir  -emit-llvm -o - %s \
+// RUN: | opt -S -passes=instcombine,mem2reg,simplifycfg -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 void fn() {
   auto a = [](){};
@@ -14,6 +17,21 @@ void fn() {
 //      CHECK:   cir.func @_Z2fnv()
 // CHECK-NEXT:     %0 = cir.alloca !ty_anon2E0_, !cir.ptr<!ty_anon2E0_>, ["a"]
 //      CHECK:   cir.call @_ZZ2fnvENK3$_0clEv
+
+// LLVM: {{.*}}void @"_ZZ2fnvENK3$_0clEv"(ptr [[THIS:%.*]])
+// FIXME: argument attributes should be emmitted, and lambda's alignment
+// COM: LLVM: {{.*}} @"_ZZ2fnvENK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]){{%.*}} align 2 {
+// LLVM: [[THIS_ADDR:%.*]] = alloca ptr, i64 1, align 8
+// LLVM: store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// LLVM: [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// LLVM: ret void
+
+// LLVM-LABEL: _Z2fnv
+// LLVM:  [[a:%.*]] = alloca %class.anon.0, i64 1, align 1
+// FIXME: parameter attributes should be emitted
+// LLVM:  call void @"_ZZ2fnvENK3$_0clEv"(ptr [[a]])
+// COM: LLVM:  call void @"_ZZ2fnvENK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[a]])
+// LLVM:  ret void
 
 void l0() {
   int i;
@@ -37,6 +55,34 @@ void l0() {
 
 // CHECK: cir.func @_Z2l0v()
 
+// LLVM: {{.* }}void @"_ZZ2l0vENK3$_0clEv"(ptr [[THIS:%.*]])
+// LLVM: [[THIS_ADDR:%.*]] = alloca ptr, i64 1, align 8
+// LLVM: store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// LLVM: [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// LLVM: [[I:%.*]] = getelementptr %class.anon.2, ptr [[THIS1]], i32 0, i32 0
+// FIXME: getelementptr argument attributes should be emitted
+// COM: LLVM: [[I:%.*]] = getelementptr inbounds nuw %class.anon.0, ptr [[THIS1]], i32 0, i32 0
+// LLVM: [[TMP0:%.*]] = load ptr, ptr [[I]], align 8
+// LLVM: [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// LLVM: [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
+// LLVM: [[I:%.*]] = getelementptr %class.anon.2, ptr [[THIS1]], i32 0, i32
+// COM: LLVM: [[I:%.*]] = getelementptr inbounds nuw %class.anon.0, ptr [[THIS1]], i32 0, i32 0
+// LLVM: [[TMP4:%.*]] = load ptr, ptr [[I]], align 8
+// LLVM: store i32 [[ADD]], ptr [[TMP4]], align 4
+// LLVM: ret void
+
+// LLVM-LABEL: _Z2l0v
+// LLVM:  [[i:%.*]] = alloca i32, i64 1, align 4
+// LLVM:  [[a:%.*]] = alloca %class.anon.2, i64 1, align 8
+// FIXME: getelementptr argument attributes should be emitted
+// COM: LLVM:  [[TMP0:%.*]] = getelementptr inbounds %class.anon.2, ptr [[a]], i32 0, i32 0
+// LLVM:  [[TMP0:%.*]] = getelementptr %class.anon.2, ptr [[a]], i32 0, i32 0
+// LLVM:  store ptr [[i]], ptr [[TMP0]], align 8
+// FIXME: parameter attributes should be emitted
+// COM: LLVM:  call void @"_ZZ2l0vENK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) [[a]])
+// LLVM:  call void @"_ZZ2l0vENK3$_0clEv"(ptr [[a]])
+// LLVM:  ret void
+
 auto g() {
   int i = 12;
   return [&] {
@@ -54,6 +100,15 @@ auto g() {
 // CHECK: cir.store %1, %3 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK: %4 = cir.load %0 : !cir.ptr<!ty_anon2E3_>, !ty_anon2E3_
 // CHECK: cir.return %4 : !ty_anon2E3_
+
+// LLVM-LABEL: @_Z1gv()
+// LLVM: [[retval:%.*]] = alloca %class.anon.3, i64 1, align 8
+// LLVM: [[i:%.*]] = alloca i32, i64 1, align 4
+// LLVM: store i32 12, ptr [[i]], align 4
+// LLVM: [[i_addr:%.*]] = getelementptr %class.anon.3, ptr [[retval]], i32 0, i32 0
+// LLVM: store ptr [[i]], ptr [[i_addr]], align 8
+// LLVM: [[tmp:%.*]] = load %class.anon.3, ptr [[retval]], align 8
+// LLVM: ret %class.anon.3 [[tmp]]
 
 auto g2() {
   int i = 12;
@@ -75,6 +130,15 @@ auto g2() {
 // CHECK-NEXT: %4 = cir.load %0 : !cir.ptr<!ty_anon2E4_>, !ty_anon2E4_
 // CHECK-NEXT: cir.return %4 : !ty_anon2E4_
 
+// LLVM-LABEL: @_Z2g2v()
+// LLVM: [[retval:%.*]] = alloca %class.anon.4, i64 1, align 8
+// LLVM: [[i:%.*]] = alloca i32, i64 1, align 4
+// LLVM: store i32 12, ptr [[i]], align 4
+// LLVM: [[i_addr:%.*]] = getelementptr %class.anon.4, ptr [[retval]], i32 0, i32 0
+// LLVM: store ptr [[i]], ptr [[i_addr]], align 8
+// LLVM: [[tmp:%.*]] = load %class.anon.4, ptr [[retval]], align 8
+// LLVM: ret %class.anon.4 [[tmp]]
+
 int f() {
   return g2()();
 }
@@ -91,6 +155,36 @@ int f() {
 // CHECK-NEXT:   %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:   cir.return %1 : !s32i
 // CHECK-NEXT: }
+
+// LLVM: {{.*}}i32 @"_ZZ2g2vENK3$_0clEv"(ptr [[THIS:%.*]])
+// LLVM: [[THIS_ADDR:%.*]] = alloca ptr, i64 1, align 8
+// LLVM: [[I_SAVE:%.*]] = alloca i32, i64 1, align 4
+// LLVM: store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// LLVM: [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// LLVM: [[I:%.*]] = getelementptr %class.anon.4, ptr [[THIS1]], i32 0, i32 0
+// LLVM: [[TMP0:%.*]] = load ptr, ptr [[I]], align 8
+// LLVM: [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// LLVM: [[ADD:%.*]] = add nsw i32 [[TMP1]], 100
+// LLVM: [[I:%.*]] = getelementptr %class.anon.4, ptr [[THIS1]], i32 0, i32 0
+// LLVM: [[TMP4:%.*]] = load ptr, ptr [[I]], align 8
+// LLVM: [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
+// LLVM: store i32 [[TMP5]], ptr [[I_SAVE]], align 4
+// LLVM: [[TMP6:%.*]] = load i32, ptr [[I_SAVE]], align 4
+// LLVM: ret i32 [[TMP6]]
+
+// LLVM-LABEL: _Z1fv
+// LLVM: [[ref_tmp0:%.*]] = alloca %class.anon.4, i64 1, align 8
+// LLVM: [[ret_val:%.*]] = alloca i32, i64 1, align 4
+// LLVM: br label %[[scope_bb:[0-9]+]],
+// LLVM: [[scope_bb]]:
+// LLVM: [[tmp0:%.*]] = call %class.anon.4 @_Z2g2v()
+// LLVM: store %class.anon.4 [[tmp0]], ptr [[ref_tmp0]], align 8
+// LLVM: [[tmp1:%.*]] = call i32 @"_ZZ2g2vENK3$_0clEv"(ptr [[ref_tmp0]])
+// LLVM: store i32 [[tmp1]], ptr [[ret_val]], align 4
+// LLVM: br label %[[ret_bb:[0-9]+]],
+// LLVM: [[ret_bb]]:
+// LLVM: [[tmp2:%.*]] = load i32, ptr [[ret_val]], align 4
+// LLVM: ret i32 [[tmp2]]
 
 int g3() {
   auto* fn = +[](int const& i) -> int { return i; };
@@ -134,3 +228,60 @@ int g3() {
 // CHECK:     }
 
 // CHECK:   }
+
+// lambda operator()
+// FIXME: argument attributes should be emitted
+// COM: LLVM: define internal noundef i32 @"_ZZ2g3vENK3$_0clERKi"(ptr noundef nonnull align 1 dereferenceable(1) {{%.*}}, ptr noundef nonnull align 4 dereferenceable(4){{%.*}}) #0 align 2
+// LLVM: {{.*}}i32 @"_ZZ2g3vENK3$_0clERKi"(ptr {{%.*}}, ptr {{%.*}})
+
+// lambda __invoke()
+// LLVM: {{.*}}i32 @"_ZZ2g3vEN3$_08__invokeERKi"(ptr [[i:%.*]])
+// LLVM: [[i_addr:%.*]] = alloca ptr, i64 1, align 8
+// LLVM: [[ret_val:%.*]] = alloca i32, i64 1, align 4
+// LLVM: [[unused_capture:%.*]] = alloca %class.anon.5, i64 1, align 1
+// LLVM: store ptr [[i]], ptr [[i_addr]], align 8
+// LLVM: [[TMP0:%.*]] = load ptr, ptr [[i_addr]], align 8
+// FIXME: call and argument attributes should be emitted
+// COM: LLVM: [[CALL:%.*]] =  call noundef i32 @"_ZZ2g3vENK3$_0clERKi"(ptr noundef nonnull align 1 dereferenceable(1) [[unused_capture]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0]])
+// LLVM: [[CALL:%.*]] = call i32 @"_ZZ2g3vENK3$_0clERKi"(ptr [[unused_capture]], ptr [[TMP0]])
+// LLVM: store i32 [[CALL]], ptr [[ret_val]], align 4
+// FIXME: should just return result
+// COM: LLVM: ret i32 [[ret_val]]
+// LLVM: call void @llvm.trap()
+// LLVM: unreachable
+
+// lambda operator int (*)(int const&)()
+// LLVM-LABEL: @"_ZZ2g3vENK3$_0cvPFiRKiEEv"
+// LLVM:  store ptr @"_ZZ2g3vEN3$_08__invokeERKi", ptr [[ret_val:%.*]], align 8
+// LLVM:  [[TMP0:%.*]] = load ptr, ptr [[ret_val]], align 8
+// LLVM:  ret ptr [[TMP0]]
+
+// LLVM-LABEL: _Z2g3v
+// LLVM-DAG: [[ref_tmp0:%.*]] = alloca %class.anon.5, i64 1, align 1
+// LLVM-DAG: [[ref_tmp1:%.*]] = alloca i32, i64 1, align 4
+// LLVM-DAG: [[ret_val:%.*]] = alloca i32, i64 1, align 4
+// LLVM-DAG: [[fn_ptr:%.*]] = alloca ptr, i64 1, align 8
+// LLVM-DAG: [[task:%.*]] = alloca i32, i64 1, align 4
+// LLVM: br label %[[scope0_bb:[0-9]+]],
+
+// LLVM: [[scope0_bb]]: {{.*}}; preds = %0
+// LLVM: [[call:%.*]] = call ptr @"_ZZ2g3vENK3$_0cvPFiRKiEEv"(ptr [[ref_tmp0]])
+// LLVM: br label %[[scope1_before:[0-9]+]],
+
+// LLVM: [[scope1_before]]: {{.*}}; preds = %[[scope0_bb]]
+// LLVM: [[tmp0:%.*]] = phi ptr [ [[call]], %[[scope0_bb]] ]
+// LLVM: br label %[[scope1_bb:[0-9]+]],
+
+// LLVM: [[scope1_bb]]: {{.*}}; preds = %[[scope1_before]]
+// LLVM: [[fn:%.*]] = load ptr, ptr [[fn_ptr]], align 8
+// LLVM: store i32 3, ptr [[ref_tmp1]], align 4
+// LLVM: [[call1:%.*]] = call i32 [[fn]](ptr [[ref_tmp1]])
+// LLVM: br label %[[ret_bb:[0-9]+]],
+
+// LLVM: [[ret_bb]]: {{.*}}; preds = %[[scope1_bb]]
+// LLVM: [[tmp1:%.*]] = phi i32 [ [[call1]], %[[scope1_bb]] ]
+// LLVM: store i32 [[tmp1]], ptr [[task]], align 4
+// LLVM: [[tmp2:%.*]] = load i32, ptr [[task]], align 4
+// LLVM: store i32 [[tmp2]], ptr [[ret_val]], align 4
+// LLVM: [[tmp3:%.*]] = load i32, ptr [[ret_val]], align 4
+// LLVM: ret i32 [[tmp3]]
