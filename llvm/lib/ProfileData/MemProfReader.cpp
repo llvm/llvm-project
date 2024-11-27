@@ -63,6 +63,14 @@ template <> struct MappingTraits<memprof::Frame> {
     static_assert(std::is_same_v<remove_cvref_t<decltype(Column)>, uint32_t>);
     static_assert(
         std::is_same_v<remove_cvref_t<decltype(IsInlineFrame)>, bool>);
+
+    // MSVC issues unused variable warnings despite the uses in static_assert
+    // above.
+    (void)Function;
+    (void)SymbolName;
+    (void)LineOffset;
+    (void)Column;
+    (void)IsInlineFrame;
   }
 };
 
