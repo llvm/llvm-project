@@ -56,6 +56,8 @@ private:
                             MachineBasicBlock::iterator MBBI);
   bool expandRV32ZdinxLoad(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
+  bool expandVendorXcvsimdShuffle(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI);
 #ifndef NDEBUG
   unsigned getInstSizeInBytes(const MachineFunction &MF) const {
     unsigned Size = 0;
@@ -164,6 +166,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoVMSET_M_B64:
     // vmset.m vd => vmxnor.mm vd, vd, vd
     return expandVMSET_VMCLR(MBB, MBBI, RISCV::VMXNOR_MM);
+  case RISCV::CV_SHUFFLE_SCI_B_PSEUDO:
+    return expandVendorXcvsimdShuffle(MBB, MBBI);
   }
 
   return false;
@@ -411,6 +415,24 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
   MIBLo.setMemRefs(NewLoMMOs);
   MIBHi.setMemRefs(NewHiMMOs);
 
+  MBBI->eraseFromParent();
+  return true;
+}
+
+bool RISCVExpandPseudo::expandVendorXcvsimdShuffle(MachineBasicBlock &MBB,
+                                                   MachineBasicBlock::iterator
+                                                   MBBI) {
+  DebugLoc DL = MBBI->getDebugLoc();
+  Register DstReg = MBBI->getOperand(0).getReg();
+  Register SrcReg = MBBI->getOperand(1).getReg();
+  uint8_t Imm = MBBI->getOperand(2).getImm();
+  const unsigned Opcodes[] = {
+      RISCV::CV_SHUFFLEI0_SCI_B, RISCV::CV_SHUFFLEI1_SCI_B,
+      RISCV::CV_SHUFFLEI2_SCI_B, RISCV::CV_SHUFFLEI3_SCI_B};
+  const MCInstrDesc &Desc = TII->get(Opcodes[Imm >> 6]);
+  BuildMI(MBB, MBBI, DL, Desc, DstReg)
+      .addReg(SrcReg)
+      .addImm(APInt(6, Imm, true).getSExtValue());
   MBBI->eraseFromParent();
   return true;
 }
