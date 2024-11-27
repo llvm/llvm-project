@@ -276,7 +276,9 @@ private:
   // representation for. No other cases are supported.
   void cloneUsesAndDefs(BasicBlock *BB, BasicBlock *NewBB,
                         const ValueToValueMapTy &VMap, PhiToDefMap &MPhiMap,
+                        function_ref<bool(BasicBlock *)> IsInClonedRegion,
                         bool CloneWasSimplified = false);
+
   template <typename Iter>
   void privateUpdateExitBlocksForClonedLoop(ArrayRef<BasicBlock *> ExitBlocks,
                                             Iter ValuesBegin, Iter ValuesEnd,
