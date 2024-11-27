@@ -14,7 +14,7 @@
 #include <vector>
 
 //--- Test.cpp
-%lib vec.dylib
+%lib vec.so
 #include <vector>
 std::vector<int> v;
 %quit
