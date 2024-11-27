@@ -11,6 +11,7 @@
 // REQUIRES: amdgpu-registered-target
 
 typedef unsigned int uint;
+typedef unsigned short ushort;
 typedef unsigned int uint2 __attribute__((ext_vector_type(2)));
 typedef half __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
@@ -21,7 +22,7 @@ typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
 typedef half __attribute__((ext_vector_type(32))) half32;
 typedef __bf16 __attribute__((ext_vector_type(32))) bfloat32;
 
-void test(global uint* out, global uint2* out_v2u32, uint a, uint b, global half2* out_v2f16, global float* out_f32, float scale, global short2* out_v2i16, float src0, float src1,
+void test(global uint* out, global uint2* out_v2u32, uint a, uint b, uint c, global half2* out_v2f16, global float* out_f32, float scale, unsigned seed, global short2* out_v2i16, float src0, float src1,
           float2 src0_v2f32, global float2* out_v2f32, half2 src0_v2f16, bfloat2 src0_v2bf16, global bfloat2* out_v2bf16, global float32* out_v32f32, uint6 src_v6i32,
           global half32 *out_v32f16, global bfloat32 *out_v32bf16) {
   *out = __builtin_amdgcn_prng_b32(a); // expected-error{{'__builtin_amdgcn_prng_b32' needs target feature prng-inst}}
@@ -58,4 +59,8 @@ void test(global uint* out, global uint2* out_v2u32, uint a, uint b, global half
   *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f16(*out, src0_v2f16, 0, scale, 0); // expected-error{{'__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f16' needs target feature fp4-cvt-scale-insts}}
   *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_bf16(*out, src0_v2bf16, 0, scale, 0); // expected-error{{'__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_bf16' needs target feature fp4-cvt-scale-insts}}
   *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f32(*out, src0_v2f32, 0, scale, 0); // expected-error{{'__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f32' needs target feature fp4-cvt-scale-insts}}
+  *out = __builtin_amdgcn_bitop3_b32(a, b, c, 1); // expected-error {{'__builtin_amdgcn_bitop3_b32' needs target feature bitop3-insts}}
+  *out = __builtin_amdgcn_bitop3_b16((ushort)a, (ushort)b, (ushort)c, 1); // expected-error {{'__builtin_amdgcn_bitop3_b16' needs target feature bitop3-insts}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_sr_bf16_f32(*out_v2bf16, src0, seed, 0); // expected-error{{'__builtin_amdgcn_cvt_sr_bf16_f32' needs target feature f32-to-f16bf16-cvt-sr-insts}}
+  *out_v2f16 = __builtin_amdgcn_cvt_sr_f16_f32(*out_v2f16, src0, seed, 0); // expected-error{{'__builtin_amdgcn_cvt_sr_f16_f32' needs target feature f32-to-f16bf16-cvt-sr-insts}}
 }

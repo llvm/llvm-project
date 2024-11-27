@@ -1779,25 +1779,27 @@ class getSDWASrcForVT <ValueType VT> {
 // given VT.
 class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   RegisterOperand ret =
-  !cond(!eq(VT, f64)      : VSrc_f64,
-        !eq(VT, f32)      : VSrc_f32,
-        !eq(VT, f16)      : !if(IsTrue16, VSrcT_f16, VSrc_f16),
-        !eq(VT, bf16)     : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
-        !eq(VT, i16)      : !if(IsTrue16, VSrcT_b16, VSrc_b16),
-        !eq(VT, i1)       : SSrc_i1,
-        !eq(VT, v2f32)    : VSrc_v2f32,
-        !eq(VT, v2i32)    : VSrc_v2b32,
-        !eq(VT, v2f16)    : VSrc_v2f16,
-        !eq(VT, v2bf16)   : VSrc_v2bf16,
-        !eq(VT, v2i16)    : VSrc_v2b16,
-        !eq(VT, v4f16)    : AVSrc_64,
-        !eq(VT, v4bf16)   : AVSrc_64,
-        !eq(VT.Size, 512) : VRegSrc_512,
-        !eq(VT.Size, 192) : VRegSrc_192,
-        !eq(VT.Size, 128) : VRegSrc_128,
-        !eq(VT.Size, 96)  : VRegSrc_96,
-        !eq(VT.Size, 64)  : VSrc_b64,
-        1                 : VSrc_b32);
+  !cond(!eq(VT, f64)       : VSrc_f64,
+        !eq(VT, f32)       : VSrc_f32,
+        !eq(VT, f16)       : !if(IsTrue16, VSrcT_f16, VSrc_f16),
+        !eq(VT, bf16)      : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
+        !eq(VT, i16)       : !if(IsTrue16, VSrcT_b16, VSrc_b16),
+        !eq(VT, i1)        : SSrc_i1,
+        !eq(VT, v2f32)     : VSrc_v2f32,
+        !eq(VT, v2i32)     : VSrc_v2b32,
+        !eq(VT, v2f16)     : VSrc_v2f16,
+        !eq(VT, v2bf16)    : VSrc_v2bf16,
+        !eq(VT, v2i16)     : VSrc_v2b16,
+        !eq(VT, v4f16)     : AVSrc_64,
+        !eq(VT, v4bf16)    : AVSrc_64,
+        !eq(VT.Size, 1024) : VRegSrc_1024,
+        !eq(VT.Size, 512)  : VRegSrc_512,
+        !eq(VT.Size, 256)  : VRegSrc_256,
+        !eq(VT.Size, 192)  : VRegSrc_192,
+        !eq(VT.Size, 128)  : VRegSrc_128,
+        !eq(VT.Size, 96)   : VRegSrc_96,
+        !eq(VT.Size, 64)   : VSrc_b64,
+        1                  : VSrc_b32);
 }
 
 // Returns the vreg register class to use for sources of VOP3 instructions for the
@@ -2856,6 +2858,10 @@ def VOP_I32_BF16_I32_F32 : VOPProfile<[i32, bf16, i32, f32]>;
 def VOP_I32_F16_I32_F32 : VOPProfile<[i32, f16, i32, f32]>;
 def VOP_I32_F32_I32_F32 : VOPProfile<[i32, f32, i32, f32]>;
 
+def VOP_V6I32_V32BF16_I32_F32 : VOPProfile<[v6i32, v32bf16, i32, f32]>;
+def VOP_V6I32_V32F16_I32_F32 : VOPProfile<[v6i32, v32f16, i32, f32]>;
+def VOP_V6I32_V32F32_I32_F32 : VOPProfile<[v6i32, v32f32, i32, f32]>;
+
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
 def VOP_I64_I64_I64 : VOPProfile <[i64, i64, i64, untyped]>;
@@ -3222,6 +3228,15 @@ def getMFMA_F8F6F4_WithSize : GenericTable {
   let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
   let PrimaryKey = [ "NumRegsSrcA", "NumRegsSrcB", "F8F8Opcode" ];
   let PrimaryKeyName = "getMFMA_F8F6F4_InstWithNumRegs" ;
+}
+
+def isMFMA_F8F6F4Table : GenericTable {
+  let FilterClass = "MFMA_F8F6F4_WithSizeTable";
+  let CppTypeName = "MFMA_F8F6F4_Info";
+//  let Fields = [ "Opcode" ];
+  let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
+  let PrimaryKey = [ "Opcode" ];
+  let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
 def FP8DstByteSelTable : GenericTable {

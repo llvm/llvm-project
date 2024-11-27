@@ -490,13 +490,36 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   assert(checkAllSuperRegsMarked(Reserved));
+
+  // Add _HI registers after checkAllSuperRegsMarked as this check otherwise
+  // becomes considerably more expensive.
+  Reserved.set(AArch64::WSP_HI);
+  Reserved.set(AArch64::WZR_HI);
+  static_assert(AArch64::W30_HI - AArch64::W0_HI == 30,
+                "Unexpected order of registers");
+  Reserved.set(AArch64::W0_HI, AArch64::W30_HI);
+  static_assert(AArch64::B31_HI - AArch64::B0_HI == 31,
+                "Unexpected order of registers");
+  Reserved.set(AArch64::B0_HI, AArch64::B31_HI);
+  static_assert(AArch64::H31_HI - AArch64::H0_HI == 31,
+                "Unexpected order of registers");
+  Reserved.set(AArch64::H0_HI, AArch64::H31_HI);
+  static_assert(AArch64::S31_HI - AArch64::S0_HI == 31,
+                "Unexpected order of registers");
+  Reserved.set(AArch64::S0_HI, AArch64::S31_HI);
+  static_assert(AArch64::D31_HI - AArch64::D0_HI == 31,
+                "Unexpected order of registers");
+  Reserved.set(AArch64::D0_HI, AArch64::D31_HI);
+  static_assert(AArch64::Q31_HI - AArch64::Q0_HI == 31,
+                "Unexpected order of registers");
+  Reserved.set(AArch64::Q0_HI, AArch64::Q31_HI);
+
   return Reserved;
 }
 
 BitVector
 AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  BitVector Reserved = getStrictlyReservedRegs(MF);
-
+  BitVector Reserved(getNumRegs());
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
     if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReservedForRA(i))
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
@@ -514,6 +537,11 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   assert(checkAllSuperRegsMarked(Reserved));
+
+  // Handle strictlyReservedRegs separately to avoid re-evaluating the assert,
+  // which becomes considerably expensive when considering the _HI registers.
+  Reserved |= getStrictlyReservedRegs(MF);
+
   return Reserved;
 }
 
