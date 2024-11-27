@@ -627,7 +627,7 @@ def : WriteRes<WriteSystem,     [HWPort0156]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [HWPort0156]> { let Latency = 100; }
 
 // Fence instructions.
-def : WriteRes<WriteFence,  [HWPort23, HWPort4]>;
+def : WriteRes<WriteFence,  [HWPort23, HWPort4]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 
 // Nop, not very useful expect it provides a model for nops!
 def : WriteRes<WriteNop, []>;
@@ -1054,13 +1054,6 @@ def HWWriteResGroup18 : SchedWriteRes<[HWPort23,HWPort0156]> {
 def: InstRW<[HWWriteResGroup18], (instrs POP16r, POP32r, POP64r)>;
 def: InstRW<[HWWriteResGroup18], (instregex "POP(16|32|64)rmr")>;
 
-def HWWriteResGroup19 : SchedWriteRes<[HWPort237,HWPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup19], (instrs SFENCE)>;
-
 def HWWriteResGroup21 : SchedWriteRes<[HWPort4,HWPort6,HWPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
@@ -1121,7 +1114,6 @@ def HWWriteResGroup30 : SchedWriteRes<[HWPort0156]> {
   let ReleaseAtCycles = [2];
 }
 def: InstRW<[HWWriteResGroup30], (instrs LFENCE,
-                                         MFENCE,
                                          WAIT,
                                          XGETBV)>;
 
