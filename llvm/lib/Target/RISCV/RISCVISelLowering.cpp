@@ -5161,14 +5161,14 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
 static bool isCompressMask(ArrayRef<int> Mask) {
   int Last = -1;
   bool SawUndef = false;
-  for (int i = 0; i < Mask.size(); i++) {
+  for (unsigned i = 0; i < Mask.size(); i++) {
     if (Mask[i] == -1) {
       SawUndef = true;
       continue;
     }
     if (SawUndef)
       return false;
-    if (i > Mask[i])
+    if (i > (unsigned)Mask[i])
       return false;
     if (Mask[i] <= Last)
       return false;
