@@ -1088,6 +1088,19 @@ std::string dumpInstruction(unsigned arrayIndex,
   return ret.str();
 }
 
+
+
+extern "C" {
+#include "bddisasm/inc/bdx86_core.h"
+#include "bddisasm/bddisasm/bdx86_decoder.c"
+  void *nd_memset(void *s, int c, ND_SIZET n) {
+    memset(s, c, n);
+    return NULL;
+  }
+}
+
+
+
 TEST(Interception, GetInstructionSize) {
   SetErrorReportCallback(DebugOutputPrinter::Report);
   for (unsigned i = 0; i < sizeof(data) / sizeof(*data); i++) {
@@ -1096,6 +1109,53 @@ TEST(Interception, GetInstructionSize) {
         (uptr)data[i].instr, &rel_offset);
     EXPECT_EQ(data[i].size, size) << dumpInstruction(i, data[i]);
     EXPECT_EQ(data[i].rel_offset, rel_offset) << dumpInstruction(i, data[i]);
+
+    INSTRUX instrux;
+    ND_CONTEXT ctx = { 0 };
+    NDSTATUS status;
+    NdInitContext(&ctx);
+#if SANITIZER_WINDOWS_x64
+    ctx.DefCode = ND_CODE_64;
+#else
+    ctx.DefCode = ND_CODE_32;
+#endif
+    ctx.DefData = ctx.DefCode;
+    ctx.DefStack = ctx.DefCode;
+    ctx.VendMode = ND_VEND_ANY;
+    ctx.FeatMode = ND_FEAT_ALL;
+
+    status = NdDecodeWithContext(&instrux, (const ND_UINT8 *)data[i].instr, 15, &ctx);
+    if (ND_SUCCESS(status)) {
+      if (data[i].size > 0) {
+        EXPECT_EQ(data[i].size, (size_t)instrux.Length) << dumpInstruction(i, data[i]);
+        if (instrux.IsRipRelative) {
+          EXPECT_EQ(data[i].rel_offset, (size_t)instrux.DispOffset) << dumpInstruction(i, data[i]);
+        } else {
+          EXPECT_EQ(data[i].rel_offset, (size_t)0) << dumpInstruction(i, data[i]);
+        }
+      }
+    }
+
+    // check rel_offset is just used in tests with x86-64
+    if (sizeof(void*) != 8) {
+        EXPECT_EQ(data[i].rel_offset, (size_t)0) << dumpInstruction(i, data[i]);
+    }
+
+    //// check if instruction is possibly the same in 64-bit and 32-bit
+    //if (i > 60) { // last index, which is already visible in i386 and x86_64
+    //  if (sizeof(void*) == 8 && data[i].size > 0) {
+    //    NdInitContext(&ctx);
+    //    ctx.DefCode = ND_CODE_32;
+    //    ctx.DefData = ctx.DefCode;
+    //    ctx.DefStack = ctx.DefCode;
+    //    ctx.VendMode = ND_VEND_ANY;
+    //    ctx.FeatMode = ND_FEAT_ALL;
+    //    status = NdDecodeWithContext(&instrux, (const ND_UINT8 *)data[i].instr, 15, &ctx);
+    //    if (ND_SUCCESS(status)) {
+    //      EXPECT_NE(data[i].size, (size_t)instrux.Length) << dumpInstruction(i, data[i]);
+    //    }
+    //  }
+    //}
   }
 }
 
