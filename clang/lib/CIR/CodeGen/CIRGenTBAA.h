@@ -98,11 +98,11 @@ struct TBAAAccessInfo {
 /// types to LLVM types.
 class CIRGenTBAA {
   mlir::MLIRContext *ctx;
-  clang::ASTContext &context;
-  CIRGenTypes &types;
+  [[maybe_unused]] clang::ASTContext &context;
+  [[maybe_unused]] CIRGenTypes &types;
   mlir::ModuleOp moduleOp;
-  const clang::CodeGenOptions &codeGenOpts;
-  const clang::LangOptions &features;
+  [[maybe_unused]] const clang::CodeGenOptions &codeGenOpts;
+  [[maybe_unused]] const clang::LangOptions &features;
 
 public:
   CIRGenTBAA(mlir::MLIRContext *ctx, clang::ASTContext &context,

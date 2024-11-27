@@ -487,10 +487,6 @@ void ItaniumRecordLayoutBuilder::finishLayout(const StructType D) {
 
   // Finally, round the size of the record up to the alignment of the
   // record itself.
-  uint64_t unpaddedSize = getSizeInBits() - UnfilledBitsInLastUnit;
-  uint64_t unpackedSizeInBits =
-      llvm::alignTo(getSizeInBits(), Context.toBits(UnpackedAlignment));
-
   uint64_t roundedSize = llvm::alignTo(
       getSizeInBits(),
       Context.toBits(!Context.getTargetInfo().defaultsToAIXPowerAlignment()
@@ -549,10 +545,8 @@ void ItaniumRecordLayoutBuilder::checkFieldPadding(
   // Warn if padding was introduced to the struct/class.
   if (!IsUnion && Offset > UnpaddedOffset) {
     unsigned padSize = Offset - UnpaddedOffset;
-    bool inBits = true;
     if (padSize % CharBitNum == 0) {
       padSize = padSize / CharBitNum;
-      inBits = false;
     }
     cir_cconv_assert(!cir::MissingFeatures::bitFieldPaddingDiagnostics());
   }
