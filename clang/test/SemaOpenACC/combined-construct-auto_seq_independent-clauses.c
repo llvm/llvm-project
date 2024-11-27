@@ -92,8 +92,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc parallel loop auto device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
 #pragma acc parallel loop auto deviceptr(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
@@ -253,8 +251,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc parallel loop device(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
 #pragma acc parallel loop deviceptr(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
@@ -415,8 +411,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc parallel loop independent device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
 #pragma acc parallel loop independent deviceptr(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
@@ -576,8 +570,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc parallel loop device(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
 #pragma acc parallel loop deviceptr(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
@@ -744,8 +736,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc parallel loop seq device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
 #pragma acc parallel loop seq deviceptr(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
@@ -911,8 +901,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc parallel loop device(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
 #pragma acc parallel loop deviceptr(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
