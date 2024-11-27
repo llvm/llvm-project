@@ -221,6 +221,7 @@ template<int ...N> void NoMissingSemicolonHereEither(struct S... [N]);
 // expected-error@-1 {{pack indexing is a C++2c extension}} \
 
 
+
 // This must be at the end of the file; we used to look ahead past the EOF token here.
 // expected-error@+1 {{expected unqualified-id}} expected-error@+1{{expected ';'}}
 using

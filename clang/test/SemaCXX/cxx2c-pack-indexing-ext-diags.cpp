@@ -41,6 +41,7 @@ void h(typename T... [1]::type); // cxx11-warning {{pack indexing is a C++2c ext
 
 template <typename... T>
 void x(T... [0]); // cxx11-warning {{'T...[0]' is no longer a pack expansion but a pack indexing type; add a name to specify a pack expansion}} \
+                  // cxx11-warning {{pack indexing is a C++2c extension}} \
                   // cxx26-warning {{pack indexing is incompatible with C++ standards before C++2c}}
 
 void call() {
