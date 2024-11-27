@@ -241,10 +241,9 @@ void InitializeFlags() {
         DisplayHelpMessages(&asan_parser);
         ProcessFlags();
 
-        // TODO: Update other globals and data structures that may change after
-        // initialization due to these flags potentially changing.
-        // These flags can be identified by looking at the work done in
-        // `AsanInitInternal` inside of `asan_rtl.cpp`.
+        // TODO: Update other globals and data structures that may need to change
+        // after initialization due to new flags potentially being set changing after
+        // `__asan_default_options` is registered.
         // See GH issue 'https://github.com/llvm/llvm-project/issues/117925' for details.
         SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
       });
