@@ -11,7 +11,7 @@ analyses implementing in the BOLT libraries.
 
 At the moment, no binary analyses are implemented.
 
-The goal is to make it easy using a plug-in framework to add you own analyses.
+The goal is to make it easy using a plug-in framework to add your own analyses.
 
 ## How to add your own binary analysis
 
