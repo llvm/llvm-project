@@ -33,7 +33,7 @@
 // RUN: %clang_cc1 -fmodules -I %t -fmodule-file=%t/b.pcm %s
 // RUN: not %clang_cc1 -fmodules -I %t -fmodule-file=%t/a.pcm %s -DERRORS 2>&1 | FileCheck %s --check-prefix=MISSING-B
 // RUN: %clang_cc1 -fmodules -I %t -fmodule-file=%t/a.pcm -fmodule-map-file=%t/modulemap.moved %s
-// RUN: %clang_cc1 -fmodules -I %t -fmodule-file=%t/a.pcm -fmodule-map-file=%t/modulemap.moved -std=c++1z %s
+// RUN: not %clang_cc1 -fmodules -I %t -fmodule-file=%t/a.pcm -fmodule-map-file=%t/modulemap.moved -std=c++1z %s
 // RUN: %clang_cc1 -fmodules -I %t -fmodule-file=%t/a.pcm -fmodule-map-file=%t/modulemap.moved -std=c++1z -Wno-module-file-config-mismatch %s -Db=a
 // RUN: rm %t/a.h
 // RUN: %clang_cc1 -fmodules -I %t -fmodule-file=%t/a.pcm %s -verify

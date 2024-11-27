@@ -279,7 +279,9 @@ ASTReaderListener::~ASTReaderListener() = default;
 /// \param Diags If non-NULL, diagnostics will be emitted via this engine.
 /// \param AllowCompatibleDifferences If true, differences between compatible
 ///        language options will be permitted.
-static void checkLanguageOptions(const LangOptions &LangOpts,
+///
+/// \returns true if the languagae options mis-match, false otherwise.
+static bool checkLanguageOptions(const LangOptions &LangOpts,
                                  const LangOptions &ExistingLangOpts,
                                  StringRef ModuleFilename,
                                  DiagnosticsEngine *Diags,
@@ -288,27 +290,30 @@ static void checkLanguageOptions(const LangOptions &LangOpts,
   if (ExistingLangOpts.Name != LangOpts.Name) {                                \
     if (Diags) {                                                               \
       if (Bits == 1)                                                           \
-        Diags->Report(diag::warn_ast_file_langopt_mismatch)                    \
+        Diags->Report(diag::err_ast_file_langopt_mismatch)                     \
             << Description << LangOpts.Name << ExistingLangOpts.Name           \
             << ModuleFilename;                                                 \
       else                                                                     \
-        Diags->Report(diag::warn_ast_file_langopt_value_mismatch)              \
+        Diags->Report(diag::err_ast_file_langopt_value_mismatch)               \
             << Description << ModuleFilename;                                  \
     }                                                                          \
+    return true;                                                               \
   }
 
 #define VALUE_LANGOPT(Name, Bits, Default, Description)                        \
   if (ExistingLangOpts.Name != LangOpts.Name) {                                \
     if (Diags)                                                                 \
-      Diags->Report(diag::warn_ast_file_langopt_value_mismatch)                \
+      Diags->Report(diag::err_ast_file_langopt_value_mismatch)                 \
           << Description << ModuleFilename;                                    \
+    return true;                                                               \
   }
 
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
   if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {                  \
     if (Diags)                                                                 \
-      Diags->Report(diag::warn_ast_file_langopt_value_mismatch)                \
+      Diags->Report(diag::err_ast_file_langopt_value_mismatch)                 \
           << Description << ModuleFilename;                                    \
+    return true;                                                               \
   }
 
 #define COMPATIBLE_LANGOPT(Name, Bits, Default, Description)  \
@@ -330,21 +335,24 @@ static void checkLanguageOptions(const LangOptions &LangOpts,
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
     if (Diags)
-      Diags->Report(diag::warn_ast_file_langopt_value_mismatch)
+      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
           << "module features" << ModuleFilename;
+    return true;
   }
 
   if (ExistingLangOpts.ObjCRuntime != LangOpts.ObjCRuntime) {
     if (Diags)
-      Diags->Report(diag::warn_ast_file_langopt_value_mismatch)
+      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
           << "target Objective-C runtime" << ModuleFilename;
+    return true;
   }
 
   if (ExistingLangOpts.CommentOpts.BlockCommandNames !=
       LangOpts.CommentOpts.BlockCommandNames) {
     if (Diags)
-      Diags->Report(diag::warn_ast_file_langopt_value_mismatch)
+      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
           << "block command names" << ModuleFilename;
+    return true;
   }
 
   // Sanitizer feature mismatches are treated as compatible differences. If
@@ -370,8 +378,11 @@ static void checkLanguageOptions(const LangOptions &LangOpts,
   }
 #include "clang/Basic/Sanitizers.def"
       }
+      return true;
     }
   }
+
+  return false;
 }
 
 /// Compare the given set of target options against an existing set of
@@ -448,10 +459,9 @@ bool PCHValidator::ReadLanguageOptions(const LangOptions &LangOpts,
                                        StringRef ModuleFilename, bool Complain,
                                        bool AllowCompatibleDifferences) {
   const LangOptions &ExistingLangOpts = PP.getLangOpts();
-  checkLanguageOptions(LangOpts, ExistingLangOpts, ModuleFilename,
-                       Complain ? &Reader.Diags : nullptr,
-                       AllowCompatibleDifferences);
-  return false;
+  return checkLanguageOptions(LangOpts, ExistingLangOpts, ModuleFilename,
+                              Complain ? &Reader.Diags : nullptr,
+                              AllowCompatibleDifferences);
 }
 
 bool PCHValidator::ReadTargetOptions(const TargetOptions &TargetOpts,
@@ -5388,9 +5398,8 @@ namespace {
     bool ReadLanguageOptions(const LangOptions &LangOpts,
                              StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
-      checkLanguageOptions(ExistingLangOpts, LangOpts, ModuleFilename, nullptr,
-                           AllowCompatibleDifferences);
-      return false;
+      return checkLanguageOptions(ExistingLangOpts, LangOpts, ModuleFilename,
+                                  nullptr, AllowCompatibleDifferences);
     }
 
     bool ReadTargetOptions(const TargetOptions &TargetOpts,
