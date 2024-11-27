@@ -49,7 +49,7 @@ int OnExit() {
 // ---------------------- Wrappers ---------------- {{{1
 using namespace __memprof;
 
-DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                               \
