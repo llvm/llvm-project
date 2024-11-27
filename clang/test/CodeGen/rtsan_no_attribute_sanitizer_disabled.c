@@ -5,4 +5,4 @@ int spinlock(int *a) [[clang::blocking]] { return *a; }
 
 // Without the -fsanitize=realtime flag, we shouldn't attach the attributes.
 // CHECK-NOT: {{.*sanitize_realtime .*}}
-// CHECK-NOT: {{.*sanitize_realtime_unsafe .*}}
+// CHECK-NOT: {{.*sanitize_realtime_blocking .*}}

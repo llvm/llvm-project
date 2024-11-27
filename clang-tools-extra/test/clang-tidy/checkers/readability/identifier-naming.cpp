@@ -101,6 +101,10 @@ inline namespace InlineNamespace {
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for inline namespace 'InlineNamespace'
 // CHECK-FIXES: {{^}}inline namespace inline_namespace {{{$}}
 
+namespace FOO_ALIAS = FOO_NS;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for namespace 'FOO_ALIAS' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}namespace foo_alias = FOO_NS;{{$}}
+
 SYSTEM_NS::structure g_s1;
 // NO warnings or fixes expected as SYSTEM_NS and structure are declared in a header file
 

@@ -723,12 +723,28 @@ public:
     /// Stats for stale profile matching:
     ///   the total number of basic blocks in the profile
     uint32_t NumStaleBlocks{0};
-    ///   the number of matched basic blocks
-    uint32_t NumMatchedBlocks{0};
+    ///   the number of exactly matched basic blocks
+    uint32_t NumExactMatchedBlocks{0};
+    ///   the number of loosely matched basic blocks
+    uint32_t NumLooseMatchedBlocks{0};
+    ///   the number of exactly pseudo probe matched basic blocks
+    uint32_t NumPseudoProbeExactMatchedBlocks{0};
+    ///   the number of loosely pseudo probe matched basic blocks
+    uint32_t NumPseudoProbeLooseMatchedBlocks{0};
+    ///   the number of call matched basic blocks
+    uint32_t NumCallMatchedBlocks{0};
     ///   the total count of samples in the profile
     uint64_t StaleSampleCount{0};
-    ///   the count of matched samples
-    uint64_t MatchedSampleCount{0};
+    ///   the count of exactly matched samples
+    uint64_t ExactMatchedSampleCount{0};
+    ///   the count of loosely matched samples
+    uint64_t LooseMatchedSampleCount{0};
+    ///   the count of exactly pseudo probe matched samples
+    uint64_t PseudoProbeExactMatchedSampleCount{0};
+    ///   the count of loosely pseudo probe matched samples
+    uint64_t PseudoProbeLooseMatchedSampleCount{0};
+    ///   the count of call matched samples
+    uint64_t CallMatchedSampleCount{0};
     ///   the number of stale functions that have matching number of blocks in
     ///   the profile
     uint64_t NumStaleFuncsWithEqualBlockCount{0};

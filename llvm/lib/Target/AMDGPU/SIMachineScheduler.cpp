@@ -878,14 +878,11 @@ void SIScheduleBlockCreator::colorAccordingToReservedDependencies() {
     SUColors.first = CurrentTopDownReservedDependencyColoring[SU.NodeNum];
     SUColors.second = CurrentBottomUpReservedDependencyColoring[SU.NodeNum];
 
-    std::map<std::pair<unsigned, unsigned>, unsigned>::iterator Pos =
-      ColorCombinations.find(SUColors);
-    if (Pos != ColorCombinations.end()) {
-      CurrentColoring[SU.NodeNum] = Pos->second;
-    } else {
-      CurrentColoring[SU.NodeNum] = NextNonReservedID;
-      ColorCombinations[SUColors] = NextNonReservedID++;
-    }
+    auto [Pos, Inserted] =
+        ColorCombinations.try_emplace(SUColors, NextNonReservedID);
+    CurrentColoring[SU.NodeNum] = Pos->second;
+    if (Inserted)
+      NextNonReservedID++;
   }
 }
 

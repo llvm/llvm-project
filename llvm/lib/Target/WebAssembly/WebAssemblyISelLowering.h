@@ -136,6 +136,8 @@ private:
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
+  SDValue Replace128Op(SDNode *N, SelectionDAG &DAG) const;
 
   // Custom DAG combine hooks
   SDValue

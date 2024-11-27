@@ -58,6 +58,7 @@ class ObjcopyOptTable : public opt::GenericOptTable {
 public:
   ObjcopyOptTable() : opt::GenericOptTable(objcopy_opt::ObjcopyInfoTable) {
     setGroupedShortOptions(true);
+    setDashDashParsing(true);
   }
 };
 
@@ -650,16 +651,10 @@ parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
+objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                              function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ObjcopyOptTable T;
-
-  const char *const *DashDash =
-      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
-  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
-  if (DashDash != RawArgsArr.end())
-    DashDash = std::next(DashDash);
 
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -671,7 +666,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         "argument to '%s' is missing (expected %d value(s))",
         InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
 
-  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
+  if (InputArgs.size() == 0) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
   }
@@ -695,7 +690,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
-  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");

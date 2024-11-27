@@ -466,7 +466,10 @@ multiclass Urdwrmsr<Map rrmap, string suffix> {
                                 "urdmsr\t{$imm, $dst|$dst, $imm}",
                                 [(set GR64:$dst, (int_x86_urdmsr i64immSExt32_su:$imm))]>,
                            T_MAP7, VEX, XD, NoCD8;
-}
+    def RDMSRri#suffix  : Ii32<0xf6, MRM0r, (outs GR64:$dst), (ins i64i32imm:$imm),
+                                "rdmsr\t{$imm, $dst|$dst, $imm}", []>,
+                           T_MAP7, VEX, XD, NoCD8;
+  }
   let mayStore = 1 in {
     let OpMap = rrmap in
     def UWRMSRrr#suffix  : I<0xf8, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
@@ -476,6 +479,9 @@ multiclass Urdwrmsr<Map rrmap, string suffix> {
                                 "uwrmsr\t{$src, $imm|$imm, $src}",
                                 [(int_x86_uwrmsr i64immSExt32_su:$imm, GR64:$src)]>,
                            T_MAP7, VEX, XS, NoCD8;
+    def WRMSRNSir#suffix  : Ii32<0xf6, MRM0r, (outs), (ins GR64:$src, i64i32imm:$imm),
+                                "wrmsrns\t{$src, $imm|$imm, $src}",
+                                []>, T_MAP7, VEX, XS, NoCD8;
   }
 }
 
@@ -684,7 +690,7 @@ let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
 let SchedRW = [WriteSystem] in {
 let Defs = [EAX, EDX], Uses = [ECX] in
   def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru",
-                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, TB;
+                  [(set EAX, EDX, (X86rdpkru ECX))]>, TB;
 let Uses = [EAX, ECX, EDX] in
   def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru",
                   [(X86wrpkru EAX, EDX, ECX)]>, TB;

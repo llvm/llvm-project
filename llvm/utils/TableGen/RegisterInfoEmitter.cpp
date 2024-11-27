@@ -445,7 +445,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
     if (!V || !V->getValue())
       continue;
 
-    DefInit *DI = cast<DefInit>(V->getValue());
+    const DefInit *DI = cast<DefInit>(V->getValue());
     const Record *Alias = DI->getDef();
     const auto &AliasIter = llvm::lower_bound(
         DwarfRegNums, Alias, [](const DwarfRegNumsMapPair &A, const Record *B) {
@@ -1061,10 +1061,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   OS << "  0,\n";
   for (const auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
-    BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
+    const BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
     uint64_t Value = 0;
     for (unsigned b = 0, be = BI->getNumBits(); b != be; ++b) {
-      if (BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
+      if (const BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
         Value |= (uint64_t)B->getValue() << b;
     }
     OS << "  " << Value << ",\n";

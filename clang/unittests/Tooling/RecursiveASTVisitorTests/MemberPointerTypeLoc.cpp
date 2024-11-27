@@ -13,16 +13,15 @@ using namespace clang;
 
 namespace {
 
-class MemberPointerTypeLocVisitor
-    : public ExpectedLocationVisitor<MemberPointerTypeLocVisitor> {
+class MemberPointerTypeLocVisitor : public ExpectedLocationVisitor {
 public:
-  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) override {
     if (!TL)
       return true;
     Match(TL.getDecl()->getName(), TL.getNameLoc());
     return true;
   }
-  bool VisitRecordTypeLoc(RecordTypeLoc RTL) {
+  bool VisitRecordTypeLoc(RecordTypeLoc RTL) override {
     if (!RTL)
       return true;
     Match(RTL.getDecl()->getName(), RTL.getNameLoc());

@@ -164,6 +164,7 @@ struct FactOrCheck {
   }
 
   Instruction *getContextInst() const {
+    assert(!isConditionFact());
     if (Ty == EntryTy::UseCheck)
       return getContextInstForUse(*U);
     return Inst;
@@ -766,7 +767,7 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
   if (CmpInst::isSigned(Pred) &&
       isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
       isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
-    Pred = CmpInst::getUnsignedPredicate(Pred);
+    Pred = ICmpInst::getUnsignedPredicate(Pred);
 
   SmallVector<Value *> NewVariables;
   ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables);
@@ -856,7 +857,7 @@ void ConstraintInfo::transferToOtherSystem(
     if (IsKnownNonNegative(B)) {
       addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
-      addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+      addFact(ICmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
               DFSInStack);
     }
     break;
@@ -866,7 +867,7 @@ void ConstraintInfo::transferToOtherSystem(
     if (IsKnownNonNegative(A)) {
       addFact(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
-      addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+      addFact(ICmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
               DFSInStack);
     }
     break;
@@ -1033,9 +1034,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
       DTN, CmpInst::ICMP_SLT, PN, B,
       ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
 
-  // Try to add condition from header to the exit blocks. When exiting either
-  // with EQ or NE in the header, we know that the induction value must be u<=
-  // B, as other exits may only exit earlier.
+  // Try to add condition from header to the dedicated exit blocks. When exiting
+  // either with EQ or NE in the header, we know that the induction value must
+  // be u<= B, as other exits may only exit earlier.
   assert(!StepOffset.isNegative() && "induction must be increasing");
   assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
          "unsupported predicate");
@@ -1043,8 +1044,11 @@ void State::addInfoForInductions(BasicBlock &BB) {
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
-    WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+    // Bail out on non-dedicated exits.
+    if (DT.dominates(&BB, EB)) {
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+    }
   }
 }
 

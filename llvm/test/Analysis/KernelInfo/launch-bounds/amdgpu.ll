@@ -25,9 +25,9 @@ entry:
 
 ; CHECK-NOT: remark: test.c:11:0: in function 'none', omp_target_num_teams = {{.*}}
 ; CHECK-NOT: remark: test.c:11:0: in function 'none', omp_target_thread_limit = {{.*}}
-; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[0] = 0
-; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[1] = 0
-; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[2] = 0
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[0] = 4294967295
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[1] = 4294967295
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[2] = 4294967295
 ; CHECK: remark: test.c:11:0: in function 'none', amdgpu-flat-work-group-size[0] = 1
 ; CHECK: remark: test.c:11:0: in function 'none', amdgpu-flat-work-group-size[1] = 1024
 ; CHECK: remark: test.c:11:0: in function 'none', amdgpu-waves-per-eu[0] = 4

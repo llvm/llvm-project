@@ -3,7 +3,7 @@
 
 int __attribute__((target_version("sme-f64f64+bf16"))) foo(int) { return 1; }
 int __attribute__((target_version("default"))) foo(int) { return 2; }
-int __attribute__((target_version("sm4+ebf16"))) foo(void) { return 3; }
+int __attribute__((target_version("sm4+bf16"))) foo(void) { return 3; }
 int __attribute__((target_version("default"))) foo(void) { return 4; }
 
 struct MyClass {
@@ -84,7 +84,7 @@ int bar() {
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define dso_local noundef i32 @_Z3foov._Mebf16Msm4(
+// CHECK-LABEL: define dso_local noundef i32 @_Z3foov._Mbf16Msm4(
 // CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 3
@@ -220,7 +220,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @_Z3barv(
-// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi(ptr noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
@@ -249,12 +249,12 @@ int bar() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435488
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435488
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 134217760
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 134217760
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
-// CHECK-NEXT:    ret ptr @_Z3foov._Mebf16Msm4
+// CHECK-NEXT:    ret ptr @_Z3foov._Mbf16Msm4
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    ret ptr @_Z3foov.default
 //

@@ -47,12 +47,10 @@ def testAffineStoreOp():
 # CHECK-LABEL: TEST: testAffineDelinearizeInfer
 @constructAndPrintInModule
 def testAffineDelinearizeInfer():
-    # CHECK: %[[C0:.*]] = arith.constant 0 : index
-    c0 = arith.ConstantOp(T.index(), 0)
     # CHECK: %[[C1:.*]] = arith.constant 1 : index
     c1 = arith.ConstantOp(T.index(), 1)
-    # CHECK: %{{.*}}:2 = affine.delinearize_index %[[C1:.*]] into (%[[C1:.*]], %[[C0:.*]]) : index, index
-    two_indices = affine.AffineDelinearizeIndexOp(c1, [c1, c0])
+    # CHECK: %{{.*}}:2 = affine.delinearize_index %[[C1:.*]] into (2, 3) : index, index
+    two_indices = affine.AffineDelinearizeIndexOp([T.index()] * 2, c1, [], [2, 3])
 
 
 # CHECK-LABEL: TEST: testAffineLoadOp
@@ -159,7 +157,7 @@ def testAffineForOpErrors():
         )
 
     try:
-        two_indices = affine.AffineDelinearizeIndexOp(c1, [c1, c1])
+        two_indices = affine.AffineDelinearizeIndexOp([T.index()] * 2, c1, [], [1, 1])
         affine.AffineForOp(
             two_indices,
             c2,
@@ -265,3 +263,73 @@ def testForSugar():
             add = arith.addi(i, i)
             memref.store(add, it, [i])
             affine.yield_([it])
+
+
+# CHECK-LABEL: TEST: testAffineIfWithoutElse
+@constructAndPrintInModule
+def testAffineIfWithoutElse():
+    index = IndexType.get()
+    i32 = IntegerType.get_signless(32)
+    d0 = AffineDimExpr.get(0)
+
+    # CHECK: #[[$SET0:.*]] = affine_set<(d0) : (d0 - 5 >= 0)>
+    cond = IntegerSet.get(1, 0, [d0 - 5], [False])
+
+    # CHECK-LABEL:  func.func @simple_affine_if(
+    # CHECK-SAME:                        %[[VAL_0:.*]]: index) {
+    # CHECK:            affine.if #[[$SET0]](%[[VAL_0]]) {
+    # CHECK:                %[[VAL_1:.*]] = arith.constant 1 : i32
+    # CHECK:                %[[VAL_2:.*]] = arith.addi %[[VAL_1]], %[[VAL_1]] : i32
+    # CHECK:            }
+    # CHECK:            return
+    # CHECK:        }
+    @func.FuncOp.from_py_func(index)
+    def simple_affine_if(cond_operands):
+        if_op = affine.AffineIfOp(cond, cond_operands=[cond_operands])
+        with InsertionPoint(if_op.then_block):
+            one = arith.ConstantOp(i32, 1)
+            add = arith.AddIOp(one, one)
+            affine.AffineYieldOp([])
+        return
+
+
+# CHECK-LABEL: TEST: testAffineIfWithElse
+@constructAndPrintInModule
+def testAffineIfWithElse():
+    index = IndexType.get()
+    i32 = IntegerType.get_signless(32)
+    d0 = AffineDimExpr.get(0)
+
+    # CHECK: #[[$SET0:.*]] = affine_set<(d0) : (d0 - 5 >= 0)>
+    cond = IntegerSet.get(1, 0, [d0 - 5], [False])
+
+    # CHECK-LABEL:  func.func @simple_affine_if_else(
+    # CHECK-SAME:                                    %[[VAL_0:.*]]: index) {
+    # CHECK:            %[[VAL_IF:.*]]:2 = affine.if #[[$SET0]](%[[VAL_0]]) -> (i32, i32) {
+    # CHECK:                %[[VAL_XT:.*]] = arith.constant 0 : i32
+    # CHECK:                %[[VAL_YT:.*]] = arith.constant 1 : i32
+    # CHECK:                affine.yield %[[VAL_XT]], %[[VAL_YT]] : i32, i32
+    # CHECK:            } else {
+    # CHECK:                %[[VAL_XF:.*]] = arith.constant 2 : i32
+    # CHECK:                %[[VAL_YF:.*]] = arith.constant 3 : i32
+    # CHECK:                affine.yield %[[VAL_XF]], %[[VAL_YF]] : i32, i32
+    # CHECK:            }
+    # CHECK:            %[[VAL_ADD:.*]] = arith.addi %[[VAL_IF]]#0, %[[VAL_IF]]#1 : i32
+    # CHECK:            return
+    # CHECK:        }
+
+    @func.FuncOp.from_py_func(index)
+    def simple_affine_if_else(cond_operands):
+        if_op = affine.AffineIfOp(
+            cond, [i32, i32], cond_operands=[cond_operands], has_else=True
+        )
+        with InsertionPoint(if_op.then_block):
+            x_true = arith.ConstantOp(i32, 0)
+            y_true = arith.ConstantOp(i32, 1)
+            affine.AffineYieldOp([x_true, y_true])
+        with InsertionPoint(if_op.else_block):
+            x_false = arith.ConstantOp(i32, 2)
+            y_false = arith.ConstantOp(i32, 3)
+            affine.AffineYieldOp([x_false, y_false])
+        add = arith.AddIOp(if_op.results[0], if_op.results[1])
+        return

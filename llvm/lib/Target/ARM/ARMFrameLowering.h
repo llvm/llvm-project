@@ -41,11 +41,10 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
-  bool keepFramePointer(const MachineFunction &MF) const override;
+  bool keepFramePointer(const MachineFunction &MF) const;
 
   bool enableCalleeSaveSkip(const MachineFunction &MF) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
   bool isFPReserved(const MachineFunction &MF) const;
   bool requiresAAPCSFrameRecord(const MachineFunction &MF) const;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
@@ -86,6 +85,9 @@ public:
 
   const SpillSlot *
   getCalleeSavedSpillSlots(unsigned &NumEntries) const override;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   void emitPushInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,

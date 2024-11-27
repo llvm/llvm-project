@@ -63,6 +63,7 @@ def KernelClock : BuiltinGroup;
 def CastToPtr : BuiltinGroup;
 def Construct : BuiltinGroup;
 def CoopMatr : BuiltinGroup;
+def ICarryBorrow : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -628,6 +629,16 @@ defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBar
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 3, OpControlBarrier>;
 
+// ICarryBorrow builtin record:
+defm : DemangledNativeBuiltin<"__spirv_IAddCarry", OpenCL_std, ICarryBorrow, 3, 3, OpIAddCarryS>;
+defm : DemangledNativeBuiltin<"__spirv_ISubBorrow", OpenCL_std, ICarryBorrow, 3, 3, OpISubBorrowS>;
+
+// cl_intel_split_work_group_barrier
+defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ControlBarrierArriveINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierArriveINTEL>;
+defm : DemangledNativeBuiltin<"intel_work_group_barrier_wait", OpenCL_std, Barrier, 1, 2, OpControlBarrierWaitINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ControlBarrierWaitINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierWaitINTEL>;
+
 // Kernel enqueue builtin records:
 defm : DemangledNativeBuiltin<"__enqueue_kernel_basic", OpenCL_std, Enqueue, 5, 5, OpEnqueueKernel>;
 defm : DemangledNativeBuiltin<"__enqueue_kernel_basic_events", OpenCL_std, Enqueue, 8, 8, OpEnqueueKernel>;
@@ -783,7 +794,9 @@ defm : DemangledGroupBuiltinWrapper<"__spirv_GroupAny", 2, 2, OpGroupAny>;
 defm : DemangledGroupBuiltin<"group_broadcast", WorkOrSub, OpGroupBroadcast>;
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupBroadcast", 3, 3, OpGroupBroadcast>;
 defm : DemangledGroupBuiltin<"group_non_uniform_broadcast", OnlySub, OpGroupNonUniformBroadcast>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBroadcast", 3, 3, OpGroupNonUniformBroadcast>;
 defm : DemangledGroupBuiltin<"group_broadcast_first", OnlySub, OpGroupNonUniformBroadcastFirst>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBroadcastFirst", 2, 2, OpGroupNonUniformBroadcastFirst>;
 
 // cl_khr_subgroup_non_uniform_vote
 defm : DemangledGroupBuiltin<"group_elect", OnlySub, OpGroupNonUniformElect>;

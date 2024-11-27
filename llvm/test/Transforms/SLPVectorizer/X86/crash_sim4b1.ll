@@ -67,7 +67,7 @@ define void @SIM4() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP3]], [[IF_THEN_I]] ], [ undef, [[WHILE_END275_I]] ]
 ; CHECK-NEXT:    br i1 false, label [[IF_THEN157:%.*]], label [[LAND_LHS_TRUE167]]
 ; CHECK:       if.then157:
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], splat (i32 1)
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr undef, align 4
 ; CHECK-NEXT:    br label [[LAND_LHS_TRUE167]]
 ; CHECK:       land.lhs.true167:

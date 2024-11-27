@@ -252,4 +252,40 @@ CharBlock Variable::GetSource() const {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
+
+OmpDependenceType::Value OmpDoacross::GetDepType() const {
+  return common::visit( //
+      common::visitors{
+          [](const OmpDoacross::Sink &) {
+            return OmpDependenceType::Value::Sink;
+          },
+          [](const OmpDoacross::Source &) {
+            return OmpDependenceType::Value::Source;
+          },
+      },
+      u);
+}
+
+OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
+  return std::get<parser::OmpTaskDependenceType>(t).v;
+}
+
+} // namespace Fortran::parser
+
+template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
+  using namespace Fortran;
+  using A = llvm::remove_cvref_t<C>; // A is referenced in OMP.inc
+  // The code included below contains a sequence of checks like the following
+  // for each OpenMP clause
+  //   if constexpr (std::is_same_v<A, parser::OmpClause::AcqRel>)
+  //     return llvm::omp::Clause::OMPC_acq_rel;
+  //   [...]
+#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+#include "llvm/Frontend/OpenMP/OMP.inc"
+}
+
+namespace Fortran::parser {
+llvm::omp::Clause OmpClause::Id() const {
+  return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
+}
 } // namespace Fortran::parser

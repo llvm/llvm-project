@@ -337,6 +337,7 @@ cc_library(
         ":PluginTypeSystemClangHeaders",
         ":SymbolFileDWARFProperties",
         "//clang:ast",
+        "//clang:basic",
         "//lldb:Core",
         "//lldb:ExpressionHeaders",
         "//lldb:Headers",
@@ -1221,12 +1222,31 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "DynamicLoaderMacOSXDYLDProperties",
+    strip_include_prefix = "DynamicLoader/MacOSX-DYLD",
+    tbl_outs = [
+        (
+            ["-gen-lldb-property-defs"],
+            "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinProperties.inc",
+        ),
+        (
+            ["-gen-lldb-property-enum-defs"],
+            "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinPropertiesEnum.inc",
+        ),
+    ],
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
 cc_library(
     name = "PluginDynamicLoaderMacOSXDYLD",
     srcs = glob(["DynamicLoader/MacOSX-DYLD/*.cpp"]),
     hdrs = glob(["DynamicLoader/MacOSX-DYLD/*.h"]),
     include_prefix = "Plugins",
     deps = [
+        ":DynamicLoaderMacOSXDYLDProperties",
         ":PluginObjCRuntime",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
@@ -1239,6 +1259,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )

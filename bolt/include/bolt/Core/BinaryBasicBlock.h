@@ -819,6 +819,9 @@ public:
     return OutputAddressRange;
   }
 
+  uint64_t getOutputStartAddress() const { return OutputAddressRange.first; }
+  uint64_t getOutputEndAddress() const { return OutputAddressRange.second; }
+
   bool hasLocSyms() const { return LocSyms != nullptr; }
 
   /// Return mapping of input offsets to symbols in the output.

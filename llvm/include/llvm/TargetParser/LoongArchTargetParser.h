@@ -49,6 +49,16 @@ enum FeatureKind : uint32_t {
 
   // Floating-point approximate reciprocal instructions are available.
   FK_FRECIPE = 1 << 9,
+
+  // Atomic memory swap and add instructions for byte and half word are
+  // available.
+  FK_LAM_BH = 1 << 10,
+
+  // Do not generate load-load barrier instructions (dbar 0x700).
+  FK_LD_SEQ_SA = 1 << 12,
+
+  // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
+  FK_DIV32 = 1 << 13,
 };
 
 struct FeatureInfo {

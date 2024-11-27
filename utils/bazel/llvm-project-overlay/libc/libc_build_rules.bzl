@@ -8,7 +8,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
-load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
+load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
 def libc_internal_target(name):
     return name + ".__internal__"
@@ -59,7 +59,7 @@ def libc_function(
         srcs,
         weak = False,
         copts = None,
-        local_defines = None,
+        local_defines = [],
         **kwargs):
     """Add target for a libc function.
 
@@ -108,16 +108,20 @@ def libc_function(
         name = libc_internal_target(name),
         srcs = srcs,
         copts = copts,
+        local_defines = local_defines,
         **kwargs
     )
 
     # This second target is the llvm libc C function with either a default or hidden visibility.
     # All other functions are hidden.
-    func_attrs = ["__attribute__((visibility(\"default\")))"]
-    if weak:
-        func_attrs = func_attrs + ["__attribute__((weak))"]
-    local_defines = local_defines or ["LIBC_COPT_PUBLIC_PACKAGING"]
-    local_defines = local_defines + ["LLVM_LIBC_FUNCTION_ATTR='%s'" % " ".join(func_attrs)]
+    func_attrs = [
+        "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'",
+    ] if weak else []
+
+    local_defines = (local_defines +
+                     ["LIBC_COPT_PUBLIC_PACKAGING"] +
+                     ["LLVM_LIBC_FUNCTION_ATTR='[[gnu::visibility(\"default\")]]'"] +
+                     func_attrs)
     _libc_library(
         name = name,
         hidden = True,

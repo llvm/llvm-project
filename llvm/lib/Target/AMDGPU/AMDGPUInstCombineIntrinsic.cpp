@@ -130,10 +130,7 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   // Modify arguments and types
   Func(Args, ArgTys);
 
-  Function *I =
-      Intrinsic::getOrInsertDeclaration(OldIntr.getModule(), NewIntr, ArgTys);
-
-  CallInst *NewCall = IC.Builder.CreateCall(I, Args);
+  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, ArgTys, Args);
   NewCall->takeName(&OldIntr);
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
@@ -891,12 +888,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         // register (which contains the bitmask of live threads). So a
         // comparison that always returns true is the same as a read of the
         // EXEC register.
-        Function *NewF = Intrinsic::getOrInsertDeclaration(
-            II.getModule(), Intrinsic::read_register, II.getType());
         Metadata *MDArgs[] = {MDString::get(II.getContext(), "exec")};
         MDNode *MD = MDNode::get(II.getContext(), MDArgs);
         Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
-        CallInst *NewCall = IC.Builder.CreateCall(NewF, Args);
+        CallInst *NewCall = IC.Builder.CreateIntrinsic(Intrinsic::read_register,
+                                                       II.getType(), Args);
         NewCall->addFnAttr(Attribute::Convergent);
         NewCall->takeName(&II);
         return IC.replaceInstUsesWith(II, NewCall);
@@ -990,11 +986,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       } else if (!Ty->isFloatTy() && !Ty->isDoubleTy() && !Ty->isHalfTy())
         break;
 
-      Function *NewF = Intrinsic::getOrInsertDeclaration(
-          II.getModule(), NewIID, {II.getType(), SrcLHS->getType()});
       Value *Args[] = {SrcLHS, SrcRHS,
                        ConstantInt::get(CC->getType(), SrcPred)};
-      CallInst *NewCall = IC.Builder.CreateCall(NewF, Args);
+      CallInst *NewCall = IC.Builder.CreateIntrinsic(
+          NewIID, {II.getType(), SrcLHS->getType()}, Args);
       NewCall->takeName(&II);
       return IC.replaceInstUsesWith(II, NewCall);
     }
@@ -1027,6 +1022,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       Call->takeName(&II);
       return IC.replaceInstUsesWith(II, Call);
     }
+    break;
+  }
+  case Intrinsic::amdgcn_wavefrontsize: {
+    if (ST->isWaveSizeKnown())
+      return IC.replaceInstUsesWith(
+          II, ConstantInt::get(II.getType(), ST->getWavefrontSize()));
     break;
   }
   case Intrinsic::amdgcn_wqm_vote: {
@@ -1258,6 +1259,69 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_prng_b32: {
+    auto *Src = II.getArgOperand(0);
+    if (isa<UndefValue>(Src)) {
+      return IC.replaceInstUsesWith(II, Src);
+    }
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
+    Value *Src0 = II.getArgOperand(0);
+    Value *Src1 = II.getArgOperand(1);
+    uint64_t CBSZ = cast<ConstantInt>(II.getArgOperand(3))->getZExtValue();
+    uint64_t BLGP = cast<ConstantInt>(II.getArgOperand(4))->getZExtValue();
+    auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
+    auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
+
+    auto getFormatNumRegs = [](unsigned FormatVal) {
+      switch (FormatVal) {
+      case AMDGPU::MFMAScaleFormats::FP6_E2M3:
+      case AMDGPU::MFMAScaleFormats::FP6_E3M2:
+        return 6u;
+      case AMDGPU::MFMAScaleFormats::FP4_E2M1:
+        return 4u;
+      case AMDGPU::MFMAScaleFormats::FP8_E4M3:
+      case AMDGPU::MFMAScaleFormats::FP8_E5M2:
+        return 8u;
+      default:
+        llvm_unreachable("invalid format value");
+      }
+    };
+
+    bool MadeChange = false;
+    unsigned Src0NumElts = getFormatNumRegs(CBSZ);
+    unsigned Src1NumElts = getFormatNumRegs(BLGP);
+
+    // Depending on the used format, fewer registers are required so shrink the
+    // vector type.
+    if (Src0Ty->getNumElements() > Src0NumElts) {
+      Src0 = IC.Builder.CreateExtractVector(
+          FixedVectorType::get(Src0Ty->getElementType(), Src0NumElts), Src0,
+          IC.Builder.getInt64(0));
+      MadeChange = true;
+    }
+
+    if (Src1Ty->getNumElements() > Src1NumElts) {
+      Src1 = IC.Builder.CreateExtractVector(
+          FixedVectorType::get(Src0Ty->getElementType(), Src1NumElts), Src1,
+          IC.Builder.getInt64(0));
+      MadeChange = true;
+    }
+
+    if (!MadeChange)
+      return std::nullopt;
+
+    SmallVector<Value *, 10> Args(II.args());
+    Args[0] = Src0;
+    Args[1] = Src1;
+
+    CallInst *NewII = IC.Builder.CreateIntrinsic(
+        IID, {Src0->getType(), Src1->getType()}, Args, &II);
+    NewII->takeName(&II);
+    return IC.replaceInstUsesWith(II, NewII);
+  }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
@@ -1402,9 +1466,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       Args[0] = IC.Builder.CreateShuffleVector(II.getOperand(0), EltMask);
   }
 
-  Function *NewIntrin = Intrinsic::getOrInsertDeclaration(
-      II.getModule(), II.getIntrinsicID(), OverloadTys);
-  CallInst *NewCall = IC.Builder.CreateCall(NewIntrin, Args);
+  CallInst *NewCall =
+      IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
 

@@ -1109,4 +1109,36 @@ define float @test_fneg_select_maxnum(float %x) {
   ret float %neg
 }
 
+; Check that there's no infinite loop.
+define <vscale x 2 x double> @test_fneg_select_svec(<vscale x 2 x i1> %cond, <vscale x 2 x double> %b) {
+; CHECK-LABEL: @test_fneg_select_svec(
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg fast <vscale x 2 x double> [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select fast <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x double> splat (double -0.000000e+00), <vscale x 2 x double> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
+;
+  %1 = select <vscale x 2 x i1> %cond, <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> %b
+  %2 = fneg fast <vscale x 2 x double> %1
+  ret <vscale x 2 x double> %2
+}
+
+define <vscale x 2 x double> @test_fneg_select_svec_2(<vscale x 2 x i1> %cond, <vscale x 2 x double> %a) {
+; CHECK-LABEL: @test_fneg_select_svec_2(
+; CHECK-NEXT:    [[A_NEG:%.*]] = fneg fast <vscale x 2 x double> [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select fast <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x double> [[A_NEG]], <vscale x 2 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = select <vscale x 2 x i1> %cond, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
+  %2 = fneg fast <vscale x 2 x double> %1
+  ret <vscale x 2 x double> %2
+}
+
+define <vscale x 2 x double> @test_fneg_select_svec_3(<vscale x 2 x i1> %cond, <vscale x 2 x double> %b) {
+; CHECK-LABEL: @test_fneg_select_svec_3(
+; CHECK-NEXT:    ret <vscale x 2 x double> splat (double -0.000000e+00)
+;
+  %1 = select <vscale x 2 x i1> %cond, <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> zeroinitializer
+  %2 = fneg fast <vscale x 2 x double> %1
+  ret <vscale x 2 x double> %2
+}
+
 !0 = !{}
