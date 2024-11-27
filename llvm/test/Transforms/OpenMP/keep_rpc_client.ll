@@ -3,14 +3,14 @@
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s --check-prefix=PRELINK
 
 @client = internal addrspace(1) global i64 zeroinitializer, align 8
-@__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+@__llvm_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
 
 ;.
 ; POSTLINK: @client = internal addrspace(1) global i64 0, align 8
-; POSTLINK: @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+; POSTLINK: @__llvm_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
 ;.
 ; PRELINK: @client = internal addrspace(1) global i64 0, align 8
-; PRELINK: @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+; PRELINK: @__llvm_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
 ;.
 define i64 @a() {
 ; POSTLINK-LABEL: define {{[^@]+}}@a

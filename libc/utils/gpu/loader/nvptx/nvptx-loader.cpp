@@ -314,15 +314,10 @@ int load(int argc, const char **argv, const char **envp, void *image,
   CUdeviceptr rpc_client_dev = 0;
   uint64_t client_ptr_size = sizeof(void *);
   if (CUresult err = cuModuleGetGlobal(&rpc_client_dev, &client_ptr_size,
-                                       binary, "__llvm_libc_rpc_client"))
+                                       binary, "__llvm_rpc_client"))
     handle_error(err);
 
-  CUdeviceptr rpc_client_host = 0;
-  if (CUresult err =
-          cuMemcpyDtoH(&rpc_client_host, rpc_client_dev, sizeof(void *)))
-    handle_error(err);
-  if (CUresult err =
-          cuMemcpyHtoD(rpc_client_host, &client, sizeof(rpc::Client)))
+  if (CUresult err = cuMemcpyHtoD(rpc_client_dev, &client, sizeof(rpc::Client)))
     handle_error(err);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
