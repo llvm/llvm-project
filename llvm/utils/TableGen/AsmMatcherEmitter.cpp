@@ -2466,7 +2466,8 @@ static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
 }
 
 /// emitValidateOperandClass - Emit the function to validate an operand class.
-static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
+static void emitValidateOperandClass(const CodeGenTarget &Target,
+                                     AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "static unsigned validateOperandClass(MCParsedAsmOperand &GOp, "
      << "MatchClassKind Kind) {\n";
   OS << "  " << Info.Target.getName() << "Operand &Operand = ("
@@ -2508,15 +2509,21 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "  } // end switch (Kind)\n\n";
 
   // Check for register operands, including sub-classes.
+  const auto &Regs = Target.getRegBank().getRegisters();
+  StringRef Namespace = Regs.front().TheDef->getValueAsString("Namespace");
+  SmallVector<StringRef> Table(1 + Regs.size(), "InvalidMatchClass");
+  for (const auto &RC : Info.RegisterClasses) {
+    const auto &Reg = Target.getRegBank().getReg(RC.first);
+    Table[Reg->EnumValue] = RC.second->Name;
+  }
   OS << "  if (Operand.isReg()) {\n";
-  OS << "    MatchClassKind OpKind;\n";
-  OS << "    switch (Operand.getReg().id()) {\n";
-  OS << "    default: OpKind = InvalidMatchClass; break;\n";
-  for (const auto &RC : Info.RegisterClasses)
-    OS << "    case " << RC.first->getValueAsString("Namespace")
-       << "::" << RC.first->getName() << ": OpKind = " << RC.second->Name
-       << "; break;\n";
-  OS << "    }\n";
+  OS << "    static constexpr uint16_t Table[" << Namespace
+     << "::NUM_TARGET_REGS] = {\n";
+  for (auto &MatchClassName : Table)
+    OS << "      " << MatchClassName << ",\n";
+  OS << "    };\n\n";
+  OS << "    MatchClassKind OpKind = "
+        "(MatchClassKind)Table[Operand.getReg().id()];\n";
   OS << "    return isSubclass(OpKind, Kind) ? "
      << "(unsigned)MCTargetAsmParser::Match_Success :\n                     "
      << "                 getDiagKindFromRegisterClass(Kind);\n  }\n\n";
@@ -3412,7 +3419,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   emitIsSubclass(Target, Info.Classes, OS);
 
   // Emit the routine to validate an operand against a match class.
-  emitValidateOperandClass(Info, OS);
+  emitValidateOperandClass(Target, Info, OS);
 
   emitMatchClassKindNames(Info.Classes, OS);
 
