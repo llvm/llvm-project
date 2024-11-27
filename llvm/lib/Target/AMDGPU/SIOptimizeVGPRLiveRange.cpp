@@ -651,10 +651,6 @@ PreservedAnalyses
 SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   LiveVariables *LV = &MFAM.getResult<LiveVariablesAnalysis>(MF);
   MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
@@ -667,6 +663,7 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
   PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   return PA;
 }
 
