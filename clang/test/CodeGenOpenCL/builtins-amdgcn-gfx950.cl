@@ -5,6 +5,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 typedef unsigned int uint;
+typedef unsigned short ushort;
 typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
 typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
 typedef __bf16 __attribute__((ext_vector_type(32))) bfloat32;
@@ -1657,4 +1658,48 @@ void test_cvt_scalef32_sr_fp8_f32(global unsigned *out, float src, uint seed, fl
   *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_f32(*out, src, seed, scale, 0);
   *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_f32(*out, src, seed, scale, 1);
   *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_f32(*out, src, seed, scale, 2);
+}
+
+// CHECK-LABEL: @test_bitop3_b32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[C:%.*]], ptr addrspace(5) [[C_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[C_ADDR]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.bitop3.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i8 1)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_bitop3_b32(global uint* out, uint a, uint b, uint c) {
+  *out = __builtin_amdgcn_bitop3_b32(a, b, c, 1);
+}
+
+// CHECK-LABEL: @test_bitop3_b16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i16 [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 2
+// CHECK-NEXT:    store i16 [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 2
+// CHECK-NEXT:    store i16 [[C:%.*]], ptr addrspace(5) [[C_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr addrspace(5) [[A_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr addrspace(5) [[B_ADDR]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(5) [[C_ADDR]], align 2
+// CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.amdgcn.bitop3.i16(i16 [[TMP0]], i16 [[TMP1]], i16 [[TMP2]], i8 1)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i16 [[TMP3]], ptr addrspace(1) [[TMP4]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_bitop3_b16(global ushort* out, ushort a, ushort b, ushort c) {
+  *out = __builtin_amdgcn_bitop3_b16(a, b, c, 1);
 }
