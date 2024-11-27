@@ -81,17 +81,17 @@ _LIBCPP_WEAK void* operator new(size_t size, const std::nothrow_t&) noexcept {
       "it fails to allocate, making it impossible for `operator new(size_t, nothrow_t)` to fulfill its "
       "contract (since it should return nullptr upon failure). Please make sure you override "
       "`operator new(size_t, nothrow_t)` as well.");
-#    endif
+#  endif
 
   return operator_new_impl(size);
-#  else
+#else
   void* p = nullptr;
   try {
     p = ::operator new(size);
   } catch (...) {
   }
   return p;
-#  endif
+#endif
 }
 
 _LIBCPP_OVERRIDABLE_FUNCTION(_Znam, void*, operator new[], (size_t size)) _THROW_BAD_ALLOC {
@@ -109,17 +109,17 @@ _LIBCPP_WEAK void* operator new[](size_t size, const std::nothrow_t&) noexcept {
       "it fails to allocate, making it impossible for `operator new[](size_t, nothrow_t)` to fulfill its "
       "contract (since it should return nullptr upon failure). Please make sure you override "
       "`operator new[](size_t, nothrow_t)` as well.");
-#    endif
+#  endif
 
   return operator_new_impl(size);
-#  else
+#else
   void* p = nullptr;
   try {
     p = ::operator new[](size);
   } catch (...) {
   }
   return p;
-#  endif
+#endif
 }
 
 _LIBCPP_WEAK void operator delete(void* ptr) noexcept { std::free(ptr); }
@@ -175,17 +175,17 @@ _LIBCPP_WEAK void* operator new(size_t size, std::align_val_t alignment, const s
       "terminate in case it fails to allocate, making it impossible for `operator new(size_t, align_val_t, nothrow_t)` "
       "to fulfill its contract (since it should return nullptr upon failure). Please make sure you override "
       "`operator new(size_t, align_val_t, nothrow_t)` as well.");
-#      endif
+#    endif
 
   return operator_new_aligned_impl(size, alignment);
-#    else
+#  else
   void* p = nullptr;
   try {
     p = ::operator new(size, alignment);
   } catch (...) {
   }
   return p;
-#    endif
+#  endif
 }
 
 _LIBCPP_OVERRIDABLE_FUNCTION(_ZnamSt11align_val_t, void*, operator new[], (size_t size, std::align_val_t alignment))
@@ -203,17 +203,17 @@ _LIBCPP_WEAK void* operator new[](size_t size, std::align_val_t alignment, const
       "nothrow_t)` to fulfill its contract (since it should return nullptr upon failure). Please make sure you "
       "override "
       "`operator new[](size_t, align_val_t, nothrow_t)` as well.");
-#      endif
+#    endif
 
   return operator_new_aligned_impl(size, alignment);
-#    else
+#  else
   void* p = nullptr;
   try {
     p = ::operator new[](size, alignment);
   } catch (...) {
   }
   return p;
-#    endif
+#  endif
 }
 
 _LIBCPP_WEAK void operator delete(void* ptr, std::align_val_t) noexcept { std::__libcpp_aligned_free(ptr); }
