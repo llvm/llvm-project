@@ -8,7 +8,7 @@
 
 #include "src/__support/threads/CndVar.h"
 #include "src/__support/CPP/mutex.h"
-#include "src/__support/OSUtil/syscall.h"           // syscall_impl
+#include "src/__support/OSUtil/syscall.h" // syscall_impl
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_word.h" // FutexWordType
 #include "src/__support/threads/linux/raw_mutex.h"  // RawMutex
@@ -56,7 +56,7 @@ int CndVar::wait(Mutex *m) {
     }
   }
 
-  waiter.futex_word.wait(WS_Waiting, cpp::nullopt, true);
+  waiter.futex_word.wait(WS_Waiting, /*is_shared=*/true);
 
   // At this point, if locking |m| fails, we can simply return as the
   // queued up waiter would have been removed from the queue.

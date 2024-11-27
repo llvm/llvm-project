@@ -14,7 +14,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/threads/linux/futex_utils.h"
+#include "src/__support/threads/linux/futex_timeout.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/linux/abs_timeout.h"
@@ -38,7 +38,7 @@ namespace LIBC_NAMESPACE_DECL {
 // critical sections.
 class RawMutex {
 protected:
-  Futex futex;
+  TimedFutex futex;
   LIBC_INLINE_VAR static constexpr FutexWordType UNLOCKED = 0b00;
   LIBC_INLINE_VAR static constexpr FutexWordType LOCKED = 0b01;
   LIBC_INLINE_VAR static constexpr FutexWordType IN_CONTENTION = 0b10;
@@ -63,7 +63,7 @@ private:
 
   // Return true if the lock is acquired. Return false if timeout happens before
   // the lock is acquired.
-  LIBC_INLINE bool lock_slow(cpp::optional<Futex::Timeout> timeout,
+  LIBC_INLINE bool lock_slow(cpp::optional<TimedFutex::Timeout> timeout,
                              bool is_pshared, unsigned spin_count) {
     FutexWordType state = spin(spin_count);
     // Before go into contention state, try to grab the lock.
@@ -102,7 +102,7 @@ public:
         expected, LOCKED, cpp::MemoryOrder::ACQUIRE, cpp::MemoryOrder::RELAXED);
   }
   LIBC_INLINE bool
-  lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+  lock(cpp::optional<TimedFutex::Timeout> timeout = cpp::nullopt,
        bool is_shared = false,
        unsigned spin_count = LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT) {
     // Timeout will not be checked if immediate lock is possible.

@@ -55,9 +55,9 @@ class WaitingQueue final : private RawMutex {
   // Pending writer count (protected by the mutex)
   FutexWordType pending_writers;
   // Reader serialization (increases on each reader-waking operation)
-  Futex reader_serialization;
+  TimedFutex reader_serialization;
   // Writer serialization (increases on each writer-waking operation)
-  Futex writer_serialization;
+  TimedFutex writer_serialization;
 
 public:
   // RAII guard to lock and unlock the waiting queue.
@@ -98,7 +98,7 @@ public:
 
   template <Role role>
   LIBC_INLINE long wait(FutexWordType expected,
-                        cpp::optional<Futex::Timeout> timeout,
+                        cpp::optional<TimedFutex::Timeout> timeout,
                         bool is_pshared) {
     if constexpr (role == Role::Reader)
       return reader_serialization.wait(expected, timeout, is_pshared);
@@ -389,7 +389,7 @@ public:
 private:
   template <Role role>
   LIBC_INLINE LockResult
-  lock_slow(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+  lock_slow(cpp::optional<TimedFutex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     // Phase 1: deadlock detection.
     // A deadlock happens if this is a RAW/WAW lock in the same thread.
@@ -468,7 +468,7 @@ private:
 public:
   [[nodiscard]]
   LIBC_INLINE LockResult
-  read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+  read_lock(cpp::optional<TimedFutex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     LockResult result = try_read_lock();
     if (LIBC_LIKELY(result != LockResult::Busy))
@@ -477,7 +477,7 @@ public:
   }
   [[nodiscard]]
   LIBC_INLINE LockResult
-  write_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+  write_lock(cpp::optional<TimedFutex::Timeout> timeout = cpp::nullopt,
              unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     LockResult result = try_write_lock();
     if (LIBC_LIKELY(result != LockResult::Busy))

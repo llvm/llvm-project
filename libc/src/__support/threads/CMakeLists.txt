@@ -105,3 +105,20 @@ add_header_library(
     libc.hdr.types.pid_t
     ${identifier_dependency_on_thread}
 )
+
+# TODO: implement windows "futex" with WaitOnAddress
+add_header_library(
+  futex_utils
+  HDRS
+    futex_utils.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.futex_utils
+)
+
+add_header_library(
+  futex_timeout
+  HDRS
+    futex_timeout.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.futex_timeout
+)
