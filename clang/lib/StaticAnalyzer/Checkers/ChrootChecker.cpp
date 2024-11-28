@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines chroot checker, which checks improper use of chroot.
+//  This file defines chroot checker, which checks improper use of chroot. This
+//  is described by the SEI Cert C rule POS05-C. The checker is a warning not
+//  a hard failure since it only checks for a recommended rule.
 //
 //===----------------------------------------------------------------------===//
 
@@ -66,10 +68,6 @@ public:
 private:
   void evalChroot(const CallEvent &Call, CheckerContext &C) const;
   void evalChdir(const CallEvent &Call, CheckerContext &C) const;
-
-  /// Searches for the ExplodedNode where chroot was called.
-  static const ExplodedNode *getAcquisitionSite(const ExplodedNode *N,
-                                                CheckerContext &C);
 };
 
 bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
@@ -145,26 +143,72 @@ void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
   C.addTransition(state);
 }
 
-const ExplodedNode *ChrootChecker::getAcquisitionSite(const ExplodedNode *N,
-                                                      CheckerContext &C) {
-  ProgramStateRef State = N->getState();
-  // When a chroot() issue is found, the current exploded node may not
-  // have state info for where chroot() was called for the bug report but
-  // a predecessor should have it.
-  if (!State->get<ChrootCall>())
-    N = N->getFirstPred();
+class ChrootInvocationVisitor final : public BugReporterVisitor {
+  bool Satisfied = false;
+  const SymbolRef ChrootSym;
 
-  const ExplodedNode *Pred = N;
-  while (N) {
-    State = N->getState();
+  const ExplodedNode *getAcquisitionSite(const ExplodedNode *N) {
+    ProgramStateRef State = N->getState();
+    // When a chroot() issue is found, the current exploded node may not
+    // have state info for where chroot() was called for the bug report but
+    // a predecessor should have it.
     if (!State->get<ChrootCall>())
-      return Pred;
-    Pred = N;
-    N = N->getFirstPred();
+      N = N->getFirstPred();
+
+    const ExplodedNode *Pred = N;
+    while (N) {
+      State = N->getState();
+      if (!State->get<ChrootCall>())
+        return Pred;
+      Pred = N;
+      N = N->getFirstPred();
+    }
+
+    return nullptr;
   }
 
-  return nullptr;
-}
+public:
+  explicit ChrootInvocationVisitor(SymbolRef ChrootSym)
+      : ChrootSym(ChrootSym) {}
+
+  static void *getTag() {
+    static int Tag = 0;
+    return &Tag;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
+  }
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override {
+    if (Satisfied)
+      return nullptr;
+
+    const Expr *ChrootExpr = N->getFirstPred()->getState()->get<ChrootCall>();
+    if (!ChrootExpr)
+      return nullptr;
+
+    const Stmt *S = N->getStmtForDiagnostics();
+    if (!S)
+      return nullptr;
+
+    const ExplodedNode *ChrootNode = getAcquisitionSite(N);
+    if (!ChrootNode)
+      return nullptr;
+
+    Satisfied = true;
+    PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
+                               N->getLocationContext());
+
+    BR.addNote("chroot called here",
+               PathDiagnosticLocation::create(ChrootNode->getLocation(),
+                                              BRC.getSourceManager()),
+               {ChrootExpr->getSourceRange()});
+    return nullptr;
+  }
+};
 
 // Check the jail state before any function call except chroot and chdir().
 void ChrootChecker::checkPreCall(const CallEvent &Call,
@@ -185,18 +229,12 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
   const Expr *ChrootExpr = C.getState()->get<ChrootCall>();
   assert(ChrootExpr && "Expected to find chroot call expansion.");
 
-  const ExplodedNode *ChrootCallNode = getAcquisitionSite(Err, C);
-  assert(ChrootCallNode && "Could not find node invoking chroot.");
-
   std::unique_ptr<PathSensitiveBugReport> R =
       std::make_unique<PathSensitiveBugReport>(
           BT_BreakJail, R"(No call of chdir("/") immediately after chroot)",
           Err);
 
-  R->addNote("chroot called here",
-             PathDiagnosticLocation::create(ChrootCallNode->getLocation(),
-                                            C.getSourceManager()),
-             {ChrootExpr->getSourceRange()});
+  R->addVisitor<ChrootInvocationVisitor>(nullptr);
 
   C.emitReport(std::move(R));
 }
