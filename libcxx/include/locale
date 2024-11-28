@@ -722,7 +722,7 @@ __num_get_signed_integral(const char* __a, const char* __a_end, ios_base::iostat
     __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
     errno                                                     = 0;
     char* __p2;
-    long long __ll                                               = strtoll_l(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
+    long long __ll = __locale::__strtoll(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
     __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
     if (__current_errno == 0)
       errno = __save_errno;
@@ -754,7 +754,7 @@ __num_get_unsigned_integral(const char* __a, const char* __a_end, ios_base::iost
     __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
     errno                                                     = 0;
     char* __p2;
-    unsigned long long __ll                                      = strtoull_l(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
+    unsigned long long __ll = __locale::__strtoull(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
     __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
     if (__current_errno == 0)
       errno = __save_errno;
@@ -779,17 +779,17 @@ _LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return strtof_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return strtod_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return strtold_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <class _Tp>
