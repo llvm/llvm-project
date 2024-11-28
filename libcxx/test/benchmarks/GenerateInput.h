@@ -108,19 +108,6 @@ std::vector<IntT> getRandomIntegerInputs(std::size_t N) {
   return inputs;
 }
 
-inline std::vector<std::string> getDuplicateStringInputs(std::size_t N) {
-  std::vector<std::string> inputs(N, getRandomString(1024));
-  return inputs;
-}
-
-inline std::vector<std::string> getRandomStringInputs(std::size_t N) {
-  std::vector<std::string> inputs;
-  inputs.reserve(N);
-  for (std::size_t i = 0; i < N; ++i)
-    inputs.push_back(getRandomString(1024));
-  return inputs;
-}
-
 inline std::vector<std::string> getRandomStringInputsWithLength(std::size_t N, std::size_t len) { // N-by-len
   std::vector<std::string> inputs;
   inputs.reserve(N);
@@ -129,8 +116,17 @@ inline std::vector<std::string> getRandomStringInputsWithLength(std::size_t N, s
   return inputs;
 }
 
+inline std::vector<std::string> getDuplicateStringInputs(std::size_t N) {
+  std::vector<std::string> inputs(N, getRandomString(1024));
+  return inputs;
+}
+
+inline std::vector<std::string> getRandomStringInputs(std::size_t N) {
+  return getRandomStringInputsWithLength(N, 1024);
+}
+
 template <class IntT>
-inline std::vector<std::vector<IntT>> getRandomIntegerInputsWithLength(std::size_t N, std::size_t len) { // N-by-len
+std::vector<std::vector<IntT>> getRandomIntegerInputsWithLength(std::size_t N, std::size_t len) { // N-by-len
   std::vector<std::vector<IntT>> inputs;
   inputs.reserve(N);
   for (std::size_t i = 0; i < N; ++i)

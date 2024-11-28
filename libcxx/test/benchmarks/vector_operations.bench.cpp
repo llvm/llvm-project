@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
-
 #include "ContainerBenchmarks.h"
 #include "GenerateInput.h"
 
