@@ -3244,6 +3244,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
           Error = Cxx ? 3 : 4; /* Union member */
           break;
         case TagTypeKind::Class:
+        case TagTypeKind::Coroutine:
           Error = 5; /* Class member */
           break;
         case TagTypeKind::Interface:
