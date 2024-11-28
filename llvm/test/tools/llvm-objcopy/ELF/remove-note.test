@@ -1,0 +1,98 @@
+# RUN: not llvm-objcopy --remove-note= - 2>&1 | FileCheck %s --check-prefix=ERR-NOTYPEID
+# RUN: not llvm-objcopy --remove-note=/1 - 2>&1 | FileCheck %s --check-prefix=ERR-EMPTYNAME
+# RUN: not llvm-objcopy --remove-note=CORE/1/2 - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM1
+# RUN: not llvm-objcopy --remove-note=Notanumber - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM2
+# RUN: not llvm-objcopy --remove-note=CORE/Notanumber - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM2
+
+# ERR-NOTYPEID: error: bad format for --remove-note, missing type_id
+# ERR-EMPTYNAME: error: bad format for --remove-note, note name is empty
+# ERR-INVNUM1: error: bad note type_id for --remove-note: '1/2'
+# ERR-INVNUM2: error: bad note type_id for --remove-note: 'Notanumber'
+
+# RUN: yaml2obj -D ALIGN=8 %s -o - \
+# RUN:   | llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/0x03 - - \
+# RUN:   | llvm-readobj --segments --sections --notes - \
+# RUN:   | FileCheck %s -D#SIZE=64
+
+# RUN: yaml2obj -D ALIGN=4 %s -o - \
+# RUN:   | llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/0x03 - - \
+# RUN:   | llvm-readobj --segments --sections --notes - \
+# RUN:   | FileCheck %s -D#SIZE=48
+
+# CHECK:      Sections [
+# CHECK:        Section {
+# CHECK:          Name: .note
+# CHECK-NEXT:     Type: SHT_NOTE
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address:
+# CHECK-NEXT:     Offset: [[OFFSET:0x.+]]
+# CHECK-NEXT:     Size: [[#%d,SIZE]]
+
+# CHECK:      ProgramHeaders [
+# CHECK-NEXT:   ProgramHeader {
+# CHECK-NEXT:     Type: PT_NOTE
+# CHECK-NEXT:     Offset: [[OFFSET]]
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     FileSize: [[#%d,SIZE]]
+# CHECK-NEXT:     MemSize: 0
+
+# CHECK:      NoteSections [
+# CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Offset: [[OFFSET]]
+# CHECK-NEXT:     Size: 0x[[#%x,SIZE]]
+# CHECK-NEXT:     Notes [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Owner: CORE
+# CHECK-NEXT:         Data size: 0x2
+# CHECK-NEXT:         Type: NT_FPREGSET
+# CHECK-NEXT:         Description data (
+# CHECK-NEXT:           0000: 0202
+# CHECK-NEXT:         )
+# CHECK-NEXT:       }
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Owner: CORE
+# CHECK-NEXT:         Data size: 0x2
+# CHECK-NEXT:         Type: NT_TASKSTRUCT
+# CHECK-NEXT:         Description data (
+# CHECK-NEXT:           0000: 0404
+# CHECK-NEXT:         )
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:          ELFCLASS64
+  Data:           ELFDATA2LSB
+  Type:           ET_CORE
+  Machine:        EM_X86_64
+ProgramHeaders:
+  - Type:         PT_NOTE
+    MemSize:      0
+    FirstSec:     .note
+    LastSec:      .note
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    AddressAlign: [[ALIGN]]
+    Notes:
+      - Name:   CORE
+        Type:   0x01
+        Desc:   0101
+      - Name:   CORE
+        Type:   0x02
+        Desc:   0202
+      - Name:   CORE
+        Type:   0x03
+        Desc:   0303
+      - Name:   CORE
+        Type:   0x04
+        Desc:   0404
+      - Name:   LINUX
+        Type:   0x01
+        Desc:   0505
+...
