@@ -631,8 +631,15 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                << "Invalid prefix with R_X86_64_CODE_6_GOTTPOFF!";
       return;
     }
-    if (((loc[-4] & 0x80) != 0) && ((loc[-3] & 0x14) != 0) &&
-        (loc[-2] == 0x3 || loc[-2] == 0x1) && ((loc[-1] & 0xc7) == 0x5)) {
+    // Check bits are satified:
+    //   loc[-5]: X==1 (inverted polarity), (loc[-5] & 0x7) == 0x4
+    //   loc[-4]: W==1, X2==1 (inverted polarity), pp==0b00(NP)
+    //   loc[-3]: NF==1 or ND==1
+    //   loc[-2]: opcode==0x1 or opcode==0x3
+    //   loc[-1]: Mod==0b00, RM==0b101
+    if (((loc[-5] & 0x47) == 0x44) && ((loc[-4] & 0x87) == 0x84) &&
+        ((loc[-3] & 0x14) != 0) && (loc[-2] == 0x3 || loc[-2] == 0x1) &&
+        ((loc[-1] & 0xc7) == 0x5)) {
       // "addq %reg1, foo@GOTTPOFF(%rip), %reg2" -> "addq $foo, %reg1, %reg2"
       // "addq foo@GOTTPOFF(%rip), %reg1, %reg2" -> "addq $foo, %reg1, %reg2"
       // "{nf} addq %reg1, foo@GOTTPOFF(%rip), %reg2"
