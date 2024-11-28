@@ -9,6 +9,7 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
@@ -253,9 +254,17 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   LocalVisitor Visit);
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
-  if (auto *RD = Type->getAsCXXRecordDecl())
-    return RD->hasAttr<T>();
-  return false;
+  auto *RD = Type->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+  return RD->hasAttr<T>();
+}
+
+bool isPointerLikeType(QualType QT) {
+  return isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
+         QT->isNullPtrType();
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
@@ -274,11 +283,6 @@ static bool isInStlNamespace(const Decl *D) {
     }
 
   return DC->isStdNamespace();
-}
-
-static bool isPointerLikeType(QualType Type) {
-  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
-         Type->isNullPtrType();
 }
 
 // Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
@@ -622,6 +626,26 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       Arg = DAE->getExpr();
     }
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+    else if (const auto *CaptureAttr =
+                 Callee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+             CaptureAttr && isa<CXXConstructorDecl>(Callee) &&
+             llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
+               return ArgIdx == LifetimeCaptureByAttr::THIS;
+             }))
+      // `lifetime_capture_by(this)` in a class constructor has the same
+      // semantics as `lifetimebound`:
+      //
+      // struct Foo {
+      //   const int& a;
+      //   // Equivalent to Foo(const int& t [[clang::lifetimebound]])
+      //   Foo(const int& t [[clang::lifetime_capture_by(this)]]) : a(t) {}
+      // };
+      //
+      // In the implementation, `lifetime_capture_by` is treated as an alias for
+      // `lifetimebound` and shares the same code path. This implies the emitted
+      // diagnostics will be emitted under `-Wdangling`, not
+      // `-Wdangling-capture`.
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument

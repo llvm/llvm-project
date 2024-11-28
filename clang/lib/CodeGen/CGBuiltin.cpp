@@ -10859,6 +10859,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   else if (TypeFlags.isUndef())
     return UndefValue::get(Ty);
   else if (Builtin->LLVMIntrinsic != 0) {
+    // Emit set FPMR for intrinsics that require it
+    if (TypeFlags.setsFPMR())
+      Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_set_fpmr),
+                         Ops.pop_back_val());
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);
 
