@@ -372,6 +372,9 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
   case dwarf::DW_AT_name:
     CurrentElement->setName(dwarf::toStringRef(FormValue));
     break;
+  case dwarf::DW_AT_GNU_template_name:
+    CurrentElement->setValue(dwarf::toStringRef(FormValue));
+    break;
   case dwarf::DW_AT_linkage_name:
   case dwarf::DW_AT_MIPS_linkage_name:
     CurrentElement->setLinkageName(dwarf::toStringRef(FormValue));
