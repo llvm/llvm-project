@@ -433,3 +433,12 @@ will be created with the specified commits.
 If a commit you want to backport does not apply cleanly, you may resolve
 the conflicts locally and then create a pull request against the release
 branch.  Just make sure to add the release milestone to the pull request.
+
+Getting admin access to CI infrastructure
+=========================================
+
+Any individual who is responsible for setting up and/or maintaining CI infrastructure for a LLVM project can
+request to be granted the CI/CD role to the LLVM organization admins. The request can be made by creating
+`a Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the ``infrastructure`` label.
+Applicants must include a justification for why the role is being requested. Applications are reviewed on a
+case-by-case basis by the LLVM admins and the role can be revoked at any point as the LLVM admins see fit.

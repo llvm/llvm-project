@@ -923,9 +923,21 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // As a solution, for fixed-address binaries we set LPStart to 0, and for
   // position-independent binaries we offset LP start by one byte.
   bool NeedsLPAdjustment = false;
-  const MCSymbol *LPStartSymbol = nullptr;
   std::function<void(const MCSymbol *)> emitLandingPad;
-  if (BC.HasFixedLoadAddress) {
+
+  // Check if there's a symbol associated with a landing pad fragment.
+  const MCSymbol *LPStartSymbol = BF.getLPStartSymbol(FF.getFragmentNum());
+  if (!LPStartSymbol) {
+    // Since landing pads are not in the same fragment, we fall back to emitting
+    // absolute addresses for this FDE.
+    if (opts::Verbosity >= 2) {
+      BC.outs() << "BOLT-INFO: falling back to generating absolute-address "
+                << "exception ranges for " << BF << '\n';
+    }
+
+    assert(BC.HasFixedLoadAddress &&
+           "Cannot emit absolute-address landing pads for PIE/DSO");
+
     Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1); // LPStart format
     Streamer.emitIntValue(0, 4);                      // LPStart
     emitLandingPad = [&](const MCSymbol *LPSymbol) {
@@ -936,9 +948,6 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     };
   } else {
     std::optional<FragmentNum> LPFN = BF.getLPFragment(FF.getFragmentNum());
-    LPStartSymbol = BF.getLPStartSymbol(FF.getFragmentNum());
-    assert(LPFN && LPStartSymbol && "Expected LPStart symbol to be set");
-
     const FunctionFragment &LPFragment = BF.getLayout().getFragment(*LPFN);
     NeedsLPAdjustment =
         (!LPFragment.empty() && LPFragment.front()->isLandingPad());
@@ -987,7 +996,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
   // Emit encoding of entries in the call site table. The format is used for the
   // call site start, length, and corresponding landing pad.
-  if (BC.HasFixedLoadAddress)
+  if (!LPStartSymbol)
     Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
   else
     Streamer.emitIntValue(dwarf::DW_EH_PE_uleb128, 1);
@@ -1007,7 +1016,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
     // Start of the range is emitted relative to the start of current
     // function split part.
-    if (BC.HasFixedLoadAddress) {
+    if (!LPStartSymbol) {
       Streamer.emitAbsoluteSymbolDiff(BeginLabel, StartSymbol, 4);
       Streamer.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
     } else {

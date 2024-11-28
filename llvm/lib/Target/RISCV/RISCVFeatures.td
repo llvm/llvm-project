@@ -1059,6 +1059,10 @@ def FeatureStdExtSha
                       FeatureStdExtShvstvala, FeatureStdExtShtvala, FeatureStdExtShvstvecd,
                       FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
 
+def FeatureStdExtSvukte
+    : RISCVExperimentalExtension<"svukte", 0, 3,
+                                 "'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)">;
+
 // Pointer Masking extensions
 
 // A supervisor-level extension that provides pointer masking for the next lower
@@ -1448,6 +1452,9 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
+
+def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
+                                             "true", "VXRM writes causes pipeline flush">;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

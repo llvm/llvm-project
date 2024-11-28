@@ -3943,7 +3943,7 @@ In this case, the capturing entity ``X`` could capture a dangling reference to t
 temporary object.
 
 .. code-block:: c++
-  
+
   void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
     s.insert(a);
   }
@@ -3957,8 +3957,8 @@ temporary object.
 
 The capturing entity ``X`` can be one of the following:
 
-- Another (named) function parameter. 
-  
+- Another (named) function parameter.
+
   .. code-block:: c++
 
     void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
@@ -3966,7 +3966,7 @@ The capturing entity ``X`` can be one of the following:
     }
 
 - ``this`` (in case of member functions).
-  
+
   .. code-block:: c++
 
     class S {
@@ -3977,7 +3977,7 @@ The capturing entity ``X`` can be one of the following:
     };
 
 - `global`, `unknown`.
-  
+
   .. code-block:: c++
 
     std::set<std::string_view> s;
@@ -4000,7 +4000,7 @@ function by writing the attribute after the function type:
 The attribute supports specifying more than one capturing entities:
 
 .. code-block:: c++
-  
+
   void addToSets(std::string_view a [[clang::lifetime_capture_by(s1, s2)]],
                  std::set<std::string_view>& s1,
                  std::set<std::string_view>& s2) {
@@ -4014,7 +4014,7 @@ statement-local and only detects use of a temporary as an argument to the
 annotated parameter.
 
 .. code-block:: c++
-  
+
   void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s);
   void use() {
     std::set<std::string_view> s;
@@ -7174,8 +7174,8 @@ the field it is attached to, and it may also lead to emission of automatic fix-i
 hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-* Attribute attached to functions: The attribute does not suppress 
-  ``-Wunsafe-buffer-usage`` inside the function to which it is attached. 
+* Attribute attached to functions: The attribute does not suppress
+  ``-Wunsafe-buffer-usage`` inside the function to which it is attached.
   These warnings still need to be addressed.
 
   The attribute is warranted even if the only way a function can overflow
@@ -7238,10 +7238,10 @@ alternatives, though the attribute can be used even when the fix can't be automa
   and then use the attribute on the original ``baz()`` to help the users
   update their code to use the new function.
 
-* Attribute attached to fields: The attribute should only be attached to 
-  struct fields, if the fields can not be updated to a safe type with bounds 
-  check, such as std::span. In other words, the buffers prone to unsafe accesses 
-  should always be updated to use safe containers/views and attaching the attribute 
+* Attribute attached to fields: The attribute should only be attached to
+  struct fields, if the fields can not be updated to a safe type with bounds
+  check, such as std::span. In other words, the buffers prone to unsafe accesses
+  should always be updated to use safe containers/views and attaching the attribute
   must be last resort when such an update is infeasible.
 
   The attribute can be placed on individual fields or a set of them as shown below.
@@ -7259,7 +7259,7 @@ alternatives, though the attribute can be used even when the fix can't be automa
       size_t sz;
     };
 
-  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning 
+  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning
   that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
 
   }];
@@ -7814,10 +7814,10 @@ def HLSLLoopHintDocs : Documentation {
   let Content = [{
 The ``[loop]`` directive allows loop optimization hints to be
 specified for the subsequent loop. The directive allows unrolling to
-be disabled and is not compatible with [unroll(x)]. 
+be disabled and is not compatible with [unroll(x)].
 
 Specifying the parameter, ``[loop]``, directs the
-unroller to not unroll the loop. 
+unroller to not unroll the loop.
 
 .. code-block:: hlsl
 
@@ -7931,6 +7931,16 @@ otherwise.
 The attribute ``no_randomize_layout``, when attached to a C structure,
 instructs the compiler that this structure should not have its field layout
 randomized.
+  }];
+}
+
+def HLSLSV_GroupIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
+thread group a shader is executing in. This attribute is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
   }];
 }
 

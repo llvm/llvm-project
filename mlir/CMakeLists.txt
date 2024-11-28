@@ -162,6 +162,9 @@ configure_file(
 # Requires:
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
+# By default, find_package and probing for installed pybind11 is performed.
+# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to 
+# disable all package setup and control it themselves.
 #-------------------------------------------------------------------------------
 
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
@@ -170,8 +173,17 @@ set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
        "Prime the python detection by searching for a full 'Development' \
        component first (temporary while diagnosing environment specific Python \
        detection issues)")
+set(MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES 0 CACHE BOOL
+       "Performs python dev package configuration sufficient to use all MLIR \
+       python features. Super-projects that wish to control their own setup \
+       must perform an appropriate find_package of Python3 with \
+       'Development.Module' and ensure that find_package(pybind11) is \
+       satisfied (and keep up to date as requirements evolve).")
+
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
+  # Note that both upstream and downstreams often call this macro. It gates
+  # internally on the MLIR_CONFIGURE_PYTHON_DEV_PACKAGES option.
   mlir_configure_python_dev_packages()
 endif()
 
