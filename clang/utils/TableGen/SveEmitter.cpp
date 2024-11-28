@@ -466,7 +466,6 @@ std::string SVEType::builtinBaseType() const {
     }
   case TypeKind::SInt:
   case TypeKind::UInt:
-  default:
     switch (ElementBitwidth) {
     case 1:
       return "b";
