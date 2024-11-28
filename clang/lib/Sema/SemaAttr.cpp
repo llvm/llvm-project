@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
@@ -214,11 +213,6 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 
   // Handle nested classes that could be a gsl::Pointer.
   inferGslPointerAttribute(Record, Record);
-}
-
-bool Sema::isPointerLikeType(QualType Type) {
-  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
-         Type->isNullPtrType();
 }
 
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
