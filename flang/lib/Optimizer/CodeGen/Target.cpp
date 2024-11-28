@@ -1157,9 +1157,9 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
   /// Flatten non-basic types, resulting in an array of types containing only
   /// `IntegerType` and `FloatType`.
-  std::vector<mlir::Type> flattenTypeList(mlir::Location loc,
-                                          const mlir::Type type) const {
-    std::vector<mlir::Type> flatTypes;
+  llvm::SmallVector<mlir::Type> flattenTypeList(mlir::Location loc,
+                                                const mlir::Type type) const {
+    llvm::SmallVector<mlir::Type> flatTypes;
 
     llvm::TypeSwitch<mlir::Type>(type)
         .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
@@ -1178,7 +1178,7 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
             std::fill_n(std::back_inserter(flatTypes), 2,
                         cmplx.getElementType());
           else
-            TODO(loc, "unsupported complx type(not IEEEsingle, IEEEdouble, "
+            TODO(loc, "unsupported complex type(not IEEEsingle, IEEEdouble, "
                       "IEEEquad) as a structure component for BIND(C), "
                       "VALUE derived type argument and type return");
         })
@@ -1198,12 +1198,13 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
         })
         .template Case<fir::SequenceType>([&](fir::SequenceType seqTy) {
           if (!seqTy.hasDynamicExtents()) {
-            std::size_t numOfEle = seqTy.getConstantArraySize();
+            const std::uint64_t numOfEle = seqTy.getConstantArraySize();
             mlir::Type eleTy = seqTy.getEleTy();
             if (!mlir::isa<mlir::IntegerType, mlir::FloatType>(eleTy)) {
-              std::vector<mlir::Type> subTypeList = flattenTypeList(loc, eleTy);
+              llvm::SmallVector<mlir::Type> subTypeList =
+                  flattenTypeList(loc, eleTy);
               if (subTypeList.size() != 0)
-                for (std::size_t i = 0; i < numOfEle; ++i)
+                for (std::uint64_t i = 0; i < numOfEle; ++i)
                   llvm::copy(subTypeList, std::back_inserter(flatTypes));
             } else {
               std::fill_n(std::back_inserter(flatTypes), numOfEle, eleTy);
@@ -1216,22 +1217,20 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
         .template Case<fir::RecordType>([&](fir::RecordType recTy) {
           for (auto &component : recTy.getTypeList()) {
             mlir::Type eleTy = component.second;
-            std::vector<mlir::Type> subTypeList = flattenTypeList(loc, eleTy);
+            llvm::SmallVector<mlir::Type> subTypeList =
+                flattenTypeList(loc, eleTy);
             if (subTypeList.size() != 0)
               llvm::copy(subTypeList, std::back_inserter(flatTypes));
           }
         })
         .template Case<fir::VectorType>([&](fir::VectorType vecTy) {
-          std::size_t numOfEle = vecTy.getLen();
-          mlir::Type eleTy = vecTy.getEleTy();
-          if (!(mlir::isa<mlir::IntegerType, mlir::FloatType>(eleTy))) {
-            std::vector<mlir::Type> subTypeList = flattenTypeList(loc, eleTy);
-            if (subTypeList.size() != 0)
-              for (std::size_t i = 0; i < numOfEle; ++i)
-                llvm::copy(subTypeList, std::back_inserter(flatTypes));
-          } else {
-            std::fill_n(std::back_inserter(flatTypes), numOfEle, eleTy);
-          }
+          auto sizeAndAlign = fir::getTypeSizeAndAlignmentOrCrash(
+              loc, vecTy, getDataLayout(), kindMap);
+          if (sizeAndAlign.first == 2 * GRLenInChar)
+            flatTypes.push_back(
+                mlir::IntegerType::get(type.getContext(), 2 * GRLen));
+          else
+            TODO(loc, "unsupported vector width(must be 128 bits)");
         })
         .Default([&](mlir::Type ty) {
           if (fir::conformsWithPassByRef(ty))
@@ -1251,9 +1250,8 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
   bool detectFARsEligibleStruct(mlir::Location loc, fir::RecordType recTy,
                                 mlir::Type &field1Ty,
                                 mlir::Type &field2Ty) const {
-
     field1Ty = field2Ty = nullptr;
-    std::vector<mlir::Type> flatTypes = flattenTypeList(loc, recTy);
+    llvm::SmallVector<mlir::Type> flatTypes = flattenTypeList(loc, recTy);
     size_t flatSize = flatTypes.size();
 
     // Cannot be eligible if the number of flattened types is equal to 0 or
@@ -1306,9 +1304,9 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     return isFirstAvaliableFloat;
   }
 
-  bool checkTypehasEnoughReg(mlir::Location loc, int &GARsLeft, int &FARsLeft,
-                             const mlir::Type type) const {
-    if (type == nullptr)
+  bool checkTypeHasEnoughRegs(mlir::Location loc, int &GARsLeft, int &FARsLeft,
+                              const mlir::Type type) const {
+    if (!type)
       return true;
 
     llvm::TypeSwitch<mlir::Type>(type)
@@ -1352,7 +1350,6 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
                           const Marshalling &previousArguments,
                           const mlir::Type &field1Ty,
                           const mlir::Type &field2Ty) const {
-
     for (auto &typeAndAttr : previousArguments) {
       const auto &attr = std::get<Attributes>(typeAndAttr);
       if (attr.isByVal()) {
@@ -1364,17 +1361,17 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
       // Previous aggregate arguments were marshalled into simpler arguments.
       const auto &type = std::get<mlir::Type>(typeAndAttr);
-      std::vector<mlir::Type> flatTypes = flattenTypeList(loc, type);
+      llvm::SmallVector<mlir::Type> flatTypes = flattenTypeList(loc, type);
 
       for (auto &flatTy : flatTypes) {
-        if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, flatTy))
+        if (!checkTypeHasEnoughRegs(loc, GARsLeft, FARsLeft, flatTy))
           return false;
       }
     }
 
-    if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, field1Ty))
+    if (!checkTypeHasEnoughRegs(loc, GARsLeft, FARsLeft, field1Ty))
       return false;
-    if (!checkTypehasEnoughReg(loc, GARsLeft, FARsLeft, field2Ty))
+    if (!checkTypeHasEnoughRegs(loc, GARsLeft, FARsLeft, field2Ty))
       return false;
     return true;
   }
@@ -1405,28 +1402,27 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
     // Pass by FARs(and GARs)
     mlir::Type field1Ty = nullptr, field2Ty = nullptr;
-    if (detectFARsEligibleStruct(loc, recTy, field1Ty, field2Ty)) {
-      if (hasEnoughRegisters(loc, GARsLeft, FARsLeft, previousArguments,
-                             field1Ty, field2Ty)) {
-        if (!isResult) {
-          if (field1Ty)
-            marshal.emplace_back(field1Ty, AT{});
-          if (field2Ty)
-            marshal.emplace_back(field2Ty, AT{});
-        } else {
-          // field1Ty is always preferred over field2Ty for assignment, so there
-          // will never be a case where field1Ty == nullptr and field2Ty !=
-          // nullptr.
-          if (field1Ty && !field2Ty)
-            marshal.emplace_back(field1Ty, AT{});
-          else if (field1Ty && field2Ty)
-            marshal.emplace_back(
-                mlir::TupleType::get(context,
-                                     mlir::TypeRange{field1Ty, field2Ty}),
-                AT{/*alignment=*/0, /*byval=*/true});
-        }
-        return marshal;
+    if (detectFARsEligibleStruct(loc, recTy, field1Ty, field2Ty) &&
+        hasEnoughRegisters(loc, GARsLeft, FARsLeft, previousArguments, field1Ty,
+                           field2Ty)) {
+      if (!isResult) {
+        if (field1Ty)
+          marshal.emplace_back(field1Ty, AT{});
+        if (field2Ty)
+          marshal.emplace_back(field2Ty, AT{});
+      } else {
+        // field1Ty is always preferred over field2Ty for assignment, so there
+        // will never be a case where field1Ty == nullptr and field2Ty !=
+        // nullptr.
+        if (field1Ty && !field2Ty)
+          marshal.emplace_back(field1Ty, AT{});
+        else if (field1Ty && field2Ty)
+          marshal.emplace_back(
+              mlir::TupleType::get(context,
+                                   mlir::TypeRange{field1Ty, field2Ty}),
+              AT{/*alignment=*/0, /*byval=*/true});
       }
+      return marshal;
     }
 
     if (recSize <= GRLenInChar) {
