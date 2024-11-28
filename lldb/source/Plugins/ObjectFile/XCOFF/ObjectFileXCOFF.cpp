@@ -179,7 +179,7 @@ bool ObjectFileXCOFF::ParseHeader() {
 
     if (ParseXCOFFHeader(m_data, &offset, m_xcoff_header)) {
       m_data.SetAddressByteSize(GetAddressByteSize());
-      if (m_xcoff_header.auxhdrsize > 0)
+      if (m_xcoff_header.AuxHeaderSize > 0)
         ParseXCOFFOptionalHeader(m_data, &offset);
     }
     return true;
@@ -193,13 +193,13 @@ bool ObjectFileXCOFF::ParseXCOFFHeader(lldb_private::DataExtractor &data,
                                        xcoff_header_t &xcoff_header) {
 
   // FIXME: data.ValidOffsetForDataOfSize
-  xcoff_header.magic = data.GetU16(offset_ptr);
-  xcoff_header.nsects = data.GetU16(offset_ptr);
-  xcoff_header.modtime = data.GetU32(offset_ptr);
-  xcoff_header.symoff = data.GetU64(offset_ptr);
-  xcoff_header.auxhdrsize = data.GetU16(offset_ptr);
-  xcoff_header.flags = data.GetU16(offset_ptr);
-  xcoff_header.nsyms = data.GetU32(offset_ptr);
+  xcoff_header.Magic = data.GetU16(offset_ptr);
+  xcoff_header.NumberOfSections = data.GetU16(offset_ptr);
+  xcoff_header.TimeStamp = data.GetU32(offset_ptr);
+  xcoff_header.SymbolTableOffset = data.GetU64(offset_ptr);
+  xcoff_header.AuxHeaderSize = data.GetU16(offset_ptr);
+  xcoff_header.Flags = data.GetU16(offset_ptr);
+  xcoff_header.NumberOfSymTableEntries = data.GetU32(offset_ptr);
   return true;
 }
 
@@ -239,8 +239,8 @@ bool ObjectFileXCOFF::ParseXCOFFOptionalHeader(
   m_xcoff_aux_header.SecNumOfTBSS = data.GetU16(offset_ptr);
   m_xcoff_aux_header.XCOFF64Flag = data.GetU16(offset_ptr);
   lldb::offset_t last_offset = *offset_ptr;
-  if ((last_offset - init_offset) < m_xcoff_header.auxhdrsize)
-    *offset_ptr += (m_xcoff_header.auxhdrsize - (last_offset - init_offset));
+  if ((last_offset - init_offset) < m_xcoff_header.AuxHeaderSize)
+    *offset_ptr += (m_xcoff_header.AuxHeaderSize - (last_offset - init_offset));
   return true;
 }
 
@@ -249,9 +249,9 @@ ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
-  if (m_xcoff_header.magic == XCOFF::XCOFF64)
+  if (m_xcoff_header.Magic == XCOFF::XCOFF64)
     return 8;
-  else if (m_xcoff_header.magic == XCOFF::XCOFF32)
+  else if (m_xcoff_header.Magic == XCOFF::XCOFF32)
     return 4;
   return 4;
 }
@@ -279,9 +279,9 @@ UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-  if (m_xcoff_header.flags & XCOFF::F_EXEC)
+  if (m_xcoff_header.Flags & XCOFF::F_EXEC)
     return eTypeExecutable;
-  else if (m_xcoff_header.flags & XCOFF::F_SHROBJ)
+  else if (m_xcoff_header.Flags & XCOFF::F_SHROBJ)
     return eTypeSharedLibrary;
   return eTypeUnknown;
 }
