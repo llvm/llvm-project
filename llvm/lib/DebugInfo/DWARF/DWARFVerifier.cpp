@@ -624,12 +624,21 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   // Verify that children don't intersect.
   const auto IntersectingChild = ParentRI.insert(RI);
   if (IntersectingChild != ParentRI.Children.end()) {
-    ++NumErrors;
-    ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {
-      error() << "DIEs have overlapping address ranges:";
-      dump(Die);
-      dump(IntersectingChild->Die) << '\n';
-    });
+    auto &IR = IntersectingChild->Ranges;
+    // Overlapping DW_TAG_subprogram can happen and are valid when multiple
+    // functions are merged via ICF. See --keep-icf-stabs in LLD.
+    bool isMergedFunc = (Die.getTag() == DW_TAG_subprogram) &&
+                        (IR.size() == 1) && (IR == RI.Ranges);
+    if (!isMergedFunc) {
+      if (IntersectingChild->Ranges != ParentRI.Children.end()->Ranges) {
+        ++NumErrors;
+        ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {
+          error() << "DIEs have overlapping address ranges:";
+          dump(Die);
+          dump(IntersectingChild->Die) << '\n';
+        });
+      }
+    }
   }
 
   // Verify that ranges are contained within their parent.
