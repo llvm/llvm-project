@@ -103,6 +103,9 @@ def NonParmVar : SubsetSubject<Var,
 def NonLocalVar : SubsetSubject<Var,
                                 [{!S->hasLocalStorage()}],
                                 "variables with non-local storage">;
+def VarTmpl : SubsetSubject<Var, [{S->getDescribedVarTemplate()}],
+                            "variable templates">;
+
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
@@ -3426,6 +3429,15 @@ def DiagnoseIf : InheritableAttr {
   }];
   let TemplateDependent = 1;
   let Documentation = [DiagnoseIfDocs];
+}
+
+def NoSpecializations : InheritableAttr {
+  let Spellings = [Clang<"no_specializations", /*AllowInC*/0>];
+  let Args = [StringArgument<"Message", 1>];
+  let Subjects = SubjectList<[ClassTmpl, FunctionTmpl, VarTmpl]>;
+  let Documentation = [NoSpecializationsDocs];
+  let MeaningfulToClassTemplateDefinition = 1;
+  let TemplateDependent = 1;
 }
 
 def ArcWeakrefUnavailable : InheritableAttr {
