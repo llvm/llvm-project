@@ -52,8 +52,8 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
 private:
-  void evalChroot(const CallEvent &Call, CheckerContext &C) const;
-  void evalChdir(const CallEvent &Call, CheckerContext &C) const;
+  bool evalChroot(const CallEvent &Call, CheckerContext &C) const;
+  bool evalChdir(const CallEvent &Call, CheckerContext &C) const;
 
   const BugType BreakJailBug{this, "Break out of jail"};
   const CallDescription Chroot{CDM::CLibrary, {"chroot"}, 1};
@@ -61,19 +61,16 @@ private:
 };
 
 bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
-  if (Chroot.matches(Call)) {
-    evalChroot(Call, C);
-    return true;
-  }
-  if (Chdir.matches(Call)) {
-    evalChdir(Call, C);
-    return true;
-  }
+  if (Chroot.matches(Call))
+    return evalChroot(Call, C);
+
+  if (Chdir.matches(Call))
+    return evalChdir(Call, C);
 
   return false;
 }
 
-void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
+bool ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   BasicValueFactory &BVF = C.getSValBuilder().getBasicValueFactory();
   const LocationContext *LCtx = C.getLocationContext();
 
@@ -90,14 +87,15 @@ void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef ChrootSucceeded = State->BindExpr(CE, LCtx, Zero);
   C.addTransition(ChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED));
   C.addTransition(ChrootSucceeded->set<ChrootState>(ROOT_CHANGED));
+  return true;
 }
 
-void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
+bool ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   // If there are no jail state, just return.
   if (State->get<ChrootState>() == NO_CHROOT)
-    return;
+    return false;
 
   // After chdir("/"), enter the jail, set the enum value JAIL_ENTERED.
   SVal ArgVal = Call.getArgSVal(0);
@@ -107,9 +105,11 @@ void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
     if (const auto *StrRegion = dyn_cast<StringRegion>(R)) {
       if (StrRegion->getStringLiteral()->getString() == "/") {
         C.addTransition(State->set<ChrootState>(JAIL_ENTERED));
+        return true;
       }
     }
   }
+  return false;
 }
 
 class ChrootInvocationVisitor final : public BugReporterVisitor {
