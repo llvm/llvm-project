@@ -22130,7 +22130,8 @@ performPartialReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     return Dot;
   if (auto WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))
     return WideAdd;
-  return DAG.expandPartialReduceAdd(SDLoc(N), N->getOperand(0), N->getOperand(1));
+  return DAG.expandPartialReduceAdd(SDLoc(N), N->getOperand(0),
+                                    N->getOperand(1));
 }
 
 
