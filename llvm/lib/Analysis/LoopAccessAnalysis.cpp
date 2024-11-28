@@ -2043,7 +2043,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // Attempt to prove strided accesses independent.
   if (ConstDist) {
-    int64_t Distance = std::abs(ConstDist->getAPInt().getSExtValue());
+    uint64_t Distance = ConstDist->getAPInt().abs().getZExtValue();
 
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
