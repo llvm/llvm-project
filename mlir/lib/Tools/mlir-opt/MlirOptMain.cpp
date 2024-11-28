@@ -114,7 +114,7 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
             "mlir-diagnostic-verbosity-level",
             cl::desc("Choose level of diagnostic information"),
             cl::location(diagnosticVerbosityLevelFlag),
-            cl::init(VerbosityLevel::ErrorsAndWarnings),
+            cl::init(VerbosityLevel::ErrorsWarningsAndRemarks),
             cl::values(
                 clEnumValN(VerbosityLevel::ErrorsOnly, "errors", "Errors only"),
                 clEnumValN(VerbosityLevel::ErrorsAndWarnings, "warnings",

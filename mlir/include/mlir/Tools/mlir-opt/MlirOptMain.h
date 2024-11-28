@@ -221,7 +221,7 @@ protected:
   /// Verbosity level of diagnostic information. 0: Errors only,
   /// 1: Errors and warnings, 2: Errors, warnings and remarks.
   VerbosityLevel diagnosticVerbosityLevelFlag =
-      VerbosityLevel::ErrorsAndWarnings;
+      VerbosityLevel::ErrorsWarningsAndRemarks;
 
   /// Print the pipeline that will be run.
   bool dumpPassPipelineFlag = false;
@@ -271,9 +271,8 @@ protected:
   /// Use an explicit top-level module op during parsing.
   bool useExplicitModuleFlag = false;
 
-  /// Set whether to check that emitted diagnostics match `expected-*` lines
-  /// on the corresponding line. This is meant for implementing diagnostic
-  /// tests.
+  /// Set whether to check that emitted diagnostics match `expected-*` lines on
+  /// the corresponding line. This is meant for implementing diagnostic tests.
   bool verifyDiagnosticsFlag = false;
 
   /// Run the verifier after each transformation pass.
@@ -287,14 +286,13 @@ protected:
 };
 
 /// This defines the function type used to setup the pass manager. This can be
-/// used to pass in a callback to setup a default pass pipeline to be applied
-/// on the loaded IR.
+/// used to pass in a callback to setup a default pass pipeline to be applied on
+/// the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
 
 /// Register and parse command line options.
 /// - toolName is used for the header displayed by `--help`.
-/// - registry should contain all the dialects that can be parsed in the
-/// source.
+/// - registry should contain all the dialects that can be parsed in the source.
 /// - return std::pair<std::string, std::string> for
 ///   inputFilename and outputFilename command line option values.
 std::pair<std::string, std::string>
@@ -304,8 +302,7 @@ registerAndParseCLIOptions(int argc, char **argv, llvm::StringRef toolName,
 /// Perform the core processing behind `mlir-opt`.
 /// - outputStream is the stream where the resulting IR is printed.
 /// - buffer is the in-memory file to parser and process.
-/// - registry should contain all the dialects that can be parsed in the
-/// source.
+/// - registry should contain all the dialects that can be parsed in the source.
 /// - config contains the configuration options for the tool.
 LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           std::unique_ptr<llvm::MemoryBuffer> buffer,
@@ -314,8 +311,7 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
-/// - registry should contain all the dialects that can be parsed in the
-/// source.
+/// - registry should contain all the dialects that can be parsed in the source.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry);
 
@@ -324,8 +320,7 @@ LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
 /// CLI options can be accessed before running MlirOptMain.
 /// - inputFilename is the name of the input mlir file.
 /// - outputFilename is the name of the output file.
-/// - registry should contain all the dialects that can be parsed in the
-/// source.
+/// - registry should contain all the dialects that can be parsed in the source.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef inputFilename,
                           llvm::StringRef outputFilename,
                           DialectRegistry &registry);
