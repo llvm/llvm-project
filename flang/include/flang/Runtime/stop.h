@@ -29,6 +29,7 @@ NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 // Extensions
 NORETURN void RTNAME(Exit)(int status DEFAULT_VALUE(EXIT_SUCCESS));
 NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
+void RTNAME(Backtrace)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran
 // constraint.

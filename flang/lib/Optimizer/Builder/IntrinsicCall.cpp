@@ -150,6 +150,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
+    {"backtrace", &I::genBacktrace},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2680,6 +2681,12 @@ IntrinsicLibrary::genBesselJn(mlir::Type resultType,
         .end();
     return readAndAddCleanUp(resultMutableBox, resultType, "BESSEL_JN");
   }
+}
+
+// Backtrace
+void IntrinsicLibrary::genBacktrace(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  fir::runtime::genBacktrace(builder, loc);
 }
 
 // BESSEL_YN
