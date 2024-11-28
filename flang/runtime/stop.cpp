@@ -16,6 +16,11 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "llvm/Config/config.h"
+#ifdef HAVE_BACKTRACE
+#include BACKTRACE_HEADER
+#endif
+
 extern "C" {
 
 static void DescribeIEEESignaledExceptions() {
@@ -152,10 +157,35 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
   std::exit(status);
 }
 
+static void PrintBacktrace() {
+#ifdef HAVE_BACKTRACE
+  // TODO: Need to parse DWARF information to print function line numbers
+  constexpr int MAX_CALL_STACK{999};
+  void *buffer[MAX_CALL_STACK];
+  int nptrs{backtrace(buffer, MAX_CALL_STACK)};
+
+  if (char **symbols{backtrace_symbols(buffer, nptrs)}) {
+    for (int i = 0; i < nptrs; i++) {
+      Fortran::runtime::Terminator{}.PrintCrashArgs("#%d %s\n", i, symbols[i]);
+    }
+    free(symbols);
+  }
+
+#else
+
+  // TODO: Need to implement the version for other platforms.
+  Fortran::runtime::Terminator{}.PrintCrashArgs(
+      "Handle the case when a backtrace is not available");
+
+#endif
+}
+
 [[noreturn]] void RTNAME(Abort)() {
-  // TODO: Add backtrace call, unless with `-fno-backtrace`.
+  PrintBacktrace();
   std::abort();
 }
+
+void RTNAME(Backtrace)() { PrintBacktrace(); }
 
 [[noreturn]] void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {
