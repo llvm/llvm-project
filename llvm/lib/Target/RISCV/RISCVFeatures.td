@@ -1341,6 +1341,16 @@ def HasVendorXwchc
       AssemblerPredicate<(all_of FeatureVendorXwchc),
                          "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
 
+// Qualcomm Extension(s)
+
+def FeatureVendorXqcicsr
+    : RISCVExperimentalExtension<"xqcicsr", 0, 2,
+                                 "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+def HasVendorXqcicsr
+    : Predicate<"Subtarget->hasVendorXqcicsr()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicsr),
+                         "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1388,10 +1398,14 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
-def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
-def FeaturePredictableSelectIsExpensive
+def TuneDisableLatencySchedHeuristic
+    : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
+                       "Disable latency scheduling heuristic">;
+
+def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
