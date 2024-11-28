@@ -2119,7 +2119,7 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 
 static bool IsPrivatizable(const Symbol *sym) {
   auto *misc{sym->detailsIf<MiscDetails>()};
-  return !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
+  return IsVariableName(*sym) && !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
       !semantics::IsAssumedSizeArray(
           *sym) && /* OpenMP 5.2, 5.1.1: Assumed-size arrays are shared*/
       !sym->owner().IsDerivedType() &&
