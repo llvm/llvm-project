@@ -42,6 +42,7 @@
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
 #include "UseRangesCheck.h"
+#include "CleanupStaticCastCheck.h"
 #include "UseStartsEndsWithCheck.h"
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
@@ -122,6 +123,8 @@ public:
     CheckFactories.registerCheck<UseUncaughtExceptionsCheck>(
         "modernize-use-uncaught-exceptions");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
+    CheckFactories.registerCheck<CleanupStaticCastCheck>(
+      "modernize-cleanup-static-cast");
   }
 };
 
