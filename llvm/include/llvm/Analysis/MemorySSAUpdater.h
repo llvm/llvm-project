@@ -190,7 +190,8 @@ public:
   /// inaccessible and it *must* have removeMemoryAccess called on it.
   MemoryAccess *createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
                                        const BasicBlock *BB,
-                                       MemorySSA::InsertionPlace Point);
+                                       MemorySSA::InsertionPlace Point,
+                                       bool CreationMustSucceed = true);
 
   /// Create a MemoryAccess in MemorySSA before an existing MemoryAccess.
   ///

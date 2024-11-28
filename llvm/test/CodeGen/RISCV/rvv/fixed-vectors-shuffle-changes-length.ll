@@ -97,31 +97,31 @@ define <4 x i32> @v4i32_v8i32(<8 x i32>) {
 define <4 x i32> @v4i32_v16i32(<16 x i32>) {
 ; RV32-LABEL: v4i32_v16i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 1
-; RV32-NEXT:    vmv.v.i v13, 6
-; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v16, v8, 8
 ; RV32-NEXT:    vmv4r.v v20, v8
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
-; RV32-NEXT:    vslideup.vi v13, v12, 1
+; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV32-NEXT:    vmv.v.i v8, 1
+; RV32-NEXT:    vmv2r.v v22, v12
+; RV32-NEXT:    vmv.v.i v10, 6
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vmv.v.i v0, 10
-; RV32-NEXT:    vmv2r.v v22, v14
+; RV32-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV32-NEXT:    vslideup.vi v10, v8, 1
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; RV32-NEXT:    vnsrl.wx v8, v20, a0
-; RV32-NEXT:    vrgatherei16.vv v8, v16, v13, v0.t
+; RV32-NEXT:    vrgatherei16.vv v8, v16, v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v4i32_v16i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 32
 ; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v16, v8, 8
 ; RV64-NEXT:    vmv4r.v v20, v8
+; RV64-NEXT:    li a0, 32
+; RV64-NEXT:    vmv2r.v v22, v12
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV64-NEXT:    vmv.v.i v0, 10
-; RV64-NEXT:    vmv2r.v v22, v12
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vnsrl.wx v8, v20, a0
 ; RV64-NEXT:    li a0, 3
@@ -292,9 +292,9 @@ define <32 x i32> @v32i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    lui a1, 100550
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 3
+; CHECK-NEXT:    vmv.v.i v10, 3
 ; CHECK-NEXT:    addi a0, a1, 64
-; CHECK-NEXT:    vmerge.vim v18, v16, 2, v0
+; CHECK-NEXT:    vmerge.vim v18, v10, 2, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v16, a0
 ; CHECK-NEXT:    vmv1r.v v0, v9

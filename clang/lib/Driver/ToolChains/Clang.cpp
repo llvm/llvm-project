@@ -5807,7 +5807,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
       if (Triple.getArch() != llvm::Triple::aarch64 &&
-          Triple.getArch() != llvm::Triple::aarch64_be)
+          Triple.getArch() != llvm::Triple::aarch64_be &&
+          Triple.getArch() != llvm::Triple::riscv64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     }
@@ -7316,6 +7317,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     !types::isOpenCL(InputType) &&
                         (!IsWindowsMSVC || IsMSVC2015Compatible)))
     CmdArgs.push_back("-fno-threadsafe-statics");
+
+  if (!Args.hasFlag(options::OPT_fms_tls_guards, options::OPT_fno_ms_tls_guards,
+                    true))
+    CmdArgs.push_back("-fno-ms-tls-guards");
 
   // Add -fno-assumptions, if it was specified.
   if (!Args.hasFlag(options::OPT_fassumptions, options::OPT_fno_assumptions,

@@ -9,8 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
-#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-
 #define DEBUG_TYPE "orc"
 
 using namespace llvm;
@@ -29,7 +27,7 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
   Triple TT = ES.getTargetTriple();
 
   auto G = std::make_unique<jitlink::LinkGraph>(
-      ("<INDIRECT STUBS #" + Twine(++StubGraphIdx) + ">").str(), TT,
+      ("<indirect stubs graph #" + Twine(++StubGraphIdx) + ">").str(), TT,
       TT.isArch64Bit() ? 8 : 4,
       TT.isLittleEndian() ? endianness::little : endianness::big,
       jitlink::getGenericEdgeKindName);

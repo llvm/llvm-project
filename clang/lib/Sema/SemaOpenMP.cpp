@@ -25,7 +25,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -37,7 +36,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -49,7 +47,6 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Assumptions.h"
 #include <optional>
-#include <set>
 
 using namespace clang;
 using namespace llvm::omp;
@@ -1614,10 +1611,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        ReductionData.ReductionOp.is<const Expr *>())
+        isa<const Expr *>(ReductionData.ReductionOp))
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    BOK = ReductionData.ReductionOp.get<ReductionData::BOKPtrType>();
+    BOK = cast<ReductionData::BOKPtrType>(ReductionData.ReductionOp);
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -1641,10 +1638,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        !ReductionData.ReductionOp.is<const Expr *>())
+        !isa<const Expr *>(ReductionData.ReductionOp))
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    ReductionRef = ReductionData.ReductionOp.get<const Expr *>();
+    ReductionRef = cast<const Expr *>(ReductionData.ReductionOp);
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -11105,7 +11102,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
   for (const OMPClause *C : Clauses) {
     if (C->getClauseKind() == OMPC_acq_rel ||
         C->getClauseKind() == OMPC_acquire ||
-        C->getClauseKind() == OMPC_release) {
+        C->getClauseKind() == OMPC_release ||
+        C->getClauseKind() == OMPC_seq_cst /*OpenMP 5.1*/) {
       if (MemOrderKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
             << getOpenMPDirectiveName(OMPD_flush) << 1
@@ -18188,7 +18186,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
             Lookups, [&SemaRef, Ty, Loc](ValueDecl *D) -> ValueDecl * {
               if (!D->isInvalidDecl() &&
                   SemaRef.IsDerivedFrom(Loc, Ty, D->getType()) &&
-                  !Ty.isMoreQualifiedThan(D->getType()))
+                  !Ty.isMoreQualifiedThan(D->getType(),
+                                          SemaRef.getASTContext()))
                 return D;
               return nullptr;
             })) {
@@ -21038,7 +21037,8 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
           Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
             if (!D->isInvalidDecl() &&
                 SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
-                !Type.isMoreQualifiedThan(D->getType()))
+                !Type.isMoreQualifiedThan(D->getType(),
+                                          SemaRef.getASTContext()))
               return D;
             return nullptr;
           })) {
@@ -21209,7 +21209,7 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
       Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
         if (!D->isInvalidDecl() &&
             SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
-            !Type.isMoreQualifiedThan(D->getType()))
+            !Type.isMoreQualifiedThan(D->getType(), SemaRef.getASTContext()))
           return D;
         return nullptr;
       });

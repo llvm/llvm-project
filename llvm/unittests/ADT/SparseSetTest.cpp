@@ -204,4 +204,16 @@ TEST(SparseSetTest, PopBack) {
   for (unsigned i = 0; i < UpperBound; ++i)
     ASSERT_TRUE(Set.insert(i).second);
 }
+
+TEST(SparseSetTest, MoveConstructor) {
+  USet Set;
+  Set.setUniverse(2);
+  Set.insert(1);
+  EXPECT_FALSE(Set.empty());
+  // Move and check original is empty.
+  USet OtherSet(std::move(Set));
+  EXPECT_TRUE(Set.empty());
+  EXPECT_TRUE(OtherSet.contains(1));
+}
+
 } // namespace

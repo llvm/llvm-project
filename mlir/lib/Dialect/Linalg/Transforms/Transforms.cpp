@@ -921,7 +921,7 @@ LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
 
 /// Filling `dest` using FillOp constant padding value if possible.
 /// Otherwise, generate a tensor::GenerateOp.
-Value GeneralizePadOpPattern::createFillOrGenerateOp(
+Value DecomposePadOpPattern::createFillOrGenerateOp(
     RewriterBase &rewriter, tensor::PadOp padOp, Value dest,
     const SmallVector<Value> &dynSizes) const {
   auto padValue = padOp.getConstantPaddingValue();
@@ -938,8 +938,8 @@ Value GeneralizePadOpPattern::createFillOrGenerateOp(
 }
 
 LogicalResult
-GeneralizePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
-                                        PatternRewriter &rewriter) const {
+DecomposePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
+                                       PatternRewriter &rewriter) const {
   // Given an OpFoldResult, return an index-typed value.
   auto getIdxValue = [&](OpFoldResult ofr) {
     if (auto val = llvm::dyn_cast_if_present<Value>(ofr))
@@ -1090,8 +1090,8 @@ getPackUnpackNormalizedPerm(int rank, ArrayRef<int64_t> perm) {
   SmallVector<int64_t> vec(rank, kNonTiledMarker);
   for (auto [index, value] : llvm::enumerate(perm))
     vec[value] = index;
-  SmallVector<int64_t> normalizedPerm = llvm::to_vector(llvm::make_filter_range(
-      vec, [&](int64_t v) { return v != kNonTiledMarker; }));
+  SmallVector<int64_t> normalizedPerm = llvm::filter_to_vector(
+      vec, [&](int64_t v) { return v != kNonTiledMarker; });
   // This inverts the permutation in addition to normalizing so invert back.
   return invertPermutationVector(normalizedPerm);
 }
@@ -1138,7 +1138,7 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
   return perm;
 }
 
-LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
+LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     tensor::PackOp packOp, PatternRewriter &rewriter) const {
   // TODO: support the case that outer dimensions are not all 1s. A
   // tensor.expand_shape will be generated in this case.
@@ -1239,7 +1239,7 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   return success();
 }
 
-LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
+LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     tensor::UnPackOp unpackOp, PatternRewriter &rewriter) const {
   int64_t srcRank = unpackOp.getSourceRank();
   int64_t destRank = unpackOp.getDestRank();
@@ -1617,4 +1617,13 @@ void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                             PoolingNwcMinUnsignedOp>,
       DownscaleSizeOneWindowed2DConvolution<PoolingNchwMaxOp, PoolingNcwMaxOp>>(
       patterns.getContext(), benefit);
+}
+
+void linalg::populateDecomposePackUnpackPatterns(RewritePatternSet &patterns) {
+  // TODO: Add and test patterns for tensor.unpack
+  patterns.add<DecomposeOuterUnitDimsPackOpPattern>(patterns.getContext());
+}
+
+void linalg::populateDecomposePadPatterns(RewritePatternSet &patterns) {
+  patterns.add<DecomposePadOpPattern>(patterns.getContext());
 }

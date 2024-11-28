@@ -305,6 +305,14 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
                 Ctx);
 }
 
+bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym) const {
+  for (const MCExpr *E : getArgs()) {
+    if (E->isSymbolUsedInExpression(Sym))
+      return true;
+  }
+  return false;
+}
+
 static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {
   static constexpr unsigned BitWidth = 64;
   const APInt True(BitWidth, 1);

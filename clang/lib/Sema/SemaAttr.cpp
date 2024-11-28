@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/SemaInternal.h"
 #include <optional>
 using namespace clang;
 
@@ -265,6 +265,44 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
           Param->addAttr(
               LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
       }
+    }
+  }
+}
+
+static bool isPointerLikeType(QualType QT) {
+  QT = QT.getNonReferenceType();
+  if (QT->isPointerType())
+    return true;
+  auto *RD = QT->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+  return RD->hasAttr<PointerAttr>();
+}
+
+void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
+  if (!FD)
+    return;
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->getIdentifier() || !MD->getParent()->isInStdNamespace())
+    return;
+  // FIXME: Infer for operator[] for map-like containers. For example:
+  //    std::map<string_view, ...> m;
+  //    m[ReturnString(..)] = ...;
+  static const llvm::StringSet<> CapturingMethods{"insert", "push",
+                                                  "push_front", "push_back"};
+  if (!CapturingMethods.contains(MD->getName()))
+    return;
+  // Do not infer if any parameter is explicitly annotated.
+  for (ParmVarDecl *PVD : MD->parameters())
+    if (PVD->hasAttr<LifetimeCaptureByAttr>())
+      return;
+  for (ParmVarDecl *PVD : MD->parameters()) {
+    if (isPointerLikeType(PVD->getType())) {
+      int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
+      PVD->addAttr(
+          LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
     }
   }
 }
