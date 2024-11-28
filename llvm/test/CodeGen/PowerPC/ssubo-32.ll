@@ -6,13 +6,12 @@
 define i1 @subovfi_i32(i32 noundef %a, i32 noundef %b, ptr %c)  {
 ; CHECK-LABEL: subovfi_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sub 6, 3, 4
-; CHECK-NEXT:    cmpwi 1, 4, 0
-; CHECK-NEXT:    cmpw 6, 3
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    stw 6, 0(5)
-; CHECK-NEXT:    creqv 20, 5, 0
-; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    xor 6, 4, 3
+; CHECK-NEXT:    sub 4, 3, 4
+; CHECK-NEXT:    xor 3, 4, 3
+; CHECK-NEXT:    stw 4, 0(5)
+; CHECK-NEXT:    and 3, 6, 3
+; CHECK-NEXT:    srwi 3, 3, 31
 ; CHECK-NEXT:    blr
 entry:
   %0 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)
