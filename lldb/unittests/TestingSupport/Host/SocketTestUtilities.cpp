@@ -24,18 +24,15 @@ void lldb_private::CreateConnectedSockets(
     llvm::StringRef listen_remote_address,
     const std::function<std::string(const SocketType &)> &get_connect_addr,
     std::unique_ptr<SocketType> *a_up, std::unique_ptr<SocketType> *b_up) {
-  bool child_processes_inherit = false;
   Status error;
-  std::unique_ptr<SocketType> listen_socket_up(
-      new SocketType(true, child_processes_inherit));
+  auto listen_socket_up = std::make_unique<SocketType>(true);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   error = listen_socket_up->Listen(listen_remote_address, 5);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   ASSERT_TRUE(listen_socket_up->IsValid());
 
   std::string connect_remote_address = get_connect_addr(*listen_socket_up);
-  std::unique_ptr<SocketType> connect_socket_up(
-      new SocketType(true, child_processes_inherit));
+  auto connect_socket_up = std::make_unique<SocketType>(true);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   error = connect_socket_up->Connect(connect_remote_address);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
@@ -85,8 +82,7 @@ void lldb_private::CreateDomainConnectedSockets(
 #endif
 
 static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
-  llvm::Expected<std::unique_ptr<TCPSocket>> Sock = Socket::TcpListen(
-      Addr, /*child_processes_inherit=*/false);
+  llvm::Expected<std::unique_ptr<TCPSocket>> Sock = Socket::TcpListen(Addr);
   if (Sock)
     return true;
   llvm::Error Err = Sock.takeError();

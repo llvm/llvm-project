@@ -169,9 +169,7 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
   F->setLinkage(GlobalValue::LinkOnceODRLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
-  // Set no-opt/minsize, so we don't insert padding between outlined
-  // functions.
-  F->addFnAttr(Attribute::OptimizeNone);
+  // Set minsize, so we don't insert padding between outlined functions.
   F->addFnAttr(Attribute::NoInline);
   F->addFnAttr(Attribute::MinSize);
   F->addFnAttr(Attribute::Naked);
