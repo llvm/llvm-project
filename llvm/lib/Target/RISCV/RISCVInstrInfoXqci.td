@@ -34,6 +34,7 @@ class QCILoad_ScaleIdx<bits<4> func4, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
+// rd corresponds to the source for the store 'rs3' described in the spec.
 class QCIStore_ScaleIdx<bits<4> func4, string opcodestr>
     : RVInstRBase<0b110, OPC_CUSTOM_1, (outs),
                   (ins GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt),

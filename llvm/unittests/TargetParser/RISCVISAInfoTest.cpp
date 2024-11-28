@@ -652,6 +652,11 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'xwchc' and 'zcb' extensions are incompatible");
   }
+
+  for (StringRef Input : {"rv64i_xqcisls0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqcisls' is only supported for 'rv32'");
+  }
 }
 
 TEST(ParseArchString, MissingDepency) {
