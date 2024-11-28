@@ -573,9 +573,17 @@ multiclass MUBUF_Pseudo_Loads<string opName, ValueType load_vt = i32,
   }
 }
 
-multiclass MUBUF_Pseudo_Loads_Lds<string opName, ValueType load_vt = i32> {
+multiclass MUBUF_Pseudo_Loads_Lds<string opName, ValueType load_vt = i32, Predicate LDSPred = TruePredicate> {
   defm NAME : MUBUF_Pseudo_Loads<opName, load_vt>;
-  defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, 0, 1>;
+
+  if !ne(LDSPred, TruePredicate) then {
+    let SubtargetPredicate = LDSPred in {
+      defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, 0, 1>;
+    }
+  } else {
+    defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, 0, 1>;
+  }
+
 }
 
 multiclass MUBUF_Pseudo_Loads_LDSOpc<string opName,
@@ -732,7 +740,6 @@ class MUBUF_Atomic_Pseudo<string opName,
     MUBUF_SetupAddr<addrKindCopy> {
   let mayStore = 1;
   let mayLoad = 1;
-  let hasPostISelHook = 1;
   let hasSideEffects = 1;
   let DisableWQM = 1;
   let has_glc = 0;
@@ -956,11 +963,11 @@ defm BUFFER_LOAD_DWORD : MUBUF_Pseudo_Loads_Lds <
 defm BUFFER_LOAD_DWORDX2 : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx2", v2i32
 >;
-defm BUFFER_LOAD_DWORDX3 : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx3", v3i32
+defm BUFFER_LOAD_DWORDX3 : MUBUF_Pseudo_Loads_Lds <
+  "buffer_load_dwordx3", v3i32, /*LDSPred=*/HasGFX950Insts
 >;
-defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx4", v4i32
+defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads_Lds <
+  "buffer_load_dwordx4", v4i32, /*LDSPred=*/HasGFX950Insts
 >;
 
 defm BUFFER_LOAD_LDS_B32 : MUBUF_Pseudo_Loads_LDSOpc <
@@ -3231,8 +3238,8 @@ defm BUFFER_LOAD_USHORT         : MUBUF_Real_AllAddr_Lds_vi <0x12>;
 defm BUFFER_LOAD_SSHORT         : MUBUF_Real_AllAddr_Lds_vi <0x13>;
 defm BUFFER_LOAD_DWORD          : MUBUF_Real_AllAddr_Lds_vi <0x14>;
 defm BUFFER_LOAD_DWORDX2        : MUBUF_Real_AllAddr_vi <0x15>;
-defm BUFFER_LOAD_DWORDX3        : MUBUF_Real_AllAddr_vi <0x16>;
-defm BUFFER_LOAD_DWORDX4        : MUBUF_Real_AllAddr_vi <0x17>;
+defm BUFFER_LOAD_DWORDX3        : MUBUF_Real_AllAddr_Lds_vi <0x16>;
+defm BUFFER_LOAD_DWORDX4        : MUBUF_Real_AllAddr_Lds_vi <0x17>;
 defm BUFFER_STORE_BYTE          : MUBUF_Real_AllAddr_vi <0x18>;
 defm BUFFER_STORE_BYTE_D16_HI   : MUBUF_Real_AllAddr_vi <0x19>;
 defm BUFFER_STORE_SHORT         : MUBUF_Real_AllAddr_vi <0x1a>;
@@ -3289,6 +3296,8 @@ defm BUFFER_WBINVL1_VOL         : MUBUF_Real_vi <0x3f>;
 
 
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
+defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Real_Atomic_vi <0x52>;
+
 defm BUFFER_ATOMIC_ADD_F32    : MUBUF_Real_Atomic_vi <0x4d>;
 
 let SubtargetPredicate = isGFX90APlus in {

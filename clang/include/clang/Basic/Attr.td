@@ -1916,7 +1916,7 @@ public:
   }
   auto getArgIdents() const { return ArgIdents; }
   auto getArgLocs() const { return ArgLocs; }
-  void setParamIdx(size_t Idx, int Val) { 
+  void setParamIdx(size_t Idx, int Val) {
     assert(Idx < params_Size);
     params_[Idx] = Val;
   }
@@ -3292,7 +3292,7 @@ def Target : InheritableAttr {
   }];
 }
 
-def TargetVersion : InheritableAttr {
+def TargetVersion : InheritableAttr, TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetRISCV.Arches)>> {
   let Spellings = [GCC<"target_version">];
   let Args = [StringArgument<"NamesStr">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
@@ -4636,6 +4636,13 @@ def HLSLNumThreads: InheritableAttr {
   let Documentation = [NumThreadsDocs];
 }
 
+def HLSLSV_GroupID: HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"SV_GroupID">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_GroupIDDocs];
+}
+
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
   let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
@@ -4652,7 +4659,7 @@ def HLSLResourceBinding: InheritableAttr {
   let AdditionalMembers = [{
   public:
       enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I };
-  
+
   private:
       RegisterType RegType;
       unsigned SlotNumber;
@@ -4722,7 +4729,7 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [    
+  let Args = [
     EnumArgument<
         "ResourceKind", "llvm::hlsl::ResourceKind",
         /*is_string=*/0,
@@ -4747,7 +4754,7 @@ def HLSLResource : InheritableAttr {
 
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
-  let LangOpts = [HLSL]; 
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
@@ -4772,7 +4779,7 @@ def HLSLContainedType : TypeAttr {
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
-  let LangOpts = [HLSL]; 
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
@@ -4901,5 +4908,12 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Spellings = [Clang<"clspv_libclc_builtin">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ClspvLibclcBuiltinDoc];
+  let SimpleHandler = 1;
+}
+
+def NoTrivialAutoVarInit: InheritableAttr {
+  let Spellings = [Declspec<"no_init_all">];
+  let Subjects = SubjectList<[Function, Tag]>;
+  let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
 }

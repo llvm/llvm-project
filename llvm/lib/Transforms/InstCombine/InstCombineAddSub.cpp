@@ -1357,14 +1357,10 @@ Instruction *InstCombinerImpl::
   //   low bits to skip = shift bitwidth - high bits to extract
   // The shift amount itself may be extended, and we need to look past zero-ext
   // when matching NBits, that will matter for matching later.
-  Constant *C;
   Value *NBits;
-  if (!match(
-          LowBitsToSkip,
-          m_ZExtOrSelf(m_Sub(m_Constant(C), m_ZExtOrSelf(m_Value(NBits))))) ||
-      !match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                                   APInt(C->getType()->getScalarSizeInBits(),
-                                         X->getType()->getScalarSizeInBits()))))
+  if (!match(LowBitsToSkip,
+             m_ZExtOrSelf(m_Sub(m_SpecificInt(XTy->getScalarSizeInBits()),
+                                m_ZExtOrSelf(m_Value(NBits))))))
     return nullptr;
 
   // Sign-extending value can be zero-extended if we `sub`tract it,
@@ -2249,9 +2245,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         const Instruction *UI = dyn_cast<Instruction>(U);
         if (!UI)
           return false;
-        return match(UI,
-                     m_Select(m_Value(), m_Specific(Op1), m_Specific(&I))) ||
-               match(UI, m_Select(m_Value(), m_Specific(&I), m_Specific(Op1)));
+        return match(UI, m_c_Select(m_Specific(Op1), m_Specific(&I)));
       })) {
     if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
                                                         I.hasNoSignedWrap(),

@@ -481,6 +481,12 @@ public:
            RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.RegNum);
   }
 
+  bool isGPRPair() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(
+               Reg.RegNum);
+  }
+
   bool isGPRF16() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRF16RegClassID].contains(Reg.RegNum);
@@ -494,13 +500,7 @@ public:
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
   bool isGPRAsFPR16() const { return isGPRF16() && Reg.IsGPRAsFPR; }
   bool isGPRAsFPR32() const { return isGPRF32() && Reg.IsGPRAsFPR; }
-  bool isGPRPairAsFPR() const { return isGPRPair() && Reg.IsGPRAsFPR; }
-
-  bool isGPRPair() const {
-    return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(
-               Reg.RegNum);
-  }
+  bool isGPRPairAsFPR64() const { return isGPRPair() && Reg.IsGPRAsFPR; }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {

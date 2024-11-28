@@ -776,9 +776,9 @@ static void handleDiagnoseAsBuiltinAttr(Sema &S, Decl *D,
   auto DiagnoseType = [&](unsigned Index, AttributeArgumentNType T) {
     SourceLocation Loc = [&]() {
       auto Union = AL.getArg(Index - 1);
-      if (Union.is<Expr *>())
-        return Union.get<Expr *>()->getBeginLoc();
-      return Union.get<IdentifierLoc *>()->Loc;
+      if (auto *E = dyn_cast<Expr *>(Union))
+        return E->getBeginLoc();
+      return cast<IdentifierLoc *>(Union)->Loc;
     }();
 
     S.Diag(Loc, diag::err_attribute_argument_n_type) << AL << Index << T;
@@ -7103,6 +7103,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLSV_GroupID:
+    S.HLSL().handleSV_GroupIDAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
     break;
@@ -7368,7 +7371,9 @@ void Sema::ProcessDeclAttributeList(
   // good to have a way to specify "these attributes must appear as a group",
   // for these. Additionally, it would be good to have a way to specify "these
   // attribute must never appear as a group" for attributes like cold and hot.
-  if (!D->hasAttr<OpenCLKernelAttr>()) {
+  if (!(D->hasAttr<OpenCLKernelAttr>() ||
+        (D->hasAttr<CUDAGlobalAttr>() &&
+         Context.getTargetInfo().getTriple().isSPIRV()))) {
     // These attributes cannot be applied to a non-kernel function.
     if (const auto *A = D->getAttr<ReqdWorkGroupSizeAttr>()) {
       // FIXME: This emits a different error message than

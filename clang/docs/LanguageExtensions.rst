@@ -647,6 +647,9 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
+The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
+can be called in a ``constexpr`` context.
+
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
 ============================================== ====================================================================== =========================================
@@ -731,6 +734,10 @@ power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
+
+The integer reduction intrinsics, including ``__builtin_reduce_add``,
+``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
+and ``__builtin_reduce_xor``, can be called in a ``constexpr`` context.
 
 Example:
 

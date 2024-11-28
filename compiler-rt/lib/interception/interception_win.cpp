@@ -544,6 +544,10 @@ static const u8 kPrologueWithShortJump2[] = {
 
 // Returns 0 on error.
 static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
+  if (rel_offset) {
+    *rel_offset = 0;
+  }
+
 #if SANITIZER_ARM64
   // An ARM64 instruction is 4 bytes long.
   return 4;
@@ -696,7 +700,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x018a:  // mov al, byte ptr [rcx]
       return 2;
 
-    case 0x058A:  // 8A 05 XX XX XX XX : mov al, byte ptr [XX XX XX XX]
     case 0x7E80:  // 80 7E YY XX  cmp BYTE PTR [rsi+YY], XX
     case 0x7D80:  // 80 7D YY XX  cmp BYTE PTR [rbp+YY], XX
     case 0x7A80:  // 80 7A YY XX  cmp BYTE PTR [rdx+YY], XX
@@ -705,6 +708,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x7980:  // 80 79 YY XX  cmp BYTE ptr [rcx+YY], XX
       return 4;
 
+    case 0x058A:  // 8A 05 XX XX XX XX : mov al, byte ptr [XX XX XX XX]
     case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
       if (rel_offset)
         *rel_offset = 2;
@@ -816,6 +820,10 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]
     case 0x058d48:    // 48 8d 05 XX XX XX XX :
                       //   lea rax, QWORD PTR [rip + XXXXXXXX]
+    case 0x0d8948:    // 48 89 0d XX XX XX XX :
+                      //   mov QWORD PTR [rip + XXXXXXXX], rcx
+    case 0x158948:    // 48 89 15 XX XX XX XX :
+                      //   mov QWORD PTR [rip + XXXXXXXX], rdx
     case 0x25ff48:    // 48 ff 25 XX XX XX XX :
                       //   rex.W jmp QWORD PTR [rip + XXXXXXXX]
     case 0x158D4C:    // 4c 8d 15 XX XX XX XX : lea r10, [rip + XX]
@@ -905,6 +913,10 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   if (::IsDebuggerPresent())
     __debugbreak();
   return 0;
+}
+
+size_t TestOnlyGetInstructionSize(uptr address, size_t *rel_offset) {
+  return GetInstructionSize(address, rel_offset);
 }
 
 // Returns 0 on error.

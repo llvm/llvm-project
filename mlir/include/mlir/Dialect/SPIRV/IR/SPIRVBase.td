@@ -278,16 +278,17 @@ def SPIRV_DeviceTypeAttr : SPIRV_I32EnumAttr<
 def SPIRV_V_AMD         : I32EnumAttrCase<"AMD", 0>;
 def SPIRV_V_Apple       : I32EnumAttrCase<"Apple", 1>;
 def SPIRV_V_ARM         : I32EnumAttrCase<"ARM", 2>;
-def SPIRV_V_Imagination : I32EnumAttrCase<"Imagination", 3>;
-def SPIRV_V_Intel       : I32EnumAttrCase<"Intel", 4>;
-def SPIRV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 5>;
-def SPIRV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 6>;
-def SPIRV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 7>;
+def SPIRV_V_Broadcom    : I32EnumAttrCase<"Broadcom", 3>;
+def SPIRV_V_Imagination : I32EnumAttrCase<"Imagination", 4>;
+def SPIRV_V_Intel       : I32EnumAttrCase<"Intel", 5>;
+def SPIRV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 6>;
+def SPIRV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 7>;
+def SPIRV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 8>;
 def SPIRV_V_Unknown     : I32EnumAttrCase<"Unknown", 0xffffffff>;
 
 def SPIRV_VendorAttr : SPIRV_I32EnumAttr<
   "Vendor", "recognized SPIR-V vendor strings", "vendor", [
-    SPIRV_V_AMD, SPIRV_V_Apple, SPIRV_V_ARM, SPIRV_V_Imagination,
+    SPIRV_V_AMD, SPIRV_V_Apple, SPIRV_V_ARM, SPIRV_V_Broadcom, SPIRV_V_Imagination,
     SPIRV_V_Intel, SPIRV_V_NVIDIA, SPIRV_V_Qualcomm, SPIRV_V_SwiftShader,
     SPIRV_V_Unknown
   ]>;
@@ -4512,6 +4513,8 @@ def SPIRV_OC_OpAssumeTrueKHR                : I32EnumAttrCase<"OpAssumeTrueKHR",
 def SPIRV_OC_OpAtomicFAddEXT                : I32EnumAttrCase<"OpAtomicFAddEXT", 6035>;
 def SPIRV_OC_OpConvertFToBF16INTEL          : I32EnumAttrCase<"OpConvertFToBF16INTEL", 6116>;
 def SPIRV_OC_OpConvertBF16ToFINTEL          : I32EnumAttrCase<"OpConvertBF16ToFINTEL", 6117>;
+def SPIRV_OC_OpControlBarrierArriveINTEL    : I32EnumAttrCase<"OpControlBarrierArriveINTEL", 6142>;
+def SPIRV_OC_OpControlBarrierWaitINTEL      : I32EnumAttrCase<"OpControlBarrierWaitINTEL", 6143>;
 def SPIRV_OC_OpGroupIMulKHR                 : I32EnumAttrCase<"OpGroupIMulKHR", 6401>;
 def SPIRV_OC_OpGroupFMulKHR                 : I32EnumAttrCase<"OpGroupFMulKHR", 6402>;
 
@@ -4602,7 +4605,9 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpCooperativeMatrixLengthKHR, SPIRV_OC_OpSubgroupBlockReadINTEL,
       SPIRV_OC_OpSubgroupBlockWriteINTEL, SPIRV_OC_OpAssumeTrueKHR,
       SPIRV_OC_OpAtomicFAddEXT, SPIRV_OC_OpConvertFToBF16INTEL,
-      SPIRV_OC_OpConvertBF16ToFINTEL, SPIRV_OC_OpGroupIMulKHR,
+      SPIRV_OC_OpConvertBF16ToFINTEL,
+      SPIRV_OC_OpControlBarrierArriveINTEL, SPIRV_OC_OpControlBarrierWaitINTEL,
+      SPIRV_OC_OpGroupIMulKHR,
       SPIRV_OC_OpGroupFMulKHR
     ]>;
 
