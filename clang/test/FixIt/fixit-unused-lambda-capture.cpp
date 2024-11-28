@@ -66,6 +66,38 @@ void test() {
   // CHECK: [z = (n = i)] {};
   [j,z = (n = i)] {};
   // CHECK: [z = (n = i)] {};
+
+  // New Edge Cases
+
+  // Test 1: Leading and trailing whitespace
+  [i,    j] { return i; };
+  // CHECK: [i] { return i; };
+  [i ,    j] { return j; };
+  // CHECK: [j] { return j; };
+  [i  ,  j ,  k] { return j + k; };
+  // CHECK: [j,k] { return j + k; };
+
+  // Test 2: Single unused capture
+  [i] {};
+  // CHECK: [] {};
+  [&i] {};
+  // CHECK: [] {};
+
+  // Test 3: Multiple commas
+  [i,,j] { return j; };
+  // CHECK: [j] { return j; };
+  [,i,j,,k] { return k; };
+  // CHECK: [k] { return k; };
+
+  // Test 4: Mixed captures
+  [=, &i, j] { return i; };
+  // CHECK: [&i] { return i; };
+  [&, i] {};
+  // CHECK: [&] {};
+
+  // Test 5: Capture with comments
+  [/*capture*/ i, j] { return j; };
+  // CHECK: [/*capture*/ j] { return j; };
 }
 
 class ThisTest {
