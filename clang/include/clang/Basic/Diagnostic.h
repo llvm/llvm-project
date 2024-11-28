@@ -18,6 +18,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -284,7 +285,10 @@ public:
     ak_qualtype_pair,
 
     /// Attr *
-    ak_attr
+    ak_attr,
+
+    /// APSInt *
+    ak_apsint,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -1366,6 +1370,12 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
   return DB;
 }
 
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APSInt *I) {
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(I), DiagnosticsEngine::ak_apsint);
+  return DB;
+}
+
 // We use enable_if here to prevent that this overload is selected for
 // pointers or other arguments that are implicitly convertible to bool.
 template <typename T>
@@ -1579,6 +1589,13 @@ public:
     assert(getArgKind(Idx) == DiagnosticsEngine::ak_identifierinfo &&
            "invalid argument accessor!");
     return reinterpret_cast<IdentifierInfo *>(
+        DiagStorage.DiagArgumentsVal[Idx]);
+  }
+
+  const llvm::APSInt *getArgAPSInt(unsigned Idx) const {
+    assert(getArgKind(Idx) == DiagnosticsEngine::ak_apsint &&
+           "invalid argument accessor!");
+    return reinterpret_cast<const llvm::APSInt *>(
         DiagStorage.DiagArgumentsVal[Idx]);
   }
 

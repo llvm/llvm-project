@@ -769,6 +769,15 @@ static void HandleSelectModifier(const Diagnostic &DInfo, unsigned ValNo,
   DInfo.FormatDiagnostic(Argument, EndPtr, OutStr);
 }
 
+static void HandleSeparatedModifier(const Diagnostic &DInfo,
+                                    const llvm::APSInt &Val,
+                                    const char *Argument, unsigned ArgumentLen,
+                                    SmallVectorImpl<char> &OutStr) {
+  llvm::raw_svector_ostream Out(OutStr);
+  Out << toString(Val, 10, Val.isSigned(), /*formatAsCLiteral=*/false,
+                  /*UpperCase=*/false, /*InsertSeparators=*/true);
+}
+
 /// HandleIntegerSModifier - Handle the integer 's' modifier.  This adds the
 /// letter 's' to the string if the value is not 1.  This is used in cases like
 /// this:  "you idiot, you have %4 parameter%s4!".
@@ -1160,6 +1169,10 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
         HandleOrdinalModifier((unsigned)Val, OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "human")) {
         HandleIntegerHumanModifier(Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "separated")) {
+        llvm::APSInt ValAP = llvm::APSInt(
+            llvm::APInt(64, Val, /*IsSigned=*/true), /*IsUnsigned=*/false);
+        HandleSeparatedModifier(*this, ValAP, Argument, ArgumentLen, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;
@@ -1180,10 +1193,26 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
         HandleOrdinalModifier(Val, OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "human")) {
         HandleIntegerHumanModifier(Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "separated")) {
+        llvm::APSInt ValAP = llvm::APSInt(
+            llvm::APInt(64, Val, /*IsSigned=*/false), /*IsUnsigned=*/true);
+        HandleSeparatedModifier(*this, ValAP, Argument, ArgumentLen, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;
       }
+      break;
+    }
+
+    case DiagnosticsEngine::ak_apsint: {
+      const llvm::APSInt *Val = getArgAPSInt(ArgNo);
+      if (ModifierIs(Modifier, ModifierLen, "separated")) {
+        HandleSeparatedModifier(*this, *Val, Argument, ArgumentLen, OutStr);
+      } else {
+        assert(ModifierLen == 0 && "Unknown integer modifier");
+        llvm::raw_svector_ostream(OutStr) << *Val;
+      }
+      // FIXME: Support the other modifiers for APSInt as well.
       break;
     }
     // ---- TOKEN SPELLINGS ----

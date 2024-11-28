@@ -18307,22 +18307,15 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
   if (Value.isSigned() && Value.isNegative()) {
     if (FieldName)
       return Diag(FieldLoc, diag::err_bitfield_has_negative_width)
-             << FieldName
-             << toString(Value, 10, Value.isSigned(),
-                         /*formatAsCLiteral=*/false, /*UpperCase=*/true,
-                         /*InsertSeparators=*/true);
-    return Diag(FieldLoc, diag::err_anon_bitfield_has_negative_width)
-           << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,
-                       /*UpperCase=*/true, /*InsertSeparators=*/true);
+             << FieldName << &Value;
+    return Diag(FieldLoc, diag::err_anon_bitfield_has_negative_width) << &Value;
   }
 
   // The size of the bit-field must not exceed our maximum permitted object
   // size.
   if (Value.getActiveBits() > ConstantArrayType::getMaxSizeBits(Context)) {
     return Diag(FieldLoc, diag::err_bitfield_too_wide)
-           << !FieldName << FieldName
-           << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,
-                       /*UpperCase=*/true, /*InsertSeparators=*/true);
+           << !FieldName << FieldName << &Value;
   }
 
   if (!FieldTy->isDependentType()) {
@@ -18341,10 +18334,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
       unsigned DiagWidth =
           CStdConstraintViolation ? TypeWidth : TypeStorageSize;
       return Diag(FieldLoc, diag::err_bitfield_width_exceeds_type_width)
-             << (bool)FieldName << FieldName
-             << toString(Value, 10, Value.isSigned(),
-                         /*formatAsCLiteral=*/false, /*UpperCase=*/true,
-                         /*InsertSeparators=*/true)
+             << (bool)FieldName << FieldName << &Value
              << !CStdConstraintViolation << DiagWidth;
     }
 
@@ -18355,12 +18345,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
       llvm::APInt TypeWidthAP(sizeof(TypeWidth) * 8, TypeWidth,
                               /*IsSigned=*/false);
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName
-          << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,
-                      /*UpperCase=*/true, /*InsertSeparators=*/true)
-          << toString(TypeWidthAP, 10, /*Signed=*/false,
-                      /*formatAsCLiteral=*/false, /*UpperCase=*/true,
-                      /*InsertSeparators=*/true);
+          << FieldName << &Value << (unsigned)TypeWidth;
     }
   }
 
