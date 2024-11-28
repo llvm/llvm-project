@@ -1388,10 +1388,10 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
-def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
-def FeaturePredictableSelectIsExpensive
+def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
