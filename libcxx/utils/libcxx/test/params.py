@@ -193,7 +193,7 @@ DEFAULT_PARAMETERS = [
         choices=["none", "speed", "size"],
         type=str,
         help="The optimization level to use when compiling the test suite.",
-        default="none",
+        default="speed",
         actions=lambda opt: filter(None, [
             AddCompileFlag(lambda cfg: getSpeedOptimizationFlag(cfg)) if opt == "speed" else None,
             AddCompileFlag(lambda cfg: getSizeOptimizationFlag(cfg)) if opt == "size" else None,
