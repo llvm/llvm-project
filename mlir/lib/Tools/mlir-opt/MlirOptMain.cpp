@@ -259,9 +259,8 @@ public:
           return failure();
         else
           return success();
-      default:
-        llvm_unreachable("Unknown diagnostic severity");
       }
+      llvm_unreachable("Unknown diagnostic severity");
     });
   }
 };
