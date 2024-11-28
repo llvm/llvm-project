@@ -1,4 +1,4 @@
-// RUN: %offload-tblgen -gen-print-header -I %S/../../../new-api/API %s | %fcheck-generic
+// RUN: %offload-tblgen -gen-print-header -I %S/../../../liboffload/API %s | %fcheck-generic
 
 // Check that print helpers are created for enums
 
