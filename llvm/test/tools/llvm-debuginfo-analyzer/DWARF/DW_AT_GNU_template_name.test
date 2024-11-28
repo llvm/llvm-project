@@ -23,7 +23,7 @@
 
 ; The llvm-debuginfo-analyzer did not support the DW_AT_GNU_template_name
 ; attribute. When using '--attribute=encoded' and the template argument is
-; another template, it will show:
+; another template, it would show:
 ;   {Encoded} <>
 
 ; The object file is generated using the following commands:
