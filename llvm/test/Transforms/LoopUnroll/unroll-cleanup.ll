@@ -57,9 +57,7 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[CMP_PROL:%.*]] = icmp eq i8 [[TMP3_PROL]], 0
 ; CHECK-NEXT:    br i1 [[CMP_PROL]], label %[[IF_THEN_PROL:.*]], label %[[FOR_INC_PROL:.*]]
 ; CHECK:       [[IF_THEN_PROL]]:
-; CHECK-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds i8, ptr [[R_022]], i64 2
-; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX_PROL]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[R_022]], align 2
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[R_022]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX5_PROL:%.*]] = getelementptr inbounds i8, ptr [[R_022]], i64 4
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX5_PROL]], align 2
 ; CHECK-NEXT:    br label %[[FOR_INC_PROL]]
@@ -82,9 +80,7 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[FOR_INC:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 2
-; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[R_117]], align 2
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[R_117]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 4
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX5]], align 2
 ; CHECK-NEXT:    br label %[[FOR_INC]]
@@ -96,9 +92,7 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[IF_THEN_1:.*]], label %[[FOR_INC_1]]
 ; CHECK:       [[IF_THEN_1]]:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 8
-; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX_1]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[ADD_PTR]], align 2
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[ADD_PTR]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX5_1:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 10
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX5_1]], align 2
 ; CHECK-NEXT:    br label %[[FOR_INC_1]]

@@ -5157,8 +5157,9 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   InstructionCost Cost = 0;
 
-  // Add a cost for constant load to vector.
-  if (Opcode == Instruction::Store && OpInfo.isConstant())
+  // Add a cost for constant load to vector, if pointer is not a constant.
+  if (auto *SI = dyn_cast_or_null<StoreInst>(I);
+      SI && !isa<Constant>(SI->getPointerOperand()) && OpInfo.isConstant())
     Cost += getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
                             /*AddressSpace=*/0, CostKind);
 
