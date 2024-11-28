@@ -18,7 +18,7 @@
 #include "test/UnitTest/LibcTest.h"
 
 #include <sys/syscall.h>
-
+#if defined(SYS_process_mrelease) && defined(SYS_pidfd_open)
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 int pidfd_open(pid_t pid, unsigned int flags) {
@@ -72,3 +72,4 @@ TEST(LlvmLibcProcessMReleaseTest, ErrorNotKilled) {
 TEST(LlvmLibcProcessMReleaseTest, ErrorNonExistingPidfd) {
   EXPECT_THAT(LIBC_NAMESPACE::process_mrelease(-1, 0), Fails(EBADF));
 }
+#endif
