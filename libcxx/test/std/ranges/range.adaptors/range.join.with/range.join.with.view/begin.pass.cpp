@@ -10,24 +10,12 @@
 
 // <ranges>
 
-// constexpr auto begin() {
-//   if constexpr (forward_range<V>) {
-//     constexpr bool use_const =
-//       simple-view<V> && is_reference_v<InnerRng> && simple-view<Pattern>;
-//     return iterator<use_const>{*this, ranges::begin(base_)};
-//   }
-//   else {
-//     outer_it_ = ranges::begin(base_);
-//     return iterator<false>{*this};
-//   }
-// }
+// constexpr auto begin();
 // constexpr auto begin() const
 //   requires forward_range<const V> &&
 //            forward_range<const Pattern> &&
 //            is_reference_v<range_reference_t<const V>> &&
-//            input_range<range_reference_t<const V>> {
-//   return iterator<true>{*this, ranges::begin(base_)};
-// }
+//            input_range<range_reference_t<const V>>;
 
 #include <ranges>
 
@@ -48,30 +36,6 @@ using MaybeSimpleForwardRvalueView =
 
 template <bool Simple>
 using MaybeSimplePattern = BasicView<std::string, ViewProperties{.simple = Simple}, forward_iterator>;
-
-class DifferentWhenConstV {
-  using Arr                      = std::array<std::array<int, 2>, 2>;
-  static constexpr Arr regular_v = {{{1, 2}, {3, 4}}};
-  static constexpr Arr const_v   = {{{5, 6}, {7, 8}}};
-
-public:
-  constexpr auto begin() { return regular_v.begin(); }
-  constexpr auto end() { return regular_v.end(); }
-  constexpr auto begin() const { return const_v.begin(); }
-  constexpr auto end() const { return const_v.end(); }
-};
-
-class DifferentWhenConstPattern {
-  using Pat                            = std::array<int, 2>;
-  static constexpr Pat regular_pattern = {0, 0};
-  static constexpr Pat const_pattern   = {1, 1};
-
-public:
-  constexpr auto begin() { return regular_pattern.begin(); }
-  constexpr auto end() { return regular_pattern.end(); }
-  constexpr auto begin() const { return const_pattern.begin(); }
-  constexpr auto end() const { return const_pattern.end(); }
-};
 
 template <class V, class Pattern>
 concept JoinWithViewHasConstBegin = requires(const std::ranges::join_with_view<V, Pattern> jwv) {
@@ -187,64 +151,59 @@ constexpr void test_begin() {
 }
 
 constexpr void test_const_begin() {
-  { // `const V` models forward range
-    // `const Pattern` models forward range
-    // `is_reference_v<range_reference_t<const V>>` is true
-    // `range_reference_t<const V>` models input range
-    using V       = BasicView<DifferentWhenConstV, ViewProperties{}, forward_iterator>;
-    using Pattern = BasicView<DifferentWhenConstPattern, ViewProperties{}, forward_iterator>;
-
-    const std::ranges::join_with_view<V, Pattern> jwv;
-    auto it = jwv.begin();
-    assert(std::ranges::equal(std::views::counted(it, 6), std::array{5, 6, 1, 1, 7, 8}));
-  }
-
   using Vec = std::vector<std::array<int, 2>>;
   using Pat = std::array<int, 2>;
 
-  { // `const V` does not model forward range
-    // `const Pattern` models forward range
-    // `is_reference_v<range_reference_t<const V>>` is true
-    // `range_reference_t<const V>` models input range
-    static_assert(!JoinWithViewHasConstBegin<BasicView<Vec, ViewProperties{.common = false}, cpp20_input_iterator>,
-                                             BasicView<Pat, ViewProperties{}, forward_iterator>>);
-  }
-
-  { // `const V` models forward range
-    // `const Pattern` does not model forward range
-    // `is_reference_v<range_reference_t<const V>>` is true
-    // `range_reference_t<const V>` models input range
-    static_assert(!JoinWithViewHasConstBegin<BasicView<Vec, ViewProperties{}, forward_iterator>,
-                                             BasicView<Pat, ViewProperties{.common = false}, cpp20_input_iterator>>);
-  }
-
-  { // `const V` models forward range
-    // `const Pattern` models forward range
-    // `is_reference_v<range_reference_t<const V>>` is false
-    // `range_reference_t<const V>` models input range
-    static_assert(
-        !JoinWithViewHasConstBegin<BasicView<RvalueVector<std::vector<int>>, ViewProperties{}, forward_iterator>,
-                                   BasicView<Pat, ViewProperties{}, forward_iterator>>);
-  }
-
   { // `const V` models forward range
     // `const Pattern` models forward range
     // `is_reference_v<range_reference_t<const V>>` is true
-    // `range_reference_t<const V>` does not model input range
-    static_assert(!JoinWithViewHasConstBegin<
-                  BasicView<std::vector<InputRangeButOutputWhenConst<int>>, ViewProperties{}, forward_iterator>,
-                  BasicView<Pat, ViewProperties{}, forward_iterator>>);
+    // `range_reference_t<const V>` models input range
+    using V       = BasicView<Vec, ViewProperties{}, forward_iterator>;
+    using Pattern = BasicView<Pat, ViewProperties{}, forward_iterator>;
+
+    const std::ranges::join_with_view<V, Pattern> jwv{V{Vec{std::array{1, 2}, std::array{3, 4}}}, Pattern{Pat{0, 0}}};
+    auto it = jwv.begin();
+    assert(std::ranges::equal(std::views::counted(it, 6), std::array{1, 2, 0, 0, 3, 4}));
   }
 
-  { // Check situation when iterators returned by `begin()` and `begin() const` are the same
-    using JWV = std::ranges::join_with_view<MaybeSimpleForwardView<true>, MaybeSimplePattern<true>>;
-    static_assert(std::same_as<std::ranges::iterator_t<JWV&>, std::ranges::iterator_t<const JWV&>>);
-  }
+  // `const V` does not model forward range
+  // `const Pattern` models forward range
+  // `is_reference_v<range_reference_t<const V>>` is true
+  // `range_reference_t<const V>` models input range
+  static_assert(!JoinWithViewHasConstBegin<BasicView<Vec, ViewProperties{.common = false}, cpp20_input_iterator>,
+                                           BasicView<Pat, ViewProperties{}, forward_iterator>>);
 
-  { // Check LWG-4074: compatible-joinable-ranges is underconstrained
-    static_assert(!JoinWithViewHasConstBegin<BasicVectorView<int, ViewProperties{}, forward_iterator>,
-                                             lwg4074::PatternWithProxyConstAccess>);
-  }
+  // `const V` models forward range
+  // `const Pattern` does not model forward range
+  // `is_reference_v<range_reference_t<const V>>` is true
+  // `range_reference_t<const V>` models input range
+  static_assert(!JoinWithViewHasConstBegin<BasicView<Vec, ViewProperties{}, forward_iterator>,
+                                           BasicView<Pat, ViewProperties{.common = false}, cpp20_input_iterator>>);
+
+  // `const V` models forward range
+  // `const Pattern` models forward range
+  // `is_reference_v<range_reference_t<const V>>` is false
+  // `range_reference_t<const V>` models input range
+  static_assert(
+      !JoinWithViewHasConstBegin<BasicView<RvalueVector<std::vector<int>>, ViewProperties{}, forward_iterator>,
+                                 BasicView<Pat, ViewProperties{}, forward_iterator>>);
+
+  // `const V` models forward range
+  // `const Pattern` models forward range
+  // `is_reference_v<range_reference_t<const V>>` is true
+  // `range_reference_t<const V>` does not model input range
+  static_assert(!JoinWithViewHasConstBegin<
+                BasicView<std::vector<InputRangeButOutputWhenConst<int>>, ViewProperties{}, forward_iterator>,
+                BasicView<Pat, ViewProperties{}, forward_iterator>>);
+
+  // `concatable<range_reference_t<const V>, const Pattern>` is not satisfied
+  // See also LWG-4074: compatible-joinable-ranges is underconstrained
+  static_assert(!JoinWithViewHasConstBegin<BasicVectorView<int, ViewProperties{}, forward_iterator>,
+                                           lwg4074::PatternWithProxyConstAccess>);
+
+  // Check situation when iterators returned by `begin()` and `begin() const` are the same
+  using JWV = std::ranges::join_with_view<MaybeSimpleForwardView<true>, MaybeSimplePattern<true>>;
+  static_assert(std::same_as<std::ranges::iterator_t<JWV&>, std::ranges::iterator_t<const JWV&>>);
 }
 
 constexpr bool test() {

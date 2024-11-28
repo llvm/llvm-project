@@ -68,8 +68,7 @@ constexpr bool test() {
   InnerRange buff[3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
   Pattern pattern;
 
-  // Check the const& overload
-  {
+  { // Check the const& overload
     Range range(buff, buff + 3);
     std::ranges::join_with_view<Range, Pattern> view(range, pattern);
     std::same_as<Range> decltype(auto) result = view.base();
@@ -78,8 +77,7 @@ constexpr bool test() {
     assert(result.end() == buff + 3);
   }
 
-  // Check the const& overload on const `view`
-  {
+  { // Check the const& overload on const `view`
     Range range(buff, buff + 3);
     const std::ranges::join_with_view<Range, Pattern> view(range, pattern);
     std::same_as<Range> decltype(auto) result = view.base();
@@ -88,8 +86,7 @@ constexpr bool test() {
     assert(result.end() == buff + 3);
   }
 
-  // Check the && overload
-  {
+  { // Check the && overload
     Range range(buff, buff + 3);
     std::ranges::join_with_view<Range, Pattern> view(range, pattern);
     std::same_as<Range> decltype(auto) result = std::move(view).base();
@@ -98,18 +95,7 @@ constexpr bool test() {
     assert(result.end() == buff + 3);
   }
 
-  // Check the && overload on const `view`
-  {
-    Range range(buff, buff + 3);
-    const std::ranges::join_with_view<Range, Pattern> view(range, pattern);
-    std::same_as<Range> decltype(auto) result = std::move(view).base();
-    assert(result.was_copy_initialized_);
-    assert(result.begin() == buff);
-    assert(result.end() == buff + 3);
-  }
-
-  // Ensure the const& overload is not considered when the base is not copy-constructible
-  {
+  { // Ensure the const& overload is not considered when the base is not copy-constructible
     static_assert(!CanCallBaseOn<const std::ranges::join_with_view<NonCopyableRange<InnerRange>, Pattern>&>);
     static_assert(!CanCallBaseOn<std::ranges::join_with_view<NonCopyableRange<InnerRange>, Pattern>&>);
     static_assert(!CanCallBaseOn<const std::ranges::join_with_view<NonCopyableRange<InnerRange>, Pattern>&&>);
@@ -117,17 +103,15 @@ constexpr bool test() {
     static_assert(CanCallBaseOn<std::ranges::join_with_view<NonCopyableRange<InnerRange>, Pattern>>);
   }
 
-  // Ensure the const& overload does not depend on Pattern's copy-constructability
-  {
-    static_assert(CanCallBaseOn<const std::ranges::join_with_view<Range, NonCopyableRange<int>>& >);
-    static_assert(CanCallBaseOn<std::ranges::join_with_view<Range, NonCopyableRange<int>>& >);
-    static_assert(CanCallBaseOn<const std::ranges::join_with_view<Range, NonCopyableRange<int>>&& >);
-    static_assert(CanCallBaseOn<std::ranges::join_with_view<Range, NonCopyableRange<int>>&& >);
+  { // Ensure the const& overload does not depend on Pattern's copy-constructability
+    static_assert(CanCallBaseOn<const std::ranges::join_with_view<Range, NonCopyableRange<int>>&>);
+    static_assert(CanCallBaseOn<std::ranges::join_with_view<Range, NonCopyableRange<int>>&>);
+    static_assert(CanCallBaseOn<const std::ranges::join_with_view<Range, NonCopyableRange<int>>&&>);
+    static_assert(CanCallBaseOn<std::ranges::join_with_view<Range, NonCopyableRange<int>>&&>);
     static_assert(CanCallBaseOn<std::ranges::join_with_view<Range, NonCopyableRange<int>>>);
   }
 
-  // Check above two at the same time
-  {
+  { // Check above two at the same time
     static_assert(
         !CanCallBaseOn<const std::ranges::join_with_view<NonCopyableRange<InnerRange>, NonCopyableRange<int>>&>);
     static_assert(!CanCallBaseOn<std::ranges::join_with_view<NonCopyableRange<InnerRange>, NonCopyableRange<int>>&>);

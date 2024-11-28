@@ -10,19 +10,14 @@
 
 // <ranges>
 
-// friend constexpr decltype(auto) iter_move(const iterator& x) {
-//   using rvalue_reference = common_reference_t<
-//     iter_rvalue_reference_t<InnerIter>,
-//     iter_rvalue_reference_t<PatternIter>>;
-//   return visit<rvalue_reference>(ranges::iter_move, x.inner_it_);
-// }
+// friend constexpr decltype(auto) iter_move(const iterator& x);
 
 #include <ranges>
 
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <type_traits>
+#include <cstddef>
 #include <utility>
 #include <vector>
 
@@ -52,7 +47,9 @@ public:
     return *this;
   }
 
-  constexpr Status get_status() const { return status_; }
+  constexpr bool was_normally_constructed() const { return status_ == constructed; }
+  constexpr bool was_move_constructed() const { return status_ == move_constructed; }
+  constexpr bool was_moved_from() const { return status_ == moved_from_this; }
 
   friend constexpr bool operator==(const MoveOnlyInt& left, int right) { return left.val_ == right; }
   friend constexpr bool operator==(const MoveOnlyInt& left, const MoveOnlyInt& right) {
@@ -66,68 +63,77 @@ private:
 
 static_assert(std::movable<MoveOnlyInt>);
 
-template <class T>
-class ProxyRvalue {
-  T val_;
-
-public:
-  constexpr ProxyRvalue(T val) : val_(std::move(val)) {}
-
-  ProxyRvalue(ProxyRvalue&&)            = default;
-  ProxyRvalue& operator=(ProxyRvalue&&) = default;
-
-  constexpr explicit operator T&&() noexcept { return std::move(val_); }
+struct ProxyRvalueRef {
+  MoveOnlyInt&& val;
 };
 
-static_assert(std::common_reference_with<ProxyRvalue<int>, int>);
-static_assert(std::common_reference_with<ProxyRvalue<MoveOnlyInt>, MoveOnlyInt>);
-
-template <std::bidirectional_iterator It>
-class ProxyOnIterMoveIter {
-  It it_ = It();
-
+class CommonProxyRvalueRef {
 public:
-  using value_type      = std::iter_value_t<It>;
-  using difference_type = std::iter_difference_t<It>;
+  constexpr CommonProxyRvalueRef(ProxyRvalueRef i) : val_(std::move(i.val)) {}
+  constexpr CommonProxyRvalueRef(MoveOnlyInt i) : val_(std::move(i)) {}
 
-  ProxyOnIterMoveIter() = default;
-  constexpr ProxyOnIterMoveIter(It it) : it_(std::move(it)) {}
+  constexpr MoveOnlyInt&& get() { return std::move(val_); }
 
-  constexpr decltype(auto) operator*() const { return *it_; }
+private:
+  MoveOnlyInt val_;
+};
 
-  constexpr ProxyOnIterMoveIter& operator++() {
-    ++it_;
+template <template <class> class TQual, template <class> class UQual>
+struct std::basic_common_reference<ProxyRvalueRef, MoveOnlyInt, TQual, UQual> {
+  using type = CommonProxyRvalueRef;
+};
+
+template <template <class> class TQual, template <class> class UQual>
+struct std::basic_common_reference<MoveOnlyInt, ProxyRvalueRef, TQual, UQual> {
+  using type = CommonProxyRvalueRef;
+};
+
+static_assert(std::common_reference_with<MoveOnlyInt&&, ProxyRvalueRef>);
+static_assert(std::common_reference_with<MoveOnlyInt&&, CommonProxyRvalueRef>);
+
+class ProxyIter {
+public:
+  using value_type      = MoveOnlyInt;
+  using difference_type = std::ptrdiff_t;
+
+  constexpr ProxyIter() : ptr_(nullptr) {}
+  constexpr explicit ProxyIter(MoveOnlyInt* it) : ptr_(std::move(it)) {}
+
+  constexpr decltype(auto) operator*() const { return *ptr_; }
+
+  constexpr ProxyIter& operator++() {
+    ++ptr_;
     return *this;
   }
 
-  constexpr ProxyOnIterMoveIter operator++(int) {
-    ProxyOnIterMoveIter copy = *this;
-    ++it_;
+  constexpr ProxyIter operator++(int) {
+    ProxyIter copy = *this;
+    ++ptr_;
     return copy;
   }
 
-  constexpr ProxyOnIterMoveIter& operator--() {
-    --it_;
+  constexpr ProxyIter& operator--() {
+    --ptr_;
     return *this;
   }
 
-  constexpr ProxyOnIterMoveIter operator--(int) {
-    ProxyOnIterMoveIter copy = *this;
-    --it_;
+  constexpr ProxyIter operator--(int) {
+    ProxyIter copy = *this;
+    --ptr_;
     return copy;
   }
 
-  friend bool operator==(const ProxyOnIterMoveIter&, const ProxyOnIterMoveIter&) = default;
+  friend bool operator==(const ProxyIter&, const ProxyIter&) = default;
 
-  friend constexpr ProxyRvalue<value_type> iter_move(const ProxyOnIterMoveIter iter) {
-    return ProxyRvalue<value_type>{std::ranges::iter_move(iter.it_)};
+  friend constexpr ProxyRvalueRef iter_move(const ProxyIter iter) {
+    return ProxyRvalueRef{std::ranges::iter_move(iter.ptr_)};
   }
+
+private:
+  MoveOnlyInt* ptr_;
 };
 
-template <class It>
-ProxyOnIterMoveIter(It) -> ProxyOnIterMoveIter<It>;
-
-static_assert(std::bidirectional_iterator<ProxyOnIterMoveIter<int*>>);
+static_assert(std::forward_iterator<ProxyIter>);
 
 constexpr bool test() {
   { // Test `iter_move` when result is true rvalue reference. Test return types.
@@ -183,10 +189,9 @@ constexpr bool test() {
     v.emplace_back(std::ranges::to<Inner>(std::views::iota(0, 4)));
     v.emplace_back(std::ranges::to<Inner>(std::views::iota(12, 16)));
     JWV jwv(std::move(v), std::ranges::to<Pattern>(std::views::iota(4, 12)));
-    assert(std::ranges::all_of(jwv, [](const MoveOnlyInt& i) { return i.get_status() == MoveOnlyInt::constructed; }));
+    assert(std::ranges::all_of(jwv, &MoveOnlyInt::was_normally_constructed));
 
     {
-      using enum MoveOnlyInt::Status;
       std::vector<MoveOnlyInt> values;
       values.reserve(8);
 
@@ -208,11 +213,10 @@ constexpr bool test() {
       values.emplace_back(std::ranges::iter_move(std::as_const(it)));
 
       assert(std::ranges::equal(values, std::views::iota(0, 8)));
-      assert(std::ranges::all_of(values, [](const MoveOnlyInt& i) { return i.get_status() == move_constructed; }));
+      assert(std::ranges::all_of(values, &MoveOnlyInt::was_move_constructed));
     }
 
     {
-      using enum MoveOnlyInt::Status;
       std::vector<MoveOnlyInt> values;
       values.reserve(8);
 
@@ -234,99 +238,102 @@ constexpr bool test() {
       values.emplace_back(std::ranges::iter_move(std::as_const(cit)));
 
       assert(std::ranges::equal(std::views::reverse(values), std::views::iota(8, 16)));
-      assert(std::ranges::all_of(values, [](const MoveOnlyInt& i) { return i.get_status() == move_constructed; }));
+      assert(std::ranges::all_of(values, &MoveOnlyInt::was_move_constructed));
     }
 
-    assert(
-        std::ranges::all_of(jwv, [](const MoveOnlyInt& i) { return i.get_status() == MoveOnlyInt::moved_from_this; }));
+    assert(std::ranges::all_of(jwv, &MoveOnlyInt::was_moved_from));
   }
 
-  { // Test `iter_move` when result is proxy rvalue reference. Test return types and moving.
+  { // Test `iter_move` when result is proxy rvalue reference type, which is different from
+    // range_rvalue_reference_t<InnerRng> and range_rvalue_reference_t<Pattern>.
     using Inner   = std::vector<MoveOnlyInt>;
     using V       = std::vector<Inner>;
-    using Pattern = BasicVectorView<MoveOnlyInt, ViewProperties{}, ProxyOnIterMoveIter>;
-    using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, std::ranges::owning_view<Pattern>>;
+    using Pattern = std::ranges::subrange<ProxyIter, ProxyIter>;
+    using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, Pattern>;
 
-    using RRef = ProxyRvalue<MoveOnlyInt>;
-    static_assert(std::same_as<RRef, std::ranges::range_rvalue_reference_t<JWV>>);
+    static_assert(!std::same_as<std::ranges::range_rvalue_reference_t<V>, std::ranges::range_rvalue_reference_t<JWV>>);
+    static_assert(
+        !std::same_as<std::ranges::range_rvalue_reference_t<Pattern>, std::ranges::range_rvalue_reference_t<JWV>>);
+    static_assert(std::same_as<CommonProxyRvalueRef, std::ranges::range_rvalue_reference_t<JWV>>);
 
     V v;
     v.reserve(2);
     v.emplace_back(std::ranges::to<Inner>(std::views::iota(0, 4)));
     v.emplace_back(std::ranges::to<Inner>(std::views::iota(12, 16)));
-    JWV jwv(std::move(v), Pattern{std::ranges::to<std::vector<MoveOnlyInt>>(std::views::iota(4, 12))});
-    assert(std::ranges::all_of(jwv, [](const MoveOnlyInt& i) { return i.get_status() == MoveOnlyInt::constructed; }));
+
+    auto pattern = std::ranges::to<std::vector<MoveOnlyInt>>(std::views::iota(4, 12));
+    Pattern pattern_as_subrange(ProxyIter{pattern.data()}, ProxyIter{pattern.data() + pattern.size()});
+
+    JWV jwv(std::move(v), pattern_as_subrange);
+    assert(std::ranges::all_of(jwv, &MoveOnlyInt::was_normally_constructed));
 
     {
-      using enum MoveOnlyInt::Status;
       std::vector<MoveOnlyInt> values;
       values.reserve(8);
 
-      auto it                                 = jwv.begin();
-      std::same_as<RRef> decltype(auto) rref1 = iter_move(it);
-      values.emplace_back(std::move(rref1));
+      auto it                                                 = jwv.begin();
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref1 = iter_move(it);
+      values.emplace_back(rref1.get());
       ++it;
-      std::same_as<RRef> decltype(auto) rref2 = iter_move(std::as_const(it));
-      values.emplace_back(rref2);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref2 = iter_move(std::as_const(it));
+      values.emplace_back(rref2.get());
       it++;
-      std::same_as<RRef> decltype(auto) rref3 = std::ranges::iter_move(it);
-      values.emplace_back(rref3);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref3 = std::ranges::iter_move(it);
+      values.emplace_back(rref3.get());
       ++it;
-      std::same_as<RRef> decltype(auto) rref4 = std::ranges::iter_move(std::as_const(it));
-      values.emplace_back(rref4);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref4 = std::ranges::iter_move(std::as_const(it));
+      values.emplace_back(rref4.get());
       it++; // `it` points to element of `Pattern` from here
-      std::same_as<RRef> decltype(auto) rref5 = iter_move(it);
-      values.emplace_back(rref5);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref5 = iter_move(it);
+      values.emplace_back(rref5.get());
       ++it;
-      std::same_as<RRef> decltype(auto) rref6 = iter_move(std::as_const(it));
-      values.emplace_back(rref6);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref6 = iter_move(std::as_const(it));
+      values.emplace_back(rref6.get());
       it++;
-      std::same_as<RRef> decltype(auto) rref7 = std::ranges::iter_move(it);
-      values.emplace_back(rref7);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref7 = std::ranges::iter_move(it);
+      values.emplace_back(rref7.get());
       ++it;
-      std::same_as<RRef> decltype(auto) rref8 = std::ranges::iter_move(std::as_const(it));
-      values.emplace_back(rref8);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref8 = std::ranges::iter_move(std::as_const(it));
+      values.emplace_back(rref8.get());
 
       assert(std::ranges::equal(values, std::views::iota(0, 8)));
-      assert(std::ranges::all_of(values, [](const MoveOnlyInt& i) { return i.get_status() == move_constructed; }));
+      assert(std::ranges::all_of(values, &MoveOnlyInt::was_move_constructed));
     }
 
     {
-      using enum MoveOnlyInt::Status;
       std::vector<MoveOnlyInt> values;
       values.reserve(8);
 
-      auto cit                                = std::prev(std::as_const(jwv).end());
-      std::same_as<RRef> decltype(auto) rref1 = iter_move(cit);
-      values.emplace_back(rref1);
+      auto cit                                                = std::prev(std::as_const(jwv).end());
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref1 = iter_move(cit);
+      values.emplace_back(rref1.get());
       cit--;
-      std::same_as<RRef> decltype(auto) rref2 = iter_move(std::as_const(cit));
-      values.emplace_back(rref2);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref2 = iter_move(std::as_const(cit));
+      values.emplace_back(rref2.get());
       --cit;
-      std::same_as<RRef> decltype(auto) rref3 = std::ranges::iter_move(cit);
-      values.emplace_back(rref3);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref3 = std::ranges::iter_move(cit);
+      values.emplace_back(rref3.get());
       cit--;
-      std::same_as<RRef> decltype(auto) rref4 = std::ranges::iter_move(std::as_const(cit));
-      values.emplace_back(rref4);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref4 = std::ranges::iter_move(std::as_const(cit));
+      values.emplace_back(rref4.get());
       --cit; // `it` points to element of `Pattern` from here
-      std::same_as<RRef> decltype(auto) rref5 = iter_move(cit);
-      values.emplace_back(rref5);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref5 = iter_move(cit);
+      values.emplace_back(rref5.get());
       cit--;
-      std::same_as<RRef> decltype(auto) rref6 = iter_move(std::as_const(cit));
-      values.emplace_back(rref6);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref6 = iter_move(std::as_const(cit));
+      values.emplace_back(rref6.get());
       --cit;
-      std::same_as<RRef> decltype(auto) rref7 = std::ranges::iter_move(cit);
-      values.emplace_back(rref7);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref7 = std::ranges::iter_move(cit);
+      values.emplace_back(rref7.get());
       cit--;
-      std::same_as<RRef> decltype(auto) rref8 = std::ranges::iter_move(std::as_const(cit));
-      values.emplace_back(rref8);
+      std::same_as<CommonProxyRvalueRef> decltype(auto) rref8 = std::ranges::iter_move(std::as_const(cit));
+      values.emplace_back(rref8.get());
 
       assert(std::ranges::equal(std::views::reverse(values), std::views::iota(8, 16)));
-      assert(std::ranges::all_of(values, [](const MoveOnlyInt& i) { return i.get_status() == move_constructed; }));
+      assert(std::ranges::all_of(values, &MoveOnlyInt::was_move_constructed));
     }
 
-    assert(
-        std::ranges::all_of(jwv, [](const MoveOnlyInt& i) { return i.get_status() == MoveOnlyInt::moved_from_this; }));
+    assert(std::ranges::all_of(jwv, &MoveOnlyInt::was_moved_from));
   }
 
   return true;

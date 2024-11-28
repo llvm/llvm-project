@@ -52,6 +52,6 @@ using JWV = std::ranges::join_with_view<View, IntRange>;
 // Expected JWV::iterator layout:
 // _Parent* __parent_;                           // offset: 0
 // [[no_unique_address]] __empty __outer_it;     //         0
-// variant<_PatternIter, _InnerIter> __pattern_; //         8
+// variant<_PatternIter, _InnerIter> __pattern_; //         sizeof(pointer)
 static_assert(sizeof(std::ranges::iterator_t<JWV>) ==
               sizeof(void*) + sizeof(std::variant<int*, int*>)); // sizeof(__parent_) + sizeof(__inner_it_)

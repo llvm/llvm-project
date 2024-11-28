@@ -10,10 +10,7 @@
 
 // <ranges>
 
-// friend constexpr void iter_swap(const iterator& x, const iterator& y)
-//   requires indirectly_swappable<InnerIter, PatternIter> {
-//   visit(ranges::iter_swap, x.inner_it_, y.inner_it_);
-// }
+// friend constexpr void iter_swap(const iterator& x, const iterator& y);
 
 #include <ranges>
 

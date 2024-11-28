@@ -20,12 +20,8 @@
 
 #include <ranges>
 
-#include <algorithm>
 #include <string>
-#include <string_view>
 #include <vector>
-
-using namespace std::string_view_literals;
 
 constexpr bool test() {
   std::vector<std::string> vs = {"the", "quick", "brown", "fox"};
@@ -34,7 +30,7 @@ constexpr bool test() {
     result += c;
   }
 
-  return std::ranges::equal(result, "the-quick-brown-fox"sv);
+  return result == "the-quick-brown-fox";
 }
 
 int main(int, char**) {

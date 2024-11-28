@@ -10,25 +10,11 @@
 
 // <ranges>
 
-// constexpr auto end() {
-//   if constexpr (forward_range<V> &&
-//                 is_reference_v<InnerRng> && forward_range<InnerRng> &&
-//                 common_range<V> && common_range<InnerRng>)
-//     return iterator<simple-view<V> && simple-view<Pattern>>{*this, ranges::end(base_)};
-//   else
-//     return sentinel<simple-view<V> && simple-view<Pattern>>{*this};
-// }
+// constexpr auto end();
 // constexpr auto end() const
 //   requires forward_range<const V> && forward_range<const Pattern> &&
 //            is_reference_v<range_reference_t<const V>> &&
-//            input_range<range_reference_t<const V>> {
-//   using InnerConstRng = range_reference_t<const V>;
-//   if constexpr (forward_range<InnerConstRng> &&
-//                 common_range<const V> && common_range<InnerConstRng>)
-//     return iterator<true>{*this, ranges::end(base_)};
-//   else
-//     return sentinel<true>{*this};
-// }
+//            input_range<range_reference_t<const V>>;
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=10000000
 

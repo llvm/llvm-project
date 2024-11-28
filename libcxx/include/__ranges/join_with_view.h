@@ -247,7 +247,7 @@ private:
     if constexpr (__ref_is_glvalue)
       return std::__as_lvalue(*__get_outer());
     else
-      return __parent_->__inner_.__emplace_from([&]() -> decltype(auto) { return *__get_outer(); });
+      return __parent_->__inner_.__emplace_from([this]() -> decltype(auto) { return *__get_outer(); });
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto& __get_inner() {
