@@ -404,11 +404,11 @@ public:
   PPC32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : PPCTargetInfo(Triple, Opts) {
     if (Triple.isOSAIX())
-      resetDataLayout("E-m:a-p:32:32-Fi32-i64:64-i128:128-n32");
+      resetDataLayout("E-m:a-p:32:32-Fi32-i64:64-n32");
     else if (Triple.getArch() == llvm::Triple::ppcle)
-      resetDataLayout("e-m:e-p:32:32-Fn32-i64:64-i128:128-n32");
+      resetDataLayout("e-m:e-p:32:32-Fn32-i64:64-n32");
     else
-      resetDataLayout("E-m:e-p:32:32-Fn32-i64:64-i128:128-n32");
+      resetDataLayout("E-m:e-p:32:32-Fn32-i64:64-n32");
 
     switch (getTriple().getOS()) {
     case llvm::Triple::Linux:

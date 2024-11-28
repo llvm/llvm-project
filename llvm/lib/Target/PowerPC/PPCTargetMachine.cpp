@@ -183,12 +183,9 @@ static std::string getDataLayoutString(const Triple &T) {
   // documentation are wrong; these are correct (i.e. "what gcc does").
   Ret += "-i64:64";
 
-  // Alignment for 128 bit integers.
-  Ret += "-i128:128";
-
   // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
   if (is64Bit)
-    Ret += "-n32:64";
+    Ret += "-i128:128-n32:64";
   else
     Ret += "-n32";
 

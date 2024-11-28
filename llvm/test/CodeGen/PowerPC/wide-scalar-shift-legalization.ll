@@ -304,28 +304,27 @@ define void @shl_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    stw 3, 28(1)
 ; LE-32BIT-NEXT:    addi 3, 1, 16
 ; LE-32BIT-NEXT:    stw 9, 24(1)
-; LE-32BIT-NEXT:    stw 8, 20(1)
-; LE-32BIT-NEXT:    stw 7, 16(1)
-; LE-32BIT-NEXT:    lwzx 6, 3, 6
-; LE-32BIT-NEXT:    rlwimi 3, 4, 29, 28, 29
-; LE-32BIT-NEXT:    lwz 7, 8(3)
 ; LE-32BIT-NEXT:    clrlwi 4, 4, 27
-; LE-32BIT-NEXT:    lwz 8, 4(3)
-; LE-32BIT-NEXT:    subfic 9, 4, 32
-; LE-32BIT-NEXT:    lwz 3, 12(3)
-; LE-32BIT-NEXT:    srw 10, 7, 9
-; LE-32BIT-NEXT:    slw 11, 8, 4
-; LE-32BIT-NEXT:    srw 8, 8, 9
-; LE-32BIT-NEXT:    srw 9, 3, 9
-; LE-32BIT-NEXT:    slw 7, 7, 4
+; LE-32BIT-NEXT:    stw 8, 20(1)
+; LE-32BIT-NEXT:    subfic 8, 4, 32
+; LE-32BIT-NEXT:    stw 7, 16(1)
+; LE-32BIT-NEXT:    lwzux 3, 6, 3
+; LE-32BIT-NEXT:    lwz 9, 4(6)
 ; LE-32BIT-NEXT:    slw 3, 3, 4
-; LE-32BIT-NEXT:    slw 6, 6, 4
-; LE-32BIT-NEXT:    stw 3, 12(5)
-; LE-32BIT-NEXT:    or 3, 7, 9
-; LE-32BIT-NEXT:    stw 3, 8(5)
-; LE-32BIT-NEXT:    or 3, 6, 8
+; LE-32BIT-NEXT:    lwz 7, 8(6)
+; LE-32BIT-NEXT:    lwz 6, 12(6)
+; LE-32BIT-NEXT:    slw 11, 9, 4
+; LE-32BIT-NEXT:    srw 9, 9, 8
+; LE-32BIT-NEXT:    srw 10, 7, 8
+; LE-32BIT-NEXT:    srw 8, 6, 8
+; LE-32BIT-NEXT:    slw 7, 7, 4
+; LE-32BIT-NEXT:    slw 4, 6, 4
+; LE-32BIT-NEXT:    or 3, 3, 9
+; LE-32BIT-NEXT:    stw 4, 12(5)
+; LE-32BIT-NEXT:    or 4, 7, 8
 ; LE-32BIT-NEXT:    stw 3, 0(5)
 ; LE-32BIT-NEXT:    or 3, 11, 10
+; LE-32BIT-NEXT:    stw 4, 8(5)
 ; LE-32BIT-NEXT:    stw 3, 4(5)
 ; LE-32BIT-NEXT:    addi 1, 1, 48
 ; LE-32BIT-NEXT:    blr
