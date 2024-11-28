@@ -3985,6 +3985,8 @@ The capturing entity ``X`` can be one of the following:
       std::set<std::string_view> s;
     };
 
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
+
 - `global`, `unknown`.
 
   .. code-block:: c++
