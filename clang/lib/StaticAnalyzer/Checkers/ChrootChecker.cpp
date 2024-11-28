@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines chroot checker, which checks improper use of chroot. This
-//  is described by the SEI Cert C rule POS05-C. The checker is a warning not
-//  a hard failure since it only checks for a recommended rule.
+//  This file defines chroot checker, which checks improper use of chroot.
+//  This is described by the SEI Cert C rule POS05-C.
+//  The checker is a warning not a hard failure since it only checks for a
+//  recommended rule.
 //
 //===----------------------------------------------------------------------===//
 
