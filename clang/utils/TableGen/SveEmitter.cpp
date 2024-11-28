@@ -116,7 +116,7 @@ public:
 
   unsigned getNumElements() const {
     assert(ElementBitwidth != ~0U);
-    return Bitwidth / ElementBitwidth;
+    return isPredicate() ? 16 : (Bitwidth / ElementBitwidth);
   }
   unsigned getSizeInBits() const {
     return Bitwidth;
@@ -137,7 +137,7 @@ private:
   /// Applies a prototype modifier to the type.
   void applyModifier(char Mod);
 
-  /// Get the builtin base for this SVEType, e.g, 'Wi' for svint64_t.
+  /// Get the builtin base for this SVEType, e.g. 'Wi' for svint64_t.
   std::string builtinBaseType() const;
 };
 
@@ -442,6 +442,11 @@ std::string SVEType::builtinBaseType() const {
     return "v";
   case TypeKind::Svcount:
     return "Qa";
+  case TypeKind::PrefetchOp:
+  case TypeKind::PredicatePattern:
+    return "i";
+  case TypeKind::Predicate:
+    return "b";
   case TypeKind::BFloat16:
     assert(ElementBitwidth == 16 && "Invalid BFloat16!");
     return "y";
@@ -459,11 +464,8 @@ std::string SVEType::builtinBaseType() const {
     default:
       llvm_unreachable("Unhandled float width!");
     }
-  case TypeKind::Predicate:
-    if (isScalar())
-      return "b";
-    [[fallthrough]];
-  // SInt/UInt, PredicatePattern, PrefetchOp.
+  case TypeKind::SInt:
+  case TypeKind::UInt:
   default:
     switch (ElementBitwidth) {
     case 1:
@@ -482,10 +484,10 @@ std::string SVEType::builtinBaseType() const {
       llvm_unreachable("Unhandled bitwidth!");
     }
   }
+  llvm_unreachable("Unhandled TypeKind!");
 }
 
 std::string SVEType::builtin_str() const {
-
   std::string Prefix;
 
   if (isScalableVector())
