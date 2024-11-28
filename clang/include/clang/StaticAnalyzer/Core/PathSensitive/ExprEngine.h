@@ -321,14 +321,14 @@ public:
                                NodeBuilderWithSinks &nodeBuilder,
                                ExplodedNode *Pred);
 
-  /// ProcessBranch - Called by CoreEngine.  Used to generate successor
-  ///  nodes by processing the 'effects' of a branch condition.
-  void processBranch(const Stmt *Condition,
-                     NodeBuilderContext& BuilderCtx,
-                     ExplodedNode *Pred,
-                     ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT,
-                     const CFGBlock *DstF);
+  /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
+  /// processing the 'effects' of a branch condition. If the branch condition
+  /// is a loop condition, IterationsCompletedInLoop is the number of completed
+  /// iterations (otherwise it's std::nullopt).
+  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
+                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                     const CFGBlock *DstT, const CFGBlock *DstF,
+                     std::optional<unsigned> IterationsCompletedInLoop);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
@@ -587,6 +587,8 @@ public:
   /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
   void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
                                     const Expr *Ex);
+
+  bool didEagerlyAssumeBifurcateAt(ProgramStateRef State, const Expr *Ex) const;
 
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
   getEagerlyAssumeBifurcationTags();
