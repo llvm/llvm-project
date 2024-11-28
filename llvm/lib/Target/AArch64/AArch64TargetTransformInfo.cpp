@@ -252,7 +252,7 @@ uint64_t AArch64TTIImpl::getFeatureMask(Function &F) const {
   FeatureStr.split(Features, ",");
   if (none_of(Features, [](StringRef Feat) { return Feat == "+fmv"; }))
     return 0;
-  return AArch64::getCpuSupportsMask(Features);
+  return AArch64::getPriorityMask(Features);
 }
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,

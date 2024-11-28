@@ -57,26 +57,35 @@ lookupFMVByID(llvm::AArch64::ArchExtKind ExtID) {
 }
 
 unsigned AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
-  constexpr unsigned MaxFMVPriority = 1000;
-  unsigned Priority = 0;
-  unsigned NumFeatures = 0;
+  constexpr unsigned MaxFMVPriority = 100;
+  uint64_t Priority = 0;
+  FeatPriorities TopBit = static_cast<FeatPriorities>(0);
   for (StringRef Feature : Features) {
-    if (auto Ext = parseFMVExtension(Feature)) {
-      Priority = std::max(Priority, Ext->Priority);
-      NumFeatures++;
+    if (auto FMVExt = parseFMVExtension(Feature)) {
+      TopBit = std::max(TopBit, FMVExt->PriorityBit);
+      Priority |= (1ULL << FMVExt->PriorityBit);
     }
   }
-  return Priority + MaxFMVPriority * NumFeatures;
+  return TopBit + MaxFMVPriority * popcount(Priority);
+}
+
+uint64_t AArch64::getPriorityMask(ArrayRef<StringRef> Features) {
+  uint64_t PriorityMask = 0;
+  for (StringRef Feature : Features) {
+    if (auto FMVExt = parseFMVExtension(Feature))
+      PriorityMask |= (1ULL << FMVExt->PriorityBit);
+    else if (auto ArchExt = targetFeatureToExtension(Feature))
+      if (auto FMVExt = lookupFMVByID(ArchExt->ID))
+        PriorityMask |= (1ULL << FMVExt->PriorityBit);
+  }
+  return PriorityMask;
 }
 
 uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   uint64_t FeaturesMask = 0;
   for (const StringRef &FeatureStr : FeatureStrs) {
-    if (auto FMVExt = parseFMVExtension(FeatureStr))
-      FeaturesMask |= (1ULL << FMVExt->Bit);
-    else if (auto ArchExt = targetFeatureToExtension(FeatureStr))
-      if (auto FMVExt = lookupFMVByID(ArchExt->ID))
-        FeaturesMask |= (1ULL << FMVExt->Bit);
+    if (auto Ext = parseFMVExtension(FeatureStr))
+      FeaturesMask |= (1ULL << Ext->FeatureBit);
   }
   return FeaturesMask;
 }
