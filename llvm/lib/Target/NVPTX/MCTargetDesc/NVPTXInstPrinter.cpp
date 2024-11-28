@@ -450,4 +450,6 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
     O << ".xor";
     return;
   }
+  llvm_unreachable(
+      "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
 }
