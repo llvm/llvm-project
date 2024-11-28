@@ -1,4 +1,4 @@
-// RUN: %offload-tblgen -gen-entry-points -I %S/../../../new-api/API %s | %fcheck-generic
+// RUN: %offload-tblgen -gen-entry-points -I %S/../../../liboffload/API %s | %fcheck-generic
 
 // Check entry point wrapper functions are generated correctly
 
@@ -13,7 +13,7 @@ def : Function {
         Param<"uint32_t*", "ParamB", "Parameter B description">,
     ];
     let returns = [
-        Return<"OFFLOAD_ERRC_INVALID_VALUE", ["When a value is invalid"]>
+        Return<"OL_ERRC_INVALID_VALUE", ["When a value is invalid"]>
     ];
 }
 
@@ -22,7 +22,7 @@ def : Function {
 // CHECK: FunctionA_val
 // CHECK: return FunctionA_impl(ParamA, ParamB);
 
-// CHECK: offload_result_t{{.*}} FunctionA(
+// CHECK: ol_result_t{{.*}} FunctionA(
 
 // The entry point should print tracing output if enabled
 // CHECK: if (offloadConfig().TracingEnabled) {

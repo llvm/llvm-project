@@ -1,12 +1,12 @@
-// RUN: %offload-tblgen -gen-print-header -I %S/../../../new-api/API %s | %fcheck-generic --check-prefix=CHECK-PRINT
-// RUN: %offload-tblgen -gen-api -I %S/../../../new-api/API %s | %fcheck-generic --check-prefix=CHECK-API
+// RUN: %offload-tblgen -gen-print-header -I %S/../../../liboffload/API %s | %fcheck-generic --check-prefix=CHECK-PRINT
+// RUN: %offload-tblgen -gen-api -I %S/../../../liboffload/API %s | %fcheck-generic --check-prefix=CHECK-API
 
 // Check that print helpers are created for functions
 
 include "APIDefs.td"
 
 def : Handle {
-    let name = "offload_foo_handle_t";
+    let name = "ol_foo_handle_t";
     let desc = "Example handle type";
 }
 
@@ -16,7 +16,7 @@ def : Function {
     let details = [ "Function A detailed information" ];
     let params = [
         Param<"uint32_t", "ParamValue", "A plain value parameter">,
-        Param<"offload_foo_handle_t", "ParamHandle", "A handle parameter">,
+        Param<"ol_foo_handle_t", "ParamHandle", "A handle parameter">,
         Param<"uint32_t*", "ParamPointer", "A pointer parameter">,
     ];
     let returns = [];
@@ -24,7 +24,7 @@ def : Function {
 
 // CHECK-API: typedef struct function_a_params_t {
 // CHECK-API-NEXT: uint32_t* pParamValue;
-// CHECK-API-NEXT: offload_foo_handle_t* pParamHandle;
+// CHECK-API-NEXT: ol_foo_handle_t* pParamHandle;
 // CHECK-API-NEXT: uint32_t** pParamPointer;
 
 // CHECK-PRINT: inline std::ostream &operator<<(std::ostream &os, const struct function_a_params_t *params)

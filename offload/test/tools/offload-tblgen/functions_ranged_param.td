@@ -1,4 +1,4 @@
-// RUN: %offload-tblgen -gen-print-header -I %S/../../../new-api/API %s | %fcheck-generic
+// RUN: %offload-tblgen -gen-print-header -I %S/../../../liboffload/API %s | %fcheck-generic
 
 // Check that ranged function parameters are implemented correctly. These
 // are pointers to an array of an arbitrary size. Their size is described as a

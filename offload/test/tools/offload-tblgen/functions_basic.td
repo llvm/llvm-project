@@ -1,6 +1,6 @@
-// RUN: %offload-tblgen -gen-api -I %S/../../../new-api/API %s | %fcheck-generic --check-prefix=CHECK-API
-// RUN: %offload-tblgen -gen-exports -I %S/../../../new-api/API %s | %fcheck-generic --check-prefix=CHECK-EXPORTS
-// RUN: %offload-tblgen -gen-func-names -I %S/../../../new-api/API %s | %fcheck-generic --check-prefix=CHECK-FUNC-MACRO
+// RUN: %offload-tblgen -gen-api -I %S/../../../liboffload/API %s | %fcheck-generic --check-prefix=CHECK-API
+// RUN: %offload-tblgen -gen-exports -I %S/../../../liboffload/API %s | %fcheck-generic --check-prefix=CHECK-EXPORTS
+// RUN: %offload-tblgen -gen-func-names -I %S/../../../liboffload/API %s | %fcheck-generic --check-prefix=CHECK-FUNC-MACRO
 
 // Check basic support for API functions
 
@@ -15,7 +15,7 @@ def : Function {
         Param<"uint32_t*", "ParamB", "Parameter B description">,
     ];
     let returns = [
-        Return<"OFFLOAD_ERRC_INVALID_VALUE", ["When a value is invalid"]>
+        Return<"OL_ERRC_INVALID_VALUE", ["When a value is invalid"]>
     ];
 }
 
@@ -23,10 +23,10 @@ def : Function {
 // CHECK-API: /// @details
 // CHECK-API-NEXT: Function A detailed information
 // CHECK-API: /// @returns
-// CHECK-API: OFFLOAD_ERRC_INVALID_VALUE
+// CHECK-API: OL_ERRC_INVALID_VALUE
 // CHECK-API-NEXT: When a value is invalid
 
-// CHECK-API: offload_result_t
+// CHECK-API: ol_result_t
 // CHECK-API-SAME: FunctionA
 
 // CHECK-API: // Parameter A description

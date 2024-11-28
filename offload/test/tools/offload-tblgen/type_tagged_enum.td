@@ -1,5 +1,5 @@
-// RUN: %offload-tblgen -gen-api -I %S/../../../new-api/API %s | %fcheck-generic --check-prefix=CHECK-API
-// RUN: %offload-tblgen -gen-print-header -I %S/../../../new-api/API %s | %fcheck-generic --check-prefix=CHECK-PRINT
+// RUN: %offload-tblgen -gen-api -I %S/../../../liboffload/API %s | %fcheck-generic --check-prefix=CHECK-API
+// RUN: %offload-tblgen -gen-print-header -I %S/../../../liboffload/API %s | %fcheck-generic --check-prefix=CHECK-PRINT
 
 // Check that type-tagged enumerators are implemented correctly. They enable
 // functions to return data of an arbitrary type and size via a void*, using
@@ -43,7 +43,7 @@ def : Function {
     Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
     TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
       "If PropSize is not equal to or greater to the real number of bytes needed to return the info "
-      "then the OFFLOAD_ERRC_INVALID_SIZE error is returned and PropValue is not used.", PARAM_OUT,
+      "then the OL_ERRC_INVALID_SIZE error is returned and PropValue is not used.", PARAM_OUT,
       TypeInfo<"PropName" , "PropSize">>
   ];
   let returns = [];
