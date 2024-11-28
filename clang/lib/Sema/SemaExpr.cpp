@@ -11860,7 +11860,7 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   // C++2a [depr.array.comp]:
   //   Equality and relational comparisons ([expr.eq], [expr.rel]) between two
   //   operands of array type are deprecated.
-  if (LHSStripped->getType()->isArrayType() &&
+  if (S.getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
     auto IsDeprArrayComparionIgnored =
         S.getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
