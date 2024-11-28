@@ -24,6 +24,10 @@
 
 namespace Fortran::lower {
 
+struct LoweredResult {
+  std::variant<fir::ExtendedValue, hlfir::EntityWithAttributes> result;
+};
+
 /// Given a call site for which the arguments were already lowered, generate
 /// the call and return the result. This function deals with explicit result
 /// allocation and lowering if needed. It also deals with passing the host
@@ -32,7 +36,7 @@ namespace Fortran::lower {
 /// It is only used for HLFIR.
 /// The returned boolean indicates if finalization has been emitted in
 /// \p stmtCtx for the result.
-std::pair<fir::ExtendedValue, bool> genCallOpAndResult(
+std::pair<LoweredResult, bool> genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,
