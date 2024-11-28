@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -34,11 +33,6 @@ enum ChrootKind { NO_CHROOT, ROOT_CHANGED, ROOT_CHANGE_FAILED, JAIL_ENTERED };
 // Track chroot state changes for success, failure, state change
 // and "jail"
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ChrootState, ChrootKind)
-
-// Track the call expression to chroot for accurate
-// warning messages
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ChrootCall, const Expr *)
-
 namespace {
 
 // This checker checks improper use of chroot.
@@ -105,7 +99,6 @@ void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
       State->BindExpr(CE, LCtx, nonloc::ConcreteInt{Minus1});
   if (StateChrootFailed) {
     StateChrootFailed = StateChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED);
-    StateChrootFailed = StateChrootFailed->set<ChrootCall>(ChrootCE);
     C.addTransition(StateChrootFailed);
   }
 
@@ -114,7 +107,6 @@ void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
       State->BindExpr(CE, LCtx, nonloc::ConcreteInt{Zero});
   if (StateChrootSuccess) {
     StateChrootSuccess = StateChrootSuccess->set<ChrootState>(ROOT_CHANGED);
-    StateChrootSuccess = StateChrootSuccess->set<ChrootCall>(ChrootCE);
     C.addTransition(StateChrootSuccess);
   }
 }
@@ -144,41 +136,9 @@ void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
 }
 
 class ChrootInvocationVisitor final : public BugReporterVisitor {
-  bool Satisfied = false;
-  const SymbolRef ChrootSym;
-
-  const ExplodedNode *getAcquisitionSite(const ExplodedNode *N) {
-    ProgramStateRef State = N->getState();
-    // When a chroot() issue is found, the current exploded node may not
-    // have state info for where chroot() was called for the bug report but
-    // a predecessor should have it.
-    if (!State->get<ChrootCall>())
-      N = N->getFirstPred();
-
-    const ExplodedNode *Pred = N;
-    while (N) {
-      State = N->getState();
-      if (!State->get<ChrootCall>())
-        return Pred;
-      Pred = N;
-      N = N->getFirstPred();
-    }
-
-    return nullptr;
-  }
-
 public:
-  explicit ChrootInvocationVisitor(SymbolRef ChrootSym)
-      : ChrootSym(ChrootSym) {}
-
-  static void *getTag() {
-    static int Tag = 0;
-    return &Tag;
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override {
-    ID.AddPointer(getTag());
-  }
+  explicit ChrootInvocationVisitor(const CallDescription &Chroot)
+      : Chroot{Chroot} {}
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
@@ -186,28 +146,32 @@ public:
     if (Satisfied)
       return nullptr;
 
-    const Expr *ChrootExpr = N->getFirstPred()->getState()->get<ChrootCall>();
-    if (!ChrootExpr)
+    auto StmtP = N->getLocation().getAs<StmtPoint>();
+    if (!StmtP)
       return nullptr;
 
-    const Stmt *S = N->getStmtForDiagnostics();
-    if (!S)
+    const CallExpr *Call = StmtP->getStmtAs<CallExpr>();
+    if (!Call)
       return nullptr;
 
-    const ExplodedNode *ChrootNode = getAcquisitionSite(N);
-    if (!ChrootNode)
+    if (!matchesAnyAsWritten(*Call, Chroot))
       return nullptr;
 
     Satisfied = true;
-    PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
+    PathDiagnosticLocation Pos(Call, BRC.getSourceManager(),
                                N->getLocationContext());
-
-    BR.addNote("chroot called here",
-               PathDiagnosticLocation::create(ChrootNode->getLocation(),
-                                              BRC.getSourceManager()),
-               {ChrootExpr->getSourceRange()});
-    return nullptr;
+    return std::make_shared<PathDiagnosticEventPiece>(Pos, "chroot called here",
+                                                      /*addPosRange=*/true);
   }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    static bool Tag;
+    ID.AddPointer(&Tag);
+  }
+
+private:
+  const CallDescription &Chroot;
+  bool Satisfied = false;
 };
 
 // Check the jail state before any function call except chroot and chdir().
@@ -226,16 +190,12 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
       C.generateNonFatalErrorNode(C.getState(), C.getPredecessor());
   if (!Err)
     return;
-  const Expr *ChrootExpr = C.getState()->get<ChrootCall>();
-  assert(ChrootExpr && "Expected to find chroot call expansion.");
 
   std::unique_ptr<PathSensitiveBugReport> R =
       std::make_unique<PathSensitiveBugReport>(
           BT_BreakJail, R"(No call of chdir("/") immediately after chroot)",
           Err);
-
-  R->addVisitor<ChrootInvocationVisitor>(nullptr);
-
+  R->addVisitor<ChrootInvocationVisitor>(Chroot);
   C.emitReport(std::move(R));
 }
 
