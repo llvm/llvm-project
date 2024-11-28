@@ -396,7 +396,7 @@ PreservedAnalyses SIAnnotateControlFlowPass::run(Function &F,
   // FIXME: We introduce dead declarations of intrinsics even if never used.
   bool Changed = Impl.run(F);
   if (!Changed)
-    return PreservedAnalyses::none();
+    return PreservedAnalyses::all();
 
   // TODO: Is LoopInfo preserved?
   PreservedAnalyses PA = PreservedAnalyses::none();
