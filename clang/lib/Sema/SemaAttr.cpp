@@ -215,6 +215,11 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+bool Sema::isPointerLikeType(QualType Type) {
+  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
+         Type->isNullPtrType();
+}
+
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   if (FD->getNumParams() == 0)
     return;

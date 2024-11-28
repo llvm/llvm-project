@@ -1760,6 +1760,18 @@ public:
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
+  template <typename T> static bool isRecordWithAttr(QualType Type) {
+    auto *RD = Type->getAsCXXRecordDecl();
+    if (!RD)
+      return false;
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+    return RD->hasAttr<T>();
+  }
+
+  /// ....
+  static bool isPointerLikeType(QualType Type);
+
   LifetimeCaptureByAttr *ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
                                                     StringRef ParamName);
   // Processes the argument 'X' in [[clang::lifetime_capture_by(X)]]. Since 'X'

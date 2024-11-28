@@ -252,15 +252,6 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   Expr *Init, ReferenceKind RK,
                                                   LocalVisitor Visit);
 
-template <typename T> static bool isRecordWithAttr(QualType Type) {
-  auto *RD = Type->getAsCXXRecordDecl();
-  if (!RD)
-    return false;
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
-  return RD->hasAttr<T>();
-}
-
 // Decl::isInStdNamespace will return false for iterators in some STL
 // implementations due to them being defined in a namespace outside of the std
 // namespace.
@@ -279,11 +270,6 @@ static bool isInStlNamespace(const Decl *D) {
   return DC->isStdNamespace();
 }
 
-static bool isPointerLikeType(QualType Type) {
-  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
-         Type->isNullPtrType();
-}
-
 // Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
 // type, e.g. std::vector<string_view>, std::optional<string_view>.
 static bool isContainerOfPointer(const RecordDecl *Container) {
@@ -293,7 +279,7 @@ static bool isContainerOfPointer(const RecordDecl *Container) {
       return false;
     const auto &TAs = CTSD->getTemplateArgs();
     return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
-           isPointerLikeType(TAs[0].getAsType());
+           Sema::isPointerLikeType(TAs[0].getAsType());
   }
   return false;
 }
@@ -306,7 +292,7 @@ static bool isContainerOfOwner(const RecordDecl *Container) {
     return false;
   const auto &TAs = CTSD->getTemplateArgs();
   return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
-         isRecordWithAttr<OwnerAttr>(TAs[0].getAsType());
+         Sema::isRecordWithAttr<OwnerAttr>(TAs[0].getAsType());
 }
 
 // Returns true if the given Record is `std::initializer_list<pointer>`.
@@ -317,23 +303,24 @@ static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
     return isInStlNamespace(RD) && RD->getIdentifier() &&
            RD->getName() == "initializer_list" && TAs.size() > 0 &&
            TAs[0].getKind() == TemplateArgument::Type &&
-           isPointerLikeType(TAs[0].getAsType());
+           Sema::isPointerLikeType(TAs[0].getAsType());
   }
   return false;
 }
 
 static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
-    if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()) &&
+    if (Sema::isRecordWithAttr<PointerAttr>(Conv->getConversionType()) &&
         Callee->getParent()->hasAttr<OwnerAttr>())
       return true;
   if (!isInStlNamespace(Callee->getParent()))
     return false;
-  if (!isRecordWithAttr<PointerAttr>(
+  if (!Sema::isRecordWithAttr<PointerAttr>(
           Callee->getFunctionObjectParameterType()) &&
-      !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
+      !Sema::isRecordWithAttr<OwnerAttr>(
+          Callee->getFunctionObjectParameterType()))
     return false;
-  if (isPointerLikeType(Callee->getReturnType())) {
+  if (Sema::isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
       return false;
     return llvm::StringSwitch<bool>(Callee->getName())
@@ -366,7 +353,7 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
     return false;
   if (FD->getReturnType()->isPointerType() ||
-      isRecordWithAttr<PointerAttr>(FD->getReturnType())) {
+      Sema::isRecordWithAttr<PointerAttr>(FD->getReturnType())) {
     return llvm::StringSwitch<bool>(FD->getName())
         .Cases("begin", "rbegin", "cbegin", "crbegin", true)
         .Cases("end", "rend", "cend", "crend", true)
@@ -438,7 +425,7 @@ shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
     return true;
 
   // RHS must be an owner.
-  if (!isRecordWithAttr<OwnerAttr>(RHSArgType))
+  if (!Sema::isRecordWithAttr<OwnerAttr>(RHSArgType))
     return false;
 
   // Bail out if the RHS is Owner<Pointer>.
@@ -565,7 +552,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     // Once we initialized a value with a non gsl-owner reference, it can no
     // longer dangle.
     if (ReturnType->isReferenceType() &&
-        !isRecordWithAttr<OwnerAttr>(ReturnType->getPointeeType())) {
+        !Sema::isRecordWithAttr<OwnerAttr>(ReturnType->getPointeeType())) {
       for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
         if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit ||
             PE.Kind == IndirectLocalPathEntry::LifetimeBoundCall)
@@ -1111,7 +1098,7 @@ static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
   bool EnableGSLAssignmentWarnings = !SemaRef.getDiagnostics().isIgnored(
       diag::warn_dangling_lifetime_pointer_assignment, SourceLocation());
   return (EnableGSLAssignmentWarnings &&
-          (isRecordWithAttr<PointerAttr>(Entity.LHS->getType()) ||
+          (Sema::isRecordWithAttr<PointerAttr>(Entity.LHS->getType()) ||
            isAssignmentOperatorLifetimeBound(Entity.AssignmentOperator)));
 }
 
@@ -1146,12 +1133,12 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         //   someContainer.add(std::move(localUniquePtr));
         //   return p;
         if (pathContainsInit(Path) ||
-            !isRecordWithAttr<OwnerAttr>(L->getType()))
+            !Sema::isRecordWithAttr<OwnerAttr>(L->getType()))
           return false;
       } else {
         IsGslPtrValueFromGslTempOwner =
             MTE && !MTE->getExtendingDecl() &&
-            isRecordWithAttr<OwnerAttr>(MTE->getType());
+            Sema::isRecordWithAttr<OwnerAttr>(MTE->getType());
         // Skipping a chain of initializing gsl::Pointer annotated objects.
         // We are looking only for the final source to find out if it was
         // a local or temporary owner or the address of a local variable/param.
@@ -1280,7 +1267,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         auto *DRE = dyn_cast<DeclRefExpr>(L);
         // Suppress false positives for code like the one below:
         //   Ctor(unique_ptr<T> up) : pointer(up.get()), owner(move(up)) {}
-        if (DRE && isRecordWithAttr<OwnerAttr>(DRE->getType()))
+        if (DRE && Sema::isRecordWithAttr<OwnerAttr>(DRE->getType()))
           return false;
 
         auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
@@ -1441,7 +1428,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     break;
   }
   case LK_LifetimeCapture: {
-    if (isPointerLikeType(Init->getType()))
+    if (Sema::isPointerLikeType(Init->getType()))
       Path.push_back({IndirectLocalPathEntry::GslPointerInit, Init});
     break;
   }
