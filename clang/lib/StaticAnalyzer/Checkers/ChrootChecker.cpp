@@ -28,8 +28,9 @@
 using namespace clang;
 using namespace ento;
 
-// enum value that represent the jail state
+namespace {
 enum ChrootKind { NO_CHROOT, ROOT_CHANGED, ROOT_CHANGE_FAILED, JAIL_ENTERED };
+} // namespace
 
 // Track chroot state changes for success, failure, state change
 // and "jail"
