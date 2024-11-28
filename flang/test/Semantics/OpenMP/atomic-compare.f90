@@ -1,3 +1,4 @@
+! REQUIRES: openmp_runtime
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=51
   use omp_lib
   implicit none
@@ -34,7 +35,7 @@
   if (b .eq. a) b = c
   !$omp end atomic
 
-  ! Check for error conidtions:
+  ! Check for error conditions:
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
   !$omp atomic seq_cst seq_cst compare
