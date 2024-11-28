@@ -9,7 +9,8 @@
 // functions.
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef LLVM_LIB_TRANSFORMS_COROUTINES_COROCLONER_H
+#define LLVM_LIB_TRANSFORMS_COROUTINES_COROCLONER_H
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -18,32 +19,33 @@
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
-using namespace llvm;
+namespace llvm {
 
-class CoroCloner {
-public:
-  enum class Kind {
-    /// The shared resume function for a switch lowering.
-    SwitchResume,
+namespace coro {
 
-    /// The shared unwind function for a switch lowering.
-    SwitchUnwind,
+enum class CloneKind {
+  /// The shared resume function for a switch lowering.
+  SwitchResume,
 
-    /// The shared cleanup function for a switch lowering.
-    SwitchCleanup,
+  /// The shared unwind function for a switch lowering.
+  SwitchUnwind,
 
-    /// An individual continuation function.
-    Continuation,
+  /// The shared cleanup function for a switch lowering.
+  SwitchCleanup,
 
-    /// An async resume function.
-    Async,
-  };
+  /// An individual continuation function.
+  Continuation,
 
+  /// An async resume function.
+  Async,
+};
+
+class BaseCloner {
 protected:
   Function &OrigF;
   const Twine &Suffix;
   coro::Shape &Shape;
-  Kind FKind;
+  CloneKind FKind;
   IRBuilder<> Builder;
   TargetTransformInfo &TTI;
 
@@ -56,37 +58,38 @@ protected:
   AnyCoroSuspendInst *ActiveSuspend = nullptr;
 
   /// Create a cloner for a continuation lowering.
-  CoroCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
+  BaseCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
              Function *NewF, AnyCoroSuspendInst *ActiveSuspend,
              TargetTransformInfo &TTI)
       : OrigF(OrigF), Suffix(Suffix), Shape(Shape),
-        FKind(Shape.ABI == coro::ABI::Async ? Kind::Async : Kind::Continuation),
+        FKind(Shape.ABI == ABI::Async ? CloneKind::Async
+                                      : CloneKind::Continuation),
         Builder(OrigF.getContext()), TTI(TTI), NewF(NewF),
         ActiveSuspend(ActiveSuspend) {
-    assert(Shape.ABI == coro::ABI::Retcon ||
-           Shape.ABI == coro::ABI::RetconOnce || Shape.ABI == coro::ABI::Async);
+    assert(Shape.ABI == ABI::Retcon || Shape.ABI == ABI::RetconOnce ||
+           Shape.ABI == ABI::Async);
     assert(NewF && "need existing function for continuation");
     assert(ActiveSuspend && "need active suspend point for continuation");
   }
 
 public:
-  CoroCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
-             Kind FKind, TargetTransformInfo &TTI)
+  BaseCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
+             CloneKind FKind, TargetTransformInfo &TTI)
       : OrigF(OrigF), Suffix(Suffix), Shape(Shape), FKind(FKind),
         Builder(OrigF.getContext()), TTI(TTI) {}
 
-  virtual ~CoroCloner() {}
+  virtual ~BaseCloner() {}
 
   /// Create a clone for a continuation lowering.
   static Function *createClone(Function &OrigF, const Twine &Suffix,
                                coro::Shape &Shape, Function *NewF,
                                AnyCoroSuspendInst *ActiveSuspend,
                                TargetTransformInfo &TTI) {
-    assert(Shape.ABI == coro::ABI::Retcon ||
-           Shape.ABI == coro::ABI::RetconOnce || Shape.ABI == coro::ABI::Async);
-    TimeTraceScope FunctionScope("CoroCloner");
+    assert(Shape.ABI == ABI::Retcon || Shape.ABI == ABI::RetconOnce ||
+           Shape.ABI == ABI::Async);
+    TimeTraceScope FunctionScope("BaseCloner");
 
-    CoroCloner Cloner(OrigF, Suffix, Shape, NewF, ActiveSuspend, TTI);
+    BaseCloner Cloner(OrigF, Suffix, Shape, NewF, ActiveSuspend, TTI);
     Cloner.create();
     return Cloner.getFunction();
   }
@@ -101,15 +104,15 @@ public:
 protected:
   bool isSwitchDestroyFunction() {
     switch (FKind) {
-    case Kind::Async:
-    case Kind::Continuation:
-    case Kind::SwitchResume:
+    case CloneKind::Async:
+    case CloneKind::Continuation:
+    case CloneKind::SwitchResume:
       return false;
-    case Kind::SwitchUnwind:
-    case Kind::SwitchCleanup:
+    case CloneKind::SwitchUnwind:
+    case CloneKind::SwitchCleanup:
       return true;
     }
-    llvm_unreachable("Unknown CoroCloner::Kind enum");
+    llvm_unreachable("Unknown ClonerKind enum");
   }
 
   void replaceEntryBlock();
@@ -122,25 +125,31 @@ protected:
   void handleFinalSuspend();
 };
 
-class CoroSwitchCloner : public CoroCloner {
+class SwitchCloner : public BaseCloner {
 protected:
   /// Create a cloner for a switch lowering.
-  CoroSwitchCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
-                   Kind FKind, TargetTransformInfo &TTI)
-      : CoroCloner(OrigF, Suffix, Shape, FKind, TTI) {}
+  SwitchCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
+               CloneKind FKind, TargetTransformInfo &TTI)
+      : BaseCloner(OrigF, Suffix, Shape, FKind, TTI) {}
 
   void create() override;
 
 public:
   /// Create a clone for a switch lowering.
   static Function *createClone(Function &OrigF, const Twine &Suffix,
-                               coro::Shape &Shape, Kind FKind,
+                               coro::Shape &Shape, CloneKind FKind,
                                TargetTransformInfo &TTI) {
-    assert(Shape.ABI == coro::ABI::Switch);
-    TimeTraceScope FunctionScope("CoroCloner");
+    assert(Shape.ABI == ABI::Switch);
+    TimeTraceScope FunctionScope("SwitchCloner");
 
-    CoroSwitchCloner Cloner(OrigF, Suffix, Shape, FKind, TTI);
+    SwitchCloner Cloner(OrigF, Suffix, Shape, FKind, TTI);
     Cloner.create();
     return Cloner.getFunction();
   }
 };
+
+} // end namespace coro
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_TRANSFORMS_COROUTINES_COROCLONER_H

@@ -402,7 +402,7 @@ static void replaceCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
 // is possible since the coroutine is considered suspended at the final suspend
 // point if promise.unhandled_exception() exits via an exception), we can
 // remove the last case.
-void CoroCloner::handleFinalSuspend() {
+void coro::BaseCloner::handleFinalSuspend() {
   assert(Shape.ABI == coro::ABI::Switch &&
          Shape.SwitchLowering.HasFinalSuspend);
 
@@ -466,7 +466,7 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
 /// arguments to the continuation function.
 ///
 /// This assumes that the builder has a meaningful insertion point.
-void CoroCloner::replaceRetconOrAsyncSuspendUses() {
+void coro::BaseCloner::replaceRetconOrAsyncSuspendUses() {
   assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
          Shape.ABI == coro::ABI::Async);
 
@@ -514,7 +514,7 @@ void CoroCloner::replaceRetconOrAsyncSuspendUses() {
   NewS->replaceAllUsesWith(Aggr);
 }
 
-void CoroCloner::replaceCoroSuspends() {
+void coro::BaseCloner::replaceCoroSuspends() {
   Value *SuspendResult;
 
   switch (Shape.ABI) {
@@ -551,7 +551,7 @@ void CoroCloner::replaceCoroSuspends() {
   }
 }
 
-void CoroCloner::replaceCoroEnds() {
+void coro::BaseCloner::replaceCoroEnds() {
   for (AnyCoroEndInst *CE : Shape.CoroEnds) {
     // We use a null call graph because there's no call graph node for
     // the cloned function yet.  We'll just be rebuilding that later.
@@ -630,11 +630,11 @@ collectDbgVariableIntrinsics(Function &F) {
   return {Intrinsics, DbgVariableRecords};
 }
 
-void CoroCloner::replaceSwiftErrorOps() {
+void coro::BaseCloner::replaceSwiftErrorOps() {
   ::replaceSwiftErrorOps(*NewF, Shape, &VMap);
 }
 
-void CoroCloner::salvageDebugInfo() {
+void coro::BaseCloner::salvageDebugInfo() {
   auto [Worklist, DbgVariableRecords] = collectDbgVariableIntrinsics(*NewF);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
@@ -671,7 +671,7 @@ void CoroCloner::salvageDebugInfo() {
   for_each(DbgVariableRecords, RemoveOne);
 }
 
-void CoroCloner::replaceEntryBlock() {
+void coro::BaseCloner::replaceEntryBlock() {
   // In the original function, the AllocaSpillBlock is a block immediately
   // following the allocation of the frame object which defines GEPs for
   // all the allocas that have been moved into the frame, and it ends by
@@ -739,7 +739,7 @@ void CoroCloner::replaceEntryBlock() {
 }
 
 /// Derive the value of the new frame pointer.
-Value *CoroCloner::deriveNewFramePointer() {
+Value *coro::BaseCloner::deriveNewFramePointer() {
   // Builder should be inserting to the front of the new entry block.
 
   switch (Shape.ABI) {
@@ -863,7 +863,7 @@ static void addSwiftSelfAttrs(AttributeList &Attrs, LLVMContext &Context,
 
 /// Clone the body of the original function into a resume function of
 /// some sort.
-void CoroCloner::create() {
+void coro::BaseCloner::create() {
   assert(NewF);
 
   // Replace all args with dummy instructions. If an argument is the old frame
@@ -1090,18 +1090,18 @@ void CoroCloner::create() {
   salvageDebugInfo();
 }
 
-void CoroSwitchCloner::create() {
+void coro::SwitchCloner::create() {
   // Create a new function matching the original type
   NewF = createCloneDeclaration(OrigF, Shape, Suffix, OrigF.getParent()->end(),
                                 ActiveSuspend);
 
   // Clone the function
-  CoroCloner::create();
+  coro::BaseCloner::create();
 
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
   coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-                        /*Elide=*/FKind == CoroCloner::Kind::SwitchCleanup);
+                        /*Elide=*/FKind == coro::CloneKind::SwitchCleanup);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
@@ -1378,12 +1378,12 @@ struct SwitchCoroutineSplitter {
     // setting new entry block and replacing coro.suspend an appropriate value
     // to force resume or cleanup pass for every suspend point.
     createResumeEntryBlock(F, Shape);
-    auto *ResumeClone = CoroSwitchCloner::createClone(
-        F, ".resume", Shape, CoroCloner::Kind::SwitchResume, TTI);
-    auto *DestroyClone = CoroSwitchCloner::createClone(
-        F, ".destroy", Shape, CoroCloner::Kind::SwitchUnwind, TTI);
-    auto *CleanupClone = CoroSwitchCloner::createClone(
-        F, ".cleanup", Shape, CoroCloner::Kind::SwitchCleanup, TTI);
+    auto *ResumeClone = coro::SwitchCloner::createClone(
+        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI);
+    auto *DestroyClone = coro::SwitchCloner::createClone(
+        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI);
+    auto *CleanupClone = coro::SwitchCloner::createClone(
+        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI);
 
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
@@ -1772,8 +1772,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     auto *Suspend = CS;
     auto *Clone = Clones[Idx];
 
-    CoroCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone, Suspend,
-                            TTI);
+    coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
+                                  Suspend, TTI);
   }
 }
 
@@ -1903,8 +1903,8 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     auto Suspend = CS;
     auto Clone = Clones[Idx];
 
-    CoroCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone, Suspend,
-                            TTI);
+    coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
+                                  Suspend, TTI);
   }
 }
 
