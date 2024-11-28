@@ -623,6 +623,26 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     }
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+    else if (const auto *CaptureAttr =
+                 Callee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+             CaptureAttr && isa<CXXConstructorDecl>(Callee) &&
+             llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
+               return ArgIdx == LifetimeCaptureByAttr::THIS;
+             }))
+      // `lifetime_capture_by(this)` in a class constructor has the same
+      // semantics as `lifetimebound`:
+      //
+      // struct Foo {
+      //   const int& a;
+      //   // Equivalent to Foo(const int& t [[clang::lifetimebound]])
+      //   Foo(const int& t [[clang::lifetime_capture_by(this)]]) : a(t) {}
+      // };
+      //
+      // In the implementation, `lifetime_capture_by` is treated as an alias for
+      // `lifetimebound` and shares the same code path. This implies the emitted
+      // diagnostics will be emitted under `-Wdangling`, not
+      // `-Wdangling-capture`.
+      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
       if (shouldTrackFirstArgument(Callee)) {
