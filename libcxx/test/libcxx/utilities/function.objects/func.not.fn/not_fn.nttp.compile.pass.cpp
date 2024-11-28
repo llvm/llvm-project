@@ -20,10 +20,8 @@ struct NonEmptyFunctionObject {
   bool operator()() const; // not defined
 };
 
-void test() {
-  using ResultWithEmptyFuncObject = decltype(std::not_fn<std::false_type{}>());
-  static_assert(std::is_empty_v<ResultWithEmptyFuncObject>);
+using ResultWithEmptyFuncObject = decltype(std::not_fn<std::false_type{}>());
+static_assert(std::is_empty_v<ResultWithEmptyFuncObject>);
 
-  using ResultWithNotEmptyFuncObject = decltype(std::not_fn<NonEmptyFunctionObject{}>());
-  static_assert(std::is_empty_v<ResultWithNotEmptyFuncObject>);
-}
+using ResultWithNotEmptyFuncObject = decltype(std::not_fn<NonEmptyFunctionObject{}>());
+static_assert(std::is_empty_v<ResultWithNotEmptyFuncObject>);
