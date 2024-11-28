@@ -1,23 +1,23 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefix=CI -check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefix=VI-NOXNACK -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=kaveri | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-xnack | FileCheck -check-prefix=VI-NOXNACK -check-prefix=GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-xnack | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=-xnack | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=+xnack | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=+xnack | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,HSA-VI-NOXNACK,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck -check-prefixes=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack | FileCheck -check-prefixes=VI-NOXNACK,HSA-VI-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK,GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX9-ARCH-FLAT,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-XNACK,GFX9-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch | FileCheck -check-prefixes=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,-xnack | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX9-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,+xnack | FileCheck -check-prefixes=HSA-VI-XNACK,GFX9-ARCH-FLAT,GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX10-ARCH-FLAT,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-XNACK,GFX10-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch | FileCheck -check-prefixes=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,-xnack | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX10-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,+xnack | FileCheck -check-prefixes=HSA-VI-XNACK,GFX10-ARCH-FLAT,GCN %s
 
 ; GCN-LABEL: {{^}}no_vcc_no_flat:
 

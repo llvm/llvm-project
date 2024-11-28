@@ -113,16 +113,16 @@ define {<vscale x 64 x i1>, <vscale x 64 x i1>} @vector_deinterleave_nxv64i1_nxv
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    vmerge.vim v16, v24, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v24, 1, v0
+; CHECK-NEXT:    vmerge.vim v24, v24, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v24, v16, 0
-; CHECK-NEXT:    vnsrl.wi v28, v8, 0
+; CHECK-NEXT:    vnsrl.wi v8, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v0, v16, 8
-; CHECK-NEXT:    vnsrl.wi v4, v8, 8
+; CHECK-NEXT:    vnsrl.wi v12, v24, 0
+; CHECK-NEXT:    vnsrl.wi v4, v24, 8
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmsne.vi v9, v24, 0
+; CHECK-NEXT:    vmsne.vi v16, v8, 0
 ; CHECK-NEXT:    vmsne.vi v8, v0, 0
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    ret
 %retval = call {<vscale x 64 x i1>, <vscale x 64 x i1>} @llvm.vector.deinterleave2.nxv128i1(<vscale x 128 x i1> %vec)
 ret {<vscale x 64 x i1>, <vscale x 64 x i1>} %retval
@@ -134,8 +134,8 @@ define {<vscale x 64 x i8>, <vscale x 64 x i8>} @vector_deinterleave_nxv64i8_nxv
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
-; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v0, v24, 8
+; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v4, v16, 8
 ; CHECK-NEXT:    vmv8r.v v16, v0
 ; CHECK-NEXT:    ret
@@ -149,8 +149,8 @@ define {<vscale x 32 x i16>, <vscale x 32 x i16>} @vector_deinterleave_nxv32i16_
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
-; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v0, v24, 16
+; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v4, v16, 16
 ; CHECK-NEXT:    vmv8r.v v16, v0
 ; CHECK-NEXT:    ret
@@ -161,14 +161,14 @@ ret {<vscale x 32 x i16>, <vscale x 32 x i16>} %retval
 define {<vscale x 16 x i32>, <vscale x 16 x i32>} @vector_deinterleave_nxv16i32_nxvv32i32(<vscale x 32 x i32> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv16i32_nxvv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v24, v8, 0
-; CHECK-NEXT:    vnsrl.wx v4, v16, a0
-; CHECK-NEXT:    vnsrl.wx v0, v8, a0
-; CHECK-NEXT:    vnsrl.wi v28, v16, 0
-; CHECK-NEXT:    vmv8r.v v8, v24
-; CHECK-NEXT:    vmv8r.v v16, v0
+; CHECK-NEXT:    vnsrl.wx v20, v24, a0
+; CHECK-NEXT:    vnsrl.wx v16, v8, a0
+; CHECK-NEXT:    vnsrl.wi v0, v8, 0
+; CHECK-NEXT:    vnsrl.wi v4, v24, 0
+; CHECK-NEXT:    vmv8r.v v8, v0
 ; CHECK-NEXT:    ret
 %retval = call {<vscale x 16 x i32>, <vscale x 16 x i32>} @llvm.vector.deinterleave2.nxv32i32(<vscale x 32 x i32> %vec)
 ret {<vscale x 16 x i32>, <vscale x 16 x i32>} %retval
@@ -390,8 +390,8 @@ define {<vscale x 32 x bfloat>, <vscale x 32 x bfloat>} @vector_deinterleave_nxv
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
-; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v0, v24, 16
+; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v4, v16, 16
 ; CHECK-NEXT:    vmv8r.v v16, v0
 ; CHECK-NEXT:    ret
@@ -405,8 +405,8 @@ define {<vscale x 32 x half>, <vscale x 32 x half>} @vector_deinterleave_nxv32f1
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
-; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v0, v24, 16
+; CHECK-NEXT:    vnsrl.wi v12, v16, 0
 ; CHECK-NEXT:    vnsrl.wi v4, v16, 16
 ; CHECK-NEXT:    vmv8r.v v16, v0
 ; CHECK-NEXT:    ret
@@ -417,14 +417,14 @@ ret {<vscale x 32 x half>, <vscale x 32 x half>} %retval
 define {<vscale x 16 x float>, <vscale x 16 x float>} @vector_deinterleave_nxv16f32_nxv32f32(<vscale x 32 x float> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv16f32_nxv32f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v24, v8, 0
-; CHECK-NEXT:    vnsrl.wx v4, v16, a0
-; CHECK-NEXT:    vnsrl.wx v0, v8, a0
-; CHECK-NEXT:    vnsrl.wi v28, v16, 0
-; CHECK-NEXT:    vmv8r.v v8, v24
-; CHECK-NEXT:    vmv8r.v v16, v0
+; CHECK-NEXT:    vnsrl.wx v20, v24, a0
+; CHECK-NEXT:    vnsrl.wx v16, v8, a0
+; CHECK-NEXT:    vnsrl.wi v0, v8, 0
+; CHECK-NEXT:    vnsrl.wi v4, v24, 0
+; CHECK-NEXT:    vmv8r.v v8, v0
 ; CHECK-NEXT:    ret
 %retval = call {<vscale x 16 x float>, <vscale x 16 x float>} @llvm.vector.deinterleave2.nxv32f32(<vscale x 32 x float> %vec)
 ret  {<vscale x 16 x float>, <vscale x 16 x float>} %retval

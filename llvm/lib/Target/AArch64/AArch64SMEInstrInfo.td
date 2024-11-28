@@ -876,7 +876,7 @@ defm FMLA_VG2_M2ZZI_H : sme2p1_multi_vec_array_vg2_index_16b<"fmla", 0b00, 0b100
 defm FMLA_VG4_M4ZZI_H : sme2p1_multi_vec_array_vg4_index_16b<"fmla", 0b000, ZZZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_lane_vg1x4>;
 defm FMLA_VG2_M2ZZ_H :  sme2_dot_mla_add_sub_array_vg2_single<"fmla", 0b0011100, MatrixOp16, ZZ_h, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_single_vg1x2>;
 defm FMLA_VG4_M4ZZ_H :  sme2_dot_mla_add_sub_array_vg4_single<"fmla", 0b0111100, MatrixOp16, ZZZZ_h, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_single_vg1x4>;
-defm FMLA_VG2_M2Z4Z_H : sme2_dot_mla_add_sub_array_vg2_multi<"fmla", 0b0100001, MatrixOp16, ZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmla_vg1x2>;
+defm FMLA_VG2_M2Z2Z_H : sme2_dot_mla_add_sub_array_vg2_multi<"fmla", 0b0100001, MatrixOp16, ZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmla_vg1x2>;
 defm FMLA_VG4_M4Z4Z_H : sme2_dot_mla_add_sub_array_vg4_multi<"fmla", 0b0100001, MatrixOp16, ZZZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmla_vg1x4>;
 
 defm FMLS_VG2_M2ZZI_H : sme2p1_multi_vec_array_vg2_index_16b<"fmls", 0b00, 0b101, ZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmls_lane_vg1x2>;
@@ -884,7 +884,7 @@ defm FMLS_VG4_M4ZZI_H : sme2p1_multi_vec_array_vg4_index_16b<"fmls", 0b001, ZZZZ
 defm FMLS_VG2_M2ZZ_H :  sme2_dot_mla_add_sub_array_vg2_single<"fmls", 0b0011101, MatrixOp16, ZZ_h, ZPR4b16, nxv8f16, int_aarch64_sme_fmls_single_vg1x2>;
 defm FMLS_VG4_M4ZZ_H :  sme2_dot_mla_add_sub_array_vg4_single<"fmls", 0b0111101, MatrixOp16, ZZZZ_h, ZPR4b16, nxv8f16, int_aarch64_sme_fmls_single_vg1x4>;
 defm FMLS_VG2_M2Z2Z_H : sme2_dot_mla_add_sub_array_vg2_multi<"fmls", 0b0100011, MatrixOp16, ZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmls_vg1x2>;
-defm FMLS_VG4_M4Z2Z_H : sme2_dot_mla_add_sub_array_vg4_multi<"fmls", 0b0100011, MatrixOp16, ZZZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmls_vg1x4>;
+defm FMLS_VG4_M4Z4Z_H : sme2_dot_mla_add_sub_array_vg4_multi<"fmls", 0b0100011, MatrixOp16, ZZZZ_h_mul_r, nxv8f16, int_aarch64_sme_fmls_vg1x4>;
 
 defm FCVT_2ZZ_H  : sme2p1_fp_cvt_vector_vg2_single<"fcvt", 0b0>;
 defm FCVTL_2ZZ_H : sme2p1_fp_cvt_vector_vg2_single<"fcvtl", 0b1>;

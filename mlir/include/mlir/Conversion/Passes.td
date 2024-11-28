@@ -22,12 +22,20 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
     This is a generic pass to convert to LLVM, it uses the
     `ConvertToLLVMPatternInterface` dialect interface to delegate to dialects
     the injection of conversion patterns.
+
+    If `dynamic` is set to `true`, the pass will look for
+    `ConvertToLLVMAttrInterface` attributes and use them to further configure
+    the conversion process. This option also uses the `DataLayoutAnalysis`
+    analysis to configure the type converter. Enabling this option incurs in
+    extra overhead.
   }];
 
   let constructor = "mlir::createConvertToLLVMPass()";
   let options = [
     ListOption<"filterDialects", "filter-dialects", "std::string",
                "Test conversion patterns of only the specified dialects">,
+    Option<"useDynamic", "dynamic", "bool", "false",
+           "Use op conversion attributes to configure the conversion">,
   ];
 }
 
@@ -543,10 +551,7 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleOp"> {
   let summary =
     "Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations";
-  let dependentDialects = [
-    "LLVM::LLVMDialect",
-    "spirv::SPIRVDialect",
-  ];
+  let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",

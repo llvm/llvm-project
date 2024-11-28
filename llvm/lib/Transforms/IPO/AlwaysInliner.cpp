@@ -34,7 +34,8 @@ bool AlwaysInlineImpl(
     Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<AAResults &(Function &)> GetAAR,
-    function_ref<BlockFrequencyInfo &(Function &)> GetBFI) {
+    function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+    function_ref<BlockFrequencyInfo *(Function &)> GetCachedBFI) {
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedComdatFunctions;
@@ -61,9 +62,11 @@ bool AlwaysInlineImpl(
       DebugLoc DLoc = CB->getDebugLoc();
       BasicBlock *Block = CB->getParent();
 
-      InlineFunctionInfo IFI(GetAssumptionCache, &PSI,
-                             GetBFI ? &GetBFI(*Caller) : nullptr,
-                             GetBFI ? &GetBFI(F) : nullptr);
+      // Only update CallerBFI if already available. The CallerBFI update
+      // requires CalleeBFI.
+      BlockFrequencyInfo *CallerBFI = GetCachedBFI(*Caller);
+      InlineFunctionInfo IFI(GetAssumptionCache, &PSI, CallerBFI,
+                             CallerBFI ? &GetBFI(F) : nullptr);
 
       InlineResult Res = InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
                                         &GetAAR(F), InsertLifetime);
@@ -133,9 +136,12 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
       return getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     };
+    auto GetCachedBFI = [](Function &) -> BlockFrequencyInfo * {
+      return nullptr;
+    };
 
     return AlwaysInlineImpl(M, InsertLifetime, PSI, GetAssumptionCache, GetAAR,
-                            /*GetBFI*/ nullptr);
+                            /*GetBFI=*/nullptr, GetCachedBFI);
   }
 
   static char ID; // Pass identification, replacement for typeid
@@ -172,13 +178,16 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
     return FAM.getResult<BlockFrequencyAnalysis>(F);
   };
+  auto GetCachedBFI = [&](Function &F) -> BlockFrequencyInfo * {
+    return FAM.getCachedResult<BlockFrequencyAnalysis>(F);
+  };
   auto GetAAR = [&](Function &F) -> AAResults & {
     return FAM.getResult<AAManager>(F);
   };
   auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
 
   bool Changed = AlwaysInlineImpl(M, InsertLifetime, PSI, GetAssumptionCache,
-                                  GetAAR, GetBFI);
+                                  GetAAR, GetBFI, GetCachedBFI);
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

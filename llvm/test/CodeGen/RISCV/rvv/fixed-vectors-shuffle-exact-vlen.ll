@@ -57,8 +57,8 @@ define <4 x i64> @m2_pair_swap_vl4(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v11, v9, 1
-; CHECK-NEXT:    vslidedown.vi v10, v8, 1
 ; CHECK-NEXT:    vslideup.vi v11, v9, 1
+; CHECK-NEXT:    vslidedown.vi v10, v8, 1
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret

@@ -1,5 +1,5 @@
 // clang-format off
-// REQUIRES: system-windows
+// REQUIRES: target-windows
 
 // RUN: %build -o %t.exe -- %s
 // RUN: %lldb -f %t.exe -s \

@@ -61,10 +61,10 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
   // the return. Ignore following attributes because they don't affect the
   // call sequence.
   AttrBuilder CallerAttrs(F.getContext(), F.getAttributes().getRetAttrs());
-  for (const auto &Attr :
-       {Attribute::Alignment, Attribute::Dereferenceable,
-        Attribute::DereferenceableOrNull, Attribute::NoAlias,
-        Attribute::NonNull, Attribute::NoUndef, Attribute::Range})
+  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
+                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
+                           Attribute::NonNull, Attribute::NoUndef,
+                           Attribute::Range, Attribute::NoFPClass})
     CallerAttrs.removeAttribute(Attr);
 
   if (CallerAttrs.hasAttributes())
@@ -3723,6 +3723,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
                                    KnownZero, TLO, Depth + 1))
       return true;
+
+    if (!DemandedElts.isAllOnes())
+      if (SDValue NewOp = SimplifyMultipleUseDemandedVectorElts(
+              Op.getOperand(0), DemandedElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp));
 
     if (Op.getOpcode() == ISD::ZERO_EXTEND) {
       // zext(undef) upper bits are guaranteed to be zero.

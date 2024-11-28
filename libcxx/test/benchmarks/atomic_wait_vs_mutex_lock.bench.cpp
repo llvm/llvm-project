@@ -9,8 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <atomic>
+#include <cstdint>
 #include <mutex>
-#include <numeric>
 #include <stop_token>
 #include <thread>
 

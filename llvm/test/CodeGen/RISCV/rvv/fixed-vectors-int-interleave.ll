@@ -53,9 +53,9 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; V128-NEXT:    vid.v v10
+; V128-NEXT:    vid.v v9
 ; V128-NEXT:    vmv.v.i v0, 10
-; V128-NEXT:    vsrl.vi v14, v10, 1
+; V128-NEXT:    vsrl.vi v14, v9, 1
 ; V128-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; V128-NEXT:    vrgatherei16.vv v10, v8, v14
 ; V128-NEXT:    vrgatherei16.vv v10, v12, v14, v0.t

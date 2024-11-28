@@ -112,11 +112,11 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v24, v16, v0.t
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v24, 16
 ; CHECK-NEXT:    ret
   %v = call <32 x float> @llvm.vp.fptrunc.v32f64.v32f32(<32 x double> %a, <32 x i1> %m, i32 %vl)
