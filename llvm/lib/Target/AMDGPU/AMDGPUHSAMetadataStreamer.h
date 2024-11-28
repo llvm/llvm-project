@@ -160,6 +160,10 @@ protected:
 public:
   MetadataStreamerMsgPackV6() = default;
   ~MetadataStreamerMsgPackV6() = default;
+#if LLPC_BUILD_NPI
+
+  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
+#endif /* LLPC_BUILD_NPI */
 };
 
 } // end namespace HSAMD

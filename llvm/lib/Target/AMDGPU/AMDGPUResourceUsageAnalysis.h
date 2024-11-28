@@ -31,6 +31,9 @@ public:
   struct SIFunctionResourceInfo {
     // Track the number of explicitly used VGPRs. Special registers reserved at
     // the end are tracked separately.
+#if LLPC_BUILD_NPI
+    // NumVGPR is the wave-private number of VGPRs, it excludes shared VGPRs.
+#endif /* LLPC_BUILD_NPI */
     int32_t NumVGPR = 0;
     int32_t NumAGPR = 0;
     int32_t NumExplicitSGPR = 0;

@@ -486,6 +486,16 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
     Kern[".workgroup_processor_mode"] =
         Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 
+#if LLPC_BUILD_NPI
+  // TODO-GFX13: Properly check for CodeObjectVersion
+  if (STM.hasVGPRIndexingRegisters()) {
+    Kern[".enable_wavegroup"] = AMDGPU::getWavegroupEnable(MF.getFunction());
+    DelayedExprs->assignDocNode(Kern[".laneshared_segment_fixed_size"],
+                                msgpack::Type::UInt,
+                                ProgramInfo.LaneSharedSegmentSize);
+  }
+
+#endif /* LLPC_BUILD_NPI */
   // FIXME: The metadata treats the minimum as 16?
   Kern[".kernarg_segment_align"] =
       Kern.getDocument()->getNode(std::max(Align(4), MaxKernArgAlign).value());
@@ -715,6 +725,37 @@ void MetadataStreamerMsgPackV6::emitVersion() {
   Version.push_back(Version.getDocument()->getNode(VersionMajorV6));
   Version.push_back(Version.getDocument()->getNode(VersionMinorV6));
   getRootMetadata("amdhsa.version") = Version;
+#if LLPC_BUILD_NPI
+}
+
+void MetadataStreamerMsgPackV6::emitKernelAttrs(const Function &Func,
+                                                msgpack::MapDocNode Kern) {
+  MetadataStreamerMsgPackV5::emitKernelAttrs(Func, Kern);
+
+  // .cluster_dims_*
+  {
+    auto Attr = Func.getFnAttribute("amdgpu-cluster-dims");
+    if (Attr.isValid()) {
+      auto AttrStr = Attr.getValueAsString();
+      SmallVector<StringRef, 3> ClusterDims;
+      AttrStr.split(ClusterDims, ',');
+      assert(ClusterDims.size() == 3 && "expect 3d value");
+
+      // TODO: We can't use getAsInteger for now because it doesn't use the
+      // length of a slice as end mark. Instead, it reads all the way to the end
+      // of a string.
+      auto ClusterDimsNode = HSAMetadataDoc->getArrayNode();
+      ClusterDimsNode.push_back(
+          Kern.getDocument()->getNode(std::stoi(ClusterDims[0].str())));
+      ClusterDimsNode.push_back(
+          Kern.getDocument()->getNode(std::stoi(ClusterDims[1].str())));
+      ClusterDimsNode.push_back(
+          Kern.getDocument()->getNode(std::stoi(ClusterDims[2].str())));
+
+      Kern[".cluster_dims"] = ClusterDimsNode;
+    }
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 } // end namespace AMDGPU::HSAMD

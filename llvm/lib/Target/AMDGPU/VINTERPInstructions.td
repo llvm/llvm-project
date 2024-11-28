@@ -44,7 +44,11 @@ class VINTERPe_gfx11 <bits<7> op, VOPProfile P> : VINTERPe<P> {
   let Inst{22-16} = op;
 }
 
+#ifdef LLPC_BUILD_NPI
+class VINTERPe_gfx12_gfx13 <bits<7> op, VOPProfile P> : VINTERPe<P> {
+#else /* LLPC_BUILD_NPI */
 class VINTERPe_gfx12 <bits<7> op, VOPProfile P> : VINTERPe<P> {
+#endif /* LLPC_BUILD_NPI */
   let Inst{20-16} = op{4-0};
 }
 
@@ -219,22 +223,55 @@ multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName> {
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     def _gfx12 :
       VINTERP_Real<ps, SIEncodingFamily.GFX12, asmName>,
+#ifdef LLPC_BUILD_NPI
+      VINTERPe_gfx12_gfx13<op, ps.Pfl>;
+#else /* LLPC_BUILD_NPI */
       VINTERPe_gfx12<op, ps.Pfl>;
+#endif /* LLPC_BUILD_NPI */
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass VINTERP_Real_gfx13 <bits<7> op, string asmName> {
+  defvar ps = !cast<VOP3_Pseudo>(NAME);
+  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" #
+                           !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
+    def _gfx13 :
+      VINTERP_Real<ps, SIEncodingFamily.GFX13, asmName>,
+      VINTERPe_gfx12_gfx13<op, ps.Pfl>;
+  }
+#else /* LLPC_BUILD_NPI */
 multiclass VINTERP_Real_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> :
   VINTERP_Real_gfx11<op, asmName>, VINTERP_Real_gfx12<op, asmName>;
 
 multiclass VINTERP_Real_t16_and_fake16_gfx11_gfx12 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> {
   defm _t16:    VINTERP_Real_gfx11_gfx12<op, asmName>;
   defm _fake16: VINTERP_Real_gfx11_gfx12<op, asmName>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass VINTERP_Real_gfx11_gfx12_gfx13 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> :
+  VINTERP_Real_gfx11<op, asmName>, VINTERP_Real_gfx12<op, asmName>, VINTERP_Real_gfx13<op, asmName>;
 
+multiclass VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13 <bits<7> op, string asmName = !cast<VOP3_Pseudo>(NAME).Mnemonic> {
+  defm _t16:    VINTERP_Real_gfx11_gfx12_gfx13<op, asmName>;
+  defm _fake16: VINTERP_Real_gfx11_gfx12_gfx13<op, asmName>;
+}
+#endif /* LLPC_BUILD_NPI */
+
+#ifdef LLPC_BUILD_NPI
+defm V_INTERP_P10_F32_inreg : VINTERP_Real_gfx11_gfx12_gfx13<0x000>;
+defm V_INTERP_P2_F32_inreg : VINTERP_Real_gfx11_gfx12_gfx13<0x001>;
+defm V_INTERP_P10_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x002, "v_interp_p10_f16_f32">;
+defm V_INTERP_P2_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x003, "v_interp_p2_f16_f32">;
+defm V_INTERP_P10_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x004, "v_interp_p10_rtz_f16_f32">;
+defm V_INTERP_P2_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12_gfx13<0x005, "v_interp_p2_rtz_f16_f32">;
+#else /* LLPC_BUILD_NPI */
 defm V_INTERP_P10_F32_inreg : VINTERP_Real_gfx11_gfx12<0x000>;
 defm V_INTERP_P2_F32_inreg : VINTERP_Real_gfx11_gfx12<0x001>;
 defm V_INTERP_P10_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x002, "v_interp_p10_f16_f32">;
 defm V_INTERP_P2_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x003, "v_interp_p2_f16_f32">;
 defm V_INTERP_P10_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x004, "v_interp_p10_rtz_f16_f32">;
 defm V_INTERP_P2_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x005, "v_interp_p2_rtz_f16_f32">;
+#endif /* LLPC_BUILD_NPI */

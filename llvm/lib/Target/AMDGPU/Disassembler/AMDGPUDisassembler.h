@@ -204,6 +204,7 @@ public:
   void convertVINTERPInst(MCInst &MI) const;
   void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
   void convertSDWAInst(MCInst &MI) const;
+  void convertMAIInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;
@@ -218,12 +219,16 @@ public:
     OPW96,
     OPW128,
     OPW160,
+    OPW192,
     OPW256,
     OPW288,
     OPW320,
     OPW352,
     OPW384,
     OPW512,
+#if LLPC_BUILD_NPI
+    OPW576,
+#endif /* LLPC_BUILD_NPI */
     OPW1024,
     OPW16,
     OPWV216,
@@ -242,7 +247,13 @@ public:
                                  AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
+#if LLPC_BUILD_NPI
+  MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
+#endif /* LLPC_BUILD_NPI */
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
+#if LLPC_BUILD_NPI
+  MCOperand decodeLiteral64Constant() const;
+#endif /* LLPC_BUILD_NPI */
 
   MCOperand decodeSrcOp(
       const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
@@ -254,6 +265,13 @@ public:
       unsigned ImmWidth = 0,
       AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
+#if LLPC_BUILD_NPI
+  MCOperand decodeGVGPROp(OpWidthTy OpWidth, unsigned Val) const;
+  MCOperand decodeGSrcVGPROp(OpWidthTy OpWidth, unsigned Val) const;
+  MCOperand decodeGSrcVGPROrZeroOp(OpWidthTy OpWidth, unsigned Val) const;
+  MCOperand decodeGSrcSimpleOp(unsigned Val) const;
+
+#endif /* LLPC_BUILD_NPI */
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
@@ -285,6 +303,12 @@ public:
   bool isGFX11Plus() const;
   bool isGFX12() const;
   bool isGFX12Plus() const;
+#if LLPC_BUILD_NPI
+  bool isGFX1210Plus() const;
+  bool isGFX1210Only() const;
+  bool isGFX13() const;
+  bool isGFX13Plus() const;
+#endif /* LLPC_BUILD_NPI */
 
   bool hasArchitectedFlatScratch() const;
   bool hasKernargPreload() const;

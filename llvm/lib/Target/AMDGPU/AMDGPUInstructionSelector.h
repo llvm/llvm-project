@@ -143,9 +143,15 @@ private:
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
   bool selectBufferLoadLds(MachineInstr &MI) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
+#if LLPC_BUILD_NPI
+  bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
+#else /* LLPC_BUILD_NPI */
   bool selectBVHIntrinsic(MachineInstr &I) const;
+#endif /* LLPC_BUILD_NPI */
   bool selectSMFMACIntrin(MachineInstr &I) const;
+  bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
   bool selectWaveAddress(MachineInstr &I) const;
+  bool selectBITOP3(MachineInstr &I) const;
   bool selectStackRestore(MachineInstr &MI) const;
   bool selectNamedBarrierInit(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
@@ -195,6 +201,12 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsNeg(MachineOperand &Root) const;
+#if LLPC_BUILD_NPI
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsNegs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsNegAbs(MachineOperand &Root) const;
+#endif /* LLPC_BUILD_NPI */
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
@@ -220,8 +232,16 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
+#if LLPC_BUILD_NPI
+  bool selectScaleOffset(MachineOperand &Root, Register &Offset,
+                         bool IsSigned) const;
+#endif /* LLPC_BUILD_NPI */
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
+#if LLPC_BUILD_NPI
+                        int64_t *Offset, bool *ScaleOffset) const;
+#else /* LLPC_BUILD_NPI */
                         int64_t *Offset) const;
+#endif /* LLPC_BUILD_NPI */
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
@@ -242,7 +262,18 @@ private:
   selectScratchOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+#if LLPC_BUILD_NPI
+  selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
+                    bool NeedIOffset = true) const;
+  InstructionSelector::ComplexRendererFns
+#endif /* LLPC_BUILD_NPI */
   selectGlobalSAddr(MachineOperand &Root) const;
+#if LLPC_BUILD_NPI
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrGLC(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
+#endif /* LLPC_BUILD_NPI */
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;
@@ -328,9 +359,40 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
 
   void renderOpSelTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_0_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_0_1(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_1_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_1_1(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderDstSelToOpSelXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
+
+  void renderSrcSelToOpSelXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
+
+  void renderSrcAndDstSelToOpSelXForm_2_0(MachineInstrBuilder &MIB,
+                                          const MachineInstr &MI,
+                                          int OpIdx) const;
+
+  void renderDstSelToOpSel3XFormXForm(MachineInstrBuilder &MIB,
+                                const MachineInstr &MI, int OpIdx) const;
 
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
@@ -364,6 +426,14 @@ private:
 
   void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+#if LLPC_BUILD_NPI
+
+  void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
+
+#endif /* LLPC_BUILD_NPI */
+  void renderScaledMAIIntrinsicOperand(MachineInstrBuilder &MIB,
+                                       const MachineInstr &MI, int OpIdx) const;
 
   bool isInlineImmediate(const APInt &Imm) const;
   bool isInlineImmediate(const APFloat &Imm) const;
@@ -371,6 +441,22 @@ private:
   // Returns true if TargetOpcode::G_AND MachineInstr `MI`'s masking of the
   // shift amount operand's `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const MachineInstr &MI, unsigned ShAmtBits) const;
+#if LLPC_BUILD_NPI
+
+  /// Match a zero extend from a 32-bit value to 64-bits.
+  Register matchZeroExtendFromS32(Register Reg) const;
+  /// Match a sign extend from a 32-bit value to 64-bits.
+  Register matchSignExtendFromS32(Register Reg) const;
+  /// Match a zero extend from a 32-bit value to 64-bits, or \p Reg itself if it
+  /// is 32-bit.
+  Register matchZeroExtendFromS32OrS32(Register Reg) const;
+  /// Match a sign extend from a 32-bit value to 64-bits, or \p Reg itself if it
+  /// is 32-bit.
+  Register matchSignExtendFromS32OrS32(Register Reg) const;
+  /// Match either sign or zero extend depending on the \p IsSigned from a
+  /// 32-bit value to 64-bits, or \p Reg itself if it is 32-bit.
+  Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
+#endif /* LLPC_BUILD_NPI */
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;

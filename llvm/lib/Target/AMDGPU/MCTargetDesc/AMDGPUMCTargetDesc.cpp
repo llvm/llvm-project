@@ -21,9 +21,15 @@
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#if LLPC_BUILD_NPI
+#include "llvm/MC/MCContext.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 #include "llvm/MC/MCInstrAnalysis.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -77,7 +83,22 @@ static MCSubtargetInfo *
 createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (TT.getArch() == Triple::r600)
     return createR600MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
-  return createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  MCSubtargetInfo *STI =
+      createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  // FIXME: We should error for the default target.
+  if (!STI->hasFeature(AMDGPU::FeatureWavefrontSize64) &&
+      !STI->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+    // If there is no default wave size it must be a generation before gfx10,
+    // these have FeatureWavefrontSize64 in their definition already. For gfx10+
+    // set wave32 as a default.
+    STI->ToggleFeature(AMDGPU::isGFX10Plus(*STI)
+                           ? AMDGPU::FeatureWavefrontSize32
+                           : AMDGPU::FeatureWavefrontSize64);
+  }
+
+  return STI;
 }
 
 static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,
@@ -114,8 +135,37 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                  std::move(Emitter));
 }
 
+#if LLPC_BUILD_NPI
+namespace llvm {
+namespace AMDGPU {
+#else /* LLPC_BUILD_NPI */
 namespace {
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
+                                           uint64_t Size,
+                                           uint64_t &Target) const {
+  if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
+    return false;
+
+  int64_t Imm = Inst.getOperand(0).getImm();
+  // Our branches take a simm16.
+  Target = SignExtend64<16>(Imm) * 4 + Addr + Size;
+  return true;
+}
+
+void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
+  if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
+    VgprMSBs = Inst.getOperand(0).getImm();
+  else if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_FRAMES_gfx13)
+    VgprMSBs = Inst.getOperand(0).getImm() >> 8;
+  else if (isTerminator(Inst))
+    VgprMSBs = 0;
+}
+#else /* LLPC_BUILD_NPI */
 class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
 public:
   explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
@@ -134,11 +184,21 @@ public:
     return true;
   }
 };
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+} // end namespace AMDGPU
+} // end namespace llvm
+#else /* LLPC_BUILD_NPI */
 } // end anonymous namespace
+#endif /* LLPC_BUILD_NPI */
 
 static MCInstrAnalysis *createAMDGPUMCInstrAnalysis(const MCInstrInfo *Info) {
+#if LLPC_BUILD_NPI
+  return new AMDGPU::AMDGPUMCInstrAnalysis(Info);
+#else /* LLPC_BUILD_NPI */
   return new AMDGPUMCInstrAnalysis(Info);
+#endif /* LLPC_BUILD_NPI */
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMC() {

@@ -111,6 +111,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v16f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v16f32, MVT::v16i32);
 
+#if LLPC_BUILD_NPI
+  setOperationAction(ISD::LOAD, MVT::v18f32, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v18f32, MVT::v18i32);
+
+#endif /* LLPC_BUILD_NPI */
   setOperationAction(ISD::LOAD, MVT::v32f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v32f32, MVT::v32i32);
 
@@ -276,6 +281,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::v16f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::v16f32, MVT::v16i32);
 
+#if LLPC_BUILD_NPI
+  setOperationAction(ISD::STORE, MVT::v18f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v18f32, MVT::v18i32);
+
+#endif /* LLPC_BUILD_NPI */
   setOperationAction(ISD::STORE, MVT::v32f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::v32f32, MVT::v32i32);
 
@@ -446,18 +456,35 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v5i32,  MVT::v5f32,  MVT::v6i32,  MVT::v6f32,
                       MVT::v7i32,  MVT::v7f32,  MVT::v8i32,  MVT::v8f32,
                       MVT::v9i32,  MVT::v9f32,  MVT::v10i32, MVT::v10f32,
+#if LLPC_BUILD_NPI
+                      MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
+                      MVT::v18i32, MVT::v18f32},
+#else /* LLPC_BUILD_NPI */
                       MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32},
+#endif /* LLPC_BUILD_NPI */
                      Custom);
 
   setOperationAction(
       ISD::EXTRACT_SUBVECTOR,
+#if LLPC_BUILD_NPI
+      {
+       MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,  MVT::v4f32,
+#else /* LLPC_BUILD_NPI */
       {MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,  MVT::v4f32,
+#endif /* LLPC_BUILD_NPI */
        MVT::v4i32,  MVT::v5f32,  MVT::v5i32,  MVT::v6f32,  MVT::v6i32,
        MVT::v7f32,  MVT::v7i32,  MVT::v8f32,  MVT::v8i32,  MVT::v9f32,
        MVT::v9i32,  MVT::v10i32, MVT::v10f32, MVT::v11i32, MVT::v11f32,
+#if LLPC_BUILD_NPI
+       MVT::v12i32, MVT::v12f32, MVT::v16f32, MVT::v16i32, MVT::v18f32,
+       MVT::v18i32, MVT::v32f32, MVT::v32i32, MVT::v2f64,  MVT::v2i64,
+       MVT::v3f64,  MVT::v3i64,  MVT::v4f64,  MVT::v4i64,  MVT::v8f64,
+       MVT::v8i64,  MVT::v16f64, MVT::v16i64, },
+#else /* LLPC_BUILD_NPI */
        MVT::v12i32, MVT::v12f32, MVT::v16i32, MVT::v32f32, MVT::v32i32,
        MVT::v2f64,  MVT::v2i64,  MVT::v3f64,  MVT::v3i64,  MVT::v4f64,
        MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64},
+#endif /* LLPC_BUILD_NPI */
       Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
@@ -507,8 +534,13 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, VT, Custom);
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
+#if LLPC_BUILD_NPI
+      MVT::v2i32, MVT::v3i32,  MVT::v4i32,  MVT::v5i32,  MVT::v6i32, MVT::v7i32,
+      MVT::v9i32, MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v18i32};
+#else /* LLPC_BUILD_NPI */
       MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32, MVT::v6i32, MVT::v7i32,
       MVT::v9i32, MVT::v10i32, MVT::v11i32, MVT::v12i32};
+#endif /* LLPC_BUILD_NPI */
 
   for (MVT VT : VectorIntTypes) {
     // Expand the following operations for the current type by default.
@@ -528,8 +560,13 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   }
 
   static const MVT::SimpleValueType FloatVectorTypes[] = {
+#if LLPC_BUILD_NPI
+      MVT::v2f32, MVT::v3f32,  MVT::v4f32,  MVT::v5f32,  MVT::v6f32, MVT::v7f32,
+      MVT::v9f32, MVT::v10f32, MVT::v11f32, MVT::v12f32, MVT::v18f32};
+#else /* LLPC_BUILD_NPI */
       MVT::v2f32, MVT::v3f32,  MVT::v4f32, MVT::v5f32, MVT::v6f32, MVT::v7f32,
       MVT::v9f32, MVT::v10f32, MVT::v11f32, MVT::v12f32};
+#endif /* LLPC_BUILD_NPI */
 
   for (MVT VT : FloatVectorTypes) {
     setOperationAction(
@@ -580,6 +617,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT, MVT::v12f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v12f32, MVT::v12i32);
 
+#if LLPC_BUILD_NPI
+  setOperationAction(ISD::SELECT, MVT::v18f32, Promote);
+  AddPromotedToType(ISD::SELECT, MVT::v18f32, MVT::v18i32);
+
+#endif /* LLPC_BUILD_NPI */
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
 
@@ -1538,6 +1580,15 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
     // The initializer will anyway get errored out during assembly emission.
     unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
     return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+#if LLPC_BUILD_NPI
+  } else if (G->getAddressSpace() == AMDGPUAS::LANE_SHARED) {
+    // XXX: What does the value of G->getOffset() mean?
+    assert(G->getOffset() == 0 &&
+           "Do not know what to do with an non-zero offset");
+    unsigned Offset =
+        MFI->allocateLaneSharedGlobal(DL, *cast<GlobalVariable>(GV));
+    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+#endif /* LLPC_BUILD_NPI */
   }
   return SDValue();
 }
@@ -2333,7 +2384,7 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   SDValue RHS = Op.getOperand(1);
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue NegOne = DAG.getConstant(-1, DL, VT);
+  SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
 
   if (VT == MVT::i32) {
     if (SDValue Res = LowerDIVREM24(Op, DAG, true))
@@ -3794,7 +3845,11 @@ static SDValue constantFoldBFE(SelectionDAG &DAG, IntTy Src0, uint32_t Offset,
   if (Width + Offset < 32) {
     uint32_t Shl = static_cast<uint32_t>(Src0) << (32 - Offset - Width);
     IntTy Result = static_cast<IntTy>(Shl) >> (32 - Width);
-    return DAG.getConstant(Result, DL, MVT::i32);
+    if constexpr (std::is_signed_v<IntTy>) {
+      return DAG.getSignedConstant(Result, DL, MVT::i32);
+    } else {
+      return DAG.getConstant(Result, DL, MVT::i32);
+    }
   }
 
   return DAG.getConstant(Src0 >> Offset, DL, MVT::i32);
@@ -3978,7 +4033,13 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_rsq_clamp:
+  case Intrinsic::amdgcn_tanh:
+  case Intrinsic::amdgcn_prng_b32: {
+#else /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_rsq_clamp: {
+#endif /* LLPC_BUILD_NPI */
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -5541,6 +5602,9 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUILD_VERTICAL_VECTOR)
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
+#if LLPC_BUILD_NPI
+  NODE_NAME_CASE(PC_ADD_REL_OFFSET64)
+#endif /* LLPC_BUILD_NPI */
   NODE_NAME_CASE(LDS)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
@@ -5576,6 +5640,11 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SBUFFER_LOAD_SHORT)
   NODE_NAME_CASE(SBUFFER_LOAD_USHORT)
   NODE_NAME_CASE(SBUFFER_PREFETCH_DATA)
+#if LLPC_BUILD_NPI
+  NODE_NAME_CASE(BUFFER_DISCARD_B32)
+  NODE_NAME_CASE(BUFFER_DISCARD_B128)
+  NODE_NAME_CASE(BUFFER_DISCARD_B1024)
+#endif /* LLPC_BUILD_NPI */
   NODE_NAME_CASE(BUFFER_STORE)
   NODE_NAME_CASE(BUFFER_STORE_BYTE)
   NODE_NAME_CASE(BUFFER_STORE_SHORT)
@@ -6006,7 +6075,12 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
+#if LLPC_BUILD_NPI
+    case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_tanh: {
+#else /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_rsq_clamp: {
+#endif /* LLPC_BUILD_NPI */
       if (SNaN)
         return true;
 

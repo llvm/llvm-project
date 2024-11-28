@@ -172,11 +172,26 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
 
   // Delete FeatureWavefrontSize32 functions for
   // gfx9 and below targets that don't support the mode.
+#if LLPC_BUILD_NPI
+  // gfx10, gfx11, gfx12 are implied to support both wave32 and 64 features.
+#else /* LLPC_BUILD_NPI */
   // gfx10+ is implied to support both wave32 and 64 features.
+#endif /* LLPC_BUILD_NPI */
   // They are not in the feature set. So, we need a separate check
+#if LLPC_BUILD_NPI
+  if (!ST->supportsWave32() && ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+#else /* LLPC_BUILD_NPI */
   if (ST->getGeneration() < AMDGPUSubtarget::GFX10 &&
       ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+#endif /* LLPC_BUILD_NPI */
     reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize32);
+#if LLPC_BUILD_NPI
+    return true;
+  }
+  // gfx121x only support FeatureWavefrontSize32.
+  if (!ST->supportsWave64() && ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize64);
+#endif /* LLPC_BUILD_NPI */
     return true;
   }
   return false;

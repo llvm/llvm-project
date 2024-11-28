@@ -1,0 +1,226 @@
+#if LLPC_BUILD_NPI
+//===----------- AMDGPUIdxRegAlloc.cpp - Allocate gpr-idx registers -------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// Assign the physical idx-reg for v_load_idx and v_store_idx by
+/// inserting set_gpr_idx_u32 instruction and replace the indexing operand
+//
+//===----------------------------------------------------------------------===//
+
+#include "AMDGPU.h"
+#include "GCNSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/InitializePasses.h"
+
+using namespace llvm;
+
+#define DEBUG_TYPE "amdgpu-idx-reg-alloc"
+
+namespace {
+
+class AMDGPUIdxRegAlloc : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUIdxRegAlloc() : MachineFunctionPass(ID) {
+    initializeAMDGPUIdxRegAllocPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override { return "AMDGPU Set GPR Indices"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+private:
+  bool processMBB(MachineBasicBlock &MBB);
+
+  const MachineRegisterInfo *MRI;
+  const SIInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
+  SmallVector<MachineInstr *, 4> InstrsToErase;
+};
+
+} // End anonymous namespace.
+
+INITIALIZE_PASS(AMDGPUIdxRegAlloc, DEBUG_TYPE, "AMDGPU Set GPR Indices", false,
+                false)
+
+char AMDGPUIdxRegAlloc::ID = 0;
+
+char &llvm::AMDGPUIdxRegAllocID = AMDGPUIdxRegAlloc::ID;
+
+FunctionPass *llvm::createAMDGPUIdxRegAllocPass() {
+  return new AMDGPUIdxRegAlloc();
+}
+
+constexpr int NumIDXReg = 4;
+
+bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
+  // GFX13-TODO:
+  // Idx0 right now is always reserved. In non-wavegroup mode,
+  // Idx0 simply holds constant-zero, perhaps we should
+  // think about flexible usage of idx0 to get better result?
+  struct IdxInfo {
+    MachineInstr *SetIdxMI; // current setter
+    Register IdxSrc;        // its virtual source
+    int UseCnt;             // potential uses of this setter
+    int UseTS;              // time-stamp for the most recent use
+  } IdxInfo[NumIDXReg];
+  // initialize the tracking struct
+  for (int i = 0; i < NumIDXReg; ++i) {
+    IdxInfo[i].SetIdxMI = nullptr;
+    IdxInfo[i].IdxSrc = 0;
+    IdxInfo[i].UseCnt = 0;
+    IdxInfo[i].UseTS = 0;
+  }
+  // iterate the MBB bottom-up from the exit to the entry
+  int TimeStamp = 0;
+  bool Changed = false;
+  for (MachineBasicBlock::reverse_instr_iterator I = MBB.instr_rbegin(),
+                                                 E = MBB.instr_rend();
+       I != E; ++I) {
+    MachineInstr &MI = (*I);
+    if (MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
+        MI.getOpcode() == AMDGPU::V_STORE_IDX) {
+      auto IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
+      auto SRegIdx = IdxOpnd->getReg();
+      auto DefMI = MRI->getVRegDef(SRegIdx);
+      Changed = true;
+      // first, try to find an existing setter
+      bool Found = false;
+      for (int i = 1; !Found && i < NumIDXReg; ++i) {
+        if (IdxInfo[i].IdxSrc == SRegIdx) {
+          // find an active setter
+          assert(IdxInfo[i].SetIdxMI);
+          // simply redirect the indexing operand to the setter
+          MachineOperand &NewOp = IdxInfo[i].SetIdxMI->getOperand(0);
+          if (MI.isBundled())
+            updateReplacedRegInBundle(MI, NewOp, *IdxOpnd, TRI);
+          IdxOpnd->setReg(NewOp.getReg());
+          // The def-instr can become dead due to const-folding
+          if (MRI->use_nodbg_empty(SRegIdx)) {
+            InstrsToErase.push_back(DefMI);
+          }
+          IdxInfo[i].UseCnt--;
+          IdxInfo[i].UseTS = TimeStamp;
+          Found = true;
+        }
+      }
+      if (Found)
+        continue;
+      // second, try to find a free idx-reg
+      int FreeIdx = 0;
+      for (int i = 1; !FreeIdx && i < NumIDXReg; ++i) {
+        if (IdxInfo[i].SetIdxMI == nullptr) {
+          FreeIdx = i;
+        }
+      }
+      if (!FreeIdx) {
+        // pick one of the existing setters:
+        // first, try to pick one without any remaining use;
+        // Second, try to pick one with the minimum TimeStamp;
+        // move that setter below this use, then create a new setter for
+        // this use
+        FreeIdx = 1;
+        int MinTS = IdxInfo[FreeIdx].UseTS;
+        for (int i = 1; i < NumIDXReg; ++i) {
+          // UseCnt is not accurate in a Bundle, but UseTS is still useful
+          if (IdxInfo[i].UseCnt <= 0 && !MI.isBundled()) {
+            FreeIdx = i;
+            break;
+          } else if (IdxInfo[i].UseTS < MinTS) {
+            FreeIdx = i;
+            MinTS = IdxInfo[i].UseTS;
+          }
+        }
+        IdxInfo[FreeIdx].SetIdxMI->removeFromParent();
+        MBB.insertAfterBundle(MachineBasicBlock::instr_iterator(&MI),
+                              IdxInfo[FreeIdx].SetIdxMI);
+      }
+      // Create idx[i] = s_set_gpr_idx_u32 SRegIdx (or its imm-src)
+      auto InsertPt = MBB.getFirstNonPHI();
+      if (DefMI->getParent() == &MBB && !DefMI->isPHI()) {
+        InsertPt = ++(DefMI->getIterator());
+      }
+      Register RegList[] = {AMDGPU::IDX0, AMDGPU::IDX1, AMDGPU::IDX2,
+                            AMDGPU::IDX3};
+      auto Setter =
+          BuildMI(MBB, InsertPt, DefMI->getDebugLoc(),
+                  TII->get(AMDGPU::S_SET_GPR_IDX_U32), RegList[FreeIdx]);
+      if (DefMI->getOpcode() == AMDGPU::S_MOV_B32 &&
+          DefMI->getOperand(1).isImm())
+        // Fold the constant source from the def to the setter
+        Setter.addImm(DefMI->getOperand(1).getImm());
+      else
+        Setter.addReg(SRegIdx);
+
+      IdxInfo[FreeIdx].SetIdxMI = Setter;
+      IdxInfo[FreeIdx].IdxSrc = SRegIdx;
+      IdxInfo[FreeIdx].UseTS = TimeStamp;
+      MachineOperand &NewOp = IdxInfo[FreeIdx].SetIdxMI->getOperand(0);
+      if (MI.isBundled())
+        updateReplacedRegInBundle(MI, NewOp, *IdxOpnd, TRI);
+      IdxOpnd->setReg(NewOp.getReg());
+      // The def-instr can become dead due to const-folding
+      if (MRI->use_nodbg_empty(SRegIdx)) {
+        InstrsToErase.push_back(DefMI);
+      }
+      // Count the remaining local-uses of the virtual-sreg-idx
+      int Cnt = 0;
+      for (MachineInstr &Use : MRI->use_instructions(SRegIdx)) {
+        if (Use.getParent() == &MBB &&
+            (Use.getOpcode() == AMDGPU::V_LOAD_IDX ||
+             Use.getOpcode() == AMDGPU::V_STORE_IDX) &&
+            TII->getNamedOperand(Use, AMDGPU::OpName::idx)->getReg() ==
+                SRegIdx) {
+          Cnt++;
+        }
+      }
+      IdxInfo[FreeIdx].UseCnt = Cnt;
+    } else if (MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
+      // clears the entry when we meet the setter
+      for (int i = 0; i < NumIDXReg; ++i) {
+        if (IdxInfo[i].SetIdxMI == &MI) {
+          IdxInfo[i].SetIdxMI = nullptr;
+          IdxInfo[i].IdxSrc = 0;
+          IdxInfo[i].UseTS = TimeStamp;
+          break;
+        }
+      }
+    }
+    TimeStamp++;
+  }
+  return Changed;
+}
+
+bool AMDGPUIdxRegAlloc::runOnMachineFunction(MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  if (!ST.hasVGPRIndexingRegisters())
+    return false;
+
+  TII = ST.getInstrInfo();
+  MRI = &MF.getRegInfo();
+  TRI = &TII->getRegisterInfo();
+
+  bool Changed = false;
+  InstrsToErase.clear();
+  for (MachineBasicBlock &MBB : MF)
+    Changed |= processMBB(MBB);
+
+  for (auto I : InstrsToErase)
+    I->eraseFromParent();
+
+  return Changed;
+}
+#endif /* LLPC_BUILD_NPI */

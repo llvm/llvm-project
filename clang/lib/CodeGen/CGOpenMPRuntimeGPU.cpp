@@ -2330,6 +2330,14 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
+#if LLPC_BUILD_NPI
+      case OffloadArch::GFX1210:
+      case OffloadArch::GFX1211:
+      case OffloadArch::GFX12_1_GENERIC:
+      case OffloadArch::GFX1300:
+      case OffloadArch::GFX1301:
+      case OffloadArch::GFX1302:
+#endif /* LLPC_BUILD_NPI */
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::UNUSED:

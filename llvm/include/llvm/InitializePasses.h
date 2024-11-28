@@ -65,12 +65,16 @@ void initializeBranchRelaxationPass(PassRegistry &);
 void initializeBreakCriticalEdgesPass(PassRegistry &);
 void initializeBreakFalseDepsPass(PassRegistry &);
 void initializeCanonicalizeFreezeInLoopsPass(PassRegistry &);
+#if LLPC_BUILD_NPI
+void initializeCFGPrinterLegacyPassPass(PassRegistry &);
+#else /* LLPC_BUILD_NPI */
 void initializeCFGPrinterLegacyPassPass(PassRegistry&);
 void initializeCFGSimplifyPassPass(PassRegistry&);
 void initializeCFGuardPass(PassRegistry&);
 void initializeCFGuardLongjmpPass(PassRegistry&);
 void initializeCFIFixupPass(PassRegistry&);
 void initializeCFIInstrInserterPass(PassRegistry&);
+#endif /* LLPC_BUILD_NPI */
 void initializeCFGSimplifyPassPass(PassRegistry &);
 void initializeCFGuardPass(PassRegistry &);
 void initializeCFGuardLongjmpPass(PassRegistry &);
@@ -108,7 +112,7 @@ void initializeEarlyIfConverterLegacyPass(PassRegistry &);
 void initializeEarlyIfPredicatorPass(PassRegistry &);
 void initializeEarlyMachineLICMPass(PassRegistry &);
 void initializeEarlyTailDuplicateLegacyPass(PassRegistry &);
-void initializeEdgeBundlesPass(PassRegistry &);
+void initializeEdgeBundlesWrapperLegacyPass(PassRegistry &);
 void initializeEHContGuardCatchretPass(PassRegistry &);
 void initializeExpandLargeFpConvertLegacyPassPass(PassRegistry &);
 void initializeExpandLargeDivRemLegacyPassPass(PassRegistry &);

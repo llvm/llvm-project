@@ -163,6 +163,10 @@ CUDAFunctionTarget SemaCUDA::IdentifyTarget(const FunctionDecl *D,
 SemaCUDA::CUDAVariableTarget SemaCUDA::IdentifyTarget(const VarDecl *Var) {
   if (Var->hasAttr<HIPManagedAttr>())
     return CVT_Unified;
+#if LLPC_BUILD_NPI
+  if (Var->hasAttr<HIPLaneSharedAttr>())
+    return CVT_Device;
+#endif /* LLPC_BUILD_NPI */
   // Only constexpr and const variabless with implicit constant attribute
   // are emitted on both sides. Such variables are promoted to device side
   // only if they have static constant intializers on device side.

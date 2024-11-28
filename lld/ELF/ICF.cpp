@@ -542,7 +542,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     });
   } while (repeat);
 
-  Log(ctx) << "ICF needed " << Twine(cnt) << " iterations";
+  Log(ctx) << "ICF needed " << cnt << " iterations";
 
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {

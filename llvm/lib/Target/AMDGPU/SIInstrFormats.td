@@ -55,6 +55,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   // VINTERP instruction format.
   field bit VINTERP = 0;
 
+#ifdef LLPC_BUILD_NPI
+  field bit VOPD3 = 0;
+
+#endif /* LLPC_BUILD_NPI */
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -68,6 +72,11 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit Gather4 = 0;
 
+#ifdef LLPC_BUILD_NPI
+  // wait count to manage tensor loads/stores.
+  field bit TENSOR_CNT = 0;
+
+#endif /* LLPC_BUILD_NPI */
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
   // SMEM instructions like the cache flush ones.
@@ -77,6 +86,11 @@ class InstSI <dag outs, dag ins, string asm = "",
   // instruction size.
   field bit FixedSize = 0;
 
+#ifdef LLPC_BUILD_NPI
+  // wait count to manage asynchronous loads/stores.
+  field bit ASYNC_CNT = 0;
+
+#endif /* LLPC_BUILD_NPI */
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
   field bit VOP3_OPSEL = 0;
@@ -189,6 +203,9 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{28} = LDSDIR;
   let TSFlags{29} = VINTERP;
+#ifdef LLPC_BUILD_NPI
+  let TSFlags{30} = VOPD3;
+#endif /* LLPC_BUILD_NPI */
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
@@ -198,14 +215,22 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{36} = DisableWQM;
   let TSFlags{37} = Gather4;
 
+#ifdef LLPC_BUILD_NPI
+  let TSFlags{38} = TENSOR_CNT;
+#else /* LLPC_BUILD_NPI */
   // Reserved, must be 0.
   let TSFlags{38} = 0;
+#endif /* LLPC_BUILD_NPI */
 
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
 
+#ifdef LLPC_BUILD_NPI
+  let TSFlags{41} = ASYNC_CNT;
+#else /* LLPC_BUILD_NPI */
   // Reserved, must be 0.
   let TSFlags{41} = 0;
+#endif /* LLPC_BUILD_NPI */
 
   let TSFlags{42} = VOP3_OPSEL;
 
@@ -300,21 +325,46 @@ class Enc96 {
   int Size = 12;
 }
 
+class Enc128 {
+  field bits<128> Inst;
+  int Size = 16;
+}
+
 def CPolBit {
   int GLC = 0;
   int SLC = 1;
   int DLC = 2;
   int SCC = 4;
+#ifdef LLPC_BUILD_NPI
+  int NV = 5;
+  int SCAL = 9;
+#endif /* LLPC_BUILD_NPI */
 }
 
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
 
+#ifdef LLPC_BUILD_NPI
+def VOPDstOperand_VGPR_32 : VOPDstOperand <VGPR_32_STAGING> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
+def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_STAGING_Lo128> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
+def VOPDstOperand_t16 : VOPDstOperand <VGPR_16_STAGING> {
+#else /* LLPC_BUILD_NPI */
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
+#endif /* LLPC_BUILD_NPI */
   let EncoderMethod = "getMachineOpValueT16";
   let DecoderMethod = "DecodeVGPR_16RegisterClass";
 }
 
+#ifdef LLPC_BUILD_NPI
+def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_STAGING_Lo128> {
+#else /* LLPC_BUILD_NPI */
 def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+#endif /* LLPC_BUILD_NPI */
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
 }
@@ -449,7 +499,11 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   bits<4> dmask;
   bits<8> vdata;
   bits<9> rsrc;
+#ifdef LLPC_BUILD_NPI
+  bits<9> cpol;
+#else /* LLPC_BUILD_NPI */
   bits<6> cpol;
+#endif /* LLPC_BUILD_NPI */
   bits<8> vaddr0;
   bits<8> vaddr1;
   bits<8> vaddr2;
@@ -459,6 +513,9 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   let Inst{4} = r128;
   let Inst{5} = d16;
   let Inst{6} = a16;
+#ifdef LLPC_BUILD_NPI
+  let Inst{7} = cpol{5}; // nv
+#endif /* LLPC_BUILD_NPI */
   let Inst{21-14} = op;
   let Inst{25-22} = dmask;
   let Inst{39-32} = vdata;

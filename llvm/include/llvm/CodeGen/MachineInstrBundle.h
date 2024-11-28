@@ -74,6 +74,17 @@ inline MachineBasicBlock::const_instr_iterator getBundleEnd(
   return I;
 }
 
+#if LLPC_BUILD_NPI
+/// When an operand in a Bundled instruction is replaced, we must update the
+/// operand in the BUNDLE instruction as well.
+bool updateReplacedRegInBundle(MachineInstr &BundledMI,
+                               const MachineOperand &NewOp,
+                               const MachineOperand &OldOp,
+                               const TargetRegisterInfo *TRI,
+                               bool UpdateUndef = false,
+                               bool UpdateKill = false);
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // MachineBundleOperand iterator
 //

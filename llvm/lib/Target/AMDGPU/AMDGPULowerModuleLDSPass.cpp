@@ -955,8 +955,16 @@ public:
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
     bool Changed = false;
+#if LLPC_BUILD_NPI
+    constexpr unsigned NumScopes =
+        static_cast<unsigned>(Barrier::Scope::NUM_SCOPES);
+#endif /* LLPC_BUILD_NPI */
     // The 1st round: give module-absolute assignments
+#if LLPC_BUILD_NPI
+    unsigned NumAbsolutes[NumScopes] = {0};
+#else /* LLPC_BUILD_NPI */
     int NumAbsolutes = 0;
+#endif /* LLPC_BUILD_NPI */
     std::vector<GlobalVariable *> OrderedGVs;
     for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
       GlobalVariable *GV = K.first;
@@ -976,8 +984,14 @@ public:
     }
     OrderedGVs = sortByName(std::move(OrderedGVs));
     for (GlobalVariable *GV : OrderedGVs) {
+#if LLPC_BUILD_NPI
+      TargetExtType *ExtTy = cast<TargetExtType>(GV->getValueType());
+      unsigned BarrierScope = ExtTy->getIntParameter(0);
+      unsigned BarId = ++NumAbsolutes[BarrierScope];
+#else /* LLPC_BUILD_NPI */
       int BarId = ++NumAbsolutes;
       unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+#endif /* LLPC_BUILD_NPI */
       // 4 bits for alignment, 5 bits for the barrier num,
       // 3 bits for the barrier scope
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
@@ -996,7 +1010,11 @@ public:
     }
     OrderedKernels = sortByName(std::move(OrderedKernels));
 
+#if LLPC_BUILD_NPI
+    DenseMap<Function *, unsigned> Kernel2BarId[NumScopes];
+#else /* LLPC_BUILD_NPI */
     llvm::DenseMap<Function *, uint32_t> Kernel2BarId;
+#endif /* LLPC_BUILD_NPI */
     for (Function *F : OrderedKernels) {
       for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
         if (!isNamedBarrier(*GV))
@@ -1015,12 +1033,19 @@ public:
         // create a new GV used only by this kernel and its function.
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
+#if LLPC_BUILD_NPI
+        TargetExtType *ExtTy = cast<TargetExtType>(GV->getValueType());
+        unsigned BarrierScope = ExtTy->getIntParameter(0);
+        unsigned BarId = Kernel2BarId[BarrierScope][F]++;
+        BarId += NumAbsolutes[BarrierScope] + 1;
+#else /* LLPC_BUILD_NPI */
         int BarId = (NumAbsolutes + 1);
         if (Kernel2BarId.find(F) != Kernel2BarId.end()) {
           BarId = (Kernel2BarId[F] + 1);
         }
         Kernel2BarId[F] = BarId;
         unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+#endif /* LLPC_BUILD_NPI */
         unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
         recordLDSAbsoluteAddress(&M, NewGV, Offset);
       }

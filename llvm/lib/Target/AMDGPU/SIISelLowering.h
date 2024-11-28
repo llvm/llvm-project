@@ -68,6 +68,10 @@ private:
 
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
+#if LLPC_BUILD_NPI
+  SDValue lowerFrameIndex(AMDGPUMachineFunction *MFI, SDValue Op,
+                          SelectionDAG &DAG) const;
+#endif /* LLPC_BUILD_NPI */
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
@@ -81,6 +85,10 @@ private:
                                         unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
+#if LLPC_BUILD_NPI
+  SDValue lowerWavegroupID(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerWaveIDInWavegroup(SelectionDAG &DAG, SDValue Op) const;
+#endif /* LLPC_BUILD_NPI */
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
 
@@ -146,6 +154,9 @@ private:
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
+#if LLPC_BUILD_NPI
+  SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
+#endif /* LLPC_BUILD_NPI */
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue promoteUniformOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;

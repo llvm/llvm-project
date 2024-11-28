@@ -24,6 +24,9 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#if LLPC_BUILD_NPI
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -129,6 +132,13 @@ unsigned getKmcntBitWidth(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 5 : 0;
 }
 
+#if LLPC_BUILD_NPI
+/// \returns Xcnt bit width.
+unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
+  return VersionMajor == 12 && VersionMinor == 1 ? 5 : 0;
+}
+
+#endif /* LLPC_BUILD_NPI */
 /// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
 unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
@@ -280,6 +290,9 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
+#if LLPC_BUILD_NPI
+#define GET_WMMAInstInfoTable_IMPL
+#endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -372,10 +385,23 @@ struct VOP3CDPPAsmOnlyInfo {
   uint16_t Opcode;
 };
 
+#if LLPC_BUILD_NPI
+struct VOPMAsmOnlyInfo {
+  uint16_t Opcode;
+};
+
+struct VOPMPseudoInfo {
+  uint16_t Opcode;
+};
+
+#endif /* LLPC_BUILD_NPI */
 struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
   bool CanBeVOPDX;
+#if LLPC_BUILD_NPI
+  bool CanBeVOPD3X;
+#endif /* LLPC_BUILD_NPI */
 };
 
 struct VOPDInfo {
@@ -383,6 +409,9 @@ struct VOPDInfo {
   uint16_t OpX;
   uint16_t OpY;
   uint16_t Subtarget;
+#if LLPC_BUILD_NPI
+  bool VOPD3;
+#endif /* LLPC_BUILD_NPI */
 };
 
 struct VOPTrue16Info {
@@ -390,11 +419,22 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
+#if LLPC_BUILD_NPI
+struct DPMACCInstructionInfo {
+  uint16_t Opcode;
+  bool IsDPMACCInstruction;
+};
+
+#endif /* LLPC_BUILD_NPI */
 struct FP8DstByteSelInfo {
   uint16_t Opcode;
   bool HasFP8DstByteSel;
 };
 
+#if LLPC_BUILD_NPI
+#define GET_DPMACCInstructionTable_DECL
+#define GET_DPMACCInstructionTable_IMPL
+#endif /* LLPC_BUILD_NPI */
 #define GET_FP8DstByteSelTable_DECL
 #define GET_FP8DstByteSelTable_IMPL
 #define GET_MTBUFInfoTable_DECL
@@ -417,6 +457,12 @@ struct FP8DstByteSelInfo {
 #define GET_VOPCAsmOnlyInfoTable_IMPL
 #define GET_VOP3CAsmOnlyInfoTable_DECL
 #define GET_VOP3CAsmOnlyInfoTable_IMPL
+#if LLPC_BUILD_NPI
+#define GET_VOPMAsmOnlyInfoTable_DECL
+#define GET_VOPMAsmOnlyInfoTable_IMPL
+#define GET_VOPMPseudoInfoTable_DECL
+#define GET_VOPMPseudoInfoTable_IMPL
+#endif /* LLPC_BUILD_NPI */
 #define GET_VOPDComponentTable_DECL
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
@@ -427,6 +473,13 @@ struct FP8DstByteSelInfo {
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
 #define GET_WMMAOpcode3AddrMappingTable_IMPL
+#define GET_getMFMA_F8F6F4_WithSize_DECL
+#define GET_getMFMA_F8F6F4_WithSize_IMPL
+#define GET_isMFMA_F8F6F4Table_IMPL
+#if LLPC_BUILD_NPI
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+
+#endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -525,6 +578,12 @@ bool isVOPC64DPP(unsigned Opc) {
 
 bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
+#if LLPC_BUILD_NPI
+bool isVOPMAsmOnly(unsigned Opc) { return isVOPMAsmOnlyOpcodeHelper(Opc); }
+
+bool isVOPMPseudo(unsigned Opc) { return isVOPMPsuedoOpcodeHelper(Opc); }
+
+#endif /* LLPC_BUILD_NPI */
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
   return Info ? Info->is_dgemm : false;
@@ -535,7 +594,42 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
+#if LLPC_BUILD_NPI
+bool getWMMAIsXDL(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  return Info ? Info->is_wmma_xdl : false;
+}
+
+#endif /* LLPC_BUILD_NPI */
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
+  switch (EncodingVal) {
+  case MFMAScaleFormats::FP6_E2M3:
+  case MFMAScaleFormats::FP6_E3M2:
+    return 6;
+  case MFMAScaleFormats::FP4_E2M1:
+    return 4;
+  case MFMAScaleFormats::FP8_E4M3:
+  case MFMAScaleFormats::FP8_E5M2:
+  default:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over mfma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
+                                                      unsigned BLGP,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = mfmaScaleF8F6F4FormatToNumRegs(CBSZ);
+  uint8_t SrcBNumRegs = mfmaScaleF8F6F4FormatToNumRegs(BLGP);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
+}
+
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
+#if LLPC_BUILD_NPI
+  if (ST.hasFeature(AMDGPU::FeatureGFX1210Insts))
+    return SIEncodingFamily::GFX1210;
+#endif /* LLPC_BUILD_NPI */
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
@@ -543,14 +637,40 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
+#if LLPC_BUILD_NPI
+CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
+  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(Opc) : 0;
+  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+#else /* LLPC_BUILD_NPI */
 CanBeVOPD getCanBeVOPD(unsigned Opc) {
+#endif /* LLPC_BUILD_NPI */
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
+#if LLPC_BUILD_NPI
+  if (Info) {
+    // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
+    // VOPDX is just a placeholder here, it is supported on all encodings.
+    // TODO: This can be optimized by creating tables of supported VOPDY
+    // opcodes per encoding.
+    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
+    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
+                                  EncodingFamily, VOPD3) != -1;
+    return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
+  }
+
+#else /* LLPC_BUILD_NPI */
   if (Info)
     return {Info->CanBeVOPDX, true};
+#endif /* LLPC_BUILD_NPI */
   return {false, false};
 }
 
+#if LLPC_BUILD_NPI
+unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
+  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(Opc) : 0;
+  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+#else /* LLPC_BUILD_NPI */
 unsigned getVOPDOpcode(unsigned Opc) {
+#endif /* LLPC_BUILD_NPI */
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
 }
@@ -567,16 +687,27 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_MAC_F16_e64_vi ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
+#if LLPC_BUILD_NPI
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||
+#if LLPC_BUILD_NPI
+         Opc == AMDGPU::V_FMAC_F32_e64_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == AMDGPU::V_FMAC_F32_e64_vi ||
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
+#if LLPC_BUILD_NPI
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
+         Opc == AMDGPU::V_DOT2C_F32_BF16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
          Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
          Opc == AMDGPU::V_DOT8C_I32_I4_e64_vi;
@@ -588,9 +719,21 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx12 ||
+#if LLPC_BUILD_NPI
+         Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx12 ||
+#if LLPC_BUILD_NPI
+         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx12 ||
+#if LLPC_BUILD_NPI
+         Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx13 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx13;
+#else /* LLPC_BUILD_NPI */
          Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12;
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
@@ -626,11 +769,59 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
 }
 
+#if LLPC_BUILD_NPI
+bool isAsyncStore(unsigned Opc) {
+  return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx13;
+}
+
+bool isTensorStore(unsigned Opc) {
+  return Opc == TENSOR_STORE_FROM_LDS_gfx1210 ||
+         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1210;
+}
+
+unsigned getTemporalHintType(const MCInstrDesc TID) {
+  if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
+    return CPol::TH_TYPE_ATOMIC;
+  unsigned Opc = TID.getOpcode();
+  // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
+  if (TID.mayStore() && (isAsyncStore(Opc) || isTensorStore(Opc) ||
+                         !TID.mayLoad()))
+    return CPol::TH_TYPE_STORE;
+
+  // This will default to returning TH_TYPE_LOAD when neither MayStore nor
+  // MayLoad flag is present which is the case with instructions like
+  // image_get_resinfo.
+  return CPol::TH_TYPE_LOAD;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
 }
 
+#if LLPC_BUILD_NPI
+bool isDPMACCInstruction(unsigned Opc) {
+  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
+  return Info && Info->IsDPMACCInstruction;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isFP8DstSelInst(unsigned Opc) {
   const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
   return Info ? Info->HasFP8DstByteSel : false;
@@ -653,9 +844,35 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
+#if LLPC_BUILD_NPI
+unsigned getBitOp2(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 0;
+  case AMDGPU::V_AND_B32_e32:
+    return 0x40;
+  case AMDGPU::V_OR_B32_e32:
+    return 0x54;
+  case AMDGPU::V_XOR_B32_e32:
+    return 0x14;
+  case AMDGPU::V_XNOR_B32_e32:
+    return 0x41;
+  }
+}
+
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
+                bool VOPD3) {
+  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(OpY) : 0;
+  OpY = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : OpY;
+#else /* LLPC_BUILD_NPI */
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
+#endif /* LLPC_BUILD_NPI */
   const VOPDInfo *Info =
+#if LLPC_BUILD_NPI
+      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
+#else /* LLPC_BUILD_NPI */
       getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily);
+#endif /* LLPC_BUILD_NPI */
   return Info ? Info->Opcode : -1;
 }
 
@@ -670,7 +887,11 @@ std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
 
 namespace VOPD {
 
+#if LLPC_BUILD_NPI
+ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
+#else /* LLPC_BUILD_NPI */
 ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
+#endif /* LLPC_BUILD_NPI */
   assert(OpDesc.getNumDefs() == Component::DST_NUM);
 
   assert(OpDesc.getOperandConstraint(Component::SRC0, MCOI::TIED_TO) == -1);
@@ -678,10 +899,41 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto TiedIdx = OpDesc.getOperandConstraint(Component::SRC2, MCOI::TIED_TO);
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
+#if LLPC_BUILD_NPI
+  Opcode = OpDesc.getOpcode();
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  IsVOP3 = VOP3Layout || (OpDesc.TSFlags & SIInstrFlags::VOP3);
+  SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2) ? 3 :
+                   AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3 :
+                   AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2 :
+                                                                           1;
+#else /* LLPC_BUILD_NPI */
   SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs();
+#endif /* LLPC_BUILD_NPI */
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
+#if LLPC_BUILD_NPI
+  if (Opcode == AMDGPU::V_CNDMASK_B32_e32 ||
+      Opcode == AMDGPU::V_CNDMASK_B32_e64) {
+    // CNDMASK is an awkward exception, it has FP modifiers, but not FP
+    // operands.
+    NumVOPD3Mods = 2;
+    if (IsVOP3)
+      SrcOperandsNum = 3;
+  } else if (isSISrcFPOperand(OpDesc, getNamedOperandIdx(Opcode, OpName::src0))) {
+    // All FP VOPD instructions have Neg modifiers for all operands except
+    // for tied src2.
+    NumVOPD3Mods = SrcOperandsNum;
+    if (HasSrc2Acc)
+      --NumVOPD3Mods;
+  }
+
+  if (OpDesc.TSFlags & SIInstrFlags::VOP3)
+    return;
+
+#endif /* LLPC_BUILD_NPI */
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
   for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
@@ -692,6 +944,12 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   }
 }
 
+#if LLPC_BUILD_NPI
+int ComponentProps::getBitOp3OperandIdx() const {
+  return getNamedOperandIdx(Opcode, OpName::bitop3);
+}
+
+#endif /* LLPC_BUILD_NPI */
 unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
   assert(CompOprIdx < Component::MAX_OPR_NUM);
 
@@ -707,19 +965,85 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool SkipSrc) const {
+#if LLPC_BUILD_NPI
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
+    bool VOPD3) const {
 
+  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx,
+                               CompInfo[ComponentIndex::X].isVOP3());
+  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx,
+                               CompInfo[ComponentIndex::Y].isVOP3());
+
+  const auto banksOverlap = [&MRI](MCRegister X, MCRegister Y,
+                                   unsigned BanksMask) -> bool {
+    MCRegister BaseX = MRI.getSubReg(X, AMDGPU::sub0);
+    MCRegister BaseY = MRI.getSubReg(Y, AMDGPU::sub0);
+    if (!BaseX)
+      BaseX = X;
+    if (!BaseY)
+      BaseY = Y;
+    if ((BaseX & BanksMask) == (BaseY & BanksMask))
+      return true;
+    if (BaseX != X /* This is 64-bit register */ &&
+        ((BaseX + 1) & BanksMask) == (BaseY & BanksMask))
+      return true;
+    if (BaseY != Y &&
+        (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
+      return true;
+#else /* LLPC_BUILD_NPI */
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool SkipSrc) const {
+#endif /* LLPC_BUILD_NPI */
+
+#if LLPC_BUILD_NPI
+    // If both are 64-bit bank conflict will be detected yet while checking
+    // the first subreg.
+    return false;
+  };
+#else /* LLPC_BUILD_NPI */
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   const unsigned CompOprNum =
       SkipSrc ? Component::DST_NUM : Component::MAX_OPR_NUM;
+#endif /* LLPC_BUILD_NPI */
   unsigned CompOprIdx;
+#if LLPC_BUILD_NPI
+  for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
+    unsigned BanksMasks = VOPD3 ? VOPD3_VGPR_BANK_MASKS[CompOprIdx]
+                                : VOPD_VGPR_BANK_MASKS[CompOprIdx];
+    if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
+      continue;
+
+    if (getVGPREncodingMSBs(OpXRegs[CompOprIdx], MRI) !=
+        getVGPREncodingMSBs(OpYRegs[CompOprIdx], MRI))
+      return CompOprIdx;
+
+    if (SkipSrc && CompOprIdx >= Component::DST_NUM)
+      continue;
+
+    if (CompOprIdx < Component::DST_NUM) {
+      // Even if we do not check vdst parity, vdst operands still shall not
+      // overlap.
+      if (MRI.regsOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx]))
+        return CompOprIdx;
+      if (VOPD3) // No need to check dst parity.
+        continue;
+    }
+
+    if (banksOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx], BanksMasks) &&
+        (!AllowSameVGPR || CompOprIdx < Component::DST_NUM ||
+         OpXRegs[CompOprIdx] != OpYRegs[CompOprIdx]))
+#else /* LLPC_BUILD_NPI */
   for (CompOprIdx = 0; CompOprIdx < CompOprNum; ++CompOprIdx) {
     unsigned BanksMasks = VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
         ((OpXRegs[CompOprIdx] & BanksMasks) ==
          (OpYRegs[CompOprIdx] & BanksMasks)))
+#endif /* LLPC_BUILD_NPI */
       return CompOprIdx;
   }
 
@@ -735,7 +1059,11 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 // if the operand is not a register or not a VGPR.
 InstInfo::RegIndices InstInfo::getRegIndices(
     unsigned CompIdx,
+#if LLPC_BUILD_NPI
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool VOPD3) const {
+#else /* LLPC_BUILD_NPI */
     std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+#endif /* LLPC_BUILD_NPI */
   assert(CompIdx < COMPONENTS_NUM);
 
   const auto &Comp = CompInfo[CompIdx];
@@ -747,7 +1075,12 @@ InstInfo::RegIndices InstInfo::getRegIndices(
     unsigned CompSrcIdx = CompOprIdx - DST_NUM;
     RegIndices[CompOprIdx] =
         Comp.hasRegSrcOperand(CompSrcIdx)
+#if LLPC_BUILD_NPI
+            ? GetRegIdx(CompIdx,
+                        Comp.getIndexOfSrcInMCOperands(CompSrcIdx, VOPD3))
+#else /* LLPC_BUILD_NPI */
             ? GetRegIdx(CompIdx, Comp.getIndexOfSrcInMCOperands(CompSrcIdx))
+#endif /* LLPC_BUILD_NPI */
             : 0;
   }
   return RegIndices;
@@ -764,8 +1097,14 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   auto [OpX, OpY] = getVOPDComponents(VOPDOpcode);
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
+#if LLPC_BUILD_NPI
+  bool VOPD3 = InstrInfo->get(VOPDOpcode).TSFlags & SIInstrFlags::VOPD3;
+  VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X, VOPD3);
+  VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo, VOPD3);
+#else /* LLPC_BUILD_NPI */
   VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X);
   VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo);
+#endif /* LLPC_BUILD_NPI */
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 
@@ -930,17 +1269,39 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 65536;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
+#if LLPC_BUILD_NPI
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+    return 327680;
+#endif /* LLPC_BUILD_NPI */
   return 0;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
+#if LLPC_BUILD_NPI
+  // workgroup must share".
+
+  // GFX12.1 only supports CU mode, which contains four SIMDs.
+  if (isGFX1210Only(*STI)) {
+    assert(STI->getFeatureBits().test(FeatureCuMode));
+    return 4;
+  }
+
+  // For gfx10 in CU mode the functional block is the CU, which contains
+#else /* LLPC_BUILD_NPI */
   // workgroup must share". For gfx10 in CU mode this is the CU, which contains
+#endif /* LLPC_BUILD_NPI */
   // two SIMDs.
   if (isGFX10Plus(*STI) && STI->getFeatureBits().test(FeatureCuMode))
     return 2;
+#if LLPC_BUILD_NPI
+
+  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
+  // contains two CUs, so a total of four SIMDs.
+#else /* LLPC_BUILD_NPI */
   // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP contains
   // two CUs, so a total of four SIMDs.
+#endif /* LLPC_BUILD_NPI */
   return 4;
 }
 
@@ -1109,6 +1470,11 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
+#if LLPC_BUILD_NPI
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
+
+#endif /* LLPC_BUILD_NPI */
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1127,9 +1493,18 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
+#if LLPC_BUILD_NPI
+  bool IsWave32 = EnableWavefrontSize32
+                      ? *EnableWavefrontSize32
+                      : STI->getFeatureBits().test(FeatureWavefrontSize32);
+
+  if (isGFX12(*STI) && STI->getFeatureBits().test(Feature1024AddressableVGPRs))
+    return IsWave32 ? 16 : 8;
+#else /* LLPC_BUILD_NPI */
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
+#endif /* LLPC_BUILD_NPI */
 
   return IsWave32 ? 8 : 4;
 }
@@ -1148,8 +1523,20 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
+#if LLPC_BUILD_NPI
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(FeatureGFX1210Insts))
+    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
+  if (Features.test(FeatureGFX90AInsts))
+#else /* LLPC_BUILD_NPI */
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+#endif /* LLPC_BUILD_NPI */
     return 512;
+#if LLPC_BUILD_NPI
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    // On GFX12 we can allocate at most 8 blocks of VGPRs.
+    return 8 * getVGPRAllocGranule(STI);
+#endif /* LLPC_BUILD_NPI */
   return getAddressableNumArchVGPRs(STI);
 }
 
@@ -1220,11 +1607,22 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   return std::min(MinNumVGPRs, AddrsableNumVGPRs);
 }
 
+#if LLPC_BUILD_NPI
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned NumExcludedVGPRs) {
+#else /* LLPC_BUILD_NPI */
 unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
+#endif /* LLPC_BUILD_NPI */
   assert(WavesPerEU != 0);
 
+#if LLPC_BUILD_NPI
+  unsigned MaxNumVGPRs =
+      alignDown((getTotalNumVGPRs(STI) - NumExcludedVGPRs) / WavesPerEU,
+                getVGPRAllocGranule(STI));
+#else /* LLPC_BUILD_NPI */
   unsigned MaxNumVGPRs = alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
                                    getVGPRAllocGranule(STI));
+#endif /* LLPC_BUILD_NPI */
   unsigned AddressableNumVGPRs = getAddressableNumVGPRs(STI);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
@@ -1278,6 +1676,51 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   }
 }
 
+#if LLPC_BUILD_NPI
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
+    const MCSubtargetInfo *STI) {
+  IsaVersion Version = getIsaVersion(STI->getCPU());
+
+  amdhsa::kernel_descriptor_t KD;
+  memset(&KD, 0, sizeof(KD));
+
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
+                  amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
+  if (Version.Major >= 12) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, 0);
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF, 0);
+  } else {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, 1);
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, 1);
+  }
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
+                  amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
+  if (Version.Major >= 10) {
+    AMDHSA_BITS_SET(KD.kernel_code_properties,
+                    amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
+                    STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, 1);
+  }
+  if (AMDGPU::isGFX90A(*STI)) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
+                    amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
+                    STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
+  }
+  if (AMDGPU::supportsWGP(*STI)) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
+                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
+  }
+  return KD;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isGroupSegment(const GlobalValue *GV) {
   return GV->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }
@@ -1392,6 +1835,12 @@ unsigned getKmcntBitMask(const IsaVersion &Version) {
   return (1 << getKmcntBitWidth(Version.Major)) - 1;
 }
 
+#if LLPC_BUILD_NPI
+unsigned getXcntBitMask(const IsaVersion &Version) {
+  return (1 << getXcntBitWidth(Version.Major, Version.Minor)) - 1;
+}
+
+#endif /* LLPC_BUILD_NPI */
 unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
 }
@@ -1664,6 +2113,12 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                              STI);
 }
 
+#if LLPC_BUILD_NPI
+unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
+
+unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
+
+#endif /* LLPC_BUILD_NPI */
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
@@ -1794,7 +2249,11 @@ bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI) {
     return isGFX11Plus(STI);
   default:
     if (Id >= ET_PARAM0 && Id <= ET_PARAM31)
+#if LLPC_BUILD_NPI
+      return !isGFX11Plus(STI) || isGFX13Plus(STI);
+#else /* LLPC_BUILD_NPI */
       return !isGFX11Plus(STI);
+#endif /* LLPC_BUILD_NPI */
     return true;
   }
 }
@@ -2019,6 +2478,25 @@ bool getHasDepthExport(const Function &F) {
   return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
 }
 
+#if LLPC_BUILD_NPI
+bool getWavegroupEnable(const Function &F) {
+  return F.hasFnAttribute("amdgpu-wavegroup-enable");
+}
+
+std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F) {
+  MDNode *Node = F.getMetadata("reqd_work_group_size");
+  if (!Node)
+    return std::nullopt;
+
+  std::array<uint32_t, 3> Dims;
+  for (unsigned i = 0; i < 3; ++i) {
+    Dims[i] =
+        mdconst::extract<ConstantInt>(Node->getOperand(i))->getZExtValue();
+  }
+  return Dims;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isShader(CallingConv::ID cc) {
   switch(cc) {
     case CallingConv::AMDGPU_VS:
@@ -2124,7 +2602,15 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   return 0;
 }
 
+#if LLPC_BUILD_NPI
+unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
+  if (isGFX1210Plus(STI))
+    return 32;
+  return 16;
+}
+#else /* LLPC_BUILD_NPI */
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) { return 16; }
+#endif /* LLPC_BUILD_NPI */
 
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
@@ -2188,10 +2674,38 @@ bool isGFX12(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
 }
 
+#if LLPC_BUILD_NPI
+bool isGFX12Plus(const MCSubtargetInfo &STI) {
+  return isGFX12(STI) || isGFX13Plus(STI);
+}
+#else /* LLPC_BUILD_NPI */
 bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
+#endif /* LLPC_BUILD_NPI */
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
+#if LLPC_BUILD_NPI
+bool isGFX1210Plus(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1210Insts];
+}
+
+bool isGFX1210Only(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1210Insts] && !isGFX13(STI);
+}
+
+bool isGFX13(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX13];
+}
+
+bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
+
+bool supportsWGP(const MCSubtargetInfo &STI) {
+  if (isGFX1210Only(STI))
+    return false;
+  return isGFX10Plus(STI);
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
   return !isGFX11Plus(STI);
 }
@@ -2259,6 +2773,17 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
   return std::max(ArgNumVGPR, ArgNumAGPR);
 }
 
+#if LLPC_BUILD_NPI
+unsigned getHWRegIndex(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::REG_IDX_MASK;
+}
+
+bool isVGPR(MCRegister Reg, const MCRegisterInfo &MRI) {
+  unsigned EV = MRI.getEncodingValue(Reg);
+  return EV & HWEncoding::IS_VGPR;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
@@ -2355,6 +2880,10 @@ bool isInlineValue(unsigned Reg) {
   case AMDGPU::SRC_PRIVATE_BASE:
   case AMDGPU::SRC_PRIVATE_LIMIT_LO:
   case AMDGPU::SRC_PRIVATE_LIMIT:
+#if LLPC_BUILD_NPI
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_LO:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_HI:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
     return true;
   case AMDGPU::SRC_VCCZ:
@@ -2408,6 +2937,9 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+#if LLPC_BUILD_NPI
+  case AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED:
+#endif /* LLPC_BUILD_NPI */
     return true;
   default:
     return false;
@@ -2432,10 +2964,18 @@ unsigned getRegBitWidth(unsigned RCID) {
     return 16;
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::VGPR_32RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VGPR_32_STAGINGRegClassID:
+  case AMDGPU::VGPR_32_Lo256RegClassID:
+  case AMDGPU::VGPR_32_STAGING_Lo256RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::VRegOrLds_32RegClassID:
   case AMDGPU::AGPR_32RegClassID:
   case AMDGPU::VS_32RegClassID:
   case AMDGPU::AV_32RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_32_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SReg_32RegClassID:
   case AMDGPU::SReg_32_XM0RegClassID:
   case AMDGPU::SRegOrLds_32RegClassID:
@@ -2444,48 +2984,118 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VS_64RegClassID:
   case AMDGPU::SReg_64RegClassID:
   case AMDGPU::VReg_64RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_64_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_64RegClassID:
   case AMDGPU::SReg_64_XEXECRegClassID:
   case AMDGPU::VReg_64_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_64_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_64_Align2RegClassID:
   case AMDGPU::AV_64RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_64_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_64_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_64_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_64_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_64_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
   case AMDGPU::VReg_96RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_96_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_96RegClassID:
   case AMDGPU::VReg_96_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_96_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_96_Align2RegClassID:
   case AMDGPU::AV_96RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_96_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_96_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_96_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_96_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_96_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
   case AMDGPU::VReg_128RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_128_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_128RegClassID:
   case AMDGPU::VReg_128_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_128_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_128_Align2RegClassID:
   case AMDGPU::AV_128RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_128_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_128_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_128_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_128_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_128_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
   case AMDGPU::VReg_160RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_160_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_160RegClassID:
   case AMDGPU::VReg_160_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_160_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_160_Align2RegClassID:
   case AMDGPU::AV_160RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_160_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_160_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_160_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_160_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_160_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:
   case AMDGPU::VReg_192RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_192_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_192RegClassID:
   case AMDGPU::VReg_192_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_192_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_192_Align2RegClassID:
   case AMDGPU::AV_192RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_192_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_192_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_192_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_192_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_192_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 192;
   case AMDGPU::SGPR_224RegClassID:
   case AMDGPU::SReg_224RegClassID:
@@ -2495,24 +3105,55 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_224_Align2RegClassID:
   case AMDGPU::AV_224RegClassID:
   case AMDGPU::AV_224_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_224_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 224;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
   case AMDGPU::VReg_256RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_256_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_256RegClassID:
   case AMDGPU::VReg_256_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_256_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_256_Align2RegClassID:
   case AMDGPU::AV_256RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_256_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_256_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_256_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_256_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_256_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 256;
   case AMDGPU::SGPR_288RegClassID:
   case AMDGPU::SReg_288RegClassID:
   case AMDGPU::VReg_288RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_288_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_288RegClassID:
   case AMDGPU::VReg_288_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_288_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_288_Align2RegClassID:
   case AMDGPU::AV_288RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_288_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_288_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_288_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_288_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_288_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 288;
   case AMDGPU::SGPR_320RegClassID:
   case AMDGPU::SReg_320RegClassID:
@@ -2522,6 +3163,9 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_320_Align2RegClassID:
   case AMDGPU::AV_320RegClassID:
   case AMDGPU::AV_320_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_320_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 320;
   case AMDGPU::SGPR_352RegClassID:
   case AMDGPU::SReg_352RegClassID:
@@ -2531,6 +3175,9 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_352_Align2RegClassID:
   case AMDGPU::AV_352RegClassID:
   case AMDGPU::AV_352_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_352_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 352;
   case AMDGPU::SGPR_384RegClassID:
   case AMDGPU::SReg_384RegClassID:
@@ -2540,24 +3187,72 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_384_Align2RegClassID:
   case AMDGPU::AV_384RegClassID:
   case AMDGPU::AV_384_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_384_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 384;
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
   case AMDGPU::VReg_512RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_512_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_512RegClassID:
   case AMDGPU::VReg_512_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_512_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_512_Align2RegClassID:
   case AMDGPU::AV_512RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_512_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_512_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_512_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_512_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_512_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 512;
+#if LLPC_BUILD_NPI
+  case AMDGPU::SGPR_576RegClassID:
+  case AMDGPU::SReg_576RegClassID:
+  case AMDGPU::VReg_576RegClassID:
+  case AMDGPU::VReg_576_STAGINGRegClassID:
+  case AMDGPU::AReg_576RegClassID:
+  case AMDGPU::VReg_576_Align2RegClassID:
+  case AMDGPU::VReg_576_STAGING_Align2RegClassID:
+  case AMDGPU::AReg_576_Align2RegClassID:
+  case AMDGPU::AV_576RegClassID:
+  case AMDGPU::AV_576_STAGINGRegClassID:
+  case AMDGPU::AV_576_Align2RegClassID:
+  case AMDGPU::AV_576_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_576_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_576_STAGING_Lo256_Align2RegClassID:
+    return 576;
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
   case AMDGPU::VReg_1024RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_1024_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_1024RegClassID:
   case AMDGPU::VReg_1024_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::VReg_1024_STAGING_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AReg_1024_Align2RegClassID:
   case AMDGPU::AV_1024RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_1024_STAGINGRegClassID:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_1024_Align2RegClassID:
+#if LLPC_BUILD_NPI
+  case AMDGPU::AV_1024_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_1024_STAGING_Lo256_Align2RegClassID:
+#endif /* LLPC_BUILD_NPI */
     return 1024;
   default:
     llvm_unreachable("Unexpected register class");
@@ -2926,7 +3621,11 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
   if (AMDGPU::isGFX10(ST))
     return 12;
 
+#if LLPC_BUILD_NPI
+  if (AMDGPU::isGFX12Plus(ST))
+#else /* LLPC_BUILD_NPI */
   if (AMDGPU::isGFX12(ST))
+#endif /* LLPC_BUILD_NPI */
     return 24;
   return 13;
 }
@@ -2948,6 +3647,7 @@ const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
@@ -2980,6 +3680,186 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                          : getGfx9BufferFormatInfo(Format);
 }
 
+#if LLPC_BUILD_NPI
+const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+                                           const MCRegisterInfo &MRI) {
+  const unsigned VGPRClasses[] = {
+    AMDGPU::VGPR_16RegClassID,
+    AMDGPU::VGPR_32RegClassID,
+    AMDGPU::VReg_64RegClassID,
+    AMDGPU::VReg_96RegClassID,
+    AMDGPU::VReg_128RegClassID,
+    AMDGPU::VReg_160RegClassID,
+    AMDGPU::VReg_192RegClassID,
+    AMDGPU::VReg_224RegClassID,
+    AMDGPU::VReg_256RegClassID,
+    AMDGPU::VReg_288RegClassID,
+    AMDGPU::VReg_320RegClassID,
+    AMDGPU::VReg_352RegClassID,
+    AMDGPU::VReg_384RegClassID,
+    AMDGPU::VReg_512RegClassID,
+    AMDGPU::VReg_1024RegClassID
+  };
+
+  for (unsigned RCID : VGPRClasses) {
+    const MCRegisterClass &RC = MRI.getRegClass(RCID);
+    if (RC.contains(Reg))
+      return &RC;
+  }
+
+  return nullptr;
+}
+
+unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  return Idx >> 8;
+}
+
+MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
+                          const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  if (Idx >= 0x100)
+    return AMDGPU::NoRegister;
+
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  if (!RC)
+    return AMDGPU::NoRegister;
+  return RC->getRegister(Idx | (MSBs << 8));
+}
+
+std::pair<const unsigned *, const unsigned *>
+getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
+
+#define DEFAULT_VALUES_3                                                       \
+  AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,                  \
+      AMDGPU::OpName::OPERAND_LAST
+  static const unsigned VOPOps[7] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                     AMDGPU::OpName::src2, AMDGPU::OpName::vdst,
+                                     DEFAULT_VALUES_3};
+  static const unsigned VDSOps[7] = {
+      AMDGPU::OpName::addr, AMDGPU::OpName::data0, AMDGPU::OpName::data1,
+      AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
+  static const unsigned FLATOps[7] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
+  static const unsigned BUFOps[7] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::OPERAND_LAST,
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdata, DEFAULT_VALUES_3};
+  static const unsigned VIMGOps[7] = {
+      AMDGPU::OpName::vaddr0, AMDGPU::OpName::vaddr1, AMDGPU::OpName::vaddr2,
+      AMDGPU::OpName::vdata, DEFAULT_VALUES_3};
+  static const unsigned VEXPOps[7] = {
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,
+      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,
+      DEFAULT_VALUES_3};
+
+  // For VOPD instructions MSB of a corresponding Y component operand VGPR
+  // address is supposed to match X operand, otherwise VOPD shall not be
+  // combined.
+  static const unsigned VOPDOpsX[7] = {
+      AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vsrc2X,
+      AMDGPU::OpName::vdstX, DEFAULT_VALUES_3};
+  static const unsigned VOPDOpsY[7] = {
+      AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
+      AMDGPU::OpName::vdstY, DEFAULT_VALUES_3};
+  static const unsigned VOPMOps[7] = {
+      AMDGPU::OpName::vdst, AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+      AMDGPU::OpName::src2, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
+      AMDGPU::OpName::src5};
+#undef DEFAULT_VALUES_3
+
+  unsigned TSFlags = Desc.TSFlags;
+
+  if (TSFlags &
+      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
+       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+    // LD_SCALE operands ignore MSB.
+    if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1210)
+      return {};
+    return { VOPOps, nullptr };
+  }
+
+  if (TSFlags & SIInstrFlags::DS)
+    return { VDSOps, nullptr };
+
+  if (TSFlags & SIInstrFlags::FLAT)
+    return { FLATOps, nullptr };
+
+  if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
+    return { BUFOps, nullptr };
+
+  if (TSFlags & (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE))
+    return { VIMGOps, nullptr };
+
+  if (TSFlags & SIInstrFlags::EXP)
+    return {VEXPOps, nullptr};
+
+  if (AMDGPU::isVOPD(Desc.getOpcode()))
+    return { VOPDOpsX, VOPDOpsY };
+
+  assert(!(TSFlags & SIInstrFlags::MIMG));
+
+  if (TSFlags & SIInstrFlags::VSAMPLE)
+    llvm_unreachable("Sample VGPR lowering is not implemented and"
+                     " these instructions are not expected on gfx1210");
+
+  if (isVOPMPseudo(Desc.getOpcode()))
+    return {VOPMOps, nullptr};
+
+  return {};
+}
+
+bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
+  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+
+  if (TSFlags & SIInstrFlags::SMRD)
+    return !getSMEMIsBuffer(Opcode);
+  if (!(TSFlags & SIInstrFlags::FLAT))
+    return false;
+
+  // Only SV and SVS modes are supported.
+  if (TSFlags & SIInstrFlags::FlatScratch)
+    return hasNamedOperand(Opcode, OpName::vaddr);
+
+  // Only GVS mode is supported.
+  return hasNamedOperand(Opcode, OpName::vaddr) &&
+         hasNamedOperand(Opcode, OpName::saddr);
+
+  return false;
+}
+
+bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
+                             unsigned DC) {
+  if (isGFX13(ST)) {
+    return (Opcode != AMDGPU::V_ADD_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_ADD_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_ADD_U64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_ADD_U64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_ASHRREV_I64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_FMAC_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_FMAC_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_FMA_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_LDEXP_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_LSHLREV_B64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_LSHLREV_B64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_LSHRREV_B64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MUL_F64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_MUL_F64_e64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_SUB_U64_dpp_gfx13 &&
+            Opcode != AMDGPU::V_SUB_U64_e64_dpp_gfx13) ||
+           (DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST);
+  }
+  if (isGFX12(ST))
+    return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
+  if (isGFX90A(ST))
+    return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+  return false;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
   for (auto OpName : { OpName::vdst, OpName::src0, OpName::src1,
                        OpName::src2 }) {
@@ -2987,21 +3867,63 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
     if (Idx == -1)
       continue;
 
+#if LLPC_BUILD_NPI
+    auto RC = OpDesc.operands()[Idx].RegClass;
+    if (RC == AMDGPU::VReg_64RegClassID ||
+        RC == AMDGPU::VReg_64_STAGINGRegClassID ||
+        RC == AMDGPU::VReg_64_Align2RegClassID ||
+        RC == AMDGPU::VReg_64_STAGING_Align2RegClassID)
+#else /* LLPC_BUILD_NPI */
     if (OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64RegClassID ||
         OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64_Align2RegClassID)
+#endif /* LLPC_BUILD_NPI */
       return true;
   }
 
   return false;
 }
 
+#if LLPC_BUILD_NPI
+bool isDPALU_DPP32BitOpc(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_MUL_LO_U32_e64:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx1210:
+  case AMDGPU::V_MUL_HI_U32_e64:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx1210:
+  case AMDGPU::V_MUL_HI_I32_e64:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx1210:
+  case AMDGPU::V_MAD_U32_e64:
+  case AMDGPU::V_MAD_U32_e64_dpp:
+  case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
+    return false;
+
+  if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
+    return ST.hasFeature(AMDGPU::FeatureGFX1210Insts);
+
+#else /* LLPC_BUILD_NPI */
 bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+#endif /* LLPC_BUILD_NPI */
   return hasAny64BitVGPROperands(OpDesc);
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
+#if LLPC_BUILD_NPI
+  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256 : 128;
+#else /* LLPC_BUILD_NPI */
   // Currently this is 128 for all subtargets
   return 128;
+#endif /* LLPC_BUILD_NPI */
 }
 
 } // namespace AMDGPU

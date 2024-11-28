@@ -101,7 +101,11 @@ defm EXP      : EXP_Real_si, EXP_Real_vi, EXP_Real_gfx10;
 defm EXP_DONE : EXP_Real_si, EXP_Real_vi, EXP_Real_gfx10;
 
 //===----------------------------------------------------------------------===//
+#ifdef LLPC_BUILD_NPI
+// GFX11, GFX12, GFX13.
+#else /* LLPC_BUILD_NPI */
 // GFX11, GFX12.
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 
 multiclass EXP_Real_gfx11 {
@@ -119,19 +123,44 @@ multiclass VEXPORT_Real_gfx12 {
   def _gfx12 : EXP_Real_Row<ps, SIEncodingFamily.GFX12, "export">,
     EXPe_Row {
     let AssemblerPredicate = isGFX12Only;
+#ifdef LLPC_BUILD_NPI
+    let OtherPredicates = [HasExportInsts];
+#endif /* LLPC_BUILD_NPI */
     let DecoderNamespace = "GFX12";
     let row = ps.row;
     let done = ps.done;
   }
   def : AMDGPUMnemonicAlias<"exp", "export"> {
-    let AssemblerPredicate = isGFX12Plus;
+#ifdef LLPC_BUILD_NPI
+    let AssemblerPredicate = isGFX12Only;
   }
 }
 
+multiclass VEXPORT_Real_gfx13 {
+  defvar ps = !cast<EXP_Pseudo>(NAME);
+  def _gfx13 : EXP_Real_Row<ps, SIEncodingFamily.GFX13, "export">,
+    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX13Only]> {
+    let AssemblerPredicate = isGFX13Only;
+    let DecoderNamespace = "GFX13";
+    let row = ps.row;
+    let done = ps.done;
+#else /* LLPC_BUILD_NPI */
+    let AssemblerPredicate = isGFX12Plus;
+#endif /* LLPC_BUILD_NPI */
+  }
+}
+
+#ifdef LLPC_BUILD_NPI
+defm EXP          : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
+defm EXP_DONE     : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
+defm EXP_ROW      : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
+defm EXP_ROW_DONE : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
+#else /* LLPC_BUILD_NPI */
 defm EXP          : EXP_Real_gfx11, VEXPORT_Real_gfx12;
 defm EXP_DONE     : EXP_Real_gfx11, VEXPORT_Real_gfx12;
 defm EXP_ROW      : EXP_Real_gfx11, VEXPORT_Real_gfx12;
 defm EXP_ROW_DONE : EXP_Real_gfx11, VEXPORT_Real_gfx12;
+#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // EXP Patterns

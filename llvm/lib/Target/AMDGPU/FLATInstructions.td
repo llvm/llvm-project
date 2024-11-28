@@ -10,9 +10,19 @@ def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot],
 def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
 def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
 
+#ifdef LLPC_BUILD_NPI
+def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 4, "SelectGlobalSAddrNoIOffset", [], [SDNPWantRoot], -3>;
+def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
+def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [SDNPWantRoot], -10>;
+#else /* LLPC_BUILD_NPI */
 def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
+#endif /* LLPC_BUILD_NPI */
 def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
+#ifdef LLPC_BUILD_NPI
+def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
+#else /* LLPC_BUILD_NPI */
 def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
+#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -92,6 +102,9 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
+#ifdef LLPC_BUILD_NPI
+  let WaveSizePredicate    = ps.WaveSizePredicate;
+#endif /* LLPC_BUILD_NPI */
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
@@ -174,7 +187,11 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   bits<7> saddr;
   bits<8> vdst;
+#ifdef LLPC_BUILD_NPI
+  bits<10> cpol;
+#else /* LLPC_BUILD_NPI */
   bits<6> cpol;
+#endif /* LLPC_BUILD_NPI */
   bits<8> vdata; // vsrc
   bits<8> vaddr;
   bits<24> offset;
@@ -184,6 +201,9 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{31-26} = 0x3b;
   let Inst{39-32} = !if(ps.has_vdst, vdst, ?);
   let Inst{49} = ps.sve;
+#ifdef LLPC_BUILD_NPI
+  let Inst{7} = cpol{5}; // nv
+#endif /* LLPC_BUILD_NPI */
   let Inst{54-53} = cpol{2-1}; // th{2-1}
   let Inst{52} = !if(ps.IsAtomicRet, 1, cpol{0}); // th{0}
   let Inst{51-50} = cpol{4-3}; // scope
@@ -192,6 +212,9 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{95-72} = !if(ps.has_offset, offset, ?);
 }
 
+#ifdef LLPC_BUILD_NPI
+// TODO: Rename to FlatSaddrTable, it now handles both global and flat GVS addressing mode.
+#endif /* LLPC_BUILD_NPI */
 class GlobalSaddrTable <bit is_saddr, string Name = ""> {
   bit IsSaddr = is_saddr;
   string SaddrOp = Name;
@@ -225,6 +248,16 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
+  def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput>,
+    GlobalSaddrTable<0, opName>;
+  let OtherPredicates = [HasFlatGVSMode] in
+  def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>,
+    GlobalSaddrTable<1, opName>;
+}
+
+#endif /* LLPC_BUILD_NPI */
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   bit HasSaddr = 0, bit EnableSaddr = 0> : FLAT_Pseudo<
   opName,
@@ -242,6 +275,16 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   let enabled_saddr = EnableSaddr;
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass FLAT_Flat_Store_Pseudo<string opName, RegisterClass regClass> {
+  def "" : FLAT_Store_Pseudo<opName, regClass>,
+    GlobalSaddrTable<0, opName>;
+  let OtherPredicates = [HasFlatGVSMode] in
+  def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1>,
+    GlobalSaddrTable<1, opName>;
+}
+
+#endif /* LLPC_BUILD_NPI */
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
   let is_flat_global = 1 in {
     def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1>,
@@ -287,31 +330,94 @@ multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+// Async loads, introduced in gfx1210, will store directly
+// to a DS address in vdst (they will not use M0 for DS addess).
+class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0> : FLAT_Pseudo<
+#else /* LLPC_BUILD_NPI */
 class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+#endif /* LLPC_BUILD_NPI */
   opName,
   (outs ),
   !con(
+#ifdef LLPC_BUILD_NPI
+       !if(IsAsync, (ins VGPR_32:$vdst), (ins)),
+       !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
+       (ins flat_offset:$offset, CPol_0:$cpol)),
+  !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
+  let LGKM_CNT = !not(IsAsync);
+  let VM_CNT = !not(IsAsync);
+  let ASYNC_CNT = IsAsync;
+#else /* LLPC_BUILD_NPI */
       !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
       (ins flat_offset:$offset, CPol_0:$cpol)),
   " $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
   let LGKM_CNT = 1;
+#endif /* LLPC_BUILD_NPI */
   let is_flat_global = 1;
   let lds = 1;
   let has_data = 0;
+#ifdef LLPC_BUILD_NPI
+  let has_vdst = IsAsync; // vdst for ds address with IsAsync
+  let mayLoad = 1;
+  let mayStore = 1;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let VALU = 1;
+  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
+  let Uses = !if(IsAsync, [EXEC, ASYNCcnt], [M0, EXEC]);
+  let Defs = !if(IsAsync, [ASYNCcnt], []);
+  let SchedRW = [WriteVMEM, WriteLDS];
+}
+
+multiclass FLAT_Global_Load_LDS_Pseudo<string opName, bit IsAsync = 0> {
+  def ""     : FLAT_Global_Load_LDS_Pseudo<opName, 0, IsAsync>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Global_Load_LDS_Pseudo<opName, 1, IsAsync>,
+    GlobalSaddrTable<1, opName>;
+}
+
+class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+  opName,
+  (outs ),
+  !con(
+      !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)), (ins VGPR_32:$vdata),
+      (ins flat_offset:$offset, CPol_0:$cpol)),
+  " $vaddr, $vdata"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
+  let VM_CNT = 0;
+  let ASYNC_CNT = 1;
+  let is_flat_global = 1;
+  let lds = 1;
+  let has_data = 1; // vdata for ds address
+#endif /* LLPC_BUILD_NPI */
   let has_vdst = 0;
   let mayLoad = 1;
   let mayStore = 1;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
   let VALU = 1;
+#ifdef LLPC_BUILD_NPI
+  let Uses = [EXEC, ASYNCcnt];
+  let Defs = [ASYNCcnt];
+#else /* LLPC_BUILD_NPI */
   let Uses = [M0, EXEC];
+#endif /* LLPC_BUILD_NPI */
   let SchedRW = [WriteVMEM, WriteLDS];
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass FLAT_Global_STORE_LDS_Pseudo<string opName> {
+  def ""     : FLAT_Global_STORE_LDS_Pseudo<opName>,
+#else /* LLPC_BUILD_NPI */
 multiclass FLAT_Global_Load_LDS_Pseudo<string opName> {
   def ""     : FLAT_Global_Load_LDS_Pseudo<opName>,
+#endif /* LLPC_BUILD_NPI */
     GlobalSaddrTable<0, opName>;
+#ifdef LLPC_BUILD_NPI
+  def _SADDR : FLAT_Global_STORE_LDS_Pseudo<opName, 1>,
+#else /* LLPC_BUILD_NPI */
   def _SADDR : FLAT_Global_Load_LDS_Pseudo<opName, 1>,
+#endif /* LLPC_BUILD_NPI */
     GlobalSaddrTable<1, opName>;
 }
 
@@ -338,6 +444,25 @@ multiclass FLAT_Global_Store_AddTid_Pseudo<string opName, RegisterClass regClass
     GlobalSaddrTable<1, opName>;
 }
 
+#ifdef LLPC_BUILD_NPI
+class FLAT_Global_Tensor_Pseudo<string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+  opName,
+  (outs ),
+  !con(!if(EnableSaddr, (ins SReg_64:$saddr, flat_offset:$offset), (ins )), (ins CPol_0:$cpol)),
+  !if(EnableSaddr, " $saddr$offset", " ")#"$cpol"> {
+
+  let is_flat_global = 1;
+  let has_vdst = 0;
+  let has_data = 0;
+  let has_vaddr = 0;
+  let mayLoad = 0;
+  let mayStore = 1;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let has_offset = EnableSaddr;
+}
+
+#endif /* LLPC_BUILD_NPI */
 class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = null_frag> :
   FLAT_Pseudo<opName, (outs), (ins CPol:$cpol), "$cpol", [(node)]> {
 
@@ -366,6 +491,65 @@ class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = n
   let sve = 0;
 }
 
+#ifdef LLPC_BUILD_NPI
+class FLAT_RTS<string opName, bit HasVdst, bit HasData, RegisterClass vdstClass = VGPR_32> : FLAT_Pseudo<
+  opName,
+  !if(HasVdst, (outs vdstClass:$vdst), (outs)),
+  !con(!if(HasData, !if(HasVdst, (ins VReg_64:$vdata), (ins VGPR_32:$vdata)), (ins)),(ins CPol:$cpol)),
+  !if(!and(HasVdst, HasData), " $vdst, $vdata", !if(HasVdst, " $vdst", !if(HasData, " $vdata", "")))#"$cpol">{
+
+  let is_flat_global = 1;
+  let has_offset = 0;
+  let has_vaddr = 0;
+  let has_data = HasData;
+  let has_vdst = HasVdst;
+}
+
+class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
+  opName,
+  !if(HasVdst, (outs VGPR_32:$vdst), (outs)),
+  !con(!if(HasAddr, !if(HasVdst, (ins VReg_64:$vaddr), (ins VGPR_32:$vaddr)), (ins)), (ins CPol:$cpol)),
+  !if(HasVdst, " $vdst", "")#!if(HasAddr, ", $vaddr", "")#"$cpol">{
+
+  let is_flat_global = 1;
+  let has_offset = 0;
+  let has_vaddr = HasAddr;
+  let has_data = 0;
+  let has_vdst = HasVdst;
+}
+
+class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
+  FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
+  let has_vdst = 0;
+  let has_data = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let VM_CNT = 0;
+  let LGKM_CNT = 0;
+}
+
+multiclass FLAT_Flat_Prefetch_Pseudo<string opName> {
+  def "" : FLAT_Prefetch_Pseudo<opName>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+    GlobalSaddrTable<1, opName> {
+    let OtherPredicates = [HasFlatGVSMode];
+    let enabled_saddr = 1;
+  }
+}
+
+multiclass FLAT_Global_Prefetch_Pseudo<string opName> {
+  let is_flat_global = 1, has_saddr = 1 in {
+    def "" : FLAT_Prefetch_Pseudo<opName, (ins VReg_64:$vaddr), " $vaddr, off">,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+      GlobalSaddrTable<1, opName> {
+      let enabled_saddr = 1;
+    }
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 class FlatScratchInst <string sv_op, string mode> {
   string SVOp = sv_op;
   string Mode = mode;
@@ -500,6 +684,48 @@ multiclass FLAT_Scratch_Load_LDS_Pseudo<string opName> {
                FlatScratchInst<opName, "ST">;
 }
 
+#ifdef LLPC_BUILD_NPI
+class FLAT_Scratch_Discard_Pseudo <string opName, bit EnableSaddr = 0,
+  bit EnableSVE = 0,
+  bit EnableVaddr = !or(EnableSVE, !not(EnableSaddr))> : FLAT_Pseudo<
+  opName,
+  (outs),
+  !if(EnableSVE,
+    (ins VGPR_32:$vaddr, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol_0:$cpol),
+    !if(EnableSaddr,
+      (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol_0:$cpol),
+      !if(EnableVaddr,
+        (ins VGPR_32:$vaddr, flat_offset:$offset, CPol_0:$cpol),
+        (ins flat_offset:$offset, CPol_0:$cpol)))),
+  " "#!if(EnableVaddr, "$vaddr", "off")#", "#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol"> {
+  let is_flat_scratch = 1;
+  let mayStore = 1;
+  let has_vdst = 0;
+  let has_data = 0;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let has_vaddr = EnableVaddr;
+  let has_sve = EnableSVE;
+  let sve = EnableVaddr;
+  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
+}
+
+multiclass FLAT_Scratch_Discard_Pseudo<string opName> {
+  def "" : FLAT_Scratch_Discard_Pseudo<opName>,
+           FlatScratchInst<opName, "SV">;
+  def _SADDR : FLAT_Scratch_Discard_Pseudo<opName, 1>,
+               FlatScratchInst<opName, "SS">;
+
+  let SubtargetPredicate = HasFlatScratchSVSMode in
+  def _SVS : FLAT_Scratch_Discard_Pseudo<opName, 1, 1>,
+             FlatScratchInst<opName, "SVS">;
+
+  let SubtargetPredicate = HasFlatScratchSTMode in
+  def _ST  : FLAT_Scratch_Discard_Pseudo<opName, 0, 0, 0>,
+             FlatScratchInst<opName, "ST">;
+}
+
+#endif /* LLPC_BUILD_NPI */
 class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
                                string asm, list<dag> pattern = []> :
   FLAT_Pseudo<opName, outs, ins, asm, pattern> {
@@ -538,6 +764,20 @@ multiclass FLAT_Atomic_Pseudo_NO_RTN<
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
+#ifdef LLPC_BUILD_NPI
+
+  def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
+    (outs),
+    (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
+    " $vaddr, $vdata, $saddr$offset$cpol">,
+    GlobalSaddrTable<1, opName> {
+    let OtherPredicates = [HasFlatGVSMode];
+    let has_saddr = 1;
+    let enabled_saddr = 1;
+    let FPAtomic = data_vt.isFP;
+    let AddedComplexity = -1; // Prefer global atomics if available
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass FLAT_Atomic_Pseudo_RTN<
@@ -546,15 +786,39 @@ multiclass FLAT_Atomic_Pseudo_RTN<
   ValueType vt,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc,
+#ifdef LLPC_BUILD_NPI
+  RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret,
+  RegisterOperand vdst_op = getLdStRegisterOperand<vdst_rc>.ret> {
+#else /* LLPC_BUILD_NPI */
   RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> {
+#endif /* LLPC_BUILD_NPI */
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
+#ifdef LLPC_BUILD_NPI
+    (outs vdst_op:$vdst),
+#else /* LLPC_BUILD_NPI */
     (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst),
+#endif /* LLPC_BUILD_NPI */
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol">,
     GlobalSaddrTable<0, opName#"_rtn"> {
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
+#ifdef LLPC_BUILD_NPI
+
+  def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
+    (outs vdst_op:$vdst),
+      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
+    " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
+    GlobalSaddrTable<1, opName#"_rtn"> {
+    let OtherPredicates = [HasFlatGVSMode];
+    let has_saddr = 1;
+    let enabled_saddr = 1;
+    let PseudoInstr = NAME#"_SADDR_RTN";
+    let FPAtomic = data_vt.isFP;
+    let AddedComplexity = -1; // Prefer global atomics if available
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass FLAT_Atomic_Pseudo<
@@ -639,10 +903,48 @@ multiclass FLAT_Global_Atomic_Pseudo<
   defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
 }
 
+#ifdef LLPC_BUILD_NPI
+class FLAT_Discard_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
+  FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
+  let has_vdst = 0;
+  let has_data = 0;
+  let mayStore = 1;
+}
+
+multiclass FLAT_Global_Discard_Pseudo<string opName> {
+  let is_flat_global = 1, has_saddr = 1 in {
+    def "" : FLAT_Discard_Pseudo<opName, (ins VReg_64:$vaddr), " $vaddr, off">,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Discard_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+      GlobalSaddrTable<1, opName> {
+      let enabled_saddr = 1;
+      let PseudoInstr = opName#"_SADDR";
+    }
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // Flat Instructions
 //===----------------------------------------------------------------------===//
 
+#ifdef LLPC_BUILD_NPI
+defm FLAT_LOAD_UBYTE    : FLAT_Flat_Load_Pseudo <"flat_load_ubyte", VGPR_32>;
+defm FLAT_LOAD_SBYTE    : FLAT_Flat_Load_Pseudo <"flat_load_sbyte", VGPR_32>;
+defm FLAT_LOAD_USHORT   : FLAT_Flat_Load_Pseudo <"flat_load_ushort", VGPR_32>;
+defm FLAT_LOAD_SSHORT   : FLAT_Flat_Load_Pseudo <"flat_load_sshort", VGPR_32>;
+defm FLAT_LOAD_DWORD    : FLAT_Flat_Load_Pseudo <"flat_load_dword", VGPR_32>;
+defm FLAT_LOAD_DWORDX2  : FLAT_Flat_Load_Pseudo <"flat_load_dwordx2", VReg_64>;
+defm FLAT_LOAD_DWORDX4  : FLAT_Flat_Load_Pseudo <"flat_load_dwordx4", VReg_128>;
+defm FLAT_LOAD_DWORDX3  : FLAT_Flat_Load_Pseudo <"flat_load_dwordx3", VReg_96>;
+
+defm FLAT_STORE_BYTE    : FLAT_Flat_Store_Pseudo <"flat_store_byte", VGPR_32>;
+defm FLAT_STORE_SHORT   : FLAT_Flat_Store_Pseudo <"flat_store_short", VGPR_32>;
+defm FLAT_STORE_DWORD   : FLAT_Flat_Store_Pseudo <"flat_store_dword", VGPR_32>;
+defm FLAT_STORE_DWORDX2 : FLAT_Flat_Store_Pseudo <"flat_store_dwordx2", VReg_64>;
+defm FLAT_STORE_DWORDX4 : FLAT_Flat_Store_Pseudo <"flat_store_dwordx4", VReg_128>;
+defm FLAT_STORE_DWORDX3 : FLAT_Flat_Store_Pseudo <"flat_store_dwordx3", VReg_96>;
+#else /* LLPC_BUILD_NPI */
 def FLAT_LOAD_UBYTE    : FLAT_Load_Pseudo <"flat_load_ubyte", VGPR_32>;
 def FLAT_LOAD_SBYTE    : FLAT_Load_Pseudo <"flat_load_sbyte", VGPR_32>;
 def FLAT_LOAD_USHORT   : FLAT_Load_Pseudo <"flat_load_ushort", VGPR_32>;
@@ -658,19 +960,34 @@ def FLAT_STORE_DWORD   : FLAT_Store_Pseudo <"flat_store_dword", VGPR_32>;
 def FLAT_STORE_DWORDX2 : FLAT_Store_Pseudo <"flat_store_dwordx2", VReg_64>;
 def FLAT_STORE_DWORDX4 : FLAT_Store_Pseudo <"flat_store_dwordx4", VReg_128>;
 def FLAT_STORE_DWORDX3 : FLAT_Store_Pseudo <"flat_store_dwordx3", VReg_96>;
+#endif /* LLPC_BUILD_NPI */
 
 let SubtargetPredicate = HasD16LoadStore in {
 let TiedSourceNotRead = 1 in {
+#ifdef LLPC_BUILD_NPI
+defm FLAT_LOAD_UBYTE_D16     : FLAT_Flat_Load_Pseudo <"flat_load_ubyte_d16", VGPR_32, 1>;
+defm FLAT_LOAD_UBYTE_D16_HI  : FLAT_Flat_Load_Pseudo <"flat_load_ubyte_d16_hi", VGPR_32, 1>;
+defm FLAT_LOAD_SBYTE_D16     : FLAT_Flat_Load_Pseudo <"flat_load_sbyte_d16", VGPR_32, 1>;
+defm FLAT_LOAD_SBYTE_D16_HI  : FLAT_Flat_Load_Pseudo <"flat_load_sbyte_d16_hi", VGPR_32, 1>;
+defm FLAT_LOAD_SHORT_D16     : FLAT_Flat_Load_Pseudo <"flat_load_short_d16", VGPR_32, 1>;
+defm FLAT_LOAD_SHORT_D16_HI  : FLAT_Flat_Load_Pseudo <"flat_load_short_d16_hi", VGPR_32, 1>;
+#else /* LLPC_BUILD_NPI */
 def FLAT_LOAD_UBYTE_D16     : FLAT_Load_Pseudo <"flat_load_ubyte_d16", VGPR_32, 1>;
 def FLAT_LOAD_UBYTE_D16_HI  : FLAT_Load_Pseudo <"flat_load_ubyte_d16_hi", VGPR_32, 1>;
 def FLAT_LOAD_SBYTE_D16     : FLAT_Load_Pseudo <"flat_load_sbyte_d16", VGPR_32, 1>;
 def FLAT_LOAD_SBYTE_D16_HI  : FLAT_Load_Pseudo <"flat_load_sbyte_d16_hi", VGPR_32, 1>;
 def FLAT_LOAD_SHORT_D16     : FLAT_Load_Pseudo <"flat_load_short_d16", VGPR_32, 1>;
 def FLAT_LOAD_SHORT_D16_HI  : FLAT_Load_Pseudo <"flat_load_short_d16_hi", VGPR_32, 1>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+defm FLAT_STORE_BYTE_D16_HI  : FLAT_Flat_Store_Pseudo <"flat_store_byte_d16_hi", VGPR_32>;
+defm FLAT_STORE_SHORT_D16_HI : FLAT_Flat_Store_Pseudo <"flat_store_short_d16_hi", VGPR_32>;
+#else /* LLPC_BUILD_NPI */
 def FLAT_STORE_BYTE_D16_HI  : FLAT_Store_Pseudo <"flat_store_byte_d16_hi", VGPR_32>;
 def FLAT_STORE_SHORT_D16_HI : FLAT_Store_Pseudo <"flat_store_short_d16_hi", VGPR_32>;
+#endif /* LLPC_BUILD_NPI */
 }
 
 defm FLAT_ATOMIC_CMPSWAP    : FLAT_Atomic_Pseudo <"flat_atomic_cmpswap",
@@ -947,14 +1264,52 @@ let SubtargetPredicate = isGFX12Plus in {
   def GLOBAL_WBINV  : FLAT_Global_Invalidate_Writeback<"global_wbinv">;
 } // End SubtargetPredicate = isGFX12Plus
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = isGFX1210Plus in {
+
+let Uses = [M0, EXEC, ASYNCcnt] in {
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B32     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b32",  1>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B64     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b64",  1>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B128    :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b128", 1>;
+} // End Uses = [M0, EXEC, ASYNCcnt]
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B8       :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b8",    1>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B32      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b32",   1>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B64      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b64",   1>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B128     :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b128",  1>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B8    :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b8">;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B32   :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b32">;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B64   :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b64">;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B128  :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b128">;
+
+def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
+def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
+} // End SubtargetPredicate = isGFX1210Plus
+
+#endif /* LLPC_BUILD_NPI */
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte", VGPR_32>;
 defm SCRATCH_LOAD_SBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte", VGPR_32>;
 defm SCRATCH_LOAD_USHORT   : FLAT_Scratch_Load_Pseudo <"scratch_load_ushort", VGPR_32>;
 defm SCRATCH_LOAD_SSHORT   : FLAT_Scratch_Load_Pseudo <"scratch_load_sshort", VGPR_32>;
+#ifdef LLPC_BUILD_NPI
+
+// may apply CustomInsert to convert into V_LOAD_IDX and V_STORE_IDX
+let usesCustomInserter = 1 in {
+#endif /* LLPC_BUILD_NPI */
 defm SCRATCH_LOAD_DWORD    : FLAT_Scratch_Load_Pseudo <"scratch_load_dword", VGPR_32>;
 defm SCRATCH_LOAD_DWORDX2  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx2", VReg_64>;
 defm SCRATCH_LOAD_DWORDX3  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx3", VReg_96>;
 defm SCRATCH_LOAD_DWORDX4  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx4", VReg_128>;
+#ifdef LLPC_BUILD_NPI
+// DWORDX5 and larger are pseudos only used during instruction-selection for v_load_idx conversion
+defm SCRATCH_LOAD_DWORDX5  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx5", VReg_160>;
+defm SCRATCH_LOAD_DWORDX6 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx6", VReg_192>;
+defm SCRATCH_LOAD_DWORDX8 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx8", VReg_256>;
+defm SCRATCH_LOAD_DWORDX9 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx9", VReg_288>;
+defm SCRATCH_LOAD_DWORDX16 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx16", VReg_512>;
+defm SCRATCH_LOAD_DWORDX18 : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx18", VReg_576>;
+}
+#endif /* LLPC_BUILD_NPI */
 
 let TiedSourceNotRead = 1 in {
 defm SCRATCH_LOAD_UBYTE_D16    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte_d16", VGPR_32, 1>;
@@ -967,10 +1322,24 @@ defm SCRATCH_LOAD_SHORT_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_short_d
 
 defm SCRATCH_STORE_BYTE    : FLAT_Scratch_Store_Pseudo <"scratch_store_byte", VGPR_32>;
 defm SCRATCH_STORE_SHORT   : FLAT_Scratch_Store_Pseudo <"scratch_store_short", VGPR_32>;
+#ifdef LLPC_BUILD_NPI
+// may apply CustomInsert to convert into V_LOAD_IDX and V_STORE_IDX
+let usesCustomInserter = 1 in {
+#endif /* LLPC_BUILD_NPI */
 defm SCRATCH_STORE_DWORD   : FLAT_Scratch_Store_Pseudo <"scratch_store_dword", VGPR_32>;
 defm SCRATCH_STORE_DWORDX2 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx2", VReg_64>;
 defm SCRATCH_STORE_DWORDX3 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx3", VReg_96>;
 defm SCRATCH_STORE_DWORDX4 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx4", VReg_128>;
+#ifdef LLPC_BUILD_NPI
+// DWORDX5 and larger are pseudos only used during instruction-selection for v_store_idx conversion
+defm SCRATCH_STORE_DWORDX5 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx5", VReg_160>;
+defm SCRATCH_STORE_DWORDX6 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx6", VReg_192>;
+defm SCRATCH_STORE_DWORDX8 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx8", VReg_256>;
+defm SCRATCH_STORE_DWORDX9 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx9", VReg_288>;
+defm SCRATCH_STORE_DWORDX16 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx16", VReg_512>;
+defm SCRATCH_STORE_DWORDX18 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx18", VReg_576>;
+}
+#endif /* LLPC_BUILD_NPI */
 
 defm SCRATCH_STORE_BYTE_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_byte_d16_hi", VGPR_32>;
 defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_short_d16_hi", VGPR_32>;
@@ -981,6 +1350,27 @@ defm SCRATCH_LOAD_LDS_USHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_u
 defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sshort">;
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
+#ifdef LLPC_BUILD_NPI
+
+let SubtargetPredicate = isGFX121xOnly in {
+defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
+defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VReg_64>;
+defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VReg_128>;
+
+defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
+defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
+defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
+} // End SubtargetPredicate = isGFX121xOnly
+
+let SubtargetPredicate = isGFX1210Plus in {
+let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
+defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
+defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
+defm CLUSTER_LOAD_B128        : FLAT_Global_Load_Pseudo <"cluster_load_b128", VReg_128>;
+} // End Uses = [M0, EXEC]
+} // End SubtargetPredicate = isGFX1210Plus.
+
+#endif /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX12Plus in {
   let Uses = [EXEC, M0] in {
     defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
@@ -992,6 +1382,10 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 
   let WaveSizePredicate = isWave32 in {
+#ifdef LLPC_BUILD_NPI
+    defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128", VReg_128>;
+    defm GLOBAL_LOAD_TR_B64_w32   : FLAT_Global_Load_Pseudo <"global_load_tr_b64", VReg_64>;
+#else /* LLPC_BUILD_NPI */
     let Mnemonic = "global_load_tr_b128" in
     defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w32", VReg_128>;
     let Mnemonic = "global_load_tr_b64" in
@@ -1002,9 +1396,24 @@ let SubtargetPredicate = isGFX12Plus in {
     defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
     let Mnemonic = "global_load_tr_b64" in
     defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
+#endif /* LLPC_BUILD_NPI */
   }
 } // End SubtargetPredicate = isGFX12Plus
 
+#ifdef LLPC_BUILD_NPI
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot1210 in {
+  let Mnemonic = "global_load_tr_b128" in
+  defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
+  let Mnemonic = "global_load_tr_b64" in
+  defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
+}
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1210Plus in {
+  defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VReg_96>;
+  defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VReg_64>;
+}
+
+#endif /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX10Plus in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap", VGPR_32, f32, v2f32, VReg_64>;
@@ -1033,6 +1442,43 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = HasVectorPrefetch in {
+  defm FLAT_PREFETCH_B8   : FLAT_Flat_Prefetch_Pseudo<"flat_prefetch_b8">;
+  defm GLOBAL_PREFETCH_B8 : FLAT_Global_Prefetch_Pseudo<"global_prefetch_b8">;
+}
+
+def FLAT_DISCARD_B32   : FLAT_Discard_Pseudo<"flat_discard_b32">;
+def FLAT_DISCARD_B128  : FLAT_Discard_Pseudo<"flat_discard_b128">;
+def FLAT_DISCARD_B1024 : FLAT_Discard_Pseudo<"flat_discard_b1024">;
+
+defm GLOBAL_DISCARD_B32   : FLAT_Global_Discard_Pseudo<"global_discard_b32">;
+defm GLOBAL_DISCARD_B128  : FLAT_Global_Discard_Pseudo<"global_discard_b128">;
+defm GLOBAL_DISCARD_B1024 : FLAT_Global_Discard_Pseudo<"global_discard_b1024">;
+
+defm SCRATCH_DISCARD_B32  : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b32">;
+defm SCRATCH_DISCARD_B128 : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b128">;
+
+let SubtargetPredicate = isGFX13Plus in {
+  def RTS_READ_RESULT_ALL_STOP : FLAT_RTS<"rts_read_result_all_stop", 1, 0, VReg_64>;
+  def RTS_READ_RESULT_ONGOING  : FLAT_RTS<"rts_read_result_ongoing", 1, 0, VReg_64>;
+  def RTS_RAY_RESTORE          : FLAT_RTS<"rts_ray_restore", 0, 1>;
+  def RTS_RAY_SAVE             : FLAT_RTS<"rts_ray_save", 1, 0>;
+  def RTS_UPDATE_RAY           : FLAT_RTS<"rts_update_ray", 1, 1>;
+  def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0>;
+
+  let OtherPredicates = [HasSWC] in {
+  def SWC_REORDER             : FLAT_SWC<"swc_reorder", 1, 1>;
+  def SWC_FLUSH               : FLAT_SWC<"swc_flush", 0, 0>;
+  def SWC_REORDER_SWAP        : FLAT_SWC<"swc_reorder_swap", 1, 1>;
+  def SWC_REORDER_SWAP_RESUME : FLAT_SWC<"swc_reorder_swap_resume", 1, 0>;
+  def SWC_GET_EXCHANGE_STATE  : FLAT_SWC<"swc_get_exchange_state", 1, 0>;
+  def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1>;
+  def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0>;
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // Flat Patterns
 //===----------------------------------------------------------------------===//
@@ -1043,6 +1489,13 @@ class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCN
   (inst $vaddr, $offset)
 >;
 
+#ifdef LLPC_BUILD_NPI
+class FlatLoadPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (FlatOffset i64:$vaddr, i32:$offset), (i32 timm:$cpol))),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+#endif /* LLPC_BUILD_NPI */
 class FlatLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node (FlatOffset (i64 VReg_64:$vaddr), i32:$offset), vt:$in),
   (inst $vaddr, $offset, 0, $in)
@@ -1053,9 +1506,45 @@ class FlatSignedLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType
   (inst $vaddr, $offset, 0, $in)
 >;
 
+#ifdef LLPC_BUILD_NPI
+class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$in)),
+  (inst $saddr, $voffset, $offset, $cpol, $in)
+>;
+
+class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
+  (inst $dsaddr, $vaddr, $offset, $cpol)
+>;
+
+class GlobalLoadLDSSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
+  (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatLoadLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
+  (inst $dsaddr, $vaddr, $offset, $cpol)
+>;
+
+class GlobalLoadLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
+  (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatStoreLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
+  (inst $vaddr, $dsaddr, $offset, $cpol)
+>;
+
+class GlobalStoreLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
+  (inst $saddr, $voffset, $dsaddr, $offset, $cpol)
+#else /* LLPC_BUILD_NPI */
 class GlobalLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), vt:$in)),
   (inst $saddr, $voffset, $offset, 0, $in)
+#endif /* LLPC_BUILD_NPI */
 >;
 
 class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1063,27 +1552,78 @@ class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
   (inst $vaddr, $offset)
 >;
 
+#ifdef LLPC_BUILD_NPI
+class FlatLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
+#else /* LLPC_BUILD_NPI */
 class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
   (inst $saddr, $voffset, $offset, 0)
+#endif /* LLPC_BUILD_NPI */
 >;
 
+#ifdef LLPC_BUILD_NPI
+class FlatLoadSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), M0)),
+  (inst $vaddr, $offset)
+#else /* LLPC_BUILD_NPI */
 class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                            ValueType vt> : GCNPat <
   (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset)),
   (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
+#endif /* LLPC_BUILD_NPI */
 >;
 
+#ifdef LLPC_BUILD_NPI
+class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), M0)),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol))),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 timm:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
+                         ValueType vt> : GCNPat <
+  (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol)),
+  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
+>;
+
+class GlobalAtomicStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
+                                 ValueType vt> : GCNPat <
+  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$data),
+  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
+>;
+
+class FlatAtomicSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ComplexPattern pat,
+                          ValueType vt, ValueType data_vt = vt> : GCNPat <
+  (vt (node (pat (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), data_vt:$data)),
+  (inst $voffset, getVregSrcForVT<data_vt>.ret:$data, $saddr, $offset, $cpol)
+#else /* LLPC_BUILD_NPI */
 class GlobalAtomicSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                             ValueType vt, ValueType data_vt = vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), data_vt:$data)),
   (inst $voffset, getVregSrcForVT<data_vt>.ret:$data, $saddr, $offset)
+#endif /* LLPC_BUILD_NPI */
 >;
 
 class GlobalAtomicNoRtnSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                                  ValueType vt> : GCNPat <
+#ifdef LLPC_BUILD_NPI
+  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$data),
+  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
+#else /* LLPC_BUILD_NPI */
   (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), vt:$data),
   (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
+#endif /* LLPC_BUILD_NPI */
 >;
 
 class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1112,6 +1652,14 @@ multiclass FlatAtomicNoRtnPatBase <string inst, string node, ValueType vt,
   let AddedComplexity = 1 in
   def : GCNPat <(vt (noRtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+#ifdef LLPC_BUILD_NPI
+
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node),
+                           GlobalSAddr, vt, data_vt> {
+    let AddedComplexity = 9;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass FlatAtomicNoRtnPatWithAddrSpace<string inst, string node, string addrSpaceSuffix,
@@ -1130,6 +1678,13 @@ multiclass FlatAtomicRtnPatBase <string inst, string node, ValueType vt,
 
   def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+#ifdef LLPC_BUILD_NPI
+
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, GlobalSAddrGLC, vt, data_vt> {
+    let AddedComplexity = 8;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass FlatAtomicRtnPatWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
@@ -1212,27 +1767,98 @@ class ScratchStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 class ScratchLoadSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+#ifdef LLPC_BUILD_NPI
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
+  (inst $vaddr, $saddr, $offset, $cpol)
+#else /* LLPC_BUILD_NPI */
   (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset))),
   (inst $vaddr, $saddr, $offset, 0)
+#endif /* LLPC_BUILD_NPI */
 >;
 
 class ScratchStoreSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                              ValueType vt> : GCNPat <
+#ifdef LLPC_BUILD_NPI
+  (node vt:$data, (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol)),
+  (inst getVregSrcForVT<vt>.ret:$data, $vaddr, $saddr, $offset, $cpol)
+#else /* LLPC_BUILD_NPI */
   (node vt:$data, (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset)),
   (inst getVregSrcForVT<vt>.ret:$data, $vaddr, $saddr, $offset)
+#endif /* LLPC_BUILD_NPI */
 >;
 
 class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+#ifdef LLPC_BUILD_NPI
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol), vt:$in)),
+  (inst $vaddr, $saddr, $offset, $cpol, $in)
+#else /* LLPC_BUILD_NPI */
   (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset), vt:$in)),
   (inst $vaddr, $saddr, $offset, 0, $in)
+#endif /* LLPC_BUILD_NPI */
 >;
 
+#ifdef LLPC_BUILD_NPI
+multiclass GlobalLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
+  def : FlatLoadLDSSignedPat_M0 <inst, node> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadLDSSaddrPat_M0<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalLoadLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
+  def : FlatLoadLDSSignedPat <inst, node> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadLDSSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalStoreLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
+  def : FlatStoreLDSSignedPat <inst, node> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalStoreLDSSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node> {
+    let AddedComplexity = 11;
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : FlatLoadSignedPat <inst, node, vt> {
     let AddedComplexity = 10;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : FlatLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalFLATLoadPats_M0<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadSignedPat_M0 <inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat_M0<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalFLATLoadPats_CPOL<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadSignedPat_CPOL<inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat_CPOL<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#else /* LLPC_BUILD_NPI */
   def : GlobalLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 11;
   }
 }
@@ -1242,7 +1868,11 @@ multiclass GlobalFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, Valu
     let AddedComplexity = 10;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : FlatLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#else /* LLPC_BUILD_NPI */
   def : GlobalLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 11;
   }
 }
@@ -1253,7 +1883,11 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
     let AddedComplexity = 10;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#else /* LLPC_BUILD_NPI */
   def : GlobalStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 11;
   }
 }
@@ -1264,7 +1898,12 @@ multiclass GlobalFLATAtomicPatsNoRtnBase<string inst, string node, ValueType vt,
   def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt, data_vt>;
 
   let AddedComplexity = 13 in
+#ifdef LLPC_BUILD_NPI
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node),
+                             GlobalSAddr, vt, data_vt>;
+#else /* LLPC_BUILD_NPI */
   def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt, data_vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
@@ -1275,7 +1914,11 @@ multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
   def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst#"_RTN"), rtnNode, vt, data_vt>;
 
   let AddedComplexity = 12 in
+#ifdef LLPC_BUILD_NPI
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, GlobalSAddrGLC, vt, data_vt>;
+#else /* LLPC_BUILD_NPI */
   def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, vt, data_vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass GlobalFLATAtomicPatsNoRtn<string inst, string node, ValueType vt,
@@ -1309,54 +1952,149 @@ multiclass GlobalFLATAtomicIntrPats<string inst, string node, ValueType vt,
   defm : GlobalFLATAtomicPats<inst, node, vt, data_vt, /* isIntr */ 1>;
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, string node, ValueType vt> {
+  def : ScratchLoadSignedPat <inst, !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
 multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : ScratchLoadSignedPat <inst, node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 25;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : ScratchLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
   def : ScratchLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 26;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
   def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass ScratchFLATStorePats<FLAT_Pseudo inst, string node,
+#else /* LLPC_BUILD_NPI */
 multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
+#endif /* LLPC_BUILD_NPI */
                                ValueType vt> {
+#ifdef LLPC_BUILD_NPI
+  def : ScratchStoreSignedPat <inst, !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
   def : ScratchStoreSignedPat <inst, node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 25;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : ScratchStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
   def : ScratchStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 26;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
   def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, string node, ValueType vt> {
+  def : ScratchLoadSignedPat_D16 <inst, !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
 multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : ScratchLoadSignedPat_D16 <inst, node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 25;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : ScratchLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
   def : ScratchLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let AddedComplexity = 26;
   }
 
+#ifdef LLPC_BUILD_NPI
+  def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), !cast<SDPatternOperator>(node), vt> {
+#else /* LLPC_BUILD_NPI */
   def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+#endif /* LLPC_BUILD_NPI */
     let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass FlatLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadPat <inst, node, vt>;
+
+  def : FlatLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 9;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
+}
+
+multiclass FlatLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadPat_D16 <inst, node, vt>;
+
+  def : FlatLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 9;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
+}
+
+multiclass FlatStorePats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatStorePat <inst, node, vt>;
+
+  def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 9;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 let OtherPredicates = [HasFlatAddressSpace] in {
 
+#ifdef LLPC_BUILD_NPI
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, extloadi16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, load_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_SSHORT, atomic_load_sext_16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
+#else /* LLPC_BUILD_NPI */
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
@@ -1379,36 +2117,75 @@ def : FlatLoadPat <FLAT_LOAD_USHORT, load_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, atomic_load_sext_16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
+#else /* LLPC_BUILD_NPI */
 def : FlatLoadPat <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
+#else /* LLPC_BUILD_NPI */
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
 def : FlatStorePat <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
+#endif /* LLPC_BUILD_NPI */
 
 foreach vt = Reg32Types.types in {
+#ifdef LLPC_BUILD_NPI
+defm : FlatLoadPats <FLAT_LOAD_DWORD, load_flat, vt>;
+defm : FlatStorePats <FLAT_STORE_DWORD, store_flat, vt>;
+#else /* LLPC_BUILD_NPI */
 def : FlatLoadPat <FLAT_LOAD_DWORD, load_flat, vt>;
 def : FlatStorePat <FLAT_STORE_DWORD, store_flat, vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
 foreach vt = VReg_64.RegTypes in {
+#ifdef LLPC_BUILD_NPI
+defm : FlatStorePats <FLAT_STORE_DWORDX2, store_flat, vt>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, load_flat, vt>;
+#else /* LLPC_BUILD_NPI */
 def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, vt>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+defm : FlatStorePats <FLAT_STORE_DWORDX3, store_flat, v3i32>;
+#else /* LLPC_BUILD_NPI */
 def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32>;
+#endif /* LLPC_BUILD_NPI */
 
 foreach vt = VReg_128.RegTypes in {
+#ifdef LLPC_BUILD_NPI
+defm : FlatLoadPats <FLAT_LOAD_DWORDX4, load_flat, vt>;
+defm : FlatStorePats <FLAT_STORE_DWORDX4, store_flat, vt>;
+#else /* LLPC_BUILD_NPI */
 def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, vt>;
 def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+defm : FlatStorePats <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
+defm : FlatStorePats <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
+#else /* LLPC_BUILD_NPI */
 def : FlatStorePat <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
 def : FlatStorePat <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
 def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
 def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
 def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
 def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
+#endif /* LLPC_BUILD_NPI */
 
 foreach as = [ "flat", "global" ] in {
 defm : FlatAtomicPat <"FLAT_ATOMIC_ADD", "atomic_load_add_"#as, i32>;
@@ -1444,30 +2221,71 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_FMIN", "atomic_load_fmin_"#as, f32>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_FMAX", "atomic_load_fmax_"#as, f32>;
 }
 
+#ifdef LLPC_BUILD_NPI
+let OtherPredicates = [HasAtomicFMinFMaxF64FlatInsts] in {
+#else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasAtomicFMinFMaxF64FlatInsts in {
+#endif /* LLPC_BUILD_NPI */
 defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_"#as, f64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 }
 
 } // end foreach as
 
+#ifdef LLPC_BUILD_NPI
+defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_SHORT, store_flat, i16>;
+#else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX12Plus in {
   defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32 >;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+} // End OtherPredicates = [HasFlatAddressSpace]
+
+let OtherPredicates = [isGFX12Plus] in
+defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
+#else /* LLPC_BUILD_NPI */
   let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
     defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 }
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+let OtherPredicates = [isGFX12Plus, HasAtomicCSubNoRtnInsts] in
+defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
+#else /* LLPC_BUILD_NPI */
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
+#endif /* LLPC_BUILD_NPI */
 
 let OtherPredicates = [HasD16LoadStore] in {
+#ifdef LLPC_BUILD_NPI
+defm : FlatStorePats <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
+#else /* LLPC_BUILD_NPI */
 def : FlatStorePat <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
 def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
+#endif /* LLPC_BUILD_NPI */
 }
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 // TODO: Handle atomic loads
+#ifdef LLPC_BUILD_NPI
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2f16>;
+
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
+#else /* LLPC_BUILD_NPI */
 def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
@@ -1481,10 +2299,14 @@ def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 } // End OtherPredicates = [HasFlatAddressSpace]
 
+#endif /* LLPC_BUILD_NPI */
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i32>;
@@ -1611,15 +2433,64 @@ let OtherPredicates = [isGFX12Plus] in {
   defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
 
   let WaveSizePredicate = isWave32 in {
+#ifdef LLPC_BUILD_NPI
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32,  int_amdgcn_global_load_tr_b64, v2i32>;
+#else /* LLPC_BUILD_NPI */
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr_b64, v2i32>;
+#endif /* LLPC_BUILD_NPI */
     foreach vt = [v8i16, v8f16, v8bf16] in
       defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr_b128, vt>;
   }
+#ifdef LLPC_BUILD_NPI
+}
+
+let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot1210] in {
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr_b64, i32>;
+  foreach vt = [v4i16, v4f16, v4bf16] in
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
+}
+
+let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1210Plus] in {
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
+}
+
+let OtherPredicates = [isGFX121xOnly] in {
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
+  def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
+
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
+  defm : GlobalFLATLoadPats_CPOL <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+} // End SubtargetPredicate = isGFX121xOnly
+
+let OtherPredicates = [isGFX1210Plus] in {
+  defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
+  defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
+  defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
+
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B8,   int_amdgcn_cluster_load_async_to_lds_b8>;
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B32,  int_amdgcn_cluster_load_async_to_lds_b32>;
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B64,  int_amdgcn_cluster_load_async_to_lds_b64>;
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B128, int_amdgcn_cluster_load_async_to_lds_b128>;
+
+  defm : GlobalLoadLDSPats  <GLOBAL_LOAD_ASYNC_TO_LDS_B8,      int_amdgcn_global_load_async_to_lds_b8>;
+  defm : GlobalLoadLDSPats  <GLOBAL_LOAD_ASYNC_TO_LDS_B32,     int_amdgcn_global_load_async_to_lds_b32>;
+  defm : GlobalLoadLDSPats  <GLOBAL_LOAD_ASYNC_TO_LDS_B64,     int_amdgcn_global_load_async_to_lds_b64>;
+  defm : GlobalLoadLDSPats  <GLOBAL_LOAD_ASYNC_TO_LDS_B128,    int_amdgcn_global_load_async_to_lds_b128>;
+
+  defm : GlobalStoreLDSPats <GLOBAL_STORE_ASYNC_FROM_LDS_B8,   int_amdgcn_global_store_async_from_lds_b8>;
+  defm : GlobalStoreLDSPats <GLOBAL_STORE_ASYNC_FROM_LDS_B32,  int_amdgcn_global_store_async_from_lds_b32>;
+  defm : GlobalStoreLDSPats <GLOBAL_STORE_ASYNC_FROM_LDS_B64,  int_amdgcn_global_store_async_from_lds_b64>;
+  defm : GlobalStoreLDSPats <GLOBAL_STORE_ASYNC_FROM_LDS_B128, int_amdgcn_global_store_async_from_lds_b128>;
+#else /* LLPC_BUILD_NPI */
   let WaveSizePredicate = isWave64 in {
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr_b64, i32>;
     foreach vt = [v4i16, v4f16, v4bf16] in
       defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
   }
+#endif /* LLPC_BUILD_NPI */
 }
 
 let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts, OtherPredicates = [HasFlatGlobalInsts] in {
@@ -1680,7 +2551,26 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_glob
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 
 let OtherPredicates = [HasFlatScratchInsts, EnableFlatScratch] in {
+#ifdef LLPC_BUILD_NPI
+foreach as = [ "private", "laneshared" ] in {
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "extloadi8_"#as, i32>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "zextloadi8_"#as, i32>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_SBYTE, "sextloadi8_"#as, i32>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "extloadi8_"#as, i16>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "zextloadi8_"#as, i16>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_SBYTE, "sextloadi8_"#as, i16>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, "extloadi16_"#as, i32>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, "zextloadi16_"#as, i32>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_SSHORT, "sextloadi16_"#as, i32>;
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, "load_"#as, i16>;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+  foreach vt = Reg32Types.types in {
+    defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORD, "load_"#as, vt>;
+    defm : ScratchFLATStorePats <SCRATCH_STORE_DWORD, "store_"#as, vt>;
+  }
+#else /* LLPC_BUILD_NPI */
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, extloadi8_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, zextloadi8_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_SBYTE, sextloadi8_private, i32>;
@@ -1691,24 +2581,240 @@ defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, extloadi16_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, zextloadi16_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_SSHORT, sextloadi16_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_USHORT, load_private, i16>;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+  foreach vt = VReg_64.RegTypes in {
+    defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX2, "load_"#as, vt>;
+    defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX2, "store_"#as, vt>;
+  }
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX3, "load_"#as, v3i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX3, "store_"#as, v3i32>;
+
+  foreach vt = VReg_128.RegTypes in {
+    defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX4, "load_"#as, vt>;
+    defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX4, "store_"#as, vt>;
+  }
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX5, "load_"#as, v5i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX5, "store_"#as, v5i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX6, "load_"#as, v6i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX6, "store_"#as, v6i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX8, "load_"#as, v8i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX8, "store_"#as, v8i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX9, "load_"#as, v9i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX9, "store_"#as, v9i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX16, "load_"#as, v16i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX16, "store_"#as, v16i32>;
+
+  defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX18, "load_"#as, v18i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX18, "store_"#as, v18i32>;
+
+  defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, "truncstorei8_"#as, i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, "truncstorei8_"#as, i16>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, "truncstorei16_"#as, i32>;
+  defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, "store_"#as, i16>;
+
+
+  let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, EnableFlatScratch] in {
+    defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT_D16_HI, "truncstorei16_hi16_"#as, i32>;
+    defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE_D16_HI, "truncstorei8_hi16_"#as, i32>;
+  }
+
+  let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, EnableFlatScratch] in {
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, "az_extloadi8_d16_hi_"#as, v2i16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, "az_extloadi8_d16_hi_"#as, v2f16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16_HI, "sextloadi8_d16_hi_"#as, v2i16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16_HI, "sextloadi8_d16_hi_"#as, v2f16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16_HI, "load_d16_hi_"#as, v2i16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16_HI, "load_d16_hi_"#as, v2f16>;
+
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16, "az_extloadi8_d16_lo_"#as, v2i16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16, "az_extloadi8_d16_lo_"#as, v2f16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16, "sextloadi8_d16_lo_"#as, v2i16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16, "sextloadi8_d16_lo_"#as, v2f16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, "load_d16_lo_"#as, v2i16>;
+    defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, "load_d16_lo_"#as, v2f16>;
+  }
+} // End foreach as
+} // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
+
+def PrefetchLoc: SDNodeXForm<timm, [{
+  uint32_t V = N->getZExtValue();
+  V = (AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK)) << AMDGPU::CPol::SCOPE_SHIFT;
+  if (!Subtarget->hasSafeCUPrefetch())
+    V = std::max(V, (uint32_t)AMDGPU::CPol::SCOPE_SE); // CU scope is unsafe
+  return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i32);
+}]>;
+
+def prefetch_flat : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                             (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                             [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+  }];
+}
+
+def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                               (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+                                         (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+                                          !Subtarget->hasSafeSmemPrefetch()); }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+            ((*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+             !Subtarget->hasSafeSmemPrefetch());
+  }];
+}
+
+multiclass FlatPrefetchPats<string inst, SDPatternOperator prefetch_kind, SDPatternOperator rw> {
+  def : GCNPat <
+    (prefetch_kind (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 0, 25);
+  }
+
+  def : GCNPat <
+    (prefetch_kind (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 11, 30);
+  }
+#else /* LLPC_BUILD_NPI */
 foreach vt = Reg32Types.types in {
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORD, load_private, vt>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_DWORD, store_private, vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
+  def : GCNPat <
+    (intr (FlatOffset i64:$vaddr, i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, $cpol)
+  >;
+
+  def : GCNPat <
+    (intr (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, $cpol)> {
+      let AddedComplexity = 11;
+    }
+#else /* LLPC_BUILD_NPI */
 foreach vt = VReg_64.RegTypes in {
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX2, load_private, vt>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX2, store_private, vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
-defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX3, load_private, v3i32>;
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = HasVectorPrefetch in {
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_zero>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_zero>;
 
+  // Patterns for forced vector prefetch with rw = 1.
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_one>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_one>;
+
+  // Patterns for target intrinsics
+  defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
+  defm : FlatIntrPrefetchPats<"GLOBAL_PREFETCH_B8", int_amdgcn_global_prefetch>;
+} // End SubtargetPredicate = HasVectorPrefetch
+#else /* LLPC_BUILD_NPI */
+defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX3, load_private, v3i32>;
+#endif /* LLPC_BUILD_NPI */
+
+#ifdef LLPC_BUILD_NPI
+
+//===----------------------------------------------------------------------===//
+// GFX13: Discard instruction patterns
+//===----------------------------------------------------------------------===//
+foreach size = ["b32", "b128", "b1024"] in {
+def discard_flat_#size
+    : PatFrag <(ops node:$ptr, node:$cpol),
+               (!cast<SDPatternOperator>("int_amdgcn_discard_"#size) node:$ptr, node:$cpol),
+               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+  }];
+}
+
+def discard_global_#size
+    : PatFrag <(ops node:$ptr, node:$cpol),
+               (!cast<SDPatternOperator>("int_amdgcn_discard_"#size) node:$ptr, node:$cpol),
+               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+  }];
+}
+} // foreach size = ["b32", "b128", "b1024"]
+
+foreach size = ["b32", "b128"] in {
+def discard_scratch_#size
+    : PatFrag <(ops node:$ptr, node:$cpol),
+               (!cast<SDPatternOperator>("int_amdgcn_discard_"#size) node:$ptr, node:$cpol),
+               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS;
+  }];
+}
+} // foreach size = ["b32", "b128"]
+
+class FlatDiscardPat <FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (FlatOffset i64:$vaddr, i32:$offset), (i32 timm:$cpol)),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class FlatDiscardSignedPat <FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol)),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class GlobalDiscardSaddrPat <FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 timm:$cpol)),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+multiclass GlobalFlatDiscardPats <FLAT_Pseudo inst, PatFrag intrPat> {
+  def : FlatDiscardSignedPat<inst, intrPat> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalDiscardSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), intrPat> {
+    let AddedComplexity = 11;
+  }
+#else /* LLPC_BUILD_NPI */
 foreach vt = VReg_128.RegTypes in {
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_DWORDX4, load_private, vt>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX4, store_private, vt>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+class ScratchDiscardSignedPat<FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (ScratchOffset (i32 VGPR_32:$vaddr), i32:$offset), (i32 timm:$cpol)),
+  (inst $vaddr, $offset, $cpol)
+>;
+
+class ScratchDiscardSaddrPat<FLAT_Pseudo inst, PatFrag intrPat> : GCNPat <
+  (intrPat (ScratchSAddr (i32 SGPR_32:$saddr), i32:$offset), (i32 timm:$cpol)),
+  (inst $saddr, $offset, $cpol)
+>;
+
+multiclass ScratchFlatDiscardPats<FLAT_Pseudo inst, PatFrag intrPat> {
+  def : ScratchDiscardSignedPat <inst, intrPat> {
+    let AddedComplexity = 25;
+  }
+
+  def : ScratchDiscardSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), intrPat> {
+    let AddedComplexity = 26;
+  }
+#else /* LLPC_BUILD_NPI */
 defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, truncstorei8_private, i32>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, truncstorei8_private, i16>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, truncstorei16_private, i32>;
@@ -1734,9 +2840,23 @@ defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16, sextloadi8_d16_lo_privat
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16, sextloadi8_d16_lo_private, v2f16>;
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2i16>;
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2f16>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+def : FlatDiscardPat <FLAT_DISCARD_B32,   discard_flat_b32>;
+def : FlatDiscardPat <FLAT_DISCARD_B128,  discard_flat_b128>;
+def : FlatDiscardPat <FLAT_DISCARD_B1024, discard_flat_b1024>;
+
+defm : GlobalFlatDiscardPats <GLOBAL_DISCARD_B32,   discard_global_b32>;
+defm : GlobalFlatDiscardPats <GLOBAL_DISCARD_B128,  discard_global_b128>;
+defm : GlobalFlatDiscardPats <GLOBAL_DISCARD_B1024, discard_global_b1024>;
+
+defm : ScratchFlatDiscardPats <SCRATCH_DISCARD_B32,  discard_scratch_b32>;
+defm : ScratchFlatDiscardPats <SCRATCH_DISCARD_B128, discard_scratch_b128>;
+#else /* LLPC_BUILD_NPI */
 } // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
+#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // Target
@@ -1984,9 +3104,16 @@ defm GLOBAL_LOAD_LDS_USHORT : FLAT_Real_AllAddr_LDS <0x028, 0x12>;
 defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Real_AllAddr_LDS <0x029, 0x13>;
 defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Real_AllAddr_LDS <0x02a, 0x14>;
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = HasGFX950Insts in {
+#endif /* LLPC_BUILD_NPI */
 defm GLOBAL_LOAD_LDS_DWORDX3 : FLAT_Real_AllAddr_LDS <0x07e, 0x07e>;
 defm GLOBAL_LOAD_LDS_DWORDX4 : FLAT_Real_AllAddr_LDS <0x07d, 0x07d>;
+#ifdef LLPC_BUILD_NPI
+}
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
 
 defm GLOBAL_ATOMIC_SWAP       : FLAT_Global_Real_Atomics_vi <0x40>;
 defm GLOBAL_ATOMIC_CMPSWAP    : FLAT_Global_Real_Atomics_vi <0x41>;
@@ -2545,6 +3672,9 @@ multiclass VFLAT_Real_gfx12 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemoni
     let DecoderNamespace = "GFX12";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
+#ifdef LLPC_BUILD_NPI
+    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+#endif /* LLPC_BUILD_NPI */
   }
 }
 
@@ -2564,6 +3694,9 @@ multiclass VFLAT_Real_Base_gfx12<bits<8> op,
   VFLAT_Aliases_gfx12<name, alias>,
   VFLAT_Real_gfx12<op, name>;
 
+#ifdef LLPC_BUILD_NPI
+multiclass VFLAT_Real_AllAddr_gfx12<bits<8> op,
+#else /* LLPC_BUILD_NPI */
 multiclass VFLAT_Real_Atomics_gfx12<bits<8> op,
                                     string name = get_FLAT_ps<NAME>.Mnemonic,
                                     string alias = name> :
@@ -2572,13 +3705,25 @@ multiclass VFLAT_Real_Atomics_gfx12<bits<8> op,
 }
 
 multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
+#endif /* LLPC_BUILD_NPI */
                                       string name = get_FLAT_ps<NAME>.Mnemonic,
                                       string alias = name> :
   VFLAT_Real_Base_gfx12<op, name, alias> {
   defm _SADDR : VFLAT_Real_gfx12<op, name>;
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass VGLOBAL_Real_AllAddr_gfx1200<bits<8> op> {
+  let AssemblerPredicate = isGFX12Not12_10 in {
+    defm "" : VFLAT_Real_gfx12<op>;
+    defm _SADDR : VFLAT_Real_gfx12<op>;
+  }
+}
+
+multiclass VFLAT_Real_AllAddr_gfx12_w64<bits<8> op,
+#else /* LLPC_BUILD_NPI */
 multiclass VGLOBAL_Real_AllAddr_gfx12_w64<bits<8> op,
+#endif /* LLPC_BUILD_NPI */
                                        string name = get_FLAT_ps<NAME>.Mnemonic> :
   VFLAT_Aliases_gfx12<name> {
   let DecoderNamespace = "GFX12W64" in {
@@ -2587,10 +3732,18 @@ multiclass VGLOBAL_Real_AllAddr_gfx12_w64<bits<8> op,
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass VFLAT_Real_Atomics_gfx12<bits<8> op,
+#else /* LLPC_BUILD_NPI */
 multiclass VGLOBAL_Real_Atomics_gfx12<bits<8> op,
+#endif /* LLPC_BUILD_NPI */
                                       string name = get_FLAT_ps<NAME>.Mnemonic,
                                       string alias = name> :
+#ifdef LLPC_BUILD_NPI
+  VFLAT_Real_AllAddr_gfx12<op, name, alias> {
+#else /* LLPC_BUILD_NPI */
   VGLOBAL_Real_AllAddr_gfx12<op, name, alias> {
+#endif /* LLPC_BUILD_NPI */
   defm _RTN : VFLAT_Real_gfx12<op, name>;
   defm _SADDR_RTN : VFLAT_Real_gfx12<op, name>;
 }
@@ -2604,6 +3757,30 @@ multiclass VSCRATCH_Real_AllAddr_gfx12<bits<8> op,
 }
 
 // ENC_VFLAT.
+#ifdef LLPC_BUILD_NPI
+defm FLAT_LOAD_UBYTE               : VFLAT_Real_AllAddr_gfx12<0x010, "flat_load_u8">;
+defm FLAT_LOAD_SBYTE               : VFLAT_Real_AllAddr_gfx12<0x011, "flat_load_i8">;
+defm FLAT_LOAD_USHORT              : VFLAT_Real_AllAddr_gfx12<0x012, "flat_load_u16">;
+defm FLAT_LOAD_SSHORT              : VFLAT_Real_AllAddr_gfx12<0x013, "flat_load_i16">;
+defm FLAT_LOAD_DWORD               : VFLAT_Real_AllAddr_gfx12<0x014, "flat_load_b32">;
+defm FLAT_LOAD_DWORDX2             : VFLAT_Real_AllAddr_gfx12<0x015, "flat_load_b64">;
+defm FLAT_LOAD_DWORDX3             : VFLAT_Real_AllAddr_gfx12<0x016, "flat_load_b96">;
+defm FLAT_LOAD_DWORDX4             : VFLAT_Real_AllAddr_gfx12<0x017, "flat_load_b128">;
+defm FLAT_STORE_BYTE               : VFLAT_Real_AllAddr_gfx12<0x018, "flat_store_b8">;
+defm FLAT_STORE_SHORT              : VFLAT_Real_AllAddr_gfx12<0x019, "flat_store_b16">;
+defm FLAT_STORE_DWORD              : VFLAT_Real_AllAddr_gfx12<0x01a, "flat_store_b32">;
+defm FLAT_STORE_DWORDX2            : VFLAT_Real_AllAddr_gfx12<0x01b, "flat_store_b64">;
+defm FLAT_STORE_DWORDX3            : VFLAT_Real_AllAddr_gfx12<0x01c, "flat_store_b96">;
+defm FLAT_STORE_DWORDX4            : VFLAT_Real_AllAddr_gfx12<0x01d, "flat_store_b128">;
+defm FLAT_LOAD_UBYTE_D16           : VFLAT_Real_AllAddr_gfx12<0x01e, "flat_load_d16_u8">;
+defm FLAT_LOAD_SBYTE_D16           : VFLAT_Real_AllAddr_gfx12<0x01f, "flat_load_d16_i8">;
+defm FLAT_LOAD_SHORT_D16           : VFLAT_Real_AllAddr_gfx12<0x020, "flat_load_d16_b16">;
+defm FLAT_LOAD_UBYTE_D16_HI        : VFLAT_Real_AllAddr_gfx12<0x021, "flat_load_d16_hi_u8">;
+defm FLAT_LOAD_SBYTE_D16_HI        : VFLAT_Real_AllAddr_gfx12<0x022, "flat_load_d16_hi_i8">;
+defm FLAT_LOAD_SHORT_D16_HI        : VFLAT_Real_AllAddr_gfx12<0x023, "flat_load_d16_hi_b16">;
+defm FLAT_STORE_BYTE_D16_HI        : VFLAT_Real_AllAddr_gfx12<0x024, "flat_store_d16_hi_b8">;
+defm FLAT_STORE_SHORT_D16_HI       : VFLAT_Real_AllAddr_gfx12<0x025, "flat_store_d16_hi_b16">;
+#else /* LLPC_BUILD_NPI */
 defm FLAT_LOAD_UBYTE               : VFLAT_Real_Base_gfx12<0x010, "flat_load_u8">;
 defm FLAT_LOAD_SBYTE               : VFLAT_Real_Base_gfx12<0x011, "flat_load_i8">;
 defm FLAT_LOAD_USHORT              : VFLAT_Real_Base_gfx12<0x012, "flat_load_u16">;
@@ -2626,6 +3803,7 @@ defm FLAT_LOAD_SBYTE_D16_HI        : VFLAT_Real_Base_gfx12<0x022, "flat_load_d16
 defm FLAT_LOAD_SHORT_D16_HI        : VFLAT_Real_Base_gfx12<0x023, "flat_load_d16_hi_b16">;
 defm FLAT_STORE_BYTE_D16_HI        : VFLAT_Real_Base_gfx12<0x024, "flat_store_d16_hi_b8">;
 defm FLAT_STORE_SHORT_D16_HI       : VFLAT_Real_Base_gfx12<0x025, "flat_store_d16_hi_b16">;
+#endif /* LLPC_BUILD_NPI */
 defm FLAT_ATOMIC_SWAP              : VFLAT_Real_Atomics_gfx12<0x033, "flat_atomic_swap_b32">;
 defm FLAT_ATOMIC_CMPSWAP           : VFLAT_Real_Atomics_gfx12<0x034, "flat_atomic_cmpswap_b32">;
 defm FLAT_ATOMIC_ADD               : VFLAT_Real_Atomics_gfx12<0x035, "flat_atomic_add_u32">;
@@ -2661,6 +3839,76 @@ defm FLAT_ATOMIC_PK_ADD_F16        : VFLAT_Real_Atomics_gfx12<0x059>;
 defm FLAT_ATOMIC_PK_ADD_BF16       : VFLAT_Real_Atomics_gfx12<0x05a>;
 
 // ENC_VGLOBAL.
+#ifdef LLPC_BUILD_NPI
+defm GLOBAL_LOAD_UBYTE             : VFLAT_Real_AllAddr_gfx12<0x010, "global_load_u8">;
+defm GLOBAL_LOAD_SBYTE             : VFLAT_Real_AllAddr_gfx12<0x011, "global_load_i8">;
+defm GLOBAL_LOAD_USHORT            : VFLAT_Real_AllAddr_gfx12<0x012, "global_load_u16">;
+defm GLOBAL_LOAD_SSHORT            : VFLAT_Real_AllAddr_gfx12<0x013, "global_load_i16">;
+defm GLOBAL_LOAD_DWORD             : VFLAT_Real_AllAddr_gfx12<0x014, "global_load_b32">;
+defm GLOBAL_LOAD_DWORDX2           : VFLAT_Real_AllAddr_gfx12<0x015, "global_load_b64">;
+defm GLOBAL_LOAD_DWORDX3           : VFLAT_Real_AllAddr_gfx12<0x016, "global_load_b96">;
+defm GLOBAL_LOAD_DWORDX4           : VFLAT_Real_AllAddr_gfx12<0x017, "global_load_b128">;
+defm GLOBAL_STORE_BYTE             : VFLAT_Real_AllAddr_gfx12<0x018, "global_store_b8">;
+defm GLOBAL_STORE_SHORT            : VFLAT_Real_AllAddr_gfx12<0x019, "global_store_b16">;
+defm GLOBAL_STORE_DWORD            : VFLAT_Real_AllAddr_gfx12<0x01a, "global_store_b32">;
+defm GLOBAL_STORE_DWORDX2          : VFLAT_Real_AllAddr_gfx12<0x01b, "global_store_b64">;
+defm GLOBAL_STORE_DWORDX3          : VFLAT_Real_AllAddr_gfx12<0x01c, "global_store_b96">;
+defm GLOBAL_STORE_DWORDX4          : VFLAT_Real_AllAddr_gfx12<0x01d, "global_store_b128">;
+defm GLOBAL_LOAD_UBYTE_D16         : VFLAT_Real_AllAddr_gfx12<0x01e, "global_load_d16_u8">;
+defm GLOBAL_LOAD_SBYTE_D16         : VFLAT_Real_AllAddr_gfx12<0x01f, "global_load_d16_i8">;
+defm GLOBAL_LOAD_SHORT_D16         : VFLAT_Real_AllAddr_gfx12<0x020, "global_load_d16_b16">;
+defm GLOBAL_LOAD_UBYTE_D16_HI      : VFLAT_Real_AllAddr_gfx12<0x021, "global_load_d16_hi_u8">;
+defm GLOBAL_LOAD_SBYTE_D16_HI      : VFLAT_Real_AllAddr_gfx12<0x022, "global_load_d16_hi_i8">;
+defm GLOBAL_LOAD_SHORT_D16_HI      : VFLAT_Real_AllAddr_gfx12<0x023, "global_load_d16_hi_b16">;
+defm GLOBAL_STORE_BYTE_D16_HI      : VFLAT_Real_AllAddr_gfx12<0x024, "global_store_d16_hi_b8">;
+defm GLOBAL_STORE_SHORT_D16_HI     : VFLAT_Real_AllAddr_gfx12<0x025, "global_store_d16_hi_b16">;
+defm GLOBAL_LOAD_DWORD_ADDTID      : VFLAT_Real_AllAddr_gfx12<0x028, "global_load_addtid_b32">;
+defm GLOBAL_STORE_DWORD_ADDTID     : VFLAT_Real_AllAddr_gfx12<0x029, "global_store_addtid_b32">;
+defm GLOBAL_LOAD_BLOCK             : VFLAT_Real_AllAddr_gfx12<0x053>;
+defm GLOBAL_STORE_BLOCK            : VFLAT_Real_AllAddr_gfx12<0x054>;
+
+defm GLOBAL_ATOMIC_SWAP            : VFLAT_Real_Atomics_gfx12<0x033, "global_atomic_swap_b32">;
+defm GLOBAL_ATOMIC_CMPSWAP         : VFLAT_Real_Atomics_gfx12<0x034, "global_atomic_cmpswap_b32">;
+defm GLOBAL_ATOMIC_ADD             : VFLAT_Real_Atomics_gfx12<0x035, "global_atomic_add_u32">;
+defm GLOBAL_ATOMIC_SUB             : VFLAT_Real_Atomics_gfx12<0x036, "global_atomic_sub_u32">;
+defm GLOBAL_ATOMIC_CSUB            : VFLAT_Real_Atomics_gfx12<0x037, "global_atomic_sub_clamp_u32", "global_atomic_csub_u32">;
+defm GLOBAL_ATOMIC_SMIN            : VFLAT_Real_Atomics_gfx12<0x038, "global_atomic_min_i32">;
+defm GLOBAL_ATOMIC_UMIN            : VFLAT_Real_Atomics_gfx12<0x039, "global_atomic_min_u32">;
+defm GLOBAL_ATOMIC_SMAX            : VFLAT_Real_Atomics_gfx12<0x03a, "global_atomic_max_i32">;
+defm GLOBAL_ATOMIC_UMAX            : VFLAT_Real_Atomics_gfx12<0x03b, "global_atomic_max_u32">;
+defm GLOBAL_ATOMIC_AND             : VFLAT_Real_Atomics_gfx12<0x03c, "global_atomic_and_b32">;
+defm GLOBAL_ATOMIC_OR              : VFLAT_Real_Atomics_gfx12<0x03d, "global_atomic_or_b32">;
+defm GLOBAL_ATOMIC_XOR             : VFLAT_Real_Atomics_gfx12<0x03e, "global_atomic_xor_b32">;
+defm GLOBAL_ATOMIC_INC             : VFLAT_Real_Atomics_gfx12<0x03f, "global_atomic_inc_u32">;
+defm GLOBAL_ATOMIC_DEC             : VFLAT_Real_Atomics_gfx12<0x040, "global_atomic_dec_u32">;
+defm GLOBAL_ATOMIC_SWAP_X2         : VFLAT_Real_Atomics_gfx12<0x041, "global_atomic_swap_b64">;
+defm GLOBAL_ATOMIC_CMPSWAP_X2      : VFLAT_Real_Atomics_gfx12<0x042, "global_atomic_cmpswap_b64">;
+defm GLOBAL_ATOMIC_ADD_X2          : VFLAT_Real_Atomics_gfx12<0x043, "global_atomic_add_u64">;
+defm GLOBAL_ATOMIC_SUB_X2          : VFLAT_Real_Atomics_gfx12<0x044, "global_atomic_sub_u64">;
+defm GLOBAL_ATOMIC_SMIN_X2         : VFLAT_Real_Atomics_gfx12<0x045, "global_atomic_min_i64">;
+defm GLOBAL_ATOMIC_UMIN_X2         : VFLAT_Real_Atomics_gfx12<0x046, "global_atomic_min_u64">;
+defm GLOBAL_ATOMIC_SMAX_X2         : VFLAT_Real_Atomics_gfx12<0x047, "global_atomic_max_i64">;
+defm GLOBAL_ATOMIC_UMAX_X2         : VFLAT_Real_Atomics_gfx12<0x048, "global_atomic_max_u64">;
+defm GLOBAL_ATOMIC_AND_X2          : VFLAT_Real_Atomics_gfx12<0x049, "global_atomic_and_b64">;
+defm GLOBAL_ATOMIC_OR_X2           : VFLAT_Real_Atomics_gfx12<0x04a, "global_atomic_or_b64">;
+defm GLOBAL_ATOMIC_XOR_X2          : VFLAT_Real_Atomics_gfx12<0x04b, "global_atomic_xor_b64">;
+defm GLOBAL_ATOMIC_INC_X2          : VFLAT_Real_Atomics_gfx12<0x04c, "global_atomic_inc_u64">;
+defm GLOBAL_ATOMIC_DEC_X2          : VFLAT_Real_Atomics_gfx12<0x04d, "global_atomic_dec_u64">;
+defm GLOBAL_ATOMIC_COND_SUB_U32    : VFLAT_Real_Atomics_gfx12<0x050>;
+defm GLOBAL_ATOMIC_FMIN            : VFLAT_Real_Atomics_gfx12<0x051, "global_atomic_min_num_f32", "global_atomic_min_f32">;
+defm GLOBAL_ATOMIC_FMAX            : VFLAT_Real_Atomics_gfx12<0x052, "global_atomic_max_num_f32", "global_atomic_max_f32">;
+defm GLOBAL_ATOMIC_ADD_F32         : VFLAT_Real_Atomics_gfx12<0x056>;
+
+defm GLOBAL_LOAD_TR_B128_w32       : VGLOBAL_Real_AllAddr_gfx1200<0x057>;
+defm GLOBAL_LOAD_TR_B64_w32        : VGLOBAL_Real_AllAddr_gfx1200<0x058>;
+
+defm GLOBAL_LOAD_TR_B128_w64       : VFLAT_Real_AllAddr_gfx12_w64<0x057>;
+defm GLOBAL_LOAD_TR_B64_w64        : VFLAT_Real_AllAddr_gfx12_w64<0x058>;
+
+defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : VFLAT_Real_Atomics_gfx12<0x073>;
+defm GLOBAL_ATOMIC_PK_ADD_F16      : VFLAT_Real_Atomics_gfx12<0x059>;
+defm GLOBAL_ATOMIC_PK_ADD_BF16     : VFLAT_Real_Atomics_gfx12<0x05a>;
+#else /* LLPC_BUILD_NPI */
 defm GLOBAL_LOAD_UBYTE             : VGLOBAL_Real_AllAddr_gfx12<0x010, "global_load_u8">;
 defm GLOBAL_LOAD_SBYTE             : VGLOBAL_Real_AllAddr_gfx12<0x011, "global_load_i8">;
 defm GLOBAL_LOAD_USHORT            : VGLOBAL_Real_AllAddr_gfx12<0x012, "global_load_u16">;
@@ -2729,6 +3977,7 @@ defm GLOBAL_LOAD_TR_B64_w64        : VGLOBAL_Real_AllAddr_gfx12_w64<0x058>;
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : VGLOBAL_Real_Atomics_gfx12<0x073>;
 defm GLOBAL_ATOMIC_PK_ADD_F16      : VGLOBAL_Real_Atomics_gfx12<0x059>;
 defm GLOBAL_ATOMIC_PK_ADD_BF16     : VGLOBAL_Real_Atomics_gfx12<0x05a>;
+#endif /* LLPC_BUILD_NPI */
 
 defm GLOBAL_INV                    : VFLAT_Real_Base_gfx12<0x02b>;
 defm GLOBAL_WB                     : VFLAT_Real_Base_gfx12<0x02c>;
@@ -2760,3 +4009,366 @@ defm SCRATCH_STORE_SHORT_D16_HI    : VSCRATCH_Real_AllAddr_gfx12<0x25, "scratch_
 
 defm SCRATCH_LOAD_BLOCK            : VSCRATCH_Real_AllAddr_gfx12<0x53>;
 defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;
+#ifdef LLPC_BUILD_NPI
+
+//===----------------------------------------------------------------------===//
+// GFX1210
+//===----------------------------------------------------------------------===//
+
+multiclass VFLAT_Real_gfx1210<bits<8> op,
+                              string name = get_FLAT_ps<NAME>.Mnemonic> {
+  defvar ps = !cast<FLAT_Pseudo>(NAME);
+  def _gfx1210 : VFLAT_Real<op, ps, name>,
+                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1210> {
+    let AssemblerPredicate = isGFX121xOnly;
+    let DecoderNamespace = "GFX1210";
+
+    let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
+    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+  }
+}
+
+multiclass VFLAT_Aliases_gfx1210<string name> {
+  defvar ps = get_FLAT_ps<NAME>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX121xOnly]>;
+}
+
+multiclass VFLAT_Real_Base_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Aliases_gfx1210<name> {
+  defm "" : VFLAT_Real_gfx1210<op, name>;
+}
+
+multiclass VFLAT_Real_RTN_gfx1210<bits<8> op, string name> {
+  defm _RTN : VFLAT_Real_gfx1210<op, name>;
+}
+
+multiclass VFLAT_Real_SADDR_gfx1210<bits<8> op, string name> {
+  defm _SADDR : VFLAT_Real_gfx1210<op, name>;
+}
+
+multiclass VFLAT_Real_SADDR_RTN_gfx1210<bits<8> op, string name> {
+  defm _SADDR_RTN : VFLAT_Real_gfx1210<op, name>;
+}
+
+multiclass VFLAT_Real_AllAddr_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Real_Base_gfx1210<op, name>,
+  VFLAT_Real_SADDR_gfx1210<op, name>;
+
+multiclass VFLAT_Real_Atomics_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Real_AllAddr_gfx1210<op, name>,
+  VFLAT_Real_RTN_gfx1210<op, name>,
+  VFLAT_Real_SADDR_RTN_gfx1210<op, name>;
+
+defm TENSOR_SAVE                      : VFLAT_Real_gfx1210<0x06e>;
+defm TENSOR_STOP                      : VFLAT_Real_gfx1210<0x06f>;
+
+defm FLAT_PREFETCH_B8                 : VFLAT_Real_AllAddr_gfx1210<0x05d>;
+defm GLOBAL_PREFETCH_B8               : VFLAT_Real_AllAddr_gfx1210<0x05d>;
+
+defm FLAT_LOAD_MONITOR_B32            : VFLAT_Real_AllAddr_gfx1210<0x070>;
+defm FLAT_LOAD_MONITOR_B64            : VFLAT_Real_AllAddr_gfx1210<0x071>;
+defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_AllAddr_gfx1210<0x072>;
+
+defm GLOBAL_LOAD_MONITOR_B32          : VFLAT_Real_AllAddr_gfx1210<0x070>;
+defm GLOBAL_LOAD_MONITOR_B64          : VFLAT_Real_AllAddr_gfx1210<0x071>;
+defm GLOBAL_LOAD_MONITOR_B128         : VFLAT_Real_AllAddr_gfx1210<0x072>;
+defm CLUSTER_LOAD_B32                 : VFLAT_Real_AllAddr_gfx1210<0x067>;
+defm CLUSTER_LOAD_B64                 : VFLAT_Real_AllAddr_gfx1210<0x068>;
+defm CLUSTER_LOAD_B128                : VFLAT_Real_AllAddr_gfx1210<0x069>;
+
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B8     : VFLAT_Real_AllAddr_gfx1210<0x6a>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B32    : VFLAT_Real_AllAddr_gfx1210<0x6b>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B64    : VFLAT_Real_AllAddr_gfx1210<0x6c>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VFLAT_Real_AllAddr_gfx1210<0x6d>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B8      : VFLAT_Real_AllAddr_gfx1210<0x5f>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B32     : VFLAT_Real_AllAddr_gfx1210<0x60>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B64     : VFLAT_Real_AllAddr_gfx1210<0x61>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B128    : VFLAT_Real_AllAddr_gfx1210<0x62>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B8   : VFLAT_Real_AllAddr_gfx1210<0x63>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VFLAT_Real_AllAddr_gfx1210<0x64>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VFLAT_Real_AllAddr_gfx1210<0x65>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VFLAT_Real_AllAddr_gfx1210<0x66>;
+
+defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1210<0x057, "global_load_tr16_b128">;
+defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1210<0x058, "global_load_tr8_b64">;
+
+defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1210<0x075>;
+defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1210<0x074>;
+
+defm FLAT_ATOMIC_ADD_F64              : VFLAT_Real_Atomics_gfx1210<0x055>;
+defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx1210<0x05b, "flat_atomic_min_num_f64">;
+defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx1210<0x05c, "flat_atomic_max_num_f64">;
+
+defm GLOBAL_ATOMIC_ADD_F64            : VFLAT_Real_Atomics_gfx1210<0x055>;
+defm GLOBAL_ATOMIC_MIN_F64            : VFLAT_Real_Atomics_gfx1210<0x05b, "global_atomic_min_num_f64">;
+defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1210<0x05c, "global_atomic_max_num_f64">;
+
+//===----------------------------------------------------------------------===//
+// GFX13
+//===----------------------------------------------------------------------===//
+
+multiclass VFLAT_Real_gfx13 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> {
+  defvar ps = !cast<FLAT_Pseudo>(NAME);
+  def _gfx13 : VFLAT_Real <op, ps, name>,
+               SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX13> {
+    let AssemblerPredicate = isGFX13Only;
+    let DecoderNamespace = "GFX13";
+
+    let Inst{9-8} = cpol{8-7};
+    let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
+    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+  }
+}
+
+multiclass VFLAT_Aliases_gfx13<string name, string alias = name> {
+  defvar ps = get_FLAT_ps<NAME>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+  if !ne(alias, name) then
+    def : MnemonicAlias<alias, name>, Requires<[isGFX13Only]>;
+}
+
+multiclass VFLAT_Real_Base_gfx13<bits<8> op,
+                                 string name = get_FLAT_ps<NAME>.Mnemonic,
+                                 string alias = name> :
+  VFLAT_Aliases_gfx13<name, alias>,
+  VFLAT_Real_gfx13<op, name>;
+
+multiclass VFLAT_Real_Atomics_gfx13<bits<8> op,
+                                    string name = get_FLAT_ps<NAME>.Mnemonic,
+                                    string alias = name> :
+  VFLAT_Real_Base_gfx13<op, name, alias> {
+  defm _RTN : VFLAT_Real_gfx13<op, name>;
+}
+
+multiclass VGLOBAL_Real_AllAddr_gfx13<bits<8> op,
+                                      string name = get_FLAT_ps<NAME>.Mnemonic,
+                                      string alias = name> :
+  VFLAT_Real_Base_gfx13<op, name, alias> {
+  defm _SADDR : VFLAT_Real_gfx13<op, name>;
+}
+
+multiclass VGLOBAL_Real_AllAddr_gfx13_w64<bits<8> op,
+                                       string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Aliases_gfx13<name> {
+  let DecoderNamespace = "GFX13W64" in {
+    defm "" : VFLAT_Real_gfx13<op, name>;
+    defm _SADDR : VFLAT_Real_gfx13<op, name>;
+  }
+}
+
+multiclass VGLOBAL_Real_Atomics_gfx13<bits<8> op,
+                                      string name = get_FLAT_ps<NAME>.Mnemonic,
+                                      string alias = name> :
+  VGLOBAL_Real_AllAddr_gfx13<op, name, alias> {
+  defm _RTN : VFLAT_Real_gfx13<op, name>;
+  defm _SADDR_RTN : VFLAT_Real_gfx13<op, name>;
+}
+
+multiclass VSCRATCH_Real_AllAddr_gfx13<bits<8> op,
+                                       string name = get_FLAT_ps<NAME>.Mnemonic> :
+  VFLAT_Real_Base_gfx13<op, name> {
+  defm _SADDR : VFLAT_Real_gfx13<op, name>;
+  defm _ST : VFLAT_Real_gfx13<op, name>;
+  defm _SVS : VFLAT_Real_gfx13<op, name>;
+}
+
+// ENC_VFLAT.
+defm FLAT_LOAD_UBYTE                  : VFLAT_Real_Base_gfx13<0x08, "flat_load_u8">;
+defm FLAT_LOAD_SBYTE                  : VFLAT_Real_Base_gfx13<0x09, "flat_load_i8">;
+defm FLAT_LOAD_USHORT                 : VFLAT_Real_Base_gfx13<0x0a, "flat_load_u16">;
+defm FLAT_LOAD_SSHORT                 : VFLAT_Real_Base_gfx13<0x0b, "flat_load_i16">;
+defm FLAT_LOAD_DWORD                  : VFLAT_Real_Base_gfx13<0x0c, "flat_load_b32">;
+defm FLAT_LOAD_DWORDX2                : VFLAT_Real_Base_gfx13<0x0d, "flat_load_b64">;
+defm FLAT_LOAD_DWORDX4                : VFLAT_Real_Base_gfx13<0x0e, "flat_load_b128">;
+defm FLAT_LOAD_DWORDX3                : VFLAT_Real_Base_gfx13<0x0f, "flat_load_b96">;
+defm FLAT_STORE_BYTE                  : VFLAT_Real_Base_gfx13<0x18, "flat_store_b8">;
+defm FLAT_STORE_BYTE_D16_HI           : VFLAT_Real_Base_gfx13<0x19, "flat_store_d16_hi_b8">;
+defm FLAT_STORE_SHORT                 : VFLAT_Real_Base_gfx13<0x1a, "flat_store_b16">;
+defm FLAT_STORE_SHORT_D16_HI          : VFLAT_Real_Base_gfx13<0x1b, "flat_store_d16_hi_b16">;
+defm FLAT_STORE_DWORD                 : VFLAT_Real_Base_gfx13<0x1c, "flat_store_b32">;
+defm FLAT_STORE_DWORDX2               : VFLAT_Real_Base_gfx13<0x1d, "flat_store_b64">;
+defm FLAT_STORE_DWORDX4               : VFLAT_Real_Base_gfx13<0x1e, "flat_store_b128">;
+defm FLAT_STORE_DWORDX3               : VFLAT_Real_Base_gfx13<0x1f, "flat_store_b96">;
+defm FLAT_LOAD_UBYTE_D16              : VFLAT_Real_Base_gfx13<0x20, "flat_load_d16_u8">;
+defm FLAT_LOAD_UBYTE_D16_HI           : VFLAT_Real_Base_gfx13<0x21, "flat_load_d16_hi_u8">;
+defm FLAT_LOAD_SBYTE_D16              : VFLAT_Real_Base_gfx13<0x22, "flat_load_d16_i8">;
+defm FLAT_LOAD_SBYTE_D16_HI           : VFLAT_Real_Base_gfx13<0x23, "flat_load_d16_hi_i8">;
+defm FLAT_LOAD_SHORT_D16              : VFLAT_Real_Base_gfx13<0x24, "flat_load_d16_b16">;
+defm FLAT_LOAD_SHORT_D16_HI           : VFLAT_Real_Base_gfx13<0x25, "flat_load_d16_hi_b16">;
+defm FLAT_ATOMIC_SWAP                 : VFLAT_Real_Atomics_gfx13<0x30, "flat_atomic_swap_b32">;
+defm FLAT_ATOMIC_CMPSWAP              : VFLAT_Real_Atomics_gfx13<0x31, "flat_atomic_cmpswap_b32">;
+defm FLAT_ATOMIC_ADD                  : VFLAT_Real_Atomics_gfx13<0x32, "flat_atomic_add_u32">;
+defm FLAT_ATOMIC_SUB                  : VFLAT_Real_Atomics_gfx13<0x33, "flat_atomic_sub_u32">;
+defm FLAT_ATOMIC_CSUB_U32             : VFLAT_Real_Atomics_gfx13<0x34, "flat_atomic_sub_clamp_u32">;
+defm FLAT_ATOMIC_SMIN                 : VFLAT_Real_Atomics_gfx13<0x35, "flat_atomic_min_i32">;
+defm FLAT_ATOMIC_UMIN                 : VFLAT_Real_Atomics_gfx13<0x36, "flat_atomic_min_u32">;
+defm FLAT_ATOMIC_SMAX                 : VFLAT_Real_Atomics_gfx13<0x37, "flat_atomic_max_i32">;
+defm FLAT_ATOMIC_UMAX                 : VFLAT_Real_Atomics_gfx13<0x38, "flat_atomic_max_u32">;
+defm FLAT_ATOMIC_AND                  : VFLAT_Real_Atomics_gfx13<0x39, "flat_atomic_and_b32">;
+defm FLAT_ATOMIC_OR                   : VFLAT_Real_Atomics_gfx13<0x3a, "flat_atomic_or_b32">;
+defm FLAT_ATOMIC_XOR                  : VFLAT_Real_Atomics_gfx13<0x3b, "flat_atomic_xor_b32">;
+defm FLAT_ATOMIC_INC                  : VFLAT_Real_Atomics_gfx13<0x3c, "flat_atomic_inc_u32">;
+defm FLAT_ATOMIC_DEC                  : VFLAT_Real_Atomics_gfx13<0x3d, "flat_atomic_dec_u32">;
+defm FLAT_ATOMIC_FMIN                 : VFLAT_Real_Atomics_gfx13<0x3f, "flat_atomic_min_num_f32", "flat_atomic_min_f32">;
+defm FLAT_ATOMIC_FMAX                 : VFLAT_Real_Atomics_gfx13<0x40, "flat_atomic_max_num_f32", "flat_atomic_max_f32">;
+defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx13<0x5f, "flat_atomic_min_num_f64", "flat_atomic_fmin_x2">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
+defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx13<0x60, "flat_atomic_max_num_f64", "flat_atomic_fmax_x2">; // TODO-GFX13: SP3 does not accept the old (gfx90a/gfx940) name as an alias.
+defm FLAT_ATOMIC_COND_SUB_U32         : VFLAT_Real_Atomics_gfx13<0x47>;
+defm FLAT_PREFETCH_B8                 : VFLAT_Real_Base_gfx13<0x048>;
+defm FLAT_ATOMIC_PK_ADD_F16           : VFLAT_Real_Atomics_gfx13<0x4a>;
+defm FLAT_ATOMIC_PK_ADD_BF16          : VFLAT_Real_Atomics_gfx13<0x4b>;
+defm FLAT_DISCARD_B32                 : VFLAT_Real_Base_gfx13<0x04c>;
+defm FLAT_DISCARD_B128                : VFLAT_Real_Base_gfx13<0x04d>;
+defm FLAT_DISCARD_B1024               : VFLAT_Real_Base_gfx13<0x04e>;
+defm FLAT_ATOMIC_SWAP_X2              : VFLAT_Real_Atomics_gfx13<0x50, "flat_atomic_swap_b64">;
+defm FLAT_ATOMIC_CMPSWAP_X2           : VFLAT_Real_Atomics_gfx13<0x51, "flat_atomic_cmpswap_b64">;
+defm FLAT_ATOMIC_ADD_X2               : VFLAT_Real_Atomics_gfx13<0x52, "flat_atomic_add_u64">;
+defm FLAT_ATOMIC_SUB_X2               : VFLAT_Real_Atomics_gfx13<0x53, "flat_atomic_sub_u64">;
+defm FLAT_ATOMIC_ADD_F32              : VFLAT_Real_Atomics_gfx13<0x54>;
+defm FLAT_ATOMIC_SMIN_X2              : VFLAT_Real_Atomics_gfx13<0x55, "flat_atomic_min_i64">;
+defm FLAT_ATOMIC_UMIN_X2              : VFLAT_Real_Atomics_gfx13<0x56, "flat_atomic_min_u64">;
+defm FLAT_ATOMIC_SMAX_X2              : VFLAT_Real_Atomics_gfx13<0x57, "flat_atomic_max_i64">;
+defm FLAT_ATOMIC_UMAX_X2              : VFLAT_Real_Atomics_gfx13<0x58, "flat_atomic_max_u64">;
+defm FLAT_ATOMIC_AND_X2               : VFLAT_Real_Atomics_gfx13<0x59, "flat_atomic_and_b64">;
+defm FLAT_ATOMIC_OR_X2                : VFLAT_Real_Atomics_gfx13<0x5a, "flat_atomic_or_b64">;
+defm FLAT_ATOMIC_XOR_X2               : VFLAT_Real_Atomics_gfx13<0x5b, "flat_atomic_xor_b64">;
+defm FLAT_ATOMIC_INC_X2               : VFLAT_Real_Atomics_gfx13<0x5c, "flat_atomic_inc_u64">;
+defm FLAT_ATOMIC_DEC_X2               : VFLAT_Real_Atomics_gfx13<0x5d, "flat_atomic_dec_u64">;
+
+// ENC_VGLOBAL.
+defm GLOBAL_LOAD_UBYTE                : VGLOBAL_Real_AllAddr_gfx13<0x08, "global_load_u8">;
+defm GLOBAL_LOAD_SBYTE                : VGLOBAL_Real_AllAddr_gfx13<0x09, "global_load_i8">;
+defm GLOBAL_LOAD_USHORT               : VGLOBAL_Real_AllAddr_gfx13<0x0a, "global_load_u16">;
+defm GLOBAL_LOAD_SSHORT               : VGLOBAL_Real_AllAddr_gfx13<0x0b, "global_load_i16">;
+defm GLOBAL_LOAD_DWORD                : VGLOBAL_Real_AllAddr_gfx13<0x0c, "global_load_b32">;
+defm GLOBAL_LOAD_DWORDX2              : VGLOBAL_Real_AllAddr_gfx13<0x0d, "global_load_b64">;
+defm GLOBAL_LOAD_DWORDX4              : VGLOBAL_Real_AllAddr_gfx13<0x0e, "global_load_b128">;
+defm GLOBAL_LOAD_DWORDX3              : VGLOBAL_Real_AllAddr_gfx13<0x0f, "global_load_b96">;
+defm GLOBAL_LOAD_DWORD_ADDTID         : VGLOBAL_Real_AllAddr_gfx13<0x16, "global_load_addtid_b32">;
+defm GLOBAL_STORE_DWORD_ADDTID        : VGLOBAL_Real_AllAddr_gfx13<0x17, "global_store_addtid_b32">;
+defm GLOBAL_STORE_BYTE                : VGLOBAL_Real_AllAddr_gfx13<0x18, "global_store_b8">;
+defm GLOBAL_STORE_BYTE_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x19, "global_store_d16_hi_b8">;
+defm GLOBAL_STORE_SHORT               : VGLOBAL_Real_AllAddr_gfx13<0x1a, "global_store_b16">;
+defm GLOBAL_STORE_SHORT_D16_HI        : VGLOBAL_Real_AllAddr_gfx13<0x1b, "global_store_d16_hi_b16">;
+defm GLOBAL_STORE_DWORD               : VGLOBAL_Real_AllAddr_gfx13<0x1c, "global_store_b32">;
+defm GLOBAL_STORE_DWORDX2             : VGLOBAL_Real_AllAddr_gfx13<0x1d, "global_store_b64">;
+defm GLOBAL_STORE_DWORDX4             : VGLOBAL_Real_AllAddr_gfx13<0x1e, "global_store_b128">;
+defm GLOBAL_STORE_DWORDX3             : VGLOBAL_Real_AllAddr_gfx13<0x1f, "global_store_b96">;
+defm GLOBAL_LOAD_UBYTE_D16            : VGLOBAL_Real_AllAddr_gfx13<0x20, "global_load_d16_u8">;
+defm GLOBAL_LOAD_UBYTE_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x21, "global_load_d16_hi_u8">;
+defm GLOBAL_LOAD_SBYTE_D16            : VGLOBAL_Real_AllAddr_gfx13<0x22, "global_load_d16_i8">;
+defm GLOBAL_LOAD_SBYTE_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x23, "global_load_d16_hi_i8">;
+defm GLOBAL_LOAD_SHORT_D16            : VGLOBAL_Real_AllAddr_gfx13<0x24, "global_load_d16_b16">;
+defm GLOBAL_LOAD_SHORT_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x25, "global_load_d16_hi_b16">;
+defm GLOBAL_INV                       : VFLAT_Real_Base_gfx13<0x2b>;
+defm GLOBAL_WB                        : VFLAT_Real_Base_gfx13<0x2c>;
+defm GLOBAL_WBINV                     : VFLAT_Real_Base_gfx13<0x2e>;
+defm GLOBAL_ATOMIC_SWAP               : VGLOBAL_Real_Atomics_gfx13<0x30, "global_atomic_swap_b32">;
+defm GLOBAL_ATOMIC_CMPSWAP            : VGLOBAL_Real_Atomics_gfx13<0x31, "global_atomic_cmpswap_b32">;
+defm GLOBAL_ATOMIC_ADD                : VGLOBAL_Real_Atomics_gfx13<0x32, "global_atomic_add_u32">;
+defm GLOBAL_ATOMIC_SUB                : VGLOBAL_Real_Atomics_gfx13<0x33, "global_atomic_sub_u32">;
+defm GLOBAL_ATOMIC_CSUB               : VGLOBAL_Real_Atomics_gfx13<0x34, "global_atomic_sub_clamp_u32", "global_atomic_csub_u32">;
+defm GLOBAL_ATOMIC_SMIN               : VGLOBAL_Real_Atomics_gfx13<0x35, "global_atomic_min_i32">;
+defm GLOBAL_ATOMIC_UMIN               : VGLOBAL_Real_Atomics_gfx13<0x36, "global_atomic_min_u32">;
+defm GLOBAL_ATOMIC_SMAX               : VGLOBAL_Real_Atomics_gfx13<0x37, "global_atomic_max_i32">;
+defm GLOBAL_ATOMIC_UMAX               : VGLOBAL_Real_Atomics_gfx13<0x38, "global_atomic_max_u32">;
+defm GLOBAL_ATOMIC_AND                : VGLOBAL_Real_Atomics_gfx13<0x39, "global_atomic_and_b32">;
+defm GLOBAL_ATOMIC_OR                 : VGLOBAL_Real_Atomics_gfx13<0x3a, "global_atomic_or_b32">;
+defm GLOBAL_ATOMIC_XOR                : VGLOBAL_Real_Atomics_gfx13<0x3b, "global_atomic_xor_b32">;
+defm GLOBAL_ATOMIC_INC                : VGLOBAL_Real_Atomics_gfx13<0x3c, "global_atomic_inc_u32">;
+defm GLOBAL_ATOMIC_DEC                : VGLOBAL_Real_Atomics_gfx13<0x3d, "global_atomic_dec_u32">;
+defm GLOBAL_ATOMIC_FMIN               : VGLOBAL_Real_Atomics_gfx13<0x3f, "global_atomic_min_num_f32", "global_atomic_min_f32">;
+defm GLOBAL_ATOMIC_FMAX               : VGLOBAL_Real_Atomics_gfx13<0x40, "global_atomic_max_num_f32", "global_atomic_max_f32">;
+defm GLOBAL_ATOMIC_MIN_F64            : VGLOBAL_Real_Atomics_gfx13<0x5f, "global_atomic_min_num_f64", "global_atomic_fmin_x2">;
+defm GLOBAL_ATOMIC_MAX_F64            : VGLOBAL_Real_Atomics_gfx13<0x60, "global_atomic_max_num_f64", "global_atomic_fmax_x2">;
+defm GLOBAL_LOAD_BLOCK                : VGLOBAL_Real_AllAddr_gfx13<0x43>;
+defm GLOBAL_STORE_BLOCK               : VGLOBAL_Real_AllAddr_gfx13<0x44>;
+defm GLOBAL_LOAD_TR_B128_w32          : VGLOBAL_Real_AllAddr_gfx13<0x45, "global_load_tr16_b128">;
+defm GLOBAL_LOAD_TR_B64_w32           : VGLOBAL_Real_AllAddr_gfx13<0x46, "global_load_tr8_b64">;
+defm GLOBAL_ATOMIC_COND_SUB_U32       : VGLOBAL_Real_Atomics_gfx13<0x47>;
+defm GLOBAL_PREFETCH_B8               : VGLOBAL_Real_AllAddr_gfx13<0x48>;
+defm GLOBAL_ATOMIC_PK_ADD_F16         : VGLOBAL_Real_Atomics_gfx13<0x4a>;
+defm GLOBAL_ATOMIC_PK_ADD_BF16        : VGLOBAL_Real_Atomics_gfx13<0x4b>;
+defm GLOBAL_DISCARD_B32               : VGLOBAL_Real_AllAddr_gfx13<0x4c>;
+defm GLOBAL_DISCARD_B128              : VGLOBAL_Real_AllAddr_gfx13<0x4d>;
+defm GLOBAL_DISCARD_B1024             : VGLOBAL_Real_AllAddr_gfx13<0x4e>;
+defm GLOBAL_ATOMIC_SWAP_X2            : VGLOBAL_Real_Atomics_gfx13<0x50, "global_atomic_swap_b64">;
+defm GLOBAL_ATOMIC_CMPSWAP_X2         : VGLOBAL_Real_Atomics_gfx13<0x51, "global_atomic_cmpswap_b64">;
+defm GLOBAL_ATOMIC_ADD_X2             : VGLOBAL_Real_Atomics_gfx13<0x52, "global_atomic_add_u64">;
+defm GLOBAL_ATOMIC_SUB_X2             : VGLOBAL_Real_Atomics_gfx13<0x53, "global_atomic_sub_u64">;
+defm GLOBAL_ATOMIC_ADD_F32            : VGLOBAL_Real_Atomics_gfx13<0x54>;
+defm GLOBAL_ATOMIC_SMIN_X2            : VGLOBAL_Real_Atomics_gfx13<0x55, "global_atomic_min_i64">;
+defm GLOBAL_ATOMIC_UMIN_X2            : VGLOBAL_Real_Atomics_gfx13<0x56, "global_atomic_min_u64">;
+defm GLOBAL_ATOMIC_SMAX_X2            : VGLOBAL_Real_Atomics_gfx13<0x57, "global_atomic_max_i64">;
+defm GLOBAL_ATOMIC_UMAX_X2            : VGLOBAL_Real_Atomics_gfx13<0x58, "global_atomic_max_u64">;
+defm GLOBAL_ATOMIC_AND_X2             : VGLOBAL_Real_Atomics_gfx13<0x59, "global_atomic_and_b64">;
+defm GLOBAL_ATOMIC_OR_X2              : VGLOBAL_Real_Atomics_gfx13<0x5a, "global_atomic_or_b64">;
+defm GLOBAL_ATOMIC_XOR_X2             : VGLOBAL_Real_Atomics_gfx13<0x5b, "global_atomic_xor_b64">;
+defm GLOBAL_ATOMIC_INC_X2             : VGLOBAL_Real_Atomics_gfx13<0x5c, "global_atomic_inc_u64">;
+defm GLOBAL_ATOMIC_DEC_X2             : VGLOBAL_Real_Atomics_gfx13<0x5d, "global_atomic_dec_u64">;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B8      : VGLOBAL_Real_AllAddr_gfx13<0x61>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B32     : VGLOBAL_Real_AllAddr_gfx13<0x62>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B64     : VGLOBAL_Real_AllAddr_gfx13<0x63>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B128    : VGLOBAL_Real_AllAddr_gfx13<0x64>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B8   : VGLOBAL_Real_AllAddr_gfx13<0x65>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VGLOBAL_Real_AllAddr_gfx13<0x66>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VGLOBAL_Real_AllAddr_gfx13<0x67>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VGLOBAL_Real_AllAddr_gfx13<0x68>;
+defm CLUSTER_LOAD_B32                 : VGLOBAL_Real_AllAddr_gfx13<0x69>;
+defm CLUSTER_LOAD_B64                 : VGLOBAL_Real_AllAddr_gfx13<0x6a>;
+defm CLUSTER_LOAD_B128                : VGLOBAL_Real_AllAddr_gfx13<0x6b>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B8     : VGLOBAL_Real_AllAddr_gfx13<0x6c>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B32    : VGLOBAL_Real_AllAddr_gfx13<0x6d>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B64    : VGLOBAL_Real_AllAddr_gfx13<0x6e>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VGLOBAL_Real_AllAddr_gfx13<0x6f>;
+defm GLOBAL_ATOMIC_ORDERED_ADD_B64    : VGLOBAL_Real_Atomics_gfx13<0x75>;
+defm TENSOR_SAVE                      : VFLAT_Real_Base_gfx13<0x76>;
+defm TENSOR_STOP                      : VFLAT_Real_Base_gfx13<0x77>;
+defm GLOBAL_LOAD_TR4_B64              : VGLOBAL_Real_AllAddr_gfx13<0x8a>;
+defm GLOBAL_LOAD_TR6_B96              : VGLOBAL_Real_AllAddr_gfx13<0x8b>;
+defm RTS_READ_RESULT_ALL_STOP         : VFLAT_Real_Base_gfx13<0x90>;
+defm RTS_READ_RESULT_ONGOING          : VFLAT_Real_Base_gfx13<0x91>;
+defm RTS_UPDATE_RAY                   : VFLAT_Real_Base_gfx13<0x92>;
+defm RTS_FLUSH                        : VFLAT_Real_Base_gfx13<0x94>;
+defm RTS_RAY_SAVE                     : VFLAT_Real_Base_gfx13<0x95>;
+defm RTS_RAY_RESTORE                  : VFLAT_Real_Base_gfx13<0x96>;
+defm SWC_REORDER                      : VFLAT_Real_Base_gfx13<0xa0>;
+defm SWC_FLUSH                        : VFLAT_Real_Base_gfx13<0xa1>;
+defm SWC_REORDER_SWAP                 : VFLAT_Real_Base_gfx13<0xa3>;
+defm SWC_REORDER_SWAP_RESUME          : VFLAT_Real_Base_gfx13<0xa4>;
+defm SWC_GET_EXCHANGE_STATE           : VFLAT_Real_Base_gfx13<0xa5>;
+defm SWC_SET_EXCHANGE_STATE           : VFLAT_Real_Base_gfx13<0xa6>;
+defm SWC_ABORT_EXCHANGE               : VFLAT_Real_Base_gfx13<0xa7>;
+// TODO-GFX13:
+// GLOBAL_WAVE_KILL
+
+// ENC_VSCRATCH.
+defm SCRATCH_LOAD_UBYTE               : VSCRATCH_Real_AllAddr_gfx13<0x08, "scratch_load_u8">;
+defm SCRATCH_LOAD_SBYTE               : VSCRATCH_Real_AllAddr_gfx13<0x09, "scratch_load_i8">;
+defm SCRATCH_LOAD_USHORT              : VSCRATCH_Real_AllAddr_gfx13<0x0a, "scratch_load_u16">;
+defm SCRATCH_LOAD_SSHORT              : VSCRATCH_Real_AllAddr_gfx13<0x0b, "scratch_load_i16">;
+defm SCRATCH_LOAD_DWORD               : VSCRATCH_Real_AllAddr_gfx13<0x0c, "scratch_load_b32">;
+defm SCRATCH_LOAD_DWORDX2             : VSCRATCH_Real_AllAddr_gfx13<0x0d, "scratch_load_b64">;
+defm SCRATCH_LOAD_DWORDX4             : VSCRATCH_Real_AllAddr_gfx13<0x0e, "scratch_load_b128">;
+defm SCRATCH_LOAD_DWORDX3             : VSCRATCH_Real_AllAddr_gfx13<0x0f, "scratch_load_b96">;
+defm SCRATCH_STORE_BYTE               : VSCRATCH_Real_AllAddr_gfx13<0x18, "scratch_store_b8">;
+defm SCRATCH_STORE_BYTE_D16_HI        : VSCRATCH_Real_AllAddr_gfx13<0x19, "scratch_store_d16_hi_b8">;
+defm SCRATCH_STORE_SHORT              : VSCRATCH_Real_AllAddr_gfx13<0x1a, "scratch_store_b16">;
+defm SCRATCH_STORE_SHORT_D16_HI       : VSCRATCH_Real_AllAddr_gfx13<0x1b, "scratch_store_d16_hi_b16">;
+defm SCRATCH_STORE_DWORD              : VSCRATCH_Real_AllAddr_gfx13<0x1c, "scratch_store_b32">;
+defm SCRATCH_STORE_DWORDX2            : VSCRATCH_Real_AllAddr_gfx13<0x1d, "scratch_store_b64">;
+defm SCRATCH_STORE_DWORDX4            : VSCRATCH_Real_AllAddr_gfx13<0x1e, "scratch_store_b128">;
+defm SCRATCH_STORE_DWORDX3            : VSCRATCH_Real_AllAddr_gfx13<0x1f, "scratch_store_b96">;
+defm SCRATCH_LOAD_UBYTE_D16           : VSCRATCH_Real_AllAddr_gfx13<0x20, "scratch_load_d16_u8">;
+defm SCRATCH_LOAD_UBYTE_D16_HI        : VSCRATCH_Real_AllAddr_gfx13<0x21, "scratch_load_d16_hi_u8">;
+defm SCRATCH_LOAD_SBYTE_D16           : VSCRATCH_Real_AllAddr_gfx13<0x22, "scratch_load_d16_i8">;
+defm SCRATCH_LOAD_SBYTE_D16_HI        : VSCRATCH_Real_AllAddr_gfx13<0x23, "scratch_load_d16_hi_i8">;
+defm SCRATCH_LOAD_SHORT_D16           : VSCRATCH_Real_AllAddr_gfx13<0x24, "scratch_load_d16_b16">;
+defm SCRATCH_LOAD_SHORT_D16_HI        : VSCRATCH_Real_AllAddr_gfx13<0x25, "scratch_load_d16_hi_b16">;
+defm SCRATCH_LOAD_BLOCK               : VSCRATCH_Real_AllAddr_gfx13<0x43>;
+defm SCRATCH_STORE_BLOCK              : VSCRATCH_Real_AllAddr_gfx13<0x44>;
+defm SCRATCH_DISCARD_B32              : VSCRATCH_Real_AllAddr_gfx13<0x4c>;
+defm SCRATCH_DISCARD_B128             : VSCRATCH_Real_AllAddr_gfx13<0x4d>;
+#endif /* LLPC_BUILD_NPI */

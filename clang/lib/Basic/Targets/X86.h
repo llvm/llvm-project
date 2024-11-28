@@ -49,6 +49,9 @@ static const unsigned X86AddrSpaceMap[] = {
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
+#if LLPC_BUILD_NPI
+    21, // dummy value for hip_lane_shared
+#endif /* LLPC_BUILD_NPI */
 };
 
 // X86 target abstract base class; x86-32 and x86-64 are very close, so
@@ -384,7 +387,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
+  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 

@@ -55,6 +55,16 @@ def gi_vop3pmodsneg :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
     GIComplexPatternEquiv<VOP3PModsNeg>;
 
+#ifdef LLPC_BUILD_NPI
+def gi_vop3pmodsnegs :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNegs">,
+    GIComplexPatternEquiv<VOP3PModsNegs>;
+
+def gi_dotiuvop3pmodsnegabs :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNegAbs">,
+    GIComplexPatternEquiv<VOP3PModsNegAbs>;
+
+#endif /* LLPC_BUILD_NPI */
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -125,6 +135,14 @@ def gi_global_offset :
 def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
+#ifdef LLPC_BUILD_NPI
+def gi_global_saddr_glc :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
+    GIComplexPatternEquiv<GlobalSAddrGLC>;
+def gi_global_saddr_no_ioffset :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffset">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffset>;
+#endif /* LLPC_BUILD_NPI */
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
@@ -246,6 +264,12 @@ def : GINodeEquiv<G_AMDGPU_UMED3, AMDGPUumed3>;
 def : GINodeEquiv<G_AMDGPU_FMED3, AMDGPUfmed3_impl>;
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
+#ifdef LLPC_BUILD_NPI
+def : GINodeEquiv<G_AMDGPU_BUFFER_DISCARD_B32,   SIbuffer_discard_b32>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_DISCARD_B128,  SIbuffer_discard_b128>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_DISCARD_B1024, SIbuffer_discard_b1024>;
+
+#endif /* LLPC_BUILD_NPI */
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_USHORT, SIbuffer_load_ushort>;
@@ -395,6 +419,9 @@ def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;
 
+def gi_as_i1timm_zext : GICustomOperandRenderer<"renderZextBoolTImm">,
+  GISDNodeXFormEquiv<as_i1timm_zext>;
+
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
   GISDNodeXFormEquiv<NegateImm>;
 
@@ -423,3 +450,11 @@ def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
 
 def gi_as_hw_round_mode : GICustomOperandRenderer<"renderRoundMode">,
   GISDNodeXFormEquiv<as_hw_round_mode>;
+#ifdef LLPC_BUILD_NPI
+
+def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
+  GISDNodeXFormEquiv<PrefetchLoc>;
+#endif /* LLPC_BUILD_NPI */
+
+def gi_MFMALdScaleModifierOp : GICustomOperandRenderer<"renderScaledMAIIntrinsicOperand">,
+  GISDNodeXFormEquiv<MFMALdScaleXForm>;

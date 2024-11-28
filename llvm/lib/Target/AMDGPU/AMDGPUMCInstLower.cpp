@@ -18,6 +18,9 @@
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#if LLPC_BUILD_NPI
+#include "SIMachineFunctionInfo.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
@@ -47,6 +50,9 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
   default:
     return MCSymbolRefExpr::VK_None;
   case SIInstrInfo::MO_GOTPCREL:
+#if LLPC_BUILD_NPI
+  case SIInstrInfo::MO_GOTPCREL64:
+#endif /* LLPC_BUILD_NPI */
     return MCSymbolRefExpr::VK_GOTPCREL;
   case SIInstrInfo::MO_GOTPCREL32_LO:
     return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO;
@@ -56,10 +62,18 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
     return MCSymbolRefExpr::VK_AMDGPU_REL32_LO;
   case SIInstrInfo::MO_REL32_HI:
     return MCSymbolRefExpr::VK_AMDGPU_REL32_HI;
+#if LLPC_BUILD_NPI
+  case SIInstrInfo::MO_REL64:
+    return MCSymbolRefExpr::VK_AMDGPU_REL64;
+#endif /* LLPC_BUILD_NPI */
   case SIInstrInfo::MO_ABS32_LO:
     return MCSymbolRefExpr::VK_AMDGPU_ABS32_LO;
   case SIInstrInfo::MO_ABS32_HI:
     return MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+#if LLPC_BUILD_NPI
+  case SIInstrInfo::MO_ABS64:
+    return MCSymbolRefExpr::VK_AMDGPU_ABS64;
+#endif /* LLPC_BUILD_NPI */
   }
 }
 
@@ -103,7 +117,12 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     // Regmasks are like implicit defs.
     return false;
   case MachineOperand::MO_MCSymbol:
+#if LLPC_BUILD_NPI
+    if (MO.getTargetFlags() == SIInstrInfo::MO_FAR_BRANCH_OFFSET ||
+        MO.getTargetFlags() == SIInstrInfo::MO_NUM_VGPRS) {
+#else /* LLPC_BUILD_NPI */
     if (MO.getTargetFlags() == SIInstrInfo::MO_FAR_BRANCH_OFFSET) {
+#endif /* LLPC_BUILD_NPI */
       MCSymbol *Sym = MO.getMCSymbol();
       MCOp = MCOperand::createExpr(Sym->getVariableValue());
       return true;
@@ -181,6 +200,38 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
   return AsmPrinter::lowerConstant(CV);
 }
 
+#if LLPC_BUILD_NPI
+static void emitVGPRBlockComment(const MachineInstr *MI, MCStreamer &OS) {
+  // The instruction will only transfer a subset of the registers in the block,
+  // based on the mask that is stored in m0. We could search for the instruction
+  // that sets m0, but most of the time we'll already have the mask stored in
+  // the machine function info. Try to use that. This assumes that we only use
+  // block loads/stores for CSR spills.
+  const MachineFunction *MF = MI->getParent()->getParent();
+  const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+  const SIInstrInfo *TII = MF->getSubtarget<GCNSubtarget>().getInstrInfo();
+
+  Register RegBlock =
+      TII->getNamedOperand(*MI, MI->mayLoad() ? AMDGPU::OpName::vdst
+                                              : AMDGPU::OpName::vdata)
+          ->getReg();
+  Register FirstRegInBlock = TRI.getSubReg(RegBlock, AMDGPU::sub0);
+  uint32_t Mask = MFI->getMaskForVGPRBlockOps(RegBlock);
+
+  SmallString<512> TransferredRegs;
+  for (unsigned I = 0; I < 32; ++I) {
+    if (Mask & (1 << I)) {
+      (llvm::Twine(" ") + TRI.getName(FirstRegInBlock + I))
+          .toVector(TransferredRegs);
+    }
+  }
+
+  if (!TransferredRegs.empty())
+    OS.emitRawComment(" transferring at most " + TransferredRegs);
+}
+
+#endif /* LLPC_BUILD_NPI */
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -268,6 +319,31 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         OutStreamer->emitRawComment(" meta instruction");
       return;
     }
+#if LLPC_BUILD_NPI
+
+    if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+      unsigned V = MI->getOperand(0).getImm();
+      OutStreamer->AddComment(
+          " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
+          " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));
+    }
+
+    if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_FRAMES) {
+      unsigned V = MI->getOperand(0).getImm();
+      OutStreamer->AddComment(" vsrc0_idx=" + Twine((V >> 0) & 3) +
+                              " vsrc1_idx=" + Twine((V >> 2) & 3) +
+                              " vsrc2_idx=" + Twine((V >> 4) & 3) +
+                              " vdst_idx=" + Twine((V >> 6) & 3) +
+                              " vsrc0_msb=" + Twine((V >> 8) & 3) +
+                              " vsrc1_msb=" + Twine((V >> 10) & 3) +
+                              " vsrc2_msb=" + Twine((V >> 12) & 3) +
+                              " vdst_msb=" + Twine((V >> 14) & 3));
+    }
+
+    if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
+      if (isVerbose())
+        emitVGPRBlockComment(MI, *OutStreamer);
+#endif /* LLPC_BUILD_NPI */
 
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);

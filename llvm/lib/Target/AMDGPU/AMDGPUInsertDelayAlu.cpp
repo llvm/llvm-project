@@ -59,13 +59,31 @@ public:
   // Types of delay that can be encoded in an s_delay_alu instruction.
   enum DelayType { VALU, TRANS, SALU, OTHER };
 
+#if LLPC_BUILD_NPI
+  // Get the delay type for a MachineInstr.
+  static DelayType getDelayType(const MachineInstr &MI) {
+    if (SIInstrInfo::isTRANS(MI))
+#else /* LLPC_BUILD_NPI */
   // Get the delay type for an instruction with the specified TSFlags.
   static DelayType getDelayType(uint64_t TSFlags) {
     if (TSFlags & SIInstrFlags::TRANS)
+#endif /* LLPC_BUILD_NPI */
       return TRANS;
+#if LLPC_BUILD_NPI
+    // WMMA XDL ops are treated the same as TRANS.
+    if ((SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI)) &&
+       AMDGPU::getWMMAIsXDL(MI.getOpcode()))
+      return TRANS;
+    if (SIInstrInfo::isVALU(MI))
+#else /* LLPC_BUILD_NPI */
     if (TSFlags & SIInstrFlags::VALU)
+#endif /* LLPC_BUILD_NPI */
       return VALU;
+#if LLPC_BUILD_NPI
+    if (SIInstrInfo::isSALU(MI))
+#else /* LLPC_BUILD_NPI */
     if (TSFlags & SIInstrFlags::SALU)
+#endif /* LLPC_BUILD_NPI */
       return SALU;
     return OTHER;
   }
@@ -352,7 +370,11 @@ public:
         continue;
       }
 
+#if LLPC_BUILD_NPI
+      DelayType Type = getDelayType(MI);
+#else /* LLPC_BUILD_NPI */
       DelayType Type = getDelayType(MI.getDesc().TSFlags);
+#endif /* LLPC_BUILD_NPI */
 
       if (instructionWaitsForVALU(MI)) {
         // Forget about all outstanding VALU delays.

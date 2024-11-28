@@ -26,6 +26,9 @@ namespace llvm {
 class GCNSubtarget;
 class LiveIntervals;
 class LiveRegUnits;
+#if LLPC_BUILD_NPI
+class MachineInstrBuilder;
+#endif /* LLPC_BUILD_NPI */
 class RegisterBank;
 struct SGPRSpillBuilder;
 
@@ -37,11 +40,19 @@ private:
   BitVector RegPressureIgnoredUnits;
 
   /// Sub reg indexes for getRegSplitParts.
+#if LLPC_BUILD_NPI
+  /// First index represents subreg size from 1 to 18 DWORDs.
+#else /* LLPC_BUILD_NPI */
   /// First index represents subreg size from 1 to 16 DWORDs.
+#endif /* LLPC_BUILD_NPI */
   /// The inner vector is sorted by bit offset.
   /// Provided a register can be fully split with given subregs,
   /// all elements of the inner vector combined give a full lane mask.
+#if LLPC_BUILD_NPI
+  static std::array<std::vector<int16_t>, 18> RegSplitParts;
+#else /* LLPC_BUILD_NPI */
   static std::array<std::vector<int16_t>, 16> RegSplitParts;
+#endif /* LLPC_BUILD_NPI */
 
   // Table representing sub reg of given width and offset.
   // First index is subreg size: 32, 64, 96, 128, 160, 192, 224, 256, 512.
@@ -108,6 +119,18 @@ public:
     return 100;
   }
 
+#if LLPC_BUILD_NPI
+  // When building a block VGPR load, we only really transfer a subset of the
+  // registers in the block, based on a mask. Liveness analysis is not aware of
+  // the mask, so it might consider that any register in the block is available
+  // before the load and may therefore be scavenged. This is not ok for CSRs
+  // that are not clobbered, since the caller will expect them to be preserved.
+  // This method will add artificial implicit uses for those registers on the
+  // load instruction, so liveness analysis knows they're unavailable.
+  void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
+                                      Register BlockReg) const;
+
+#endif /* LLPC_BUILD_NPI */
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
@@ -182,12 +205,25 @@ public:
   StringRef getRegAsmName(MCRegister Reg) const override;
 
   // Pseudo regs are not allowed
+#if LLPC_BUILD_NPI
+  unsigned getHWRegIndex(MCRegister Reg) const;
+
+  LLVM_READONLY
+  const TargetRegisterClass *
+  getAnyVGPRClassForBitWidth(unsigned BitWidth) const;
+#else /* LLPC_BUILD_NPI */
   unsigned getHWRegIndex(MCRegister Reg) const {
     return getEncodingValue(Reg) & 0xff;
   }
+#endif /* LLPC_BUILD_NPI */
 
   LLVM_READONLY
   const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
+#if LLPC_BUILD_NPI
+
+  LLVM_READONLY const TargetRegisterClass *
+  getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const;
+#endif /* LLPC_BUILD_NPI */
 
   LLVM_READONLY
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;

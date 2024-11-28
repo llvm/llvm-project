@@ -208,16 +208,41 @@ public:
     MO_GOTPCREL32_LO = 2,
     // MO_GOTPCREL32_HI -> symbol@gotpcrel32@hi -> R_AMDGPU_GOTPCREL32_HI.
     MO_GOTPCREL32_HI = 3,
+#if LLPC_BUILD_NPI
+    // MO_GOTPCREL64 -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
+    MO_GOTPCREL64 = 4,
+#endif /* LLPC_BUILD_NPI */
     // MO_REL32_LO -> symbol@rel32@lo -> R_AMDGPU_REL32_LO.
+#if LLPC_BUILD_NPI
+    MO_REL32 = 5,
+    MO_REL32_LO = 5,
+#else /* LLPC_BUILD_NPI */
     MO_REL32 = 4,
     MO_REL32_LO = 4,
+#endif /* LLPC_BUILD_NPI */
     // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
+#if LLPC_BUILD_NPI
+    MO_REL32_HI = 6,
+    MO_REL64 = 7,
+#else /* LLPC_BUILD_NPI */
     MO_REL32_HI = 5,
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+    MO_FAR_BRANCH_OFFSET = 8,
+#else /* LLPC_BUILD_NPI */
     MO_FAR_BRANCH_OFFSET = 6,
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+    MO_ABS32_LO = 9,
+    MO_ABS32_HI = 10,
+    MO_ABS64 = 11,
+    MO_NUM_VGPRS = 12,
+#else /* LLPC_BUILD_NPI */
     MO_ABS32_LO = 8,
     MO_ABS32_HI = 9,
+#endif /* LLPC_BUILD_NPI */
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);
@@ -650,6 +675,20 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+#if LLPC_BUILD_NPI
+  static bool isBlockLoadStore(uint16_t Opcode) {
+    switch (Opcode) {
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
+    case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
+    case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+#endif /* LLPC_BUILD_NPI */
   static bool isEXP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::EXP;
   }
@@ -989,7 +1028,11 @@ public:
     }
   }
 
+#if LLPC_BUILD_NPI
+  static bool isWaitcnt(unsigned Opcode) {
+#else /* LLPC_BUILD_NPI */
   bool isWaitcnt(unsigned Opcode) const {
+#endif /* LLPC_BUILD_NPI */
     switch (getNonSoftWaitcntOpcode(Opcode)) {
     case AMDGPU::S_WAITCNT:
     case AMDGPU::S_WAITCNT_VSCNT:
@@ -1114,6 +1157,12 @@ public:
   bool usesConstantBus(const MachineRegisterInfo &MRI,
                        const MachineOperand &MO,
                        const MCOperandInfo &OpInfo) const;
+
+  bool usesConstantBus(const MachineRegisterInfo &MRI, const MachineInstr &MI,
+                       int OpIdx) const {
+    return usesConstantBus(MRI, MI.getOperand(OpIdx),
+                           MI.getDesc().operands()[OpIdx]);
+  }
 
   /// Return true if this instruction has any modifiers.
   ///  e.g. src[012]_mod, omod, clamp.
@@ -1308,6 +1357,18 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
+#if LLPC_BUILD_NPI
+  /// Check whether this is a bundle formed with v_load/store_idx
+  /// surrounding a core v_mem/alu instruction, return that core
+  /// instruction if true. In case it is just a v_load_idx bundled
+  /// with v_store_idx, return the v_store_idx as the core.
+  static MachineInstr *bundleWithGPRIndexing(MachineInstr &MI);
+  /// Starting for a core instruction in bundle, find the corresponding
+  /// v_load/store_idx that is the source/dest of its operand
+  static const MachineInstr *getBundledIndexingInst(const MachineInstr &MI,
+                                                    const MachineOperand &Op);
+
+#endif /* LLPC_BUILD_NPI */
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -1408,6 +1469,12 @@ public:
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF)
     const override;
+#if LLPC_BUILD_NPI
+
+  const TargetRegisterClass *
+  getRegClassForBlockOp(const TargetRegisterInfo *TRI,
+                        const MachineFunction &MF) const;
+#endif /* LLPC_BUILD_NPI */
 
   void fixImplicitOperands(MachineInstr &MI) const;
 

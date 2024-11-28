@@ -2553,6 +2553,10 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
+#if LLPC_BUILD_NPI
+  case LangAS::hip_lane_shared:
+    return "__lane_shared__";
+#endif /* LLPC_BUILD_NPI */
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

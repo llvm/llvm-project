@@ -51,6 +51,9 @@ static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
 static constexpr unsigned GFX12 = 1;
+#if LLPC_BUILD_NPI
+static constexpr unsigned GFX12_1 = 1;
+#endif /* LLPC_BUILD_NPI */
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -96,6 +99,24 @@ struct MAIInstInfo {
   bool is_gfx940_xdl;
 };
 
+struct MFMA_F8F6F4_Info {
+  unsigned Opcode;
+  unsigned F8F8Opcode;
+  uint8_t NumRegsSrcA;
+  uint8_t NumRegsSrcB;
+};
+
+#if LLPC_BUILD_NPI
+struct CvtScaleF32_F32F16ToF8F4_Info {
+  unsigned Opcode;
+};
+
+struct WMMAInstInfo {
+  uint16_t Opcode;
+  bool is_wmma_xdl;
+};
+
+#endif /* LLPC_BUILD_NPI */
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -103,6 +124,15 @@ struct MAIInstInfo {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+#define GET_MAIInstInfoTable_DECL
+#endif /* LLPC_BUILD_NPI */
+#define GET_isMFMA_F8F6F4Table_DECL
+#if LLPC_BUILD_NPI
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
+#define GET_WMMAInstInfoTable_DECL
+#endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -308,7 +338,12 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
+#if LLPC_BUILD_NPI
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        unsigned NumExcludedVGRs);
+#else /* LLPC_BUILD_NPI */
 unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+#endif /* LLPC_BUILD_NPI */
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
@@ -562,6 +597,14 @@ bool isVOPC64DPP(unsigned Opc);
 LLVM_READONLY
 bool isVOPCAsmOnly(unsigned Opc);
 
+#if LLPC_BUILD_NPI
+LLVM_READONLY
+bool isVOPMAsmOnly(unsigned Opc);
+
+LLVM_READONLY
+bool isVOPMPseudo(unsigned Opc);
+
+#endif /* LLPC_BUILD_NPI */
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
@@ -569,6 +612,16 @@ bool getMAIIsDGEMM(unsigned Opc);
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
 
+#if LLPC_BUILD_NPI
+LLVM_READONLY
+bool getWMMAIsXDL(unsigned Opc);
+
+// Get an equivalent BitOp3 for a binary logical \p Opc.
+// \returns BitOp3 modifier for the logical operation or zero.
+// Used in VOPD3 conversion.
+unsigned getBitOp2(unsigned Opc);
+
+#endif /* LLPC_BUILD_NPI */
 struct CanBeVOPD {
   bool X;
   bool Y;
@@ -579,7 +632,19 @@ LLVM_READONLY
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
 
 LLVM_READONLY
+#if LLPC_BUILD_NPI
+CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3);
+#else /* LLPC_BUILD_NPI */
 CanBeVOPD getCanBeVOPD(unsigned Opc);
+#endif /* LLPC_BUILD_NPI */
+
+LLVM_READNONE
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal);
+
+LLVM_READONLY
+const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
+                                                      unsigned BLGP,
+                                                      unsigned F8F8Opcode);
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -594,10 +659,19 @@ LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
 
 LLVM_READONLY
+#if LLPC_BUILD_NPI
+unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
+#else /* LLPC_BUILD_NPI */
 unsigned getVOPDOpcode(unsigned Opc);
+#endif /* LLPC_BUILD_NPI */
 
 LLVM_READONLY
+#if LLPC_BUILD_NPI
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
+                bool VOPD3);
+#else /* LLPC_BUILD_NPI */
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily);
+#endif /* LLPC_BUILD_NPI */
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
@@ -630,6 +704,9 @@ enum Component : unsigned {
 // LSB mask for VGPR banks per VOPD component operand.
 // 4 banks result in a mask 3, setting 2 lower bits.
 constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
+#if LLPC_BUILD_NPI
+constexpr unsigned VOPD3_VGPR_BANK_MASKS[] = {1, 3, 3, 3};
+#endif /* LLPC_BUILD_NPI */
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -641,10 +718,19 @@ private:
   unsigned SrcOperandsNum = 0;
   unsigned MandatoryLiteralIdx = ~0u;
   bool HasSrc2Acc = false;
+#if LLPC_BUILD_NPI
+  unsigned NumVOPD3Mods = 0;
+  unsigned Opcode = 0;
+  bool IsVOP3 = false;
+#endif /* LLPC_BUILD_NPI */
 
 public:
   ComponentProps() = default;
+#if LLPC_BUILD_NPI
+  ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout = false);
+#else /* LLPC_BUILD_NPI */
   ComponentProps(const MCInstrDesc &OpDesc);
+#endif /* LLPC_BUILD_NPI */
 
   // Return the total number of src operands this component has.
   unsigned getCompSrcOperandsNum() const { return SrcOperandsNum; }
@@ -674,6 +760,20 @@ public:
   // Return true iif this component has tied src2.
   bool hasSrc2Acc() const { return HasSrc2Acc; }
 
+#if LLPC_BUILD_NPI
+  // Return a number of source modifiers if instruction is used in VOPD3.
+  unsigned getCompVOPD3ModsNum() const { return NumVOPD3Mods; }
+
+  // Return opcode of the component.
+  unsigned getOpcode() const { return Opcode; }
+
+  // Returns if component opcode is in VOP3 encoding.
+  unsigned isVOP3() const { return IsVOP3; }
+
+  // Return index of BitOp3 operand or -1.
+  int getBitOp3OperandIdx() const;
+
+#endif /* LLPC_BUILD_NPI */
 private:
   bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
@@ -726,7 +826,19 @@ private:
   //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
   // Each ComponentKind has operand indices defined below.
   static constexpr unsigned MC_DST_IDX[] = {0, 0, 1};
+#if LLPC_BUILD_NPI
+
+  // VOPD3 instructions may have 2 or 3 source modifiers, src2 modifier is not
+  // used if there is tied accumulator. Indexing of this array:
+  // MC_SRC_IDX[VOPD3ModsNum][SrcNo]. This returns an index for a SINGLE
+  // instruction layout, add 1 for COMPONENT_X or COMPONENT_Y. For the second
+  // component add OpX.MCSrcNum + OpX.VOPD3ModsNum.
+  // For VOPD1/VOPD2 use column with zero modifiers.
+  static constexpr unsigned SINGLE_MC_SRC_IDX[4][3] =
+      {{1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}};
+#else /* LLPC_BUILD_NPI */
   static constexpr unsigned FIRST_MC_SRC_IDX[] = {1, 2, 2 /* + OpX.MCSrcNum */};
+#endif /* LLPC_BUILD_NPI */
 
   // Parsed operands of regular instructions are ordered as follows:
   //   Mnemo dst src0 [vsrc1 ...]
@@ -742,25 +854,59 @@ private:
 private:
   const ComponentKind Kind;
   const ComponentProps PrevComp;
+#if LLPC_BUILD_NPI
+  const unsigned VOPD3ModsNum;
+  const int BitOp3Idx; // Index of bitop3 operand or -1
+#endif /* LLPC_BUILD_NPI */
 
 public:
   // Create layout for COMPONENT_X or SINGLE component.
+#if LLPC_BUILD_NPI
+  ComponentLayout(ComponentKind Kind, unsigned VOPD3ModsNum, int BitOp3Idx)
+      : Kind(Kind), VOPD3ModsNum(VOPD3ModsNum), BitOp3Idx(BitOp3Idx) {
+#else /* LLPC_BUILD_NPI */
   ComponentLayout(ComponentKind Kind) : Kind(Kind) {
+#endif /* LLPC_BUILD_NPI */
     assert(Kind == ComponentKind::SINGLE || Kind == ComponentKind::COMPONENT_X);
   }
 
   // Create layout for COMPONENT_Y which depends on COMPONENT_X layout.
+#if LLPC_BUILD_NPI
+  ComponentLayout(const ComponentProps &OpXProps, unsigned VOPD3ModsNum,
+                  int BitOp3Idx)
+      : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps),
+        VOPD3ModsNum(VOPD3ModsNum), BitOp3Idx(BitOp3Idx) {}
+#else /* LLPC_BUILD_NPI */
   ComponentLayout(const ComponentProps &OpXProps)
       : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps) {}
+#endif /* LLPC_BUILD_NPI */
 
 public:
   // Return the index of dst operand in MCInst operands.
   unsigned getIndexOfDstInMCOperands() const { return MC_DST_IDX[Kind]; }
 
   // Return the index of the specified src operand in MCInst operands.
+#if LLPC_BUILD_NPI
+  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx, bool VOPD3) const {
+#else /* LLPC_BUILD_NPI */
   unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const {
+#endif /* LLPC_BUILD_NPI */
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
+#if LLPC_BUILD_NPI
+
+    if (Kind == SINGLE && CompSrcIdx == 2 && BitOp3Idx != -1)
+      return BitOp3Idx;
+
+    if (VOPD3) {
+      return SINGLE_MC_SRC_IDX[VOPD3ModsNum][CompSrcIdx] + getPrevCompSrcNum() +
+             getPrevCompVOPD3ModsNum() + (Kind != SINGLE ? 1 : 0);
+    }
+
+    return SINGLE_MC_SRC_IDX[0][CompSrcIdx] + getPrevCompSrcNum() +
+           (Kind != SINGLE ? 1 : 0);
+#else /* LLPC_BUILD_NPI */
     return FIRST_MC_SRC_IDX[Kind] + getPrevCompSrcNum() + CompSrcIdx;
+#endif /* LLPC_BUILD_NPI */
   }
 
   // Return the index of dst operand in the parsed operands array.
@@ -781,19 +927,43 @@ private:
   unsigned getPrevCompParsedSrcNum() const {
     return PrevComp.getCompParsedSrcOperandsNum();
   }
+#if LLPC_BUILD_NPI
+  unsigned getPrevCompVOPD3ModsNum() const {
+    return PrevComp.getCompVOPD3ModsNum();
+  }
+#endif /* LLPC_BUILD_NPI */
 };
 
 // Layout and properties of VOPD components.
+#if LLPC_BUILD_NPI
+class ComponentInfo : public ComponentProps, public ComponentLayout {
+#else /* LLPC_BUILD_NPI */
 class ComponentInfo : public ComponentLayout, public ComponentProps {
+#endif /* LLPC_BUILD_NPI */
 public:
   // Create ComponentInfo for COMPONENT_X or SINGLE component.
   ComponentInfo(const MCInstrDesc &OpDesc,
+#if LLPC_BUILD_NPI
+                ComponentKind Kind = ComponentKind::SINGLE,
+                bool VOP3Layout = false)
+      : ComponentProps(OpDesc, VOP3Layout),
+        ComponentLayout(Kind, getCompVOPD3ModsNum(), getBitOp3OperandIdx()) {}
+#else /* LLPC_BUILD_NPI */
                 ComponentKind Kind = ComponentKind::SINGLE)
       : ComponentLayout(Kind), ComponentProps(OpDesc) {}
+#endif /* LLPC_BUILD_NPI */
 
   // Create ComponentInfo for COMPONENT_Y which depends on COMPONENT_X layout.
+#if LLPC_BUILD_NPI
+  ComponentInfo(const MCInstrDesc &OpDesc, const ComponentProps &OpXProps,
+                bool VOP3Layout = false)
+      : ComponentProps(OpDesc, VOP3Layout),
+        ComponentLayout(OpXProps, getCompVOPD3ModsNum(),
+                        getBitOp3OperandIdx()) {}
+#else /* LLPC_BUILD_NPI */
   ComponentInfo(const MCInstrDesc &OpDesc, const ComponentProps &OpXProps)
       : ComponentLayout(OpXProps), ComponentProps(OpDesc) {}
+#endif /* LLPC_BUILD_NPI */
 
   // Map component operand index to parsed operand index.
   // Return 0 if the specified operand does not exist.
@@ -825,23 +995,58 @@ public:
   // if the operand is not a register or not a VGPR.
   // If \p SkipSrc is set to true then constraints for source operands are not
   // checked.
+#if LLPC_BUILD_NPI
+  // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
+  // even though it violates requirement to be from different banks.
+  // If \p VOPD3 is set to true both dst registers allowed to be either odd
+  // or even and instruction may have real src2 as opposed to tied accumulator.
+#endif /* LLPC_BUILD_NPI */
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+#if LLPC_BUILD_NPI
+                         const MCRegisterInfo &MRI,
+                         bool SkipSrc = false,
+                         bool AllowSameVGPR = false,
+                         bool VOPD3 = false) const {
+    return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
+                                      VOPD3).has_value();
+#else /* LLPC_BUILD_NPI */
                          bool SkipSrc = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, SkipSrc).has_value();
+#endif /* LLPC_BUILD_NPI */
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
   // If \p SkipSrc is set to true then constraints for source operands are not
+#if LLPC_BUILD_NPI
+  // checked except for being from the same halves of VGPR file on gfx1210.
+  // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
+  // even though it violates requirement to be from different banks.
+  // If \p VOPD3 is set to true both dst registers allowed to be either odd
+  // or even and instruction may have real src2 as opposed to tied accumulator.
+#else /* LLPC_BUILD_NPI */
   // checked.
+#endif /* LLPC_BUILD_NPI */
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+#if LLPC_BUILD_NPI
+      const MCRegisterInfo &MRI,
+      bool SkipSrc = false,
+      bool AllowSameVGPR = false,
+      bool VOPD3 = false) const;
+#else /* LLPC_BUILD_NPI */
       bool SkipSrc = false) const;
+#endif /* LLPC_BUILD_NPI */
 
 private:
   RegIndices
   getRegIndices(unsigned ComponentIdx,
+#if LLPC_BUILD_NPI
+                std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                bool VOPD3) const;
+#else /* LLPC_BUILD_NPI */
                 std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+#endif /* LLPC_BUILD_NPI */
 };
 
 } // namespace VOPD
@@ -860,6 +1065,15 @@ VOPD::InstInfo
 getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
 
 LLVM_READONLY
+#if LLPC_BUILD_NPI
+bool isAsyncStore(unsigned Opc);
+LLVM_READONLY
+bool isTensorStore(unsigned Opc);
+LLVM_READONLY
+unsigned getTemporalHintType(const MCInstrDesc TID);
+
+LLVM_READONLY
+#endif /* LLPC_BUILD_NPI */
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
@@ -935,28 +1149,57 @@ struct Waitcnt {
   unsigned SampleCnt = ~0u; // gfx12+ only.
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
+#if LLPC_BUILD_NPI
+  unsigned XCnt = ~0u;      // gfx1210.
+  unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
+  unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
+#endif /* LLPC_BUILD_NPI */
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
       : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt),
+#if LLPC_BUILD_NPI
+        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u), XCnt(~0u), VaVdst(~0u),
+        VmVsrc(~0u) {}
+#else /* LLPC_BUILD_NPI */
         SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u) {}
+#endif /* LLPC_BUILD_NPI */
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
+#if LLPC_BUILD_NPI
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
+          unsigned VaVdst, unsigned VmVsrc)
+#else /* LLPC_BUILD_NPI */
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt)
+#endif /* LLPC_BUILD_NPI */
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
+#if LLPC_BUILD_NPI
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
+        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
+#else /* LLPC_BUILD_NPI */
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
+#endif /* LLPC_BUILD_NPI */
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
+#if LLPC_BUILD_NPI
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || VaVdst != ~0u ||
+           VmVsrc != ~0u || XCnt != ~0u;
+#else /* LLPC_BUILD_NPI */
            SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u;
+#endif /* LLPC_BUILD_NPI */
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
 
+#if LLPC_BUILD_NPI
+  bool hasWaitDepctr() const { return VaVdst != ~0u || VmVsrc != ~0u; }
+
+#endif /* LLPC_BUILD_NPI */
   Waitcnt combined(const Waitcnt &Other) const {
     // Does the right thing provided self and Other are either both pre-gfx12
     // or both gfx12+.
@@ -964,7 +1207,12 @@ struct Waitcnt {
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
+#if LLPC_BUILD_NPI
+        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
+        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
+#else /* LLPC_BUILD_NPI */
         std::min(KmCnt, Other.KmCnt));
+#endif /* LLPC_BUILD_NPI */
   }
 };
 
@@ -1070,6 +1318,12 @@ unsigned getDscntBitMask(const IsaVersion &Version);
 /// Returns 0 for versions that do not support KMcnt
 unsigned getKmcntBitMask(const IsaVersion &Version);
 
+#if LLPC_BUILD_NPI
+/// \returns Xcnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support Xcnt.
+unsigned getXcntBitMask(const IsaVersion &Version);
+
+#endif /* LLPC_BUILD_NPI */
 /// \return STOREcnt or VScnt bit mask for given isa \p Version.
 /// returns 0 for versions that do not support STOREcnt or VScnt.
 /// STOREcnt and VScnt are the same counter, the name used
@@ -1122,6 +1376,14 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
 
+#if LLPC_BUILD_NPI
+/// \returns Maximum VaVdst value that can be encoded.
+unsigned getVaVdstBitMask();
+
+/// \returns Maximum VmVsrc value that can be encoded.
+unsigned getVmVsrcBitMask();
+
+#endif /* LLPC_BUILD_NPI */
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);
 
@@ -1251,6 +1513,12 @@ bool getHasColorExport(const Function &F);
 
 bool getHasDepthExport(const Function &F);
 
+#if LLPC_BUILD_NPI
+bool getWavegroupEnable(const Function &F);
+
+std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
+
+#endif /* LLPC_BUILD_NPI */
 LLVM_READNONE
 bool isShader(CallingConv::ID CC);
 
@@ -1318,6 +1586,13 @@ bool isGFX11(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
+#if LLPC_BUILD_NPI
+bool isGFX1210Only(const MCSubtargetInfo &STI);
+bool isGFX1210Plus(const MCSubtargetInfo &STI);
+bool isGFX13(const MCSubtargetInfo &STI);
+bool isGFX13Plus(const MCSubtargetInfo &STI);
+bool supportsWGP(const MCSubtargetInfo &STI);
+#endif /* LLPC_BUILD_NPI */
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
@@ -1335,6 +1610,14 @@ int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
+#if LLPC_BUILD_NPI
+/// \returns Returns the index of \p Reg, e.g., 5 for v5.
+unsigned getHWRegIndex(MCRegister Reg, const MCRegisterInfo &MRI);
+
+/// \returns if \p Reg is a VGPR register.
+bool isVGPR(MCRegister Reg, const MCRegisterInfo &MRI);
+
+#endif /* LLPC_BUILD_NPI */
 /// Is Reg - scalar register
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
 
@@ -1399,6 +1682,10 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+#if LLPC_BUILD_NPI
+  case AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED:
+  case AMDGPU::OPERAND_KIMM64:
+#endif /* LLPC_BUILD_NPI */
     return 8;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -1526,22 +1813,60 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 /// not the encoded offset.
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
+#if LLPC_BUILD_NPI
+bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
+                             unsigned DC);
+#else /* LLPC_BUILD_NPI */
 LLVM_READNONE
 inline bool isLegalDPALU_DPPControl(unsigned DC) {
   return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
 }
+#endif /* LLPC_BUILD_NPI */
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
 
+#if LLPC_BUILD_NPI
+/// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
+bool isDPALU_DPP32BitOpc(unsigned Opc);
+
+#endif /* LLPC_BUILD_NPI */
 /// \returns true if an instruction is a DP ALU DPP.
+#if LLPC_BUILD_NPI
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);
+#else /* LLPC_BUILD_NPI */
 bool isDPALU_DPP(const MCInstrDesc &OpDesc);
+#endif /* LLPC_BUILD_NPI */
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+#if LLPC_BUILD_NPI
+
+/// \returns a register class for the physical register \p Reg if it is a VGPR
+/// or nullptr otherwise.
+const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+                                           const MCRegisterInfo &MRI);
+
+/// \returns the MODE bits which have to be set by the S_SET_VGPR_MSB for the
+/// physical register \p Reg.
+unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI);
+
+/// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
+MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
+                          const MCRegisterInfo &MRI);
+
+// Returns a table for the opcode with a given \p Desc to map the VGPR MSB
+// set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
+// maps, one for X and one for Y component.
+std::pair<const unsigned *, const unsigned *>
+getVGPRLoweringOperandTables(const MCInstrDesc& Desc);
+
+/// \returns true if a memory instruction supports scale_offset modifier.
+bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
+#endif /* LLPC_BUILD_NPI */
 
 /// \returns lds block size in terms of dwords. \p
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which

@@ -181,6 +181,11 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::SRC_PRIVATE_BASE:
         case AMDGPU::SRC_PRIVATE_LIMIT_LO:
         case AMDGPU::SRC_PRIVATE_LIMIT:
+#if LLPC_BUILD_NPI
+        case AMDGPU::SRC_FLAT_SCRATCH_BASE:
+        case AMDGPU::SRC_FLAT_SCRATCH_BASE_LO:
+        case AMDGPU::SRC_FLAT_SCRATCH_BASE_HI:
+#endif /* LLPC_BUILD_NPI */
         case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
         case AMDGPU::SGPR_NULL:
         case AMDGPU::SGPR_NULL64:
@@ -232,6 +237,14 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::SRC_SCC:
           llvm_unreachable("src_scc register should not be used");
 
+#if LLPC_BUILD_NPI
+        case AMDGPU::IDX0:
+        case AMDGPU::IDX1:
+        case AMDGPU::IDX2:
+        case AMDGPU::IDX3:
+          continue;
+
+#endif /* LLPC_BUILD_NPI */
         default:
           break;
         }
@@ -370,6 +383,18 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 16;
+#if LLPC_BUILD_NPI
+        } else if (AMDGPU::VReg_576RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 18;
+        } else if (AMDGPU::SReg_576RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 18;
+        } else if (AMDGPU::AReg_576RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 18;
+#endif /* LLPC_BUILD_NPI */
         } else if (AMDGPU::SReg_1024RegClass.contains(Reg)) {
           IsSGPR = true;
           Width = 32;

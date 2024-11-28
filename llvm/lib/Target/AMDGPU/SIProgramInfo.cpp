@@ -68,6 +68,9 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   LDSSize = 0;
   FlatUsed = ZeroExpr;
 
+#if LLPC_BUILD_NPI
+  LaneSharedSegmentSize = ZeroExpr;
+#endif /* LLPC_BUILD_NPI */
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
   Occupancy = ZeroExpr;
@@ -165,9 +168,20 @@ const MCExpr *SIProgramInfo::getComputePGMRSrc1(const GCNSubtarget &ST,
                                                 MCContext &Ctx) const {
   uint64_t Reg = getComputePGMRSrc1Reg(*this, ST);
   const MCExpr *RegExpr = MCConstantExpr::create(Reg, Ctx);
+#if LLPC_BUILD_NPI
+  const MCExpr *Res = nullptr;
+  if (AMDGPU::isGFX13Plus(ST)) {
+    Res = VGPRBlocks;
+  } else {
+    Res = MCBinaryExpr::createOr(
+        MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
+        MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+  }
+#else /* LLPC_BUILD_NPI */
   const MCExpr *Res = MCBinaryExpr::createOr(
       MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
       MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+#endif /* LLPC_BUILD_NPI */
   return MCBinaryExpr::createOr(RegExpr, Res, Ctx);
 }
 
@@ -180,9 +194,20 @@ const MCExpr *SIProgramInfo::getPGMRSrc1(CallingConv::ID CC,
 
   uint64_t Reg = getPGMRSrc1Reg(*this, CC, ST);
   const MCExpr *RegExpr = MCConstantExpr::create(Reg, Ctx);
+#if LLPC_BUILD_NPI
+  const MCExpr *Res = nullptr;
+  if (AMDGPU::isGFX13Plus(ST)) {
+    Res = VGPRBlocks;
+  } else {
+    Res = MCBinaryExpr::createOr(
+        MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
+        MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+  }
+#else /* LLPC_BUILD_NPI */
   const MCExpr *Res = MCBinaryExpr::createOr(
       MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
       MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+#endif /* LLPC_BUILD_NPI */
   return MCBinaryExpr::createOr(RegExpr, Res, Ctx);
 }
 

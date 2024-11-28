@@ -38,6 +38,11 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
 // If GV is a named-barrier return its type. Otherwise return nullptr.
 TargetExtType *isNamedBarrier(const GlobalVariable &GV);
 
+#if LLPC_BUILD_NPI
+// If GV is a semaphore return its type. Otherwise return nullptr.
+TargetExtType *isLDSSemaphore(const GlobalVariable &GV);
+
+#endif /* LLPC_BUILD_NPI */
 bool isDynamicLDS(const GlobalVariable &GV);
 bool isLDSVariableToLower(const GlobalVariable &GV);
 
@@ -70,6 +75,12 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA);
 /// Check is a \p Load is clobbered in its function.
 bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA);
+#if LLPC_BUILD_NPI
+
+/// Check if the passed global variable or private alloca can be allocated
+/// in VGPRs.
+bool IsPromotableToVGPR(const Value &V, const DataLayout &DL);
+#endif /* LLPC_BUILD_NPI */
 
 } // end namespace AMDGPU
 

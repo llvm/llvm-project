@@ -9,11 +9,11 @@
 // The code produced for "generic" is only useful for tests and cannot
 // reasonably be expected to execute on any particular target.
 def : ProcessorModel<"generic", NoSchedModel,
-  [FeatureWavefrontSize64, FeatureGDS, FeatureGWS]
+  [FeatureGDS, FeatureGWS]
 >;
 
 def : ProcessorModel<"generic-hsa", NoSchedModel,
-  [FeatureWavefrontSize64, FeatureGDS, FeatureGWS, FeatureFlatAddressSpace]
+  [FeatureGDS, FeatureGWS, FeatureFlatAddressSpace]
 >;
 
 //===------------------------------------------------------------===//
@@ -204,7 +204,7 @@ def : ProcessorModel<"gfx942", SIDPGFX940FullSpeedModel,
   FeatureISAVersion9_4_2.Features
 >;
 
-def : ProcessorModel<"gfx950", SIDPGFX940FullSpeedModel,
+def : ProcessorModel<"gfx950", SIDPGFX950FullSpeedModel,
   FeatureISAVersion9_5_0.Features
 >;
 
@@ -317,6 +317,13 @@ def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
   FeatureISAVersion11_Generic.Features
 >;
 
+#ifdef LLPC_BUILD_NPI
+// Internal only (A0)
+def : ProcessorModel<"gfx115F", GFX11SpeedModel,
+  FeatureISAVersion11_5_0.Features
+>;
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // GCN GFX12.
 //===----------------------------------------------------------------------===//
@@ -332,4 +339,45 @@ def : ProcessorModel<"gfx1201", GFX12SpeedModel,
 // [gfx1200, gfx1201]
 def : ProcessorModel<"gfx12-generic", GFX12SpeedModel,
   FeatureISAVersion12_Generic.Features
+#ifdef LLPC_BUILD_NPI
+>;
+
+// Internal only (A0)
+def : ProcessorModel<"gfx120E", GFX12SpeedModel,
+  FeatureISAVersion12.Features
+>;
+
+// Internal only (A0)
+def : ProcessorModel<"gfx120F", GFX12SpeedModel,
+  FeatureISAVersion12.Features
+>;
+
+def : ProcessorModel<"gfx1210", GFX1210SpeedModel,
+  FeatureISAVersion12_10.Features
+>;
+
+def : ProcessorModel<"gfx1211", GFX1211SpeedModel,
+  FeatureISAVersion12_11.Features
+>;
+
+// [gfx1210, gfx1211]
+def : ProcessorModel<"gfx12-1-generic", GFX1210SpeedModel,
+  FeatureISAVersion12_1_Generic.Features
+>;
+
+//===----------------------------------------------------------------------===//
+// GCN GFX13.
+//===----------------------------------------------------------------------===//
+
+def : ProcessorModel<"gfx1300", GFX12SpeedModel,
+  FeatureISAVersion13.Features
+>;
+
+def : ProcessorModel<"gfx1301", GFX12SpeedModel,
+  FeatureISAVersion13.Features
+>;
+
+def : ProcessorModel<"gfx1302", GFX12SpeedModel,
+  FeatureISAVersion13.Features
+#endif /* LLPC_BUILD_NPI */
 >;

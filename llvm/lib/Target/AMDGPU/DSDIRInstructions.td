@@ -141,7 +141,11 @@ def : GCNPat <
 
 } // End SubtargetPredicate = isGFX11Only
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = isGFX12PlusNot1210 in {
+#else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX12Plus in {
+#endif /* LLPC_BUILD_NPI */
 
 def DS_DIRECT_LOAD : DSDIR_Pseudo<"ds_direct_load", VDSDIR_getIns<1>.ret, 1>;
 def DS_PARAM_LOAD : DSDIR_Pseudo<"ds_param_load", VDSDIR_getIns<0>.ret, 0>;
@@ -156,7 +160,11 @@ def : GCNPat <
   (DS_PARAM_LOAD timm:$attr, timm:$attrchan, 0, 1)
 >;
 
+#ifdef LLPC_BUILD_NPI
+} // End SubtargetPredicate = isGFX12PlusNot1210.
+#else /* LLPC_BUILD_NPI */
 } // End SubtargetPredicate = isGFX12Only
+#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // GFX11
@@ -191,5 +199,24 @@ multiclass DSDIR_Real_gfx12<bits<2> op> {
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass DSDIR_Real_gfx13<bits<2> op> {
+  defvar ps = !cast<DSDIR_Pseudo>(NAME);
+  def _gfx13 : DSDIR_Real<ps, ps.InOperandList,
+                          VDSDIR_getAsm<ps.is_direct>.ret,
+                          SIEncodingFamily.GFX13>,
+               VDSDIRe<op, ps.is_direct> {
+    let AssemblerPredicate = isGFX13Plus;
+    let DecoderNamespace = "GFX13";
+  }
+}
+
+multiclass DSDIR_Real_gfx12_gfx13<bits<2> op> :
+  DSDIR_Real_gfx12<op>, DSDIR_Real_gfx13<op>;
+
+defm DS_PARAM_LOAD : DSDIR_Real_gfx12_gfx13<0x0>;
+defm DS_DIRECT_LOAD : DSDIR_Real_gfx12_gfx13<0x1>;
+#else /* LLPC_BUILD_NPI */
 defm DS_PARAM_LOAD : DSDIR_Real_gfx12<0x0>;
 defm DS_DIRECT_LOAD : DSDIR_Real_gfx12<0x1>;
+#endif /* LLPC_BUILD_NPI */

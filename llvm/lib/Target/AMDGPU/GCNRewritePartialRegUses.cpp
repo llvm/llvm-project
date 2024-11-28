@@ -429,7 +429,11 @@ bool GCNRewritePartialRegUses::rewriteReg(Register Reg) const {
     const TargetRegisterClass *&SubRegRC = I->second.RC;
 
     if (Inserted)
+#if LLPC_BUILD_NPI
+      SubRegRC = TRI->getAllocatableClass(TRI->getSubRegisterClass(RC, SubReg));
+#else /* LLPC_BUILD_NPI */
       SubRegRC = TRI->getSubRegisterClass(RC, SubReg);
+#endif /* LLPC_BUILD_NPI */
 
     if (SubRegRC) {
       if (const TargetRegisterClass *OpDescRC = getOperandRegClass(MO)) {

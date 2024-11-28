@@ -198,6 +198,10 @@ public:
   Register fixStoreSourceType(MachineIRBuilder &B, Register VData, LLT MemTy,
                               bool IsFormat) const;
 
+#if LLPC_BUILD_NPI
+  bool legalizeBufferDiscard(MachineInstr &MI, MachineIRBuilder &B,
+                             Intrinsic::ID IID) const;
+#endif /* LLPC_BUILD_NPI */
   bool legalizeBufferStore(MachineInstr &MI, LegalizerHelper &Helper,
                            bool IsTyped, bool IsFormat) const;
   bool legalizeBufferLoad(MachineInstr &MI, LegalizerHelper &Helper,
@@ -205,6 +209,14 @@ public:
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
+#if LLPC_BUILD_NPI
+  bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
+                                        MachineIRBuilder &B) const;
+
+  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
+                                                  MachineIRBuilder &B) const;
+
+#endif /* LLPC_BUILD_NPI */
   bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
                       Intrinsic::ID IID) const;
 
@@ -212,6 +224,10 @@ public:
 
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
+#if LLPC_BUILD_NPI
+  bool legalizeWavegroupID(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeWaveIDInWavegroup(MachineInstr &MI, MachineIRBuilder &B) const;
+#endif /* LLPC_BUILD_NPI */
 
   bool legalizeGetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B) const;

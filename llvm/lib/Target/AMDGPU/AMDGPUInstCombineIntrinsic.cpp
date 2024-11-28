@@ -513,7 +513,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_sqrt:
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_rsq:
+  case Intrinsic::amdgcn_tanh: {
+#else /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_rsq: {
+#endif /* LLPC_BUILD_NPI */
     Value *Src = II.getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
@@ -1024,6 +1029,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
   }
+  case Intrinsic::amdgcn_wavefrontsize: {
+    if (ST->isWaveSizeKnown())
+      return IC.replaceInstUsesWith(
+          II, ConstantInt::get(II.getType(), ST->getWavefrontSize()));
+    break;
+  }
   case Intrinsic::amdgcn_wqm_vote: {
     // wqm_vote is identity when the argument is constant.
     if (!isa<Constant>(II.getArgOperand(0)))
@@ -1088,6 +1099,23 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Src.get());
     break;
   }
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_wave_match_b32: {
+    // TODO: We should use UniformityAnalysis instead of just checking for
+    // trivially uniform constants.
+
+    const Use &Src0 = II.getOperandUse(0);
+    const Use &Src1 = II.getArgOperandUse(1);
+    if (Src0.get() == Src1.get() && isTriviallyUniform(Src0)) {
+      Function *NewF = Intrinsic::getOrInsertDeclaration(
+          II.getModule(), Intrinsic::amdgcn_ballot, II.getType());
+      CallInst *NewCall =
+          IC.Builder.CreateCall(NewF, {IC.Builder.getInt1(true)});
+      return IC.replaceInstUsesWith(II, NewCall);
+    }
+    break;
+  }
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_trig_preop: {
     // The intrinsic is declared with name mangling, but currently the
     // instruction only exists for f64
@@ -1274,6 +1302,138 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<UndefValue>(Src)) {
       return IC.replaceInstUsesWith(II, Src);
     }
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
+    Value *Src0 = II.getArgOperand(0);
+    Value *Src1 = II.getArgOperand(1);
+    uint64_t CBSZ = cast<ConstantInt>(II.getArgOperand(3))->getZExtValue();
+    uint64_t BLGP = cast<ConstantInt>(II.getArgOperand(4))->getZExtValue();
+    auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
+    auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
+
+    auto getFormatNumRegs = [](unsigned FormatVal) {
+      switch (FormatVal) {
+      case AMDGPU::MFMAScaleFormats::FP6_E2M3:
+      case AMDGPU::MFMAScaleFormats::FP6_E3M2:
+        return 6u;
+      case AMDGPU::MFMAScaleFormats::FP4_E2M1:
+        return 4u;
+      case AMDGPU::MFMAScaleFormats::FP8_E4M3:
+      case AMDGPU::MFMAScaleFormats::FP8_E5M2:
+        return 8u;
+      default:
+        llvm_unreachable("invalid format value");
+      }
+    };
+
+    bool MadeChange = false;
+    unsigned Src0NumElts = getFormatNumRegs(CBSZ);
+    unsigned Src1NumElts = getFormatNumRegs(BLGP);
+
+    // Depending on the used format, fewer registers are required so shrink the
+    // vector type.
+    if (Src0Ty->getNumElements() > Src0NumElts) {
+      Src0 = IC.Builder.CreateExtractVector(
+          FixedVectorType::get(Src0Ty->getElementType(), Src0NumElts), Src0,
+          IC.Builder.getInt64(0));
+      MadeChange = true;
+    }
+
+    if (Src1Ty->getNumElements() > Src1NumElts) {
+      Src1 = IC.Builder.CreateExtractVector(
+          FixedVectorType::get(Src0Ty->getElementType(), Src1NumElts), Src1,
+          IC.Builder.getInt64(0));
+      MadeChange = true;
+    }
+
+    if (!MadeChange)
+      return std::nullopt;
+
+    SmallVector<Value *, 10> Args(II.args());
+    Args[0] = Src0;
+    Args[1] = Src1;
+
+    CallInst *NewII = IC.Builder.CreateIntrinsic(
+        IID, {Src0->getType(), Src1->getType()}, Args, &II);
+    NewII->takeName(&II);
+    return IC.replaceInstUsesWith(II, NewII);
+#if LLPC_BUILD_NPI
+  }
+  case Intrinsic::amdgcn_pdep_b32:
+  case Intrinsic::amdgcn_pext_b32: {
+    if (auto *Src = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+      if (Src->isZero())
+        return IC.replaceInstUsesWith(II, Src);
+
+      if (Src->isMinusOne() && IID == Intrinsic::amdgcn_pdep_b32)
+        return IC.replaceInstUsesWith(II, II.getArgOperand(1));
+    }
+    if (auto *Mask = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
+      if (Mask->isZero())
+        return IC.replaceInstUsesWith(II, Mask);
+
+      if (Mask->isMinusOne())
+        return IC.replaceInstUsesWith(II, II.getArgOperand(0));
+
+      unsigned MaskIdx, MaskLen;
+      if (isShiftedMask_32(Mask->getZExtValue(), MaskIdx, MaskLen)) {
+        if (IID == Intrinsic::amdgcn_pdep_b32) {
+          Value *Shifted = IC.Builder.CreateShl(II.getArgOperand(0), MaskIdx);
+          Value *Masked = IC.Builder.CreateAnd(Shifted, Mask);
+          return IC.replaceInstUsesWith(II, Masked);
+        } else {
+          Value *Masked = IC.Builder.CreateAnd(II.getArgOperand(0), Mask);
+          Value *Shifted = IC.Builder.CreateLShr(Masked, MaskIdx);
+          return IC.replaceInstUsesWith(II, Shifted);
+        }
+      }
+
+      auto pdep = [&](uint32_t Src, uint32_t Mask) {
+        uint32_t Result = 0;
+        uint32_t BitToTest = 1;
+        while (Mask) {
+          uint32_t BitToSet = Mask & -Mask;
+          if (BitToTest & Src)
+            Result |= BitToSet;
+
+          BitToTest <<= 1;
+          Mask &= Mask - 1;
+        }
+        return Result;
+      };
+
+      auto pext = [&](uint32_t Src, uint32_t Mask) {
+        uint32_t Result = 0;
+        uint32_t BitToSet = 1;
+        while (Mask) {
+          uint32_t BitToTest = Mask & -Mask;
+          if (BitToTest & Src)
+            Result |= BitToSet;
+
+          BitToSet <<= 1;
+          Mask &= Mask - 1;
+        }
+        return Result;
+      };
+
+      if (auto SrcConst = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+        if (IID == Intrinsic::amdgcn_pdep_b32) {
+          uint32_t Result =
+              pdep(SrcConst->getZExtValue(), Mask->getZExtValue());
+          return IC.replaceInstUsesWith(II,
+                                        ConstantInt::get(II.getType(), Result));
+        } else {
+          uint32_t Result =
+              pext(SrcConst->getZExtValue(), Mask->getZExtValue());
+          return IC.replaceInstUsesWith(II,
+                                        ConstantInt::get(II.getType(), Result));
+        }
+      }
+    }
+    break;
+#endif /* LLPC_BUILD_NPI */
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

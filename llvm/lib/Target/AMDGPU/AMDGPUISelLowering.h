@@ -544,6 +544,9 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
+#if LLPC_BUILD_NPI
+  PC_ADD_REL_OFFSET64,
+#endif /* LLPC_BUILD_NPI */
   LDS,
 
   DUMMY_CHAIN,
@@ -581,6 +584,11 @@ enum NodeType : unsigned {
   SBUFFER_LOAD_SHORT,
   SBUFFER_LOAD_USHORT,
   SBUFFER_PREFETCH_DATA,
+#if LLPC_BUILD_NPI
+  BUFFER_DISCARD_B32,
+  BUFFER_DISCARD_B128,
+  BUFFER_DISCARD_B1024,
+#endif /* LLPC_BUILD_NPI */
   BUFFER_STORE,
   BUFFER_STORE_BYTE,
   BUFFER_STORE_SHORT,

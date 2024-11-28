@@ -23,7 +23,6 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
-#include "AMDGPURegBankSelect.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -448,6 +447,19 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
+#if LLPC_BUILD_NPI
+static cl::opt<bool>
+    EnablePromoteLaneShared("amdgpu-promote-lane-shared",
+                            cl::desc("Enable promoting lane-shared into VGPR"),
+                            cl::init(true), cl::Hidden);
+
+// TODO: Enable by default once all codegen phases are implemented.
+static cl::opt<bool> EnablePromotePrivate(
+    "amdgpu-promote-private",
+    cl::desc("Enable promoting private objects into VGPRs"), cl::init(false),
+    cl::Hidden);
+
+#endif /* LLPC_BUILD_NPI */
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -470,6 +482,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
+#if LLPC_BUILD_NPI
+  initializeAMDGPUBundleIdxLdStPass(*PR);
+#endif /* LLPC_BUILD_NPI */
   initializeSIInsertWaterfallPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -492,13 +507,16 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
-  initializeAMDGPURegBankSelectPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
+#if LLPC_BUILD_NPI
+  initializeAMDGPUMarkPromotableLaneSharedLegacyPass(*PR);
+  initializeAMDGPUMarkPromotablePrivateLegacyPass(*PR);
+#endif /* LLPC_BUILD_NPI */
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPUReserveWWMRegsPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
@@ -506,6 +524,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
+#if LLPC_BUILD_NPI
+  initializeAMDGPULowerVGPREncodingPass(*PR);
+  initializeAMDGPUIdxRegAllocPass(*PR);
+#endif /* LLPC_BUILD_NPI */
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
@@ -632,8 +654,13 @@ static StringRef computeDataLayout(const Triple &TT) {
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
   // like getelementptr.
   return "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
+#if LLPC_BUILD_NPI
+         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32"
+         "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:"
+#else /* LLPC_BUILD_NPI */
          "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-"
          "v32:32-v48:64-v96:"
+#endif /* LLPC_BUILD_NPI */
          "128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-"
          "G1-ni:7:8:9";
 }
@@ -857,7 +884,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {
   return (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
           AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+#if LLPC_BUILD_NPI
+          AddrSpace == AMDGPUAS::REGION_ADDRESS ||
+          AddrSpace == AMDGPUAS::LANE_SHARED)
+#else /* LLPC_BUILD_NPI */
           AddrSpace == AMDGPUAS::REGION_ADDRESS)
+#endif /* LLPC_BUILD_NPI */
              ? -1
              : 0;
 }
@@ -1327,6 +1359,13 @@ bool GCNPassConfig::addPreISel() {
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
 
+#if LLPC_BUILD_NPI
+  if (isPassEnabled(EnablePromoteLaneShared))
+    addPass(createAMDGPUMarkPromotableLaneSharedLegacyPass());
+  if (isPassEnabled(EnablePromotePrivate))
+    addPass(createAMDGPUMarkPromotablePrivateLegacyPass());
+
+#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
@@ -1341,6 +1380,9 @@ void GCNPassConfig::addMachineSSAOptimization() {
   //
   // XXX - Can we get away without running DeadMachineInstructionElim again?
   addPass(&SIFoldOperandsLegacyID);
+#if LLPC_BUILD_NPI
+  addPass(&AMDGPUBundleIdxLdStID);
+#endif /* LLPC_BUILD_NPI */
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineLegacyID);
   addPass(&SILoadStoreOptimizerLegacyID);
@@ -1392,7 +1434,7 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  addPass(new AMDGPURegBankSelect());
+  addPass(new RegBankSelect());
   return false;
 }
 
@@ -1407,6 +1449,9 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
+#if LLPC_BUILD_NPI
+  addPass(createAMDGPUIdxRegAllocPass());
+#endif /* LLPC_BUILD_NPI */
   addPass(createSIInsertWaterfallPass());
 }
 
@@ -1626,6 +1671,10 @@ void GCNPassConfig::addPreEmitPass() {
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
   addPass(&PostRAHazardRecognizerID);
+#if LLPC_BUILD_NPI
+
+  addPass(&AMDGPULowerVGPREncodingID);
+#endif /* LLPC_BUILD_NPI */
 
   addPass(&AMDGPUWaitSGPRHazardsID);
 

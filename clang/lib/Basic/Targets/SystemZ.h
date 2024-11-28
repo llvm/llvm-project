@@ -42,7 +42,12 @@ static const unsigned ZOSAddressMap[] = {
     1, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+#if LLPC_BUILD_NPI
+    0, // wasm_funcref
+    0  // hip_lane_shared
+#else /* LLPC_BUILD_NPI */
     0  // wasm_funcref
+#endif /* LLPC_BUILD_NPI */
 };
 
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {

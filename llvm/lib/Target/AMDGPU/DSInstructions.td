@@ -111,7 +111,11 @@ class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
+#endif /* LLPC_BUILD_NPI */
   " $addr, $data0$offset$gds"> {
 
   let has_data1 = 0;
@@ -137,7 +141,11 @@ class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32,
                     RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
 : DS_Pseudo<opName,
   (outs),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, data_op:$data0, data_op:$data1, Offset:$offset, gds:$gds),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, data_op:$data0, data_op:$data1, Offset:$offset, gds:$gds),
+#endif /* LLPC_BUILD_NPI */
   " $addr, $data0, $data1$offset$gds"> {
 
   let has_vdst = 0;
@@ -156,7 +164,11 @@ class DS_1A2D_Off8_NORET <string opName, RegisterClass rc = VGPR_32,
                           RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
 : DS_Pseudo<opName,
   (outs),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, data_op:$data0, data_op:$data1,
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, data_op:$data0, data_op:$data1,
+#endif /* LLPC_BUILD_NPI */
        Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $addr, $data0, $data1$offset0$offset1$gds"> {
 
@@ -191,7 +203,11 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
                   RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr, $data0$offset$gds"> {
 
   let has_data1 = 0;
@@ -219,7 +235,11 @@ class DS_1A2D_RET<string opName,
                   RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
 : DS_Pseudo<opName,
   (outs dst_op:$vdst),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, src_op:$data0, src_op:$data1, Offset:$offset, gds:$gds),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset:$offset, gds:$gds),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
   let IsAtomicRet = 1;
@@ -242,7 +262,11 @@ class DS_1A2D_Off8_RET<string opName,
                        RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
 : DS_Pseudo<opName,
   (outs dst_op:$vdst),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, src_op:$data0, src_op:$data1, Offset0:$offset0, Offset1:$offset1, gds:$gds),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset0:$offset0, Offset1:$offset1, gds:$gds),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
@@ -258,10 +282,22 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+class DS_BVH_STACK<string opName,
+                   RegisterClass rc,
+                   RegisterClass src>
+#else /* LLPC_BUILD_NPI */
 class DS_BVH_STACK<string opName>
+#endif /* LLPC_BUILD_NPI */
 : DS_Pseudo<opName,
+#ifdef LLPC_BUILD_NPI
+  (outs getLdStRegisterOperand<rc>.ret:$vdst, VGPRSrc_32:$addr),
+  (ins VGPRSrc_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
+   src:$data1, Offset:$offset),
+#else /* LLPC_BUILD_NPI */
   (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst, VGPR_32:$addr),
   (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0, VReg_128:$data1, Offset:$offset),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let DisableEncoding = "$addr_in";
@@ -277,8 +313,13 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
   !if(HasTiedOutput,
+#ifdef LLPC_BUILD_NPI
+    (ins VGPRSrc_32:$addr, ofs:$offset, gds:$gds, data_op:$vdst_in),
+    (ins VGPRSrc_32:$addr, ofs:$offset, gds:$gds)),
+#else /* LLPC_BUILD_NPI */
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds, data_op:$vdst_in),
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr$offset$gds"> {
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -294,13 +335,23 @@ multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOu
   }
 }
 
+multiclass DS_1A_RET_NoM0<string opName, RegisterClass rc = VGPR_32> {
+  let has_m0_read = 0 in {
+    def "" : DS_1A_RET<opName, rc>;
+  }
+}
+
 class DS_1A_RET_Tied<string opName, RegisterClass rc = VGPR_32> :
   DS_1A_RET<opName, rc, 1>;
 
 class DS_1A_Off8_RET <string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<rc>.ret:$vdst),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, Offset0:$offset0, Offset1:$offset1, gds:$gds),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, Offset0:$offset0, Offset1:$offset1, gds:$gds),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr$offset0$offset1$gds"> {
 
   let has_offset = 0;
@@ -318,7 +369,11 @@ multiclass DS_1A_Off8_RET_mc <string opName, RegisterClass rc = VGPR_32> {
 
 class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, Offset:$offset),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, Offset:$offset),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr$offset gds"> {
 
   let has_data0 = 0;
@@ -327,6 +382,22 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   let gdsValue = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+class DS_1A_Off16_NORET <string opName>
+: DS_Pseudo<opName,
+  (outs),
+  (ins VGPRSrc_32:$addr, Offset:$offset, gds:$gds),
+  " $addr$offset$gds"> {
+
+  let has_vdst = 0;
+  let has_offset = 1;
+  let has_data0 = 0;
+  let has_data1 = 0;
+  let has_m0_read = 0;
+  let IsAtomicNoRet = 1;
+}
+
+#endif /* LLPC_BUILD_NPI */
 class DS_0A_RET <string opName> : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst),
   (ins Offset:$offset, gds:$gds),
@@ -342,7 +413,11 @@ class DS_0A_RET <string opName> : DS_Pseudo<opName,
 
 class DS_1A <string opName> : DS_Pseudo<opName,
   (outs),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, Offset:$offset, gds:$gds),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, Offset:$offset, gds:$gds),
+#endif /* LLPC_BUILD_NPI */
   " $addr$offset$gds"> {
 
   let mayLoad = 1;
@@ -411,7 +486,11 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
                        RegisterOperand data_op = getLdStRegisterOperand<VGPR_32>.ret>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
+#ifdef LLPC_BUILD_NPI
+  (ins VGPRSrc_32:$addr, data_op:$data0, Offset:$offset),
+#else /* LLPC_BUILD_NPI */
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset),
+#endif /* LLPC_BUILD_NPI */
   " $vdst, $addr, $data0$offset",
   [(set i32:$vdst,
    (node (DS1Addr1Offset i32:$addr, i32:$offset), i32:$data0))] > {
@@ -716,7 +795,12 @@ def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 let SubtargetPredicate = isGFX11Plus in {
 
 let OtherPredicates = [HasImageInsts] in
+#ifdef LLPC_BUILD_NPI
+def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
+                                        VGPR_32, VReg_128> ;
+#else /* LLPC_BUILD_NPI */
 def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
+#endif /* LLPC_BUILD_NPI */
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -726,6 +810,15 @@ def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 
 let SubtargetPredicate = isGFX12Plus in {
 
+#ifdef LLPC_BUILD_NPI
+let OtherPredicates = [HasImageInsts] in {
+def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop1_rtn_b32", VGPR_32, VReg_256>;
+def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
+} // End OtherPredicates = [HasImageInsts].
+
+#endif /* LLPC_BUILD_NPI */
 defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
 defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
@@ -744,13 +837,53 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = isGFX1210Plus in {
+
+let WaveSizePredicate = isWave32, mayStore = 0 in {
+defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
+defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
+defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
+} // let WaveSizePredicate = isWave32, mayStore = 0
+
+let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
+def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
+}
+
+def : GCNPat <
+  (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
+  (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPRSrc_32:$ptr, Offset:$offset, (i1 0))
+>;
+
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VReg_64>;
+
+def : GCNPat<
+  (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
+  (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
+>;
+
+} //let SubtargetPredicate = isGFX1210Plus
+
+#endif /* LLPC_BUILD_NPI */
+let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
+  defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", VReg_64>;
+  defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", VReg_64>;
+  defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", VReg_64>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", VReg_96>;
+}
+
 //===----------------------------------------------------------------------===//
 // DS Patterns
 //===----------------------------------------------------------------------===//
 
 def : GCNPat <
   (int_amdgcn_ds_swizzle i32:$src, timm:$offset16),
+#ifdef LLPC_BUILD_NPI
+  (DS_SWIZZLE_B32 VGPRSrc_32:$src, (as_i16timm $offset16), (i1 0))
+#else /* LLPC_BUILD_NPI */
   (DS_SWIZZLE_B32 VGPR_32:$src, (as_i16timm $offset16), (i1 0))
+#endif /* LLPC_BUILD_NPI */
 >;
 
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
@@ -1153,31 +1286,73 @@ def : GCNPat <
 
 def : GCNPat <
   (i64 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
+#ifdef LLPC_BUILD_NPI
+  (DS_ADD_GS_REG_RTN VGPRSrc_32:$src, (as_i32timm $offset32))
+#else /* LLPC_BUILD_NPI */
   (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+#endif /* LLPC_BUILD_NPI */
 >;
 
 def : GCNPat <
   (i32 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
   (EXTRACT_SUBREG
     (i64 (COPY_TO_REGCLASS
+#ifdef LLPC_BUILD_NPI
+      (DS_ADD_GS_REG_RTN VGPRSrc_32:$src, (as_i32timm $offset32)),
+#else /* LLPC_BUILD_NPI */
       (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+#endif /* LLPC_BUILD_NPI */
       VReg_64)),
     sub0)
 >;
 
 def : GCNPat <
   (i64 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
+#ifdef LLPC_BUILD_NPI
+  (DS_SUB_GS_REG_RTN VGPRSrc_32:$src, (as_i32timm $offset32))
+#else /* LLPC_BUILD_NPI */
   (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+#endif /* LLPC_BUILD_NPI */
 >;
 
 def : GCNPat <
   (i32 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
   (EXTRACT_SUBREG
     (i64 (COPY_TO_REGCLASS
+#ifdef LLPC_BUILD_NPI
+      (DS_SUB_GS_REG_RTN VGPRSrc_32:$src, (as_i32timm $offset32)),
+#else /* LLPC_BUILD_NPI */
       (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+#endif /* LLPC_BUILD_NPI */
       VReg_64)),
     sub0)
 >;
+
+class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPat <
+  (vt (node (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (inst $ptr, Offset:$offset, (i1 0))
+>;
+
+#ifdef LLPC_BUILD_NPI
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1210Plus in {
+  def : DSLoadTrPat <DS_LOAD_TR8_B64,   v2i32,  int_amdgcn_ds_load_tr8_b64>;
+  def : DSLoadTrPat <DS_LOAD_TR4_B64,   v2i32,  int_amdgcn_ds_load_tr4_b64>;
+  def : DSLoadTrPat <DS_LOAD_TR6_B96,   v3i32,  int_amdgcn_ds_load_tr6_b96>;
+  foreach vt = [v8i16, v8f16, v8bf16] in
+    def : DSLoadTrPat <DS_LOAD_TR16_B128, vt,  int_amdgcn_ds_load_tr16_b128>;
+} //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1210Plus
+
+#endif /* LLPC_BUILD_NPI */
+let SubtargetPredicate = HasGFX950Insts in {
+  def : DSLoadTrPat <DS_READ_B64_TR_B4,  v2i32, int_amdgcn_ds_read_tr4_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B8,  v2i32, int_amdgcn_ds_read_tr8_b64>;
+  def : DSLoadTrPat <DS_READ_B96_TR_B6,  v3i32, int_amdgcn_ds_read_tr6_b96>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4i16, int_amdgcn_ds_read_tr16_b64>;
+#ifdef LLPC_BUILD_NPI
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4f16, int_amdgcn_ds_read_tr16_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4bf16, int_amdgcn_ds_read_tr16_b64>;
+#endif /* LLPC_BUILD_NPI */
+}
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
@@ -1187,9 +1362,15 @@ def : GCNPat <
 // Base ENC_DS for GFX6, GFX7, GFX10, GFX11, GFX12.
 //===----------------------------------------------------------------------===//
 
+#ifdef LLPC_BUILD_NPI
+class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op, DS_Pseudo ps, int ef,
+                                                     string opName = ps.Mnemonic,
+                                                     bit hasGDS = true>
+#else /* LLPC_BUILD_NPI */
 class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
                                                string opName = ps.Mnemonic,
                                                bit hasGDS = true>
+#endif /* LLPC_BUILD_NPI */
     : DS_Real<ps, opName>, SIMCInstr <ps.PseudoInstr, ef> {
 
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
@@ -1206,21 +1387,82 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
 }
 
 //===----------------------------------------------------------------------===//
+#ifdef LLPC_BUILD_NPI
+// GFX12, GFX13.
+#else /* LLPC_BUILD_NPI */
 // GFX12.
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 
 multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
   defvar ps = !cast<DS_Pseudo>(NAME);
+#ifdef LLPC_BUILD_NPI
+  let AssemblerPredicate = isGFX12Only in {
+#else /* LLPC_BUILD_NPI */
   let AssemblerPredicate = isGFX12Plus in {
+#endif /* LLPC_BUILD_NPI */
     let DecoderNamespace = "GFX12" in
       def _gfx12 :
+#ifdef LLPC_BUILD_NPI
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps, SIEncodingFamily.GFX12,
+                                                       name, /*hasGDS=*/false>;
+#else /* LLPC_BUILD_NPI */
         Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
                                                name, /*hasGDS=*/false>;
+#endif /* LLPC_BUILD_NPI */
     if !and(needAlias, !ne(ps.Mnemonic, name)) then
       def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
   } // End AssemblerPredicate
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass DS_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<DS_Pseudo>(NAME);
+  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" in
+    def _gfx13 :
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                     SIEncodingFamily.GFX13,
+                                                     name, /*hasGDS=*/false>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+}
+
+multiclass DS_Real_gfx12_gfx13<bits<8> op, string name = !tolower(NAME)> :
+  DS_Real_gfx12<op, name>, DS_Real_gfx13<op, name>;
+
+defm DS_MIN_F32           : DS_Real_gfx12_gfx13<0x012, "ds_min_num_f32">;
+defm DS_MAX_F32           : DS_Real_gfx12_gfx13<0x013, "ds_max_num_f32">;
+defm DS_MIN_RTN_F32       : DS_Real_gfx12_gfx13<0x032, "ds_min_num_rtn_f32">;
+defm DS_MAX_RTN_F32       : DS_Real_gfx12_gfx13<0x033, "ds_max_num_rtn_f32">;
+defm DS_MIN_F64           : DS_Real_gfx12_gfx13<0x052, "ds_min_num_f64">;
+defm DS_MAX_F64           : DS_Real_gfx12_gfx13<0x053, "ds_max_num_f64">;
+defm DS_MIN_RTN_F64       : DS_Real_gfx12_gfx13<0x072, "ds_min_num_rtn_f64">;
+defm DS_MAX_RTN_F64       : DS_Real_gfx12_gfx13<0x073, "ds_max_num_rtn_f64">;
+defm DS_COND_SUB_U32      : DS_Real_gfx12_gfx13<0x098>;
+defm DS_SUB_CLAMP_U32     : DS_Real_gfx12_gfx13<0x099>;
+defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12_gfx13<0x0a8>;
+defm DS_SUB_CLAMP_RTN_U32 : DS_Real_gfx12_gfx13<0x0a9>;
+defm DS_PK_ADD_F16        : DS_Real_gfx12_gfx13<0x09a>;
+defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12_gfx13<0x0aa>;
+defm DS_PK_ADD_BF16       : DS_Real_gfx12_gfx13<0x09b>;
+defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12_gfx13<0x0ab>;
+
+defm DS_LOAD_TR4_B64      : DS_Real_gfx12_gfx13<0x0fa>;
+defm DS_LOAD_TR6_B96      : DS_Real_gfx12_gfx13<0x0fb>;
+defm DS_LOAD_TR16_B128    : DS_Real_gfx12_gfx13<0x0fc>;
+defm DS_LOAD_TR8_B64      : DS_Real_gfx12_gfx13<0x0fd>;
+
+defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
+  "ds_bvh_stack_push4_pop1_rtn_b32">;
+defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
+defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
+
+defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
+defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
+
+defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12_gfx13<0x075>;
+#else /* LLPC_BUILD_NPI */
 defm DS_MIN_F32           : DS_Real_gfx12<0x012, "ds_min_num_f32">;
 defm DS_MAX_F32           : DS_Real_gfx12<0x013, "ds_max_num_f32">;
 defm DS_MIN_RTN_F32       : DS_Real_gfx12<0x032, "ds_min_num_rtn_f32">;
@@ -1237,6 +1479,7 @@ defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
 defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
+#endif /* LLPC_BUILD_NPI */
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {
@@ -1246,6 +1489,12 @@ let AssemblerPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"ds_subrev_rtn_u64", "ds_rsub_rtn_u64">;
 }
 
+#ifdef LLPC_BUILD_NPI
+// Aliases that have existed since these instructions were introduced.
+def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1210Plus]>;
+def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1210Plus]>;
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // GFX11.
 //===----------------------------------------------------------------------===//
@@ -1255,8 +1504,13 @@ multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
   let AssemblerPredicate = isGFX11Only in {
     let DecoderNamespace = "GFX11" in
       def _gfx11 :
+#ifdef LLPC_BUILD_NPI
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps, SIEncodingFamily.GFX11,
+                                                       name>;
+#else /* LLPC_BUILD_NPI */
         Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX11,
                                                name>;
+#endif /* LLPC_BUILD_NPI */
     if !ne(ps.Mnemonic, name) then
       def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
   } // End AssemblerPredicate
@@ -1265,6 +1519,49 @@ multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
 multiclass DS_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)>
   : DS_Real_gfx11<op, name>, DS_Real_gfx12<op, name>;
 
+#ifdef LLPC_BUILD_NPI
+multiclass DS_Real_gfx11_gfx12_gfx13<bits<8> op, string name = !tolower(NAME)>
+  : DS_Real_gfx11<op, name>, DS_Real_gfx12<op, name>, DS_Real_gfx13<op, name>;
+
+defm DS_WRITE_B32           : DS_Real_gfx11_gfx12_gfx13<0x00d, "ds_store_b32">;
+defm DS_WRITE2_B32          : DS_Real_gfx11_gfx12_gfx13<0x00e, "ds_store_2addr_b32">;
+defm DS_WRITE2ST64_B32      : DS_Real_gfx11_gfx12_gfx13<0x00f, "ds_store_2addr_stride64_b32">;
+defm DS_WRITE_B8            : DS_Real_gfx11_gfx12_gfx13<0x01e, "ds_store_b8">;
+defm DS_WRITE_B16           : DS_Real_gfx11_gfx12_gfx13<0x01f, "ds_store_b16">;
+defm DS_WRXCHG_RTN_B32      : DS_Real_gfx11_gfx12_gfx13<0x02d, "ds_storexchg_rtn_b32">;
+defm DS_WRXCHG2_RTN_B32     : DS_Real_gfx11_gfx12_gfx13<0x02e, "ds_storexchg_2addr_rtn_b32">;
+defm DS_WRXCHG2ST64_RTN_B32 : DS_Real_gfx11_gfx12_gfx13<0x02f, "ds_storexchg_2addr_stride64_rtn_b32">;
+defm DS_READ_B32            : DS_Real_gfx11_gfx12_gfx13<0x036, "ds_load_b32">;
+defm DS_READ2_B32           : DS_Real_gfx11_gfx12_gfx13<0x037, "ds_load_2addr_b32">;
+defm DS_READ2ST64_B32       : DS_Real_gfx11_gfx12_gfx13<0x038, "ds_load_2addr_stride64_b32">;
+defm DS_READ_I8             : DS_Real_gfx11_gfx12_gfx13<0x039, "ds_load_i8">;
+defm DS_READ_U8             : DS_Real_gfx11_gfx12_gfx13<0x03a, "ds_load_u8">;
+defm DS_READ_I16            : DS_Real_gfx11_gfx12_gfx13<0x03b, "ds_load_i16">;
+defm DS_READ_U16            : DS_Real_gfx11_gfx12_gfx13<0x03c, "ds_load_u16">;
+defm DS_WRITE_B64           : DS_Real_gfx11_gfx12_gfx13<0x04d, "ds_store_b64">;
+defm DS_WRITE2_B64          : DS_Real_gfx11_gfx12_gfx13<0x04e, "ds_store_2addr_b64">;
+defm DS_WRITE2ST64_B64      : DS_Real_gfx11_gfx12_gfx13<0x04f, "ds_store_2addr_stride64_b64">;
+defm DS_WRXCHG_RTN_B64      : DS_Real_gfx11_gfx12_gfx13<0x06d, "ds_storexchg_rtn_b64">;
+defm DS_WRXCHG2_RTN_B64     : DS_Real_gfx11_gfx12_gfx13<0x06e, "ds_storexchg_2addr_rtn_b64">;
+defm DS_WRXCHG2ST64_RTN_B64 : DS_Real_gfx11_gfx12_gfx13<0x06f, "ds_storexchg_2addr_stride64_rtn_b64">;
+defm DS_READ_B64            : DS_Real_gfx11_gfx12_gfx13<0x076, "ds_load_b64">;
+defm DS_READ2_B64           : DS_Real_gfx11_gfx12_gfx13<0x077, "ds_load_2addr_b64">;
+defm DS_READ2ST64_B64       : DS_Real_gfx11_gfx12_gfx13<0x078, "ds_load_2addr_stride64_b64">;
+defm DS_WRITE_B8_D16_HI     : DS_Real_gfx11_gfx12_gfx13<0x0a0, "ds_store_b8_d16_hi">;
+defm DS_WRITE_B16_D16_HI    : DS_Real_gfx11_gfx12_gfx13<0x0a1, "ds_store_b16_d16_hi">;
+defm DS_READ_U8_D16         : DS_Real_gfx11_gfx12_gfx13<0x0a2, "ds_load_u8_d16">;
+defm DS_READ_U8_D16_HI      : DS_Real_gfx11_gfx12_gfx13<0x0a3, "ds_load_u8_d16_hi">;
+defm DS_READ_I8_D16         : DS_Real_gfx11_gfx12_gfx13<0x0a4, "ds_load_i8_d16">;
+defm DS_READ_I8_D16_HI      : DS_Real_gfx11_gfx12_gfx13<0x0a5, "ds_load_i8_d16_hi">;
+defm DS_READ_U16_D16        : DS_Real_gfx11_gfx12_gfx13<0x0a6, "ds_load_u16_d16">;
+defm DS_READ_U16_D16_HI     : DS_Real_gfx11_gfx12_gfx13<0x0a7, "ds_load_u16_d16_hi">;
+defm DS_WRITE_ADDTID_B32    : DS_Real_gfx11_gfx12_gfx13<0x0b0, "ds_store_addtid_b32">;
+defm DS_READ_ADDTID_B32     : DS_Real_gfx11_gfx12_gfx13<0x0b1, "ds_load_addtid_b32">;
+defm DS_WRITE_B96           : DS_Real_gfx11_gfx12_gfx13<0x0de, "ds_store_b96">;
+defm DS_WRITE_B128          : DS_Real_gfx11_gfx12_gfx13<0x0df, "ds_store_b128">;
+defm DS_READ_B96            : DS_Real_gfx11_gfx12_gfx13<0x0fe, "ds_load_b96">;
+defm DS_READ_B128           : DS_Real_gfx11_gfx12_gfx13<0x0ff, "ds_load_b128">;
+#else /* LLPC_BUILD_NPI */
 defm DS_WRITE_B32           : DS_Real_gfx11_gfx12<0x00d, "ds_store_b32">;
 defm DS_WRITE2_B32          : DS_Real_gfx11_gfx12<0x00e, "ds_store_2addr_b32">;
 defm DS_WRITE2ST64_B32      : DS_Real_gfx11_gfx12<0x00f, "ds_store_2addr_stride64_b32">;
@@ -1303,18 +1600,35 @@ defm DS_WRITE_B96           : DS_Real_gfx11_gfx12<0x0de, "ds_store_b96">;
 defm DS_WRITE_B128          : DS_Real_gfx11_gfx12<0x0df, "ds_store_b128">;
 defm DS_READ_B96            : DS_Real_gfx11_gfx12<0x0fe, "ds_load_b96">;
 defm DS_READ_B128           : DS_Real_gfx11_gfx12<0x0ff, "ds_load_b128">;
+#endif /* LLPC_BUILD_NPI */
 
 // DS_CMPST_* are renamed to DS_CMPSTORE_* in GFX11, but also the data operands (src and cmp) are swapped
 // comparing to pre-GFX11.
 // Note: the mnemonic alias is not generated to avoid a potential ambiguity due to the semantics change.
 
+#ifdef LLPC_BUILD_NPI
+defm DS_CMPSTORE_B32                     : DS_Real_gfx11_gfx12_gfx13<0x010>;
+#else /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_B32                     : DS_Real_gfx11_gfx12<0x010>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_F32                     : DS_Real_gfx11<0x011>;
+#ifdef LLPC_BUILD_NPI
+defm DS_CMPSTORE_RTN_B32                 : DS_Real_gfx11_gfx12_gfx13<0x030>;
+#else /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_RTN_B32                 : DS_Real_gfx11_gfx12<0x030>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_RTN_F32                 : DS_Real_gfx11<0x031>;
+#ifdef LLPC_BUILD_NPI
+defm DS_CMPSTORE_B64                     : DS_Real_gfx11_gfx12_gfx13<0x050>;
+#else /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_B64                     : DS_Real_gfx11_gfx12<0x050>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_F64                     : DS_Real_gfx11<0x051>;
+#ifdef LLPC_BUILD_NPI
+defm DS_CMPSTORE_RTN_B64                 : DS_Real_gfx11_gfx12_gfx13<0x070>;
+#else /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_RTN_B64                 : DS_Real_gfx11_gfx12<0x070>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_CMPSTORE_RTN_F64                 : DS_Real_gfx11<0x071>;
 
 defm DS_ADD_RTN_F32                      : DS_Real_gfx11_gfx12<0x079>;
@@ -1328,12 +1642,23 @@ defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad>;
 
 let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   multiclass DS_Real_gfx10<bits<8> op>  {
+#ifdef LLPC_BUILD_NPI
+    def _gfx10 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
+#else /* LLPC_BUILD_NPI */
     def _gfx10 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+#endif /* LLPC_BUILD_NPI */
       !cast<DS_Pseudo>(NAME), SIEncodingFamily.GFX10>;
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
+#ifdef LLPC_BUILD_NPI
+multiclass DS_Real_gfx10_gfx13<bits<8> op> :
+  DS_Real_gfx10<op>, DS_Real_gfx13<op>;
+
+defm DS_ADD_RTN_F32      : DS_Real_gfx10_gfx13<0x055>;
+#else /* LLPC_BUILD_NPI */
 defm DS_ADD_RTN_F32      : DS_Real_gfx10<0x055>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_WRITE_B8_D16_HI  : DS_Real_gfx10<0x0a0>;
 defm DS_WRITE_B16_D16_HI : DS_Real_gfx10<0x0a1>;
 defm DS_READ_U8_D16      : DS_Real_gfx10<0x0a2>;
@@ -1349,16 +1674,30 @@ defm DS_READ_ADDTID_B32  : DS_Real_gfx10<0x0b1>;
 // GFX10, GFX11, GFX12.
 //===----------------------------------------------------------------------===//
 
+#ifdef LLPC_BUILD_NPI
+multiclass DS_Real_gfx10_gfx11_gfx12_gfx13<bits<8> op> :
+  DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>, DS_Real_gfx13<op>;
+#else /* LLPC_BUILD_NPI */
 multiclass DS_Real_gfx10_gfx11_gfx12<bits<8> op> :
   DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass DS_Real_gfx10_gfx11<bits<8> op> :
   DS_Real_gfx10<op>, DS_Real_gfx11<op>;
 
+#ifdef LLPC_BUILD_NPI
+defm DS_ADD_F32          : DS_Real_gfx10_gfx11_gfx12_gfx13<0x015>;
+#else /* LLPC_BUILD_NPI */
 defm DS_ADD_F32          : DS_Real_gfx10_gfx11_gfx12<0x015>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_ADD_SRC2_F32     : DS_Real_gfx10<0x095>;
+#ifdef LLPC_BUILD_NPI
+defm DS_PERMUTE_B32      : DS_Real_gfx10_gfx11_gfx12_gfx13<0x0b2>;
+defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12_gfx13<0x0b3>;
+#else /* LLPC_BUILD_NPI */
 defm DS_PERMUTE_B32      : DS_Real_gfx10_gfx11_gfx12<0x0b2>;
 defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12<0x0b3>;
+#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // GFX7, GFX10, GFX11, GFX12.
@@ -1366,13 +1705,23 @@ defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12<0x0b3>;
 
 let AssemblerPredicate = isGFX7Only, DecoderNamespace = "GFX7" in {
   multiclass DS_Real_gfx7<bits<8> op> {
+#ifdef LLPC_BUILD_NPI
+    def _gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
+#else /* LLPC_BUILD_NPI */
     def _gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+#endif /* LLPC_BUILD_NPI */
       !cast<DS_Pseudo>(NAME), SIEncodingFamily.SI>;
   }
 } // End AssemblerPredicate = isGFX7Only, DecoderNamespace = "GFX7"
 
+#ifdef LLPC_BUILD_NPI
+multiclass DS_Real_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op> :
+  DS_Real_gfx7<op>, DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>,
+  DS_Real_gfx13<op>;
+#else /* LLPC_BUILD_NPI */
 multiclass DS_Real_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
   DS_Real_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass DS_Real_gfx7_gfx10_gfx11<bits<8> op> :
   DS_Real_gfx7<op>, DS_Real_gfx10_gfx11<op>;
@@ -1383,7 +1732,11 @@ multiclass DS_Real_gfx7_gfx10<bits<8> op> :
 // FIXME-GFX7: Add tests when upstreaming this part.
 defm DS_GWS_SEMA_RELEASE_ALL : DS_Real_gfx7_gfx10_gfx11<0x018>;
 defm DS_WRAP_RTN_B32         : DS_Real_gfx7_gfx10_gfx11<0x034>;
+#ifdef LLPC_BUILD_NPI
+defm DS_CONDXCHG32_RTN_B64   : DS_Real_gfx7_gfx10_gfx11_gfx12_gfx13<0x07e>;
+#else /* LLPC_BUILD_NPI */
 defm DS_CONDXCHG32_RTN_B64   : DS_Real_gfx7_gfx10_gfx11_gfx12<0x07e>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_WRITE_B96            : DS_Real_gfx7_gfx10<0x0de>;
 defm DS_WRITE_B128           : DS_Real_gfx7_gfx10<0x0df>;
 defm DS_READ_B96             : DS_Real_gfx7_gfx10<0x0fe>;
@@ -1395,13 +1748,23 @@ defm DS_READ_B128            : DS_Real_gfx7_gfx10<0x0ff>;
 
 let AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7" in {
   multiclass DS_Real_gfx6_gfx7<bits<8> op> {
+#ifdef LLPC_BUILD_NPI
+    def _gfx6_gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
+#else /* LLPC_BUILD_NPI */
     def _gfx6_gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+#endif /* LLPC_BUILD_NPI */
       !cast<DS_Pseudo>(NAME), SIEncodingFamily.SI>;
   }
 } // End AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7"
 
+#ifdef LLPC_BUILD_NPI
+multiclass DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op> :
+  DS_Real_gfx6_gfx7<op>, DS_Real_gfx10<op>, DS_Real_gfx11<op>,
+  DS_Real_gfx12<op>, DS_Real_gfx13<op>;
+#else /* LLPC_BUILD_NPI */
 multiclass DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
   DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op> :
   DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11<op>;
@@ -1409,6 +1772,21 @@ multiclass DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op> :
 multiclass DS_Real_gfx6_gfx7_gfx10<bits<8> op> :
   DS_Real_gfx6_gfx7<op>, DS_Real_gfx10<op>;
 
+#ifdef LLPC_BUILD_NPI
+defm DS_ADD_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x000>;
+defm DS_SUB_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x001>;
+defm DS_RSUB_U32            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x002>;
+defm DS_INC_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x003>;
+defm DS_DEC_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x004>;
+defm DS_MIN_I32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x005>;
+defm DS_MAX_I32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x006>;
+defm DS_MIN_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x007>;
+defm DS_MAX_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x008>;
+defm DS_AND_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x009>;
+defm DS_OR_B32              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00a>;
+defm DS_XOR_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00b>;
+defm DS_MSKOR_B32           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00c>;
+#else /* LLPC_BUILD_NPI */
 defm DS_ADD_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x000>;
 defm DS_SUB_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x001>;
 defm DS_RSUB_U32            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x002>;
@@ -1422,6 +1800,7 @@ defm DS_AND_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x009>;
 defm DS_OR_B32              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00a>;
 defm DS_XOR_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00b>;
 defm DS_MSKOR_B32           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00c>;
+#endif /* LLPC_BUILD_NPI */
 
 defm DS_WRITE_B32           : DS_Real_gfx6_gfx7_gfx10<0x00d>;
 defm DS_WRITE2_B32          : DS_Real_gfx6_gfx7_gfx10<0x00e>;
@@ -1431,7 +1810,11 @@ defm DS_CMPST_F32           : DS_Real_gfx6_gfx7_gfx10<0x011>;
 
 defm DS_MIN_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x012>;
 defm DS_MAX_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x013>;
+#ifdef LLPC_BUILD_NPI
+defm DS_NOP                 : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x014>;
+#else /* LLPC_BUILD_NPI */
 defm DS_NOP                 : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x014>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_GWS_INIT            : DS_Real_gfx6_gfx7_gfx10_gfx11<0x019>;
 defm DS_GWS_SEMA_V          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01a>;
 defm DS_GWS_SEMA_BR         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01b>;
@@ -1441,6 +1824,21 @@ defm DS_GWS_BARRIER         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01d>;
 defm DS_WRITE_B8            : DS_Real_gfx6_gfx7_gfx10<0x01e>;
 defm DS_WRITE_B16           : DS_Real_gfx6_gfx7_gfx10<0x01f>;
 
+#ifdef LLPC_BUILD_NPI
+defm DS_ADD_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x020>;
+defm DS_SUB_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x021>;
+defm DS_RSUB_RTN_U32        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x022>;
+defm DS_INC_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x023>;
+defm DS_DEC_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x024>;
+defm DS_MIN_RTN_I32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x025>;
+defm DS_MAX_RTN_I32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x026>;
+defm DS_MIN_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x027>;
+defm DS_MAX_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x028>;
+defm DS_AND_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x029>;
+defm DS_OR_RTN_B32          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02a>;
+defm DS_XOR_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02b>;
+defm DS_MSKOR_RTN_B32       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02c>;
+#else /* LLPC_BUILD_NPI */
 defm DS_ADD_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x020>;
 defm DS_SUB_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x021>;
 defm DS_RSUB_RTN_U32        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x022>;
@@ -1454,6 +1852,7 @@ defm DS_AND_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x029>;
 defm DS_OR_RTN_B32          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02a>;
 defm DS_XOR_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02b>;
 defm DS_MSKOR_RTN_B32       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02c>;
+#endif /* LLPC_BUILD_NPI */
 
 defm DS_WRXCHG_RTN_B32      : DS_Real_gfx6_gfx7_gfx10<0x02d>;
 defm DS_WRXCHG2_RTN_B32     : DS_Real_gfx6_gfx7_gfx10<0x02e>;
@@ -1463,7 +1862,11 @@ defm DS_CMPST_RTN_F32       : DS_Real_gfx6_gfx7_gfx10<0x031>;
 
 defm DS_MIN_RTN_F32         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x032>;
 defm DS_MAX_RTN_F32         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x033>;
+#ifdef LLPC_BUILD_NPI
+defm DS_SWIZZLE_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x035>;
+#else /* LLPC_BUILD_NPI */
 defm DS_SWIZZLE_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x035>;
+#endif /* LLPC_BUILD_NPI */
 
 defm DS_READ_B32            : DS_Real_gfx6_gfx7_gfx10<0x036>;
 defm DS_READ2_B32           : DS_Real_gfx6_gfx7_gfx10<0x037>;
@@ -1473,9 +1876,29 @@ defm DS_READ_U8             : DS_Real_gfx6_gfx7_gfx10<0x03a>;
 defm DS_READ_I16            : DS_Real_gfx6_gfx7_gfx10<0x03b>;
 defm DS_READ_U16            : DS_Real_gfx6_gfx7_gfx10<0x03c>;
 
+#ifdef LLPC_BUILD_NPI
+defm DS_CONSUME             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x03d>;
+defm DS_APPEND              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x03e>;
+#else /* LLPC_BUILD_NPI */
 defm DS_CONSUME             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03d>;
 defm DS_APPEND              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03e>;
+#endif /* LLPC_BUILD_NPI */
 defm DS_ORDERED_COUNT       : DS_Real_gfx6_gfx7_gfx10_gfx11<0x03f>;
+#ifdef LLPC_BUILD_NPI
+defm DS_ADD_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x040>;
+defm DS_SUB_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x041>;
+defm DS_RSUB_U64            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x042>;
+defm DS_INC_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x043>;
+defm DS_DEC_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x044>;
+defm DS_MIN_I64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x045>;
+defm DS_MAX_I64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x046>;
+defm DS_MIN_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x047>;
+defm DS_MAX_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x048>;
+defm DS_AND_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x049>;
+defm DS_OR_B64              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x04a>;
+defm DS_XOR_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x04b>;
+defm DS_MSKOR_B64           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x04c>;
+#else /* LLPC_BUILD_NPI */
 defm DS_ADD_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x040>;
 defm DS_SUB_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x041>;
 defm DS_RSUB_U64            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x042>;
@@ -1489,6 +1912,7 @@ defm DS_AND_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x049>;
 defm DS_OR_B64              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x04a>;
 defm DS_XOR_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x04b>;
 defm DS_MSKOR_B64           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x04c>;
+#endif /* LLPC_BUILD_NPI */
 
 defm DS_WRITE_B64           : DS_Real_gfx6_gfx7_gfx10<0x04d>;
 defm DS_WRITE2_B64          : DS_Real_gfx6_gfx7_gfx10<0x04e>;
@@ -1498,6 +1922,21 @@ defm DS_CMPST_F64           : DS_Real_gfx6_gfx7_gfx10<0x051>;
 
 defm DS_MIN_F64             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x052>;
 defm DS_MAX_F64             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x053>;
+#ifdef LLPC_BUILD_NPI
+defm DS_ADD_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x060>;
+defm DS_SUB_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x061>;
+defm DS_RSUB_RTN_U64        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x062>;
+defm DS_INC_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x063>;
+defm DS_DEC_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x064>;
+defm DS_MIN_RTN_I64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x065>;
+defm DS_MAX_RTN_I64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x066>;
+defm DS_MIN_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x067>;
+defm DS_MAX_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x068>;
+defm DS_AND_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x069>;
+defm DS_OR_RTN_B64          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x06a>;
+defm DS_XOR_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x06b>;
+defm DS_MSKOR_RTN_B64       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x06c>;
+#else /* LLPC_BUILD_NPI */
 defm DS_ADD_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x060>;
 defm DS_SUB_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x061>;
 defm DS_RSUB_RTN_U64        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x062>;
@@ -1511,6 +1950,7 @@ defm DS_AND_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x069>;
 defm DS_OR_RTN_B64          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x06a>;
 defm DS_XOR_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x06b>;
 defm DS_MSKOR_RTN_B64       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x06c>;
+#endif /* LLPC_BUILD_NPI */
 
 defm DS_WRXCHG_RTN_B64      : DS_Real_gfx6_gfx7_gfx10<0x06d>;
 defm DS_WRXCHG2_RTN_B64     : DS_Real_gfx6_gfx7_gfx10<0x06e>;
@@ -1748,3 +2188,11 @@ def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
 def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
 def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
 def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;
+
+//===----------------------------------------------------------------------===//
+// GFX950.
+//===----------------------------------------------------------------------===//
+def DS_READ_B64_TR_B4_vi  : DS_Real_vi<0x0e0, DS_READ_B64_TR_B4>;
+def DS_READ_B96_TR_B6_vi  : DS_Real_vi<0x0e1, DS_READ_B96_TR_B6>;
+def DS_READ_B64_TR_B8_vi  : DS_Real_vi<0x0e2, DS_READ_B64_TR_B8>;
+def DS_READ_B64_TR_B16_vi : DS_Real_vi<0x0e3, DS_READ_B64_TR_B16>;

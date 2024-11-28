@@ -37,11 +37,19 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
     : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
+#if LLPC_BUILD_NPI
+      GlobalRegisterPSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
+      WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
+      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
+      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
+      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
+#else /* LLPC_BUILD_NPI */
       UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
       WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
       GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
+#endif /* LLPC_BUILD_NPI */
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
@@ -101,9 +109,13 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
                                MaxKernArgAlign);
 
+#if LLPC_BUILD_NPI
+    if (ST.hasGFX90AInsts() && ST.getMaxNumVGPRs(F) <= 256 && !mayUseAGPRs(F))
+#else /* LLPC_BUILD_NPI */
     if (ST.hasGFX90AInsts() &&
         ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
         !mayUseAGPRs(F))
+#endif /* LLPC_BUILD_NPI */
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
 
@@ -695,6 +707,9 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
       GDSSize(MFI.getGDSSize()),
+#if LLPC_BUILD_NPI
+      LaneSharedVGPRSize(MFI.getLaneSharedVGPRSize()),
+#endif /* LLPC_BUILD_NPI */
       DynLDSAlign(MFI.getDynLDSAlign()), IsEntryFunction(MFI.isEntryFunction()),
       NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
@@ -708,8 +723,12 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       BytesInStackArgArea(MFI.getBytesInStackArgArea()),
       ReturnsVoid(MFI.returnsVoid()),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
+#if LLPC_BUILD_NPI
+      PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
+#else /* LLPC_BUILD_NPI */
       PSInputAddr(MFI.getPSInputAddr()),
       PSInputEnable(MFI.getPSInputEnable()),
+#endif /* LLPC_BUILD_NPI */
       Mode(MFI.getMode()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
@@ -741,6 +760,9 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   MaxKernArgAlign = YamlMFI.MaxKernArgAlign;
   LDSSize = YamlMFI.LDSSize;
   GDSSize = YamlMFI.GDSSize;
+#if LLPC_BUILD_NPI
+  LaneSharedVGPRSize = YamlMFI.LaneSharedVGPRSize;
+#endif /* LLPC_BUILD_NPI */
   DynLDSAlign = YamlMFI.DynLDSAlign;
   PSInputAddr = YamlMFI.PSInputAddr;
   PSInputEnable = YamlMFI.PSInputEnable;

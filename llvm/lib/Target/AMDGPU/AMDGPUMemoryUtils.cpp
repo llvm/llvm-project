@@ -14,10 +14,16 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
+#if LLPC_BUILD_NPI
+#include "llvm/Analysis/ValueTracking.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#if LLPC_BUILD_NPI
+#include "llvm/IR/PatternMatch.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
@@ -53,6 +59,30 @@ TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
   }
 }
 
+#if LLPC_BUILD_NPI
+TargetExtType *isLDSSemaphore(const GlobalVariable &GV) {
+  // TODO-GFX13: Allow arrays and structs, if all members are semaphores owned
+  // by the same rank.
+  // TODO-GFX13: Disallow other uses of target("amdgcn.semaphore") including:
+  // - Structs containing semaphores owned by different ranks.
+  // - Structs containing a mixture of semaphores and other data.
+  // - Globals in other address spaces.
+  // - Allocas.
+  Type *Ty = GV.getValueType();
+  while (true) {
+    if (auto *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "amdgcn.semaphore" ? TTy : nullptr;
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (STy->getNumElements() == 0)
+        return nullptr;
+      Ty = STy->getElementType(0);
+      continue;
+    }
+    return nullptr;
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isDynamicLDS(const GlobalVariable &GV) {
   // external zero size addrspace(3) without initializer is dynlds.
   const Module *M = GV.getParent();
@@ -66,6 +96,10 @@ bool isLDSVariableToLower(const GlobalVariable &GV) {
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
     return false;
   }
+#if LLPC_BUILD_NPI
+  if (isLDSSemaphore(GV))
+    return false;
+#endif /* LLPC_BUILD_NPI */
   if (isDynamicLDS(GV)) {
     return true;
   }
@@ -318,6 +352,9 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
+#if LLPC_BUILD_NPI
+    case Intrinsic::amdgcn_s_cluster_barrier:
+#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
@@ -394,6 +431,185 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
   LLVM_DEBUG(dbgs() << "      -> no clobber\n");
   return false;
+#if LLPC_BUILD_NPI
+}
+
+static void collectUses(const Value &V, SmallVectorImpl<const Use *> &Uses) {
+  SmallVector<Instruction *> WorkList;
+  SmallPtrSet<const User *, 8> Visited;
+
+  auto extendWorkList = [&](const Use &U) {
+    auto User = U.getUser();
+    if (Visited.count(User))
+      return;
+    Visited.insert(User);
+    if (isa<GetElementPtrInst, PHINode, SelectInst>(User))
+      WorkList.push_back(cast<Instruction>(User));
+  };
+
+  for (auto &U : V.uses()) {
+    Uses.push_back(&U);
+    extendWorkList(U);
+  }
+
+  while (!WorkList.empty()) {
+    auto *Cur = WorkList.pop_back_val();
+    for (auto &U : Cur->uses()) {
+      Uses.push_back(&U);
+      extendWorkList(U);
+    }
+  }
+}
+
+static bool allPtrInputsInSameClass(const Value &V, Instruction *Inst) {
+  unsigned i = isa<SelectInst>(Inst) ? 1 : 0;
+  for (; i < Inst->getNumOperands(); ++i) {
+    Value *Op = Inst->getOperand(i);
+
+    if (isa<ConstantPointerNull>(Op))
+      continue;
+
+    const Value *Obj = getUnderlyingObjectAggressive(Op);
+    if (!isa<GlobalVariable>(Obj))
+      return false;
+
+    // TODO-GFX13: if pointers are derived from two different
+    // global lane-shared or private objects, it should still work. The
+    // important part is both must be promotable into vgpr at
+    // the end. It will require one more iteration of processing
+    if (Obj != &V) {
+      LLVM_DEBUG(dbgs() << "Found a select/phi with ptrs derived from two "
+                           "different objects\n");
+      return false;
+    }
+  }
+  return true;
+}
+
+// Checks if the instruction I is a memset user of the global variable that we
+// can deal with. Currently, only non-volatile memsets that affect the whole
+// global variable are handled.
+static bool isSupportedMemset(MemSetInst *I, const Value &V, Type *ValueType,
+                              const DataLayout &DL) {
+  using namespace PatternMatch;
+  // For now we only care about non-volatile memsets that affect the whole
+  // type (start at index 0 and fill the whole global variable).
+  const unsigned Size = DL.getTypeStoreSize(ValueType);
+  return I->getOperand(0) == &V &&
+         match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
+}
+
+bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
+  const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: " << Msg << "\n"
+                      << "    " << *Inst << "\n");
+    return false;
+  };
+
+  Type *ValueType;
+  if (auto *GV = dyn_cast<GlobalVariable>(&V)) {
+    assert(GV->getAddressSpace() == AMDGPUAS::LANE_SHARED);
+    ValueType = GV->getValueType();
+  } else if (auto *AI = dyn_cast<AllocaInst>(&V)) {
+    if (!AI->isStaticAlloca() ||
+        AI->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
+      return false;
+    ValueType = AI->getAllocatedType();
+  } else {
+    llvm_unreachable("Unexpected promotion candidate!");
+  }
+
+  // TODO-GFX13: Do a proper allocation check across _all_ allocatable objects.
+  if (DL.getTypeStoreSize(ValueType) > 4 * (1024 - 64)) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: too large\n");
+    return false;
+  }
+
+  SmallVector<const Use *, 8> Uses;
+  collectUses(V, Uses);
+
+  for (auto *U : Uses) {
+    Instruction *Inst = dyn_cast<Instruction>(U->getUser());
+    if (!Inst)
+      continue;
+
+    if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
+      // This is a store of the pointer, not to the pointer.
+      if (isa<StoreInst>(Inst) &&
+          U->getOperandNo() != StoreInst::getPointerOperandIndex())
+        return RejectUser(Inst, "pointer is being stored");
+
+      // Check that this is a simple access of a vector element.
+      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
+                                          : cast<StoreInst>(Inst)->isSimple();
+      if (!IsSimple)
+        return RejectUser(Inst, "not a simple load or store");
+
+      auto Align = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->getAlign()
+                                       : cast<StoreInst>(Inst)->getAlign();
+      if (Align < 4u)
+        return RejectUser(Inst, "address is less than dword-aligned");
+
+      Type *AccessTy = getLoadStoreType(Inst);
+      auto DataSize = DL.getTypeAllocSize(AccessTy);
+      if (DataSize % 4)
+        return RejectUser(Inst, "data-size is not supported");
+
+      continue;
+    }
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+      continue;
+    }
+
+    if (auto *Phi = dyn_cast<PHINode>(Inst)) {
+      if (allPtrInputsInSameClass(V, Inst)) {
+        continue;
+      }
+      return RejectUser(Inst, "phi on ptrs from two different objects");
+    }
+    if (auto *Phi = dyn_cast<SelectInst>(Inst)) {
+      if (allPtrInputsInSameClass(V, Inst)) {
+        continue;
+      }
+      return RejectUser(Inst, "select on ptrs from two different objects");
+    }
+
+    if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
+      if (isSupportedMemset(MSI, V, ValueType, DL)) {
+        continue;
+      }
+      return RejectUser(Inst, "cannot handle partial memset inst yet");
+    }
+
+    if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst))
+      return RejectUser(Inst, "cannot handle mem transfer inst yet");
+
+    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
+      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
+        continue;
+      }
+    }
+
+    // Ignore assume-like intrinsics and comparisons used in assumes.
+    if (isAssumeLikeIntrinsic(Inst)) {
+      assert(Inst->use_empty() &&
+             "does not expect assume-like intrinsic with any user");
+      continue;
+    }
+
+    if (isa<ICmpInst>(Inst)) {
+      if (!all_of(Inst->users(), [](User *U) {
+            return isAssumeLikeIntrinsic(cast<Instruction>(U));
+          }))
+        return RejectUser(Inst, "used in icmp with non-assume-like uses");
+      continue;
+    }
+
+    return RejectUser(Inst, "unhandled global-variable user");
+  }
+  return true;
+#endif /* LLPC_BUILD_NPI */
 }
 
 } // end namespace llvm::AMDGPU

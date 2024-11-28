@@ -62,6 +62,11 @@ enum class LangAS : unsigned {
   // Wasm specific address spaces.
   wasm_funcref,
 
+#if LLPC_BUILD_NPI
+  // HIP specific address spaces.
+  hip_lane_shared,
+
+#endif /* LLPC_BUILD_NPI */
   // This denotes the count of language-specific address spaces and also
   // the offset added to the target-specific address spaces, which are usually
   // specified by address space attributes __attribute__(address_space(n))).

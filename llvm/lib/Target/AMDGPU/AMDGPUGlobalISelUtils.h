@@ -14,10 +14,16 @@
 
 namespace llvm {
 
+#if LLPC_BUILD_NPI
+class AllocaInst;
+#endif /* LLPC_BUILD_NPI */
 class MachineRegisterInfo;
 class GCNSubtarget;
 class GISelKnownBits;
 class LLT;
+#if LLPC_BUILD_NPI
+class MachineMemOperand;
+#endif /* LLPC_BUILD_NPI */
 
 namespace AMDGPU {
 
@@ -26,7 +32,18 @@ std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                           GISelKnownBits *KnownBits = nullptr,
                           bool CheckNUW = false);
+#if LLPC_BUILD_NPI
+
+bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd);
+
+bool IsPromotablePrivate(const AllocaInst &Alloca);
+bool IsPromotablePrivate(const MachineMemOperand *MemOpnd);
+
+} // namespace AMDGPU
+} // namespace llvm
+#else /* LLPC_BUILD_NPI */
 }
 }
+#endif /* LLPC_BUILD_NPI */
 
 #endif

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
+def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
-def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
+def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
@@ -31,6 +31,10 @@ def SIEncodingFamily {
   int GFX940 = 9;
   int GFX11 = 10;
   int GFX12 = 11;
+#ifdef LLPC_BUILD_NPI
+  int GFX1210 = 12;
+  int GFX13 = 13;
+#endif /* LLPC_BUILD_NPI */
 }
 
 //===----------------------------------------------------------------------===//
@@ -44,9 +48,18 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
   int Subtarget = sub;
 }
 
+#ifdef LLPC_BUILD_NPI
+def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
+def GFX1210Gen       : GFXGen<isGFX121xOnly, "GFX1210", "_gfx1210", SIEncodingFamily.GFX1210>;
+def GFX12Not12_10Gen : GFXGen<isGFX12Not12_10, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
+def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
+#else /* LLPC_BUILD_NPI */
 def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
+#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // SI DAG Nodes
@@ -168,6 +181,24 @@ def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
                                 SDTBufferLoad,
                                 [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
+#ifdef LLPC_BUILD_NPI
+def SDTBufferDiscard : SDTypeProfile<0, 7,
+    [ SDTCisVT<0, v4i32>, // rsrc
+      SDTCisVT<1, i32>,   // vindex(VGPR)
+      SDTCisVT<2, i32>,   // voffset(VGPR)
+      SDTCisVT<3, i32>,   // soffset(SGPR)
+      SDTCisVT<4, i32>,   // offset(imm)
+      SDTCisVT<5, i32>,   // cachepolicy
+      SDTCisVT<6, i1>]>;  // idxen(imm)
+
+def SIbuffer_discard_b32   : SDNode <"AMDGPUISD::BUFFER_DISCARD_B32", SDTBufferDiscard,
+                                   [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_discard_b128  : SDNode <"AMDGPUISD::BUFFER_DISCARD_B128", SDTBufferDiscard,
+                                   [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_discard_b1024 : SDNode <"AMDGPUISD::BUFFER_DISCARD_B1024", SDTBufferDiscard,
+                                   [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+
+#endif /* LLPC_BUILD_NPI */
 def SDTBufferStore : SDTypeProfile<0, 8,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc
@@ -265,6 +296,12 @@ def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
 >;
 
+#ifdef LLPC_BUILD_NPI
+def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",
+  SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def SIlds : SDNode<"AMDGPUISD::LDS",
   SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
 >;
@@ -304,10 +341,34 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
+#ifdef LLPC_BUILD_NPI
+def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
+]>;
+
+def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
+
+#endif /* LLPC_BUILD_NPI */
+
+// Optimize v_mfma_scale* instructions to avoid the scale if the
+// scales are known 0.
+class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
+  (ops node:$srca, node:$srcb, node:$srcc,
+       node:$cbsz, node:$blgp),
+  (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
+          srcvalue, 0, srcvalue, 0)
+>;
+
+def mfma_f32_16x16x128_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
+def mfma_f32_32x32x64_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
+
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//
 
+#ifdef LLPC_BUILD_NPI
+// XXX - do v2i16 instructions?
+#endif /* LLPC_BUILD_NPI */
 class isIntType<ValueType SrcVT> {
   bit ret = !and(SrcVT.isInteger, !ne(SrcVT.Value, i1.Value));
 }
@@ -682,7 +743,11 @@ class LoadD16Frag <SDPatternOperator op> : PatFrag<
   let IsLoad = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ] in {
+#else /* LLPC_BUILD_NPI */
 foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+#endif /* LLPC_BUILD_NPI */
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
 
 def load_d16_hi_#as : LoadD16Frag <SIload_d16_hi>;
@@ -794,32 +859,38 @@ def as_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
 }]>;
 
+def as_i1timm_zext : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
 def as_i8imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i8);
 }]>;
 
 def as_i8timm : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
 def as_i16imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
 def as_i16timm : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+  // Explicit cast, as this is used with both signed and unsigned immediates.
+  return CurDAG->getSignedTargetConstant(int16_t(N->getSExtValue()), SDLoc(N),
+                                         MVT::i16);
 }]>;
 
 def as_i32imm: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i32timm: SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def as_i64imm: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
 def cond_as_i32imm: SDNodeXForm<cond, [{
@@ -914,6 +985,16 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
 }]>;
 
+def MFMALdScaleXForm : SDNodeXForm<timm, [{
+  unsigned Val = N->getZExtValue();
+  unsigned New = 0;
+  if (Val & 0x1)
+    New |= SISrcMods::OP_SEL_0;
+  if (Val & 0x2)
+    New |= SISrcMods::OP_SEL_1;
+  return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
+}]>;
+
 def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
   const SITargetLowering &Lowering =
       *static_cast<const SITargetLowering *>(getTargetLowering());
@@ -937,7 +1018,11 @@ def extract_cpol : SDNodeXForm<timm, [{
       N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12),
+#ifdef LLPC_BUILD_NPI
+      SDLoc(N), MVT::i16);
+#else /* LLPC_BUILD_NPI */
       SDLoc(N), MVT::i8);
+#endif /* LLPC_BUILD_NPI */
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
@@ -1000,6 +1085,14 @@ def DepCtr : CustomOperand<i32>;
 
 def SDelayALU : CustomOperand<i32>;
 
+#ifdef LLPC_BUILD_NPI
+// Global register references are represented as immediate operands but printed
+// and parsed like registers.
+def GlobalSReg32 : CustomOperand<i16>;
+
+def GlobalSReg64 : CustomOperand<i16>;
+
+#endif /* LLPC_BUILD_NPI */
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
 
@@ -1175,6 +1268,11 @@ def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
 def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
+#ifdef LLPC_BUILD_NPI
+def SignedA : NamedBitOperand<"signed_a">;
+def SignedB : NamedBitOperand<"signed_b">;
+
+#endif /* LLPC_BUILD_NPI */
 def FORMAT : CustomOperand<i8>;
 
 let PrintInHex = 1 in
@@ -1242,6 +1340,33 @@ def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
 
+#ifdef LLPC_BUILD_NPI
+let PrintMethod = "printBitOp3"  in
+def BitOp3 : NamedIntOperand<"bitop3">;
+#else /* LLPC_BUILD_NPI */
+def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+#endif /* LLPC_BUILD_NPI */
+def bitop3_0 : DefaultOperand<BitOp3, 0>;
+
+#ifdef LLPC_BUILD_NPI
+def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
+def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
+
+def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
+def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
+
+def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
+def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
+
+def ScaleSel : NamedIntOperand<"scale_sel"> {
+  let Validator = "isUInt<3>";
+}
+def AuxData : NamedIntOperand<"aux_data">;
+let PrintInHex = 1 in
+def Idxs : NamedIntOperand<"idxs">;
+def Idxs0 : DefaultOperand<Idxs, 0>;
+
+#endif /* LLPC_BUILD_NPI */
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
@@ -1256,6 +1381,14 @@ def KImmFP32 : KImmFPOperand<i32>;
 // constant bus.
 def KImmFP16 : KImmFPOperand<i16>;
 
+#ifdef LLPC_BUILD_NPI
+// 64-bit VALU immediate operand that uses the constant bus.
+def KImmFP64 : KImmFPOperand<i64> {
+  let DecoderMethod = "decodeOperand_KImmFP64";
+  let PrintMethod = "printFP64ImmOperand";
+}
+
+#endif /* LLPC_BUILD_NPI */
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";
   let ParserMethod = "parseRegOrImmWithFPInputMods";
@@ -1267,6 +1400,13 @@ class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
   let PredicateMethod = "isRegOrInlineImmWithFP"#opSize#"InputMods";
 }
 
+#ifdef LLPC_BUILD_NPI
+class FPVRegSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
+  let Name = "VRegWithFP"#opSize#"InputMods";
+  let PredicateMethod = "isVRegWithFP"#opSize#"InputMods";
+}
+
+#endif /* LLPC_BUILD_NPI */
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
 class FPT16InputModsMatchClass<bit IsFake16> : FPInputModsMatchClass<16> {
   let Name = !if(IsFake16, "RegOrImmWithFPFake16InputMods",
@@ -1285,6 +1425,12 @@ class FP16VCSrcInputModsMatchClass<bit IsFake16>
                         !if(IsFake16, "true", "false") # ">";
 }
 def FP32VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<32>;
+#ifdef LLPC_BUILD_NPI
+def FP64VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<64>;
+
+def FP32VRegSrcInputModsMatchClass : FPVRegSrcInputModsMatchClass<32>;
+def FP64VRegSrcInputModsMatchClass : FPVRegSrcInputModsMatchClass<64>;
+#endif /* LLPC_BUILD_NPI */
 
 class InputMods <AsmOperandClass matchClass> : Operand <i32> {
   let OperandNamespace = "AMDGPU";
@@ -1311,6 +1457,12 @@ class FPT16VCSrcInputMods<bit IsFake16 = 1>
   let EncoderMethod = "getMachineOpValueT16";
 }
 def FP32VCSrcInputMods : FPInputMods<FP32VCSrcInputModsMatchClass>;
+#ifdef LLPC_BUILD_NPI
+def FP64VCSrcInputMods : FPInputMods<FP64VCSrcInputModsMatchClass>;
+
+def FP32VRegSrcInputMods : FPInputMods<FP32VRegSrcInputModsMatchClass>;
+def FP64VRegSrcInputMods : FPInputMods<FP64VRegSrcInputModsMatchClass>;
+#endif /* LLPC_BUILD_NPI */
 
 class IntInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithInt"#opSize#"InputMods";
@@ -1494,6 +1646,12 @@ class PackedFPInputModsMatchClass <int opSize> : AsmOperandClass {
   let PredicateMethod = "isPackedFP"#opSize#"InputMods";
 }
 
+#ifdef LLPC_BUILD_NPI
+class PackedVGPRFPInputModsMatchClass <int opSize> : PackedFPInputModsMatchClass<opSize> {
+  let PredicateMethod = "isPackedVGPRFP"#opSize#"InputMods";
+}
+
+#endif /* LLPC_BUILD_NPI */
 class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "PackedInt"#opSize#"InputMods";
   let ParserMethod = "parseRegOrImm";
@@ -1503,6 +1661,12 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
+#ifdef LLPC_BUILD_NPI
+//def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
+def PackedVGPRF32InputModsMatchClass : PackedVGPRFPInputModsMatchClass<32>;
+#else /* LLPC_BUILD_NPI */
+def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
+#endif /* LLPC_BUILD_NPI */
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1514,6 +1678,15 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
+#ifdef LLPC_BUILD_NPI
+def PackedVGPRF32InputMods : PackedFPInputMods<PackedVGPRF32InputModsMatchClass>;
+#else /* LLPC_BUILD_NPI */
+def PackedF32InputMods : PackedFPInputMods<PackedF32InputModsMatchClass>;
+#endif /* LLPC_BUILD_NPI */
+
+def MFMALdScaleModifierOp : TImmLeaf<i32, [{
+  return isUInt<2>(Imm);
+}], MFMALdScaleXForm>;
 
 //===----------------------------------------------------------------------===//
 // Complex patterns
@@ -1544,6 +1717,10 @@ def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
+#ifdef LLPC_BUILD_NPI
+def VOP3PModsNegs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegs">;
+def VOP3PModsNegAbs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegAbs">;
+#endif /* LLPC_BUILD_NPI */
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;
@@ -1559,6 +1736,10 @@ def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
 def VOP3PMadMixModsExt : ComplexPattern<untyped, 2, "SelectVOP3PMadMixModsExt">;
 def VOP3PMadMixMods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
+#ifdef LLPC_BUILD_NPI
+def VOP3PMadMixBF16ModsExt : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16ModsExt">;
+def VOP3PMadMixBF16Mods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16Mods">;
+#endif /* LLPC_BUILD_NPI */
 
 def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
 def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
@@ -1612,6 +1793,9 @@ def HWREG {
   int FLAT_SCR_HI = 21;
   int XNACK_MASK = 22;
   int POPS_PACKER = 25;
+#ifdef LLPC_BUILD_NPI
+  int SCHED_MODE = 26;
+#endif /* LLPC_BUILD_NPI */
   int SHADER_CYCLES = 29;
 }
 
@@ -1659,20 +1843,47 @@ class getNumSrcArgs<ValueType Src0, ValueType Src1, ValueType Src2> {
 class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
+#ifdef LLPC_BUILD_NPI
+                    VOPDstOperand_VGPR_32);
+#else /* LLPC_BUILD_NPI */
                     VOPDstOperand<VGPR_32>);
-  RegisterOperand ret = !cond(!eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
+#endif /* LLPC_BUILD_NPI */
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
+#ifdef LLPC_BUILD_NPI
+                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
+                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
+                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
+                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
+                              !eq(VT.Size, 32)   : VOPDstOperand_VGPR_32,
+                              !eq(VT.Size, 16)   : op16,
+                              1                  : VOPDstS64orS32); // else VT == i1
+#else /* LLPC_BUILD_NPI */
+                              !eq(VT.Size, 512) : VOPDstOperand<VReg_512>,
+                              !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
                               !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
                               !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
                               !eq(VT.Size, 16)  : op16,
                               1                 : VOPDstS64orS32); // else VT == i1
+#endif /* LLPC_BUILD_NPI */
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
+#ifdef LLPC_BUILD_NPI
+  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand_VGPR_32,
+#else /* LLPC_BUILD_NPI */
   RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
+#endif /* LLPC_BUILD_NPI */
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
+#ifdef LLPC_BUILD_NPI
+                              !if(!eq(VT.Size, 16), VOPDstOperand_VGPR_32_Lo128,
+#else /* LLPC_BUILD_NPI */
                               !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32_Lo128>,
+#endif /* LLPC_BUILD_NPI */
                               VOPDstS64orS32)))); // else VT == i1
 }
 
@@ -1681,7 +1892,11 @@ class getVALUDstForVT_fake16<ValueType VT> {
 class getSDWADstForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 1),
                             SDWAVopcDst, // VOPC
+#ifdef LLPC_BUILD_NPI
+                            VOPDstOperand_VGPR_32); // VOP1/2 32-bit dst
+#else /* LLPC_BUILD_NPI */
                             VOPDstOperand<VGPR_32>); // VOP1/2 32-bit dst
+#endif /* LLPC_BUILD_NPI */
 }
 
 // Returns the register class to use for source 0 of VOP[12C]
@@ -1709,6 +1924,34 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
         1               : VSrc_b32);
 }
 
+#ifdef LLPC_BUILD_NPI
+// Returns the register class to use for source VGPR, SGPR or inline constant
+// for the given VT.
+class getVCSrcForVT<ValueType VT> {
+  RegisterOperand ret =
+    !if(VT.isFP,
+      !if(!eq(VT.Size, 64),
+         VCSrc_f64,
+         !cond(!eq(VT.Value, f16.Value)    : VCSrc_f16,
+               !eq(VT.Value, bf16.Value)   : VCSrc_bf16,
+               !eq(VT.Value, v2f16.Value)  : VCSrc_v2f16,
+               !eq(VT.Value, v2bf16.Value) : VCSrc_v2bf16,
+               1 : VCSrc_f32)
+       ),
+       !if(!eq(VT.Size, 64),
+          VCSrc_b64,
+          !if(!eq(VT.Value, i16.Value),
+             VCSrc_b16,
+             !if(!eq(VT.Value, v2i16.Value),
+                VCSrc_v2b16,
+                VCSrc_b32
+             )
+          )
+       )
+    );
+}
+
+#endif /* LLPC_BUILD_NPI */
 class getSOPSrcForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_b64, SSrc_b32);
 }
@@ -1716,14 +1959,31 @@ class getSOPSrcForVT<ValueType VT> {
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
-  !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+#ifdef LLPC_BUILD_NPI
+  !cond(!eq(VT.Size, 576) : RegisterOperand<VReg_576>,
+        !eq(VT.Size, 512) : RegisterOperand<VReg_512>,
+        !eq(VT.Size, 288) : RegisterOperand<VReg_288>,
+        !eq(VT.Size, 256) : RegisterOperand<VReg_256>,
+#else /* LLPC_BUILD_NPI */
+  !cond(!eq(VT.Size, 512) : RegisterOperand<VReg_512>,
+#endif /* LLPC_BUILD_NPI */
+        !eq(VT.Size, 192) : RegisterOperand<VReg_192>,
+#ifdef LLPC_BUILD_NPI
+        !eq(VT.Size, 160) : RegisterOperand<VReg_160>,
+#endif /* LLPC_BUILD_NPI */
+        !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
         !eq(VT.Size, 16)  : !if(IsTrue16,
                                 !if(IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
+#ifdef LLPC_BUILD_NPI
+                                VGPRSrc_32),
+        1                 : VGPRSrc_32);
+#else /* LLPC_BUILD_NPI */
                                 RegisterOperand<VGPR_32>),
         1                 : RegisterOperand<VGPR_32>);
+#endif /* LLPC_BUILD_NPI */
 }
 
 class getSDWASrcForVT <ValueType VT> {
@@ -1736,28 +1996,66 @@ class getSDWASrcForVT <ValueType VT> {
 // given VT.
 class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   RegisterOperand ret =
-  !cond(!eq(VT, f64)      : VSrc_f64,
-        !eq(VT, f32)      : VSrc_f32,
-        !eq(VT, f16)      : !if(IsTrue16, VSrcT_f16, VSrc_f16),
-        !eq(VT, bf16)     : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
-        !eq(VT, i16)      : !if(IsTrue16, VSrcT_b16, VSrc_b16),
-        !eq(VT, i1)       : SSrc_i1,
-        !eq(VT, v2f32)    : VSrc_v2f32,
-        !eq(VT, v2i32)    : VSrc_v2b32,
-        !eq(VT, v2f16)    : VSrc_v2f16,
-        !eq(VT, v2bf16)   : VSrc_v2bf16,
-        !eq(VT, v2i16)    : VSrc_v2b16,
-        !eq(VT, v4f16)    : AVSrc_64,
-        !eq(VT, v4bf16)   : AVSrc_64,
-        !eq(VT.Size, 128) : VRegSrc_128,
-        !eq(VT.Size, 96)  : VRegSrc_96,
-        !eq(VT.Size, 64)  : VSrc_b64,
-        1                 : VSrc_b32);
+  !cond(!eq(VT, f64)       : VSrc_f64,
+        !eq(VT, f32)       : VSrc_f32,
+        !eq(VT, f16)       : !if(IsTrue16, VSrcT_f16, VSrc_f16),
+        !eq(VT, bf16)      : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
+        !eq(VT, i16)       : !if(IsTrue16, VSrcT_b16, VSrc_b16),
+        !eq(VT, i1)        : SSrc_i1,
+        !eq(VT, v2f32)     : VSrc_v2f32,
+        !eq(VT, v2i32)     : VSrc_v2b32,
+        !eq(VT, v2f16)     : VSrc_v2f16,
+        !eq(VT, v2bf16)    : VSrc_v2bf16,
+        !eq(VT, v2i16)     : VSrc_v2b16,
+        !eq(VT, v4f16)     : AVSrc_64,
+        !eq(VT, v4bf16)    : AVSrc_64,
+        !eq(VT.Size, 1024) : VRegSrc_1024,
+#ifdef LLPC_BUILD_NPI
+        !eq(VT.Size, 576)  : VRegSrc_576,
+#endif /* LLPC_BUILD_NPI */
+        !eq(VT.Size, 512)  : VRegSrc_512,
+#ifdef LLPC_BUILD_NPI
+        !eq(VT.Size, 288)  : VRegSrc_288,
+#endif /* LLPC_BUILD_NPI */
+        !eq(VT.Size, 256)  : VRegSrc_256,
+        !eq(VT.Size, 192)  : VRegSrc_192,
+#ifdef LLPC_BUILD_NPI
+        !eq(VT.Size, 160)  : VRegSrc_160,
+#endif /* LLPC_BUILD_NPI */
+        !eq(VT.Size, 128)  : VRegSrc_128,
+        !eq(VT.Size, 96)   : VRegSrc_96,
+        !eq(VT.Size, 64)   : VSrc_b64,
+        1                  : VSrc_b32);
 }
 
+#ifdef LLPC_BUILD_NPI
+// VGPR only VOP3 src with 9 bit encoding
+class getVOP3VRegSrcForVT<ValueType VT> {
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
+                              !eq(VT.Size, 512)  : VRegSrc_512,
+                              !eq(VT.Size, 256)  : VRegSrc_256,
+                              !eq(VT.Size, 192)  : VRegSrc_192,
+                              !eq(VT.Size, 128)  : VRegSrc_128,
+                              !eq(VT.Size, 96)   : VRegSrc_96,
+                              !eq(VT.Size, 64)   : VRegSrc_64,
+                              1 : VRegSrc_32);
+}
+
+// VGPR only src, such as VOP3DPP src0.
+class getVGPRSrcForVT<ValueType VT> {
+  RegisterOperand ret = !cond(!eq(VT.Size, 96) : VGPRSrc_96,
+                              !eq(VT.Size, 64) : VGPRSrc_64,
+                              1 : VGPRSrc_32);
+}
+
+#endif /* LLPC_BUILD_NPI */
 // Returns the vreg register class to use for sources of VOP3 instructions for the
 // given VT.
+#ifdef LLPC_BUILD_NPI
+class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+#else /* LLPC_BUILD_NPI */
 class getVOP3VRegSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+#endif /* LLPC_BUILD_NPI */
    RegisterOperand ret =
    !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
          !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
@@ -1775,12 +2073,19 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
   !cond(!eq(VT, i1)     : SSrc_i1,
         !eq(VT, i16)    : !if (IsFake16, VCSrc_b16, VCSrcT_b16),
+#ifdef LLPC_BUILD_NPI
+        !eq(VT, i64)    : VCSrc_b64,
+#endif /* LLPC_BUILD_NPI */
         !eq(VT, f16)    : !if (IsFake16, VCSrc_f16, VCSrcT_f16),
         !eq(VT, bf16)   : !if (IsFake16, VCSrc_bf16, VCSrcT_bf16),
         !eq(VT, v2i16)  : VCSrc_v2b16,
         !eq(VT, v2f16)  : VCSrc_v2f16,
         !eq(VT, v2bf16) : VCSrc_v2bf16,
         !eq(VT, f32)    : VCSrc_f32,
+#ifdef LLPC_BUILD_NPI
+        !eq(VT, f64)    : VCSrc_f64,
+        !eq(VT, v2i32)  : VCSrc_v2b32,
+#endif /* LLPC_BUILD_NPI */
         1               : VCSrc_b32);
 }
 
@@ -1847,6 +2152,21 @@ class getSrcModDPP_t16 <ValueType VT, bit IsFake16 = 1> {
 }
 
 // Return type of input modifiers operand for specified input operand for DPP
+#ifdef LLPC_BUILD_NPI
+// or VOPD3.
+class getSrcModVOP3VC <ValueType VT, bit IsFake16 = 1> {
+  Operand ret =
+      !if (VT.isFP,
+           !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
+                FPT16VCSrcInputMods<IsFake16>,
+                !if (!eq(VT.Value, f64.Value), FP64VCSrcInputMods,
+                     FP32VCSrcInputMods)),
+           !if (!eq(VT.Value, i16.Value),
+                IntT16VCSrcInputMods<IsFake16>,
+                Int32VCSrcInputMods));
+}
+
+#endif /* LLPC_BUILD_NPI */
 // True16: If the destination is a 16-bit value, the src0 modifier must hold
 // dst's opsel bit. Use a dummy value for DstVT if getting the mod for a src operand besides 0.
 // 64-bit src types are not implemented for True16 dst.
@@ -1867,16 +2187,27 @@ class getSrc0ModVOP3DPP <ValueType VT, ValueType DstVT, bit IsFake16 = 1> {
   Operand ret = !if(!and(!not(IsFake16), !eq(DstVT.Size, 16)), T16Dst, Normal);
 }
 
+#ifdef LLPC_BUILD_NPI
+// Return type of input modifiers operand for specified input operand for VGPR
+// only operands (VOPD3 vsrc1 and vsrc2).
+class getSrcModVOP3V <ValueType VT> {
+#else /* LLPC_BUILD_NPI */
 // GFX11 only supports VGPR src1, but the restriction is done in AsmParser
 // and GCNDPPCombine.
 class getSrcModVOP3DPP<ValueType VT, bit IsFake16 = 1> {
+#endif /* LLPC_BUILD_NPI */
   Operand ret =
+#ifdef LLPC_BUILD_NPI
+      !if (!eq(VT.Value, f64.Value), FP64VRegSrcInputMods,
+           FP32VRegSrcInputMods);
+#else /* LLPC_BUILD_NPI */
       !if (VT.isFP,
            !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
                 FPT16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
            !if (!eq(VT.Value, i16.Value),
                 IntT16VCSrcInputMods<IsFake16>,
                 Int32VCSrcInputMods));
+#endif /* LLPC_BUILD_NPI */
 }
 
 // Return type of input modifiers operand specified input operand for SDWA
@@ -1888,6 +2219,44 @@ class getSrcModSDWA <ValueType VT> {
                 Int32SDWAInputMods))));
 }
 
+#ifdef LLPC_BUILD_NPI
+// Return type of SSrc operand in VOPM.
+class getVOPMSSrcForVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT, f32)  : SSrc_f32,
+                              !eq(VT, f16)  : SSrc_f16,
+                              !eq(VT, bf16) : SSrc_bf16);
+}
+
+// Return type of GVGPR operand.
+class getGVGPRforVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT.Size, 32)  : GVGPR_32,
+                              !eq(VT.Size, 64)  : GVGPR_64,
+                              !eq(VT.Size, 96)  : GVGPR_96,
+                              !eq(VT.Size, 128) : GVGPR_128,
+                              !eq(VT.Size, 256) : GVGPR_256,
+                              1 : GVGPR_32); // unused
+}
+
+// Return type of GVGPR operand.
+class getGSrcVGPRForVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT.Size, 32)  : GSrcVGPR_32,
+                              !eq(VT.Size, 64)  : GSrcVGPR_64,
+                              !eq(VT.Size, 96)  : GSrcVGPR_96,
+                              !eq(VT.Size, 128) : GSrcVGPR_128,
+                              !eq(VT.Size, 160) : GSrcVGPR_160,
+                              !eq(VT.Size, 192) : GSrcVGPR_192,
+                              !eq(VT.Size, 256) : GSrcVGPR_256,
+                              !eq(VT.Size, 288) : GSrcVGPR_288,
+                              !eq(VT.Size, 576) : GSrcVGPR_576,
+                              1 : SSrc_bf16); // unused
+}
+
+class getGSrcVGPROrZeroForVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT.Size, 128) : GSrcVGPROrZero_128,
+                              !eq(VT.Size, 256) : GSrcVGPROrZero_256);
+}
+
+#endif /* LLPC_BUILD_NPI */
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.
 class getIns32 <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs> {
   dag ret = !if(!eq(NumSrcArgs, 1), (ins Src0RC:$src0),               // VOP1
@@ -1991,13 +2360,14 @@ class getInsVOP3Base<RegisterOperand Src0RC, RegisterOperand Src1RC,
 
 class getInsVOP3P <RegisterOperand Src0RC, RegisterOperand Src1RC,
                    RegisterOperand Src2RC, int NumSrcArgs, bit HasClamp, bit HasOpSel,
+                   bit HasNeg,
                    Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
   dag base = getInsVOP3Base<Src0RC, Src1RC, Src2RC, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 1/*HasSrc2Mods*/,
                     0/*HasOMod*/, Src0Mod, Src1Mod, Src2Mod, HasOpSel>.ret;
 
   dag vop3pOpsel = (ins op_sel_hi0:$op_sel_hi);
-  dag vop3p_neg = (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi);
+  dag vop3p_neg = !if(HasNeg, (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi), (ins));
 
   dag vop3pFields = !con(!if(HasOpSel, vop3pOpsel, (ins)), vop3p_neg);
   dag ret = !con(base, vop3pFields);
@@ -2149,6 +2519,29 @@ class getInsSDWA <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs
             (ins)/* endif */)));
 }
 
+#ifdef LLPC_BUILD_NPI
+// Ins for VOPD3
+class getInsVOPD3<RegisterOperand Src0VOPD3, RegisterOperand Src1VOPD3, RegisterOperand Src2VOPD3,
+                  Operand Src0Mod, Operand Src1Mod, Operand Src2Mod,
+                  bit HasSrc1, bit HasSrc2, bit HasModifiers, bit IsCompY> {
+  dag Src0 = !if(HasModifiers,
+                 !if(IsCompY, (ins Src0Mod:$src0Y_modifiers, Src0VOPD3:$src0Y),
+                              (ins Src0Mod:$src0X_modifiers, Src0VOPD3:$src0X)),
+                 !if(IsCompY, (ins Src0VOPD3:$src0Y), (ins Src0VOPD3:$src0X)));
+  dag Src1 = !if(HasModifiers,
+                 !if(IsCompY, (ins Src1Mod:$vsrc1Y_modifiers, Src1VOPD3:$vsrc1Y),
+                              (ins Src1Mod:$vsrc1X_modifiers, Src1VOPD3:$vsrc1X)),
+                 !if(IsCompY, (ins Src1VOPD3:$vsrc1Y), (ins Src1VOPD3:$vsrc1X)));
+  dag Src2 = !if(HasModifiers,
+                 !if(IsCompY, (ins Src2Mod:$vsrc2Y_modifiers, Src2VOPD3:$vsrc2Y),
+                              (ins Src2Mod:$vsrc2X_modifiers, Src2VOPD3:$vsrc2X)),
+                 !if(IsCompY, (ins Src2VOPD3:$vsrc2Y), (ins Src2VOPD3:$vsrc2X)));
+  dag ret = !con(Src0,
+                 !if(HasSrc1, Src1, (ins)),
+                 !if(HasSrc2, Src2, (ins)));
+}
+
+#endif /* LLPC_BUILD_NPI */
 // Outs for DPP
 class getOutsDPP <bit HasDst, ValueType DstVT, RegisterOperand DstRCDPP> {
   dag ret = !if(HasDst,
@@ -2180,33 +2573,49 @@ class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
                !if(!eq(NumSrcArgs, 3), src0#src1#src2, "");
 }
 
+#ifdef LLPC_BUILD_NPI
+class getAsmVOPDPart <int NumSrcArgs, string XorY, bit HasVOPD3Src2 = 0, bit HasModifiers = 0> {
+  string mods = !if(HasModifiers, "_modifiers", "");
+#else /* LLPC_BUILD_NPI */
 class getAsmVOPDPart <int NumSrcArgs, string XorY> {
+#endif /* LLPC_BUILD_NPI */
   string dst = "$vdst" # XorY;
+#ifdef LLPC_BUILD_NPI
+  string src0 = ", $src0" # XorY # mods;
+  string src1 = ", $vsrc1" # XorY # mods;
+  string src2 = ", $vsrc2" # XorY # mods;
+#else /* LLPC_BUILD_NPI */
   string src0 = ", $src0" # XorY;
   string src1 = ", $vsrc1" # XorY;
+#endif /* LLPC_BUILD_NPI */
   string ret = dst #
                !if(!ge(NumSrcArgs, 1), src0, "") #
+#ifdef LLPC_BUILD_NPI
+               !if(!ge(NumSrcArgs, 2), src1, "") #
+               !if(HasVOPD3Src2, src2, "");
+#else /* LLPC_BUILD_NPI */
                !if(!ge(NumSrcArgs, 2), src1, "");
+#endif /* LLPC_BUILD_NPI */
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
 // instruction.
-class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
+class getAsmVOP3P <bit HasDst, int NumSrcArgs, bit HasNeg,
                    bit HasClamp, bit HasOpSel> {
-  string dst = "$vdst";
-  string src0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
+  string dst = !if(HasDst, "$vdst"# !if(!gt(NumSrcArgs, 0), ",", ""), "");
+  string src0 = !if(!eq(NumSrcArgs, 1), " $src0", " $src0,");
   string src1 = !if(!eq(NumSrcArgs, 1), "",
                    !if(!eq(NumSrcArgs, 2), " $src1",
                                            " $src1,"));
   string src2 = !if(!eq(NumSrcArgs, 3), " $src2", "");
 
-  string mods = !if(HasModifiers, "$neg_lo$neg_hi", "");
+  string mods = !if(HasNeg, "$neg_lo$neg_hi", "");
   string clamp = !if(HasClamp, "$clamp", "");
   string opsel = !if(HasOpSel, "$op_sel$op_sel_hi", "");
 
   // Each modifier is printed as an array of bits for each operand, so
   // all operands are printed as part of src0_modifiers.
-  string ret = dst#", "#src0#src1#src2#opsel#mods#clamp;
+  string ret = dst#src0#src1#src2#opsel#mods#clamp;
 }
 
 // FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
@@ -2267,7 +2676,7 @@ class getAsmDPP8 <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT 
 
 class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
                        bit HasOpSel, bit HasOMod, bit IsVOP3P,
-                       bit HasModifiers, bit Src0HasMods,
+                       bit HasNeg, bit Src0HasMods,
                        bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32,
                        bit HasByteSel = 0> {
   string dst = !if(HasDst,
@@ -2294,7 +2703,7 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string bytesel = !if(HasByteSel, "$byte_sel", "");
   string 3PMods = !if(IsVOP3P,
                       !if(HasOpSel, "$op_sel_hi", "")
-                        #!if(HasModifiers, "$neg_lo$neg_hi", ""),
+                        #!if(HasNeg, "$neg_lo$neg_hi", ""),
                       "");
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
@@ -2440,6 +2849,13 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 96)   : AVLdSt_96,
           !eq(RC.Size, 128)  : AVLdSt_128,
           !eq(RC.Size, 160)  : AVLdSt_160,
+#ifdef LLPC_BUILD_NPI
+          !eq(RC.Size, 192)  : AVLdSt_192,
+          !eq(RC.Size, 256)  : AVLdSt_256,
+          !eq(RC.Size, 288)  : AVLdSt_288,
+          !eq(RC.Size, 512)  : AVLdSt_512,
+          !eq(RC.Size, 576)  : AVLdSt_576,
+#endif /* LLPC_BUILD_NPI */
           !eq(RC.Size, 1024) : AVLdSt_1024);
 }
 
@@ -2490,7 +2906,11 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterOperand Src0DPP = getVregSrcForVT<Src0VT>.ret;
   field RegisterOperand Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterOperand Src2DPP = getVregSrcForVT<Src2VT>.ret;
+#ifdef LLPC_BUILD_NPI
+  field RegisterOperand Src0VOP3DPP = getVGPRSrcForVT<Src0VT>.ret;
+#else /* LLPC_BUILD_NPI */
   field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
+#endif /* LLPC_BUILD_NPI */
   field RegisterOperand Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT>.ret;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
@@ -2502,10 +2922,23 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field Operand Src1ModDPP = getSrcModDPP<Src1VT>.ret;
   field Operand Src2ModDPP = getSrcModDPP<Src2VT>.ret;
   field Operand Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT>.ret;
+#ifdef LLPC_BUILD_NPI
+  field Operand Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT>.ret;
+  field Operand Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT>.ret;
+#else /* LLPC_BUILD_NPI */
   field Operand Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT>.ret;
   field Operand Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT>.ret;
+#endif /* LLPC_BUILD_NPI */
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModSDWA<Src1VT>.ret;
+#ifdef LLPC_BUILD_NPI
+  field RegisterOperand Src0VOPD3 = getVCSrcForVT<Src0VT>.ret;
+  field RegisterOperand Src1VOPD3 = getVregSrcForVT<Src1VT>.ret;
+  field RegisterOperand Src2VOPD3 = getVregSrcForVT<Src2VT>.ret;
+  field Operand Src0ModVOPD3 = getSrcModVOP3VC<Src0VT>.ret;
+  field Operand Src1ModVOPD3 = getSrcModVOP3V<Src1VT>.ret;
+  field Operand Src2ModVOPD3 = getSrcModVOP3V<Src2VT>.ret;
+#endif /* LLPC_BUILD_NPI */
 
 
   field bit IsMAI = 0;
@@ -2554,6 +2987,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src1VT>.ret,
                                isModifierType<Src2VT>.ret,
                                HasOMod);
+  field bit HasNeg = HasModifiers;
+#ifdef LLPC_BUILD_NPI
+  field bit HasMaxtrixScale = 0;
+#endif /* LLPC_BUILD_NPI */
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);
@@ -2589,7 +3026,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                              HasClamp, HasModifiers, HasSrc2Mods,
                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
   field dag InsVOP3P = getInsVOP3P<Src0RC64, Src1RC64, Src2RC64,
-                                   NumSrcArgs, HasClamp, HasOpSel,
+                                   NumSrcArgs, HasClamp, HasOpSel, HasNeg,
                                    Src0PackedMod, Src1PackedMod, Src2PackedMod>.ret;
   field dag InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64,
                                 NumSrcArgs, HasClamp, HasOMod,
@@ -2607,7 +3044,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret;
   defvar InsVOP3PDPPBase = getInsVOP3P<Src0VOP3DPP, Src1VOP3DPP,
-                  Src2VOP3DPP, NumSrcArgs, HasClamp, HasOpSel,
+                  Src2VOP3DPP, NumSrcArgs, HasClamp, HasOpSel, HasNeg,
                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP>.ret;
 
   field dag InsVOP3Base = !if(IsVOP3P, InsVOP3PDPPBase, InsVOP3DPPBase);
@@ -2622,9 +3059,24 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // It is a slight misnomer to use the deferred f32 operand type for non-float
   // operands, but this operand type will only be used if the other dual
   // component is FMAAK or FMAMK
+#ifdef LLPC_BUILD_NPI
+  field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPRSrc_32:$vsrc1X);
+#else /* LLPC_BUILD_NPI */
   field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPR_32:$vsrc1X);
+#endif /* LLPC_BUILD_NPI */
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
+#ifdef LLPC_BUILD_NPI
+  field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPRSrc_32:$vsrc1Y);
+  field bit HasVOPD3Src2 = !empty(Ins32); // VOP3 does not have Ins32.
+  field dag InsVOPD3X = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
+                                    Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,
+                                    HasSrc1, HasVOPD3Src2, HasModifiers, 0>.ret;
+  field dag InsVOPD3Y = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
+                                    Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,
+                                    HasSrc1, HasVOPD3Src2, HasModifiers, 1>.ret;
+#else /* LLPC_BUILD_NPI */
   field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
+#endif /* LLPC_BUILD_NPI */
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
@@ -2635,10 +3087,15 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // the asm operand name via this HasModifiers flag
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
+#ifdef LLPC_BUILD_NPI
+   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0Mods, HasSrc1Mods,
+   HasSrc2Mods, DstVT, IsFP8ByteSel>.ret;
+#else /* LLPC_BUILD_NPI */
+   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasModifiers, HasModifiers,
    HasModifiers, DstVT, IsFP8ByteSel>.ret;
+#endif /* LLPC_BUILD_NPI */
   field string Asm64 = AsmVOP3Base;
-  field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
+  field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
                                               HasClamp,
                                               HasOMod,
@@ -2652,7 +3109,13 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
   field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
+#ifdef LLPC_BUILD_NPI
+  field string AsmVOPD3X = getAsmVOPDPart<NumSrcArgs, "X", HasVOPD3Src2, HasModifiers>.ret;
+  field string AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret;
+#endif /* LLPC_BUILD_NPI */
   field string TieRegDPP = "$old";
+  field bit IsSMFMAC = false;
+  field bit HasAbid = !and(IsMAI, HasSrc1);
 }
 
   class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
@@ -2693,8 +3156,13 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0 /*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
+#ifdef LLPC_BUILD_NPI
+  let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 0 /*IsFake16*/>.ret;
+  let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 0 /*IsFake16*/>.ret;
+#else /* LLPC_BUILD_NPI */
   let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 0 /*IsFake16*/>.ret;
+#endif /* LLPC_BUILD_NPI */
 
   let DstRC64 = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 1 /*IsVOP3Encoding*/>.ret;
   let Src0RC64 = getVOP3SrcForVT<Src0VT, 1 /*IsTrue16*/>.ret;
@@ -2723,23 +3191,42 @@ class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1 /*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1 /*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
+#ifdef LLPC_BUILD_NPI
+  let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 1 /*IsFake16*/>.ret;
+  let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 1 /*IsFake16*/>.ret;
+#else /* LLPC_BUILD_NPI */
   let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 1/*IsFake16*/>.ret;
   let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 1/*IsFake16*/>.ret;
+#endif /* LLPC_BUILD_NPI */
 }
 
 def VOP_F16_F16 : VOPProfile<[f16, f16, untyped, untyped]>;
 def VOP_F16_I16 : VOPProfile <[f16, i16, untyped, untyped]>;
 def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
 def VOP_I16_I16 : VOPProfile <[i16, i16, untyped, untyped]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_BF16_BF16 : VOPProfile<[bf16, bf16, untyped, untyped]>;
+def VOP1_I16_I32 :  VOPProfile<[i16, i32, untyped, untyped]>;
+#endif /* LLPC_BUILD_NPI */
 
 def VOP_F16_F16_F16 : VOPProfile <[f16, f16, f16, untyped]>;
 def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
 def VOP_F16_F16_I32 : VOPProfile <[f16, f16, i32, untyped]>;
 def VOP_I16_I16_I16 : VOPProfile <[i16, i16, i16, untyped]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_I16_I16_I32 : VOPProfile <[i16, i16, i32, untyped]>;
+#endif /* LLPC_BUILD_NPI */
 def VOP_I16_I16_I16_ARITH : VOPProfile <[i16, i16, i16, untyped], /*EnableClamp=*/1>;
+#ifdef LLPC_BUILD_NPI
+def VOP_I16_F16_F16 : VOPProfile <[i16, f16, f16, untyped]>;
+def VOP_BF16_BF16_BF16 : VOPProfile <[bf16, bf16, bf16, untyped]>;
+#endif /* LLPC_BUILD_NPI */
 
 def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;
 def VOP_F16_F16_F16_F16 : VOPProfile <[f16, f16, f16, f16, untyped]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_BF16_BF16_BF16_BF16 : VOPProfile <[bf16, bf16, bf16, bf16, untyped]>;
+#endif /* LLPC_BUILD_NPI */
 
 def VOP_I32_I16_I16_I32 : VOPProfile <[i32, i16, i16, i32, untyped]>;
 def VOP_I32_I16 : VOPProfile <[i32, i16, untyped, untyped]>;
@@ -2747,10 +3234,16 @@ def VOP_I16_I32 : VOPProfile <[i16, i32, untyped, untyped]>;
 
 def VOP_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, untyped]>;
 def VOP_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, untyped]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_V2BF16_V2BF16_V2BF16 : VOPProfile <[v2bf16, v2bf16, v2bf16, untyped]>;
+#endif /* LLPC_BUILD_NPI */
 def VOP_B32_F16_F16 : VOPProfile <[i32, f16, f16, untyped]>;
 
 def VOP_V2F16_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, v2f16]>;
 def VOP_V2I16_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, v2i16]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_V2BF16_V2BF16_V2BF16_V2BF16 : VOPProfile <[v2bf16, v2bf16, v2bf16, v2bf16]>;
+#endif /* LLPC_BUILD_NPI */
 def VOP_V2I16_F32_F32 : VOPProfile <[v2i16, f32, f32, untyped]>;
 def VOP_V2I16_I32_I32 : VOPProfile <[v2i16, i32, i32, untyped]>;
 
@@ -2785,10 +3278,76 @@ def VOP_I32_F32_F32 : VOPProfile <[i32, f32, f32, untyped]>;
 def VOP_I32_F32_I32 : VOPProfile <[i32, f32, i32, untyped]>;
 def VOP_I32_I32_I32 : VOPProfile <[i32, i32, i32, untyped]>;
 def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=*/1>;
+#ifdef LLPC_BUILD_NPI
+def VOP_I64_I64_I64_ARITH : VOPProfile <[i64, i64, i64, untyped], /*EnableClamp=*/1>;
+#endif /* LLPC_BUILD_NPI */
 def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_F32_BF16_BF16_BF16 : VOPProfile <[f32, bf16, bf16, bf16]>;
+#endif /* LLPC_BUILD_NPI */
 def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
+def VOP_V32F32_V6I32_F32 : VOPProfile <[v32f32, v6i32, f32, untyped]>;
+def VOP_V32F16_V6I32_F32 : VOPProfile <[v32f16, v6i32, f32, untyped]>;
+def VOP_V32BF16_V6I32_F32 : VOPProfile <[v32bf16, v6i32, f32, untyped]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
+def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
+def VOP_I32_F16_I32 : VOPProfile <[i32, f16, i32, untyped]>;
+def VOP_V32F16_V6I32_I32  : VOPProfile<[v32f16, v6i32, i32, untyped]>;
+def VOP_V32BF16_V6I32_I32 : VOPProfile<[v32bf16, v6i32, i32, untyped]>;
+def VOP_V8F16_V2I32_I32  : VOPProfile<[v8f16, v2i32, i32, untyped]>;
+def VOP_V8BF16_V2I32_I32 : VOPProfile<[v8bf16, v2i32, i32, untyped]>;
+def VOP_V8F16_I32_I32  : VOPProfile<[v8f16, i32, i32, untyped]>;
+def VOP_V8BF16_I32_I32 : VOPProfile<[v8bf16, i32, i32, untyped]>;
+def VOP_V32F32_V6I32_I32 : VOPProfile<[v32f32, v6i32, i32, untyped]>;
+def VOP_V8F32_V2I32_I32 : VOPProfile<[v8f32, v2i32, i32, untyped]>;
+def VOP_V8F32_I32_I32 : VOPProfile<[v8f32, i32, i32, untyped]>;
+#endif /* LLPC_BUILD_NPI */
+def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
+def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_V6I32_V32F32_F32 : VOPProfile<[v6i32, v32f32, f32, untyped]>;
+def VOP_V2I32_V8BF16_F32 : VOPProfile<[v2i32, v8bf16, f32, untyped]>;
+def VOP_V2I32_V8F16_F32 : VOPProfile<[v2i32, v8f16, f32, untyped]>;
+def VOP_V2I32_V8F32_F32 : VOPProfile<[v2i32, v8f32, f32, untyped]>;
+def VOP_I32_V8F32_F32 : VOPProfile<[i32, v8f32, f32, untyped]>;
+def VOP_I32_V8F16_F32 : VOPProfile<[i32, v8f16, f32, untyped]>;
+def VOP_I32_V8BF16_F32 : VOPProfile<[i32, v8bf16, f32, untyped]>;
+def VOP_V6I32_V32F16_I32_F32 : VOPProfile<[v6i32, v32f16, i32, f32]>;
+def VOP_V6I32_V32BF16_I32_F32 : VOPProfile<[v6i32, v32bf16, i32, f32]>;
+def VOP_V6I32_V32F32_I32_F32 : VOPProfile<[v6i32, v32f32, i32, f32]>;
+def VOP_V2I32_V8BF16_I32_F32 : VOPProfile<[v2i32, v8bf16, i32, f32]>;
+def VOP_V2I32_V8F16_I32_F32 : VOPProfile<[v2i32, v8f16, i32, f32]>;
+def VOP_V2I32_V8F32_I32_F32 : VOPProfile<[v2i32, v8f32, i32, f32]>;
+def VOP_I32_V8F32_I32_F32 : VOPProfile<[i32, v8f32, i32, f32]>;
+def VOP_I32_V8F16_I32_F32 : VOPProfile<[i32, v8f16, i32, f32]>;
+def VOP_I32_V8BF16_I32_F32 : VOPProfile<[i32, v8bf16, i32, f32]>;
+#endif /* LLPC_BUILD_NPI */
+def VOP_V6I32_V16F32_V16F32_F32 : VOPProfile<[v6i32, v16f32, v16f32, f32]>;
+def VOP_V2F16_I32_F32 : VOPProfile<[v2f16, i32, f32, untyped]>;
+def VOP_V2I16_F32_F32_F32 : VOPProfile<[v2i16, f32, f32, f32]>;
+def VOP_V2I16_V2F16_F32 : VOPProfile<[v2i16, v2f16, f32, untyped]>;
+def VOP_V2I16_V2BF16_F32 : VOPProfile<[v2i16, v2bf16, f32, untyped]>;
+def VOP_I32_F32_F32_F32 : VOPProfile<[i32, f32, f32, f32]>;
+#ifdef LLPC_BUILD_NPI
+def VOP_I32_V2F32_I32_F32 : VOPProfile<[i32, v2f32, i32, f32]>;
+#endif /* LLPC_BUILD_NPI */
+def VOP_I32_V2F16_F32_F32 : VOPProfile<[i32, v2f16, f32, f32]>;
+def VOP_I32_V2BF16_F32_F32: VOPProfile<[i32, v2bf16, f32, f32]>;
+def VOP_BF16_F32_I32 : VOPProfile<[bf16, f32, i32, untyped]>;
+def VOP_F16_F32_I32 : VOPProfile<[f16, f32, i32, untyped]>;
+def VOP_I32_BF16_I32_F32 : VOPProfile<[i32, bf16, i32, f32]>;
+def VOP_I32_F16_I32_F32 : VOPProfile<[i32, f16, i32, f32]>;
+def VOP_I32_F32_I32_F32 : VOPProfile<[i32, f32, i32, f32]>;
 
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+def VOP_V6I32_V32BF16_I32_F32 : VOPProfile<[v6i32, v32bf16, i32, f32]>;
+def VOP_V6I32_V32F16_I32_F32 : VOPProfile<[v6i32, v32f16, i32, f32]>;
+def VOP_V6I32_V32F32_I32_F32 : VOPProfile<[v6i32, v32f32, i32, f32]>;
+
+#endif /* LLPC_BUILD_NPI */
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
 def VOP_I64_I64_I64 : VOPProfile <[i64, i64, i64, untyped]>;
@@ -2803,6 +3362,7 @@ def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
 def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 def VOP_I64_I64_I32_I64 : VOPProfile <[i64, i64, i32, i64]>;
 def VOP_V4I32_I64_I32_V4I32 : VOPProfile <[v4i32, i64, i32, v4i32]>;
+def VOP_I16_I32_I32_I32 : VOPProfile <[i16, i32, i32, i32]>;
 
 def VOP_F32_V2F16_V2F16_F32 : VOPProfile <[f32, v2f16, v2f16, f32]>;
 def VOP_I32_V2I16_V2I16_I32 : VOPProfile <[i32, v2i16, v2i16, i32]>;
@@ -2838,17 +3398,51 @@ def VOP_V4F32_I64_I64_V4F32       : VOPProfile <[v4f32,  i64,   i64,   v4f32]>;
 def VOP_V16F32_I64_I64_V16F32     : VOPProfile <[v16f32, i64,   i64,   v16f32]>;
 
 def VOP_V4F32_V4F16_V8F16_I32     : VOPProfile <[v4f32,  v4f16, v8f16, i32]>;
+def VOP_V4F32_V8F16_V16F16_I32    : VOPProfile <[v4f32,  v8f16, v16f16, i32]>;
+def VOP_V4F32_V8BF16_V16BF16_I32  : VOPProfile <[v4f32,  v8bf16, v16bf16, i32]>;
 def VOP_V16F32_V4F16_V8F16_I32    : VOPProfile <[v16f32, v4f16, v8f16, i32]>;
+def VOP_V16F32_V8F16_V16F16_I32   : VOPProfile <[v16f32, v8f16, v16f16, i32]>;
+def VOP_V16F32_V8BF16_V16BF16_I32 : VOPProfile <[v16f32, v8bf16, v16bf16, i32]>;
 def VOP_V4F32_V4I16_V8I16_I32     : VOPProfile <[v4f32,  v4i16, v8i16, i32]>;
 def VOP_V16F32_V4I16_V8I16_I32    : VOPProfile <[v16f32, v4i16, v8i16, i32]>;
 def VOP_V4I32_V2I32_V4I32_I32     : VOPProfile <[v4i32,  v2i32, v4i32, i32]>;
 def VOP_V16I32_V2I32_V4I32_I32    : VOPProfile <[v16i32, v2i32, v4i32, i32]>;
 def VOP_V4F32_V2I32_V4I32_I32     : VOPProfile <[v4f32,  v2i32, v4i32, i32]>;
 def VOP_V16F32_V2I32_V4I32_I32    : VOPProfile <[v16f32, v2i32, v4i32, i32]>;
+def VOP_V4I32_V4I32_V8I32_I32     : VOPProfile <[v4i32,  v4i32, v8i32, i32]>;
+def VOP_V16I32_V4I32_V8I32_I32    : VOPProfile <[v16i32, v4i32, v8i32, i32]>;
+def VOP_V4F32_V4I32_V8I32_I32     : VOPProfile <[v4f32, v4i32, v8i32, i32]>;
+def VOP_V16F32_V4I32_V8I32_I32    : VOPProfile <[v16f32, v4i32, v8i32, i32]>;
 
 def VOP_V4F32_V8F16_V8F16_V4F32   : VOPProfile <[v4f32,  v8f16, v8f16, v4f32]>;
 def VOP_V16F32_V8F16_V8F16_V16F32 : VOPProfile <[v16f32, v8f16, v8f16, v16f32]>;
 def VOP_V16F32_V8BF16_V8BF16_V16F32 : VOPProfile <[v16f32, v8bf16, v8bf16, v16f32]>;
+def VOP_V4F32_V8BF16_V8BF16_V4F32 : VOPProfile <[v4f32, v8bf16, v8bf16, v4f32]>;
+def VOP_V4F32_V8I32_V8I32_V4F32   : VOPProfile <[v4f32,  v8i32, v8i32, v4f32]>;
+
+def VOP_V4F32_V8I32_V6I32_V4F32   : VOPProfile <[v4f32,  v8i32, v6i32, v4f32]>;
+def VOP_V4F32_V6I32_V8I32_V4F32   : VOPProfile <[v4f32,  v6i32, v8i32, v4f32]>;
+def VOP_V4F32_V6I32_V6I32_V4F32   : VOPProfile <[v4f32,  v6i32, v6i32, v4f32]>;
+
+def VOP_V4F32_V8I32_V4I32_V4F32   : VOPProfile <[v4f32,  v8i32, v4i32, v4f32]>;
+def VOP_V4F32_V4I32_V8I32_V4F32   : VOPProfile <[v4f32,  v4i32, v8i32, v4f32]>;
+def VOP_V4F32_V6I32_V4I32_V4F32   : VOPProfile <[v4f32,  v6i32, v4i32, v4f32]>;
+def VOP_V4F32_V4I32_V6I32_V4F32   : VOPProfile <[v4f32,  v4i32, v6i32, v4f32]>;
+def VOP_V4F32_V4I32_V4I32_V4F32   : VOPProfile <[v4f32,  v4i32, v4i32, v4f32]>;
+
+def VOP_V16F32_V8I32_V8I32_V16F32   : VOPProfile <[v16f32, v8i32, v8i32, v16f32]>;
+def VOP_V16F32_V8I32_V6I32_V16F32   : VOPProfile <[v16f32, v8i32, v6i32, v16f32]>;
+def VOP_V16F32_V6I32_V8I32_V16F32   : VOPProfile <[v16f32, v6i32, v8i32, v16f32]>;
+def VOP_V16F32_V6I32_V6I32_V16F32   : VOPProfile <[v16f32, v6i32, v6i32, v16f32]>;
+
+def VOP_V16F32_V8I32_V4I32_V16F32   : VOPProfile <[v16f32, v8i32, v4i32, v16f32]>;
+def VOP_V16F32_V4I32_V8I32_V16F32   : VOPProfile <[v16f32, v4i32, v8i32, v16f32]>;
+def VOP_V16F32_V6I32_V4I32_V16F32   : VOPProfile <[v16f32, v6i32, v4i32, v16f32]>;
+def VOP_V16F32_V4I32_V6I32_V16F32   : VOPProfile <[v16f32, v4i32, v6i32, v16f32]>;
+def VOP_V16F32_V4I32_V4I32_V16F32   : VOPProfile <[v16f32, v4i32, v4i32, v16f32]>;
+
+def VOP_V4I32_V4I32_V4I32_V4I32     : VOPProfile <[v4i32,  v4i32, v4i32, v4i32]>;
+def VOP_V16I32_V4I32_V4I32_V16I32   : VOPProfile <[v16i32,  v4i32, v4i32, v16i32]>;
 
 
 class Commutable_REV <string revOp, bit isOrig> {
@@ -2998,7 +3592,13 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
+#ifdef LLPC_BUILD_NPI
+                   [!cast<string>(SIEncodingFamily.GFX12)],
+                   [!cast<string>(SIEncodingFamily.GFX1210)],
+                   [!cast<string>(SIEncodingFamily.GFX13)]];
+#else /* LLPC_BUILD_NPI */
                    [!cast<string>(SIEncodingFamily.GFX12)]];
+#endif /* LLPC_BUILD_NPI */
 }
 
 // Get equivalent SOPK instruction.
@@ -3112,6 +3712,25 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ValueCols = [["1"]];
 }
 
+// Map encoded mfma(_scale)?_f8f6f4 instructions depending on the
+// number of registers required for the used format.
+def getMFMA_F8F6F4_WithSize : GenericTable {
+  let FilterClass = "MFMA_F8F6F4_WithSizeTable";
+  let CppTypeName = "MFMA_F8F6F4_Info";
+  let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
+  let PrimaryKey = [ "NumRegsSrcA", "NumRegsSrcB", "F8F8Opcode" ];
+  let PrimaryKeyName = "getMFMA_F8F6F4_InstWithNumRegs" ;
+}
+
+def isMFMA_F8F6F4Table : GenericTable {
+  let FilterClass = "MFMA_F8F6F4_WithSizeTable";
+  let CppTypeName = "MFMA_F8F6F4_Info";
+//  let Fields = [ "Opcode" ];
+  let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
+  let PrimaryKey = [ "Opcode" ];
+  let PrimaryKeyName = "isMFMA_F8F6F4" ;
+}
+
 def FP8DstByteSelTable : GenericTable {
   let FilterClass = "VOP3_Pseudo";
   let CppTypeName = "FP8DstByteSelInfo";
@@ -3124,7 +3743,11 @@ def FP8DstByteSelTable : GenericTable {
 def VOPDComponentTable : GenericTable {
   let FilterClass = "VOPD_Component";
   let CppTypeName = "VOPDComponentInfo";
+#ifdef LLPC_BUILD_NPI
+  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX", "CanBeVOPD3X"];
+#else /* LLPC_BUILD_NPI */
   let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX"];
+#endif /* LLPC_BUILD_NPI */
   let PrimaryKey = ["BaseVOP"];
   let PrimaryKeyName = "getVOPDComponentHelper";
 }
@@ -3137,14 +3760,22 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
+#ifdef LLPC_BUILD_NPI
+  let Fields = ["Opcode", "OpX", "OpY", "SubTgt", "VOPD3"];
+#else /* LLPC_BUILD_NPI */
   let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
+#endif /* LLPC_BUILD_NPI */
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
+#ifdef LLPC_BUILD_NPI
+  let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
+#else /* LLPC_BUILD_NPI */
   let Key = ["OpX", "OpY", "SubTgt"];
+#endif /* LLPC_BUILD_NPI */
 }
 
 include "SIInstructions.td"

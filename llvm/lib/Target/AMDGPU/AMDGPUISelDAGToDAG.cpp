@@ -11,8 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 #include "AMDGPUISelDAGToDAG.h"
+#endif /* LLPC_BUILD_NPI */
 #include "AMDGPU.h"
+#if LLPC_BUILD_NPI
+#include "AMDGPUISelDAGToDAG.h"
+#endif /* LLPC_BUILD_NPI */
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
@@ -408,7 +414,8 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0LDSInit(SDNode *N) const {
   unsigned AS = cast<MemSDNode>(N)->getAddressSpace();
   if (AS == AMDGPUAS::LOCAL_ADDRESS) {
     if (Subtarget->ldsRequiresM0Init())
-      return glueCopyToM0(N, CurDAG->getTargetConstant(-1, SDLoc(N), MVT::i32));
+      return glueCopyToM0(
+          N, CurDAG->getSignedTargetConstant(-1, SDLoc(N), MVT::i32));
   } else if (AS == AMDGPUAS::REGION_ADDRESS) {
     MachineFunction &MF = CurDAG->getMachineFunction();
     unsigned Value = MF.getInfo<SIMachineFunctionInfo>()->getGDSSize();
@@ -447,6 +454,38 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     return;
   }
 
+#if LLPC_BUILD_NPI
+  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
+               Triple::amdgcn;
+  if (IsGCN && Subtarget->has64BitLiterals() && VT.getSizeInBits() == 64 &&
+      CurDAG->isConstantValueOfAnyType(SDValue(N, 0))) {
+    uint64_t C = 0;
+    bool AllConst = true;
+    unsigned EltSize = EltVT.getSizeInBits();
+    for (unsigned I = 0; I < NumVectorElts; ++I) {
+      SDValue Op = N->getOperand(I);
+      if (Op.isUndef()) {
+        AllConst = false;
+        break;
+      }
+      uint64_t Val;
+      if (ConstantFPSDNode *CF = dyn_cast<ConstantFPSDNode>(Op)) {
+        Val = CF->getValueAPF().bitcastToAPInt().getZExtValue();
+      } else
+        Val = cast<ConstantSDNode>(Op)->getZExtValue();
+      C |= Val << (EltSize * I);
+    }
+    if (AllConst) {
+      SDValue CV = CurDAG->getTargetConstant(C, DL, MVT::i64);
+      MachineSDNode *Copy = CurDAG->getMachineNode(AMDGPU::S_MOV_B64_IMM_PSEUDO,
+                                                   DL, VT, CV);
+      CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, VT, SDValue(Copy, 0),
+                           RegClass);
+      return;
+    }
+  }
+
+#endif /* LLPC_BUILD_NPI */
   assert(NumVectorElts <= 32 && "Vectors with more than 32 elements not "
                                   "supported yet");
   // 32 = Max Num Vector Elements
@@ -454,8 +493,11 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   // 1 = Vector Register Class
   SmallVector<SDValue, 32 * 2 + 1> RegSeqArgs(NumVectorElts * 2 + 1);
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
                Triple::amdgcn;
+#endif /* LLPC_BUILD_NPI */
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
@@ -585,7 +627,12 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::Constant:
   case ISD::ConstantFP: {
+#if LLPC_BUILD_NPI
+    if (N->getValueType(0).getSizeInBits() != 64 || isInlineImmediate(N) ||
+        Subtarget->has64BitLiterals())
+#else /* LLPC_BUILD_NPI */
     if (N->getValueType(0).getSizeInBits() != 64 || isInlineImmediate(N))
+#endif /* LLPC_BUILD_NPI */
       break;
 
     uint64_t Imm;
@@ -1018,15 +1065,32 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == AMDGPUISD::MAD_I64_I32;
   unsigned Opc;
+#if LLPC_BUILD_NPI
+  bool UseNoCarry = Subtarget->hasMadU64U32NoCarry() && !N->hasAnyUseOfValue(1);
+#endif /* LLPC_BUILD_NPI */
   if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+#if LLPC_BUILD_NPI
+  else if (UseNoCarry)
+    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
+#endif /* LLPC_BUILD_NPI */
   else
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
 
   SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
   SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2),
                     Clamp };
+#if LLPC_BUILD_NPI
+
+  if (UseNoCarry) {
+    MachineSDNode *Mad = CurDAG->getMachineNode(Opc, SL, MVT::i64, Ops);
+    ReplaceUses(SDValue(N, 0), SDValue(Mad, 0));
+    CurDAG->RemoveDeadNode(N);
+    return;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }
 
@@ -1039,6 +1103,10 @@ void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+#if LLPC_BUILD_NPI
+  else if (Subtarget->hasMadU64U32NoCarry())
+    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
+#endif /* LLPC_BUILD_NPI */
   else
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
 
@@ -1724,7 +1792,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
   }
 
   VAddr = Addr;
-  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i32);
+  Offset = CurDAG->getSignedTargetConstant(OffsetVal, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -1747,9 +1815,23 @@ bool AMDGPUDAGToDAGISel::SelectScratchOffset(SDNode *N, SDValue Addr,
                               SIInstrFlags::FlatScratch);
 }
 
+#if LLPC_BUILD_NPI
+// If this matches *_extend i32:x, return x
+// Otherwise if the value is I32 returns x.
+static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
+                                    const SelectionDAG *DAG) {
+  if (Op.getValueType() == MVT::i32)
+    return Op;
+
+  if (Op.getOpcode() != (IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND) &&
+      Op.getOpcode() != ISD::ANY_EXTEND &&
+      !(DAG->SignBitIsZero(Op) &&
+        Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND)))
+#else /* LLPC_BUILD_NPI */
 // If this matches zero_extend i32:x, return x
 static SDValue matchZExtFromI32(SDValue Op) {
   if (Op.getOpcode() != ISD::ZERO_EXTEND)
+#endif /* LLPC_BUILD_NPI */
     return SDValue();
 
   SDValue ExtSrc = Op.getOperand(0);
@@ -1757,12 +1839,24 @@ static SDValue matchZExtFromI32(SDValue Op) {
 }
 
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
+#if LLPC_BUILD_NPI
+// or (64-bit SGPR base) + (sext vgpr offset) + sext(imm offset)
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
                                            SDValue Addr,
                                            SDValue &SAddr,
                                            SDValue &VOffset,
+#if LLPC_BUILD_NPI
+                                           SDValue &Offset,
+                                           bool &ScaleOffset,
+                                           bool NeedIOffset) const {
+#else /* LLPC_BUILD_NPI */
                                            SDValue &Offset) const {
+#endif /* LLPC_BUILD_NPI */
   int64_t ImmOffset = 0;
+#if LLPC_BUILD_NPI
+  ScaleOffset = false;
+#endif /* LLPC_BUILD_NPI */
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
@@ -1772,8 +1866,14 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
+#if LLPC_BUILD_NPI
+    if (NeedIOffset && TII->isLegalFLATOffset(COffsetVal,
+                                              AMDGPUAS::GLOBAL_ADDRESS,
+                                              SIInstrFlags::FlatGlobal)) {
+#else /* LLPC_BUILD_NPI */
     if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS,
                                SIInstrFlags::FlatGlobal)) {
+#endif /* LLPC_BUILD_NPI */
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent()) {
@@ -1782,11 +1882,24 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
         // saddr + large_offset -> saddr +
         //                         (voffset = large_offset & ~MaxOffset) +
         //                         (large_offset & MaxOffset);
+#if LLPC_BUILD_NPI
+        int64_t SplitImmOffset = 0, RemainderOffset = COffsetVal;
+        if (NeedIOffset) {
+          std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
+              COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
+        }
+#else /* LLPC_BUILD_NPI */
         int64_t SplitImmOffset, RemainderOffset;
         std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
             COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+        if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
+                                            : isUInt<32>(RemainderOffset)) {
+#else /* LLPC_BUILD_NPI */
         if (isUInt<32>(RemainderOffset)) {
+#endif /* LLPC_BUILD_NPI */
           SDNode *VMov = CurDAG->getMachineNode(
               AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
               CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
@@ -1813,30 +1926,84 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   // Match the variable offset.
   if (Addr.getOpcode() == ISD::ADD) {
     LHS = Addr.getOperand(0);
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
     RHS = Addr.getOperand(1);
+#endif /* LLPC_BUILD_NPI */
 
     if (!LHS->isDivergent()) {
+#if LLPC_BUILD_NPI
+      // add (i64 sgpr), (*_extend (i32 vgpr))
+      RHS = Addr.getOperand(1);
+      ScaleOffset = SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
+      if (SDValue ExtRHS =
+              matchExtFromI32orI32(RHS, Subtarget->hasSignedGVSOffset(),
+                                   CurDAG)) {
+#else /* LLPC_BUILD_NPI */
       // add (i64 sgpr), (zero_extend (i32 vgpr))
       if (SDValue ZextRHS = matchZExtFromI32(RHS)) {
+#endif /* LLPC_BUILD_NPI */
         SAddr = LHS;
+#if LLPC_BUILD_NPI
+        VOffset = ExtRHS;
+#else /* LLPC_BUILD_NPI */
         VOffset = ZextRHS;
+#endif /* LLPC_BUILD_NPI */
       }
     }
 
+#if LLPC_BUILD_NPI
+    RHS = Addr.getOperand(1);
+#endif /* LLPC_BUILD_NPI */
     if (!SAddr && !RHS->isDivergent()) {
+#if LLPC_BUILD_NPI
+      // add (*_extend (i32 vgpr)), (i64 sgpr)
+      ScaleOffset = SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
+      if (SDValue ExtLHS =
+              matchExtFromI32orI32(LHS, Subtarget->hasSignedGVSOffset(),
+                                   CurDAG)) {
+#else /* LLPC_BUILD_NPI */
       // add (zero_extend (i32 vgpr)), (i64 sgpr)
       if (SDValue ZextLHS = matchZExtFromI32(LHS)) {
+#endif /* LLPC_BUILD_NPI */
         SAddr = RHS;
+#if LLPC_BUILD_NPI
+        VOffset = ExtLHS;
+#else /* LLPC_BUILD_NPI */
         VOffset = ZextLHS;
+#endif /* LLPC_BUILD_NPI */
       }
     }
 
     if (SAddr) {
+      Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+      return true;
+    }
+  }
+
+#if LLPC_BUILD_NPI
+  if (Subtarget->hasScaleOffset() &&
+      (Addr.getOpcode() == (Subtarget->hasSignedGVSOffset()
+                                ? AMDGPUISD::MAD_I64_I32
+                                : AMDGPUISD::MAD_U64_U32) ||
+       (Addr.getOpcode() == AMDGPUISD::MAD_U64_U32 &&
+        CurDAG->SignBitIsZero(Addr.getOperand(0)))) &&
+      Addr.getOperand(0)->isDivergent() &&
+      isa<ConstantSDNode>(Addr.getOperand(1)) &&
+      !Addr.getOperand(2)->isDivergent()) {
+    // mad_u64_u32 (i32 vgpr), (i32 c), (i64 sgpr)
+    unsigned Size = (unsigned)
+        cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
+    ScaleOffset = Addr.getConstantOperandVal(1) == Size;
+    if (ScaleOffset) {
+      SAddr = Addr.getOperand(2);
+      VOffset = Addr.getOperand(0);
       Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
       return true;
     }
   }
 
+#endif /* LLPC_BUILD_NPI */
   if (Addr->isDivergent() || Addr.getOpcode() == ISD::UNDEF ||
       isa<ConstantSDNode>(Addr))
     return false;
@@ -1848,10 +2015,57 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
       CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, SDLoc(Addr), MVT::i32,
                              CurDAG->getTargetConstant(0, SDLoc(), MVT::i32));
   VOffset = SDValue(VMov, 0);
-  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+  Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
   return true;
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
+                                           SDValue Addr,
+                                           SDValue &SAddr,
+                                           SDValue &VOffset,
+                                           SDValue &Offset,
+                                           SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrGLC(SDNode *N,
+                                              SDValue Addr,
+                                              SDValue &SAddr,
+                                              SDValue &VOffset,
+                                              SDValue &Offset,
+                                              SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset))
+    return false;
+
+  unsigned CPolVal = (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | AMDGPU::CPol::GLC;
+  CPol = CurDAG->getTargetConstant(CPolVal, SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffset(SDNode *N,
+                                                    SDValue Addr,
+                                                    SDValue &SAddr,
+                                                    SDValue &VOffset,
+                                                    SDValue &Offset,
+                                                    SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset, false))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(), MVT::i32);
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
   if (auto *FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
     SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
@@ -1903,13 +2117,13 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
     SDValue AddOffset =
         SAddr.getOpcode() == ISD::TargetFrameIndex
             ? getMaterializedScalarImm32(Lo_32(RemainderOffset), DL)
-            : CurDAG->getTargetConstant(RemainderOffset, DL, MVT::i32);
+            : CurDAG->getSignedTargetConstant(RemainderOffset, DL, MVT::i32);
     SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_I32, DL, MVT::i32,
                                            SAddr, AddOffset),
                     0);
   }
 
-  Offset = CurDAG->getTargetConstant(COffsetVal, DL, MVT::i32);
+  Offset = CurDAG->getSignedTargetConstant(COffsetVal, DL, MVT::i32);
 
   return true;
 }
@@ -1934,7 +2148,12 @@ bool AMDGPUDAGToDAGISel::checkFlatScratchSVSSwizzleBug(
 
 bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
                                              SDValue &VAddr, SDValue &SAddr,
+#if LLPC_BUILD_NPI
+                                             SDValue &Offset,
+                                             SDValue &CPol) const  {
+#else /* LLPC_BUILD_NPI */
                                              SDValue &Offset) const  {
+#endif /* LLPC_BUILD_NPI */
   int64_t ImmOffset = 0;
 
   SDValue LHS, RHS;
@@ -1965,6 +2184,9 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
         if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, SplitImmOffset))
           return false;
         Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i32);
+#if LLPC_BUILD_NPI
+        CPol = CurDAG->getTargetConstant(0, SDLoc(), MVT::i32);
+#endif /* LLPC_BUILD_NPI */
         return true;
       }
     }
@@ -1998,6 +2220,12 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     return false;
   SAddr = SelectSAddrFI(CurDAG, SAddr);
   Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+#if LLPC_BUILD_NPI
+
+  bool ScaleOffset = SelectScaleOffset(N, VAddr, true /* IsSigned */);
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(), MVT::i32);
+#endif /* LLPC_BUILD_NPI */
   return true;
 }
 
@@ -2018,17 +2246,73 @@ bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
   return true;
 }
 
+#if LLPC_BUILD_NPI
+// Given \p Offset and load node \p N check if an \p Offset is a multiple of
+// the load byte size. If it is update \p Offset to a pre-scaled value and
+// return true.
+bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N,
+                                           SDValue &Offset,
+                                           bool IsSigned) const {
+  bool ScaleOffset = false;
+  if (!Subtarget->hasScaleOffset() || !Offset)
+    return false;
+
+  unsigned Size = (unsigned)
+      cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
+
+  SDValue Off = Offset;
+  if (SDValue Ext = matchExtFromI32orI32(Offset, IsSigned, CurDAG))
+    Off = Ext;
+
+  if (isPowerOf2_32(Size) && Off.getOpcode() == ISD::SHL) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Off.getOperand(1)))
+      ScaleOffset = C->getZExtValue() == Log2_32(Size);
+  } else if (Offset.getOpcode() == ISD::MUL ||
+             (IsSigned && Offset.getOpcode() == AMDGPUISD::MUL_I24) ||
+             Offset.getOpcode() == AMDGPUISD::MUL_U24 ||
+             (Offset.isMachineOpcode() &&
+              Offset.getMachineOpcode() ==
+                  (IsSigned ? AMDGPU::S_MUL_I64_I32_PSEUDO
+                            : AMDGPU::S_MUL_U64_U32_PSEUDO))) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Offset.getOperand(1)))
+      ScaleOffset = C->getZExtValue() == Size;
+  }
+
+  if (ScaleOffset)
+    Offset = Off.getOperand(0);
+
+  return ScaleOffset;
+}
+
+#endif /* LLPC_BUILD_NPI */
 // Match an immediate (if Offset is not null) or an SGPR (if SOffset is
 // not null) offset. If Imm32Only is true, match only 32-bit immediate
 // offsets available on CI.
+#if LLPC_BUILD_NPI
+bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode,
+#else /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
+#endif /* LLPC_BUILD_NPI */
                                           SDValue *SOffset, SDValue *Offset,
                                           bool Imm32Only, bool IsBuffer,
+#if LLPC_BUILD_NPI
+                                          bool HasSOffset, int64_t ImmOffset,
+                                          bool *ScaleOffset) const {
+#else /* LLPC_BUILD_NPI */
                                           bool HasSOffset,
                                           int64_t ImmOffset) const {
+#endif /* LLPC_BUILD_NPI */
   assert((!SOffset || !Offset) &&
          "Cannot match both soffset and offset at the same time!");
 
+#if LLPC_BUILD_NPI
+  if (ScaleOffset) {
+    assert(N && SOffset);
+
+    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode, false /* IsSigned */);
+  }
+
+#endif /* LLPC_BUILD_NPI */
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);
   if (!C) {
     if (!SOffset)
@@ -2058,7 +2342,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
   std::optional<int64_t> EncodedOffset = AMDGPU::getSMRDEncodedOffset(
       *Subtarget, ByteOffset, IsBuffer, HasSOffset);
   if (EncodedOffset && Offset && !Imm32Only) {
-    *Offset = CurDAG->getTargetConstant(*EncodedOffset, SL, MVT::i32);
+    *Offset = CurDAG->getSignedTargetConstant(*EncodedOffset, SL, MVT::i32);
     return true;
   }
 
@@ -2113,24 +2397,46 @@ SDValue AMDGPUDAGToDAGISel::Expand32BitAddress(SDValue Addr) const {
 // Match a base and an immediate (if Offset is not null) or an SGPR (if
 // SOffset is not null) or an immediate+SGPR offset. If Imm32Only is
 // true, match only 32-bit immediate offsets available on CI.
+#if LLPC_BUILD_NPI
+bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDNode *N, SDValue Addr,
+                                              SDValue &SBase, SDValue *SOffset,
+                                              SDValue *Offset,
+                                              bool Imm32Only,
+                                              bool IsBuffer,
+#else /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
                                               SDValue *SOffset, SDValue *Offset,
                                               bool Imm32Only, bool IsBuffer,
+#endif /* LLPC_BUILD_NPI */
                                               bool HasSOffset,
+#if LLPC_BUILD_NPI
+                                              int64_t ImmOffset,
+                                              bool *ScaleOffset) const {
+#else /* LLPC_BUILD_NPI */
                                               int64_t ImmOffset) const {
+#endif /* LLPC_BUILD_NPI */
   if (SOffset && Offset) {
     assert(!Imm32Only && !IsBuffer);
     SDValue B;
 
+#if LLPC_BUILD_NPI
+    if (!SelectSMRDBaseOffset(N, Addr, B, nullptr, Offset, false, false, true))
+#else /* LLPC_BUILD_NPI */
     if (!SelectSMRDBaseOffset(Addr, B, nullptr, Offset, false, false, true))
+#endif /* LLPC_BUILD_NPI */
       return false;
 
     int64_t ImmOff = 0;
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(*Offset))
       ImmOff = C->getSExtValue();
 
+#if LLPC_BUILD_NPI
+    return SelectSMRDBaseOffset(N, B, SBase, SOffset, nullptr, false, false,
+                                true, ImmOff, ScaleOffset);
+#else /* LLPC_BUILD_NPI */
     return SelectSMRDBaseOffset(B, SBase, SOffset, nullptr, false, false, true,
                                 ImmOff);
+#endif /* LLPC_BUILD_NPI */
   }
 
   // A 32-bit (address + offset) should not cause unsigned 32-bit integer
@@ -2150,23 +2456,44 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
   if (!N0 || !N1)
     return false;
 
+#if LLPC_BUILD_NPI
+  if (SelectSMRDOffset(N, N1, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
+                       ImmOffset, ScaleOffset)) {
+#else /* LLPC_BUILD_NPI */
   if (SelectSMRDOffset(N1, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
                        ImmOffset)) {
+#endif /* LLPC_BUILD_NPI */
     SBase = N0;
     return true;
   }
+#if LLPC_BUILD_NPI
+  if (SelectSMRDOffset(N, N0, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
+                       ImmOffset, ScaleOffset)) {
+#else /* LLPC_BUILD_NPI */
   if (SelectSMRDOffset(N0, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
                        ImmOffset)) {
+#endif /* LLPC_BUILD_NPI */
     SBase = N1;
     return true;
   }
   return false;
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPUDAGToDAGISel::SelectSMRD(SDNode *N, SDValue Addr, SDValue &SBase,
+#else /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
+#endif /* LLPC_BUILD_NPI */
                                     SDValue *SOffset, SDValue *Offset,
+#if LLPC_BUILD_NPI
+                                    bool Imm32Only, bool *ScaleOffset) const {
+  if (SelectSMRDBaseOffset(N, Addr, SBase, SOffset, Offset, Imm32Only,
+                           /* IsBuffer */ false, /* HasSOffset */ false,
+                           /* ImmOffset */ 0, ScaleOffset)) {
+#else /* LLPC_BUILD_NPI */
                                     bool Imm32Only) const {
   if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only)) {
+#endif /* LLPC_BUILD_NPI */
     SBase = Expand32BitAddress(SBase);
     return true;
   }
@@ -2182,36 +2509,84 @@ bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
 
 bool AMDGPUDAGToDAGISel::SelectSMRDImm(SDValue Addr, SDValue &SBase,
                                        SDValue &Offset) const {
+#if LLPC_BUILD_NPI
+  return SelectSMRD(/* N */ nullptr, Addr, SBase, /* SOffset */ nullptr,
+                    &Offset);
+#else /* LLPC_BUILD_NPI */
   return SelectSMRD(Addr, SBase, /* SOffset */ nullptr, &Offset);
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDImm32(SDValue Addr, SDValue &SBase,
                                          SDValue &Offset) const {
   assert(Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
+#if LLPC_BUILD_NPI
+  return SelectSMRD(/* N */ nullptr, Addr, SBase, /* SOffset */ nullptr,
+                    &Offset, /* Imm32Only */ true);
+#else /* LLPC_BUILD_NPI */
   return SelectSMRD(Addr, SBase, /* SOffset */ nullptr, &Offset,
                     /* Imm32Only */ true);
+#endif /* LLPC_BUILD_NPI */
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPUDAGToDAGISel::SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase,
+                                        SDValue &SOffset, SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectSMRD(N, Addr, SBase, &SOffset, /* Offset */ nullptr,
+      /* Imm32Only */ false, &ScaleOffset))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(N), MVT::i32);
+  return true;
+#else /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectSMRDSgpr(SDValue Addr, SDValue &SBase,
                                         SDValue &SOffset) const {
   return SelectSMRD(Addr, SBase, &SOffset, /* Offset */ nullptr);
+#endif /* LLPC_BUILD_NPI */
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPUDAGToDAGISel::SelectSMRDSgprImm(SDNode *N, SDValue Addr,
+                                           SDValue &SBase,
+#else /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectSMRDSgprImm(SDValue Addr, SDValue &SBase,
+#endif /* LLPC_BUILD_NPI */
                                            SDValue &SOffset,
+#if LLPC_BUILD_NPI
+                                           SDValue &Offset,
+                                           SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectSMRD(N, Addr, SBase, &SOffset, &Offset, false, &ScaleOffset))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(N), MVT::i32);
+  return true;
+#else /* LLPC_BUILD_NPI */
                                            SDValue &Offset) const {
   return SelectSMRD(Addr, SBase, &SOffset, &Offset);
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDBufferImm(SDValue N, SDValue &Offset) const {
+#if LLPC_BUILD_NPI
+  return SelectSMRDOffset(/* N */ nullptr, N, /* SOffset */ nullptr, &Offset,
+#else /* LLPC_BUILD_NPI */
   return SelectSMRDOffset(N, /* SOffset */ nullptr, &Offset,
+#endif /* LLPC_BUILD_NPI */
                           /* Imm32Only */ false, /* IsBuffer */ true);
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDBufferImm32(SDValue N,
                                                SDValue &Offset) const {
   assert(Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
+#if LLPC_BUILD_NPI
+  return SelectSMRDOffset(/* N */ nullptr, N, /* SOffset */ nullptr, &Offset,
+#else /* LLPC_BUILD_NPI */
   return SelectSMRDOffset(N, /* SOffset */ nullptr, &Offset,
+#endif /* LLPC_BUILD_NPI */
                           /* Imm32Only */ true, /* IsBuffer */ true);
 }
 
@@ -2220,9 +2595,15 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
   // Match the (soffset + offset) pair as a 32-bit register base and
   // an immediate offset.
   return N.getValueType() == MVT::i32 &&
+#if LLPC_BUILD_NPI
+         SelectSMRDBaseOffset(/* N */ nullptr, N, /* SBase */ SOffset,
+                              /* SOffset*/ nullptr, &Offset,
+                              /* Imm32Only */ false, /* IsBuffer */ true);
+#else /* LLPC_BUILD_NPI */
          SelectSMRDBaseOffset(N, /* SBase */ SOffset, /* SOffset*/ nullptr,
                               &Offset, /* Imm32Only */ false,
                               /* IsBuffer */ true);
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,
@@ -2569,8 +2950,25 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
 
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
+#if LLPC_BUILD_NPI
+void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
+  unsigned Opc;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP1_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP2_RTN_B64;
+    break;
+  }
+#else /* LLPC_BUILD_NPI */
 void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N) {
   unsigned Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
+#endif /* LLPC_BUILD_NPI */
   SDValue Ops[] = {N->getOperand(2), N->getOperand(3), N->getOperand(4),
                    N->getOperand(5), N->getOperand(0)};
 
@@ -2723,6 +3121,427 @@ void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
   CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), SDValue(InterpP1LV, 0));
 }
 
+#if LLPC_BUILD_NPI
+enum class Shape {
+  Pixel_4x2,
+  Pixel_4x4,
+  Pixel_8x4,
+};
+
+static Shape getPixelShape(uint64_t Val) {
+  // TODO-GFX13: Extract proper pixel shape bits from aux_mod argument.
+  return (Shape)(Val >> 1);
+}
+
+// TODO-GFX13: Move to tablegen?
+void AMDGPUDAGToDAGISel::SelectCvtTensor(SDNode *N, unsigned IntrID) {
+
+  Shape shape =
+      getPixelShape(cast<ConstantSDNode>(N->getOperand(2))->getZExtValue());
+
+  int Opc = -1;
+  switch (IntrID) {
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I4_BF16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U4_BF16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I8_BF16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U8_BF16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_FP8_BF16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF8_BF16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_F16_BF16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_F32_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_F32_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_F32_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_F16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_F16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_F16_8x4;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter4:
+    switch (shape) {
+    case Shape::Pixel_4x2:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_BF16_4x2;
+      break;
+    case Shape::Pixel_4x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_BF16_4x4;
+      break;
+    case Shape::Pixel_8x4:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_BF16_BF16_8x4;
+      break;
+    }
+    break;
+  }
+
+  if (Opc == -1) {
+    SelectCode(N); // Emit default error
+    return;
+  }
+
+  SDLoc SL(N);
+  SmallVector<SDValue> Ops;
+  for (unsigned i = 1, numop = N->getNumOperands(); i < numop; ++i)
+    Ops.push_back(N->getOperand(i));
+  Ops.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // idxs
+
+  CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+}
+
+#endif /* LLPC_BUILD_NPI */
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(1);
   switch (IntrID) {
@@ -2734,7 +3553,14 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
     return;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
+    SelectDSBvhStackIntrinsic(N, IntrID);
+#else /* LLPC_BUILD_NPI */
     SelectDSBvhStackIntrinsic(N);
+#endif /* LLPC_BUILD_NPI */
     return;
   case Intrinsic::amdgcn_init_whole_wave:
     CurDAG->getMachineFunction()
@@ -2777,6 +3603,107 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;
+  case Intrinsic::amdgcn_permlane16_swap:
+  case Intrinsic::amdgcn_permlane32_swap: {
+    if ((IntrID == Intrinsic::amdgcn_permlane16_swap &&
+         !Subtarget->hasPermlane16Swap()) ||
+        (IntrID == Intrinsic::amdgcn_permlane32_swap &&
+         !Subtarget->hasPermlane32Swap())) {
+      SelectCode(N); // Hit the default error
+      return;
+    }
+
+    Opcode = IntrID == Intrinsic::amdgcn_permlane16_swap
+                 ? AMDGPU::V_PERMLANE16_SWAP_B32_e64
+                 : AMDGPU::V_PERMLANE32_SWAP_B32_e64;
+
+    SmallVector<SDValue, 4> NewOps(N->op_begin() + 1, N->op_end());
+    if (ConvGlueNode)
+      NewOps.push_back(SDValue(ConvGlueNode, 0));
+
+    bool FI = N->getConstantOperandVal(3);
+    NewOps[2] = CurDAG->getTargetConstant(
+        FI ? AMDGPU::DPP::DPP_FI_1 : AMDGPU::DPP::DPP_FI_0, SDLoc(), MVT::i32);
+
+    CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), NewOps);
+    return;
+  }
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter4:
+    SelectCvtTensor(N, IntrID);
+    return;
+#endif /* LLPC_BUILD_NPI */
   default:
     SelectCode(N);
     break;
@@ -3086,6 +4013,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
   return SelectVOP3PMods(In, Src, SrcMods, true);
 }
 
+#if LLPC_BUILD_NPI
+// Select neg_lo from the i1 immediate operand.
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
@@ -3101,6 +4031,49 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
   return true;
 }
 
+#if LLPC_BUILD_NPI
+// Select both neg_lo and neg_hi from the i1 immediate operand. This is specifically
+// for F16/BF16 operands in WMMA instructions, where neg_lo applies to matrix's even
+// k elements, and neg_hi applies to matrix's odd k elements.
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegs(SDValue In, SDValue &Src) const {
+  const ConstantSDNode *C = cast<ConstantSDNode>(In);
+  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
+  // 1 promotes packed values to signed, 0 treats them as unsigned.
+  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
+
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  unsigned SrcSign = C->getZExtValue();
+  if (SrcSign == 1)
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+
+  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+// Select neg, abs, or both neg and abs from the i16 immediate operans.
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const {
+  const ConstantSDNode *C = cast<ConstantSDNode>(In);
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  unsigned SrcMod = C->getZExtValue();
+  switch (SrcMod) {
+  default: // Any other value will be silently ignored (considered as 0).
+    break;
+  case 1:
+    Mods ^= SISrcMods::NEG;
+    break;
+  case 2:
+    Mods ^= SISrcMods::ABS;
+    break;
+  case 3:
+    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
+    break;
+  }
+
+  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
                                                   SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
@@ -3355,17 +4328,31 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
 }
 
 bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
+#if LLPC_BUILD_NPI
+  bool OnlyZeroAllowed = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13;
+
+#endif /* LLPC_BUILD_NPI */
   if (auto *BV = dyn_cast<BuildVectorSDNode>(In)) {
     BitVector UndefElements;
     if (SDValue Splat = BV->getSplatValue(&UndefElements))
       if (isInlineImmediate(Splat.getNode())) {
         if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat)) {
           unsigned Imm = C->getAPIntValue().getSExtValue();
+#if LLPC_BUILD_NPI
+          if (OnlyZeroAllowed && Imm != 0)
+            return false;
+
+#endif /* LLPC_BUILD_NPI */
           Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
           return true;
         }
         if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat)) {
           unsigned Imm = C->getValueAPF().bitcastToAPInt().getSExtValue();
+#if LLPC_BUILD_NPI
+          if (OnlyZeroAllowed && Imm != 0)
+            return false;
+
+#endif /* LLPC_BUILD_NPI */
           Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
           return true;
         }
@@ -3388,21 +4375,40 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
             RawValue = C->getAPIntValue();
 
           if (RawValue.has_value()) {
+#if LLPC_BUILD_NPI
+            APInt Val = RawValue.value();
+            if (OnlyZeroAllowed && !Val.isZero())
+              return false;
+
+#endif /* LLPC_BUILD_NPI */
             EVT VT = In.getValueType().getScalarType();
             if (VT.getSimpleVT() == MVT::f16 || VT.getSimpleVT() == MVT::bf16) {
               APFloat FloatVal(VT.getSimpleVT() == MVT::f16
                                    ? APFloatBase::IEEEhalf()
                                    : APFloatBase::BFloat(),
+#if LLPC_BUILD_NPI
+                               Val);
+#else /* LLPC_BUILD_NPI */
                                RawValue.value());
+#endif /* LLPC_BUILD_NPI */
               if (TII->isInlineConstant(FloatVal)) {
+#if LLPC_BUILD_NPI
+                Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i16);
+#else /* LLPC_BUILD_NPI */
                 Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
                                                 MVT::i16);
+#endif /* LLPC_BUILD_NPI */
                 return true;
               }
             } else if (VT.getSimpleVT() == MVT::i16) {
+#if LLPC_BUILD_NPI
+              if (TII->isInlineConstant(Val)) {
+                Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i16);
+#else /* LLPC_BUILD_NPI */
               if (TII->isInlineConstant(RawValue.value())) {
                 Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
                                                 MVT::i16);
+#endif /* LLPC_BUILD_NPI */
                 return true;
               }
             } else
@@ -3411,6 +4417,34 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
         }
     }
 
+#if LLPC_BUILD_NPI
+  // Currently f64 immediate vectors are represented as vectors of v2i32, with
+  // different lo and hi 32-bit values even though double values are splated.
+  // So we have to manually compare to determine whether it is splated.
+  if (CurDAG->isConstantIntBuildVectorOrConstantInt(SplatSrc32)) {
+    int64_t Imm64 = 0;
+    for (unsigned i = 0; i < SplatSrc32->getNumOperands(); i += 2) {
+      auto Lo32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i));
+      auto Hi32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i+1));
+      int64_t LoImm = Lo32->getAPIntValue().getSExtValue();
+      int64_t HiImm = Hi32->getAPIntValue().getSExtValue();
+      int64_t Imm64I = (HiImm << 32) + LoImm;
+      if (i == 0) {
+        if (!isInlineImmediate(APInt(64,Imm64I)))
+          return false;
+        Imm64 = Imm64I;
+      } else if (Imm64I != Imm64)
+        return false;
+    } // end for
+
+    if (OnlyZeroAllowed && Imm64 != 0)
+      return false;
+
+    Src = CurDAG->getTargetConstant(Imm64, SDLoc(In), MVT::i64);
+    return true;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
@@ -3466,53 +4500,170 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods(SDValue In, SDValue &Src,
   return SelectVOP3Mods(In, Src, SrcMods);
 }
 
+#if LLPC_BUILD_NPI
+// Match lowered fpext from bf16 to f32. This is a bit operation extending
+// a 16-bit value with 16-bit of zeroes at LSB:
+//
+// 1. (f32 (bitcast (build_vector (i16 0), (i16 (bitcast bf16:val)))))
+// 2. (f32 (bitcast (and i32:val, 0xffff0000))) -> IsExtractHigh = true
+// 3. (f32 (bitcast (shl i32:va, 16) -> IsExtractHigh = false
+static SDValue matchBF16FPExtendLike(SDValue Op, bool &IsExtractHigh) {
+  if (Op.getValueType() != MVT::f32 || Op.getOpcode() != ISD::BITCAST)
+    return SDValue();
+  Op = Op.getOperand(0);
+
+  IsExtractHigh = false;
+  if (Op.getValueType() == MVT::v2i16 && Op.getOpcode() == ISD::BUILD_VECTOR) {
+    auto Low16 = dyn_cast<ConstantSDNode>(Op.getOperand(0));
+    if (!Low16 || !Low16->isZero())
+      return SDValue();
+    Op = stripBitcast(Op.getOperand(1));
+    if (Op.getValueType() != MVT::bf16)
+      return SDValue();
+    return Op;
+  }
+
+  if (Op.getValueType() != MVT::i32)
+    return SDValue();
+
+  if (Op.getOpcode() == ISD::AND) {
+    if (auto Mask = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (Mask->getZExtValue() == 0xffff0000) {
+        IsExtractHigh = true;
+        return Op.getOperand(0);
+      }
+    }
+    return SDValue();
+  }
+
+  if (Op.getOpcode() == ISD::SHL) {
+    if (auto Amt = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (Amt->getZExtValue() == 16)
+        return Op.getOperand(0);
+    }
+  }
+
+  return SDValue();
+}
+
+#endif /* LLPC_BUILD_NPI */
 // The return value is not whether the match is possible (which it always is),
 // but whether or not it a conversion is really used.
 bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
+#if LLPC_BUILD_NPI
+                                                   unsigned &Mods,
+                                                   MVT VT) const {
+#else /* LLPC_BUILD_NPI */
                                                    unsigned &Mods) const {
+#endif /* LLPC_BUILD_NPI */
   Mods = 0;
   SelectVOP3ModsImpl(In, Src, Mods);
 
+#if LLPC_BUILD_NPI
+  bool IsExtractHigh = false;
+#endif /* LLPC_BUILD_NPI */
   if (Src.getOpcode() == ISD::FP_EXTEND) {
     Src = Src.getOperand(0);
+#if LLPC_BUILD_NPI
+  } else if (VT == MVT::bf16) {
+    SDValue B16 = matchBF16FPExtendLike(Src, IsExtractHigh);
+    if (!B16)
+      return false;
+    Src = B16;
+  } else
+    return false;
+#else /* LLPC_BUILD_NPI */
     assert(Src.getValueType() == MVT::f16);
     Src = stripBitcast(Src);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  if (Src.getValueType() != VT &&
+      (VT != MVT::bf16 || Src.getValueType() != MVT::i32))
+    return false;
+#else /* LLPC_BUILD_NPI */
     // Be careful about folding modifiers if we already have an abs. fneg is
     // applied last, so we don't want to apply an earlier fneg.
     if ((Mods & SISrcMods::ABS) == 0) {
       unsigned ModsTmp;
       SelectVOP3ModsImpl(Src, Src, ModsTmp);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  Src = stripBitcast(Src);
+#else /* LLPC_BUILD_NPI */
       if ((ModsTmp & SISrcMods::NEG) != 0)
         Mods ^= SISrcMods::NEG;
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  // Be careful about folding modifiers if we already have an abs. fneg is
+  // applied last, so we don't want to apply an earlier fneg.
+  if ((Mods & SISrcMods::ABS) == 0) {
+    unsigned ModsTmp;
+    SelectVOP3ModsImpl(Src, Src, ModsTmp);
+#else /* LLPC_BUILD_NPI */
       if ((ModsTmp & SISrcMods::ABS) != 0)
         Mods |= SISrcMods::ABS;
     }
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+    if ((ModsTmp & SISrcMods::NEG) != 0)
+      Mods ^= SISrcMods::NEG;
+#else /* LLPC_BUILD_NPI */
     // op_sel/op_sel_hi decide the source type and source.
     // If the source's op_sel_hi is set, it indicates to do a conversion from fp16.
     // If the sources's op_sel is set, it picks the high half of the source
     // register.
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+    if ((ModsTmp & SISrcMods::ABS) != 0)
+      Mods |= SISrcMods::ABS;
+  }
+#else /* LLPC_BUILD_NPI */
     Mods |= SISrcMods::OP_SEL_1;
     if (isExtractHiElt(Src, Src)) {
       Mods |= SISrcMods::OP_SEL_0;
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  // op_sel/op_sel_hi decide the source type and source.
+  // If the source's op_sel_hi is set, it indicates to do a conversion from
+  // fp16. If the sources's op_sel is set, it picks the high half of the source
+  // register.
+#else /* LLPC_BUILD_NPI */
       // TODO: Should we try to look for neg/abs here?
     }
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  Mods |= SISrcMods::OP_SEL_1;
+  if (IsExtractHigh || isExtractHiElt(Src, Src)) {
+    Mods |= SISrcMods::OP_SEL_0;
+
+    // TODO: Should we try to look for neg/abs here?
+#else /* LLPC_BUILD_NPI */
     return true;
+#endif /* LLPC_BUILD_NPI */
   }
 
+#if LLPC_BUILD_NPI
+  return true;
+#else /* LLPC_BUILD_NPI */
   return false;
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
                                                   SDValue &SrcMods) const {
   unsigned Mods = 0;
+#if LLPC_BUILD_NPI
+  if (!SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::f16))
+#else /* LLPC_BUILD_NPI */
   if (!SelectVOP3PMadMixModsImpl(In, Src, Mods))
+#endif /* LLPC_BUILD_NPI */
     return false;
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
@@ -3521,8 +4672,199 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
 bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixMods(SDValue In, SDValue &Src,
                                                SDValue &SrcMods) const {
   unsigned Mods = 0;
-  SelectVOP3PMadMixModsImpl(In, Src, Mods);
+#if LLPC_BUILD_NPI
+  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::f16);
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16ModsExt(SDValue In, SDValue &Src,
+                                                  SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  if (!SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::bf16))
+    return false;
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
+                                               SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::bf16);
+#else /* LLPC_BUILD_NPI */
+  SelectVOP3PMadMixModsImpl(In, Src, Mods);
+#endif /* LLPC_BUILD_NPI */
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+// Match BITOP3 operation and return a number of matched instructions plus
+// truth table.
+static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
+                                              SmallVectorImpl<SDValue> &Src) {
+  unsigned NumOpcodes = 0;
+  uint8_t LHSBits, RHSBits;
+
+  auto getOperandBits = [&Src, In](SDValue Op, uint8_t &Bits) -> bool {
+    // Define truth table given Src0, Src1, Src2 bits permutations:
+    //                          0     0     0
+    //                          0     0     1
+    //                          0     1     0
+    //                          0     1     1
+    //                          1     0     0
+    //                          1     0     1
+    //                          1     1     0
+    //                          1     1     1
+    const uint8_t SrcBits[3] = { 0xf0, 0xcc, 0xaa };
+
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+      if (C->isAllOnes()) {
+        Bits = 0xff;
+        return true;
+      }
+      if (C->isZero()) {
+        Bits = 0;
+        return true;
+      }
+    }
+
+    for (unsigned I = 0; I < Src.size(); ++I) {
+      // Try to find existing reused operand
+      if (Src[I] == Op) {
+        Bits = SrcBits[I];
+        return true;
+      }
+      // Try to replace parent operator
+      if (Src[I] == In) {
+        Bits = SrcBits[I];
+        Src[I] = Op;
+        return true;
+      }
+    }
+
+    if (Src.size() == 3) {
+      // No room left for operands. Try one last time, there can be a 'not' of
+      // one of our source operands. In this case we can compute the bits
+      // without growing Src vector.
+      if (Op.getOpcode() == ISD::XOR) {
+        if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+          if (C->isAllOnes()) {
+            SDValue LHS = Op.getOperand(0);
+            for (unsigned I = 0; I < Src.size(); ++I) {
+              if (Src[I] == LHS) {
+                Bits = ~SrcBits[I];
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      return false;
+    }
+
+    Bits = SrcBits[Src.size()];
+    Src.push_back(Op);
+    return true;
+  };
+
+  switch (In.getOpcode()) {
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR: {
+    SDValue LHS = In.getOperand(0);
+    SDValue RHS = In.getOperand(1);
+
+    SmallVector<SDValue, 3> Backup(Src.begin(), Src.end());
+    if (!getOperandBits(LHS, LHSBits) ||
+        !getOperandBits(RHS, RHSBits)) {
+      Src = Backup;
+      return std::make_pair(0, 0);
+    }
+
+    // Recursion is naturally limited by the size of the operand vector.
+    auto Op = BitOp3_Op(LHS, Src);
+    if (Op.first) {
+      NumOpcodes += Op.first;
+      LHSBits = Op.second;
+    }
+
+    Op = BitOp3_Op(RHS, Src);
+    if (Op.first) {
+      NumOpcodes += Op.first;
+      RHSBits = Op.second;
+    }
+    break;
+  }
+  default:
+    return std::make_pair(0, 0);
+  }
+
+  uint8_t TTbl;
+  switch (In.getOpcode()) {
+  case ISD::AND:
+    TTbl = LHSBits & RHSBits;
+    break;
+  case ISD::OR:
+    TTbl = LHSBits | RHSBits;
+    break;
+  case ISD::XOR:
+    TTbl = LHSBits ^ RHSBits;
+    break;
+  default:
+    break;
+  }
+
+  return std::make_pair(NumOpcodes + 1, TTbl);
+}
+
+bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
+                                      SDValue &Src2, SDValue &Tbl) const {
+  SmallVector<SDValue, 3> Src;
+  uint8_t TTbl;
+  unsigned NumOpcodes;
+
+  std::tie(NumOpcodes, TTbl) = BitOp3_Op(In, Src);
+
+  // Src.empty() case can happen if all operands are all zero or all ones.
+  // Normally it shall be optimized out before reaching this.
+  if (NumOpcodes < 2 || Src.empty())
+    return false;
+
+  // For a uniform case threshold should be higher to account for moves between
+  // VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be in SGPRs
+  // and a readtfirstlane after.
+  if (NumOpcodes < 4 && !In->isDivergent())
+    return false;
+
+  if (NumOpcodes == 2 && In.getValueType() == MVT::i32) {
+    // Avoid using BITOP3 for OR3, XOR3, AND_OR. This is not faster but makes
+    // asm more readable. This cannot be modeled with AddedComplexity because
+    // selector does not know how many operations did we match.
+    if ((In.getOpcode() == ISD::XOR || In.getOpcode() == ISD::OR) &&
+        (In.getOperand(0).getOpcode() == In.getOpcode() ||
+         In.getOperand(1).getOpcode() == In.getOpcode()))
+      return false;
+
+    if (In.getOpcode() == ISD::OR &&
+        (In.getOperand(0).getOpcode() == ISD::AND ||
+         In.getOperand(1).getOpcode() == ISD::AND))
+      return false;
+  }
+
+  // Last operand can be ignored, turning a ternary operation into a binary.
+  // For example: (~a & b & c) | (~a & b & ~c) -> (~a & b). We can replace
+  // 'c' with 'a' here without changing the answer. In some pathological
+  // cases it should be possible to get an operation with a single operand
+  // too if optimizer would not catch it.
+  while (Src.size() < 3)
+    Src.push_back(Src[0]);
+
+  Src0 = Src[0];
+  Src1 = Src[1];
+  Src2 = Src[2];
+
+  Tbl = CurDAG->getTargetConstant(TTbl, SDLoc(In), MVT::i32);
   return true;
 }
 

@@ -259,6 +259,13 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
     return false;
   if (!verifyIntegerEntry(KernelMap, ".private_segment_fixed_size", true))
     return false;
+#if LLPC_BUILD_NPI
+  if (!verifyIntegerEntry(KernelMap, ".laneshared_segment_fixed_size", false))
+    return false;
+  if (!verifyScalarEntry(KernelMap, ".enable_wavegroup", false,
+                         msgpack::Type::Boolean))
+    return false;
+#endif /* LLPC_BUILD_NPI */
   if (!verifyScalarEntry(KernelMap, ".uses_dynamic_stack", false,
                          msgpack::Type::Boolean))
     return false;
@@ -280,7 +287,18 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
     return false;
   if (!verifyIntegerEntry(KernelMap, ".uniform_work_group_size", false))
     return false;
+#if LLPC_BUILD_NPI
+  if (!verifyEntry(
+          KernelMap, ".cluster_dims", false, [this](msgpack::DocNode &Node) {
+            return verifyArray(
+                Node,
+                [this](msgpack::DocNode &Node) { return verifyInteger(Node); },
+                3);
+          }))
+    return false;
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
 
   return true;
 }

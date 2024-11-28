@@ -1148,7 +1148,11 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
+#if LLPC_BUILD_NPI
+const unsigned NUM_PREDEF_TYPE_IDS = 522;
+#else /* LLPC_BUILD_NPI */
 const unsigned NUM_PREDEF_TYPE_IDS = 513;
+#endif /* LLPC_BUILD_NPI */
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

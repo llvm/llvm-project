@@ -28,6 +28,9 @@ MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
 
   KD.group_segment_fixed_size = ZeroMCExpr;
   KD.private_segment_fixed_size = ZeroMCExpr;
+#if LLPC_BUILD_NPI
+  KD.laneshared_segment_fixed_size = ZeroMCExpr;
+#endif /* LLPC_BUILD_NPI */
   KD.compute_pgm_rsrc1 = ZeroMCExpr;
   KD.compute_pgm_rsrc2 = ZeroMCExpr;
   KD.compute_pgm_rsrc3 = ZeroMCExpr;

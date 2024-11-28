@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUGlobalISelUtils.h"
+#if LLPC_BUILD_NPI
+#include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -67,4 +71,31 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   return std::pair(Reg, 0);
+#if LLPC_BUILD_NPI
+}
+
+bool AMDGPU::IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
+  if (auto *val = MemOpnd->getValue()) {
+    auto *Obj = getUnderlyingObjectAggressive(val);
+    if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
+      if (GV->hasAttribute("lane-shared-in-vgpr")) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool AMDGPU::IsPromotablePrivate(const AllocaInst &Alloca) {
+  return Alloca.hasMetadata("amdgpu.promotable.to.vgpr");
+}
+
+bool AMDGPU::IsPromotablePrivate(const MachineMemOperand *MemOpnd) {
+  if (const Value *Val = MemOpnd->getValue()) {
+    const Value *Obj = getUnderlyingObjectAggressive(Val);
+    if (auto *Alloca = dyn_cast<AllocaInst>(Obj))
+      return IsPromotablePrivate(*Alloca);
+  }
+  return false;
+#endif /* LLPC_BUILD_NPI */
 }

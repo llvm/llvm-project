@@ -100,14 +100,16 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (Gen == AMDGPUSubtarget::INVALID) {
     Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
-  }
-
-  if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
-      !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    // Assume wave64 for the unknown target, if not explicitly set.
+    if (getWavefrontSizeLog2() == 0)
+      WavefrontSizeLog2 = 6;
+  } else if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
+             !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     // If there is no default wave size it must be a generation before gfx10,
     // these have FeatureWavefrontSize64 in their definition already. For gfx10+
     // set wave32 as a default.
     ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    WavefrontSizeLog2 = getGeneration() >= AMDGPUSubtarget::GFX10 ? 5 : 6;
   }
 
   // We don't support FP64 for EG/NI atm.
@@ -147,10 +149,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
       !getFeatureBits().test(AMDGPU::FeatureCuMode))
     LocalMemorySize *= 2;
 
-  // Don't crash on invalid devices.
-  if (WavefrontSizeLog2 == 0)
-    WavefrontSizeLog2 = 5;
-
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
 
@@ -166,7 +164,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   LLVMContext &Ctx = F.getContext();
-  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) &&
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
@@ -495,11 +493,22 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
                             getReservedNumSGPRs(F));
 }
 
+#if LLPC_BUILD_NPI
+unsigned
+GCNSubtarget::getBaseMaxNumVGPRs(const Function &F,
+                                 std::pair<unsigned, unsigned> WavesPerEU,
+                                 unsigned NumExcludedVGRs) const {
+#else /* LLPC_BUILD_NPI */
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
     const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
+#endif /* LLPC_BUILD_NPI */
   // Compute maximum number of VGPRs function can use using default/requested
   // minimum number of waves per execution unit.
+#if LLPC_BUILD_NPI
+  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first, NumExcludedVGRs);
+#else /* LLPC_BUILD_NPI */
   unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
+#endif /* LLPC_BUILD_NPI */
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
@@ -512,7 +521,11 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 
     // Make sure requested value is compatible with values implied by
     // default/requested minimum/maximum number of waves per execution unit.
+#if LLPC_BUILD_NPI
+    if (Requested && Requested > MaxNumVGPRs)
+#else /* LLPC_BUILD_NPI */
     if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
+#endif /* LLPC_BUILD_NPI */
       Requested = 0;
     if (WavesPerEU.second && Requested &&
         Requested < getMinNumVGPRs(WavesPerEU.second))
@@ -532,7 +545,12 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+#if LLPC_BUILD_NPI
+  auto NumExcludedVGRs = MFI.getLaneSharedVGPRSize() / 4u;
+  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU(), NumExcludedVGRs);
+#else /* LLPC_BUILD_NPI */
   return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
+#endif /* LLPC_BUILD_NPI */
 }
 
 unsigned GCNSubtarget::getLdsSpillLimitDwords(const MachineFunction &MF) const {
@@ -753,6 +771,16 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
       (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
       !ST.flatScratchIsArchitected()) {
     FlatScratchInit = true;
+#if LLPC_BUILD_NPI
+  }
+
+  // TODO-GFX13: Can we make this conditional on whether private is actually
+  //             used?
+  if (IsKernel && AMDGPU::getWavegroupEnable(F)) {
+    PrivateSegmentSize = true;
+    if (ST.isCuModeEnabled())
+      report_fatal_error("cannot enable cumode when wavegroup is enabled");
+#endif /* LLPC_BUILD_NPI */
   }
 
   if (hasImplicitBufferPtr())

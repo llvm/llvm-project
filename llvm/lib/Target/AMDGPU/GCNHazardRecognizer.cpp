@@ -163,7 +163,20 @@ static bool isPermlane(const MachineInstr &MI) {
          Opcode == AMDGPU::V_PERMLANE64_B32 ||
          Opcode == AMDGPU::V_PERMLANEX16_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANE16_VAR_B32_e64 ||
-         Opcode == AMDGPU::V_PERMLANEX16_VAR_B32_e64;
+         Opcode == AMDGPU::V_PERMLANEX16_VAR_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE16_SWAP_B32_e32 ||
+         Opcode == AMDGPU::V_PERMLANE16_SWAP_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE32_SWAP_B32_e32 ||
+#if LLPC_BUILD_NPI
+         Opcode == AMDGPU::V_PERMLANE32_SWAP_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE_BCAST_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE_UP_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE_DOWN_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE_XOR_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE_IDX_GEN_B32_e64;
+#else /* LLPC_BUILD_NPI */
+         Opcode == AMDGPU::V_PERMLANE32_SWAP_B32_e64;
+#endif /* LLPC_BUILD_NPI */
 }
 
 static bool isLdsDma(const MachineInstr &MI) {
@@ -389,6 +402,9 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
       SIInstrInfo::isFLAT(*MI) ||
       SIInstrInfo::isDS(*MI))
     return std::max(WaitStates, checkMAILdStHazards(MI));
+
+  if (ST.hasGFX950Insts() && isPermlane(*MI))
+    return std::max(WaitStates, checkPermlaneHazards(MI));
 
   return WaitStates;
 }
@@ -897,8 +913,14 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
 
   // There are three different types of instructions
   // which produce forwarded dest: 1. SDWA with dst_sel != DWORD, 2. VOP3
+#if LLPC_BUILD_NPI
+  // which write hi bits (e.g. op_sel[3] == 1), and 3. FP8DstSelInst
+  // (instructions with dest byte sel, e.g. CVT_SR_BF8_F32) and
+  // op_sel[3:2]
+#else /* LLPC_BUILD_NPI */
   // which write hi bits (e.g. op_sel[3] == 1), and 3. CVR_SR_FP8_F32 and
   // CVT_SR_BF8_F32 with op_sel[3:2]
+#endif /* LLPC_BUILD_NPI */
   // != 0
   if (SIInstrInfo::isSDWA(MI)) {
     // Type 1: SDWA with dst_sel != DWORD
@@ -906,8 +928,13 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
       if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
         return nullptr;
   } else {
+#if LLPC_BUILD_NPI
+    // Type 2 && Type 3: (VOP3 which write the hi bits) || (FP8DstSelInst
+    // with op_sel[3:2] != 0)
+#else /* LLPC_BUILD_NPI */
     // Type 2 && Type 3: (VOP3 which write the hi bits) || (CVT_SR_FP8_F32 and
     // CVT_SR_BF8_F32 with op_sel[3:2] != 0)
+#endif /* LLPC_BUILD_NPI */
     if (!AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel) ||
         !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
               SISrcMods::DST_OP_SEL ||
@@ -971,7 +998,11 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
   }
 
+#if LLPC_BUILD_NPI
+  if (ST.hasDstSelForwardingHazard() || ST.hasCvtScaleForwardingHazard()) {
+#else /* LLPC_BUILD_NPI */
   if (ST.hasDstSelForwardingHazard()) {
+#endif /* LLPC_BUILD_NPI */
     const int Shift16DefWaitstates = 1;
 
     auto IsShift16BitDefFn = [this, VALU](const MachineInstr &ProducerMI) {
@@ -1082,7 +1113,12 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   // problematic thus far.
 
   // see checkVALUHazards()
+#if LLPC_BUILD_NPI
+  if (!ST.has12DWordStoreHazard() && !ST.hasDstSelForwardingHazard() &&
+      !ST.hasCvtScaleForwardingHazard())
+#else /* LLPC_BUILD_NPI */
   if (!ST.has12DWordStoreHazard() && !ST.hasDstSelForwardingHazard())
+#endif /* LLPC_BUILD_NPI */
     return 0;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1192,6 +1228,17 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
+#if LLPC_BUILD_NPI
+  if (ST.requiresWaitIdleBeforeGetReg())
+    fixGetRegWaitIdle(MI);
+#endif /* LLPC_BUILD_NPI */
+}
+
+static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
+                              const MachineInstr &MI) {
+  return (TII.isVOPC(MI) ||
+          (MI.isCompare() && (TII.isVOP3(MI) || TII.isSDWA(MI)))) &&
+         MI.modifiesRegister(AMDGPU::EXEC, &TRI);
 }
 
 bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
@@ -1201,9 +1248,7 @@ bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   auto IsHazardFn = [TII, TRI](const MachineInstr &MI) {
-    return (TII->isVOPC(MI) ||
-            ((TII->isVOP3(MI) || TII->isSDWA(MI)) && MI.isCompare())) &&
-           MI.modifiesRegister(AMDGPU::EXEC, TRI);
+    return isVCmpXWritesExec(*TII, *TRI, MI);
   };
 
   auto IsExpiredFn = [](const MachineInstr &MI, int) {
@@ -1337,6 +1382,18 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
         // DsCnt corresponds to LGKMCnt here.
         return (Decoded.DsCnt == 0);
       }
+#if LLPC_BUILD_NPI
+      case AMDGPU::S_WAIT_STORECNT:
+      case AMDGPU::S_WAIT_STORECNT_DSCNT:
+      case AMDGPU::S_WAIT_LOADCNT:
+      case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+      case AMDGPU::S_WAIT_SAMPLECNT:
+      case AMDGPU::S_WAIT_BVHCNT:
+      case AMDGPU::S_WAIT_DSCNT:
+      case AMDGPU::S_WAIT_EXPCNT:
+      case AMDGPU::S_WAIT_KMCNT:
+        llvm_unreachable("unexpected wait count instruction");
+#endif /* LLPC_BUILD_NPI */
       default:
         // SOPP instructions cannot mitigate the hazard.
         if (TII->isSOPP(MI))
@@ -1719,7 +1776,11 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+#if LLPC_BUILD_NPI
+      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
+#else /* LLPC_BUILD_NPI */
       .addImm(0x0fff);
+#endif /* LLPC_BUILD_NPI */
 
   return true;
 }
@@ -1769,7 +1830,11 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
         SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+#if LLPC_BUILD_NPI
+         AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
+#else /* LLPC_BUILD_NPI */
          I.getOperand(0).getImm() == 0x0fff))
+#endif /* LLPC_BUILD_NPI */
       return HazardExpired;
 
     // Track registers writes
@@ -2013,6 +2078,17 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     case AMDGPU::S_WAITCNT_EXPCNT:
     case AMDGPU::S_WAITCNT_LGKMCNT:
     case AMDGPU::S_WAIT_IDLE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::S_WAIT_LOADCNT:
+    case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    case AMDGPU::S_WAIT_SAMPLECNT:
+    case AMDGPU::S_WAIT_BVHCNT:
+    case AMDGPU::S_WAIT_STORECNT:
+    case AMDGPU::S_WAIT_STORECNT_DSCNT:
+    case AMDGPU::S_WAIT_EXPCNT:
+    case AMDGPU::S_WAIT_DSCNT:
+    case AMDGPU::S_WAIT_KMCNT:
+#endif /* LLPC_BUILD_NPI */
       return true;
     default:
       break;
@@ -2226,12 +2302,25 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
 }
 
 static int
-GFX940_XDL_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(int NumPasses) {
-  // 2 pass -> 3
-  // 4 pass -> 5
-  // 8 pass -> 9
-  // 16 pass -> 17
-  return NumPasses + 1;
+GFX940_XDL_N_PassWritesVGPROverlappedXDLOrSMFMASrcCWaitStates(int NumPasses,
+                                                              bool IsGFX950) {
+  // xdl def cycles | gfx940 | gfx950
+  // 2 pass         |  3        4
+  // 4 pass         |  5        6
+  // 8 pass         |  9        10
+  // 16 pass        |  17       18
+  return NumPasses + 1 + IsGFX950;
+}
+
+static int
+GFX940_XDL_N_PassWritesVGPROverlappedSGEMMDGEMMSrcCWaitStates(int NumPasses,
+                                                              bool IsGFX950) {
+  // xdl def cycles | gfx940 | gfx950
+  // 2 pass         |  3        3
+  // 4 pass         |  5        6
+  // 8 pass         |  9        10
+  // 16 pass        |  17       18
+  return NumPasses + 1 + (NumPasses != 2 && IsGFX950);
 }
 
 static int
@@ -2294,12 +2383,14 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
     const int SMFMA16x16WritesVGPROverlappedDMFMASrcCWaitStates = 9;
     const int SMFMA32x32WritesVGPROverlappedDMFMASrcCWaitStates = 17;
     const int DMFMA16x16WritesVGPROverlappedSrcCWaitStates = 9;
+    const int GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates = 17;
     const int DMFMA4x4WritesVGPROverlappedSrcCWaitStates = 4;
     const int SMFMA4x4WritesVGPROverlappedSrcABWaitStates = 5;
     const int SMFMA16x16WritesVGPROverlappedSrcABWaitStates = 11;
     const int SMFMA32x32WritesVGPROverlappedSrcABWaitStates = 19;
     const int DMFMA4x4WritesVGPROverlappedMFMASrcABWaitStates = 6;
     const int DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 11;
+    const int GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 19;
     const int DMFMA4x4WritesVGPRFullSrcCWaitStates = 4;
     const int GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates = 2;
     const int MaxWaitStates = 19;
@@ -2351,7 +2442,10 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
         case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
         case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
           if (!isXDL(ST, *MI))
-            NeedWaitStates = DMFMA16x16WritesVGPROverlappedSrcCWaitStates;
+            NeedWaitStates =
+                ST.hasGFX950Insts()
+                    ? GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates
+                    : DMFMA16x16WritesVGPROverlappedSrcCWaitStates;
           break;
         case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
         case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
@@ -2366,8 +2460,11 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
 
             NeedWaitStates =
                 isXDL(ST, *MI1)
-                    ? GFX940_XDL_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(
-                          NumPasses)
+                    ? (isXDL(ST, *MI)
+                           ? GFX940_XDL_N_PassWritesVGPROverlappedXDLOrSMFMASrcCWaitStates(
+                                 NumPasses, ST.hasGFX950Insts())
+                           : GFX940_XDL_N_PassWritesVGPROverlappedSGEMMDGEMMSrcCWaitStates(
+                                 NumPasses, ST.hasGFX950Insts()))
                     : GFX940_SMFMA_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(
                           NumPasses);
             break;
@@ -2402,7 +2499,10 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
       case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
       case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
       case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
-        NeedWaitStates = DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates;
+        NeedWaitStates =
+            ST.hasGFX950Insts()
+                ? GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates
+                : DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates;
         break;
       case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
       case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
@@ -2496,6 +2596,46 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
   }
 
+  return WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkPermlaneHazards(MachineInstr *MI) {
+  assert(!ST.hasVcmpxPermlaneHazard() &&
+         "this is a different vcmpx+permlane hazard");
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  auto IsVCmpXWritesExecFn = [TII, TRI](const MachineInstr &MI) {
+    return isVCmpXWritesExec(*TII, *TRI, MI);
+  };
+
+  auto IsVALUFn = [](const MachineInstr &MI) {
+    return SIInstrInfo::isVALU(MI);
+  };
+
+  const int VCmpXWritesExecWaitStates = 4;
+  const int VALUWritesVDstWaitStates = 2;
+  int WaitStatesNeeded = 0;
+
+  for (const MachineOperand &Op : MI->explicit_uses()) {
+    if (!Op.isReg() || !TRI->isVGPR(MF.getRegInfo(), Op.getReg()))
+      continue;
+    Register Reg = Op.getReg();
+
+    int WaitStatesSinceDef =
+        VALUWritesVDstWaitStates -
+        getWaitStatesSinceDef(Reg, IsVALUFn,
+                              /*MaxWaitStates=*/VALUWritesVDstWaitStates);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesSinceDef);
+    if (WaitStatesNeeded >= VALUWritesVDstWaitStates)
+      break;
+  }
+
+  int VCmpXHazardWaits =
+      VCmpXWritesExecWaitStates -
+      getWaitStatesSince(IsVCmpXWritesExecFn, VCmpXWritesExecWaitStates);
+
+  WaitStatesNeeded = std::max(WaitStatesNeeded, VCmpXHazardWaits);
   return WaitStatesNeeded;
 }
 
@@ -2597,6 +2737,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
     const int DMFMA16x16WriteVgprMemExpReadWaitStates = 18;
     const int DMFMA4x4WriteVgprVALUReadWaitStates = 6;
     const int DMFMA16x16WriteVgprVALUReadWaitStates = 11;
+    const int GFX950_DMFMA16x16WriteVgprVALUReadWaitStates = 19;
     const int DotWriteSameDotReadSrcAB = 3;
     const int DotWriteDifferentVALURead = 3;
     const int DMFMABetweenVALUWriteVMEMRead = 2;
@@ -2657,9 +2798,12 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
           break;
         case 8:
         case 16:
-          NeedWaitStates = IsMemOrExport
-                               ? DMFMA16x16WriteVgprMemExpReadWaitStates
-                               : DMFMA16x16WriteVgprVALUReadWaitStates;
+          NeedWaitStates =
+              IsMemOrExport
+                  ? DMFMA16x16WriteVgprMemExpReadWaitStates
+                  : (ST.hasGFX950Insts()
+                         ? GFX950_DMFMA16x16WriteVgprVALUReadWaitStates
+                         : DMFMA16x16WriteVgprVALUReadWaitStates);
           break;
         default:
           llvm_unreachable("unexpected dgemm");
@@ -3113,5 +3257,28 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
         .addImm(NormalPriority);
   }
 
+#if LLPC_BUILD_NPI
+  return true;
+}
+
+bool GCNHazardRecognizer::fixGetRegWaitIdle(MachineInstr *MI) {
+  if (!isSGetReg(MI->getOpcode()))
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  switch (getHWReg(TII, *MI)) {
+  default:
+    return false;
+  case AMDGPU::Hwreg::ID_STATUS:
+  case AMDGPU::Hwreg::ID_STATE_PRIV:
+  case AMDGPU::Hwreg::ID_EXCP_FLAG_PRIV:
+  case AMDGPU::Hwreg::ID_EXCP_FLAG_USER:
+    break;
+  }
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0);
+#endif /* LLPC_BUILD_NPI */
   return true;
 }

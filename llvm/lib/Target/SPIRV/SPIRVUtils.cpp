@@ -205,6 +205,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
                : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
+  case 9:
+    return SPIRV::StorageClass::CodeSectionINTEL;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -633,15 +635,12 @@ bool sortBlocks(Function &F) {
     return false;
 
   bool Modified = false;
-
   std::vector<BasicBlock *> Order;
   Order.reserve(F.size());
 
-  PartialOrderingVisitor Visitor(F);
-  Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
-    Order.push_back(Block);
-    return true;
-  });
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT)
+    Order.push_back(BB);
 
   assert(&*F.begin() == Order[0]);
   BasicBlock *LastBlock = &*F.begin();

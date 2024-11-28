@@ -587,6 +587,10 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
+#if LLPC_BUILD_NPI
+  if (AMDGPU::getWavegroupEnable(MF.getFunction()))
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP;
+#endif /* LLPC_BUILD_NPI */
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
   // un-evaluatable at this point so it cannot be conditionally checked here.
@@ -616,6 +620,9 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   KernelDescriptor.group_segment_fixed_size =
       MCConstantExpr::create(PI.LDSSize, Ctx);
   KernelDescriptor.private_segment_fixed_size = PI.ScratchSize;
+#if LLPC_BUILD_NPI
+  KernelDescriptor.laneshared_segment_fixed_size = PI.LaneSharedSegmentSize;
+#endif /* LLPC_BUILD_NPI */
 
   Align MaxKernArgAlign;
   KernelDescriptor.kernarg_size = MCConstantExpr::create(
@@ -685,6 +692,29 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);
   }
 
+#if LLPC_BUILD_NPI
+  // Replace the "num vgprs" placeholder that was inserted by frame lowering.
+  // We rely on this placeholder only appearing once.
+  if (MFI->isEntryFunction() && AMDGPU::getWavegroupEnable(MF.getFunction())) {
+    MachineBasicBlock &Entry = MF.front();
+    for (MachineInstr &MI : Entry) {
+      bool Found = false;
+      for (auto &Op : MI.uses()) {
+        if (Op.isTargetIndex() && Op.getIndex() == AMDGPU::TI_NUM_VGPRS) {
+          Op.ChangeToMCSymbol(RI.getSymbol(MF.getName(),
+                                           MCResourceInfo::RIK_NumVGPR,
+                                           OutContext),
+                              SIInstrInfo::MO_NUM_VGPRS);
+          Found = true;
+          break;
+        }
+      }
+      if (Found)
+        break;
+    }
+  }
+
+#endif /* LLPC_BUILD_NPI */
   DumpCodeInstEmitter = nullptr;
   if (STM.dumpCode()) {
     // For -dumpcode, get the assembler out of the streamer. This only works
@@ -960,6 +990,32 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
+#if LLPC_BUILD_NPI
+
+  uint32_t NumWavesPerVGPRAlloc = 1;
+  if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    auto WorkGroupSize = getReqdWorkGroupSize(MF.getFunction()).value();
+    NumWavesPerVGPRAlloc =
+        divideCeil(WorkGroupSize[0] * WorkGroupSize[1] * WorkGroupSize[2], 128);
+    unsigned NumLaneSharedVGPRs = MFI->getLaneSharedVGPRSize() / 4;
+
+    const MCExpr *NumWavesPerVGPRAllocExpr = MCConstantExpr::create(NumWavesPerVGPRAlloc, Ctx);
+    const MCExpr *NumLaneSharedVGPRsExpr = MCConstantExpr::create(NumLaneSharedVGPRs, Ctx);
+
+    const MCExpr *TmpNumVGPRExpr = MCBinaryExpr::createAdd(
+        MCBinaryExpr::createMul(NumWavesPerVGPRAllocExpr, ProgInfo.NumVGPR,
+                                Ctx),
+        NumLaneSharedVGPRsExpr, Ctx);
+
+    ProgInfo.NumArchVGPR = TmpNumVGPRExpr;
+    ProgInfo.NumVGPR = TmpNumVGPRExpr;
+
+    ProgInfo.LaneSharedSegmentSize =
+        CreateExpr(MFI->getLaneSharedScratchSize());
+  }
+
+#endif /* LLPC_BUILD_NPI */
   ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
   ProgInfo.TgSplit = STM.isTgSplitEnabled();
   ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
@@ -1090,13 +1146,25 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.
   unsigned MaxWaves = MFI->getMaxWavesPerEU();
+#if LLPC_BUILD_NPI
+  unsigned MaxVGPRAllocs;
+  if (MaxWaves >= STM.getMaxWavesPerEU())
+    MaxVGPRAllocs = MaxWaves; // treat as default / not limited
+  else
+    MaxVGPRAllocs = divideCeil(MaxWaves, NumWavesPerVGPRAlloc);
+
+#endif /* LLPC_BUILD_NPI */
   ProgInfo.NumSGPRsForWavesPerEU =
       AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, CreateExpr(1ul),
                                CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
                               Ctx);
   ProgInfo.NumVGPRsForWavesPerEU =
       AMDGPUMCExpr::createMax({ProgInfo.NumVGPR, CreateExpr(1ul),
+#if LLPC_BUILD_NPI
+                               CreateExpr(STM.getMinNumVGPRs(MaxVGPRAllocs))},
+#else /* LLPC_BUILD_NPI */
                                CreateExpr(STM.getMinNumVGPRs(MaxWaves))},
+#endif /* LLPC_BUILD_NPI */
                               Ctx);
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
@@ -1172,7 +1240,14 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
+#if LLPC_BUILD_NPI
+  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize327680)) {
+    // LDS is allocated in 256 dword blocks.
+    LDSAlignShift = 10;
+  } else if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
+#else /* LLPC_BUILD_NPI */
   if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
+#endif /* LLPC_BUILD_NPI */
     // LDS is allocated in 320 dword blocks.
     LDSAlignShift = 11;
   } else if (STM.getFeatureBits().test(
@@ -1213,8 +1288,17 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                               CreateExpr(STM.getWavefrontSize()), Ctx),
       CreateExpr(1ULL << ScratchAlignShift));
 
+#if LLPC_BUILD_NPI
+  if (STM.supportsWGP()) {
+#else /* LLPC_BUILD_NPI */
   if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
+#endif /* LLPC_BUILD_NPI */
     ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
+#if LLPC_BUILD_NPI
+  }
+
+  if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
+#endif /* LLPC_BUILD_NPI */
     ProgInfo.MemOrdered = 1;
   }
 
@@ -1234,6 +1318,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       MCBinaryExpr::createGT(ProgInfo.ScratchBlocks,
                              MCConstantExpr::create(0, Ctx), Ctx),
       ProgInfo.DynamicCallStack, Ctx);
+#if LLPC_BUILD_NPI
+  ProgInfo.ScratchEnable = MCBinaryExpr::createLOr(
+      MCBinaryExpr::createGT(ProgInfo.LaneSharedSegmentSize,
+                             MCConstantExpr::create(0, Ctx), Ctx),
+      ProgInfo.ScratchEnable, Ctx);
+#endif /* LLPC_BUILD_NPI */
 
   ProgInfo.UserSGPR = MFI->getNumUserSGPRs();
   // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
@@ -1413,6 +1503,15 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
     MD->setHwStage(CC, ".trap_present",
                    (bool)CurrentProgramInfo.TrapHandlerEnable);
     MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+#if LLPC_BUILD_NPI
+
+    if (ST.isDynamicVGPREnabled())
+      MD->setComputeRegisters(".dynamic_vgpr_en", true);
+
+    MD->setHwStage(CC, ".lds_size",
+                   (unsigned)(CurrentProgramInfo.LdsSize *
+                              getLdsDwGranularity(ST) * sizeof(uint32_t)));
+#endif /* LLPC_BUILD_NPI */
   }
 
   MD->setHwStage(CC, ".lds_size",
@@ -1435,8 +1534,21 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   MD->setEntryPoint(CC, MF.getFunction().getName());
   MD->setNumUsedVgprs(CC, CurrentProgramInfo.NumVGPRsForWavesPerEU, Ctx);
 
+#if LLPC_BUILD_NPI
+  // For targets that support dynamic VGPRs, set the number of saved dynamic
+  // VGPRs (if any) in the PAL metadata.
+#else /* LLPC_BUILD_NPI */
   // Only set AGPRs for supported devices
+#endif /* LLPC_BUILD_NPI */
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+#if LLPC_BUILD_NPI
+  if (STM.isDynamicVGPREnabled() &&
+      MFI->getScratchReservedForDynamicVGPRs() > 0)
+    MD->setHwStage(CC, ".dynamic_vgpr_saved_count",
+                   MFI->getScratchReservedForDynamicVGPRs() / 4);
+
+  // Only set AGPRs for supported devices
+#endif /* LLPC_BUILD_NPI */
   if (STM.hasMAIInsts()) {
     MD->setNumUsedAgprs(CC, CurrentProgramInfo.NumAccVGPR);
   }
@@ -1597,9 +1709,6 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
 
   if (UserSGPRInfo.hasPrivateSegmentSize())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
-
-  if (UserSGPRInfo.hasDispatchPtr())
-    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
   if (STM.isXNACKEnabled())
     Out.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;

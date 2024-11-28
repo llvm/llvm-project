@@ -383,6 +383,11 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 
+#if LLPC_BUILD_NPI
+  if (AddrSpace == AMDGPUAS::LANE_SHARED)
+    return 32;
+
+#endif /* LLPC_BUILD_NPI */
   // Common to flat, global, local and region. Assume for unknown addrspace.
   return 128;
 }
@@ -951,15 +956,26 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (const Argument *A = dyn_cast<Argument>(V))
     return !AMDGPU::isArgPassedInSGPR(A);
 
+#if LLPC_BUILD_NPI
+  // Loads from the private, laneshared, and flat address spaces are divergent,
+  // because threads can execute the load instruction with the same inputs and
+  // get different results.
+#else /* LLPC_BUILD_NPI */
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
   // different results.
+#endif /* LLPC_BUILD_NPI */
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
+#if LLPC_BUILD_NPI
+           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
+           Load->getPointerAddressSpace() == AMDGPUAS::LANE_SHARED;
+#else /* LLPC_BUILD_NPI */
            Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS;
+#endif /* LLPC_BUILD_NPI */
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each

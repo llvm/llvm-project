@@ -400,6 +400,45 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
     F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
+#if LLPC_BUILD_NPI
+
+  if (const auto *Attr = FD->getAttr<AMDGPUWavegroupKernelAttr>()) {
+    F->addFnAttr("amdgpu-wavegroup-enable");
+
+    llvm::Type *I32 = llvm::IntegerType::get(F->getContext(), 32);
+    auto *X = llvm::ConstantInt::get(I32, Attr->getBlockDimX());
+    auto *Y = llvm::ConstantInt::get(I32, Attr->getBlockDimY());
+    auto *Z = llvm::ConstantInt::get(I32, Attr->getBlockDimZ());
+    llvm::Metadata *AttrMDArgs[] = {llvm::ConstantAsMetadata::get(X),
+                                    llvm::ConstantAsMetadata::get(Y),
+                                    llvm::ConstantAsMetadata::get(Z)};
+    F->setMetadata("reqd_work_group_size",
+                   llvm::MDNode::get(F->getContext(), AttrMDArgs));
+    unsigned Min, Max;
+    Min = Max =
+        Attr->getBlockDimX() * Attr->getBlockDimY() * Attr->getBlockDimZ();
+    std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
+    F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
+  }
+
+  if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
+    uint32_t X =
+        Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    uint32_t Y =
+        Attr->getY()
+            ? Attr->getY()->EvaluateKnownConstInt(M.getContext()).getExtValue()
+            : 1;
+    uint32_t Z =
+        Attr->getZ()
+            ? Attr->getZ()->EvaluateKnownConstInt(M.getContext()).getExtValue()
+            : 1;
+
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+    F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 /// Emits control constants used to change per-architecture behaviour in the

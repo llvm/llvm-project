@@ -88,6 +88,22 @@ bool Type::containsNonGlobalTargetExtType() const {
   return containsNonGlobalTargetExtType(Visited);
 }
 
+bool Type::containsNonLocalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->containsNonLocalTargetExtType(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->containsNonLocalTargetExtType(Visited);
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return !TT->hasProperty(TargetExtType::CanBeLocal);
+  return false;
+}
+
+bool Type::containsNonLocalTargetExtType() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return containsNonLocalTargetExtType(Visited);
+}
+
 const fltSemantics &Type::getFltSemantics() const {
   switch (getTypeID()) {
   case HalfTyID: return APFloat::IEEEhalf();
@@ -466,6 +482,34 @@ bool StructType::containsNonGlobalTargetExtType(
   if (!isOpaque())
     const_cast<StructType *>(this)->setSubclassData(
         getSubclassData() | SCDB_NotContainsNonGlobalTargetExtType);
+  return false;
+}
+
+bool StructType::containsNonLocalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if ((getSubclassData() & SCDB_ContainsNonLocalTargetExtType) != 0)
+    return true;
+
+  if ((getSubclassData() & SCDB_NotContainsNonLocalTargetExtType) != 0)
+    return false;
+
+  if (!Visited.insert(this).second)
+    return false;
+
+  for (Type *Ty : elements()) {
+    if (Ty->containsNonLocalTargetExtType(Visited)) {
+      const_cast<StructType *>(this)->setSubclassData(
+          getSubclassData() | SCDB_ContainsNonLocalTargetExtType);
+      return true;
+    }
+  }
+
+  // For structures that are opaque, return false but do not set the
+  // SCDB_NotContainsNonLocalTargetExtType flag since it may gain non-local
+  // target extension types when it becomes non-opaque.
+  if (!isOpaque())
+    const_cast<StructType *>(this)->setSubclassData(
+        getSubclassData() | SCDB_NotContainsNonLocalTargetExtType);
   return false;
 }
 
@@ -897,11 +941,31 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
         "type parameter and one integer parameter");
 
   // Opaque types in the AMDGPU name space.
+#if LLPC_BUILD_NPI
+  if (TTy->Name == "amdgcn.named.barrier") {
+    if (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)
+      return createStringError(
+          "target extension type amdgcn.named.barrier should have no type "
+          "parameters and one integer parameter");
+    if (TTy->getIntParameter(0) > 1)
+      return createStringError(
+          "target extension type amdgcn.named.barrier should have one integer "
+          "parameter in the value 0 or 1");
+  }
+  if (TTy->Name == "amdgcn.semaphore" &&
+#else /* LLPC_BUILD_NPI */
   if (TTy->Name == "amdgcn.named.barrier" &&
+#endif /* LLPC_BUILD_NPI */
       (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
+#if LLPC_BUILD_NPI
+    return createStringError(
+        "target extension type amdgcn.semaphore should have no type parameters "
+        "and one integer parameter");
+#else /* LLPC_BUILD_NPI */
     return createStringError("target extension type amdgcn.named.barrier "
                              "should have no type parameters "
                              "and one integer parameter");
+#endif /* LLPC_BUILD_NPI */
   }
 
   return TTy;
@@ -922,15 +986,18 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
   if (Name == "spirv.Image")
-    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
-                          TargetExtType::CanBeGlobal);
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
-                          TargetExtType::HasZeroInit);
+                          TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeLocal);
 
   // RISC-V vector tuple type. The layout is represented as the type that needs
   // the same number of vector registers(VREGS) as this tuple type, represented
@@ -942,15 +1009,23 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
                  RISCV::RVVBitsPerBlock / 8) *
         Ty->getIntParameter(0);
     return TargetTypeInfo(
-        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
+        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),
+        TargetExtType::CanBeLocal);
   }
 
   // DirectX resources
   if (Name.starts_with("dx."))
-    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.named.barrier") {
+#if LLPC_BUILD_NPI
+    return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
+                          TargetExtType::CanBeGlobal);
+  }
+  if (Name == "amdgcn.semaphore") {
+#endif /* LLPC_BUILD_NPI */
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);
   }

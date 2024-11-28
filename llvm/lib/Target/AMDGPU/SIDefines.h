@@ -45,6 +45,10 @@ enum {
   GFX940 = 9,
   GFX11 = 10,
   GFX12 = 11,
+#if LLPC_BUILD_NPI
+  GFX1210 = 12,
+  GFX13 = 13,
+#endif /* LLPC_BUILD_NPI */
 };
 }
 
@@ -97,6 +101,10 @@ enum : uint64_t {
   // VINTERP instruction format.
   VINTERP = 1 << 29,
 
+#if LLPC_BUILD_NPI
+  VOPD3 = 1 << 30,
+
+#endif /* LLPC_BUILD_NPI */
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,
@@ -106,14 +114,22 @@ enum : uint64_t {
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
 
+#if LLPC_BUILD_NPI
+  TENSOR_CNT = UINT64_C(1) << 38,
+#else /* LLPC_BUILD_NPI */
   // Reserved, must be 0.
   Reserved0 = UINT64_C(1) << 38,
+#endif /* LLPC_BUILD_NPI */
 
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
 
+#if LLPC_BUILD_NPI
+  ASYNC_CNT = UINT64_C(1) << 41,
+#else /* LLPC_BUILD_NPI */
   // Reserved, must be 0.
   Reserved1 = UINT64_C(1) << 41,
+#endif /* LLPC_BUILD_NPI */
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
@@ -196,7 +212,11 @@ enum ClassFlags : unsigned {
 
 namespace AMDGPU {
 enum OperandType : unsigned {
+#if LLPC_BUILD_NPI
+  /// Operands with register, 32-bit, or 64-bit immediate
+#else /* LLPC_BUILD_NPI */
   /// Operands with register or 32-bit immediate
+#endif /* LLPC_BUILD_NPI */
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_REG_IMM_INT64,
   OPERAND_REG_IMM_INT16,
@@ -207,6 +227,9 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_BF16_DEFERRED,
   OPERAND_REG_IMM_FP16_DEFERRED,
   OPERAND_REG_IMM_FP32_DEFERRED,
+#if LLPC_BUILD_NPI
+  OPERAND_REG_IMM_FP64_DEFERRED,
+#endif /* LLPC_BUILD_NPI */
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
@@ -233,6 +256,9 @@ enum OperandType : unsigned {
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
+#if LLPC_BUILD_NPI
+  OPERAND_KIMM64,
+#endif /* LLPC_BUILD_NPI */
 
   /// Operands with an AccVGPR register or inline constant
   OPERAND_REG_INLINE_AC_INT16,
@@ -266,7 +292,11 @@ enum OperandType : unsigned {
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
+#if LLPC_BUILD_NPI
+  OPERAND_KIMM_LAST = OPERAND_KIMM64
+#else /* LLPC_BUILD_NPI */
   OPERAND_KIMM_LAST = OPERAND_KIMM16
+#endif /* LLPC_BUILD_NPI */
 
 };
 
@@ -357,6 +387,9 @@ enum : unsigned {
   INLINE_INTEGER_C_MAX = 208,
   INLINE_FLOATING_C_MIN = 240,
   INLINE_FLOATING_C_MAX = 248,
+#if LLPC_BUILD_NPI
+  LITERAL64_CONST = 254,
+#endif /* LLPC_BUILD_NPI */
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,
@@ -368,10 +401,18 @@ enum : unsigned {
 // Register codes as defined in the TableGen's HWEncoding field.
 namespace HWEncoding {
 enum : unsigned {
+#if LLPC_BUILD_NPI
+  REG_IDX_MASK = 0x3ff,
+  LO256_REG_IDX_MASK = 0xff,
+  IS_VGPR = 1 << 10,
+  IS_AGPR = 1 << 11,
+  IS_HI16 = 1 << 12,
+#else /* LLPC_BUILD_NPI */
   REG_IDX_MASK = 0xff,
   IS_VGPR = 1 << 8,
   IS_AGPR = 1 << 9,
   IS_HI16 = 1 << 10,
+#endif /* LLPC_BUILD_NPI */
 };
 } // namespace HWEncoding
 
@@ -411,21 +452,55 @@ enum CPol {
   TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
+#if LLPC_BUILD_NPI
+  SCOPE_SHIFT = 3,
+  SCOPE_MASK = 0x3,
+  SCOPE = SCOPE_MASK << SCOPE_SHIFT, // All Scope bits
+  SCOPE_CU = 0 << SCOPE_SHIFT,
+  SCOPE_SE = 1 << SCOPE_SHIFT,
+  SCOPE_DEV = 2 << SCOPE_SHIFT,
+  SCOPE_SYS = 3 << SCOPE_SHIFT,
+
+  NV = 1 << 5, // Non-volatile bit
+#else /* LLPC_BUILD_NPI */
   SCOPE = 0x3 << 3, // All Scope bits
   SCOPE_CU = 0 << 3,
   SCOPE_SE = 1 << 3,
   SCOPE_DEV = 2 << 3,
   SCOPE_SYS = 3 << 3,
+#endif /* LLPC_BUILD_NPI */
 
   SWZ = 1 << 6, // Swizzle bit
 
+#if LLPC_BUILD_NPI
+  // Cache fill size
+  CFS_SHIFT = 7,
+  CFS_MASK = 0x3,
+  CFS = CFS_MASK << CFS_SHIFT,
+  CFS_256B = 0 << CFS_SHIFT,
+  CFS_128B = 1 << CFS_SHIFT,
+  CFS_64B = 2 << CFS_SHIFT,
+  CFS_32B = 3 << CFS_SHIFT,
+
+  ALL = TH | SCOPE | NV | CFS,
+
+  SCAL = 1 << 9, // Scale offset bit
+#else /* LLPC_BUILD_NPI */
   ALL = TH | SCOPE,
+#endif /* LLPC_BUILD_NPI */
 
   // Helper bits
+#if LLPC_BUILD_NPI
+  TH_TYPE_LOAD = 1 << 27,   // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 28,  // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 29, // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 30, // is TH=3 bypass policy or not
+#else /* LLPC_BUILD_NPI */
   TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
   TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
   TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
   TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+#endif /* LLPC_BUILD_NPI */
 
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
@@ -452,6 +527,9 @@ enum Id { // Message ID, width(4) [3:0].
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
+#if LLPC_BUILD_NPI
+  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1210
+#endif /* LLPC_BUILD_NPI */
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
@@ -464,6 +542,16 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA_TO_PC = 134,
   ID_RTN_GET_SE_AID_ID = 135,
 
+#if LLPC_BUILD_NPI
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1210
+
+  ID_RTN_GET_SEMA1 = 140, // added in GFX13
+  ID_RTN_GET_SEMA2 = 141, // added in GFX13
+  ID_RTN_GET_SEMA3 = 142, // added in GFX13
+  ID_RTN_GET_SEMA4 = 143, // added in GFX13
+  ID_RTN_GET_SEMA5 = 144, // added in GFX13
+
+#endif /* LLPC_BUILD_NPI */
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
 };
@@ -524,11 +612,23 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+#if LLPC_BUILD_NPI
+  ID_SCHED_MODE = 26,
+#endif /* LLPC_BUILD_NPI */
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
   ID_SHADER_CYCLES = 29,
   ID_SHADER_CYCLES_HI = 30,
   ID_DVGPR_ALLOC_LO = 31,
   ID_DVGPR_ALLOC_HI = 32,
+#if LLPC_BUILD_NPI
+  ID_WAVE_SEMA1_STATE = 36,
+  ID_WAVE_SEMA2_STATE = 37,
+  ID_WAVE_SEMA3_STATE = 38,
+  ID_WAVE_SEMA4_STATE = 39,
+  ID_WAVE_SEMA5_STATE = 40,
+  ID_WAVE_GPR_MSB_IDX0 = 44,
+  ID_WAVE_GPR_IDX123 = 45,
+#endif /* LLPC_BUILD_NPI */
 
   // Register numbers reused in GFX11
   ID_PERF_SNAPSHOT_PC_LO_gfx11 = 18,
@@ -542,6 +642,11 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
 
+#if LLPC_BUILD_NPI
+  // Register numbers reused in GFX13+
+  ID_WAVE_GROUP_INFO = 27,
+
+#endif /* LLPC_BUILD_NPI */
   // GFX940 specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
@@ -552,6 +657,9 @@ enum Id { // HwRegCode, (6) [5:0]
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
+#if LLPC_BUILD_NPI
+  OFFSET_ME_ID = 8,
+#endif /* LLPC_BUILD_NPI */
 };
 
 enum ModeRegisterMasks : uint32_t {
@@ -573,7 +681,21 @@ enum ModeRegisterMasks : uint32_t {
 
   GPR_IDX_EN_MASK = 1 << 27,
   VSKIP_MASK = 1 << 28,
+#if LLPC_BUILD_NPI
+  CSP_MASK = 0x7u << 29, // Bits 29..31
+
+  // GFX1210
+  DST_VGPR_MSB = 1 << 12,
+  SRC0_VGPR_MSB = 1 << 13,
+  SRC1_VGPR_MSB = 1 << 14,
+  SRC2_VGPR_MSB = 1 << 15,
+  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+
+  REPLAY_MODE = 1 << 25,
+  FLAT_SCRATCH_IS_NV = 1 << 26,
+#else /* LLPC_BUILD_NPI */
   CSP_MASK = 0x7u << 29 // Bits 29..31
+#endif /* LLPC_BUILD_NPI */
 };
 
 } // namespace Hwreg
@@ -1021,6 +1143,23 @@ enum Target : unsigned {
 
 } // namespace Exp
 
+#if LLPC_BUILD_NPI
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_ROW0 = 0,
+  MATRIX_SCALE_ROW1 = 1,
+};
+} // namespace WMMA
+
+#endif /* LLPC_BUILD_NPI */
 namespace VOP3PEncoding {
 
 enum OpSel : uint64_t {
@@ -1048,6 +1187,18 @@ enum Offset_COV5 : unsigned {
 
 } // namespace ImplicitArg
 
+namespace MFMAScaleFormats {
+// Enum value used in cbsz/blgp for F8F6F4 MFMA operations to select the matrix
+// format.
+enum MFMAScaleFormats {
+  FP8_E4M3 = 0,
+  FP8_E5M2 = 1,
+  FP6_E2M3 = 2,
+  FP6_E3M2 = 3,
+  FP4_E2M1 = 4
+};
+} // namespace MFMAScaleFormats
+
 namespace VirtRegFlag {
 // Virtual register flags used for various target specific handlings during
 // codegen.
@@ -1063,10 +1214,21 @@ enum Register_Flag : uint8_t {
 namespace AMDGPU {
 namespace Barrier {
 
+#if LLPC_BUILD_NPI
+enum Type { CLUSTER_TRAP = -4, CLUSTER = -3, TRAP = -2, WORKGROUP = -1 };
+#else /* LLPC_BUILD_NPI */
 enum Type { TRAP = -2, WORKGROUP = -1 };
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+enum class Scope : unsigned {
+  WORKGROUP = 0,
+  CLUSTER = 1,
+  NUM_SCOPES = 2,
+#else /* LLPC_BUILD_NPI */
 enum {
   BARRIER_SCOPE_WORKGROUP = 0,
+#endif /* LLPC_BUILD_NPI */
 };
 
 } // namespace Barrier
@@ -1075,8 +1237,14 @@ enum {
 // clang-format off
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
+#if LLPC_BUILD_NPI
+#define   S_00B028_VGPRS_GFX6_GFX12(x)                                (((x) & 0x3F) << 0)
+#define   S_00B028_VGPRS_GFX13(x)                                     (((x) & 0x7F) << 0)
+#define   S_00B028_SGPRS_GFX6_GFX12(x)                                (((x) & 0x0F) << 6)
+#else /* LLPC_BUILD_NPI */
 #define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
 #define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
+#endif /* LLPC_BUILD_NPI */
 #define   S_00B028_MEM_ORDERED(x)                                     (((x) & 0x1) << 25)
 #define   G_00B028_MEM_ORDERED(x)                                     (((x) >> 25) & 0x1)
 #define   C_00B028_MEM_ORDERED                                        0xFDFFFFFF
@@ -1148,12 +1316,24 @@ enum {
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0
 
 #define R_00B848_COMPUTE_PGM_RSRC1                                      0x00B848
+#if LLPC_BUILD_NPI
+#define   S_00B848_VGPRS_GFX6_GFX12(x)                                (((x) & 0x3F) << 0)
+#define   G_00B848_VGPRS_GFX6_GFX12(x)                                (((x) >> 0) & 0x3F)
+#define   C_00B848_VGPRS_GFX6_GFX12                                   0xFFFFFFC0
+#define   S_00B848_VGPRS_GFX13(x)                                     (((x) & 0x7F) << 0)
+#define   G_00B848_VGPRS_GFX13(x)                                     (((x) >> 0) & 0x7F)
+#define   C_00B848_VGPRS_GFX13                                        0xFFFFFF80
+#define   S_00B848_SGPRS_GFX6_GFX12(x)                                (((x) & 0x0F) << 6)
+#define   G_00B848_SGPRS_GFX6_GFX12(x)                                (((x) >> 6) & 0x0F)
+#define   C_00B848_SGPRS_GFX6_GFX12                                   0xFFFFFC3F
+#else /* LLPC_BUILD_NPI */
 #define   S_00B848_VGPRS(x)                                           (((x) & 0x3F) << 0)
 #define   G_00B848_VGPRS(x)                                           (((x) >> 0) & 0x3F)
 #define   C_00B848_VGPRS                                              0xFFFFFFC0
 #define   S_00B848_SGPRS(x)                                           (((x) & 0x0F) << 6)
 #define   G_00B848_SGPRS(x)                                           (((x) >> 6) & 0x0F)
 #define   C_00B848_SGPRS                                              0xFFFFFC3F
+#endif /* LLPC_BUILD_NPI */
 #define   S_00B848_PRIORITY(x)                                        (((x) & 0x03) << 10)
 #define   G_00B848_PRIORITY(x)                                        (((x) >> 10) & 0x03)
 #define   C_00B848_PRIORITY                                           0xFFFFF3FF
@@ -1230,6 +1410,15 @@ enum {
 #define R_SPILLED_VGPRS         0x8
 
 // clang-format on
+#if LLPC_BUILD_NPI
+
+// Wavegroup defines.
+
+enum {
+  MAX_WAVES_PER_WAVEGROUP = 8,
+  WAVEGROUPS_PER_WORKGROUP = 4,
+};
+#endif /* LLPC_BUILD_NPI */
 
 } // End namespace llvm
 

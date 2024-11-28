@@ -15,6 +15,9 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#if LLPC_BUILD_NPI
+#include "llvm/CodeGen/MachineInstrBundle.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/CodeGen/MachineOperand.h"
 
 #define DEBUG_TYPE "si-fold-operands"
@@ -139,6 +142,9 @@ public:
   bool tryFoldRegSequence(MachineInstr &MI);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
+#if LLPC_BUILD_NPI
+  bool tryFoldVLoadStoreIdxOffset(MachineInstr &MI, MachineInstr *&SMovImmZero);
+#endif /* LLPC_BUILD_NPI */
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -563,7 +569,16 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   }
 
   MachineOperand *New = Fold.OpToFold;
+#if LLPC_BUILD_NPI
+  if (MI->isBundled())
+    updateReplacedRegInBundle(*MI, *New, Old, TRI, true);
+  if (New->getReg().isPhysical())
+    Old.substPhysReg(New->getReg(), *TRI);
+  else
+    Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+#else /* LLPC_BUILD_NPI */
   Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+#endif /* LLPC_BUILD_NPI */
   Old.setIsUndef(New->isUndef());
   return true;
 }
@@ -746,8 +761,19 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
   }
 
   // Check the case where we might introduce a second constant operand to a
+#if LLPC_BUILD_NPI
+  // scalar instruction.
+  //
+  // S_MOV_TO_GLOBAL has an immediate operand that is always encoded in sdst
+  // and confuses this check. It also only has a single "real" source operand
+  // and therefore doesn't need this check anyway.
+  if (TII->isSALU(MI->getOpcode()) &&
+      MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B32 &&
+      MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B64) {
+#else /* LLPC_BUILD_NPI */
   // scalar instruction
   if (TII->isSALU(MI->getOpcode())) {
+#endif /* LLPC_BUILD_NPI */
     const MCInstrDesc &InstDesc = MI->getDesc();
     const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
 
@@ -935,18 +961,35 @@ void SIFoldOperandsImpl::foldOperand(
         return;
     }
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
     // A frame index will resolve to a positive constant, so it should always be
     // safe to fold the addressing mode, even pre-GFX9.
     UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
 
+#endif /* LLPC_BUILD_NPI */
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
+#if LLPC_BUILD_NPI
+      unsigned CPol =
+          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
+      if ((CPol & AMDGPU::CPol::SCAL) &&
+          !AMDGPU::supportsScaleOffset(*TII, NewOpc))
+        return;
+
+#endif /* LLPC_BUILD_NPI */
       UseMI->setDesc(TII->get(NewOpc));
     }
 
+#if LLPC_BUILD_NPI
+    // A frame index will resolve to a positive constant, so it should always be
+    // safe to fold the addressing mode, even pre-GFX9.
+    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
+
+#endif /* LLPC_BUILD_NPI */
     return;
   }
 
@@ -1151,6 +1194,11 @@ void SIFoldOperandsImpl::foldOperand(
         // %sgpr1 = V_READFIRSTLANE_B32 %vgpr
         // =>
         // %sgpr1 = COPY %sgpr0
+#if LLPC_BUILD_NPI
+        if (UseMI->isBundled())
+          updateReplacedRegInBundle(*UseMI, OpToFold, UseMI->getOperand(1),
+                                    TRI);
+#endif /* LLPC_BUILD_NPI */
         UseMI->setDesc(TII->get(AMDGPU::COPY));
         UseMI->getOperand(1).setReg(OpToFold.getReg());
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
@@ -1203,7 +1251,11 @@ void SIFoldOperandsImpl::foldOperand(
   if (UseOp->getSubReg() && AMDGPU::getRegBitWidth(*FoldRC) == 64) {
     Register UseReg = UseOp->getReg();
     const TargetRegisterClass *UseRC = MRI->getRegClass(UseReg);
+#if LLPC_BUILD_NPI
+    if (AMDGPU::getRegBitWidth(*UseRC) != 64 || !OpToFold.isImm())
+#else /* LLPC_BUILD_NPI */
     if (AMDGPU::getRegBitWidth(*UseRC) != 64)
+#endif /* LLPC_BUILD_NPI */
       return;
 
     APInt Imm(64, OpToFold.getImm());
@@ -1596,7 +1648,13 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (!FoldingImm && !OpToFold.isReg())
     return false;
 
+#if LLPC_BUILD_NPI
+  // Fold virtual registers and constant physical registers.
+  if (OpToFold.isReg() && OpToFold.getReg().isPhysical() &&
+      !TRI->isConstantPhysReg(OpToFold.getReg()))
+#else /* LLPC_BUILD_NPI */
   if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
+#endif /* LLPC_BUILD_NPI */
     return false;
 
   // Prevent folding operands backwards in the function. For example,
@@ -1654,7 +1712,13 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_MAX_F16_fake16_e64:
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
+#if LLPC_BUILD_NPI
+  case AMDGPU::V_PK_MAX_F16:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_PK_MAX_NUM_BF16: {
+#else /* LLPC_BUILD_NPI */
   case AMDGPU::V_PK_MAX_F16: {
+#endif /* LLPC_BUILD_NPI */
     if (MI.mayRaiseFPException())
       return nullptr;
 
@@ -1681,8 +1745,15 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
 
     // Having a 0 op_sel_hi would require swizzling the output in the source
     // instruction, which we can't do.
+#if LLPC_BUILD_NPI
+    unsigned UnsetMods =
+        (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
+            ? SISrcMods::OP_SEL_1
+            : 0u;
+#else /* LLPC_BUILD_NPI */
     unsigned UnsetMods = (Op == AMDGPU::V_PK_MAX_F16) ? SISrcMods::OP_SEL_1
                                                       : 0u;
+#endif /* LLPC_BUILD_NPI */
     if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
       return nullptr;
     return Src0;
@@ -2214,6 +2285,43 @@ bool SIFoldOperandsImpl::tryFoldLoad(MachineInstr &MI) {
   return true;
 }
 
+#if LLPC_BUILD_NPI
+// when index operand of v_load_idx is a known constant, fold it
+// into the offset operand
+bool SIFoldOperandsImpl::tryFoldVLoadStoreIdxOffset(MachineInstr &MI,
+                                                    MachineInstr *&SMovImmZero) {
+  auto IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
+  auto OffOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+
+  auto DefMI = MRI->getVRegDef(IdxOpnd->getReg());
+  if (DefMI->getOpcode() == AMDGPU::S_MOV_B32) {
+    auto ImmOpnd = DefMI->getOperand(1);
+    if (ImmOpnd.isImm() && ImmOpnd.getImm()) {
+      auto Offset =
+          (ImmOpnd.getImm() + OffOpnd->getImm()) % ST->getAddressableNumVGPRs();
+      OffOpnd->setImm(Offset);
+      Register IdxReg;
+      if (!SMovImmZero) {
+        IdxReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+        SMovImmZero =
+            BuildMI(*DefMI->getParent(), DefMI->getIterator(),
+                    DefMI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32), IdxReg)
+                .addImm(0);
+      } else {
+        IdxReg = SMovImmZero->getOperand(0).getReg();
+      }
+      IdxOpnd->setReg(IdxReg);
+      IdxOpnd->setSubReg(AMDGPU::NoSubRegister);
+      if (MRI->use_nodbg_empty(DefMI->getOperand(0).getReg())) {
+        DefMI->eraseFromParent();
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+#endif /* LLPC_BUILD_NPI */
 // tryFoldPhiAGPR will aggressively try to create AGPR PHIs.
 // For GFX90A and later, this is pretty much always a good thing, but for GFX908
 // there's cases where it can create a lot more AGPR-AGPR copies, which are
@@ -2328,6 +2436,9 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineOperand *CurrentKnownM0Val = nullptr;
+#if LLPC_BUILD_NPI
+    MachineInstr *SMovImmZero = nullptr;
+#endif /* LLPC_BUILD_NPI */
     for (auto &MI : make_early_inc_range(*MBB)) {
       Changed |= tryFoldCndMask(MI);
 
@@ -2349,6 +2460,16 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
       if (MI.mayLoad() && tryFoldLoad(MI)) {
         Changed = true;
         continue;
+#if LLPC_BUILD_NPI
+      }
+
+      if ((&MI)->getOpcode() == AMDGPU::V_LOAD_IDX ||
+          (&MI)->getOpcode() == AMDGPU::V_STORE_IDX) {
+        if (tryFoldVLoadStoreIdxOffset(MI, SMovImmZero)) {
+          Changed = true;
+          continue;
+        }
+#endif /* LLPC_BUILD_NPI */
       }
 
       if (TII->isFoldableCopy(MI)) {

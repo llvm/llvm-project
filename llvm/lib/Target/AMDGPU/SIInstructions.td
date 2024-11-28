@@ -23,6 +23,9 @@ class DivergentSextInreg<ValueType VT> : PatFrag<
   [{ return N->isDivergent(); }]>;
 
 include "SOPInstructions.td"
+#ifdef LLPC_BUILD_NPI
+include "VNBRInstructions.td"
+#endif /* LLPC_BUILD_NPI */
 include "VOPInstructions.td"
 include "SMInstructions.td"
 include "FLATInstructions.td"
@@ -668,11 +671,39 @@ def : GCNPat<
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
+#ifdef LLPC_BUILD_NPI
+// Pseudos for the llvm.amdgcn.cs.chain intrinsic.
+multiclass SI_CS_CHAIN_TC<
+#else /* LLPC_BUILD_NPI */
 // Pseudo for the llvm.amdgcn.cs.chain intrinsic.
 // This is essentially a tail call, but it also takes a mask to put in EXEC
 // right before jumping to the callee.
 class SI_CS_CHAIN_TC<
+#endif /* LLPC_BUILD_NPI */
     ValueType execvt, Predicate wavesizepred,
+#ifdef LLPC_BUILD_NPI
+    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret> {
+  let FixedSize = 0,
+      isCall = 1,
+      isTerminator = 1,
+      isBarrier = 1,
+      isReturn = 1,
+      UseNamedOperandTable = 1,
+      SchedRW = [WriteBranch],
+      isConvergent = 1,
+      WaveSizePredicate = wavesizepred in {
+  // This is essentially a tail call, but it also takes a mask to put in EXEC
+  // right before jumping to the callee.
+  def NAME: SPseudoInstSI <(outs),
+      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
+
+  // Same as above, but it will first try to reallocate the VGPRs, and choose an
+  // EXEC mask and a callee depending on the success of the reallocation attempt.
+  def _DVGPR : SPseudoInstSI <(outs),
+      (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
+           SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
+  } // End FixedSize = 0 etc
+#else /* LLPC_BUILD_NPI */
     RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
     : SPseudoInstSI <(outs),
       (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
@@ -686,18 +717,31 @@ class SI_CS_CHAIN_TC<
   let isConvergent = 1;
 
   let WaveSizePredicate = wavesizepred;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+defm SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
+defm SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
+#else /* LLPC_BUILD_NPI */
 def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
 def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
+#endif /* LLPC_BUILD_NPI */
 
 // Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
 multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
+#ifdef LLPC_BUILD_NPI
+  def : GCNPat<
+    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
+    (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+  >;
+#else /* LLPC_BUILD_NPI */
 def : GCNPat<
   (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
   (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
 >;
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass si_cs_chain_tc_patterns<
@@ -712,6 +756,28 @@ multiclass si_cs_chain_tc_patterns<
 defm : si_cs_chain_tc_patterns<i32>;
 defm : si_cs_chain_tc_patterns<i64>;
 
+#ifdef LLPC_BUILD_NPI
+// Match dynamic VGPR case. This is always indirect since we choose the callee
+// dynamically based on the result of the VGPR reallocation, so make sure to
+// drop the callee info if there is any.
+multiclass si_cs_chain_tc_dvgpr_patterns<
+  ValueType execvt, RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
+  Instruction tc = SI_CS_CHAIN_TC_W32_DVGPR> {
+  let AddedComplexity = 90 in {
+  foreach callee = [ (i64 0), (tglobaladdr) ] in {
+  def : GCNPat<
+    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec,
+                           i32:$numvgprs, execvt:$fbexec, i64:$fbcallee),
+    (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
+        SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
+  >;
+  }
+  } // AddedComplexity
+}
+
+defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
+
+#endif /* LLPC_BUILD_NPI */
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
   [(callseq_start timm:$amt0, timm:$amt1)],
@@ -762,6 +828,9 @@ def SI_INDIRECT_SRC_V10 : SI_INDIRECT_SRC<VReg_320>;
 def SI_INDIRECT_SRC_V11 : SI_INDIRECT_SRC<VReg_352>;
 def SI_INDIRECT_SRC_V12 : SI_INDIRECT_SRC<VReg_384>;
 def SI_INDIRECT_SRC_V16 : SI_INDIRECT_SRC<VReg_512>;
+#ifdef LLPC_BUILD_NPI
+def SI_INDIRECT_SRC_V18 : SI_INDIRECT_SRC<VReg_576>;
+#endif /* LLPC_BUILD_NPI */
 def SI_INDIRECT_SRC_V32 : SI_INDIRECT_SRC<VReg_1024>;
 
 def SI_INDIRECT_DST_V1 : SI_INDIRECT_DST<VGPR_32>;
@@ -773,6 +842,9 @@ def SI_INDIRECT_DST_V10 : SI_INDIRECT_DST<VReg_320>;
 def SI_INDIRECT_DST_V11 : SI_INDIRECT_DST<VReg_352>;
 def SI_INDIRECT_DST_V12 : SI_INDIRECT_DST<VReg_384>;
 def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
+#ifdef LLPC_BUILD_NPI
+def SI_INDIRECT_DST_V18 : SI_INDIRECT_DST<VReg_576>;
+#endif /* LLPC_BUILD_NPI */
 def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 
 } // End Uses = [EXEC], Defs = [M0, EXEC]
@@ -818,6 +890,9 @@ def V_INDIRECT_REG_WRITE_MOVREL_B32_V10 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V11 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_352>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V12 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_384>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V16 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_512>;
+#ifdef LLPC_BUILD_NPI
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V18 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_576>;
+#endif /* LLPC_BUILD_NPI */
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V32 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_1024>;
 
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V1 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_32>;
@@ -831,6 +906,9 @@ def S_INDIRECT_REG_WRITE_MOVREL_B32_V10 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V11 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_352>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V12 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_384>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V16 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_512>;
+#ifdef LLPC_BUILD_NPI
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V18 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_576>;
+#endif /* LLPC_BUILD_NPI */
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V32 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_1024>;
 
 def S_INDIRECT_REG_WRITE_MOVREL_B64_V1 : S_INDIRECT_REG_WRITE_MOVREL_B64_pseudo<SReg_64>;
@@ -863,6 +941,9 @@ def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V10 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<V
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V11 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_352>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V12 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_384>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V16 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_512>;
+#ifdef LLPC_BUILD_NPI
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V18 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_576>;
+#endif /* LLPC_BUILD_NPI */
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_1024>;
 
 class V_INDIRECT_REG_READ_GPR_IDX_pseudo<RegisterClass rc> : PseudoInstSI <
@@ -883,6 +964,9 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V10 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VRe
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V11 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_352>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V12 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_384>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V16 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_512>;
+#ifdef LLPC_BUILD_NPI
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V18 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_576>;
+#endif /* LLPC_BUILD_NPI */
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_1024>;
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
@@ -920,6 +1004,9 @@ defm SI_SPILL_S320 : SI_SPILL_SGPR <SReg_320>;
 defm SI_SPILL_S352 : SI_SPILL_SGPR <SReg_352>;
 defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
+#ifdef LLPC_BUILD_NPI
+defm SI_SPILL_S576 : SI_SPILL_SGPR <SReg_576>;
+#endif /* LLPC_BUILD_NPI */
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
 let Spill = 1, VALU = 1, isConvergent = 1 in {
@@ -949,13 +1036,25 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
+#ifdef LLPC_BUILD_NPI
+multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
+                          bit UsesTmp = 0, bit HasMask = 0> {
+#else /* LLPC_BUILD_NPI */
 multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
+#endif /* LLPC_BUILD_NPI */
   let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
+#ifdef LLPC_BUILD_NPI
+      !con(
+        (ins vgpr_class:$vdata, i32imm:$vaddr,
+             SReg_32:$soffset, i32imm:$offset),
+        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
+#else /* LLPC_BUILD_NPI */
       (ins vgpr_class:$vdata, i32imm:$vaddr,
            SReg_32:$soffset, i32imm:$offset)> {
+#endif /* LLPC_BUILD_NPI */
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -966,8 +1065,15 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
 
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
+#ifdef LLPC_BUILD_NPI
+      !con(
+        (ins i32imm:$vaddr,
+             SReg_32:$soffset, i32imm:$offset),
+        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
+#else /* LLPC_BUILD_NPI */
       (ins i32imm:$vaddr,
            SReg_32:$soffset, i32imm:$offset)> {
+#endif /* LLPC_BUILD_NPI */
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -992,8 +1098,19 @@ defm SI_SPILL_V320 : SI_SPILL_VGPR <VReg_320>;
 defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352>;
 defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
+#ifdef LLPC_BUILD_NPI
+defm SI_SPILL_V576 : SI_SPILL_VGPR <VReg_576>;
+#endif /* LLPC_BUILD_NPI */
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
 
+#ifdef LLPC_BUILD_NPI
+let Defs = [M0] in {
+  // Spills a block of 32 VGPRs. M0 will contain a mask describing which
+  // registers in the block need to be transferred.
+  defm SI_BLOCK_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024, 0, 1>;
+}
+
+#endif /* LLPC_BUILD_NPI */
 defm SI_SPILL_A32  : SI_SPILL_VGPR <AGPR_32, 1>;
 defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64, 1>;
 defm SI_SPILL_A96  : SI_SPILL_VGPR <AReg_96, 1>;
@@ -1007,6 +1124,9 @@ defm SI_SPILL_A320 : SI_SPILL_VGPR <AReg_320, 1>;
 defm SI_SPILL_A352 : SI_SPILL_VGPR <AReg_352, 1>;
 defm SI_SPILL_A384 : SI_SPILL_VGPR <AReg_384, 1>;
 defm SI_SPILL_A512 : SI_SPILL_VGPR <AReg_512, 1>;
+#ifdef LLPC_BUILD_NPI
+defm SI_SPILL_A576 : SI_SPILL_VGPR <AReg_576, 1>;
+#endif /* LLPC_BUILD_NPI */
 defm SI_SPILL_A1024 : SI_SPILL_VGPR <AReg_1024, 1>;
 
 defm SI_SPILL_AV32  : SI_SPILL_VGPR <AV_32, 1>;
@@ -1022,6 +1142,9 @@ defm SI_SPILL_AV320 : SI_SPILL_VGPR <AV_320, 1>;
 defm SI_SPILL_AV352 : SI_SPILL_VGPR <AV_352, 1>;
 defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
 defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
+#ifdef LLPC_BUILD_NPI
+defm SI_SPILL_AV576 : SI_SPILL_VGPR <AV_576, 1>;
+#endif /* LLPC_BUILD_NPI */
 defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
 
 let isConvergent = 1 in {
@@ -1043,6 +1166,16 @@ def : GCNPat <
   (SI_PC_ADD_REL_OFFSET $ptr_lo, (i32 0))
 >;
 
+#ifdef LLPC_BUILD_NPI
+def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
+  (outs SReg_64:$dst),
+  (ins si_ga:$ptr),
+  [(set SReg_64:$dst,
+      (i64 (SIpc_add_rel_offset64 tglobaladdr:$ptr)))]> {
+  let SubtargetPredicate = Has64BitLiterals;
+}
+
+#endif /* LLPC_BUILD_NPI */
 def : GCNPat<
   (AMDGPUtrap timm:$trapid),
   (S_TRAP $trapid)
@@ -1138,6 +1271,30 @@ def SI_WATERFALL_LAST_USE_V8   : SI_WATERFALL_LAST_USE<SReg_256>;
 def SI_WATERFALL_LAST_USE_V8_V : SI_WATERFALL_LAST_USE<VReg_256>;
 
 //===----------------------------------------------------------------------===//
+#ifdef LLPC_BUILD_NPI
+// Indexed Instructions
+//===----------------------------------------------------------------------===//
+
+// The units of $idx and $offset are in DWORDS.
+// is_laneshared == 0 if the access is to a dynamically accessed private array.
+// That case and laneshared have different fence semantics.
+def V_LOAD_IDX : VPseudoInstSI <
+  (outs VGPR_IDX_DATA_OP:$data_op),
+  (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+    let mayLoad = 1;
+    let VALU = 1;
+    let UseNamedOperandTable = 1;
+}
+def V_STORE_IDX : VPseudoInstSI <
+  (outs),
+  (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+    let mayStore = 1;
+    let VALU = 1;
+    let UseNamedOperandTable = 1;
+}
+
+//===----------------------------------------------------------------------===//
+#endif /* LLPC_BUILD_NPI */
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
 
@@ -1530,6 +1687,23 @@ foreach Index = 0-15 in {
   >;
 }
 
+#ifdef LLPC_BUILD_NPI
+foreach Index = 0-17 in {
+  def Extract_Element_v18i32_#Index : Extract_Element <
+    i32, v18i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v18i32_#Index : Insert_Element <
+    i32, v18i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v18f32_#Index : Extract_Element <
+    f32, v18f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v18f32_#Index : Insert_Element <
+    f32, v18f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+#endif /* LLPC_BUILD_NPI */
 
 foreach Index = 0-31 in {
   def Extract_Element_v32i32_#Index : Extract_Element <
@@ -1655,6 +1829,26 @@ def : BitConvert <v4f32, v4i32, VReg_128>;
 def : BitConvert <v3i32, v3f32, SGPR_96>;
 def : BitConvert <v3f32, v3i32, SGPR_96>;
 
+#ifdef LLPC_BUILD_NPI
+def : BitConvert <v3i32, v6f16, SGPR_96>;
+def : BitConvert <v6f16, v3i32, SGPR_96>;
+
+def : BitConvert <v3i32, v6bf16, SGPR_96>;
+def : BitConvert <v6bf16, v3i32, SGPR_96>;
+
+def : BitConvert <v3f32, v6bf16, SGPR_96>;
+def : BitConvert <v6bf16, v3f32, SGPR_96>;
+
+def : BitConvert <v6i16, v3i32, VReg_96>;
+def : BitConvert <v3i32, v6i16, VReg_96>;
+
+def : BitConvert <v6i16, v6bf16, SGPR_96>;
+def : BitConvert <v6f16, v6bf16, SGPR_96>;
+
+def : BitConvert <v6bf16, v6i16, SGPR_96>;
+def : BitConvert <v6bf16, v6f16, SGPR_96>;
+
+#endif /* LLPC_BUILD_NPI */
 // 128-bit bitcast
 def : BitConvert <v2i64, v4i32, SReg_128>;
 def : BitConvert <v4i32, v2i64, SReg_128>;
@@ -1724,6 +1918,15 @@ def : BitConvert <v5f32, v5i32, SReg_160>;
 def : BitConvert <v5i32, v5f32, VReg_160>;
 def : BitConvert <v5f32, v5i32, VReg_160>;
 
+#ifdef LLPC_BUILD_NPI
+def : BitConvert <v5i32, v10f16, SReg_160>;
+def : BitConvert <v5i32, v10bf16, SReg_160>;
+def : BitConvert <v5f32, v10i16, SReg_160>;
+def : BitConvert <v10i16, v5f32, VReg_160>;
+def : BitConvert <v10f16, v5i32, VReg_160>;
+def : BitConvert <v10bf16, v5i32, VReg_160>;
+
+#endif /* LLPC_BUILD_NPI */
 // 192-bit bitcast
 def : BitConvert <v6i32, v6f32, SReg_192>;
 def : BitConvert <v6f32, v6i32, SReg_192>;
@@ -1813,6 +2016,15 @@ def : BitConvert <v9f32, v9i32, SReg_288>;
 def : BitConvert <v9i32, v9f32, VReg_288>;
 def : BitConvert <v9f32, v9i32, VReg_288>;
 
+#ifdef LLPC_BUILD_NPI
+def : BitConvert <v9i32, v18f16, SReg_288>;
+def : BitConvert <v9i32, v18bf16, SReg_288>;
+def : BitConvert <v9f32, v18i16, SReg_288>;
+def : BitConvert <v18i16, v9f32, VReg_288>;
+def : BitConvert <v18f16, v9i32, VReg_288>;
+def : BitConvert <v18bf16, v9i32, VReg_288>;
+
+#endif /* LLPC_BUILD_NPI */
 // 320-bit bitcast
 def : BitConvert <v10i32, v10f32, SReg_320>;
 def : BitConvert <v10f32, v10i32, SReg_320>;
@@ -1887,6 +2099,31 @@ def : BitConvert <v8i64, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v8i64, SReg_512>;
 def : BitConvert <v8i64, v32bf16, SReg_512>;
 
+#ifdef LLPC_BUILD_NPI
+// 576-bit bitcast
+
+def : BitConvert <v18f32, v18i32, VReg_576>;
+def : BitConvert <v18f32, v36bf16, VReg_576>;
+def : BitConvert <v18f32, v36f16, VReg_576>;
+def : BitConvert <v18f32, v36i16, VReg_576>;
+def : BitConvert <v18i32, v18f32, VReg_576>;
+def : BitConvert <v18i32, v36bf16, VReg_576>;
+def : BitConvert <v18i32, v36f16, VReg_576>;
+def : BitConvert <v18i32, v36i16, VReg_576>;
+def : BitConvert <v36bf16, v18f32, VReg_576>;
+def : BitConvert <v36bf16, v18i32, VReg_576>;
+def : BitConvert <v36bf16, v36f16, VReg_576>;
+def : BitConvert <v36bf16, v36i16, VReg_576>;
+def : BitConvert <v36f16, v18f32, VReg_576>;
+def : BitConvert <v36f16, v18i32, VReg_576>;
+def : BitConvert <v36f16, v36bf16, VReg_576>;
+def : BitConvert <v36f16, v36i16, VReg_576>;
+def : BitConvert <v36i16, v18f32, VReg_576>;
+def : BitConvert <v36i16, v18i32, VReg_576>;
+def : BitConvert <v36i16, v36bf16, VReg_576>;
+def : BitConvert <v36i16, v36f16, VReg_576>;
+
+#endif /* LLPC_BUILD_NPI */
 // 1024-bit bitcast
 def : BitConvert <v32i32, v32f32, VReg_1024>;
 def : BitConvert <v32f32, v32i32, VReg_1024>;
@@ -1926,6 +2163,11 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
+#ifdef LLPC_BUILD_NPI
+// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
+let True16Predicate = UseFakeTrue16Insts in
+def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
+#endif /* LLPC_BUILD_NPI */
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -1935,6 +2177,15 @@ def : GCNPat <
 >;
 }
 
+#ifdef LLPC_BUILD_NPI
+let SubtargetPredicate = HasBF16PackedInsts in {
+def : GCNPat <
+  (v2bf16 (AMDGPUclamp (VOP3PMods v2bf16:$src0, i32:$src0_modifiers))),
+  (V_PK_MAX_NUM_BF16 $src0_modifiers, $src0,
+                     $src0_modifiers, $src0, DSTCLAMP.ENABLE)
+>;
+} // End SubtargetPredicate = HasBF16PackedInsts
+#endif /* LLPC_BUILD_NPI */
 
 /********** ================================ **********/
 /********** Floating point absolute/negative **********/
@@ -2210,7 +2461,11 @@ def : GCNPat <
 
 // FIXME: Remove VGPRImm. Should be inferrable from register bank.
 
+#ifdef LLPC_BUILD_NPI
+foreach vt = [i32, p3, p5, p6, p2, p10] in {
+#else /* LLPC_BUILD_NPI */
 foreach vt = [i32, p3, p5, p6, p2] in {
+#endif /* LLPC_BUILD_NPI */
   def : GCNPat <
     (VGPRImm<(vt imm)>:$imm),
     (V_MOV_B32_e32 imm:$imm)
@@ -2606,6 +2861,9 @@ defm : SI_INDIRECT_Pattern <v10f32, f32, "V10">;
 defm : SI_INDIRECT_Pattern <v11f32, f32, "V11">;
 defm : SI_INDIRECT_Pattern <v12f32, f32, "V12">;
 defm : SI_INDIRECT_Pattern <v16f32, f32, "V16">;
+#ifdef LLPC_BUILD_NPI
+defm : SI_INDIRECT_Pattern <v18f32, f32, "V18">;
+#endif /* LLPC_BUILD_NPI */
 defm : SI_INDIRECT_Pattern <v32f32, f32, "V32">;
 
 defm : SI_INDIRECT_Pattern <v2i32, i32, "V2">;
@@ -2616,6 +2874,9 @@ defm : SI_INDIRECT_Pattern <v10i32, i32, "V10">;
 defm : SI_INDIRECT_Pattern <v11i32, i32, "V11">;
 defm : SI_INDIRECT_Pattern <v12i32, i32, "V12">;
 defm : SI_INDIRECT_Pattern <v16i32, i32, "V16">;
+#ifdef LLPC_BUILD_NPI
+defm : SI_INDIRECT_Pattern <v18i32, i32, "V18">;
+#endif /* LLPC_BUILD_NPI */
 defm : SI_INDIRECT_Pattern <v32i32, i32, "V32">;
 
 //===----------------------------------------------------------------------===//
@@ -3835,7 +4096,7 @@ def FPPow2ToExponentXForm : SDNodeXForm<fpimm, [{
   const auto &APF = N->getValueAPF();
   int Log2 = APF.getExactLog2Abs();
   assert(Log2 != INT_MIN);
-  return CurDAG->getTargetConstant(Log2, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(Log2, SDLoc(N), MVT::i32);
 }]>;
 
 // Check if a floating point value is a power of 2 floating-point
@@ -3965,6 +4226,21 @@ def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
 
+#ifdef LLPC_BUILD_NPI
+class BufferDiscardInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$rsrc, type1:$vindex, type1:$voffset,
+                           type1:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_BUFFER_DISCARD_B32   : BufferDiscardInstruction;
+def G_AMDGPU_BUFFER_DISCARD_B128  : BufferDiscardInstruction;
+def G_AMDGPU_BUFFER_DISCARD_B1024 : BufferDiscardInstruction;
+
+#endif /* LLPC_BUILD_NPI */
 class BufferStoreGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
@@ -4189,9 +4465,33 @@ def G_AMDGPU_INTRIN_IMAGE_STORE_D16 : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+def G_AMDGPU_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
+#else /* LLPC_BUILD_NPI */
 def G_AMDGPU_INTRIN_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
+#endif /* LLPC_BUILD_NPI */
   let OutOperandList = (outs type0:$dst);
+#ifdef LLPC_BUILD_NPI
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def G_AMDGPU_BVH_DUAL_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def G_AMDGPU_BVH8_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+#else /* LLPC_BUILD_NPI */
   let InOperandList = (ins unknown:$intrin, variable_ops);
+#endif /* LLPC_BUILD_NPI */
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;

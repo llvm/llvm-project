@@ -36,15 +36,24 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
+#if LLPC_BUILD_NPI
+std::array<std::vector<int16_t>, 18> SIRegisterInfo::RegSplitParts;
+#else /* LLPC_BUILD_NPI */
 std::array<std::vector<int16_t>, 16> SIRegisterInfo::RegSplitParts;
+#endif /* LLPC_BUILD_NPI */
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
 // Map numbers of DWORDs to indexes in SubRegFromChannelTable.
 // Valid indexes are shifted 1, such that a 0 mapping means unsupported.
 // e.g. for 8 DWORDs (256-bit), SubRegFromChannelTableWidthMap[8] = 8,
 //      meaning index 7 in SubRegFromChannelTable.
+#if LLPC_BUILD_NPI
+static const std::array<unsigned, 19> SubRegFromChannelTableWidthMap = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0};
+#else /* LLPC_BUILD_NPI */
 static const std::array<unsigned, 17> SubRegFromChannelTableWidthMap = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9};
+#endif /* LLPC_BUILD_NPI */
 
 namespace llvm {
 
@@ -320,7 +329,8 @@ struct SGPRSpillBuilder {
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour(),
-                            ST.getAMDGPUDwarfFlavour()),
+                            ST.getAMDGPUDwarfFlavour(),
+                            /*PC=*/0, ST.getHwMode()),
       ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
 
   assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
@@ -345,6 +355,9 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
       unsigned Size = getSubRegIdxSize(Idx);
       if (Size & 31)
         continue;
+#if LLPC_BUILD_NPI
+      assert(Size / 32 - 1 < RegSplitParts.size());
+#endif /* LLPC_BUILD_NPI */
       std::vector<int16_t> &Vec = RegSplitParts[Size / 32 - 1];
       unsigned Pos = getSubRegIdxOffset(Idx);
       if (Pos % Size)
@@ -490,6 +503,11 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     if (RC == &AMDGPU::VReg_512_Align2RegClass ||
         RC == &AMDGPU::AReg_512_Align2RegClass)
       return &AMDGPU::AV_512_Align2RegClass;
+#if LLPC_BUILD_NPI
+    if (RC == &AMDGPU::VReg_576_Align2RegClass ||
+        RC == &AMDGPU::AReg_576_Align2RegClass)
+      return &AMDGPU::AV_576_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
     if (RC == &AMDGPU::VReg_1024RegClass || RC == &AMDGPU::AReg_1024RegClass)
       return &AMDGPU::AV_1024RegClass;
     if (RC == &AMDGPU::VReg_1024_Align2RegClass ||
@@ -503,6 +521,16 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI = ST.getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+#if LLPC_BUILD_NPI
+
+  // If we need to reserve scratch space for saving the VGPRs, then we should
+  // use the frame register for accessing our own frame (which may start at a
+  // non-zero offset).
+  if (TFI->mayReserveScratchForCWSR(MF))
+    return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
+                          : FuncInfo->getStackPtrOffsetReg();
+
+#endif /* LLPC_BUILD_NPI */
   // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use
@@ -567,7 +595,11 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
   unsigned MaxNumAGPRs = MaxNumVGPRs;
+#if LLPC_BUILD_NPI
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+#else /* LLPC_BUILD_NPI */
   unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+#endif /* LLPC_BUILD_NPI */
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
@@ -582,9 +614,15 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
       MaxNumVGPRs /= 2;
       MaxNumAGPRs = MaxNumVGPRs;
     } else {
+#if LLPC_BUILD_NPI
+      if (MaxNumVGPRs > NumArchVGPRs) {
+        MaxNumAGPRs = MaxNumVGPRs - NumArchVGPRs;
+        MaxNumVGPRs = NumArchVGPRs;
+#else /* LLPC_BUILD_NPI */
       if (MaxNumVGPRs > TotalNumVGPRs) {
         MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
         MaxNumVGPRs = TotalNumVGPRs;
+#endif /* LLPC_BUILD_NPI */
       } else
         MaxNumAGPRs = 0;
     }
@@ -619,6 +657,14 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_LIMIT);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_BASE);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_LIMIT);
+#if LLPC_BUILD_NPI
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_FLAT_SCRATCH_BASE_LO);
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_FLAT_SCRATCH_BASE_HI);
+
+  // Reserve async counters pseudo registers
+  reserveRegisterTuples(Reserved, AMDGPU::ASYNCcnt);
+  reserveRegisterTuples(Reserved, AMDGPU::TENSORcnt);
+#endif /* LLPC_BUILD_NPI */
 
   // Reserve src_pops_exiting_wave_id - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::SRC_POPS_EXITING_WAVE_ID);
@@ -1141,9 +1187,26 @@ SIRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   return RC;
 }
 
+#if LLPC_BUILD_NPI
+static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
+                                        const SIInstrInfo *TII) {
+#else /* LLPC_BUILD_NPI */
 static unsigned getNumSubRegsForSpillOp(unsigned Op) {
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  unsigned Op = MI.getOpcode();
+#endif /* LLPC_BUILD_NPI */
   switch (Op) {
+#if LLPC_BUILD_NPI
+  case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+  case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
+    // FIXME: This assumes the mask is statically known and not computed at
+    // runtime. However, some ABIs may want to compute the mask dynamically and
+    // this will need to be updated.
+    return llvm::popcount(
+        (uint64_t)TII->getNamedOperand(MI, AMDGPU::OpName::mask)->getImm());
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SI_SPILL_S1024_SAVE:
   case AMDGPU::SI_SPILL_S1024_RESTORE:
   case AMDGPU::SI_SPILL_V1024_SAVE:
@@ -1153,6 +1216,17 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_AV1024_SAVE:
   case AMDGPU::SI_SPILL_AV1024_RESTORE:
     return 32;
+#if LLPC_BUILD_NPI
+  case AMDGPU::SI_SPILL_S576_SAVE:
+  case AMDGPU::SI_SPILL_S576_RESTORE:
+  case AMDGPU::SI_SPILL_V576_SAVE:
+  case AMDGPU::SI_SPILL_V576_RESTORE:
+  case AMDGPU::SI_SPILL_A576_SAVE:
+  case AMDGPU::SI_SPILL_A576_RESTORE:
+  case AMDGPU::SI_SPILL_AV576_SAVE:
+  case AMDGPU::SI_SPILL_AV576_RESTORE:
+    return 18;
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SI_SPILL_S512_SAVE:
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_V512_SAVE:
@@ -1482,6 +1556,12 @@ static unsigned getFlatScratchSpillOpcode(const SIInstrInfo *TII,
   bool UseST =
       !HasVAddr && !AMDGPU::hasNamedOperand(LoadStoreOp, AMDGPU::OpName::saddr);
 
+#if LLPC_BUILD_NPI
+  // Handle block load/store first.
+  if (TII->isBlockLoadStore(LoadStoreOp))
+    return LoadStoreOp;
+
+#endif /* LLPC_BUILD_NPI */
   switch (EltSize) {
   case 4:
     LoadStoreOp = IsStore ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
@@ -1609,6 +1689,9 @@ void SIRegisterInfo::buildSpillLoadStore(
   const MCInstrDesc *Desc = &TII->get(LoadStoreOp);
   bool IsStore = Desc->mayStore();
   bool IsFlat = TII->isFLATScratch(LoadStoreOp);
+#if LLPC_BUILD_NPI
+  bool IsBlock = TII->isBlockLoadStore(LoadStoreOp);
+#endif /* LLPC_BUILD_NPI */
 
   bool CanClobberSCC = false;
   bool Scavenged = false;
@@ -1622,7 +1705,14 @@ void SIRegisterInfo::buildSpillLoadStore(
 
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
+#if LLPC_BUILD_NPI
+  // If we're using a block operation, the element should be the whole block.
+  unsigned EltSize = IsBlock               ? RegWidth
+                     : (IsFlat && !IsAGPR) ? std::min(RegWidth, 16u)
+                                           : 4u;
+#else /* LLPC_BUILD_NPI */
   unsigned EltSize = (IsFlat && !IsAGPR) ? std::min(RegWidth, 16u) : 4u;
+#endif /* LLPC_BUILD_NPI */
   unsigned NumSubRegs = RegWidth / EltSize;
   unsigned Size = NumSubRegs * EltSize;
   unsigned RemSize = RegWidth - Size;
@@ -1779,6 +1869,9 @@ void SIRegisterInfo::buildSpillLoadStore(
       LoadStoreOp = AMDGPU::getFlatScratchInstSVfromSS(LoadStoreOp);
     } else {
       assert(ST.hasFlatScratchSTMode());
+#if LLPC_BUILD_NPI
+      assert(!TII->isBlockLoadStore(LoadStoreOp) && "Block ops don't have ST");
+#endif /* LLPC_BUILD_NPI */
       LoadStoreOp = AMDGPU::getFlatScratchInstSTfromSS(LoadStoreOp);
     }
 
@@ -1985,6 +2078,16 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB.addReg(SubReg, RegState::Implicit);
       MIB->tieOperands(0, MIB->getNumOperands() - 1);
     }
+#if LLPC_BUILD_NPI
+
+    //  If we're building a block load, we should add artificial uses for the
+    //  CSR VGPRs that are *not* being transferred. This is because liveness
+    //  analysis is not aware of the mask, so we need to somehow inform it that
+    //  those registers are not available before the load and they should not be
+    //  scavenged.
+    if (!IsStore && TII->isBlockLoadStore(LoadStoreOp))
+      addImplicitUsesForBlockCSRLoad(MIB, ValueReg);
+#endif /* LLPC_BUILD_NPI */
   }
 
   if (UninitStackPtrOffset) {
@@ -1998,6 +2101,20 @@ void SIRegisterInfo::buildSpillLoadStore(
   }
 }
 
+#if LLPC_BUILD_NPI
+void SIRegisterInfo::addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
+                                                    Register BlockReg) const {
+  const MachineFunction *MF = MIB->getParent()->getParent();
+  const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
+  uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(BlockReg);
+  Register BaseVGPR = getSubReg(BlockReg, AMDGPU::sub0);
+  for (unsigned RegOffset = 1; RegOffset < 32; ++RegOffset)
+    if (!(Mask & (1 << RegOffset)) &&
+        isCalleeSavedPhysReg(BaseVGPR + RegOffset, *MF))
+      MIB.addUse(BaseVGPR + RegOffset, RegState::Implicit);
+}
+
+#endif /* LLPC_BUILD_NPI */
 void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
                                              int Offset, bool IsLoad,
                                              bool IsKill) const {
@@ -2316,6 +2433,9 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
     SlotIndexes *Indexes, LiveIntervals *LIS, bool SpillToPhysVGPRLane) const {
   switch (MI->getOpcode()) {
   case AMDGPU::SI_SPILL_S1024_SAVE:
+#if LLPC_BUILD_NPI
+  case AMDGPU::SI_SPILL_S576_SAVE:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SI_SPILL_S512_SAVE:
   case AMDGPU::SI_SPILL_S384_SAVE:
   case AMDGPU::SI_SPILL_S352_SAVE:
@@ -2331,6 +2451,9 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S32_SAVE:
     return spillSGPR(MI, FI, RS, Indexes, LIS, true, SpillToPhysVGPRLane);
   case AMDGPU::SI_SPILL_S1024_RESTORE:
+#if LLPC_BUILD_NPI
+  case AMDGPU::SI_SPILL_S576_RESTORE:
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_S384_RESTORE:
   case AMDGPU::SI_SPILL_S352_RESTORE:
@@ -2375,6 +2498,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   switch (MI->getOpcode()) {
     // SGPR register spill
     case AMDGPU::SI_SPILL_S1024_SAVE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_S576_SAVE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_S512_SAVE:
     case AMDGPU::SI_SPILL_S384_SAVE:
     case AMDGPU::SI_SPILL_S352_SAVE:
@@ -2393,6 +2519,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
     // SGPR register restore
     case AMDGPU::SI_SPILL_S1024_RESTORE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_S576_RESTORE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_S512_RESTORE:
     case AMDGPU::SI_SPILL_S384_RESTORE:
     case AMDGPU::SI_SPILL_S352_RESTORE:
@@ -2410,7 +2539,19 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
 
     // VGPR register spill
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE: {
+      // Put mask into M0.
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
+              AMDGPU::M0)
+          .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
+      LLVM_FALLTHROUGH;
+    }
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_V1024_SAVE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_V576_SAVE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_V512_SAVE:
     case AMDGPU::SI_SPILL_V384_SAVE:
     case AMDGPU::SI_SPILL_V352_SAVE:
@@ -2438,7 +2579,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             *MI->memoperands_begin());
 
         if (ldsSpill) {
+#if LLPC_BUILD_NPI
+          MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(*MI, TII));
+#else /* LLPC_BUILD_NPI */
           MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
+#endif /* LLPC_BUILD_NPI */
           MI->eraseFromParent();
           break;
         }
@@ -2446,6 +2591,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       LLVM_FALLTHROUGH;
     }
     case AMDGPU::SI_SPILL_A1024_SAVE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_A576_SAVE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_A512_SAVE:
     case AMDGPU::SI_SPILL_A384_SAVE:
     case AMDGPU::SI_SPILL_A352_SAVE:
@@ -2460,6 +2608,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_A64_SAVE:
     case AMDGPU::SI_SPILL_A32_SAVE:
     case AMDGPU::SI_SPILL_AV1024_SAVE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_AV576_SAVE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_AV512_SAVE:
     case AMDGPU::SI_SPILL_AV384_SAVE:
     case AMDGPU::SI_SPILL_AV352_SAVE:
@@ -2480,8 +2631,16 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
+#if LLPC_BUILD_NPI
+      unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
+                         ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
+                     : ST.enableFlatScratch()
+                         ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                         : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+#else /* LLPC_BUILD_NPI */
       unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                             : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+#endif /* LLPC_BUILD_NPI */
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
@@ -2492,13 +2651,26 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
+#if LLPC_BUILD_NPI
+      MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(*MI, TII));
+#else /* LLPC_BUILD_NPI */
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
+#endif /* LLPC_BUILD_NPI */
       if (IsWWMRegSpill)
         TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
 
       MI->eraseFromParent();
       return true;
     }
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE: {
+      // Put mask into M0.
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
+              AMDGPU::M0)
+          .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
+      LLVM_FALLTHROUGH;
+    }
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_V32_RESTORE:
     case AMDGPU::SI_SPILL_V64_RESTORE:
     case AMDGPU::SI_SPILL_V96_RESTORE:
@@ -2512,6 +2684,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V352_RESTORE:
     case AMDGPU::SI_SPILL_V384_RESTORE:
     case AMDGPU::SI_SPILL_V512_RESTORE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_V576_RESTORE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_V1024_RESTORE: {
       if (MFI->getLdsSpill().TotalSize > 0) {
         const MachineOperand *VData =
@@ -2543,6 +2718,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_A352_RESTORE:
     case AMDGPU::SI_SPILL_A384_RESTORE:
     case AMDGPU::SI_SPILL_A512_RESTORE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_A576_RESTORE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_A1024_RESTORE:
     case AMDGPU::SI_SPILL_AV32_RESTORE:
     case AMDGPU::SI_SPILL_AV64_RESTORE:
@@ -2557,6 +2735,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV352_RESTORE:
     case AMDGPU::SI_SPILL_AV384_RESTORE:
     case AMDGPU::SI_SPILL_AV512_RESTORE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_AV576_RESTORE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_AV1024_RESTORE:
     case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
     case AMDGPU::SI_SPILL_WWM_AV32_RESTORE: {
@@ -2565,8 +2746,16 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
+#if LLPC_BUILD_NPI
+      unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
+                         ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
+                     : ST.enableFlatScratch()
+                         ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                         : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+#else /* LLPC_BUILD_NPI */
       unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                                             : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+#endif /* LLPC_BUILD_NPI */
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
@@ -3308,28 +3497,73 @@ StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
+#if LLPC_BUILD_NPI
+unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {
+  return getEncodingValue(Reg) & AMDGPU::HWEncoding::REG_IDX_MASK;
+}
+
+#endif /* LLPC_BUILD_NPI */
 unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
+#if LLPC_BUILD_NPI
+const TargetRegisterClass *
+SIRegisterInfo::getAnyVGPRClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth == 1)
+    return &AMDGPU::VReg_1RegClass;
+  if (BitWidth == 16)
+    return &AMDGPU::VGPR_16_STAGINGRegClass;
+  if (BitWidth == 32)
+    return &AMDGPU::VGPR_32_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
 static const TargetRegisterClass *
 getAnyVGPRClassForBitWidth(unsigned BitWidth) {
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 64)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_64_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_64RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 96)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_96_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_96RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 128)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_128_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_128RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 160)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_160_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_160RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 192)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_192_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_192RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 224)
     return &AMDGPU::VReg_224RegClass;
   if (BitWidth == 256)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_256_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_256RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 288)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_288_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_288RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 320)
     return &AMDGPU::VReg_320RegClass;
   if (BitWidth == 352)
@@ -3337,31 +3571,77 @@ getAnyVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 384)
     return &AMDGPU::VReg_384RegClass;
   if (BitWidth == 512)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_512_STAGINGRegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::VReg_576_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_512RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 1024)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_1024_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_1024RegClass;
+#endif /* LLPC_BUILD_NPI */
 
   return nullptr;
 }
 
 static const TargetRegisterClass *
 getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
+#if LLPC_BUILD_NPI
+  if (BitWidth == 1)
+    return &AMDGPU::VReg_1RegClass;
+  if (BitWidth == 16)
+    return &AMDGPU::VGPR_16_STAGINGRegClass;
+  if (BitWidth == 32)
+    return &AMDGPU::VGPR_32_STAGINGRegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 64)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_64_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_64_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 96)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_96_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_96_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 128)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_128_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_128_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 160)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_160_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_160_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 192)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_192_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_192_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 224)
     return &AMDGPU::VReg_224_Align2RegClass;
   if (BitWidth == 256)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_256_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_256_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 288)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_288_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_288_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 320)
     return &AMDGPU::VReg_320_Align2RegClass;
   if (BitWidth == 352)
@@ -3369,25 +3649,76 @@ getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 384)
     return &AMDGPU::VReg_384_Align2RegClass;
   if (BitWidth == 512)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_512_STAGING_Align2RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::VReg_576_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_512_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 1024)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::VReg_1024_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::VReg_1024_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
 
   return nullptr;
 }
 
 const TargetRegisterClass *
 SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) const {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   if (BitWidth == 1)
     return &AMDGPU::VReg_1RegClass;
   if (BitWidth == 16)
     return &AMDGPU::VGPR_16RegClass;
   if (BitWidth == 32)
     return &AMDGPU::VGPR_32RegClass;
+#endif /* LLPC_BUILD_NPI */
   return ST.needsAlignedVGPRs() ? getAlignedVGPRClassForBitWidth(BitWidth)
                                 : getAnyVGPRClassForBitWidth(BitWidth);
 }
 
+#if LLPC_BUILD_NPI
+const TargetRegisterClass *
+SIRegisterInfo::getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth <= 32)
+    return &AMDGPU::VGPR_32_STAGING_Lo256RegClass;
+  if (BitWidth <= 64)
+    return &AMDGPU::VReg_64_STAGING_Lo256_Align2RegClass;
+  if (BitWidth <= 96)
+    return &AMDGPU::VReg_96_Lo256_Align2RegClass;
+  if (BitWidth <= 128)
+    return &AMDGPU::VReg_128_Lo256_Align2RegClass;
+  if (BitWidth <= 160)
+    return &AMDGPU::VReg_160_Lo256_Align2RegClass;
+  if (BitWidth <= 192)
+    return &AMDGPU::VReg_192_Lo256_Align2RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::VReg_224_Lo256_Align2RegClass;
+  if (BitWidth <= 256)
+    return &AMDGPU::VReg_256_Lo256_Align2RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::VReg_288_Lo256_Align2RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::VReg_320_Lo256_Align2RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::VReg_352_Lo256_Align2RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::VReg_384_Lo256_Align2RegClass;
+  if (BitWidth <= 512)
+    return &AMDGPU::VReg_512_Lo256_Align2RegClass;
+  if (BitWidth <= 576)
+    return &AMDGPU::VReg_576_Lo256_Align2RegClass;
+  if (BitWidth <= 1024)
+    return &AMDGPU::VReg_1024_Lo256_Align2RegClass;
+
+  return nullptr;
+}
+
+#endif /* LLPC_BUILD_NPI */
 static const TargetRegisterClass *
 getAnyAGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
@@ -3414,6 +3745,10 @@ getAnyAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_384RegClass;
   if (BitWidth == 512)
     return &AMDGPU::AReg_512RegClass;
+#if LLPC_BUILD_NPI
+  if (BitWidth == 576)
+    return &AMDGPU::AReg_576RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 1024)
     return &AMDGPU::AReg_1024RegClass;
 
@@ -3446,6 +3781,10 @@ getAlignedAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_384_Align2RegClass;
   if (BitWidth == 512)
     return &AMDGPU::AReg_512_Align2RegClass;
+#if LLPC_BUILD_NPI
+  if (BitWidth == 576)
+    return &AMDGPU::AReg_576_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 1024)
     return &AMDGPU::AReg_1024_Align2RegClass;
 
@@ -3465,21 +3804,49 @@ SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) const {
 static const TargetRegisterClass *
 getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_64_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_64RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 96)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_96_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_96RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 128)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_128_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_128RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 160)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_160_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_160RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 192)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_192_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_192RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 224)
     return &AMDGPU::AV_224RegClass;
   if (BitWidth == 256)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_256_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_256RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 288)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_288_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_288RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 320)
     return &AMDGPU::AV_320RegClass;
   if (BitWidth == 352)
@@ -3487,9 +3854,19 @@ getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 384)
     return &AMDGPU::AV_384RegClass;
   if (BitWidth == 512)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_512_STAGINGRegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::AV_576_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_512RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 1024)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_1024_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_1024RegClass;
+#endif /* LLPC_BUILD_NPI */
 
   return nullptr;
 }
@@ -3497,21 +3874,49 @@ getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
 static const TargetRegisterClass *
 getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_64_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_64_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 96)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_96_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_96_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 128)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_128_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_128_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 160)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_160_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_160_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 192)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_192_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_192_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 224)
     return &AMDGPU::AV_224_Align2RegClass;
   if (BitWidth == 256)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_256_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_256_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 288)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_288_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_288_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 320)
     return &AMDGPU::AV_320_Align2RegClass;
   if (BitWidth == 352)
@@ -3519,9 +3924,19 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 384)
     return &AMDGPU::AV_384_Align2RegClass;
   if (BitWidth == 512)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_512_STAGING_Align2RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::AV_576_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_512_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 1024)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_1024_STAGING_Align2RegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_1024_Align2RegClass;
+#endif /* LLPC_BUILD_NPI */
 
   return nullptr;
 }
@@ -3529,7 +3944,11 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
 const TargetRegisterClass *
 SIRegisterInfo::getVectorSuperClassForBitWidth(unsigned BitWidth) const {
   if (BitWidth == 32)
+#if LLPC_BUILD_NPI
+    return &AMDGPU::AV_32_STAGINGRegClass;
+#else /* LLPC_BUILD_NPI */
     return &AMDGPU::AV_32RegClass;
+#endif /* LLPC_BUILD_NPI */
   return ST.needsAlignedVGPRs()
              ? getAlignedVectorSuperClassForBitWidth(BitWidth)
              : getAnyVectorSuperClassForBitWidth(BitWidth);
@@ -3565,6 +3984,10 @@ SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::SGPR_384RegClass;
   if (BitWidth == 512)
     return &AMDGPU::SGPR_512RegClass;
+#if LLPC_BUILD_NPI
+  if (BitWidth == 576)
+    return &AMDGPU::SGPR_576RegClass;
+#endif /* LLPC_BUILD_NPI */
   if (BitWidth == 1024)
     return &AMDGPU::SGPR_1024RegClass;
 
@@ -3584,7 +4007,12 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
   unsigned Size = getRegSizeInBits(*SRC);
+#if LLPC_BUILD_NPI
+  const TargetRegisterClass *VRC =
+      getAllocatableClass(getVGPRClassForBitWidth(Size));
+#else /* LLPC_BUILD_NPI */
   const TargetRegisterClass *VRC = getVGPRClassForBitWidth(Size);
+#endif /* LLPC_BUILD_NPI */
   assert(VRC && "Invalid register class size");
   return VRC;
 }
@@ -3827,8 +4255,13 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
                                          const RegisterBank &RB) const {
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
+#if LLPC_BUILD_NPI
+    return getAllocatableClass(getVGPRClassForBitWidth(
+        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size)));
+#else /* LLPC_BUILD_NPI */
     return getVGPRClassForBitWidth(
         std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
     return getWaveMaskRegClass();
@@ -3864,6 +4297,9 @@ MCRegister SIRegisterInfo::getExec() const {
 
 const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
   // VGPR tuples have an alignment requirement on gfx90a variants.
+#if LLPC_BUILD_NPI
+  // It is possible to return RC with STAGING_REGs here, but not needed.
+#endif /* LLPC_BUILD_NPI */
   return ST.needsAlignedVGPRs() ? &AMDGPU::VReg_64_Align2RegClass
                                 : &AMDGPU::VReg_64RegClass;
 }
@@ -3957,6 +4393,10 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   if (!ST.needsAlignedVGPRs())
     return true;
 
+#if LLPC_BUILD_NPI
+  if (&RC == &AMDGPU::VGPR_IDX_DATA_OP_RCRegClass)
+    return true;
+#endif /* LLPC_BUILD_NPI */
   if (isVGPRClass(&RC))
     return RC.hasSuperClassEq(getVGPRClassForBitWidth(getRegSizeInBits(RC)));
   if (isAGPRClass(&RC))
@@ -3973,6 +4413,9 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
   if (!RC || !ST.needsAlignedVGPRs())
     return RC;
 
+#if LLPC_BUILD_NPI
+  // RsrcRegClass and VGPR_IDX_DATA_OP_RC are implicitly aligned.
+#endif /* LLPC_BUILD_NPI */
   unsigned Size = getRegSizeInBits(*RC);
   if (Size <= 32)
     return RC;
@@ -4021,7 +4464,16 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
 unsigned
 SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
                                    const TargetRegisterClass &RC) const {
+#if LLPC_BUILD_NPI
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  ArrayRef<MCPhysReg> Registers =
+      (RC.getID() == AMDGPU::VGPR_32RegClassID)
+          ? RC.getRegisters().take_front(NumArchVGPRs)
+          : RC.getRegisters();
+  for (MCPhysReg Reg : reverse(Registers))
+#else /* LLPC_BUILD_NPI */
   for (MCPhysReg Reg : reverse(RC.getRegisters()))
+#endif /* LLPC_BUILD_NPI */
     if (MRI.isPhysRegUsed(Reg))
       return getHWRegIndex(Reg) + 1;
   return 0;

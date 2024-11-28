@@ -103,6 +103,9 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 4;
   case FK_SecRel_8:
   case FK_Data_8:
+#if LLPC_BUILD_NPI
+  case FK_PCRel_8:
+#endif /* LLPC_BUILD_NPI */
     return 8;
   default:
     llvm_unreachable("Unknown fixup kind!");
@@ -127,6 +130,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_4:
   case FK_Data_8:
   case FK_PCRel_4:
+#if LLPC_BUILD_NPI
+  case FK_PCRel_8:
+#endif /* LLPC_BUILD_NPI */
   case FK_SecRel_4:
     return Value;
   default:

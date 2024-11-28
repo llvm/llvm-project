@@ -19,6 +19,9 @@ class AddressSpacesImpl {
   int Constant = 4;
   int Private = 5;
   int Constant32Bit = 6;
+#ifdef LLPC_BUILD_NPI
+  int LaneShared = 10;
+#endif /* LLPC_BUILD_NPI */
 }
 
 def AddrSpaces : AddressSpacesImpl;
@@ -40,7 +43,7 @@ class AMDGPUInst <dag outs, dag ins, string asm = "",
   // instructions to not match without killing the whole decode process. It is
   // mainly used for ARM, but Tablegen expects this field to exist or it fails
   // to build the decode table.
-  field bits<96> SoftFail = 0;
+  field bits<128> SoftFail = 0; // FIXME: If this is smaller than largest instruction, DecodeEmitter crashes
 
   let DecoderNamespace = Namespace;
 
@@ -468,9 +471,17 @@ def StoreAddress_local : AddressSpaceList<[ AddrSpaces.Local ]>;
 def LoadAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
 def StoreAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
 
+#ifdef LLPC_BUILD_NPI
+def LoadAddress_laneshared : AddressSpaceList<[ AddrSpaces.LaneShared ]>;
+def StoreAddress_laneshared : AddressSpaceList<[ AddrSpaces.LaneShared ]>;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ] in {
+#else /* LLPC_BUILD_NPI */
 
 foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+#endif /* LLPC_BUILD_NPI */
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
 
 def load_#as : PatFrag<(ops node:$ptr), (unindexedload node:$ptr)> {
@@ -538,7 +549,11 @@ def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node
 } // End foreach as
 
 
+#ifdef LLPC_BUILD_NPI
+foreach as = [ "global", "flat", "local", "private", "region", "laneshared" ] in {
+#else /* LLPC_BUILD_NPI */
 foreach as = [ "global", "flat", "local", "private", "region" ] in {
+#endif /* LLPC_BUILD_NPI */
 let IsStore = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
 def store_#as : PatFrag<(ops node:$val, node:$ptr),
                     (unindexedstore node:$val, node:$ptr)> {
@@ -656,7 +671,11 @@ multiclass noret_ternary_atomic_op<SDNode atomic_op> {
   defm "_noret" : ternary_atomic_op<atomic_op>;
 }
 
+#ifdef LLPC_BUILD_NPI
+defvar atomic_addrspace_names = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ];
+#else /* LLPC_BUILD_NPI */
 defvar atomic_addrspace_names = [ "global", "flat", "constant", "local", "private", "region" ];
+#endif /* LLPC_BUILD_NPI */
 
 multiclass binary_atomic_op_all_as<SDNode atomic_op> {
   foreach as = atomic_addrspace_names in {

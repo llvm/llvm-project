@@ -568,6 +568,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
                                     {}, {Scope});
+#if LLPC_BUILD_NPI
+#define AMDGPU_SEMAPHORE_TYPE(Name, Id, SingletonId, Width, Align, Rank)       \
+  case BuiltinType::Id:                                                        \
+    return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.semaphore", {},  \
+                                    {Rank});
+#endif /* LLPC_BUILD_NPI */
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"

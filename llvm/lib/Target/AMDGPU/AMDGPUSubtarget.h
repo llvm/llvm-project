@@ -41,6 +41,9 @@ public:
     GFX10 = 9,
     GFX11 = 10,
     GFX12 = 11,
+#if LLPC_BUILD_NPI
+    GFX13 = 12,
+#endif /* LLPC_BUILD_NPI */
   };
 
 private:
@@ -50,8 +53,23 @@ protected:
   bool GCN3Encoding = false;
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
+  bool HasFP8ConversionScaleInsts = false;
+  bool HasBF8ConversionScaleInsts = false;
+  bool HasFP4ConversionScaleInsts = false;
+  bool HasFP6BF6ConversionScaleInsts = false;
+  bool HasF16BF16ToFP6BF6ConversionScaleInsts = false;
+#if LLPC_BUILD_NPI
+  bool HasCvtPkF16F32Inst = false;
+#endif /* LLPC_BUILD_NPI */
+  bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
+#if LLPC_BUILD_NPI
+  bool HasBF16TransInsts = false;
+#endif /* LLPC_BUILD_NPI */
   bool HasBF16ConversionInsts = false;
+#if LLPC_BUILD_NPI
+  bool HasBF16PackedInsts = false;
+#endif /* LLPC_BUILD_NPI */
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -65,6 +83,9 @@ protected:
   bool EnablePromoteAlloca = false;
   bool HasTrigReducedRange = false;
   bool FastFMAF32 = false;
+#if LLPC_BUILD_NPI
+  bool HasExclusiveScanInsts = false;
+#endif /* LLPC_BUILD_NPI */
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
@@ -167,12 +188,46 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
+#if LLPC_BUILD_NPI
+  bool hasBF16TransInsts() const {
+    return HasBF16TransInsts;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   bool hasBF16ConversionInsts() const {
     return HasBF16ConversionInsts;
   }
 
+#if LLPC_BUILD_NPI
+  bool hasBF16PackedInsts() const {
+    return HasBF16PackedInsts;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
+  }
+
+  bool hasFP8ConversionScaleInsts() const { return HasFP8ConversionScaleInsts; }
+
+  bool hasBF8ConversionScaleInsts() const { return HasBF8ConversionScaleInsts; }
+
+  bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
+
+  bool hasFP6BF6ConversionScaleInsts() const { return HasFP6BF6ConversionScaleInsts; }
+
+#if LLPC_BUILD_NPI
+  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const {
+    return HasF16BF16ToFP6BF6ConversionScaleInsts;
+  }
+
+  bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
+#else /* LLPC_BUILD_NPI */
+  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const { return HasF16BF16ToFP6BF6ConversionScaleInsts; }
+#endif /* LLPC_BUILD_NPI */
+
+  bool hasF32ToF16BF16ConversionSRInsts() const {
+    return HasF32ToF16BF16ConversionSRInsts;
   }
 
   bool hasMadMacF32Insts() const {
@@ -190,6 +245,10 @@ public:
   bool hasVOP3PInsts() const {
     return HasVOP3PInsts;
   }
+#if LLPC_BUILD_NPI
+
+  bool hasExclusiveScanInsts() const { return HasExclusiveScanInsts; }
+#endif /* LLPC_BUILD_NPI */
 
   bool hasMulI24() const {
     return HasMulI24;

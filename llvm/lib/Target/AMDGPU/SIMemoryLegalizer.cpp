@@ -73,16 +73,33 @@ enum class SIAtomicAddrSpace {
   LDS = 1u << 1,
   SCRATCH = 1u << 2,
   GDS = 1u << 3,
+#if LLPC_BUILD_NPI
+  LANESHARED = 1u << 4,
+  OTHER = 1u << 5,
+#else /* LLPC_BUILD_NPI */
   OTHER = 1u << 4,
+#endif /* LLPC_BUILD_NPI */
 
   /// The address spaces that can be accessed by a FLAT instruction.
+#if LLPC_BUILD_NPI
+  FLAT = GLOBAL | LDS | SCRATCH | LANESHARED,
+#else /* LLPC_BUILD_NPI */
   FLAT = GLOBAL | LDS | SCRATCH,
+#endif /* LLPC_BUILD_NPI */
 
   /// The address spaces that support atomic instructions.
+#if LLPC_BUILD_NPI
+  ATOMIC = GLOBAL | LDS | SCRATCH | GDS | LANESHARED,
+#else /* LLPC_BUILD_NPI */
   ATOMIC = GLOBAL | LDS | SCRATCH | GDS,
+#endif /* LLPC_BUILD_NPI */
 
   /// All address spaces.
+#if LLPC_BUILD_NPI
+  ALL = GLOBAL | LDS | SCRATCH | GDS | LANESHARED | OTHER,
+#else /* LLPC_BUILD_NPI */
   ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
+#endif /* LLPC_BUILD_NPI */
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
@@ -144,12 +161,22 @@ private:
         SIAtomicAddrSpace::NONE) {
       this->Scope = std::min(Scope, SIAtomicScope::SINGLETHREAD);
     } else if ((InstrAddrSpace &
+#if LLPC_BUILD_NPI
+                ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LANESHARED |
+                  SIAtomicAddrSpace::LDS)) == SIAtomicAddrSpace::NONE) {
+#else /* LLPC_BUILD_NPI */
                 ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS)) ==
                SIAtomicAddrSpace::NONE) {
+#endif /* LLPC_BUILD_NPI */
       this->Scope = std::min(Scope, SIAtomicScope::WORKGROUP);
     } else if ((InstrAddrSpace &
                 ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS |
+#if LLPC_BUILD_NPI
+                  SIAtomicAddrSpace::GDS | SIAtomicAddrSpace::LANESHARED)) ==
+               SIAtomicAddrSpace::NONE) {
+#else /* LLPC_BUILD_NPI */
                   SIAtomicAddrSpace::GDS)) == SIAtomicAddrSpace::NONE) {
+#endif /* LLPC_BUILD_NPI */
       this->Scope = std::min(Scope, SIAtomicScope::AGENT);
     }
   }
@@ -220,8 +247,12 @@ private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
+#if LLPC_BUILD_NPI
+  void reportUnsupported(const MachineInstr *MI, const char *Msg) const;
+#else /* LLPC_BUILD_NPI */
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
                          const char *Msg) const;
+#endif /* LLPC_BUILD_NPI */
 
   /// Inspects the target synchronization scope \p SSID and determines
   /// the SI atomic scope it corresponds to, the address spaces it
@@ -236,7 +267,11 @@ private:
   /// \returns Info constructed from \p MI, which has at least machine memory
   /// operand.
   std::optional<SIMemOpInfo>
+#if LLPC_BUILD_NPI
+  constructFromMIWithMMO(const MachineInstr *MI) const;
+#else /* LLPC_BUILD_NPI */
   constructFromMIWithMMO(const MachineBasicBlock::iterator &MI) const;
+#endif /* LLPC_BUILD_NPI */
 
 public:
   /// Construct class to support accessing the machine memory operands
@@ -244,23 +279,39 @@ public:
   SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
+#if LLPC_BUILD_NPI
+  std::optional<SIMemOpInfo> getLoadInfo(const MachineInstr *MI) const;
+#else /* LLPC_BUILD_NPI */
   std::optional<SIMemOpInfo>
   getLoadInfo(const MachineBasicBlock::iterator &MI) const;
+#endif /* LLPC_BUILD_NPI */
 
   /// \returns Store info if \p MI is a store operation, "std::nullopt"
   /// otherwise.
+#if LLPC_BUILD_NPI
+  std::optional<SIMemOpInfo> getStoreInfo(const MachineInstr *MI) const;
+#else /* LLPC_BUILD_NPI */
   std::optional<SIMemOpInfo>
   getStoreInfo(const MachineBasicBlock::iterator &MI) const;
+#endif /* LLPC_BUILD_NPI */
 
   /// \returns Atomic fence info if \p MI is an atomic fence operation,
   /// "std::nullopt" otherwise.
+#if LLPC_BUILD_NPI
+  std::optional<SIMemOpInfo> getAtomicFenceInfo(const MachineInstr *MI) const;
+#else /* LLPC_BUILD_NPI */
   std::optional<SIMemOpInfo>
   getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const;
+#endif /* LLPC_BUILD_NPI */
 
   /// \returns Atomic cmpxchg/rmw info if \p MI is an atomic cmpxchg or
   /// rmw operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
+#if LLPC_BUILD_NPI
+  getAtomicCmpxchgOrRmwInfo(const MachineInstr *MI) const;
+#else /* LLPC_BUILD_NPI */
   getAtomicCmpxchgOrRmwInfo(const MachineBasicBlock::iterator &MI) const;
+#endif /* LLPC_BUILD_NPI */
 };
 
 class SICacheControl {
@@ -604,8 +655,20 @@ protected:
   bool setAtomicScope(const MachineBasicBlock::iterator &MI,
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
 
+#if LLPC_BUILD_NPI
+  virtual bool isWorkGroupSharingL0() const { return ST.isCuModeEnabled(); }
+
+#endif /* LLPC_BUILD_NPI */
 public:
+#if LLPC_BUILD_NPI
+  SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {
+    // GFX120x and GFX121x memory models greatly overlap, and in some cases
+    // the behavior is the same if assuming GFX120x in CU mode.
+    assert((ST.hasGFX1210Insts() && !ST.hasGFX13Insts()) ? ST.isCuModeEnabled() : true);
+  }
+#else /* LLPC_BUILD_NPI */
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
+#endif /* LLPC_BUILD_NPI */
 
   bool insertWait(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                   SIAtomicAddrSpace AddrSpace, SIMemOp Op,
@@ -645,6 +708,16 @@ public:
   }
 };
 
+#if LLPC_BUILD_NPI
+class SIGfx13CacheControl : public SIGfx12CacheControl {
+protected:
+  bool isWorkGroupSharingL0() const override { return true; }
+
+public:
+  SIGfx13CacheControl(const GCNSubtarget &ST) : SIGfx12CacheControl(ST) {}
+};
+
+#endif /* LLPC_BUILD_NPI */
 class SIMemoryLegalizer final : public MachineFunctionPass {
 private:
 
@@ -701,6 +774,9 @@ public:
 static const StringMap<SIAtomicAddrSpace> ASNames = {{
     {"global", SIAtomicAddrSpace::GLOBAL},
     {"local", SIAtomicAddrSpace::LDS},
+#if LLPC_BUILD_NPI
+    {"laneshared", SIAtomicAddrSpace::LANESHARED},
+#endif /* LLPC_BUILD_NPI */
 }};
 
 void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
@@ -743,7 +819,11 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
 
 } // end anonymous namespace
 
+#if LLPC_BUILD_NPI
+void SIMemOpAccess::reportUnsupported(const MachineInstr *MI,
+#else /* LLPC_BUILD_NPI */
 void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
+#endif /* LLPC_BUILD_NPI */
                                       const char *Msg) const {
   const Function &Func = MI->getParent()->getParent()->getFunction();
   DiagnosticInfoUnsupported Diag(Func, Msg, MI->getDebugLoc());
@@ -795,6 +875,10 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
     return SIAtomicAddrSpace::SCRATCH;
   if (AS == AMDGPUAS::REGION_ADDRESS)
     return SIAtomicAddrSpace::GDS;
+#if LLPC_BUILD_NPI
+  if (AS == AMDGPUAS::LANE_SHARED)
+    return SIAtomicAddrSpace::LANESHARED;
+#endif /* LLPC_BUILD_NPI */
 
   return SIAtomicAddrSpace::OTHER;
 }
@@ -802,8 +886,13 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_)
     : MMI(&MMI_) {}
 
+#if LLPC_BUILD_NPI
+std::optional<SIMemOpInfo>
+SIMemOpAccess::constructFromMIWithMMO(const MachineInstr *MI) const {
+#else /* LLPC_BUILD_NPI */
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
+#endif /* LLPC_BUILD_NPI */
   assert(MI->getNumMemOperands() > 0);
 
   SyncScope::ID SSID = SyncScope::SingleThread;
@@ -820,15 +909,24 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsNonTemporal &= MMO->isNonTemporal();
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
+#if LLPC_BUILD_NPI
+    InstrAddrSpace |= toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
+#else /* LLPC_BUILD_NPI */
     InstrAddrSpace |=
       toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
+#endif /* LLPC_BUILD_NPI */
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
     if (OpOrdering != AtomicOrdering::NotAtomic) {
       const auto &IsSyncScopeInclusion =
           MMI->isSyncScopeInclusion(SSID, MMO->getSyncScopeID());
       if (!IsSyncScopeInclusion) {
+#if LLPC_BUILD_NPI
+        reportUnsupported(
+            MI, "Unsupported non-inclusive atomic synchronization scope");
+#else /* LLPC_BUILD_NPI */
         reportUnsupported(MI,
           "Unsupported non-inclusive atomic synchronization scope");
+#endif /* LLPC_BUILD_NPI */
         return std::nullopt;
       }
 
@@ -853,8 +951,15 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
         *ScopeOrNone;
     if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
+#if LLPC_BUILD_NPI
+        ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
+         OrderingAddrSpace) ||
+        ((InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) ==
+         SIAtomicAddrSpace::NONE)) {
+#else /* LLPC_BUILD_NPI */
         ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace) ||
         ((InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) == SIAtomicAddrSpace::NONE)) {
+#endif /* LLPC_BUILD_NPI */
       reportUnsupported(MI, "Unsupported atomic address space");
       return std::nullopt;
     }
@@ -865,7 +970,11 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
 }
 
 std::optional<SIMemOpInfo>
+#if LLPC_BUILD_NPI
+SIMemOpAccess::getLoadInfo(const MachineInstr *MI) const {
+#else /* LLPC_BUILD_NPI */
 SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
+#endif /* LLPC_BUILD_NPI */
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
   if (!(MI->mayLoad() && !MI->mayStore()))
@@ -879,7 +988,11 @@ SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
 }
 
 std::optional<SIMemOpInfo>
+#if LLPC_BUILD_NPI
+SIMemOpAccess::getStoreInfo(const MachineInstr *MI) const {
+#else /* LLPC_BUILD_NPI */
 SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
+#endif /* LLPC_BUILD_NPI */
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
   if (!(!MI->mayLoad() && MI->mayStore()))
@@ -893,14 +1006,22 @@ SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
 }
 
 std::optional<SIMemOpInfo>
+#if LLPC_BUILD_NPI
+SIMemOpAccess::getAtomicFenceInfo(const MachineInstr *MI) const {
+#else /* LLPC_BUILD_NPI */
 SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
+#endif /* LLPC_BUILD_NPI */
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
   if (MI->getOpcode() != AMDGPU::ATOMIC_FENCE)
     return std::nullopt;
 
   AtomicOrdering Ordering =
+#if LLPC_BUILD_NPI
+      static_cast<AtomicOrdering>(MI->getOperand(0).getImm());
+#else /* LLPC_BUILD_NPI */
     static_cast<AtomicOrdering>(MI->getOperand(0).getImm());
+#endif /* LLPC_BUILD_NPI */
 
   SyncScope::ID SSID = static_cast<SyncScope::ID>(MI->getOperand(1).getImm());
   auto ScopeOrNone = toSIAtomicScope(SSID, SIAtomicAddrSpace::ATOMIC);
@@ -921,12 +1042,23 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
     return std::nullopt;
   }
 
+#if LLPC_BUILD_NPI
+  return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace,
+                     SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
+                     AtomicOrdering::NotAtomic);
+#else /* LLPC_BUILD_NPI */
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, SIAtomicAddrSpace::ATOMIC,
                      IsCrossAddressSpaceOrdering, AtomicOrdering::NotAtomic);
+#endif /* LLPC_BUILD_NPI */
 }
 
+#if LLPC_BUILD_NPI
+std::optional<SIMemOpInfo>
+SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(const MachineInstr *MI) const {
+#else /* LLPC_BUILD_NPI */
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
     const MachineBasicBlock::iterator &MI) const {
+#endif /* LLPC_BUILD_NPI */
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
   if (!(MI->mayLoad() && MI->mayStore()))
@@ -970,7 +1102,14 @@ std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
     return std::make_unique<SIGfx10CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX12)
     return std::make_unique<SIGfx11CacheControl>(ST);
+#if LLPC_BUILD_NPI
+  if (Generation < AMDGPUSubtarget::GFX13)
+    return std::make_unique<SIGfx12CacheControl>(ST);
+  // The latest generation
+  return std::make_unique<SIGfx13CacheControl>(ST);
+#else /* LLPC_BUILD_NPI */
   return std::make_unique<SIGfx12CacheControl>(ST);
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
@@ -2248,7 +2387,17 @@ bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
 
 bool SIGfx12CacheControl::setTH(const MachineBasicBlock::iterator MI,
                                 AMDGPU::CPol::CPol Value) const {
+#if LLPC_BUILD_NPI
+  auto CoreMI = &*MI;
+  if (MI->isBundle()) {
+    CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
+    assert(CoreMI);
+  }
+
+  MachineOperand *CPol = TII->getNamedOperand(*CoreMI, OpName::cpol);
+#else /* LLPC_BUILD_NPI */
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+#endif /* LLPC_BUILD_NPI */
   if (!CPol)
     return false;
 
@@ -2263,7 +2412,17 @@ bool SIGfx12CacheControl::setTH(const MachineBasicBlock::iterator MI,
 
 bool SIGfx12CacheControl::setScope(const MachineBasicBlock::iterator MI,
                                    AMDGPU::CPol::CPol Value) const {
+#if LLPC_BUILD_NPI
+  auto CoreMI = &*MI;
+  if (MI->isBundle()) {
+    CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
+    assert(CoreMI);
+  }
+
+  MachineOperand *CPol = TII->getNamedOperand(*CoreMI, OpName::cpol);
+#else /* LLPC_BUILD_NPI */
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+#endif /* LLPC_BUILD_NPI */
   if (!CPol)
     return false;
 
@@ -2309,7 +2468,12 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
+#if LLPC_BUILD_NPI
+  if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH |
+                    SIAtomicAddrSpace::LANESHARED)) !=
+#else /* LLPC_BUILD_NPI */
   if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH)) !=
+#endif /* LLPC_BUILD_NPI */
       SIAtomicAddrSpace::NONE) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
@@ -2320,12 +2484,28 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
         STORECnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
+#if LLPC_BUILD_NPI
+      // GFX120x:
+      //   In WGP mode the waves of a work-group can be executing on either CU of
+      //   the WGP. Therefore need to wait for operations to complete to ensure
+      //   they are visible to waves in the other CU as the L0 is per CU.
+      //   Otherwise in CU mode and all waves of a work-group are on the same CU
+      //   which shares the same L0.
+      //
+      // GFX121x:
+      //   CU$ has two ports. To ensure operations are visible at the workgroup
+      //   level, we need to ensure all operations in this port have completed
+      //   so the other SIMDs in the WG can see them. There is no ordering
+      //   guarantee between the ports.
+      if (!isWorkGroupSharingL0() || ST.hasGFX1210Insts()) {
+#else /* LLPC_BUILD_NPI */
       // In WGP mode the waves of a work-group can be executing on either CU of
       // the WGP. Therefore need to wait for operations to complete to ensure
       // they are visible to waves in the other CU as the L0 is per CU.
       // Otherwise in CU mode and all waves of a work-group are on the same CU
       // which shares the same L0.
       if (!ST.isCuModeEnabled()) {
+#endif /* LLPC_BUILD_NPI */
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           LOADCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2377,7 +2557,11 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     //
     // This also applies to fences. Fences cannot pair with an instruction
     // tracked with bvh/samplecnt as we don't have any atomics that do that.
+#if LLPC_BUILD_NPI
+    if (Order != AtomicOrdering::Acquire && ST.hasImageInsts()) {
+#else /* LLPC_BUILD_NPI */
     if (Order != AtomicOrdering::Acquire) {
+#endif /* LLPC_BUILD_NPI */
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT_soft)).addImm(0);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT_soft)).addImm(0);
     }
@@ -2429,11 +2613,22 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     ScopeImm = AMDGPU::CPol::SCOPE_DEV;
     break;
   case SIAtomicScope::WORKGROUP:
+#if LLPC_BUILD_NPI
+    // GFX12:
+    //  In WGP mode the waves of a work-group can be executing on either CU of
+    //  the WGP. Therefore we need to invalidate the L0 which is per CU.
+    //  Otherwise in CU mode all waves of a work-group are on the same CU, and so
+    //  the L0 does not need to be invalidated.
+    //
+    // GFX121x has a shared CU$, so no invalidates are required.
+    if (isWorkGroupSharingL0())
+#else /* LLPC_BUILD_NPI */
     // In WGP mode the waves of a work-group can be executing on either CU of
     // the WGP. Therefore we need to invalidate the L0 which is per CU.
     // Otherwise in CU mode all waves of a work-group are on the same CU, and so
     // the L0 does not need to be invalidated.
     if (ST.isCuModeEnabled())
+#endif /* LLPC_BUILD_NPI */
       return false;
 
     ScopeImm = AMDGPU::CPol::SCOPE_SE;
@@ -2477,16 +2672,39 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
+#if LLPC_BUILD_NPI
+  // gfx120x:
+  //   global_wb is only necessary at system scope as stores
+  //   can only report completion from L2 onwards.
+#else /* LLPC_BUILD_NPI */
   // global_wb is only necessary at system scope for gfx120x targets.
+#endif /* LLPC_BUILD_NPI */
   //
+#if LLPC_BUILD_NPI
+  //   Emitting it for lower scopes is a slow no-op, so we omit it
+  //   for performance.
+  //
+  // gfx121x:
+  //    stores can also report completion from CU$ so we must emit
+  //    global_wb at device scope as well to ensure stores reached
+  //    the right cache level.
+#else /* LLPC_BUILD_NPI */
   // Emitting it for lower scopes is a slow no-op, so we omit it
   // for performance.
+#endif /* LLPC_BUILD_NPI */
   switch (Scope) {
   case SIAtomicScope::SYSTEM:
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
         .addImm(AMDGPU::CPol::SCOPE_SYS);
     break;
   case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    if (ST.hasGFX1210Insts()) {
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
+        .addImm(AMDGPU::CPol::SCOPE_DEV);
+    }
+    break;
+#endif /* LLPC_BUILD_NPI */
   case SIAtomicScope::WORKGROUP:
     // No WB necessary, but we still have to wait.
     break;
@@ -2514,9 +2732,12 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   // Only handle load and store, not atomic read-modify-write instructions.
   assert(MI->mayLoad() ^ MI->mayStore());
 
+#endif /* LLPC_BUILD_NPI */
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
   // handle it as do not want to pessimize all atomics. Also they do not support
@@ -2553,6 +2774,17 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
 
 bool SIGfx12CacheControl::expandSystemScopeStore(
     MachineBasicBlock::iterator &MI) const {
+#if LLPC_BUILD_NPI
+  if (ST.hasGFX1210Insts())
+    return false;
+
+  // Only required on gfx120x.
+  auto CoreMI = &*MI;
+  if (MI->isBundle()) {
+    CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
+    assert(CoreMI);
+  }
+#endif /* LLPC_BUILD_NPI */
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
   if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
     return insertWaitsBeforeSystemScopeStore(MI);
@@ -2576,7 +2808,11 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
     case SIAtomicScope::WORKGROUP:
       // In workgroup mode, SCOPE_SE is needed as waves can executes on
       // different CUs that access different L0s.
+#if LLPC_BUILD_NPI
+      if (!isWorkGroupSharingL0())
+#else /* LLPC_BUILD_NPI */
       if (!ST.isCuModeEnabled())
+#endif /* LLPC_BUILD_NPI */
         Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SE);
       break;
     case SIAtomicScope::WAVEFRONT:
@@ -2611,7 +2847,10 @@ bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
 
 bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                    MachineBasicBlock::iterator &MI) {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   assert(MI->mayLoad() && !MI->mayStore());
+#endif /* LLPC_BUILD_NPI */
 
   bool Changed = false;
 
@@ -2655,7 +2894,10 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
 
 bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                     MachineBasicBlock::iterator &MI) {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   assert(!MI->mayLoad() && MI->mayStore());
+#endif /* LLPC_BUILD_NPI */
 
   bool Changed = false;
 
@@ -2692,8 +2934,11 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
 
 bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
                                           MachineBasicBlock::iterator &MI) {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   assert(MI->getOpcode() == AMDGPU::ATOMIC_FENCE);
 
+#endif /* LLPC_BUILD_NPI */
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
@@ -2742,10 +2987,15 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   return Changed;
 }
 
+#if LLPC_BUILD_NPI
+bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(
+    const SIMemOpInfo &MOI, MachineBasicBlock::iterator &MI) {
+#else /* LLPC_BUILD_NPI */
 bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
 
+#endif /* LLPC_BUILD_NPI */
   bool Changed = false;
 
   if (MOI.isAtomic()) {
@@ -2798,9 +3048,37 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
       // Unbundle instructions after the post-RA scheduler.
+#if LLPC_BUILD_NPI
+      auto CoreMI = &*MI;
+#endif /* LLPC_BUILD_NPI */
       if (MI->isBundle() && MI->mayLoadOrStore()) {
+#if LLPC_BUILD_NPI
+        // Note that v_load/store_idx is tagged as mayLoad/mayStore.
+        // TODO-GFX13: when we can form a memory-clause from multiple bundles
+        // of memory-insts with gpr-indexing, Such memory clauses should not be
+        // unbundled entirely. Instead, they have to be split into one bundle
+        // per memory instructions.
+        CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
+        // Keep bundle if it is a bundle formed for gpr-indexing.
+        if (!CoreMI) {
+          MachineBasicBlock::instr_iterator II(MI->getIterator());
+          for (MachineBasicBlock::instr_iterator I = ++II, E = MBB.instr_end();
+               I != E && I->isBundledWithPred(); ++I) {
+            I->unbundleFromPred();
+            for (MachineOperand &MO : I->operands())
+              if (MO.isReg())
+                MO.setIsInternalRead(false);
+          }
+
+          MI->eraseFromParent();
+          MI = II->getIterator();
+          CoreMI = &*MI;
+#else /* LLPC_BUILD_NPI */
         MachineBasicBlock::instr_iterator II(MI->getIterator());
         for (MachineBasicBlock::instr_iterator I = ++II, E = MBB.instr_end();
              I != E && I->isBundledWithPred(); ++I) {
@@ -2808,23 +3086,47 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
           for (MachineOperand &MO : I->operands())
             if (MO.isReg())
               MO.setIsInternalRead(false);
+#endif /* LLPC_BUILD_NPI */
         }
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
         MI->eraseFromParent();
         MI = II->getIterator();
+#endif /* LLPC_BUILD_NPI */
       }
 
+#if LLPC_BUILD_NPI
+      if (!(CoreMI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
+#else /* LLPC_BUILD_NPI */
       if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
+#endif /* LLPC_BUILD_NPI */
         continue;
 
+#if LLPC_BUILD_NPI
+      if (const auto &MOI = MOA.getLoadInfo(CoreMI))
+#else /* LLPC_BUILD_NPI */
       if (const auto &MOI = MOA.getLoadInfo(MI))
+#endif /* LLPC_BUILD_NPI */
         Changed |= expandLoad(*MOI, MI);
+#if LLPC_BUILD_NPI
+      else if (const auto &MOI = MOA.getStoreInfo(CoreMI)) {
+#else /* LLPC_BUILD_NPI */
       else if (const auto &MOI = MOA.getStoreInfo(MI)) {
+#endif /* LLPC_BUILD_NPI */
         Changed |= expandStore(*MOI, MI);
         Changed |= CC->tryForceStoreSC0SC1(*MOI, MI);
+#if LLPC_BUILD_NPI
+      } else if (const auto &MOI = MOA.getAtomicFenceInfo(CoreMI))
+#else /* LLPC_BUILD_NPI */
       } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
+#endif /* LLPC_BUILD_NPI */
         Changed |= expandAtomicFence(*MOI, MI);
+#if LLPC_BUILD_NPI
+      else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(CoreMI))
+#else /* LLPC_BUILD_NPI */
       else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
+#endif /* LLPC_BUILD_NPI */
         Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
     }
   }

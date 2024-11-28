@@ -35,6 +35,10 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   static void printRegOperand(MCRegister Reg, raw_ostream &O,
                               const MCRegisterInfo &MRI);
+#if LLPC_BUILD_NPI
+  void printRegOperand(MCRegister Reg, unsigned Opc, unsigned OpNo,
+                       raw_ostream &O, const MCRegisterInfo &MRI);
+#endif /* LLPC_BUILD_NPI */
 
 private:
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -42,6 +46,14 @@ private:
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+#if LLPC_BUILD_NPI
+  void printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printGlobalSReg32(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printGlobalSReg64(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+#endif /* LLPC_BUILD_NPI */
   void printNamedBit(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                      StringRef BitName);
   void printOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -59,6 +71,9 @@ private:
                  const MCSubtargetInfo &STI, raw_ostream &O);
   void printTH(const MCInst *MI, int64_t TH, int64_t Scope, raw_ostream &O);
   void printScope(int64_t Scope, raw_ostream &O);
+#if LLPC_BUILD_NPI
+  void printCFS(const MCInst *MI, int64_t CFS, raw_ostream &O);
+#endif /* LLPC_BUILD_NPI */
   void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printR128A16(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -68,7 +83,11 @@ private:
   void printSymbolicFormat(const MCInst *MI,
                            const MCSubtargetInfo &STI, raw_ostream &O);
 
+#if LLPC_BUILD_NPI
+  void printRegOperand(MCRegister Reg, raw_ostream &O);
+#else /* LLPC_BUILD_NPI */
   void printRegOperand(unsigned RegNo, raw_ostream &O);
+#endif /* LLPC_BUILD_NPI */
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -130,6 +149,20 @@ private:
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printIndexKey16bit(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+#if LLPC_BUILD_NPI
+  void printMatrixFMT(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O, char AorB);
+  void printMatrixAFMT(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixBFMT(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixScale(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O, char AorB);
+  void printMatrixAScale(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixBScale(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+#endif /* LLPC_BUILD_NPI */
   void printInterpSlot(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpAttr(const MCInst *MI, unsigned OpNo,
@@ -162,6 +195,22 @@ private:
   void printNamedInt(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O,
                      StringRef Prefix, bool PrintInHex, bool AlwaysPrint);
+
+#if LLPC_BUILD_NPI
+  void printScaleSel(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printAuxData(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
+
+  void printSema(const MCInst *MI, unsigned OpNo, raw_ostream &O,
+                 StringRef Prefix, bool AlwaysPrint);
+  void printGVGPR(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                  raw_ostream &O);
+  void printGSrcSimple(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+#endif /* LLPC_BUILD_NPI */
+  void printBitOp3(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
 
 public:
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,

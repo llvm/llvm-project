@@ -30,8 +30,6 @@ FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
 
-void initializeAMDGPURegBankSelectPass(PassRegistry &);
-
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
@@ -42,6 +40,9 @@ FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
+#if LLPC_BUILD_NPI
+FunctionPass *createAMDGPUBundleIdxLdStPass();
+#endif /* LLPC_BUILD_NPI */
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangePass();
@@ -62,9 +63,16 @@ FunctionPass *createAMDGPUReserveWWMRegsPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+#if LLPC_BUILD_NPI
+FunctionPass *createAMDGPUMarkPromotableLaneSharedLegacyPass();
+FunctionPass *createAMDGPUMarkPromotablePrivateLegacyPass();
+#endif /* LLPC_BUILD_NPI */
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
+#if LLPC_BUILD_NPI
+FunctionPass *createAMDGPUIdxRegAllocPass();
+#endif /* LLPC_BUILD_NPI */
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -148,6 +156,28 @@ struct AMDGPULowerModuleLDSPass : PassInfoMixin<AMDGPULowerModuleLDSPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+#if LLPC_BUILD_NPI
+void initializeAMDGPUMarkPromotableLaneSharedLegacyPass(PassRegistry &);
+extern char &AMDGPUMarkPromotableLaneSharedLegacyPassID;
+
+struct AMDGPUMarkPromotableLaneSharedPass
+    : PassInfoMixin<AMDGPUMarkPromotableLaneSharedPass> {
+  AMDGPUMarkPromotableLaneSharedPass() {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+void initializeAMDGPUMarkPromotablePrivateLegacyPass(PassRegistry &);
+extern char &AMDGPUMarkPromotablePrivateLegacyPassID;
+
+struct AMDGPUMarkPromotablePrivatePass
+    : PassInfoMixin<AMDGPUMarkPromotablePrivatePass> {
+  AMDGPUMarkPromotablePrivatePass() {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+#endif /* LLPC_BUILD_NPI */
 void initializeAMDGPULowerBufferFatPointersPass(PassRegistry &);
 extern char &AMDGPULowerBufferFatPointersID;
 
@@ -205,6 +235,14 @@ extern char &SILoadStoreOptimizerLegacyID;
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;
 
+#if LLPC_BUILD_NPI
+void initializeAMDGPUBundleIdxLdStPass(PassRegistry &);
+extern char &AMDGPUBundleIdxLdStID;
+
+void initializeAMDGPUIdxRegAllocPass(PassRegistry &);
+extern char &AMDGPUIdxRegAllocID;
+
+#endif /* LLPC_BUILD_NPI */
 void initializeSILowerControlFlowPass(PassRegistry &);
 extern char &SILowerControlFlowID;
 
@@ -420,6 +458,11 @@ extern char &SIModeRegisterID;
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
+#if LLPC_BUILD_NPI
+void initializeAMDGPULowerVGPREncodingPass(PassRegistry &);
+extern char &AMDGPULowerVGPREncodingID;
+
+#endif /* LLPC_BUILD_NPI */
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
@@ -473,17 +516,46 @@ enum TargetIndex {
   TI_SCRATCH_RSRC_DWORD0,
   TI_SCRATCH_RSRC_DWORD1,
   TI_SCRATCH_RSRC_DWORD2,
+#if LLPC_BUILD_NPI
+  TI_SCRATCH_RSRC_DWORD3,
+  TI_NUM_VGPRS,
+#else /* LLPC_BUILD_NPI */
   TI_SCRATCH_RSRC_DWORD3
+#endif /* LLPC_BUILD_NPI */
 };
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
+#if LLPC_BUILD_NPI
+  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= AMDGPUAS::MAX_AMDGPU_ADDRESS,
+                "Addr space out of range");
+#else /* LLPC_BUILD_NPI */
   static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 9, "Addr space out of range");
+#endif /* LLPC_BUILD_NPI */
 
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return true;
 
+#if LLPC_BUILD_NPI
+  // This array is indexed by address space value enum elements 0 ... to 10
+#else /* LLPC_BUILD_NPI */
   // This array is indexed by address space value enum elements 0 ... to 9
+#endif /* LLPC_BUILD_NPI */
   // clang-format off
+#if LLPC_BUILD_NPI
+  static const bool ASAliasRules[11][11] = {
+    /*                       Flat   Global Region  Group Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr LaneShared*/
+    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true,  true},
+    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false},
+    /* Group    */            {true,  false, false, true,  false, false, false, false, false, false, false},
+    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true,  false},
+    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false, false},
+    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true,  false},
+    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Lane Shared */         {true,  false, false, false, false, false, false, false, false, false, true},
+#else /* LLPC_BUILD_NPI */
   static const bool ASAliasRules[10][10] = {
     /*                       Flat   Global Region  Group Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
     /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
@@ -496,6 +568,7 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
     /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
     /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
     /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true},
+#endif /* LLPC_BUILD_NPI */
   };
   // clang-format on
 

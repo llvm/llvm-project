@@ -26,6 +26,14 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                                 CallExpr *TheCall) {
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
+
+  const auto *FD = SemaRef.getCurFunctionDecl();
+  assert(FD && "AMDGPU builtins should not be used outside of a function");
+  llvm::StringMap<bool> CallerFeatureMap;
+  getASTContext().getFunctionFeatureMap(CallerFeatureMap, FD);
+  bool HasGFX950Insts =
+      Builtin::evaluateRequiredTargetFeatures("gfx950-insts", CallerFeatureMap);
+
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
     constexpr const int SizeIdx = 2;
@@ -39,13 +47,19 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     case 2:
     case 4:
       return false;
+    case 12:
+    case 16: {
+      if (HasGFX950Insts)
+        return false;
+      [[fallthrough]];
+    }
     default:
       Diag(ArgExpr->getExprLoc(),
            diag::err_amdgcn_global_load_lds_size_invalid_value)
           << ArgExpr->getSourceRange();
       Diag(ArgExpr->getExprLoc(),
            diag::note_amdgcn_global_load_lds_size_valid_value)
-          << ArgExpr->getSourceRange();
+          << HasGFX950Insts << ArgExpr->getSourceRange();
       return true;
     }
   }
@@ -70,6 +84,54 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
     return checkMovDPPFunctionCall(TheCall, 6, 2);
   }
+#if LLPC_BUILD_NPI
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp4:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_f16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_iu8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_i32_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_i32_iu8_4x2:
+    // TODO-GFX13: Add diagnostics.
+    return false;
+#endif /* LLPC_BUILD_NPI */
   default:
     return false;
   }
@@ -351,6 +413,64 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   Expr *YExpr = (AL.getNumArgs() > 1) ? AL.getArgAsExpr(1) : nullptr;
   Expr *ZExpr = (AL.getNumArgs() > 2) ? AL.getArgAsExpr(2) : nullptr;
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
+#if LLPC_BUILD_NPI
+}
+
+void SemaAMDGPU::handleAMDGPUWavegroupKernelAttr(Decl *D,
+                                                 const ParsedAttr &AL) {
+  uint32_t NumWavegroups = 0;
+  uint32_t WaveSize = 0;
+  uint32_t BlockDimX = 0;
+  uint32_t BlockDimY = 0;
+  uint32_t BlockDimZ = 0;
+
+  // TODO-GFX13: Do we need more error checking?
+
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), NumWavegroups))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), WaveSize))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(2), BlockDimX))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(3), BlockDimY))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(4), BlockDimZ))
+    return;
+
+  if (NumWavegroups != 4) {
+    Diag(AL.getLoc(), diag::err_amdgcn_num_wavegroups_value);
+    return;
+  }
+
+  if (WaveSize != 32) {
+    Diag(AL.getLoc(), diag::err_amdgcn_wave_size_value);
+    return;
+  }
+
+  uint32_t BlockDim = BlockDimX * BlockDimY * BlockDimZ;
+  if (BlockDim == 0) {
+    Diag(AL.getLoc(), diag::err_amdgcn_block_dim_invalid_value);
+    Diag(AL.getLoc(), diag::note_amdgcn_block_dim_valid_value) << 0;
+    return;
+  }
+  if (BlockDim > 1024 || BlockDimX > 1024 || BlockDimY > 1024 ||
+      BlockDimZ > 1024) {
+    Diag(AL.getLoc(), diag::err_amdgcn_block_dim_invalid_value);
+    Diag(AL.getLoc(), diag::note_amdgcn_block_dim_valid_value) << 1;
+    return;
+  }
+  if ((BlockDim % 128) != 0) {
+    Diag(AL.getLoc(), diag::err_amdgcn_block_dim_invalid_value);
+    Diag(AL.getLoc(), diag::note_amdgcn_block_dim_valid_value) << 2;
+    return;
+  }
+
+  auto *Addr = ::new (getASTContext())
+      AMDGPUWavegroupKernelAttr(getASTContext(), AL, NumWavegroups, WaveSize,
+                                BlockDimX, BlockDimY, BlockDimZ);
+
+  D->addAttr(Addr);
+#endif /* LLPC_BUILD_NPI */
 }
 
 } // namespace clang

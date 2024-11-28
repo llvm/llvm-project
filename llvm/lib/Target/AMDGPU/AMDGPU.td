@@ -18,6 +18,9 @@ def p3 : PtrValueType<i32, 3>;
 def p4 : PtrValueType<i64, 4>;
 def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
+#ifdef LLPC_BUILD_NPI
+def p10 : PtrValueType<i32, 10>;
+#endif /* LLPC_BUILD_NPI */
 
 //===------------------------------------------------------------===//
 // Subtarget Features (device properties)
@@ -89,6 +92,14 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
   "Use scratch_* flat memory instructions to access scratch"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
+  "FlatGVSMode",
+  "true",
+  "Have GVS addressing mode with flat_* instructions"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
   "AddNoCarryInsts",
   "true",
@@ -137,6 +148,14 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
   "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureFmaMixBF16Insts : SubtargetFeature<"fma-mix-bf16-insts",
+  "HasFmaMixBF16Insts",
+  "true",
+  "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureMinimum3Maximum3F32 : SubtargetFeature<"minimum3-maximum3-f32",
   "HasMinimum3Maximum3F32",
   "true",
@@ -147,6 +166,20 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "HasMinimum3Maximum3F16",
   "true",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
+>;
+
+#ifdef LLPC_BUILD_NPI
+def FeatureMin3Max3PKF16 : SubtargetFeature<"min3-max3-pkf16",
+  "HasMin3Max3PKF16",
+  "true",
+  "Has v_pk_min3_num_f16 and v_pk_max3_num_f16 instructions"
+>;
+
+#endif /* LLPC_BUILD_NPI */
+def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
+  "HasMinimum3Maximum3PKF16",
+  "true",
+  "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
 >;
 
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
@@ -232,6 +265,20 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "S_INST_PREFETCH instruction causes shader to hang"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
+  "HasSafeSmemPrefetch",
+  "true",
+  "SMEM prefetches do not fail on illegal address"
+>;
+
+def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
+  "HasSafeCUPrefetch",
+  "true",
+  "VMEM CU scope prefetches do not fail on illegal address"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",
@@ -372,10 +419,91 @@ def FeatureGFX940Insts : SubtargetFeature<"gfx940-insts",
   "Additional instructions for GFX940+"
 >;
 
+def FeaturePermlane16Swap : SubtargetFeature<"permlane16-swap",
+  "HasPermlane16Swap",
+  "true",
+  "Has v_permlane16_swap_b32 instructions"
+>;
+
+def FeaturePermlane32Swap : SubtargetFeature<"permlane32-swap",
+  "HasPermlane32Swap",
+  "true",
+  "Has v_permlane32_swap_b32 instructions"
+>;
+
+def FeatureFP8ConversionScaleInsts : SubtargetFeature<"fp8-cvt-scale-insts",
+  "HasFP8ConversionScaleInsts",
+  "true",
+  "Has fp8 conversion scale instructions"
+>;
+
+def FeatureBF8ConversionScaleInsts : SubtargetFeature<"bf8-cvt-scale-insts",
+  "HasBF8ConversionScaleInsts",
+  "true",
+  "Has bf8 conversion scale instructions"
+>;
+
+def FeatureFP4ConversionScaleInsts : SubtargetFeature<"fp4-cvt-scale-insts",
+  "HasFP4ConversionScaleInsts",
+  "true",
+  "Has fp4 conversion scale instructions"
+>;
+
+def FeatureFP6BF6ConversionScaleInsts : SubtargetFeature<"fp6bf6-cvt-scale-insts",
+  "HasFP6BF6ConversionScaleInsts",
+  "true",
+  "Has fp6 and bf6 conversion scale instructions"
+>;
+
+def FeatureF16BF16ToFP6BF6ConversionScaleInsts : SubtargetFeature<"f16bf16-to-fp6bf6-cvt-scale-insts",
+  "HasF16BF16ToFP6BF6ConversionScaleInsts",
+  "true",
+  "Has f16bf16 to fp6bf6 conversion scale instructions"
+>;
+
+def FeatureF32ToF16BF16ConversionSRInsts : SubtargetFeature<"f32-to-f16bf16-cvt-sr-insts",
+  "HasF32ToF16BF16ConversionSRInsts",
+  "true",
+  "Has f32 to f16bf16 conversion scale instructions"
+>;
+
+def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
+  "HasAshrPkInsts",
+  "true",
+  "Has Arithmetic Shift Pack instructions"
+>;
+
+#ifdef LLPC_BUILD_NPI
+def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
+  "HasCvtPkF16F32Inst",
+  "true",
+  "Has cvt_pk_f16_f32 instruction"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
-  "Additional instructions for GFX950+"
+  "Additional instructions for GFX950+",
+  [FeaturePermlane16Swap,
+   FeaturePermlane32Swap,
+   FeatureAshrPkInsts,
+   FeatureFP8ConversionScaleInsts,
+   FeatureBF8ConversionScaleInsts,
+   FeatureFP4ConversionScaleInsts,
+   FeatureFP6BF6ConversionScaleInsts,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureF32ToF16BF16ConversionSRInsts,
+#ifdef LLPC_BUILD_NPI
+   FeatureCvtPkF16F32Inst,
+#endif /* LLPC_BUILD_NPI */
+   FeatureMinimum3Maximum3F32,
+#ifdef LLPC_BUILD_NPI
+   FeatureMinimum3Maximum3PKF16,
+#else /* LLPC_BUILD_NPI */
+   FeatureMinimum3Maximum3PKF16
+#endif /* LLPC_BUILD_NPI */
+   ]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -396,6 +524,20 @@ def FeatureGFX12Insts : SubtargetFeature<"gfx12-insts",
   "Additional instructions for GFX12+"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureGFX1210Insts : SubtargetFeature<"gfx1210-insts",
+  "GFX1210Insts",
+  "true",
+  "Additional instructions for GFX1210+"
+>;
+
+def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
+  "GFX13Insts",
+  "true",
+  "Additional instructions for GFX13+"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -438,12 +580,34 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
+  "HasBF16TransInsts",
+  "true",
+  "Has bf16 transcendental instructions"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
   "HasBF16ConversionInsts",
   "true",
   "Has bf16 conversion instructions"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureBF16PackedInsts : SubtargetFeature<"bf16-pk-insts",
+  "HasBF16PackedInsts",
+  "true",
+  "Has bf16 packed instructions (fma, add, mul, max, min)"
+>;
+
+def FeatureMLMathInsts : SubtargetFeature<"ml-math-insts",
+  "HasMLMathInsts",
+  "true",
+  "Has ML math instructions (convolve, tensor convert, sba, bpermute)"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -676,7 +840,7 @@ def FeatureDot8Insts : SubtargetFeature<"dot8-insts",
 def FeatureDot9Insts : SubtargetFeature<"dot9-insts",
   "HasDot9Insts",
   "true",
-  "Has v_dot2_f16_f16, v_dot2_bf16_bf16, v_dot2_f32_bf16 instructions"
+  "Has v_dot2_f16_f16, v_dot2_bf16_bf16 instructions"
 >;
 
 def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
@@ -690,6 +854,19 @@ def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
   "true",
   "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
 >;
+
+def FeatureDot12Insts : SubtargetFeature<"dot12-insts",
+  "HasDot12Insts",
+  "true",
+  "Has v_dot2_f32_bf16 instructions"
+>;
+
+def FeatureDot13Insts : SubtargetFeature<"dot13-insts",
+  "HasDot13Insts",
+  "true",
+  "Has v_dot2c_f32_bf16 instructions"
+>;
+
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
@@ -819,6 +996,14 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureGFX1211GEMMInsts : SubtargetFeature<"gfx1211-gemm-insts",
+  "HasGFX1211GEMMInsts",
+  "true",
+  "Has additional gfx1211 DGEMM and F16 GEMM instructions"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureFlatBufferGlobalAtomicFaddF64Inst
   : SubtargetFeature<"flat-buffer-global-fadd-f64-inst",
   "HasFlatBufferGlobalAtomicFaddF64Inst",
@@ -984,12 +1169,76 @@ def FeatureVmemWriteVgprInOrder : SubtargetFeature<"vmem-write-vgpr-in-order",
   "VMEM instructions of the same type write VGPR results in order"
 >;
 
+def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
+  "HasBitOp3Insts",
+  "true",
+  "Has v_bitop3_b32/v_bitop3_b16 instructions"
+>;
+
+#ifdef LLPC_BUILD_NPI
+def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
+  "HasTanhInsts",
+  "true",
+  "Has v_tanh_f32/f16/b16 instructions"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
   "true",
   "Has v_prng_b32 instruction"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
+  "Has64BitLiterals",
+  "true",
+  "Can use 64-bit literals with single DWORD instructions"
+>;
+
+def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
+  "Has1024AddressableVGPRs",
+  "true",
+  "Has 1024 addressable VGPRs"
+>;
+
+def FeatureVGPRIndexingRegisters : SubtargetFeature<"vgpr-indexing-registers",
+  "HasVGPRIndexingRegisters",
+  "true",
+  "Has index registers for VGPR indexing"
+>;
+
+def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
+  "HasForceVALUThrottle",
+  "true",
+  "Always apply VALU throttle to VALU sequences"
+>;
+
+def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
+  "HasWaitXcnt",
+  "true",
+  "Has s_wait_xcnt instruction"
+>;
+
+def FeatureExclusiveScanInsts : SubtargetFeature<"exclusive-scan-insts",
+  "HasExclusiveScanInsts",
+  "true",
+  "Has exclusive scan instructions"
+>;
+
+def FeatureVNBREncoding : SubtargetFeature<"vnbr-encoding",
+  "HasVNBREncoding",
+  "true",
+  "Neighbour data sharing instructions"
+>;
+
+def FeatureSWC : SubtargetFeature<"swc",
+  "HasSWC",
+  "true",
+  "Streaming wave coalescer"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1134,6 +1383,20 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
+  "DynamicVGPR",
+  "true",
+  "Enable dynamic VGPR mode"
+>;
+
+def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
+  "DynamicVGPRBlockSize32",
+  "true",
+  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "RequiresCOV6",
   "true",
@@ -1147,6 +1410,23 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
+#ifdef LLPC_BUILD_NPI
+// Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
+// restoring the callee-saved registers.
+def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
+  "UseBlockVGPROpsForCSR",
+  "true",
+  "Use block load/store for VGPR callee saved registers"
+>;
+
+def FeatureGloballyAddressableScratch : SubtargetFeature<
+  "globally-addressable-scratch",
+  "HasGloballyAddressableScratch",
+  "true",
+  "FLAT instructions can access scratch memory for any thread in any wave"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1270,7 +1550,11 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
 
 def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   "gfx12",
+#ifdef LLPC_BUILD_NPI
+  [FeatureFP64, FeatureMIMG_R128,
+#else /* LLPC_BUILD_NPI */
   [FeatureFP64, FeatureAddressableLocalMemorySize65536, FeatureMIMG_R128,
+#endif /* LLPC_BUILD_NPI */
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
@@ -1292,6 +1576,31 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   ]
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
+  "gfx13",
+  [FeatureFP64, FeatureMIMG_R128,
+   FeatureFlatAddressSpace, Feature16BitInsts,
+   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
+   FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureGFX11Insts, FeatureGFX12Insts, FeatureGFX13Insts, FeatureVOP3P, FeatureVOPD,
+   FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
+   FeatureAddNoCarryInsts, FeatureFmaMixInsts,
+   FeatureNoSdstCMPX, FeatureVscnt,
+   FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
+   FeatureA16, FeatureFastDenormalF32, FeatureG16,
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureExclusiveScanInsts, FeatureSWC
+  ]
+>;
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 
 class FeatureSet<list<SubtargetFeature> Features_> {
@@ -1508,10 +1817,17 @@ def FeatureISAVersion9_5_Common : FeatureSet<
   [FeatureAddressableLocalMemorySize163840,
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
-   FeatureCvtFP8VOP1Bug,
    FeatureGFX950Insts,
    FeaturePrngInst,
-   FeatureBF16ConversionInsts
+   FeatureBF16ConversionInsts,
+   FeatureBitOp3Insts,
+   FeatureFP8ConversionScaleInsts,
+   FeatureBF8ConversionScaleInsts,
+   FeatureFP4ConversionScaleInsts,
+   FeatureFP6BF6ConversionScaleInsts,
+   FeatureDot12Insts,
+   FeatureDot13Insts,
+   FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -1638,6 +1954,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot12Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureShaderCyclesRegister,
@@ -1714,6 +2031,9 @@ def FeatureISAVersion11_5_3 : FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+#ifdef LLPC_BUILD_NPI
+   FeatureAddressableLocalMemorySize65536,
+#endif /* LLPC_BUILD_NPI */
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot7Insts,
@@ -1721,6 +2041,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot9Insts,
    FeatureDot10Insts,
    FeatureDot11Insts,
+   FeatureDot12Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureShaderCyclesHiLoRegisters,
@@ -1747,12 +2068,140 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport
+#ifdef LLPC_BUILD_NPI
+]>;
+
+def FeatureISAVersion12_10 : FeatureSet<
+  [FeatureGFX12,
+   FeatureGFX1210Insts,
+   FeatureAddressableLocalMemorySize327680,
+   FeatureCuMode,
+   Feature1024AddressableVGPRs,
+   Feature64BitLiterals,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureFmacF64Inst,
+   FeaturePackedFP32Ops,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesHiLoRegisters,
+   FeatureArchitectedFlatScratch,
+   FeatureArchitectedSGPRs,
+   FeatureFlatGVSMode,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
+   FeatureFlatAtomicFaddF32Inst,
+   FeatureFP8ConversionInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans,
+   FeatureHasRestrictedSOffset,
+   FeatureScalarDwordx3Loads,
+   FeatureDPPSrc1SGPR,
+   FeatureBitOp3Insts,
+   FeatureTanhInsts,
+   FeatureBF16TransInsts,
+   FeatureBF16ConversionInsts,
+   FeatureBF16PackedInsts,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureCvtPkF16F32Inst,
+   FeatureFmaMixBF16Insts,
+   FeatureMin3Max3PKF16,
+   FeatureMinimum3Maximum3PKF16,
+   FeaturePrngInst,
+   FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
+   FeatureSupportsSRAMECC,
+   FeatureMaxHardClauseLength63,
+   FeatureWaitXcnt,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureFlatBufferGlobalAtomicFaddF64Inst,
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureGloballyAddressableScratch,
+]>;
+
+def FeatureISAVersion12_11 : FeatureSet<
+  !listconcat(FeatureISAVersion12_10.Features,
+  [FullRate64Ops,
+   FeatureDPALU_DPP,
+   FeatureGFX1211GEMMInsts])>;
+#else /* LLPC_BUILD_NPI */
    ]>;
+#endif /* LLPC_BUILD_NPI */
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
     [FeatureRequiresCOV6])>;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureISAVersion12_1_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12_10.Features,
+    [FeatureRequiresCOV6])>;
+
+def FeatureISAVersion13 : FeatureSet<
+  [FeatureGFX13,
+   FeatureGFX1210Insts,
+   FeatureAddressableLocalMemorySize327680,
+   Feature1024AddressableVGPRs,
+   Feature64BitLiterals,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureFmacF64Inst,
+   FeatureDPALU_DPP,
+   FeaturePackedFP32Ops,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureNSAEncoding,
+   FeaturePartialNSAEncoding,
+   FeatureShaderCyclesRegister,
+   FeatureArchitectedFlatScratch,
+   FeatureArchitectedSGPRs,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureAtomicBufferPkAddBF16Inst,
+   FeatureFlatAtomicFaddF32Inst,
+   FeatureFP8ConversionInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans,
+   FeatureHasRestrictedSOffset,
+   FeatureScalarDwordx3Loads,
+   FeatureDPPSrc1SGPR,
+   FeatureBitOp3Insts,
+   FeatureTanhInsts,
+   FeatureBF16TransInsts,
+   FeatureBF16ConversionInsts,
+   FeatureBF16PackedInsts,
+   FeaturePrngInst,
+   FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
+   FeatureSupportsSRAMECC,
+   FeatureMLMathInsts,
+   FeatureVGPRIndexingRegisters,
+   FeatureMaxHardClauseLength63,
+   FeatureMin3Max3PKF16,
+   FeatureMinimum3Maximum3PKF16,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureFmaMixBF16Insts,
+   FeatureVNBREncoding,
+   FeatureGloballyAddressableScratch
+]>;
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
@@ -1986,6 +2435,20 @@ def HasGFX950Insts :
   Predicate<"Subtarget->hasGFX950Insts()">,
   AssemblerPredicate<(all_of FeatureGFX950Insts)>;
 
+def HasPermlane16Swap :
+  Predicate<"Subtarget->hasPermlane16Swap()">,
+  AssemblerPredicate<(all_of FeaturePermlane16Swap)>;
+
+def HasPermlane32Swap :
+  Predicate<"Subtarget->hasPermlane32Swap()">,
+  AssemblerPredicate<(all_of FeaturePermlane32Swap)>;
+
+#ifdef LLPC_BUILD_NPI
+def isGFX940Only :
+  Predicate<"Subtarget->hasGFX940Insts() && !Subtarget->hasGFX950Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX940Insts, (not FeatureGFX950Insts))>;
+
+#endif /* LLPC_BUILD_NPI */
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
@@ -2034,14 +2497,61 @@ def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
+#ifdef LLPC_BUILD_NPI
+def isGFX11GFX12 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX13Insts))>;
+
+#endif /* LLPC_BUILD_NPI */
 def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
+#ifdef LLPC_BUILD_NPI
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX13Insts))>;
+
+def isGFX12Not12_10 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1210Insts))>;
+#else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+#endif /* LLPC_BUILD_NPI */
 
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
+#ifdef LLPC_BUILD_NPI
+def isGFX12PlusNot1210 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1210Insts())">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1210Insts)))>;
+
+def isGFX121xOnly :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1210Insts, (not FeatureGFX13Insts))>;
+
+def isGFX1210Plus :
+  Predicate<"Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1210Insts)>;
+
+def isNotGFX1210Plus :
+  Predicate<"!Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1210Insts))>;
+
+def isGFX940orGFX1210orGFX13Plus :
+  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1210Insts() || "
+            "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX1210Insts,
+                             FeatureGFX13Insts)>;
+
+def isGFX13Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(all_of FeatureGFX13Insts)>;
+
+def isGFX13Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(all_of FeatureGFX13Insts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasMinimum3Maximum3F32 :
   Predicate<"Subtarget->hasMinimum3Maximum3F32()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F32)>;
@@ -2049,6 +2559,16 @@ def HasMinimum3Maximum3F32 :
 def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
+
+#ifdef LLPC_BUILD_NPI
+def HasMin3Max3PKF16 :
+  Predicate<"Subtarget->hasMin3Max3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMin3Max3PKF16)>;
+
+#endif /* LLPC_BUILD_NPI */
+def HasMinimum3Maximum3PKF16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
 
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
@@ -2076,7 +2596,11 @@ def HasAtomicFMinFMaxF64FlatInsts :
 
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
+#ifdef LLPC_BUILD_NPI
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1210Insts)>;
+#else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
+#endif /* LLPC_BUILD_NPI */
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;
@@ -2092,6 +2616,11 @@ def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
 def HasFlatScratchSVSMode : Predicate<"Subtarget->hasFlatScratchSVSMode()">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
+#ifdef LLPC_BUILD_NPI
+def HasFlatGVSMode : Predicate<"Subtarget->hasFlatGVSMode()">,
+  AssemblerPredicate<(all_of FeatureFlatGVSMode)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasGFX10_AEncoding : Predicate<"Subtarget->hasGFX10_AEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_AEncoding)>;
 
@@ -2115,11 +2644,27 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+#ifdef LLPC_BUILD_NPI
+def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
+
+def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
+#ifdef LLPC_BUILD_NPI
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX1210Insts)))>;
+#else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+#endif /* LLPC_BUILD_NPI */
 
 def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
+#ifdef LLPC_BUILD_NPI
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
+#else /* LLPC_BUILD_NPI */
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+#endif /* LLPC_BUILD_NPI */
 
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
@@ -2154,9 +2699,19 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
+#ifdef LLPC_BUILD_NPI
+def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
+#ifdef LLPC_BUILD_NPI
+def HasBF16PackedInsts : Predicate<"Subtarget->hasBF16PackedInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16PackedInsts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
@@ -2200,6 +2755,28 @@ def HasFmaakFmamkF32Insts :
   Predicate<"Subtarget->hasFmaakFmamkF32Insts()">,
   AssemblerPredicate<(any_of FeatureGFX10Insts, FeatureGFX940Insts)>;
 
+#ifdef LLPC_BUILD_NPI
+def HasFmaakFmamkF64Insts :
+  Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+
+def HasAddMinMaxInsts :
+  Predicate<"Subtarget->hasAddMinMaxInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+
+def HasPkAddMinMaxInsts :
+  Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+
+def HasPkMinMax3Insts :
+  Predicate<"Subtarget->hasPkMinMax3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+
+def HasSGetShaderCyclesInst :
+  Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
+  AssemblerPredicate<(any_of FeatureGFX1210Insts, FeatureGFX13Insts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 
@@ -2246,6 +2823,11 @@ def HasMovrel : Predicate<"Subtarget->hasMovrel()">,
 def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
   AssemblerPredicate<(all_of FeatureFmaMixInsts)>;
 
+#ifdef LLPC_BUILD_NPI
+def HasFmaMixBF16Insts : Predicate<"Subtarget->hasFmaMixBF16Insts()">,
+  AssemblerPredicate<(all_of FeatureFmaMixBF16Insts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<(all_of FeatureDLInsts)>;
 
@@ -2284,6 +2866,12 @@ def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
 
 def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
   AssemblerPredicate<(all_of FeatureDot11Insts)>;
+
+def HasDot12Insts : Predicate<"Subtarget->hasDot12Insts()">,
+  AssemblerPredicate<(all_of FeatureDot12Insts)>;
+
+def HasDot13Insts : Predicate<"Subtarget->hasDot13Insts()">,
+  AssemblerPredicate<(all_of FeatureDot13Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
@@ -2343,6 +2931,12 @@ def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
+#ifdef LLPC_BUILD_NPI
+def HasGFX1211GEMMInsts
+  : Predicate<"Subtarget->hasGFX1211GEMMInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX1211GEMMInsts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasDefaultComponentZero
   : Predicate<"Subtarget->hasDefaultComponentZero()">,
   AssemblerPredicate<(all_of FeatureDefaultComponentZero)>;
@@ -2353,6 +2947,11 @@ def HasDefaultComponentBroadcast
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
+#ifdef LLPC_BUILD_NPI
+def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
+  AssemblerPredicate<(any_of FeatureGFX1210Insts, FeatureGFX13Insts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
@@ -2370,8 +2969,53 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
 
+def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
+  AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
+
+#ifdef LLPC_BUILD_NPI
+def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
+  AssemblerPredicate<(all_of FeatureTanhInsts)>;
+
+#endif /* LLPC_BUILD_NPI */
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
+
+#ifdef LLPC_BUILD_NPI
+def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
+  AssemblerPredicate<(all_of Feature64BitLiterals)>;
+
+def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
+  AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
+
+def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
+  AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
+
+def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
+  AssemblerPredicate<(all_of FeatureWaitXcnt)>;
+
+#endif /* LLPC_BUILD_NPI */
+def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
+
+def HasBF8ConversionScaleInsts : Predicate<"Subtarget->hasBF8ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureBF8ConversionScaleInsts)>;
+
+def HasFP4ConversionScaleInsts : Predicate<"Subtarget->hasFP4ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureFP4ConversionScaleInsts)>;
+
+def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureFP6BF6ConversionScaleInsts)>;
+
+def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
+
+#ifdef LLPC_BUILD_NPI
+def HasCvtPkF16F32Inst : Predicate<"Subtarget->hasCvtPkF16F32Inst()">,
+  AssemblerPredicate<(all_of FeatureCvtPkF16F32Inst)>;
+
+#endif /* LLPC_BUILD_NPI */
+def HasF32ToF16BF16ConversionSRInsts : Predicate<"Subtarget->hasF32ToF16BF16ConversionSRInsts()">,
+  AssemblerPredicate<(all_of FeatureF32ToF16BF16ConversionSRInsts)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
@@ -2386,6 +3030,26 @@ def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 
 def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
    AssemblerPredicate<(all_of FeatureXF32Insts)>;
+
+#ifdef LLPC_BUILD_NPI
+def HasVectorPrefetch :
+  Predicate<"Subtarget->hasVectorPrefetch()">,
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
+
+#endif /* LLPC_BUILD_NPI */
+def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
+  AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
+#ifdef LLPC_BUILD_NPI
+
+def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
+  AssemblerPredicate<(all_of FeatureExclusiveScanInsts)>;
+
+def HasVNBREncoding : Predicate<"Subtarget->hasVNBREncoding()">,
+  AssemblerPredicate<(all_of FeatureVNBREncoding)>;
+
+def HasSWC : Predicate<"Subtarget->hasSWC()">,
+  AssemblerPredicate<(all_of FeatureSWC)>;
+#endif /* LLPC_BUILD_NPI */
 
 // Include AMDGPU TD files
 include "SISchedule.td"

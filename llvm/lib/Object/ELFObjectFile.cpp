@@ -593,12 +593,38 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1152";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153:
     return "gfx1153";
+#if LLPC_BUILD_NPI
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX115F:
+    return "gfx115F";
+#endif /* LLPC_BUILD_NPI */
 
   // AMDGCN GFX12.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
     return "gfx1200";
+#if LLPC_BUILD_NPI
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX120F:
+    return "gfx120F";
+#endif /* LLPC_BUILD_NPI */
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
     return "gfx1201";
+#if LLPC_BUILD_NPI
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX120E:
+    return "gfx120E";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1210:
+    return "gfx1210";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1211:
+    return "gfx1211";
+
+  // AMDGCN GFX13.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300:
+    return "gfx1300";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1301:
+    return "gfx1301";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1302:
+    return "gfx1302";
+
+
+#endif /* LLPC_BUILD_NPI */
 
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
@@ -613,6 +639,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx11-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:
     return "gfx12-generic";
+#if LLPC_BUILD_NPI
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_1_GENERIC:
+    return "gfx12-1-generic";
+#endif /* LLPC_BUILD_NPI */
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }

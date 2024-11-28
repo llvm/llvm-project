@@ -8,12 +8,18 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPU.h"
+#if LLPC_BUILD_NPI
+#include "AMDGPUGlobalISelUtils.h"
+#endif /* LLPC_BUILD_NPI */
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#if LLPC_BUILD_NPI
+#include "llvm/IR/Instructions.h"
+#endif /* LLPC_BUILD_NPI */
 #include "llvm/IR/Metadata.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -110,6 +116,18 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
       return BarAddr.value();
     }
 
+#if LLPC_BUILD_NPI
+    if (TargetExtType *TTy = AMDGPU::isLDSSemaphore(GV)) {
+      unsigned OwningRank = TTy->getIntParameter(0) % MAX_WAVES_PER_WAVEGROUP;
+      unsigned Num = ++NumSemaphores[OwningRank];
+      Offset = 0x801000u | OwningRank << 8 | Num << 4;
+      // TODO-GFX13: Diagnose trying to allocate more than the 5 semaphores
+      // supported by hardware.
+      Entry.first->second = Offset;
+      return Offset;
+    }
+
+#endif /* LLPC_BUILD_NPI */
     std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
     if (MaybeAbs) {
       // Absolute address LDS variables that exist prior to the LDS lowering
@@ -166,6 +184,52 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   }
 
   Entry.first->second = Offset;
+#if LLPC_BUILD_NPI
+  return Offset;
+}
+
+unsigned
+AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
+                                                const GlobalVariable &GV) {
+  assert(GV.getAddressSpace() == AMDGPUAS::LANE_SHARED &&
+         "expected lane-shared address space");
+  bool InVGPR = GV.hasAttribute("lane-shared-in-vgpr");
+  if (InVGPR) {
+    auto Entry = LaneSharedVGPRObjects.insert(std::pair(&GV, 0));
+    if (!Entry.second)
+      return Entry.first->second;
+
+    unsigned Offset = LaneSharedVGPRSize;
+    LaneSharedVGPRSize += DL.getTypeAllocSize(GV.getValueType());
+    LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize, 4u);
+    Entry.first->second = Offset;
+    return Offset;
+  }
+  auto Entry = LaneSharedMemoryObjects.insert(std::pair(&GV, 0));
+  if (!Entry.second)
+    return Entry.first->second;
+
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
+
+  unsigned Offset;
+  Offset = LaneSharedScratchSize = alignTo(LaneSharedScratchSize, Alignment);
+  LaneSharedScratchSize += DL.getTypeAllocSize(GV.getValueType());
+  Entry.first->second = Offset;
+  return Offset;
+}
+
+unsigned
+AMDGPUMachineFunction::allocatePrivateInVGPR(const DataLayout &DL,
+                                             const AllocaInst &Alloca) {
+  assert(AMDGPU::IsPromotablePrivate(Alloca));
+  auto [Entry, Inserted] = PrivateVGPRObjects.insert({&Alloca, 0});
+  unsigned &Offset = Entry->second;
+  if (Inserted) {
+    Offset = PrivateVGPRObjectsSize;
+    PrivateVGPRObjectsSize += alignTo(*Alloca.getAllocationSize(DL), 4);
+  }
+#endif /* LLPC_BUILD_NPI */
   return Offset;
 }
 

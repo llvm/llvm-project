@@ -50,6 +50,49 @@ class VOPD_MADKe<bits<4> opX, bits<5> opY> : Enc96 {
   let Inst{95-64} = imm;
 }
 
+#ifdef LLPC_BUILD_NPI
+class VOPD3e<bits<6> opX, bits<6> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
+  bits<9> src0X;
+  bits<8> vsrc1X;
+  bits<8> vsrc2X;
+  bits<8> vdstX;
+  bits<9> src0Y;
+  bits<8> vsrc1Y;
+  bits<8> vsrc2Y;
+  bits<8> vdstY;
+  // neg modifiers
+  bit src0X_modifiers;
+  bit src0Y_modifiers;
+  bit vsrc1X_modifiers;
+  bit vsrc1Y_modifiers;
+  bit vsrc2X_modifiers;
+  bit vsrc2Y_modifiers;
+  bits<8> bitop3;
+
+  let Inst{8-0} = src0X;
+  let Inst{17-12} = opY;
+  let Inst{23-18} = opX;
+  let Inst{31-24} = 0xcf; // encoding
+  let Inst{40-32} = src0Y;
+  let Inst{41} = !if(VDX.Pfl.HasModifiers, src0X_modifiers, 0);
+  let Inst{42} = !if(!and(VDX.Pfl.HasSrc1, VDX.Pfl.HasModifiers), vsrc1X_modifiers, 0);
+  let Inst{43} = !if(!and(VDX.Pfl.HasVOPD3Src2, VDX.Pfl.HasModifiers), vsrc2X_modifiers, 0);
+  let Inst{44} = !if(VDY.Pfl.HasModifiers, src0Y_modifiers, 0);
+  let Inst{45} = !if(!and(VDY.Pfl.HasSrc1, VDY.Pfl.HasModifiers), vsrc1Y_modifiers, 0);
+  let Inst{46} = !if(!and(VDY.Pfl.HasVOPD3Src2, VDY.Pfl.HasModifiers), vsrc2Y_modifiers, 0);
+  let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), 0, vsrc1X);
+
+  // SP3 allows to use an SGPR in place of VSRC2 operand for V_DUAL_CNDMASK_B32
+  // despite the fact the operand does not accept SGPRs.
+  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1), 0, vsrc2X);
+  let Inst{71-64} = vdstX;
+  let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), 0, vsrc1Y);
+  let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPD3Y, "bitop"), -1), bitop3,
+                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1), 0, vsrc2Y));
+  let Inst{95-88} = vdstY;
+}
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // VOPD classes
 //===----------------------------------------------------------------------===//
@@ -71,8 +114,13 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
       SIMCInstr<NAME, Gen.Subtarget> {
   // Fields for table indexing
   Instruction Opcode = !cast<Instruction>(NAME);
+#ifdef LLPC_BUILD_NPI
+  bits<6> OpX = XasVC.VOPDOp;
+  bits<6> OpY = YasVC.VOPDOp;
+#else /* LLPC_BUILD_NPI */
   bits<5> OpX = XasVC.VOPDOp;
   bits<5> OpY = YasVC.VOPDOp;
+#endif /* LLPC_BUILD_NPI */
   bits<4> SubTgt = Gen.Subtarget;
 
   let VALU = 1;
@@ -110,7 +158,11 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
 class VOPD<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
            VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
+#ifdef LLPC_BUILD_NPI
+      VOPDe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp{4-0}> {
+#else /* LLPC_BUILD_NPI */
       VOPDe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
+#endif /* LLPC_BUILD_NPI */
   let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
   let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
 }
@@ -118,13 +170,33 @@ class VOPD<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
 class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
                 VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
+#ifdef LLPC_BUILD_NPI
+      VOPD_MADKe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp{4-0}> {
+#else /* LLPC_BUILD_NPI */
       VOPD_MADKe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
+#endif /* LLPC_BUILD_NPI */
   let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
   let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
   let Size = 12;
   let FixedSize = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+class VOPD3<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
+            VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
+    : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
+      VOPD3e<XasVC.VOPDOp, YasVC.VOPDOp, VDX, VDY> {
+  let VOPD3 = 1;
+  let Size = 12;
+  // VOPD3 uses promoted form of VOP2 instructions, so V_CNDMASK_B32 is not
+  // limited to VCC src2 only, and a real SGPR will be used as an operand
+  // instead.
+  defvar UsesX = !if(!eq(VDX, V_CNDMASK_B32_e32), !filter(x, VDX.Uses, !ne(x, VCC)), VDX.Uses);
+  defvar UsesY = !if(!eq(VDY, V_CNDMASK_B32_e32), !filter(x, VDY.Uses, !ne(x, VCC)), VDY.Uses);
+  let Uses = RegListUnion<UsesX, UsesY>.ret;
+}
+
+#endif /* LLPC_BUILD_NPI */
 // V_DUAL_DOT2ACC_F32_BF16 is a legal instruction, but V_DOT2ACC_F32_BF16 is
 // not. V_DUAL_DOT2C_F32_BF16 is a legal instruction on GFX12, but
 // V_DOT2C_F32_F16_e32 is not. Since we generate the DUAL form by converting
@@ -135,16 +207,36 @@ defvar VOPDPseudosCommon = [
   "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32"
 ];
 defvar VOPDPseudosGFX11 = ["V_DOT2C_F32_F16_e32"];
+#ifdef LLPC_BUILD_NPI
+defvar VOPDYOnlyPseudosCommon = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32"];
+defvar VOPDYOnlyPseudosGFX11_12 = ["V_AND_B32_e32"];
+defvar VOPDYOnlyPseudosGFX1210 = ["V_MAX_I32_e32", "V_MIN_I32_e32",
+                                  "V_SUB_U32_e32", "V_LSHRREV_B32_e32",
+                                  "V_ASHRREV_I32_e32"];
+#else /* LLPC_BUILD_NPI */
 defvar VOPDYOnlyPseudosCommon = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32",
                                  "V_AND_B32_e32"];
+#endif /* LLPC_BUILD_NPI */
 
 defvar VOPDXPseudosGFX11 = !listconcat(VOPDPseudosCommon, VOPDPseudosGFX11);
 defvar VOPDXPseudosGFX12 = VOPDPseudosCommon;
+#ifdef LLPC_BUILD_NPI
+defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
+defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
+defvar VOPDYPseudosGFX1210 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1210);
+#else /* LLPC_BUILD_NPI */
 defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon);
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon);
+#endif /* LLPC_BUILD_NPI */
 
 def GFX11GenD : GFXGenD<GFX11Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+#ifdef LLPC_BUILD_NPI
+def GFX12GenD : GFXGenD<GFX12Not12_10Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
+def GFX1210GenD : GFXGenD<GFX1210Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1210>;
+def GFX13GenD : GFXGenD<GFX13Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1210>;
+#else /* LLPC_BUILD_NPI */
 def GFX12GenD : GFXGenD<GFX12Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
+#endif /* LLPC_BUILD_NPI */
 
 
 def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
@@ -152,7 +244,13 @@ def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
 }
 
 class getRenamed<string VOPDName, GFXGen Gen> {
+#ifdef LLPC_BUILD_NPI
+  string ret = !if(!or(!eq(Gen.Subtarget, GFX12Gen.Subtarget),
+                       !eq(Gen.Subtarget, GFX1210Gen.Subtarget),
+                       !eq(Gen.Subtarget, GFX13Gen.Subtarget)),
+#else /* LLPC_BUILD_NPI */
   string ret = !if(!eq(Gen.Subtarget, GFX12Gen.Subtarget),
+#endif /* LLPC_BUILD_NPI */
                    !if(!eq(VOPDName, "v_dual_max_f32"),
                        "v_dual_max_num_f32",
                        !if(!eq(VOPDName, "v_dual_min_f32"),
@@ -161,7 +259,11 @@ class getRenamed<string VOPDName, GFXGen Gen> {
                    VOPDName);
 }
 
+#ifdef LLPC_BUILD_NPI
+foreach Gen = [GFX11GenD, GFX12GenD, GFX1210GenD, GFX13GenD] in {
+#else /* LLPC_BUILD_NPI */
 foreach Gen = [GFX11GenD, GFX12GenD] in {
+#endif /* LLPC_BUILD_NPI */
   foreach x = Gen.VOPDXPseudos in {
     foreach y = Gen.VOPDYPseudos in {
       defvar xInst = !cast<VOP_Pseudo>(x);
@@ -209,3 +311,45 @@ foreach Gen = [GFX11GenD, GFX12GenD] in {
   }
 }
 
+#ifdef LLPC_BUILD_NPI
+defvar VOPD3XPseudosExtra = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F32_e64", "V_SUB_U32_e32",
+                             "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32", "V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
+                             "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32"];
+defvar VOPD3XPseudosGFX1210 = !listconcat(
+                                !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
+                                                                   !eq(!find(x, "FMAMK"), -1))),
+                                VOPD3XPseudosExtra);
+defvar VOPD3YPseudosExtra = ["V_BITOP3_B32_e64", "V_FMA_F32_e64"];
+defvar VOPD3YPseudosGFX1210 = !listconcat(
+                                !filter(x, VOPDYPseudosGFX1210, !and(!eq(!find(x, "FMAAK"), -1),
+                                                                     !eq(!find(x, "FMAMK"), -1))),
+                                VOPD3YPseudosExtra);
+
+def GFX1210GenD3 : GFXGenD<GFX1210Gen, VOPD3XPseudosGFX1210, VOPD3YPseudosGFX1210>;
+
+def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX1210, VOPD3YPseudosGFX1210>;
+
+class getOpcMap<string OPName> {
+  defvar BaseName = !substr(OPName,2);
+  string ret = !cond(!eq(BaseName, "BITOP3_B32_e64")   : "BITOP2_B32_e64",
+                     1 : BaseName);
+}
+
+foreach Gen = [GFX1210GenD3, GFX13GenD3] in {
+  foreach x = Gen.VOPDXPseudos in {
+    foreach y = Gen.VOPDYPseudos in {
+      defvar xInst = !cast<VOP_Pseudo>(x);
+      defvar yInst = !cast<VOP_Pseudo>(y);
+      defvar XasVC = !cast<VOPD_Component>(x);
+      defvar YasVC = !cast<VOPD_Component>(y);
+      defvar xAsmName = getRenamed<XasVC.VOPDName, Gen>.ret;
+      defvar yAsmName = getRenamed<YasVC.VOPDName, Gen>.ret;
+      defvar OpName = "V_DUAL_" # getOpcMap<x>.ret # "_X_" # getOpcMap<y>.ret # "_e96" # Gen.Suffix;
+      defvar asm = xAsmName # xInst.Pfl.AsmVOPD3X #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPD3Y;
+      defvar ins = !con(xInst.Pfl.InsVOPD3X, yInst.Pfl.InsVOPD3Y);
+      defvar outs = (outs xInst.Pfl.DstRC:$vdstX, yInst.Pfl.DstRC:$vdstY);
+      def OpName : VOPD3<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
+    }
+  }
+}
+#endif /* LLPC_BUILD_NPI */

@@ -405,8 +405,28 @@ void MachineRegisterInfo::replaceRegWith(Register FromReg, Register ToReg) {
 /// register or null if none is found.  This assumes that the code is in SSA
 /// form, so there should only be one definition.
 MachineInstr *MachineRegisterInfo::getVRegDef(Register Reg) const {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   // Since we are in SSA form, we can use the first definition.
+#endif /* LLPC_BUILD_NPI */
   def_instr_iterator I = def_instr_begin(Reg);
+#if LLPC_BUILD_NPI
+
+  // Possibly exactly one BUNDLE is a def of I as well.
+  if ((!I.atEnd())) {
+    if (I->isBundle()) // BUNDLE first
+      I++;
+    else { // BUNDLE second
+      auto NI = std::next(I);
+      if (NI != def_instr_end() && NI->isBundle()) {
+        assert((std::next(NI) == def_instr_end()) &&
+               "getVRegDef assumes a single definition or no definition");
+        return &*I;
+      }
+    }
+  }
+
+#endif /* LLPC_BUILD_NPI */
   assert((I.atEnd() || std::next(I) == def_instr_end()) &&
          "getVRegDef assumes a single definition or no definition");
   return !I.atEnd() ? &*I : nullptr;

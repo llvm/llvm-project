@@ -192,6 +192,8 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.Pseudo
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let True16Predicate    = ps.True16Predicate;
+  let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
   let DisableEncoding    = ps.DisableEncoding;
@@ -314,7 +316,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  def _e64 : VOP3_Pseudo<opName, P, getVOPCPat64<cond, P>.ret>,
+  def _e64 : VOP3_Pseudo<opName, P, getVOPCPat64<cond, P>.ret, /*IsVOP3P*/false, P.HasOpSel>,
     Commutable_REV<revOp#"_e64", !eq(revOp, opName)>,
     VCMPXNoSDstTable<1, opName#"_e64">,
     VCMPVCMPXTable<opName#"_e64"> {
@@ -373,7 +375,7 @@ multiclass VOPCX_Pseudos <string opName,
     let IsVCMPX = 1;
   }
 
-  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst>,
+  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst, [], /*IsVOP3P*/false, P_NoSDst.HasOpSel>,
     Commutable_REV<revOp#"_nosdst_e64", !eq(revOp, opName)>,
     VCMPXNoSDstTable<0, opName#"_e64">,
     VCMPVCMPXTable<!subst("v_cmpx", "v_cmp", opName#"_e64")> {
@@ -445,8 +447,15 @@ multiclass VOPC_F16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_F32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_F32_F32, cond, revOp, 0>;
 
+#ifdef LLPC_BUILD_NPI
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
+    VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
+}
+#else /* LLPC_BUILD_NPI */
 multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
                      string revOp = opName> {
@@ -464,9 +473,16 @@ multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
+#ifdef LLPC_BUILD_NPI
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
+    VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
+}
+#else /* LLPC_BUILD_NPI */
 multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
 
+#endif /* LLPC_BUILD_NPI */
 
 multiclass VOPCX_F16<string opName, string revOp = opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
@@ -483,8 +499,15 @@ multiclass VOPCX_F16<string opName, string revOp = opName> {
 multiclass VOPCX_F32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_F32_F32, VOPC_F32_F32, COND_NULL, revOp>;
 
+#ifdef LLPC_BUILD_NPI
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPCX_F64 <string opName, string revOp = opName> :
+    VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
+}
+#else /* LLPC_BUILD_NPI */
 multiclass VOPCX_F64 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass VOPCX_I16<string opName, string revOp = opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
@@ -501,8 +524,15 @@ multiclass VOPCX_I16<string opName, string revOp = opName> {
 multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
+#ifdef LLPC_BUILD_NPI
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPCX_I64 <string opName, string revOp = opName> :
+    VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+}
+#else /* LLPC_BUILD_NPI */
 multiclass VOPCX_I64 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+#endif /* LLPC_BUILD_NPI */
 
 
 //===----------------------------------------------------------------------===//
@@ -799,11 +829,22 @@ defm V_CMPX_T_U64 : VOPCX_I64 <"v_cmpx_t_u64">;
 // Class instructions
 //===----------------------------------------------------------------------===//
 
-class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType src1VT = i32> :
+class VOPC_Class_Profile_Base<list<SchedReadWrite> sched, ValueType src0VT, ValueType src1VT = i32> :
   VOPC_Profile<sched, src0VT, src1VT> {
+  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
+                     Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
+                     Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
+
+  let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
+  let HasClamp = 0;
+  let HasOMod = 0;
+}
+
+class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType src1VT = i32> :
+  VOPC_Class_Profile_Base<sched, src0VT, src1VT> {
   let AsmDPP = "$src0_modifiers, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP16 = AsmDPP#"$fi";
-    let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0, Src1DPP:$src1, dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask, DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+  let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0, Src1DPP:$src1, dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask, DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   // DPP8 forbids modifiers and can inherit from VOPC_Profile
 
@@ -812,15 +853,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
   let InsVOP3Base = !con(InsPartVOP3DPP, !if(HasOpSel, (ins op_sel0:$op_sel),
                                                        (ins)));
   let AsmVOP3Base = "$sdst, $src0_modifiers, $src1";
-
-  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
-                     Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
-
-  let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
   let HasSrc1Mods = 0;
-  let HasClamp = 0;
-  let HasOMod = 0;
 }
 
 multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
@@ -837,16 +870,30 @@ multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
     let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
     let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
   }
-  def _fake16 : VOPC_Class_Profile<sched, f16, i16> {
+  def _fake16 : VOPC_Class_Profile_Base<sched, f16, f16> {
     let IsTrue16 = 1;
+    let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
+    let DstRC64 = getVALUDstForVT<DstVT>.ret;
+    let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1RC64 = VSrc_b32;
     let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-    let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
-    let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
-    let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
+    let Src0ModDPP = getSrcModDPP_t16<Src0VT, 1/*IsFake16*/>.ret;
+    let Src1ModDPP = getSrcModDPP_t16<Src1VT, 1/*IsFake16*/>.ret;
+    let Src2ModDPP = getSrcModDPP_t16<Src2VT, 1/*IsFake16*/>.ret;
+    let Src0VOP3DPP = VGPRSrc_32;
+    let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1/*IsFake16*/>.ret;
+    let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1/*IsFake16*/>.ret;
+    let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
+#ifdef LLPC_BUILD_NPI
+    let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 1/*IsFake16*/>.ret;
+    let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 1/*IsFake16*/>.ret;
+#else /* LLPC_BUILD_NPI */
+    let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 1/*IsFake16*/>.ret;
+    let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 1/*IsFake16*/>.ret;
+#endif /* LLPC_BUILD_NPI */
   }
 }
 
@@ -889,17 +936,34 @@ multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {
   }
 }
 
-class getVOPCClassPat64 <VOPProfile P> {
-  list<dag> ret =
-    [(set i1:$sdst,
+multiclass VOPCClassPat64<string inst_name> {
+  defvar inst = !cast<VOP_Pseudo>(inst_name#"_e64");
+  defvar P = inst.Pfl;
+  def : GCNPat <
+    (i1:$sdst
       (AMDGPUfp_class
         (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
-        i32:$src1))];
+        P.Src1VT:$src1)),
+    (inst i32:$src0_modifiers, P.Src0VT:$src0, P.Src1VT:$src1)
+  >;
 }
 
+multiclass VOPCClassPat64_fake16<string inst_name> {
+  defvar inst = !cast<VOP_Pseudo>(inst_name#"_fake16_e64");
+  defvar P = inst.Pfl;
+  def : GCNPat <
+    (i1:$sdst
+      (AMDGPUfp_class
+        (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
+        i32:$src1)),
+    (inst i32:$src0_modifiers, P.Src0VT:$src0,
+          0 /*src1_modifiers*/, VGPR_32:$src1)
+  >;
+}
 
-// Special case for class instructions which only have modifiers on
-// the 1st source operand.
+// cmp_class ignores the FP mode and faithfully reports the unmodified
+// source value.
+let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
                                bit DefVcc = 1> {
   def _e32 : VOPC_Pseudo <opName, p>,
@@ -910,7 +974,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
     let isConvergent = DefExec;
   }
 
-  def _e64 : VOP3_Pseudo<opName, p, getVOPCClassPat64<p>.ret>,
+  def _e64 : VOP3_Pseudo<opName, p, [], 0/*IsVOP3P*/, p.HasOpSel>,
              VCMPXNoSDstTable<1, opName#"_e64"> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = p.Schedule;
@@ -957,7 +1021,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
     let SubtargetPredicate = HasNoSdstCMPX;
   }
 
-  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst>,
+  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst, [], 0/*IsVOP3P*/, P_NoSDst.HasOpSel>,
                     VCMPXNoSDstTable<0, opName#"_e64"> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -990,6 +1054,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
   } // end SubtargetPredicate = isGFX11Plus
 }
 } // End SubtargetPredicate = HasSdstCMPX
+} // End ReadsModeReg = 0, mayRaiseFPException = 0
 
 defm VOPC_I1_F16_I16 : VOPC_Class_Profile_t16<[Write32Bit]>;
 def VOPC_I1_F32_I32 : VOPC_Class_Profile<[Write32Bit], f32>;
@@ -1002,12 +1067,14 @@ def VOPC_F64_I32 : VOPC_Class_NoSdst_Profile<[Write64Bit], f64>;
 multiclass VOPC_CLASS_F16 <string opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F16_I16, 0>;
+    defm : VOPCClassPat64<NAME>;
   }
-  let OtherPredicates = [UseRealTrue16Insts] in {
+  let True16Predicate = UseRealTrue16Insts in {
     defm _t16 : VOPC_Class_Pseudos <opName#"_t16", VOPC_I1_F16_I16_t16, 0>;
   }
-  let OtherPredicates = [UseFakeTrue16Insts] in {
+  let True16Predicate = UseFakeTrue16Insts in {
     defm _fake16 : VOPC_Class_Pseudos <opName#"_fake16", VOPC_I1_F16_I16_fake16, 0>;
+    defm : VOPCClassPat64_fake16<NAME>;
   }
 }
 
@@ -1023,21 +1090,28 @@ multiclass VOPCX_CLASS_F16 <string opName> {
   }
 }
 
-multiclass VOPC_CLASS_F32 <string opName> :
-  VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 0>;
+multiclass VOPC_CLASS_F32 <string opName> {
+  defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 0>;
+  defm : VOPCClassPat64<NAME>;
+}
 
 multiclass VOPCX_CLASS_F32 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F32_I32, VOPC_F32_I32>;
 
-multiclass VOPC_CLASS_F64 <string opName> :
-  VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
+#ifdef LLPC_BUILD_NPI
+// FIXME: let IsDPMACCInstruction = 1 in
+#endif /* LLPC_BUILD_NPI */
+multiclass VOPC_CLASS_F64 <string opName> {
+  defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
+  defm : VOPCClassPat64<NAME>;
+}
 
+#ifdef LLPC_BUILD_NPI
+// FIXME: let IsDPMACCInstruction = 1 in
+#endif /* LLPC_BUILD_NPI */
 multiclass VOPCX_CLASS_F64 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
 
-// cmp_class ignores the FP mode and faithfully reports the unmodified
-// source value.
-let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CMP_CLASS_F32 : VOPC_CLASS_F32 <"v_cmp_class_f32">;
 defm V_CMPX_CLASS_F32 : VOPCX_CLASS_F32 <"v_cmpx_class_f32">;
 defm V_CMP_CLASS_F64 : VOPC_CLASS_F64 <"v_cmp_class_f64">;
@@ -1045,7 +1119,6 @@ defm V_CMPX_CLASS_F64 : VOPCX_CLASS_F64 <"v_cmpx_class_f64">;
 
 defm V_CMP_CLASS_F16  : VOPC_CLASS_F16 <"v_cmp_class_f16">;
 defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
-} // End ReadsModeReg = 0, mayRaiseFPException = 0
 
 //===----------------------------------------------------------------------===//
 // V_ICMPIntrinsic Pattern.
@@ -1283,6 +1356,7 @@ class VOPC_DPP16<bits<8> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
     : VOPC_DPP_Base<op, opName, ps.Pfl> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
+  let True16Predicate = ps.True16Predicate;
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
@@ -1303,6 +1377,7 @@ class VOPC_DPP8<bits<8> op, VOPC_Pseudo ps, string opName = ps.OpName>
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
+  let True16Predicate = ps.True16Predicate;
   let Constraints = "";
 }
 
@@ -1333,6 +1408,7 @@ class VOPC64_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
     : VOPC64_DPP_Base<op, opName, ps.Pfl> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
+  let True16Predicate = ps.True16Predicate;
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
@@ -1375,6 +1451,7 @@ class VOPC64_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
+  let True16Predicate = ps.True16Predicate;
 }
 
 class VOPC64_DPP8_Dst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1645,31 +1722,75 @@ multiclass VOPCX_Real_with_name_gfx11<bits<9> op, string OpName,
     string asm_name, string pseudo_mnemonic = ""> :
   VOPCX_Real_with_name<GFX11Gen, op, OpName, asm_name, pseudo_mnemonic>;
 
+#ifdef LLPC_BUILD_NPI
+multiclass VOPC_Real_gfx11_gfx12_gfx13<bits<9> op> :
+  VOPC_Real_Base<GFX11Gen, op>, VOPC_Real_Base<GFX12Gen, op>,
+  VOPC_Real_Base<GFX13Gen, op>;
+
+multiclass VOPCX_Real_gfx11_gfx12_gfx13<bits<9> op> :
+  VOPCX_Real<GFX11Gen, op>, VOPCX_Real<GFX12Gen, op>,
+  VOPCX_Real<GFX13Gen, op>;
+#else /* LLPC_BUILD_NPI */
 multiclass VOPC_Real_gfx11_gfx12<bits<9> op> :
   VOPC_Real_Base<GFX11Gen, op>, VOPC_Real_Base<GFX12Gen, op>;
 
 multiclass VOPCX_Real_gfx11_gfx12<bits<9> op> :
   VOPCX_Real<GFX11Gen, op>, VOPCX_Real<GFX12Gen, op>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass VOPC_Real_t16_gfx11<bits <9> op, string asm_name,
     string OpName = NAME, string pseudo_mnemonic = ""> :
   VOPC_Real_t16<GFX11Gen, op, asm_name, OpName, pseudo_mnemonic>;
 
+#ifdef LLPC_BUILD_NPI
+multiclass VOPC_Real_t16_gfx11_gfx12_gfx13<bits <9> op, string asm_name,
+#else /* LLPC_BUILD_NPI */
 multiclass VOPC_Real_t16_gfx11_gfx12<bits <9> op, string asm_name,
+#endif /* LLPC_BUILD_NPI */
     string OpName = NAME, string pseudo_mnemonic = ""> :
   VOPC_Real_t16<GFX11Gen, op, asm_name, OpName, pseudo_mnemonic>,
+#ifdef LLPC_BUILD_NPI
+  VOPC_Real_t16<GFX12Gen, op, asm_name, OpName, pseudo_mnemonic>,
+  VOPC_Real_t16<GFX13Gen, op, asm_name, OpName, pseudo_mnemonic>;
+#else /* LLPC_BUILD_NPI */
   VOPC_Real_t16<GFX12Gen, op, asm_name, OpName, pseudo_mnemonic>;
+#endif /* LLPC_BUILD_NPI */
 
 multiclass VOPCX_Real_t16_gfx11<bits<9> op, string asm_name,
     string OpName = NAME, string pseudo_mnemonic = ""> :
   VOPCX_Real_t16<GFX11Gen, op, asm_name, OpName, pseudo_mnemonic>;
 
+#ifdef LLPC_BUILD_NPI
+multiclass VOPCX_Real_t16_gfx11_gfx12_gfx13<bits<9> op, string asm_name,
+#else /* LLPC_BUILD_NPI */
 multiclass VOPCX_Real_t16_gfx11_gfx12<bits<9> op, string asm_name,
+#endif /* LLPC_BUILD_NPI */
     string OpName = NAME, string pseudo_mnemonic = ""> :
   VOPCX_Real_t16<GFX11Gen, op, asm_name, OpName, pseudo_mnemonic>,
+#ifdef LLPC_BUILD_NPI
+  VOPCX_Real_t16<GFX12Gen, op, asm_name, OpName, pseudo_mnemonic>,
+  VOPCX_Real_t16<GFX13Gen, op, asm_name, OpName, pseudo_mnemonic>;
+#else /* LLPC_BUILD_NPI */
   VOPCX_Real_t16<GFX12Gen, op, asm_name, OpName, pseudo_mnemonic>;
+#endif /* LLPC_BUILD_NPI */
 
 defm V_CMP_F_F16_t16      : VOPC_Real_t16_gfx11<0x000, "v_cmp_f_f16">;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_F16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x001, "v_cmp_lt_f16">;
+defm V_CMP_EQ_F16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x002, "v_cmp_eq_f16">;
+defm V_CMP_LE_F16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x003, "v_cmp_le_f16">;
+defm V_CMP_GT_F16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x004, "v_cmp_gt_f16">;
+defm V_CMP_LG_F16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x005, "v_cmp_lg_f16">;
+defm V_CMP_GE_F16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x006, "v_cmp_ge_f16">;
+defm V_CMP_O_F16_t16      : VOPC_Real_t16_gfx11_gfx12_gfx13<0x007, "v_cmp_o_f16">;
+defm V_CMP_U_F16_t16      : VOPC_Real_t16_gfx11_gfx12_gfx13<0x008, "v_cmp_u_f16">;
+defm V_CMP_NGE_F16_t16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x009, "v_cmp_nge_f16">;
+defm V_CMP_NLG_F16_t16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00a, "v_cmp_nlg_f16">;
+defm V_CMP_NGT_F16_t16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00b, "v_cmp_ngt_f16">;
+defm V_CMP_NLE_F16_t16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00c, "v_cmp_nle_f16">;
+defm V_CMP_NEQ_F16_t16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00d, "v_cmp_neq_f16">;
+defm V_CMP_NLT_F16_t16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00e, "v_cmp_nlt_f16">;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_F16_t16     : VOPC_Real_t16_gfx11_gfx12<0x001, "v_cmp_lt_f16">;
 defm V_CMP_EQ_F16_t16     : VOPC_Real_t16_gfx11_gfx12<0x002, "v_cmp_eq_f16">;
 defm V_CMP_LE_F16_t16     : VOPC_Real_t16_gfx11_gfx12<0x003, "v_cmp_le_f16">;
@@ -1684,9 +1805,26 @@ defm V_CMP_NGT_F16_t16    : VOPC_Real_t16_gfx11_gfx12<0x00b, "v_cmp_ngt_f16">;
 defm V_CMP_NLE_F16_t16    : VOPC_Real_t16_gfx11_gfx12<0x00c, "v_cmp_nle_f16">;
 defm V_CMP_NEQ_F16_t16    : VOPC_Real_t16_gfx11_gfx12<0x00d, "v_cmp_neq_f16">;
 defm V_CMP_NLT_F16_t16    : VOPC_Real_t16_gfx11_gfx12<0x00e, "v_cmp_nlt_f16">;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_T_F16_t16      : VOPC_Real_t16_gfx11<0x00f, "v_cmp_t_f16", "V_CMP_TRU_F16_t16", "v_cmp_tru_f16">;
 
 defm V_CMP_F_F16_fake16      : VOPC_Real_t16_gfx11<0x000, "v_cmp_f_f16">;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_F16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x001, "v_cmp_lt_f16">;
+defm V_CMP_EQ_F16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x002, "v_cmp_eq_f16">;
+defm V_CMP_LE_F16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x003, "v_cmp_le_f16">;
+defm V_CMP_GT_F16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x004, "v_cmp_gt_f16">;
+defm V_CMP_LG_F16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x005, "v_cmp_lg_f16">;
+defm V_CMP_GE_F16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x006, "v_cmp_ge_f16">;
+defm V_CMP_O_F16_fake16      : VOPC_Real_t16_gfx11_gfx12_gfx13<0x007, "v_cmp_o_f16">;
+defm V_CMP_U_F16_fake16      : VOPC_Real_t16_gfx11_gfx12_gfx13<0x008, "v_cmp_u_f16">;
+defm V_CMP_NGE_F16_fake16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x009, "v_cmp_nge_f16">;
+defm V_CMP_NLG_F16_fake16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00a, "v_cmp_nlg_f16">;
+defm V_CMP_NGT_F16_fake16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00b, "v_cmp_ngt_f16">;
+defm V_CMP_NLE_F16_fake16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00c, "v_cmp_nle_f16">;
+defm V_CMP_NEQ_F16_fake16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00d, "v_cmp_neq_f16">;
+defm V_CMP_NLT_F16_fake16    : VOPC_Real_t16_gfx11_gfx12_gfx13<0x00e, "v_cmp_nlt_f16">;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x001, "v_cmp_lt_f16">;
 defm V_CMP_EQ_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x002, "v_cmp_eq_f16">;
 defm V_CMP_LE_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x003, "v_cmp_le_f16">;
@@ -1701,9 +1839,26 @@ defm V_CMP_NGT_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00b, "v_cmp_ngt_f16">
 defm V_CMP_NLE_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00c, "v_cmp_nle_f16">;
 defm V_CMP_NEQ_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00d, "v_cmp_neq_f16">;
 defm V_CMP_NLT_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00e, "v_cmp_nlt_f16">;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_T_F16_fake16      : VOPC_Real_t16_gfx11<0x00f, "v_cmp_t_f16", "V_CMP_TRU_F16_fake16", "v_cmp_tru_f16">;
 
 defm V_CMP_F_F32      : VOPC_Real_gfx11<0x010>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_F32     : VOPC_Real_gfx11_gfx12_gfx13<0x011>;
+defm V_CMP_EQ_F32     : VOPC_Real_gfx11_gfx12_gfx13<0x012>;
+defm V_CMP_LE_F32     : VOPC_Real_gfx11_gfx12_gfx13<0x013>;
+defm V_CMP_GT_F32     : VOPC_Real_gfx11_gfx12_gfx13<0x014>;
+defm V_CMP_LG_F32     : VOPC_Real_gfx11_gfx12_gfx13<0x015>;
+defm V_CMP_GE_F32     : VOPC_Real_gfx11_gfx12_gfx13<0x016>;
+defm V_CMP_O_F32      : VOPC_Real_gfx11_gfx12_gfx13<0x017>;
+defm V_CMP_U_F32      : VOPC_Real_gfx11_gfx12_gfx13<0x018>;
+defm V_CMP_NGE_F32    : VOPC_Real_gfx11_gfx12_gfx13<0x019>;
+defm V_CMP_NLG_F32    : VOPC_Real_gfx11_gfx12_gfx13<0x01a>;
+defm V_CMP_NGT_F32    : VOPC_Real_gfx11_gfx12_gfx13<0x01b>;
+defm V_CMP_NLE_F32    : VOPC_Real_gfx11_gfx12_gfx13<0x01c>;
+defm V_CMP_NEQ_F32    : VOPC_Real_gfx11_gfx12_gfx13<0x01d>;
+defm V_CMP_NLT_F32    : VOPC_Real_gfx11_gfx12_gfx13<0x01e>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_F32     : VOPC_Real_gfx11_gfx12<0x011>;
 defm V_CMP_EQ_F32     : VOPC_Real_gfx11_gfx12<0x012>;
 defm V_CMP_LE_F32     : VOPC_Real_gfx11_gfx12<0x013>;
@@ -1718,9 +1873,37 @@ defm V_CMP_NGT_F32    : VOPC_Real_gfx11_gfx12<0x01b>;
 defm V_CMP_NLE_F32    : VOPC_Real_gfx11_gfx12<0x01c>;
 defm V_CMP_NEQ_F32    : VOPC_Real_gfx11_gfx12<0x01d>;
 defm V_CMP_NLT_F32    : VOPC_Real_gfx11_gfx12<0x01e>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_T_F32      : VOPC_Real_with_name_gfx11<0x01f, "V_CMP_TRU_F32", "v_cmp_t_f32">;
 defm V_CMP_T_F64      : VOPC_Real_with_name_gfx11<0x02f, "V_CMP_TRU_F64", "v_cmp_t_f64">;
 
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_I16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x031, "v_cmp_lt_i16">;
+defm V_CMP_EQ_I16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x032, "v_cmp_eq_i16">;
+defm V_CMP_LE_I16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x033, "v_cmp_le_i16">;
+defm V_CMP_GT_I16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x034, "v_cmp_gt_i16">;
+defm V_CMP_NE_I16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x035, "v_cmp_ne_i16">;
+defm V_CMP_GE_I16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x036, "v_cmp_ge_i16">;
+defm V_CMP_LT_U16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x039, "v_cmp_lt_u16">;
+defm V_CMP_EQ_U16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03a, "v_cmp_eq_u16">;
+defm V_CMP_LE_U16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03b, "v_cmp_le_u16">;
+defm V_CMP_GT_U16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03c, "v_cmp_gt_u16">;
+defm V_CMP_NE_U16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03d, "v_cmp_ne_u16">;
+defm V_CMP_GE_U16_t16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03e, "v_cmp_ge_u16">;
+
+defm V_CMP_LT_I16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x031, "v_cmp_lt_i16">;
+defm V_CMP_EQ_I16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x032, "v_cmp_eq_i16">;
+defm V_CMP_LE_I16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x033, "v_cmp_le_i16">;
+defm V_CMP_GT_I16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x034, "v_cmp_gt_i16">;
+defm V_CMP_NE_I16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x035, "v_cmp_ne_i16">;
+defm V_CMP_GE_I16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x036, "v_cmp_ge_i16">;
+defm V_CMP_LT_U16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x039, "v_cmp_lt_u16">;
+defm V_CMP_EQ_U16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03a, "v_cmp_eq_u16">;
+defm V_CMP_LE_U16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03b, "v_cmp_le_u16">;
+defm V_CMP_GT_U16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03c, "v_cmp_gt_u16">;
+defm V_CMP_NE_U16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03d, "v_cmp_ne_u16">;
+defm V_CMP_GE_U16_fake16     : VOPC_Real_t16_gfx11_gfx12_gfx13<0x03e, "v_cmp_ge_u16">;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_I16_t16     : VOPC_Real_t16_gfx11_gfx12<0x031, "v_cmp_lt_i16">;
 defm V_CMP_EQ_I16_t16     : VOPC_Real_t16_gfx11_gfx12<0x032, "v_cmp_eq_i16">;
 defm V_CMP_LE_I16_t16     : VOPC_Real_t16_gfx11_gfx12<0x033, "v_cmp_le_i16">;
@@ -1746,47 +1929,107 @@ defm V_CMP_LE_U16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x03b, "v_cmp_le_u16">;
 defm V_CMP_GT_U16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x03c, "v_cmp_gt_u16">;
 defm V_CMP_NE_U16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x03d, "v_cmp_ne_u16">;
 defm V_CMP_GE_U16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x03e, "v_cmp_ge_u16">;
+#endif /* LLPC_BUILD_NPI */
 
 defm V_CMP_F_I32      : VOPC_Real_gfx11<0x040>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_I32     : VOPC_Real_gfx11_gfx12_gfx13<0x041>;
+defm V_CMP_EQ_I32     : VOPC_Real_gfx11_gfx12_gfx13<0x042>;
+defm V_CMP_LE_I32     : VOPC_Real_gfx11_gfx12_gfx13<0x043>;
+defm V_CMP_GT_I32     : VOPC_Real_gfx11_gfx12_gfx13<0x044>;
+defm V_CMP_NE_I32     : VOPC_Real_gfx11_gfx12_gfx13<0x045>;
+defm V_CMP_GE_I32     : VOPC_Real_gfx11_gfx12_gfx13<0x046>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_I32     : VOPC_Real_gfx11_gfx12<0x041>;
 defm V_CMP_EQ_I32     : VOPC_Real_gfx11_gfx12<0x042>;
 defm V_CMP_LE_I32     : VOPC_Real_gfx11_gfx12<0x043>;
 defm V_CMP_GT_I32     : VOPC_Real_gfx11_gfx12<0x044>;
 defm V_CMP_NE_I32     : VOPC_Real_gfx11_gfx12<0x045>;
 defm V_CMP_GE_I32     : VOPC_Real_gfx11_gfx12<0x046>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_T_I32      : VOPC_Real_gfx11<0x047>;
 defm V_CMP_F_U32      : VOPC_Real_gfx11<0x048>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_U32     : VOPC_Real_gfx11_gfx12_gfx13<0x049>;
+defm V_CMP_EQ_U32     : VOPC_Real_gfx11_gfx12_gfx13<0x04a>;
+defm V_CMP_LE_U32     : VOPC_Real_gfx11_gfx12_gfx13<0x04b>;
+defm V_CMP_GT_U32     : VOPC_Real_gfx11_gfx12_gfx13<0x04c>;
+defm V_CMP_NE_U32     : VOPC_Real_gfx11_gfx12_gfx13<0x04d>;
+defm V_CMP_GE_U32     : VOPC_Real_gfx11_gfx12_gfx13<0x04e>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_U32     : VOPC_Real_gfx11_gfx12<0x049>;
 defm V_CMP_EQ_U32     : VOPC_Real_gfx11_gfx12<0x04a>;
 defm V_CMP_LE_U32     : VOPC_Real_gfx11_gfx12<0x04b>;
 defm V_CMP_GT_U32     : VOPC_Real_gfx11_gfx12<0x04c>;
 defm V_CMP_NE_U32     : VOPC_Real_gfx11_gfx12<0x04d>;
 defm V_CMP_GE_U32     : VOPC_Real_gfx11_gfx12<0x04e>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_T_U32      : VOPC_Real_gfx11<0x04f>;
 
 defm V_CMP_F_I64      : VOPC_Real_gfx11<0x050>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_I64     : VOPC_Real_gfx11_gfx12_gfx13<0x051>;
+defm V_CMP_EQ_I64     : VOPC_Real_gfx11_gfx12_gfx13<0x052>;
+defm V_CMP_LE_I64     : VOPC_Real_gfx11_gfx12_gfx13<0x053>;
+defm V_CMP_GT_I64     : VOPC_Real_gfx11_gfx12_gfx13<0x054>;
+defm V_CMP_NE_I64     : VOPC_Real_gfx11_gfx12_gfx13<0x055>;
+defm V_CMP_GE_I64     : VOPC_Real_gfx11_gfx12_gfx13<0x056>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_I64     : VOPC_Real_gfx11_gfx12<0x051>;
 defm V_CMP_EQ_I64     : VOPC_Real_gfx11_gfx12<0x052>;
 defm V_CMP_LE_I64     : VOPC_Real_gfx11_gfx12<0x053>;
 defm V_CMP_GT_I64     : VOPC_Real_gfx11_gfx12<0x054>;
 defm V_CMP_NE_I64     : VOPC_Real_gfx11_gfx12<0x055>;
 defm V_CMP_GE_I64     : VOPC_Real_gfx11_gfx12<0x056>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_T_I64      : VOPC_Real_gfx11<0x057>;
 defm V_CMP_F_U64      : VOPC_Real_gfx11<0x058>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_U64     : VOPC_Real_gfx11_gfx12_gfx13<0x059>;
+defm V_CMP_EQ_U64     : VOPC_Real_gfx11_gfx12_gfx13<0x05a>;
+defm V_CMP_LE_U64     : VOPC_Real_gfx11_gfx12_gfx13<0x05b>;
+defm V_CMP_GT_U64     : VOPC_Real_gfx11_gfx12_gfx13<0x05c>;
+defm V_CMP_NE_U64     : VOPC_Real_gfx11_gfx12_gfx13<0x05d>;
+defm V_CMP_GE_U64     : VOPC_Real_gfx11_gfx12_gfx13<0x05e>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_U64     : VOPC_Real_gfx11_gfx12<0x059>;
 defm V_CMP_EQ_U64     : VOPC_Real_gfx11_gfx12<0x05a>;
 defm V_CMP_LE_U64     : VOPC_Real_gfx11_gfx12<0x05b>;
 defm V_CMP_GT_U64     : VOPC_Real_gfx11_gfx12<0x05c>;
 defm V_CMP_NE_U64     : VOPC_Real_gfx11_gfx12<0x05d>;
 defm V_CMP_GE_U64     : VOPC_Real_gfx11_gfx12<0x05e>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_T_U64      : VOPC_Real_gfx11<0x05f>;
 
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_CLASS_F16_t16 : VOPC_Real_t16_gfx11_gfx12_gfx13<0x07d, "v_cmp_class_f16">;
+defm V_CMP_CLASS_F16_fake16 : VOPC_Real_t16_gfx11_gfx12_gfx13<0x07d, "v_cmp_class_f16">;
+defm V_CMP_CLASS_F32     : VOPC_Real_gfx11_gfx12_gfx13<0x07e>;
+defm V_CMP_CLASS_F64     : VOPC_Real_gfx11_gfx12_gfx13<0x07f>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_CLASS_F16_t16 : VOPC_Real_t16_gfx11_gfx12<0x07d, "v_cmp_class_f16">;
 defm V_CMP_CLASS_F16_fake16 : VOPC_Real_t16_gfx11_gfx12<0x07d, "v_cmp_class_f16">;
 defm V_CMP_CLASS_F32     : VOPC_Real_gfx11_gfx12<0x07e>;
 defm V_CMP_CLASS_F64     : VOPC_Real_gfx11_gfx12<0x07f>;
+#endif /* LLPC_BUILD_NPI */
 
 defm V_CMPX_F_F16_t16     : VOPCX_Real_t16_gfx11<0x080, "v_cmpx_f_f16">;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_F16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x081, "v_cmpx_lt_f16">;
+defm V_CMPX_EQ_F16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x082, "v_cmpx_eq_f16">;
+defm V_CMPX_LE_F16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x083, "v_cmpx_le_f16">;
+defm V_CMPX_GT_F16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x084, "v_cmpx_gt_f16">;
+defm V_CMPX_LG_F16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x085, "v_cmpx_lg_f16">;
+defm V_CMPX_GE_F16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x086, "v_cmpx_ge_f16">;
+defm V_CMPX_O_F16_t16     : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x087, "v_cmpx_o_f16">;
+defm V_CMPX_U_F16_t16     : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x088, "v_cmpx_u_f16">;
+defm V_CMPX_NGE_F16_t16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x089, "v_cmpx_nge_f16">;
+defm V_CMPX_NLG_F16_t16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08a, "v_cmpx_nlg_f16">;
+defm V_CMPX_NGT_F16_t16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08b, "v_cmpx_ngt_f16">;
+defm V_CMPX_NLE_F16_t16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08c, "v_cmpx_nle_f16">;
+defm V_CMPX_NEQ_F16_t16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08d, "v_cmpx_neq_f16">;
+defm V_CMPX_NLT_F16_t16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08e, "v_cmpx_nlt_f16">;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_F16_t16    : VOPCX_Real_t16_gfx11_gfx12<0x081, "v_cmpx_lt_f16">;
 defm V_CMPX_EQ_F16_t16    : VOPCX_Real_t16_gfx11_gfx12<0x082, "v_cmpx_eq_f16">;
 defm V_CMPX_LE_F16_t16    : VOPCX_Real_t16_gfx11_gfx12<0x083, "v_cmpx_le_f16">;
@@ -1801,9 +2044,26 @@ defm V_CMPX_NGT_F16_t16   : VOPCX_Real_t16_gfx11_gfx12<0x08b, "v_cmpx_ngt_f16">;
 defm V_CMPX_NLE_F16_t16   : VOPCX_Real_t16_gfx11_gfx12<0x08c, "v_cmpx_nle_f16">;
 defm V_CMPX_NEQ_F16_t16   : VOPCX_Real_t16_gfx11_gfx12<0x08d, "v_cmpx_neq_f16">;
 defm V_CMPX_NLT_F16_t16   : VOPCX_Real_t16_gfx11_gfx12<0x08e, "v_cmpx_nlt_f16">;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_F16_t16     : VOPCX_Real_with_name_gfx11<0x08f, "V_CMPX_TRU_F16_t16", "v_cmpx_t_f16", "v_cmpx_tru_f16">;
 
 defm V_CMPX_F_F16_fake16     : VOPCX_Real_t16_gfx11<0x080, "v_cmpx_f_f16">;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x081, "v_cmpx_lt_f16">;
+defm V_CMPX_EQ_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x082, "v_cmpx_eq_f16">;
+defm V_CMPX_LE_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x083, "v_cmpx_le_f16">;
+defm V_CMPX_GT_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x084, "v_cmpx_gt_f16">;
+defm V_CMPX_LG_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x085, "v_cmpx_lg_f16">;
+defm V_CMPX_GE_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x086, "v_cmpx_ge_f16">;
+defm V_CMPX_O_F16_fake16     : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x087, "v_cmpx_o_f16">;
+defm V_CMPX_U_F16_fake16     : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x088, "v_cmpx_u_f16">;
+defm V_CMPX_NGE_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x089, "v_cmpx_nge_f16">;
+defm V_CMPX_NLG_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08a, "v_cmpx_nlg_f16">;
+defm V_CMPX_NGT_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08b, "v_cmpx_ngt_f16">;
+defm V_CMPX_NLE_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08c, "v_cmpx_nle_f16">;
+defm V_CMPX_NEQ_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08d, "v_cmpx_neq_f16">;
+defm V_CMPX_NLT_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x08e, "v_cmpx_nlt_f16">;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x081, "v_cmpx_lt_f16">;
 defm V_CMPX_EQ_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x082, "v_cmpx_eq_f16">;
 defm V_CMPX_LE_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x083, "v_cmpx_le_f16">;
@@ -1818,9 +2078,26 @@ defm V_CMPX_NGT_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08b, "v_cmpx_ngt_f16
 defm V_CMPX_NLE_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08c, "v_cmpx_nle_f16">;
 defm V_CMPX_NEQ_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08d, "v_cmpx_neq_f16">;
 defm V_CMPX_NLT_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08e, "v_cmpx_nlt_f16">;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_F16_fake16     : VOPCX_Real_with_name_gfx11<0x08f, "V_CMPX_TRU_F16_fake16", "v_cmpx_t_f16", "v_cmpx_tru_f16">;
 
 defm V_CMPX_F_F32     : VOPCX_Real_gfx11<0x090>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_F32    : VOPCX_Real_gfx11_gfx12_gfx13<0x091>;
+defm V_CMPX_EQ_F32    : VOPCX_Real_gfx11_gfx12_gfx13<0x092>;
+defm V_CMPX_LE_F32    : VOPCX_Real_gfx11_gfx12_gfx13<0x093>;
+defm V_CMPX_GT_F32    : VOPCX_Real_gfx11_gfx12_gfx13<0x094>;
+defm V_CMPX_LG_F32    : VOPCX_Real_gfx11_gfx12_gfx13<0x095>;
+defm V_CMPX_GE_F32    : VOPCX_Real_gfx11_gfx12_gfx13<0x096>;
+defm V_CMPX_O_F32     : VOPCX_Real_gfx11_gfx12_gfx13<0x097>;
+defm V_CMPX_U_F32     : VOPCX_Real_gfx11_gfx12_gfx13<0x098>;
+defm V_CMPX_NGE_F32   : VOPCX_Real_gfx11_gfx12_gfx13<0x099>;
+defm V_CMPX_NLG_F32   : VOPCX_Real_gfx11_gfx12_gfx13<0x09a>;
+defm V_CMPX_NGT_F32   : VOPCX_Real_gfx11_gfx12_gfx13<0x09b>;
+defm V_CMPX_NLE_F32   : VOPCX_Real_gfx11_gfx12_gfx13<0x09c>;
+defm V_CMPX_NEQ_F32   : VOPCX_Real_gfx11_gfx12_gfx13<0x09d>;
+defm V_CMPX_NLT_F32   : VOPCX_Real_gfx11_gfx12_gfx13<0x09e>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_F32    : VOPCX_Real_gfx11_gfx12<0x091>;
 defm V_CMPX_EQ_F32    : VOPCX_Real_gfx11_gfx12<0x092>;
 defm V_CMPX_LE_F32    : VOPCX_Real_gfx11_gfx12<0x093>;
@@ -1835,9 +2112,26 @@ defm V_CMPX_NGT_F32   : VOPCX_Real_gfx11_gfx12<0x09b>;
 defm V_CMPX_NLE_F32   : VOPCX_Real_gfx11_gfx12<0x09c>;
 defm V_CMPX_NEQ_F32   : VOPCX_Real_gfx11_gfx12<0x09d>;
 defm V_CMPX_NLT_F32   : VOPCX_Real_gfx11_gfx12<0x09e>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_F32     : VOPCX_Real_with_name_gfx11<0x09f, "V_CMPX_TRU_F32", "v_cmpx_t_f32">;
 
 defm V_CMPX_F_F64     : VOPCX_Real_gfx11<0x0a0>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_F64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0a1>;
+defm V_CMPX_EQ_F64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0a2>;
+defm V_CMPX_LE_F64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0a3>;
+defm V_CMPX_GT_F64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0a4>;
+defm V_CMPX_LG_F64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0a5>;
+defm V_CMPX_GE_F64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0a6>;
+defm V_CMPX_O_F64     : VOPCX_Real_gfx11_gfx12_gfx13<0x0a7>;
+defm V_CMPX_U_F64     : VOPCX_Real_gfx11_gfx12_gfx13<0x0a8>;
+defm V_CMPX_NGE_F64   : VOPCX_Real_gfx11_gfx12_gfx13<0x0a9>;
+defm V_CMPX_NLG_F64   : VOPCX_Real_gfx11_gfx12_gfx13<0x0aa>;
+defm V_CMPX_NGT_F64   : VOPCX_Real_gfx11_gfx12_gfx13<0x0ab>;
+defm V_CMPX_NLE_F64   : VOPCX_Real_gfx11_gfx12_gfx13<0x0ac>;
+defm V_CMPX_NEQ_F64   : VOPCX_Real_gfx11_gfx12_gfx13<0x0ad>;
+defm V_CMPX_NLT_F64   : VOPCX_Real_gfx11_gfx12_gfx13<0x0ae>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_F64    : VOPCX_Real_gfx11_gfx12<0x0a1>;
 defm V_CMPX_EQ_F64    : VOPCX_Real_gfx11_gfx12<0x0a2>;
 defm V_CMPX_LE_F64    : VOPCX_Real_gfx11_gfx12<0x0a3>;
@@ -1852,8 +2146,36 @@ defm V_CMPX_NGT_F64   : VOPCX_Real_gfx11_gfx12<0x0ab>;
 defm V_CMPX_NLE_F64   : VOPCX_Real_gfx11_gfx12<0x0ac>;
 defm V_CMPX_NEQ_F64   : VOPCX_Real_gfx11_gfx12<0x0ad>;
 defm V_CMPX_NLT_F64   : VOPCX_Real_gfx11_gfx12<0x0ae>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_F64     : VOPCX_Real_with_name_gfx11<0x0af, "V_CMPX_TRU_F64", "v_cmpx_t_f64">;
 
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_I16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b1, "v_cmpx_lt_i16">;
+defm V_CMPX_EQ_I16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b2, "v_cmpx_eq_i16">;
+defm V_CMPX_LE_I16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b3, "v_cmpx_le_i16">;
+defm V_CMPX_GT_I16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b4, "v_cmpx_gt_i16">;
+defm V_CMPX_NE_I16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b5, "v_cmpx_ne_i16">;
+defm V_CMPX_GE_I16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b6, "v_cmpx_ge_i16">;
+defm V_CMPX_LT_U16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b9, "v_cmpx_lt_u16">;
+defm V_CMPX_EQ_U16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0ba, "v_cmpx_eq_u16">;
+defm V_CMPX_LE_U16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0bb, "v_cmpx_le_u16">;
+defm V_CMPX_GT_U16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0bc, "v_cmpx_gt_u16">;
+defm V_CMPX_NE_U16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0bd, "v_cmpx_ne_u16">;
+defm V_CMPX_GE_U16_t16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0be, "v_cmpx_ge_u16">;
+
+defm V_CMPX_LT_I16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b1, "v_cmpx_lt_i16">;
+defm V_CMPX_EQ_I16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b2, "v_cmpx_eq_i16">;
+defm V_CMPX_LE_I16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b3, "v_cmpx_le_i16">;
+defm V_CMPX_GT_I16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b4, "v_cmpx_gt_i16">;
+defm V_CMPX_NE_I16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b5, "v_cmpx_ne_i16">;
+defm V_CMPX_GE_I16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b6, "v_cmpx_ge_i16">;
+defm V_CMPX_LT_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0b9, "v_cmpx_lt_u16">;
+defm V_CMPX_EQ_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0ba, "v_cmpx_eq_u16">;
+defm V_CMPX_LE_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0bb, "v_cmpx_le_u16">;
+defm V_CMPX_GT_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0bc, "v_cmpx_gt_u16">;
+defm V_CMPX_NE_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0bd, "v_cmpx_ne_u16">;
+defm V_CMPX_GE_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0be, "v_cmpx_ge_u16">;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_I16_t16    : VOPCX_Real_t16_gfx11_gfx12<0x0b1, "v_cmpx_lt_i16">;
 defm V_CMPX_EQ_I16_t16    : VOPCX_Real_t16_gfx11_gfx12<0x0b2, "v_cmpx_eq_i16">;
 defm V_CMPX_LE_I16_t16    : VOPCX_Real_t16_gfx11_gfx12<0x0b3, "v_cmpx_le_i16">;
@@ -1879,44 +2201,89 @@ defm V_CMPX_LE_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x0bb, "v_cmpx_le_u16"
 defm V_CMPX_GT_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x0bc, "v_cmpx_gt_u16">;
 defm V_CMPX_NE_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x0bd, "v_cmpx_ne_u16">;
 defm V_CMPX_GE_U16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x0be, "v_cmpx_ge_u16">;
+#endif /* LLPC_BUILD_NPI */
 
 defm V_CMPX_F_I32     : VOPCX_Real_gfx11<0x0c0>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_I32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0c1>;
+defm V_CMPX_EQ_I32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0c2>;
+defm V_CMPX_LE_I32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0c3>;
+defm V_CMPX_GT_I32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0c4>;
+defm V_CMPX_NE_I32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0c5>;
+defm V_CMPX_GE_I32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0c6>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_I32    : VOPCX_Real_gfx11_gfx12<0x0c1>;
 defm V_CMPX_EQ_I32    : VOPCX_Real_gfx11_gfx12<0x0c2>;
 defm V_CMPX_LE_I32    : VOPCX_Real_gfx11_gfx12<0x0c3>;
 defm V_CMPX_GT_I32    : VOPCX_Real_gfx11_gfx12<0x0c4>;
 defm V_CMPX_NE_I32    : VOPCX_Real_gfx11_gfx12<0x0c5>;
 defm V_CMPX_GE_I32    : VOPCX_Real_gfx11_gfx12<0x0c6>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_I32     : VOPCX_Real_gfx11<0x0c7>;
 defm V_CMPX_F_U32     : VOPCX_Real_gfx11<0x0c8>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_U32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0c9>;
+defm V_CMPX_EQ_U32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0ca>;
+defm V_CMPX_LE_U32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0cb>;
+defm V_CMPX_GT_U32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0cc>;
+defm V_CMPX_NE_U32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0cd>;
+defm V_CMPX_GE_U32    : VOPCX_Real_gfx11_gfx12_gfx13<0x0ce>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_U32    : VOPCX_Real_gfx11_gfx12<0x0c9>;
 defm V_CMPX_EQ_U32    : VOPCX_Real_gfx11_gfx12<0x0ca>;
 defm V_CMPX_LE_U32    : VOPCX_Real_gfx11_gfx12<0x0cb>;
 defm V_CMPX_GT_U32    : VOPCX_Real_gfx11_gfx12<0x0cc>;
 defm V_CMPX_NE_U32    : VOPCX_Real_gfx11_gfx12<0x0cd>;
 defm V_CMPX_GE_U32    : VOPCX_Real_gfx11_gfx12<0x0ce>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_U32     : VOPCX_Real_gfx11<0x0cf>;
 
 defm V_CMPX_F_I64     : VOPCX_Real_gfx11<0x0d0>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_I64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0d1>;
+defm V_CMPX_EQ_I64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0d2>;
+defm V_CMPX_LE_I64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0d3>;
+defm V_CMPX_GT_I64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0d4>;
+defm V_CMPX_NE_I64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0d5>;
+defm V_CMPX_GE_I64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0d6>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_I64    : VOPCX_Real_gfx11_gfx12<0x0d1>;
 defm V_CMPX_EQ_I64    : VOPCX_Real_gfx11_gfx12<0x0d2>;
 defm V_CMPX_LE_I64    : VOPCX_Real_gfx11_gfx12<0x0d3>;
 defm V_CMPX_GT_I64    : VOPCX_Real_gfx11_gfx12<0x0d4>;
 defm V_CMPX_NE_I64    : VOPCX_Real_gfx11_gfx12<0x0d5>;
 defm V_CMPX_GE_I64    : VOPCX_Real_gfx11_gfx12<0x0d6>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_I64     : VOPCX_Real_gfx11<0x0d7>;
 defm V_CMPX_F_U64     : VOPCX_Real_gfx11<0x0d8>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMPX_LT_U64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0d9>;
+defm V_CMPX_EQ_U64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0da>;
+defm V_CMPX_LE_U64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0db>;
+defm V_CMPX_GT_U64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0dc>;
+defm V_CMPX_NE_U64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0dd>;
+defm V_CMPX_GE_U64    : VOPCX_Real_gfx11_gfx12_gfx13<0x0de>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_LT_U64    : VOPCX_Real_gfx11_gfx12<0x0d9>;
 defm V_CMPX_EQ_U64    : VOPCX_Real_gfx11_gfx12<0x0da>;
 defm V_CMPX_LE_U64    : VOPCX_Real_gfx11_gfx12<0x0db>;
 defm V_CMPX_GT_U64    : VOPCX_Real_gfx11_gfx12<0x0dc>;
 defm V_CMPX_NE_U64    : VOPCX_Real_gfx11_gfx12<0x0dd>;
 defm V_CMPX_GE_U64    : VOPCX_Real_gfx11_gfx12<0x0de>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMPX_T_U64     : VOPCX_Real_gfx11<0x0df>;
+#ifdef LLPC_BUILD_NPI
+
+defm V_CMPX_CLASS_F16_t16 : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0fd, "v_cmpx_class_f16">;
+defm V_CMPX_CLASS_F16_fake16 : VOPCX_Real_t16_gfx11_gfx12_gfx13<0x0fd, "v_cmpx_class_f16">;
+defm V_CMPX_CLASS_F32     : VOPCX_Real_gfx11_gfx12_gfx13<0x0fe>;
+defm V_CMPX_CLASS_F64     : VOPCX_Real_gfx11_gfx12_gfx13<0x0ff>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMPX_CLASS_F16_t16 : VOPCX_Real_t16_gfx11_gfx12<0x0fd, "v_cmpx_class_f16">;
 defm V_CMPX_CLASS_F16_fake16 : VOPCX_Real_t16_gfx11_gfx12<0x0fd, "v_cmpx_class_f16">;
 defm V_CMPX_CLASS_F32     : VOPCX_Real_gfx11_gfx12<0x0fe>;
 defm V_CMPX_CLASS_F64     : VOPCX_Real_gfx11_gfx12<0x0ff>;
+#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // GFX10.
@@ -2068,8 +2435,14 @@ multiclass VOPC_Real_gfx6_gfx7_gfx10_gfx11<bits<9> op> :
 multiclass VOPCX_Real_gfx6_gfx7_gfx10_gfx11<bits<9> op> :
   VOPCX_Real_gfx6_gfx7_gfx10<op>, VOPCX_Real<GFX11Gen, op>;
 
+#ifdef LLPC_BUILD_NPI
+multiclass VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<9> op> :
+  VOPC_Real_gfx6_gfx7_gfx10_gfx11<op>, VOPC_Real_Base<GFX12Gen, op>,
+  VOPC_Real_Base<GFX13Gen, op>;
+#else /* LLPC_BUILD_NPI */
 multiclass VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<9> op> :
   VOPC_Real_gfx6_gfx7_gfx10_gfx11<op>, VOPC_Real_Base<GFX12Gen, op>;
+#endif /* LLPC_BUILD_NPI */
 
 defm V_CMP_F_F32      : VOPC_Real_gfx6_gfx7_gfx10<0x000>;
 defm V_CMP_LT_F32     : VOPC_Real_gfx6_gfx7_gfx10<0x001>;
@@ -2104,6 +2477,22 @@ defm V_CMPX_NEQ_F32   : VOPCX_Real_gfx6_gfx7_gfx10<0x01d>;
 defm V_CMPX_NLT_F32   : VOPCX_Real_gfx6_gfx7_gfx10<0x01e>;
 defm V_CMPX_TRU_F32   : VOPCX_Real_gfx6_gfx7_gfx10<0x01f>;
 defm V_CMP_F_F64      : VOPC_Real_gfx6_gfx7_gfx10_gfx11<0x020>;
+#ifdef LLPC_BUILD_NPI
+defm V_CMP_LT_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x021>;
+defm V_CMP_EQ_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x022>;
+defm V_CMP_LE_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x023>;
+defm V_CMP_GT_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x024>;
+defm V_CMP_LG_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x025>;
+defm V_CMP_GE_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x026>;
+defm V_CMP_O_F64      : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x027>;
+defm V_CMP_U_F64      : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x028>;
+defm V_CMP_NGE_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x029>;
+defm V_CMP_NLG_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02a>;
+defm V_CMP_NGT_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02b>;
+defm V_CMP_NLE_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02c>;
+defm V_CMP_NEQ_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02d>;
+defm V_CMP_NLT_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02e>;
+#else /* LLPC_BUILD_NPI */
 defm V_CMP_LT_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x021>;
 defm V_CMP_EQ_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x022>;
 defm V_CMP_LE_F64     : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x023>;
@@ -2118,6 +2507,7 @@ defm V_CMP_NGT_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02b>;
 defm V_CMP_NLE_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02c>;
 defm V_CMP_NEQ_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02d>;
 defm V_CMP_NLT_F64    : VOPC_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02e>;
+#endif /* LLPC_BUILD_NPI */
 defm V_CMP_TRU_F64    : VOPC_Real_gfx6_gfx7_gfx10<0x02f>;
 defm V_CMPX_F_F64     : VOPCX_Real_gfx6_gfx7_gfx10<0x030>;
 defm V_CMPX_LT_F64    : VOPCX_Real_gfx6_gfx7_gfx10<0x031>;

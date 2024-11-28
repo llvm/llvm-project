@@ -3033,7 +3033,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             if (!MOP.getReg().isPhysical())
               continue;
 
-            if (llvm::is_contained(TRI->subregs(MOP.getReg()), Reg))
+            if (MOP.getReg() != Reg &&
+                all_of(TRI->regunits(Reg), [&](const MCRegUnit RegUnit) {
+                  return llvm::is_contained(TRI->regunits(MOP.getReg()),
+                                            RegUnit);
+                }))
               Bad = false;
           }
         }
@@ -3063,9 +3067,28 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDefined, Reg);
 
     // Verify SSA form.
+#if LLPC_BUILD_NPI
+    // If Reg is in a Bundle, one Bundle header operand should be a duplicate
+    // def of Reg
+    if (MRI->isSSA() && Reg.isVirtual()) {
+      auto I = MRI->def_begin(Reg);
+      if ((!I.atEnd())) {
+        if (I->getParent()->isBundle()) // BUNDLE operand first
+          I++;
+        else { // BUNDLE operand second
+          auto NI = std::next(I);
+          if (NI != MRI->def_end() && NI->getParent()->isBundle())
+            I++;
+        }
+      }
+      if (std::next(I) != MRI->def_end())
+        report("Multiple virtual register defs in SSA form", MO, MONum);
+    }
+#else /* LLPC_BUILD_NPI */
     if (MRI->isSSA() && Reg.isVirtual() &&
         std::next(MRI->def_begin(Reg)) != MRI->def_end())
       report("Multiple virtual register defs in SSA form", MO, MONum);
+#endif /* LLPC_BUILD_NPI */
 
     // Check LiveInts for a live segment, but only for virtual registers.
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {

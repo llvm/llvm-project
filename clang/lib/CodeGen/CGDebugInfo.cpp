@@ -919,6 +919,14 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
     return SingletonId;                                                        \
   }
+#if LLPC_BUILD_NPI
+#define AMDGPU_SEMAPHORE_TYPE(Name, Id, SingletonId, Width, Align, Rank)       \
+  case BuiltinType::Id:                                                        \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
+    return SingletonId;
+#endif /* LLPC_BUILD_NPI */
 #include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:

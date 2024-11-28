@@ -127,8 +127,20 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1152"},   {"gfx1152"}, GK_GFX1152, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1153"},   {"gfx1153"}, GK_GFX1153, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#if LLPC_BUILD_NPI
+    {{"gfx115F"},   {"gfx115F"}, GK_GFX115F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#endif /* LLPC_BUILD_NPI */
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#if LLPC_BUILD_NPI
+    {{"gfx120E"},   {"gfx120E"}, GK_GFX120E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx120F"},   {"gfx120F"}, GK_GFX120F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1211"},   {"gfx1211"}, GK_GFX1211, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1300"},   {"gfx1300"}, GK_GFX1300, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1301"},   {"gfx1301"}, GK_GFX1301, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1302"},   {"gfx1302"}, GK_GFX1302, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#endif /* LLPC_BUILD_NPI */
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -136,6 +148,9 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx11-generic"},     {"gfx11-generic"},   GK_GFX11_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx12-generic"},     {"gfx12-generic"},   GK_GFX12_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx9-4-generic"},    {"gfx9-4-generic"},  GK_GFX9_4_GENERIC,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
+#if LLPC_BUILD_NPI
+    {{"gfx12-1-generic"},   {"gfx12-1-generic"}, GK_GFX12_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+#endif /* LLPC_BUILD_NPI */
     // clang-format on
 };
 
@@ -165,6 +180,9 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
   case AMDGPU::GK_GFX11_GENERIC:
     return "gfx11";
   case AMDGPU::GK_GFX12_GENERIC:
+#if LLPC_BUILD_NPI
+  case AMDGPU::GK_GFX12_1_GENERIC:
+#endif /* LLPC_BUILD_NPI */
     return "gfx12";
   default: {
     StringRef ArchName = getArchNameAMDGCN(AK);
@@ -283,8 +301,23 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1152: return {11, 5, 2};
   case GK_GFX1153: return {11, 5, 3};
+#if LLPC_BUILD_NPI
+  case GK_GFX115F: return {11, 5, 0xFFFF};
+#endif /* LLPC_BUILD_NPI */
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
+#if LLPC_BUILD_NPI
+  case GK_GFX120E: return {12, 0, 0xFFFE};
+  case GK_GFX120F: return {12, 0, 0xFFFF};
+  case GK_GFX1210: return {12, 1, 0};
+  case GK_GFX1211: return {12, 1, 1};
+  case GK_GFX1300: return {13, 0, 0};
+  case GK_GFX1301: return {13, 0, 1};
+  case GK_GFX1302: return {13, 0, 2};
+
+
+
+#endif /* LLPC_BUILD_NPI */
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -305,6 +338,9 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX10_3_GENERIC: return {10, 3, 0};
   case GK_GFX11_GENERIC:   return {11, 0, 3};
   case GK_GFX12_GENERIC:   return {12, 0, 0};
+#if LLPC_BUILD_NPI
+  case GK_GFX12_1_GENERIC: return {12, 1, 0};
+#endif /* LLPC_BUILD_NPI */
   default:         return {0, 0, 0};
   }
   // clang-format on
@@ -315,7 +351,10 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
   if (ProcKind == GK_NONE)
     return StringRef();
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 
@@ -365,6 +404,45 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   } else if (T.isAMDGCN()) {
     AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
     switch (Kind) {
+#if LLPC_BUILD_NPI
+    case GK_GFX1302:
+    case GK_GFX1301:
+    case GK_GFX1300:
+      Features["gfx13-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX1211:
+      Features["gfx1211-gemm-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX1210:
+    case GK_GFX12_1_GENERIC:
+      Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+      Features["ci-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot8-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
+      Features["gfx12-insts"] = true;
+      Features["gfx1210-insts"] = true;
+      Features["bitop3-insts"] = true;
+      Features["prng-inst"] = true;
+      Features["tanh-insts"] = true;
+      Features["bf16-trans-insts"] = true;
+      Features["bf16-cvt-insts"] = true;
+      Features["bf16-pk-insts"] = true;
+      Features["fp8-conversion-insts"] = true;
+      Features["permlane16-swap"] = true;
+      Features["ashr-pk-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
+      break;
+    case GK_GFX120F:
+    case GK_GFX120E:
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX1201:
     case GK_GFX1200:
     case GK_GFX12_GENERIC:
@@ -374,10 +452,12 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["dot9-insts"] = true;
       Features["dot10-insts"] = true;
       Features["dot11-insts"] = true;
+      Features["dot12-insts"] = true;
       Features["dl-insts"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
@@ -391,6 +471,9 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["fp8-conversion-insts"] = true;
       break;
+#if LLPC_BUILD_NPI
+    case GK_GFX115F:
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX1153:
     case GK_GFX1152:
     case GK_GFX1151:
@@ -406,6 +489,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["dot8-insts"] = true;
       Features["dot9-insts"] = true;
       Features["dot10-insts"] = true;
+      Features["dot12-insts"] = true;
       Features["dl-insts"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
@@ -470,7 +554,20 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gws"] = true;
       break;
     case GK_GFX950:
+      Features["bitop3-insts"] = true;
+      Features["fp6bf6-cvt-scale-insts"] = true;
+      Features["fp4-cvt-scale-insts"] = true;
+      Features["bf8-cvt-scale-insts"] = true;
+      Features["fp8-cvt-scale-insts"] = true;
+      Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+      Features["f32-to-f16bf16-cvt-sr-insts"] = true;
       Features["prng-inst"] = true;
+      Features["permlane16-swap"] = true;
+      Features["permlane32-swap"] = true;
+      Features["ashr-pk-insts"] = true;
+      Features["dot12-insts"] = true;
+      Features["dot13-insts"] = true;
+      Features["atomic-buffer-pk-add-bf16-inst"] = true;
       Features["gfx950-insts"] = true;
       [[fallthrough]];
     case GK_GFX942:
@@ -600,8 +697,20 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+#if LLPC_BUILD_NPI
+    case GK_GFX1302:
+    case GK_GFX1301:
+    case GK_GFX1300:
+    case GK_GFX1211:
+    case GK_GFX1210:
+    case GK_GFX120E:
+    case GK_GFX120F:
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX1201:
     case GK_GFX1200:
+#if LLPC_BUILD_NPI
+    case GK_GFX115F:
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX1153:
     case GK_GFX1152:
     case GK_GFX1151:
@@ -621,6 +730,9 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     case GK_GFX1011:
     case GK_GFX1013:
     case GK_GFX1010:
+#if LLPC_BUILD_NPI
+    case GK_GFX12_1_GENERIC:
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX12_GENERIC:
     case GK_GFX11_GENERIC:
     case GK_GFX10_3_GENERIC:
@@ -634,6 +746,22 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   return IsWave32Capable;
 }
 
+#if LLPC_BUILD_NPI
+static bool isWave64Capable(StringRef GPU, const Triple &T) {
+  if (T.isAMDGCN()) {
+    switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX12_1_GENERIC:
+    case GK_GFX1211:
+    case GK_GFX1210:
+      return false;
+    default:
+      break;
+    }
+  }
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 std::pair<FeatureError, StringRef>
 AMDGPU::insertWaveSizeFeature(StringRef GPU, const Triple &T,
                               StringMap<bool> &Features) {
@@ -647,6 +775,11 @@ AMDGPU::insertWaveSizeFeature(StringRef GPU, const Triple &T,
   }
   if (HaveWave32 && !IsNullGPU && !IsWave32Capable) {
     return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize32"};
+#if LLPC_BUILD_NPI
+  }
+  if (HaveWave64 && !IsNullGPU && !isWave64Capable(GPU, T)) {
+    return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize64"};
+#endif /* LLPC_BUILD_NPI */
   }
   // Don't assume any wavesize with an unknown subtarget.
   if (!IsNullGPU) {

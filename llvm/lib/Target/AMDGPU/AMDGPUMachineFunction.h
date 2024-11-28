@@ -19,12 +19,28 @@
 
 namespace llvm {
 
+#if LLPC_BUILD_NPI
+class AllocaInst;
+#endif /* LLPC_BUILD_NPI */
 class AMDGPUSubtarget;
 
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
+#if LLPC_BUILD_NPI
+  /// A map to keep track of lane-shared objects and their offsets
+  /// mapping to the lane-shared-memory space.
+  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedMemoryObjects;
+  /// A map to keep track of lane-shared objects and their offsets
+  /// mapping to the lane-shared-vgpr space.
+  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedVGPRObjects;
+  /// A map to keep track of private objects and their offsets
+  /// mapping to the VGPR space.
+  SmallDenseMap<const AllocaInst *, unsigned, 4> PrivateVGPRObjects;
+  /// Number of bytes of VGPR-space allocated to private objects.
+  uint32_t PrivateVGPRObjectsSize = 0;
+#endif /* LLPC_BUILD_NPI */
 
 protected:
   uint64_t ExplicitKernArgSize = 0; // Cache for this.
@@ -46,6 +62,17 @@ protected:
   /// stages.
   Align DynLDSAlign;
 
+#if LLPC_BUILD_NPI
+  /// Number of bytes of scratch-memory allocated to lane-shared.
+  uint32_t LaneSharedScratchSize = 0;
+  /// Number of bytes of VGPR-space allocated to lane-shared.
+  /// Need to be aligned and converted into dwords for VGPR counting.
+  uint32_t LaneSharedVGPRSize = 0;
+
+  // Number of statically allocated semaphores for each owning rank.
+  unsigned NumSemaphores[MAX_WAVES_PER_WAVEGROUP] = {};
+
+#endif /* LLPC_BUILD_NPI */
   // Flag to check dynamic LDS usage by kernel.
   bool UsesDynamicLDS = false;
 
@@ -86,6 +113,11 @@ public:
     return GDSSize;
   }
 
+#if LLPC_BUILD_NPI
+  uint32_t getLaneSharedScratchSize() const { return LaneSharedScratchSize; }
+  uint32_t getLaneSharedVGPRSize() const { return LaneSharedVGPRSize; }
+
+#endif /* LLPC_BUILD_NPI */
   bool isEntryFunction() const {
     return IsEntryFunction;
   }
@@ -120,6 +152,14 @@ public:
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
                              Align Trailing);
+#if LLPC_BUILD_NPI
+
+  unsigned allocateLaneSharedGlobal(const DataLayout &DL,
+                                    const GlobalVariable &GV);
+
+  unsigned allocatePrivateInVGPR(const DataLayout &DL,
+                                 const AllocaInst &Alloca);
+#endif /* LLPC_BUILD_NPI */
 
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
   static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);

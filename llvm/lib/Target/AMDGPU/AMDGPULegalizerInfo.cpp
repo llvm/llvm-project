@@ -1040,10 +1040,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
   }
 
+#if LLPC_BUILD_NPI
+  auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
+  if (ST.hasCvtPkF16F32Inst())
+    FPTruncActions.legalFor(
+        {{S32, S64}, {S16, S32}, {V2S16, V2S32}, {V2S16, V2S64}});
+  else
+    FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
+  FPTruncActions.scalarize(0).lower();
+#else /* LLPC_BUILD_NPI */
   getActionDefinitionsBuilder(G_FPTRUNC)
     .legalFor({{S32, S64}, {S16, S32}})
     .scalarize(0)
     .lower();
+#endif /* LLPC_BUILD_NPI */
 
   getActionDefinitionsBuilder(G_FPEXT)
     .legalFor({{S64, S32}, {S32, S16}})
@@ -1323,13 +1333,36 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
     if (ST.hasVOP3PInsts()) {
+#if LLPC_BUILD_NPI
+      getActionDefinitionsBuilder(G_ABS)
+#else /* LLPC_BUILD_NPI */
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
+#endif /* LLPC_BUILD_NPI */
         .legalFor({S32, S16, V2S16})
         .clampMaxNumElements(0, S16, 2)
         .minScalar(0, S16)
         .widenScalarToNextPow2(0)
         .scalarize(0)
         .lower();
+#if LLPC_BUILD_NPI
+      if (ST.hasIntMinMax64()) {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+          .legalFor({S32, S16, S64, V2S16})
+          .clampMaxNumElements(0, S16, 2)
+          .minScalar(0, S16)
+          .widenScalarToNextPow2(0)
+          .scalarize(0)
+          .lower();
+      } else {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElements(0, S16, 2)
+          .minScalar(0, S16)
+          .widenScalarToNextPow2(0)
+          .scalarize(0)
+          .lower();
+      }
+#endif /* LLPC_BUILD_NPI */
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
         .legalFor({S32, S16})
@@ -1483,6 +1516,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Actions.customIf([=](const LegalityQuery &Query) -> bool {
       return hasBufferRsrcWorkaround(Query.Types[0]);
     });
+#if LLPC_BUILD_NPI
+    // lane-shared load/store with more than 4 dwords needs custom action
+    Actions.customIf([=](const LegalityQuery &Query) -> bool {
+      const LLT PtrTy = Query.Types[1];
+      return PtrTy.getAddressSpace() == AMDGPUAS::LANE_SHARED;
+    });
+#endif /* LLPC_BUILD_NPI */
 
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
@@ -1663,7 +1703,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
+#if LLPC_BUILD_NPI
+  if (ST.hasGFX90AInsts() || ST.hasGFX1210Insts()) {
+#else /* LLPC_BUILD_NPI */
   if (ST.hasGFX90AInsts()) {
+#endif /* LLPC_BUILD_NPI */
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
     // TODO: Move atomic expansion into legalizer
@@ -2216,6 +2260,11 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
                                        ? AMDGPU::SRC_SHARED_BASE
                                        : AMDGPU::SRC_PRIVATE_BASE;
+#if LLPC_BUILD_NPI
+    assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
+            !ST.hasGloballyAddressableScratch()) &&
+           "Cannot use src_private_base with globally addressable scratch!");
+#endif /* LLPC_BUILD_NPI */
     // FIXME: It would be more natural to emit a COPY here, but then copy
     // coalescing would kick in and it would think it's okay to use the "HI"
     // subregister (instead of extracting the HI 32 bits) which is an artificial
@@ -2337,14 +2386,45 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
+#if LLPC_BUILD_NPI
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS && (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
+                                          DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
+                                          DestAS == AMDGPUAS::LANE_SHARED)) {
+    auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
+      if ((DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
+           DestAS == AMDGPUAS::LANE_SHARED) &&
+          ST.hasGloballyAddressableScratch()) {
+        // flat -> private with globally addressable scratch: subtract
+        // src_flat_scratch_base_lo.
+        const LLT S32 = LLT::scalar(32);
+        Register SrcLo = B.buildExtract(S32, Src, 0).getReg(0);
+        Register FlatScratchBaseLo =
+            B.buildInstr(AMDGPU::S_MOV_B32, {S32},
+                         {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)})
+            .getReg(0);
+        MRI.setRegClass(FlatScratchBaseLo, &AMDGPU::SReg_32RegClass);
+        Register Sub = B.buildSub(S32, SrcLo, FlatScratchBaseLo).getReg(0);
+        return B.buildIntToPtr(Dst, Sub).getReg(0);
+      }
+
+      // Extract low 32-bits of the pointer.
+      return B.buildExtract(Dst, Src, 0).getReg(0);
+    };
+
+#else /* LLPC_BUILD_NPI */
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+#endif /* LLPC_BUILD_NPI */
     // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
     // G_ADDRSPACE_CAST we need to guess.
     if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
+#if LLPC_BUILD_NPI
+      castFlatToLocalOrPrivate(Dst);
+#else /* LLPC_BUILD_NPI */
       // Extract low 32-bits of the pointer.
       B.buildExtract(Dst, Src, 0);
+#endif /* LLPC_BUILD_NPI */
       MI.eraseFromParent();
       return true;
     }
@@ -2355,7 +2435,11 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     auto FlatNull = B.buildConstant(SrcTy, 0);
 
     // Extract low 32-bits of the pointer.
+#if LLPC_BUILD_NPI
+    auto PtrLo32 = castFlatToLocalOrPrivate(DstTy);
+#else /* LLPC_BUILD_NPI */
     auto PtrLo32 = B.buildExtract(DstTy, Src, 0);
+#endif /* LLPC_BUILD_NPI */
 
     auto CmpRes =
         B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, FlatNull.getReg(0));
@@ -2366,17 +2450,63 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   }
 
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
+#if LLPC_BUILD_NPI
+      (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
+       SrcAS == AMDGPUAS::LANE_SHARED)) {
+#else /* LLPC_BUILD_NPI */
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+#endif /* LLPC_BUILD_NPI */
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
       Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
       if (!ApertureReg.isValid())
         return false;
 
+#endif /* LLPC_BUILD_NPI */
       // Coerce the type of the low half of the result so we can use
       // merge_values.
       Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 
+#if LLPC_BUILD_NPI
+      if ((SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
+           SrcAS == AMDGPUAS::LANE_SHARED) &&
+          ST.hasGloballyAddressableScratch()) {
+        // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
+        // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
+        Register AllOnes = B.buildConstant(S32, -1).getReg(0);
+        Register ThreadID = B.buildConstant(S32, 0).getReg(0);
+        ThreadID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {S32})
+                       .addUse(AllOnes)
+                       .addUse(ThreadID)
+                       .getReg(0);
+        if (ST.isWave64()) {
+          ThreadID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {S32})
+                         .addUse(AllOnes)
+                         .addUse(ThreadID)
+                         .getReg(0);
+        }
+        Register ShAmt =
+            B.buildConstant(S32, 57 - 32 - ST.getWavefrontSizeLog2()).getReg(0);
+        Register SrcHi = B.buildShl(S32, ThreadID, ShAmt).getReg(0);
+        Register CvtPtr =
+            B.buildMergeLikeInstr(DstTy, {SrcAsInt, SrcHi}).getReg(0);
+        // Accessing src_flat_scratch_base_lo as a 64-bit operand gives the full
+        // 64-bit hi:lo value.
+        Register FlatScratchBase =
+            B.buildInstr(AMDGPU::S_MOV_B64, {S64},
+                         {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE)})
+                .getReg(0);
+        MRI.setRegClass(FlatScratchBase, &AMDGPU::SReg_64RegClass);
+        return B.buildPtrAdd(Dst, CvtPtr, FlatScratchBase).getReg(0);
+      }
+
+      Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
+      if (!ApertureReg.isValid())
+        return false;
+
+#endif /* LLPC_BUILD_NPI */
       // TODO: Should we allow mismatched types but matching sizes in merges to
       // avoid the ptrtoint?
       return B.buildMergeLikeInstr(Dst, {SrcAsInt, ApertureReg}).getReg(0);
@@ -2889,14 +3019,35 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   Register PCReg = PtrTy.getSizeInBits() != 32 ? DstReg :
     B.getMRI()->createGenericVirtualRegister(ConstPtrTy);
 
+#if LLPC_BUILD_NPI
+  if (ST.has64BitLiterals()) {
+    assert(GAFlags != SIInstrInfo::MO_NONE);
+#else /* LLPC_BUILD_NPI */
   MachineInstrBuilder MIB = B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET)
     .addDef(PCReg);
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET64).addDef(PCReg);
+    MIB.addGlobalAddress(GV, Offset, GAFlags + 2);
+  } else {
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET).addDef(PCReg);
+
+    MIB.addGlobalAddress(GV, Offset, GAFlags);
+    if (GAFlags == SIInstrInfo::MO_NONE)
+      MIB.addImm(0);
+    else
+      MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+  }
+#else /* LLPC_BUILD_NPI */
   MIB.addGlobalAddress(GV, Offset, GAFlags);
   if (GAFlags == SIInstrInfo::MO_NONE)
     MIB.addImm(0);
   else
     MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+#endif /* LLPC_BUILD_NPI */
 
   if (!B.getMRI()->getRegClassOrNull(PCReg))
     B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
@@ -2912,6 +3063,17 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     MachineRegisterInfo &MRI) const {
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
 
+#if LLPC_BUILD_NPI
+  if (RequiresHighHalf && ST.has64BitLiterals()) {
+    if (!MRI.getRegClassOrNull(DstReg))
+      MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+    B.buildInstr(AMDGPU::S_MOV_B64)
+        .addDef(DstReg)
+        .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
+    return;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   LLT S32 = LLT::scalar(32);
 
   // Use the destination directly, if and only if we store the lower address
@@ -3025,6 +3187,14 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
                                                    *cast<GlobalVariable>(GV)));
     MI.eraseFromParent();
     return true;
+#if LLPC_BUILD_NPI
+  } else if (AS == AMDGPUAS::LANE_SHARED) {
+    B.buildConstant(DstReg, MFI->allocateLaneSharedGlobal(
+                                B.getDataLayout(), *cast<GlobalVariable>(GV)));
+
+    MI.eraseFromParent();
+    return true;
+#endif /* LLPC_BUILD_NPI */
   }
 
   if (ST.isAmdPalOS() || ST.isMesa3DOS()) {
@@ -3077,6 +3247,30 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return LLT::scalar(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
+#if LLPC_BUILD_NPI
+static bool legalizeLaneShared(LegalizerHelper &Helper, MachineInstr &MI,
+                               MachineMemOperand &MMO) {
+  const LLT MemTy = MMO.getMemoryType();
+  const unsigned MemSize = MemTy.getSizeInBits();
+  assert((MemSize % 32) == 0);
+  auto NumDW = MemSize / 32;
+  if (NumDW <= 4)
+    return true;
+  assert(MemTy.isVector());
+  if (AMDGPU::IsLaneSharedInVGPR(&MMO) &&
+      (NumDW <= 6 || NumDW == 8 || NumDW == 9 || NumDW == 16 || NumDW == 18)) {
+    return true;
+  }
+  unsigned SplitSize = 128;
+  for (; SplitSize > 0 && MemTy.getSizeInBits() % SplitSize; SplitSize -= 32)
+    ;
+  unsigned NumSplitParts = MemTy.getSizeInBits() / SplitSize;
+  const LLT SplitTy = MemTy.divide(NumSplitParts);
+  return (Helper.fewerElementsVector(MI, 0, SplitTy) ==
+          LegalizerHelper::Legalized);
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                        MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -3116,6 +3310,12 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   const unsigned MemSize = MemTy.getSizeInBits();
   const uint64_t AlignInBits = 8 * MemAlign.value();
 
+#if LLPC_BUILD_NPI
+  if (MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED) {
+    return legalizeLaneShared(Helper, MI, *MMO);
+  }
+
+#endif /* LLPC_BUILD_NPI */
   // Widen non-power-of-2 loads to the alignment if needed
   if (shouldWidenLoad(ST, MemTy, AlignInBits, AddrSpace, MI.getOpcode())) {
     const unsigned WideMemSize = PowerOf2Ceil(MemSize);
@@ -3172,9 +3372,19 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   MachineRegisterInfo &MRI = *B.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;
 
+#if LLPC_BUILD_NPI
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  if (MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED) {
+    return legalizeLaneShared(Helper, MI, *MMO);
+  }
+
+#endif /* LLPC_BUILD_NPI */
   Register DataReg = MI.getOperand(0).getReg();
   LLT DataTy = MRI.getType(DataReg);
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   if (hasBufferRsrcWorkaround(DataTy)) {
     Observer.changingInstr(MI);
     castBufferRsrcArgToV4I32(MI, B, 0);
@@ -4149,6 +4359,11 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
+#if LLPC_BUILD_NPI
+  if (ST.hasVectorMulU64() && Size == 64)
+    return true;
+
+#endif /* LLPC_BUILD_NPI */
   unsigned NumParts = Size / 32;
   assert((Size % 32) == 0);
   assert(NumParts >= 2);
@@ -4324,6 +4539,22 @@ bool AMDGPULegalizerInfo::loadInputValue(
       AMDGPU::isEntryFunctionCC(CC) && !MFI->hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
+#if LLPC_BUILD_NPI
+  const ArgDescriptor ClusterWorkGroupIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000000Fu);
+  const ArgDescriptor ClusterWorkGroupIDY =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000000F0u);
+  const ArgDescriptor ClusterWorkGroupIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00000F00u);
+  const ArgDescriptor ClusterWorkGroupMaxIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000F000u);
+  const ArgDescriptor ClusterWorkGroupMaxIDY =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000F0000u);
+  const ArgDescriptor ClusterWorkGroupMaxIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
+  const ArgDescriptor ClusterWorkGroupMaxFlatID =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
+#endif /* LLPC_BUILD_NPI */
   if (ST.hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (ArgType) {
@@ -4342,6 +4573,43 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
+#if LLPC_BUILD_NPI
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+      Arg = &ClusterWorkGroupIDX;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+      Arg = &ClusterWorkGroupIDY;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+      Arg = &ClusterWorkGroupIDZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      Arg = &ClusterWorkGroupMaxIDX;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      Arg = &ClusterWorkGroupMaxIDY;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      Arg = &ClusterWorkGroupMaxIDZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+      Arg = &ClusterWorkGroupMaxFlatID;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+#endif /* LLPC_BUILD_NPI */
     default:
       break;
     }
@@ -5525,7 +5793,11 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (Size % 64 == 0) &&
       ST.hasDPALU_DPP() &&
+#if LLPC_BUILD_NPI
+      AMDGPU::isLegalDPALU_DPPControl(ST, MI.getOpcode(), MI.getOperand(4).getImm()))
+#else /* LLPC_BUILD_NPI */
       AMDGPU::isLegalDPALU_DPPControl(MI.getOperand(4).getImm()))
+#endif /* LLPC_BUILD_NPI */
     SplitSize = 64;
 
   if (Size == SplitSize) {
@@ -5705,11 +5977,34 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B,
                                               unsigned AddrSpace) const {
+#if LLPC_BUILD_NPI
+  const LLT S32 = LLT::scalar(32);
+  auto Unmerge = B.buildUnmerge(S32, MI.getOperand(2).getReg());
+#else /* LLPC_BUILD_NPI */
   Register ApertureReg = getSegmentAperture(AddrSpace, MRI, B);
   auto Unmerge = B.buildUnmerge(LLT::scalar(32), MI.getOperand(2).getReg());
+#endif /* LLPC_BUILD_NPI */
   Register Hi32 = Unmerge.getReg(1);
 
+#if LLPC_BUILD_NPI
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS &&
+      ST.hasGloballyAddressableScratch()) {
+    Register FlatScratchBaseHi =
+        B.buildInstr(AMDGPU::S_MOV_B32, {S32},
+                     {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_HI)})
+            .getReg(0);
+    MRI.setRegClass(FlatScratchBaseHi, &AMDGPU::SReg_32RegClass);
+    // Test bits 63..58 against the aperture address.
+    Register XOR = B.buildXor(S32, Hi32, FlatScratchBaseHi).getReg(0);
+    B.buildICmp(ICmpInst::ICMP_ULT, MI.getOperand(0), XOR,
+                B.buildConstant(S32, 1u << 26));
+  } else {
+    Register ApertureReg = getSegmentAperture(AddrSpace, MRI, B);
+    B.buildICmp(ICmpInst::ICMP_EQ, MI.getOperand(0), Hi32, ApertureReg);
+  }
+#else /* LLPC_BUILD_NPI */
   B.buildICmp(ICmpInst::ICMP_EQ, MI.getOperand(0), Hi32, ApertureReg);
+#endif /* LLPC_BUILD_NPI */
   MI.eraseFromParent();
   return true;
 }
@@ -5862,6 +6157,70 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(MachineIRBuilder &B,
   return VData;
 }
 
+#if LLPC_BUILD_NPI
+static unsigned getBufferDiscardPseudo(Intrinsic::ID IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B32;
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B128;
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B1024;
+  default:
+    llvm_unreachable("unhandled discard opcode");
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeBufferDiscard(MachineInstr &MI,
+                                                MachineIRBuilder &B,
+                                                Intrinsic::ID IID) const {
+
+  castBufferRsrcArgToV4I32(MI, B, 1);
+  Register RSrc = MI.getOperand(1).getReg();
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+
+  unsigned ImmOffset;
+  const bool HasVIndex = MI.getNumOperands() == 6;
+  Register VIndex;
+  int OpOffset = 0;
+  if (HasVIndex) {
+    VIndex = MI.getOperand(2).getReg();
+    OpOffset = 1;
+  } else {
+    VIndex = B.buildConstant(S32, 0).getReg(0);
+  }
+
+  Register VOffset = MI.getOperand(2 + OpOffset).getReg();
+  Register SOffset = MI.getOperand(3 + OpOffset).getReg();
+
+  unsigned AuxiliaryData = MI.getOperand(4 + OpOffset).getImm();
+
+  std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
+
+  B.buildInstr(getBufferDiscardPseudo(IID))
+      .addUse(RSrc)
+      .addUse(VIndex)
+      .addUse(VOffset)
+      .addUse(SOffset)
+      .addImm(ImmOffset)
+      .addImm(AuxiliaryData)
+      .addImm(HasVIndex ? -1 : 0)
+      .addMemOperand(MMO);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
                                               LegalizerHelper &Helper,
                                               bool IsTyped,
@@ -7017,8 +7376,13 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
   return true;
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+#else /* LLPC_BUILD_NPI */
 bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
                                                MachineIRBuilder &B) const {
+#endif /* LLPC_BUILD_NPI */
   MachineRegisterInfo &MRI = *B.getMRI();
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
@@ -7154,17 +7518,88 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Ops.push_back(MergedOps);
   }
 
+#if LLPC_BUILD_NPI
+  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addImm(Opcode);
+#else /* LLPC_BUILD_NPI */
   auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY)
     .addDef(DstReg)
     .addImm(Opcode);
+#endif /* LLPC_BUILD_NPI */
 
   for (Register R : Ops) {
     MIB.addUse(R);
   }
 
+#if LLPC_BUILD_NPI
+  MIB.addUse(TDescr);
+
+  MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register DstOrigin = MI.getOperand(1).getReg();
+  Register DstDir = MI.getOperand(2).getReg();
+  Register NodePtr = MI.getOperand(4).getReg();
+  Register RayExtent = MI.getOperand(5).getReg();
+  Register InstanceMask = MI.getOperand(6).getReg();
+  Register RayOrigin = MI.getOperand(7).getReg();
+  Register RayDir = MI.getOperand(8).getReg();
+  Register Offsets = MI.getOperand(9).getReg();
+  Register TDescr = MI.getOperand(10).getReg();
+
+  if (!AMDGPU::isGFX12Plus(ST)) {
+    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
+                                        "intrinsic not supported on subtarget",
+                                        MI.getDebugLoc());
+    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    return false;
+  }
+
+  bool IsBVH8 = cast<GIntrinsic>(MI).getIntrinsicID() ==
+                Intrinsic::amdgcn_image_bvh8_intersect_ray;
+  const unsigned NumVDataDwords = 10;
+  const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
+  int Opcode = AMDGPU::getMIMGOpcode(
+      IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
+             : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+      AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
+  assert(Opcode != -1);
+
+  SmallVector<Register, 12> Ops;
+  Ops.push_back(NodePtr);
+  Ops.push_back(B.buildMergeLikeInstr(
+                     V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)})
+                    .getReg(0));
+  Ops.push_back(RayOrigin);
+  Ops.push_back(RayDir);
+  Ops.push_back(Offsets);
+
+  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                                 : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addDef(DstOrigin)
+                 .addDef(DstDir)
+                 .addImm(Opcode);
+
+  for (Register R : Ops)
+    MIB.addUse(R);
+
+  MIB.addUse(TDescr).cloneMemRefs(MI);
+#else /* LLPC_BUILD_NPI */
   MIB.addUse(TDescr)
      .addImm(IsA16 ? 1 : 0)
      .cloneMemRefs(MI);
+#endif /* LLPC_BUILD_NPI */
 
   MI.eraseFromParent();
   return true;
@@ -7195,6 +7630,43 @@ bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
   return true;
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPULegalizerInfo::legalizeWavegroupID(MachineInstr &MI,
+                                              MachineIRBuilder &B) const {
+  if (!ST.hasWavegroups())
+    return false;
+  // WavegroupID is taken from the low order bits of WaveIDInGroup which is in
+  // TTMP8[29:25].
+  LLT S32 = LLT::scalar(32);
+  Register DstReg = MI.getOperand(0).getReg();
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+  auto LSB = B.buildConstant(S32, 25);
+  constexpr unsigned WavegroupCount = 4;
+  constexpr unsigned WavegroupCountBits = CTLog2<WavegroupCount>();
+  auto Width = B.buildConstant(S32, WavegroupCountBits);
+  B.buildUbfx(DstReg, TTMP8, LSB, Width);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeWaveIDInWavegroup(MachineInstr &MI,
+                                                    MachineIRBuilder &B) const {
+  if (!ST.hasWavegroups())
+    return false;
+  // WaveIDInWavegroup is in GROUP_INFO[19:16].
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!MRI.getRegClassOrNull(DstReg))
+    MRI.setRegClass(DstReg, &AMDGPU::SReg_32RegClass);
+  using namespace AMDGPU::Hwreg;
+  B.buildInstr(AMDGPU::S_GETREG_B32)
+      .addDef(DstReg)
+      .addImm(HwregEncoding::encode(ID_WAVE_GROUP_INFO, 16, 4));
+  MI.eraseFromParent();
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 static constexpr unsigned FPEnvModeBitField =
     AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 23);
 
@@ -7365,8 +7837,45 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_workgroup_id_z:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_cluster_workgroup_id_x:
+    return ST.hasGFX1210Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+  case Intrinsic::amdgcn_cluster_workgroup_id_y:
+    return ST.hasGFX1210Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+  case Intrinsic::amdgcn_cluster_workgroup_id_z:
+    return ST.hasGFX1210Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
+    return ST.hasGFX1210Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X);
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
+    return ST.hasGFX1210Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y);
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
+    return ST.hasGFX1210Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z);
+  case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
+    return ST.hasGFX1210Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B,
+               AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_wave_id:
     return legalizeWaveID(MI, B);
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_wavegroup_id:
+    return legalizeWavegroupID(MI, B);
+  case Intrinsic::amdgcn_wave_id_in_wavegroup:
+    return legalizeWaveIDInWavegroup(MI, B);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
@@ -7418,6 +7927,21 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
+    return legalizeBufferDiscard(MI, B, IntrID);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_s_buffer_load:
     return legalizeSBufferLoad(Helper, MI);
   case Intrinsic::amdgcn_raw_buffer_store:
@@ -7522,7 +8046,22 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
+#if LLPC_BUILD_NPI
+    return legalizeBVHIntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
+  case Intrinsic::amdgcn_image_bvh8_intersect_ray:
+    return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8:
+#else /* LLPC_BUILD_NPI */
     return legalizeBVHIntrinsic(MI, B);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
@@ -7537,6 +8076,15 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       MI.getOperand(5).setReg(B.buildAnyExt(S32, Index).getReg(0));
     return true;
   }
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x256_iu4:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
   case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {

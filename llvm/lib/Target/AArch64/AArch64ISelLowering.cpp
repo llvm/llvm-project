@@ -3547,11 +3547,10 @@ static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
     RHS = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {MVT::f32, MVT::Other},
                       {LHS.getValue(1), RHS});
     Chain = RHS.getValue(1);
-    VT = MVT::f32;
   }
   unsigned Opcode =
       IsSignaling ? AArch64ISD::STRICT_FCMPE : AArch64ISD::STRICT_FCMP;
-  return DAG.getNode(Opcode, dl, {VT, MVT::Other}, {Chain, LHS, RHS});
+  return DAG.getNode(Opcode, dl, {MVT::i32, MVT::Other}, {Chain, LHS, RHS});
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -3564,9 +3563,8 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     if ((VT == MVT::f16 && !FullFP16) || VT == MVT::bf16) {
       LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, LHS);
       RHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, RHS);
-      VT = MVT::f32;
     }
-    return DAG.getNode(AArch64ISD::FCMP, dl, VT, LHS, RHS);
+    return DAG.getNode(AArch64ISD::FCMP, dl, MVT::i32, LHS, RHS);
   }
 
   // The CMP instruction is just an alias for SUBS, and representing it as
@@ -4903,13 +4901,14 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), dl, {F32, MVT::Other},
                                 {Op.getOperand(0), In});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
-          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
                        DAG.getNode(Op.getOpcode(), dl, F32, In),
-                       DAG.getIntPtrConstant(0, dl));
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   }
 
   uint64_t VTSize = VT.getFixedSizeInBits();
@@ -4921,9 +4920,9 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       In = DAG.getNode(Opc, dl, {CastVT, MVT::Other},
                        {Op.getOperand(0), In});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
-          {In.getValue(1), In.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
+                         {In.getValue(1), In.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     In = DAG.getNode(Opc, dl, CastVT, In);
     return DAG.getNode(ISD::FP_ROUND, dl, VT, In,
@@ -4971,13 +4970,14 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), dl, {PromoteVT, MVT::Other},
                                 {Op.getOperand(0), SrcVal});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
-          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
                        DAG.getNode(Op.getOpcode(), dl, PromoteVT, SrcVal),
-                       DAG.getIntPtrConstant(0, dl));
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   };
 
   if (Op.getValueType() == MVT::bf16) {
@@ -5069,12 +5069,13 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
           DAG.getNode(ISD::OR, DL, MVT::i64, RoundedBits, NeedsAdjustment);
       SDValue Adjusted = DAG.getNode(ISD::BITCAST, DL, MVT::f64, AdjustedBits);
       return IsStrict
-                 ? DAG.getNode(ISD::STRICT_FP_ROUND, DL,
-                               {Op.getValueType(), MVT::Other},
-                               {Rounded.getValue(1), Adjusted,
-                                DAG.getIntPtrConstant(0, DL)})
+                 ? DAG.getNode(
+                       ISD::STRICT_FP_ROUND, DL,
+                       {Op.getValueType(), MVT::Other},
+                       {Rounded.getValue(1), Adjusted,
+                        DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)})
                  : DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), Adjusted,
-                               DAG.getIntPtrConstant(0, DL, true));
+                               DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
   }
 
@@ -7111,7 +7112,7 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), FScale, Zero);
   if (X.getValueType() != XScalarTy)
     Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
-                        DAG.getIntPtrConstant(1, SDLoc(Op)));
+                        DAG.getIntPtrConstant(1, SDLoc(Op), /*isTarget=*/true));
   return Final;
 }
 
@@ -13660,11 +13661,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSize = VT.getScalarSizeInBits();
   if (isREVMask(ShuffleMask, EltSize, NumElts, 64))
-    return DAG.getNode(AArch64ISD::REV64, dl, V1.getValueType(), V1, V2);
+    return DAG.getNode(AArch64ISD::REV64, dl, V1.getValueType(), V1);
   if (isREVMask(ShuffleMask, EltSize, NumElts, 32))
-    return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1, V2);
+    return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1);
   if (isREVMask(ShuffleMask, EltSize, NumElts, 16))
-    return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1, V2);
+    return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1);
 
   if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
@@ -15681,7 +15682,7 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
     if (IsZero)
       return DAG.getNode(AArch64ISD::CMGTz, dl, VT, LHS);
     if (IsMinusOne)
-      return DAG.getNode(AArch64ISD::CMGEz, dl, VT, LHS, RHS);
+      return DAG.getNode(AArch64ISD::CMGEz, dl, VT, LHS);
     return DAG.getNode(AArch64ISD::CMGT, dl, VT, LHS, RHS);
   case AArch64CC::LE:
     if (IsZero)
@@ -21568,7 +21569,7 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
   // Set condition code (CC) flags.
   SDValue Test = DAG.getNode(
       Cond == AArch64CC::ANY_ACTIVE ? AArch64ISD::PTEST_ANY : AArch64ISD::PTEST,
-      DL, MVT::Other, Pg, Op);
+      DL, MVT::i32, Pg, Op);
 
   // Convert CC to integer based on requested condition.
   // NOTE: Cond is inverted to promote CSEL's removal when it feeds a compare.
@@ -26374,8 +26375,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                   : AArch64SysReg::RNDRRS);
       SDLoc DL(N);
       SDValue A = DAG.getNode(
-          AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, MVT::Glue, MVT::Other),
-          N->getOperand(0), DAG.getConstant(Register, DL, MVT::i64));
+          AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, MVT::i32, MVT::Other),
+          N->getOperand(0), DAG.getConstant(Register, DL, MVT::i32));
       SDValue B = DAG.getNode(
           AArch64ISD::CSINC, DL, MVT::i32, DAG.getConstant(0, DL, MVT::i32),
           DAG.getConstant(0, DL, MVT::i32),
@@ -28165,7 +28166,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
   if (VT.getScalarSizeInBits() > Mask.getValueType().getScalarSizeInBits()) {
     assert(Load->getExtensionType() != ISD::NON_EXTLOAD &&
            "Incorrect mask type");
-    Mask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Mask);
+    Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Mask);
   }
   Mask = convertFixedMaskToScalableVector(Mask, DAG);
 
@@ -29212,6 +29213,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
     }
   }
+
+  // Try to widen the shuffle before generating a possibly expensive SVE TBL.
+  // This may allow the shuffle to be matched as something cheaper like ZIP1.
+  if (SDValue WideOp = tryWidenMaskForShuffle(Op, DAG))
+    return WideOp;
 
   // Avoid producing TBL instruction if we don't know SVE register minimal size,
   // unless NEON is not available and we can assume minimal SVE register size is

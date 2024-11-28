@@ -44,7 +44,11 @@ using namespace llvm;
 namespace {
 
 enum HardClauseType {
+#if LLPC_BUILD_NPI
+  // For GFX10 and GFX1210:
+#else /* LLPC_BUILD_NPI */
   // For GFX10:
+#endif /* LLPC_BUILD_NPI */
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
@@ -103,7 +107,12 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
+#if LLPC_BUILD_NPI
+      if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
+          ST->hasGFX1210Insts()) {
+#else /* LLPC_BUILD_NPI */
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
+#endif /* LLPC_BUILD_NPI */
         if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
@@ -115,7 +124,10 @@ public:
         if (SIInstrInfo::isFLAT(MI))
           return HARDCLAUSE_FLAT;
       } else {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
         assert(ST->getGeneration() >= AMDGPUSubtarget::GFX11);
+#endif /* LLPC_BUILD_NPI */
         if (SIInstrInfo::isMIMG(MI)) {
           const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
           const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
