@@ -76,7 +76,7 @@ protected:
     if (GOTEntryI == GOTEntries.end()) {
       auto &GOTEntry = impl().createGOTEntry(Target);
       LLVM_DEBUG({
-        dbgs() << "    Created GOT entry for " << Target.getName() << ": "
+        dbgs() << "    Created GOT entry for " << *Target.getName() << ": "
                << GOTEntry << "\n";
       });
       GOTEntryI =
@@ -97,7 +97,7 @@ protected:
     if (StubI == PLTStubs.end()) {
       auto &StubSymbol = impl().createPLTStub(Target);
       LLVM_DEBUG({
-        dbgs() << "    Created PLT stub for " << Target.getName() << ": "
+        dbgs() << "    Created PLT stub for " << *Target.getName() << ": "
                << StubSymbol << "\n";
       });
       StubI =
@@ -114,8 +114,8 @@ protected:
 private:
   BuilderImplT &impl() { return static_cast<BuilderImplT &>(*this); }
 
-  DenseMap<StringRef, Symbol *> GOTEntries;
-  DenseMap<StringRef, Symbol *> PLTStubs;
+  DenseMap<orc::SymbolStringPtr, Symbol *> GOTEntries;
+  DenseMap<orc::SymbolStringPtr, Symbol *> PLTStubs;
 };
 
 } // end namespace jitlink

@@ -86,7 +86,7 @@ constexpr StringRef RegisterPerfImplSymbolName =
 static PerfJITCodeLoadRecord
 getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {
   PerfJITCodeLoadRecord Record;
-  auto Name = Sym.getName();
+  auto Name = *Sym.getName();
   auto Addr = Sym.getAddress();
   auto Size = Sym.getSize();
   Record.Prefix.Id = PerfJITRecordType::JIT_CODE_LOAD;
@@ -117,7 +117,7 @@ getDebugInfoRecord(const Symbol &Sym, DWARFContext &DC) {
   auto Addr = Sym.getAddress();
   auto Size = Sym.getSize();
   auto SAddr = object::SectionedAddress{Addr.getValue(), Section.getOrdinal()};
-  LLVM_DEBUG(dbgs() << "Getting debug info for symbol " << Sym.getName()
+  LLVM_DEBUG(dbgs() << "Getting debug info for symbol " << *Sym.getName()
                     << " at address " << Addr.getValue() << " with size "
                     << Size << "\n"
                     << "Section ordinal: " << Section.getOrdinal() << "\n");

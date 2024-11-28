@@ -398,7 +398,7 @@ Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
   auto SymSize = Sym.getSize() ? Sym.getSize() : B.getSize() - Sym.getOffset();
   auto Content = ArrayRef(SymStartInBlock, SymSize);
 
-  LLVM_DEBUG(dbgs() << "Adding self-relocations to " << Sym.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Adding self-relocations to " << *Sym.getName() << "\n");
 
   SmallDenseSet<uintptr_t, 8> ExistingRelocations;
   for (auto &E : B.edges()) {

@@ -211,8 +211,7 @@ JITLinkContext::LookupMap JITLinkerBase::getExternalSymbolNames() const {
   for (auto *Sym : G->external_symbols()) {
     assert(!Sym->getAddress() &&
            "External has already been assigned an address");
-    assert(Sym->getName() != StringRef() && Sym->getName() != "" &&
-           "Externals must be named");
+    assert(Sym->hasName() && "Externals must be named");
     SymbolLookupFlags LookupFlags =
         Sym->isWeaklyReferenced() ? SymbolLookupFlags::WeaklyReferencedSymbol
                                   : SymbolLookupFlags::RequiredSymbol;
@@ -242,7 +241,7 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
   LLVM_DEBUG({
     dbgs() << "Externals after applying lookup result:\n";
     for (auto *Sym : G->external_symbols()) {
-      dbgs() << "  " << Sym->getName() << ": "
+      dbgs() << "  " << *Sym->getName() << ": "
              << formatv("{0:x16}", Sym->getAddress().getValue());
       switch (Sym->getLinkage()) {
       case Linkage::Strong:

@@ -44,13 +44,13 @@ protected:
           S(S) {
       assert((!Name || !Name->empty()) && "Name must be none or non-empty");
     }
-
+    
   public:
     NormalizedSymbol(const NormalizedSymbol &) = delete;
     NormalizedSymbol &operator=(const NormalizedSymbol &) = delete;
     NormalizedSymbol(NormalizedSymbol &&) = delete;
     NormalizedSymbol &operator=(NormalizedSymbol &&) = delete;
-
+  
     std::optional<StringRef> Name;
     uint64_t Value = 0;
     uint8_t Type = 0;
@@ -83,10 +83,10 @@ protected:
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
 
-  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj, Triple TT,
+  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj,
+                        std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                         SubtargetFeatures Features,
                         LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
-
   LinkGraph &getGraph() const { return *G; }
 
   const object::MachOObjectFile &getObject() const { return Obj; }

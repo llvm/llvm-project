@@ -39,7 +39,7 @@ public:
       auto &Entry = impl().createEntry(G, Target);
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "    Created " << impl().getSectionName() << " entry for "
-               << Target.getName() << ": " << Entry << "\n";
+               << *Target.getName() << ": " << Entry << "\n";
       });
       EntryI = Entries.insert(std::make_pair(Target.getName(), &Entry)).first;
     }
@@ -69,7 +69,7 @@ public:
 
 private:
   TableManagerImplT &impl() { return static_cast<TableManagerImplT &>(*this); }
-  DenseMap<StringRef, Symbol *> Entries;
+  DenseMap<orc::SymbolStringPtr, Symbol *> Entries;
 };
 
 } // namespace jitlink
