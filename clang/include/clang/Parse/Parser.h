@@ -3052,7 +3052,11 @@ private:
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
+
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
+
+  Attr *ParseHLSLRootSignature(StringRef Signature, ParsedAttributes &Attrs,
+                               SourceLocation *EndLoc = nullptr);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
