@@ -3119,6 +3119,7 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
+  mlir::Location loc = converter.genLocation(declareMapperConstruct.source);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   lower::StatementContext stmtCtx;
   const auto &spec =
@@ -3136,24 +3137,50 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   else
     mapperNameStr =
         "default_" + varType.declTypeSpec->derivedTypeSpec().name().ToString();
-
-  mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
-  firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
   auto mlirType = converter.genType(varType.declTypeSpec->derivedTypeSpec());
-  auto varVal = firOpBuilder.createTemporaryAlloc(
-      converter.getCurrentLocation(), mlirType, varName.ToString());
-  symTable.addSymbol(*varName.symbol, varVal);
+  auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
+      loc, mapperNameStr, mlirType);
+  auto &region = declMapperOp.getRegion();
 
-  mlir::omp::DeclareMapperOperands clauseOps;
+  // Save insert point just after the DeclMapperOp.
+  mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
+  firOpBuilder.createBlock(&region);
+  auto varVal =
+      firOpBuilder.createTemporaryAlloc(loc, mlirType, varName.ToString());
+  converter.bindSymbol(*varName.symbol, varVal);
+
+  // Insert dummy instruction to remember the insertion position. The
+  // marker will be deleted by clean up passes since there are no uses.
+  // Remembering the position for further insertion is important since
+  // there are hlfir.declares inserted above while setting block arguments
+  // and new code from the body should be inserted after that.
+  mlir::Value undefMarker =
+      firOpBuilder.create<fir::UndefOp>(loc, firOpBuilder.getIndexType());
+
+  // Create blocks for unstructured regions. This has to be done since
+  // blocks are initially allocated with the function as the parent region.
+  if (eval.lowerAsUnstructured()) {
+    lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp, mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
+  }
+
+  firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
+
+  // Set the insertion point after the marker.
+  firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
+  genNestedEvaluations(converter, eval);
+
+  // Populate the declareMapper region with the map information.
+  mlir::omp::DeclareMapperInfoOperands clauseOps;
   const auto *clauseList{
       parser::Unwrap<parser::OmpClauseList>(declareMapperConstruct.t)};
   List<Clause> clauses = makeClauses(*clauseList, semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processMap(converter.getCurrentLocation(), stmtCtx, clauseOps);
-  auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
-      converter.getCurrentLocation(), mapperNameStr, varVal, mlirType,
-      clauseOps.mapVars);
-  converter.getMLIRSymbolTable()->insert(declMapperOp.getOperation());
+  cp.processMap(loc, stmtCtx, clauseOps);
+
+  firOpBuilder.create<mlir::omp::DeclareMapperInfoOp>(loc, clauseOps.mapVars);
+
+  // Restore the insert point to just after the DeclareMapperOp.
   firOpBuilder.restoreInsertionPoint(insPt);
 }
 
