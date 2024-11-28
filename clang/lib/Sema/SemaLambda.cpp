@@ -1164,8 +1164,11 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
                           /*FunctionScopeIndexToStopAtPtr*/ nullptr,
                           C->Kind == LCK_StarThis);
       if (!LSI->Captures.empty())
-        LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
-      continue;
+      {
+          SourceRange TrimmedRange = Lexer::makeFileCharRange(
+              C->ExplicitRange, SM, LangOpts);
+          LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
+      }
     }
 
     assert(C->Id && "missing identifier for capture");
@@ -1329,7 +1332,11 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       tryCaptureVariable(Var, C->Loc, Kind, EllipsisLoc);
     }
     if (!LSI->Captures.empty())
-      LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
+      {
+    SourceRange TrimmedRange = Lexer::makeFileCharRange(
+        C->ExplicitRange, SM, LangOpts);
+    LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
+}
   }
   finishLambdaExplicitCaptures(LSI);
   LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
