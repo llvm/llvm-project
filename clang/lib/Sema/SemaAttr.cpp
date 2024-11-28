@@ -269,18 +269,6 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   }
 }
 
-static bool isPointerLikeType(QualType QT) {
-  QT = QT.getNonReferenceType();
-  if (QT->isPointerType())
-    return true;
-  auto *RD = QT->getAsCXXRecordDecl();
-  if (!RD)
-    return false;
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
-  return RD->hasAttr<PointerAttr>();
-}
-
 void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
   if (!FD)
     return;
@@ -299,7 +287,7 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
     if (PVD->hasAttr<LifetimeCaptureByAttr>())
       return;
   for (ParmVarDecl *PVD : MD->parameters()) {
-    if (isPointerLikeType(PVD->getType())) {
+    if (sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
       int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
       PVD->addAttr(
           LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
