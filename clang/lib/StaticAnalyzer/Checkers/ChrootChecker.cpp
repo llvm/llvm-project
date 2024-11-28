@@ -171,10 +171,8 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
   if (!Err)
     return;
 
-  std::unique_ptr<PathSensitiveBugReport> R =
-      std::make_unique<PathSensitiveBugReport>(
-          BreakJailBug, R"(No call of chdir("/") immediately after chroot)",
-          Err);
+  auto R = std::make_unique<PathSensitiveBugReport>(
+      BreakJailBug, R"(No call of chdir("/") immediately after chroot)", Err);
   R->addVisitor<ChrootInvocationVisitor>(Chroot);
   C.emitReport(std::move(R));
 }
