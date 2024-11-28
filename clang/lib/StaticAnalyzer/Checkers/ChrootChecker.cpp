@@ -48,7 +48,7 @@ namespace {
 //
 class ChrootChecker : public Checker<eval::Call, check::PreCall> {
   // This bug refers to possibly break out of a chroot() jail.
-  const BugType BT_BreakJail{this, "Break out of jail"};
+  const BugType BreakJailBug{this, "Break out of jail"};
 
   const CallDescription Chroot{CDM::CLibrary, {"chroot"}, 1},
       Chdir{CDM::CLibrary, {"chdir"}, 1};
@@ -174,7 +174,7 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
 
   std::unique_ptr<PathSensitiveBugReport> R =
       std::make_unique<PathSensitiveBugReport>(
-          BT_BreakJail, R"(No call of chdir("/") immediately after chroot)",
+          BreakJailBug, R"(No call of chdir("/") immediately after chroot)",
           Err);
   R->addVisitor<ChrootInvocationVisitor>(Chroot);
   C.emitReport(std::move(R));
