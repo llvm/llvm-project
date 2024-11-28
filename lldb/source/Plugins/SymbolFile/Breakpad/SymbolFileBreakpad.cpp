@@ -315,7 +315,8 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
       if (record->InlineNestLevel == 0 ||
           record->InlineNestLevel <= last_added_nest_level + 1) {
         last_added_nest_level = record->InlineNestLevel;
-        BlockSP block_sp = std::make_shared<Block>(It.GetBookmark().offset);
+        BlockSP block_sp = blocks[record->InlineNestLevel]->CreateChild(
+            It.GetBookmark().offset);
         FileSpec callsite_file;
         if (record->CallSiteFileNum < m_files->size())
           callsite_file = (*m_files)[record->CallSiteFileNum];
@@ -333,7 +334,6 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
         }
         block_sp->FinalizeRanges();
 
-        blocks[record->InlineNestLevel]->AddChild(block_sp);
         if (record->InlineNestLevel + 1 >= blocks.size()) {
           blocks.resize(blocks.size() + 1);
         }

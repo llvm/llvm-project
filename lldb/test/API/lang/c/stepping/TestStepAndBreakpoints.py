@@ -99,9 +99,7 @@ class TestCStepping(TestBase):
         frame = thread.GetFrameAtIndex(0)
         current_line = frame.GetLineEntry().GetLine()
         current_file = frame.GetLineEntry().GetFileSpec()
-        current_bp = []
-        current_bp.append(thread.GetStopReasonDataAtIndex(0))
-        current_bp.append(thread.GetStopReasonDataAtIndex(1))
+        current_bp = thread.stop_reason_data
 
         stop_id_before_expression = process.GetStopID()
         stop_id_before_including_expressions = process.GetStopID(True)
@@ -124,9 +122,9 @@ class TestCStepping(TestBase):
             lldb.eStopReasonBreakpoint,
             "We still say we stopped for a breakpoint.",
         )
-        self.assertTrue(
-            thread.GetStopReasonDataAtIndex(0) == current_bp[0]
-            and thread.GetStopReasonDataAtIndex(1) == current_bp[1],
+        self.assertEqual(
+            thread.stop_reason_data,
+            current_bp,
             "And it is the same breakpoint.",
         )
 

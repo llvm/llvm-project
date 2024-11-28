@@ -2557,10 +2557,10 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
   if (ElemTy == MVT::i8) {
     // First try generating a constant.
     if (AllConst) {
-      int32_t V = (Consts[0]->getZExtValue() & 0xFF) |
-                  (Consts[1]->getZExtValue() & 0xFF) << 8 |
-                  (Consts[2]->getZExtValue() & 0xFF) << 16 |
-                  Consts[3]->getZExtValue() << 24;
+      uint32_t V = (Consts[0]->getZExtValue() & 0xFF) |
+                   (Consts[1]->getZExtValue() & 0xFF) << 8 |
+                   (Consts[2]->getZExtValue() & 0xFF) << 16 |
+                   Consts[3]->getZExtValue() << 24;
       return DAG.getBitcast(MVT::v4i8, DAG.getConstant(V, dl, MVT::i32));
     }
 
