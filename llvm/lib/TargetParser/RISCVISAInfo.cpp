@@ -772,7 +772,7 @@ Error RISCVISAInfo::checkDependency() {
   }
 
   if (Exts.count("xqcicsr") != 0 && (XLen != 32)) {
-    return getError("'xqcicsr' is only supported in 'rv32'");
+    return getError("'xqcicsr' is only supported for 'rv32'");
   }
 
   return Error::success();
