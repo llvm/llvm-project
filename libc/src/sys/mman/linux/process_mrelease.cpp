@@ -19,6 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, process_mrelease, (int pidfd, unsigned int flags)) {
+#ifdef SYS_process_mrelease
   long ret =
       LIBC_NAMESPACE::syscall_impl<int>(SYS_process_mrelease, pidfd, flags);
 
@@ -28,6 +29,13 @@ LLVM_LIBC_FUNCTION(int, process_mrelease, (int pidfd, unsigned int flags)) {
   }
 
   return 0;
+#else
+  // The system call is not available.
+  (void)pidfd;
+  (void)flags;
+  libc_errno = ENOSYS;
+  return -1;
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL
