@@ -6888,6 +6888,32 @@ static void SetNestedNameSpecifier(Sema &S, DeclaratorDecl *DD, Declarator &D) {
   DD->setQualifierInfo(SS.getWithLocInContext(S.Context));
 }
 
+void Sema::deduceHLSLAddressSpace(VarDecl *Decl) {
+  // The variable already has an address space (groupshared for ex).
+  if (Decl->getType().hasAddressSpace())
+    return;
+
+  if (Decl->getType()->isDependentType())
+    return;
+
+  QualType Type = Decl->getType();
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+
+  // Resource handles.
+  if (Type->isHLSLIntangibleType())
+    return;
+
+  // Only static globals belong to the Private address space.
+  // Non-static globals belongs to the cbuffer.
+  if (Decl->getStorageClass() != SC_Static && !Decl->isStaticDataMember())
+    return;
+
+  LangAS ImplAS = LangAS::hlsl_private;
+  Type = Context.getAddrSpaceQualType(Type, ImplAS);
+  Decl->setType(Type);
+}
+
 void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
   if (Decl->getType().hasAddressSpace())
     return;
@@ -7776,6 +7802,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(),
                               D.getIdentifierLoc(), II, R, TInfo, SC);
 
+    if (getLangOpts().HLSL)
+      deduceHLSLAddressSpace(NewVD);
+
     // If this is supposed to be a variable template, create it as such.
     if (IsVariableTemplate) {
       NewTemplate =
@@ -7959,6 +7988,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NewVD->setInvalidDecl();
     }
   }
+
+  if (getLangOpts().HLSL)
+    deduceHLSLAddressSpace(NewVD);
 
   // WebAssembly tables are always in address space 1 (wasm_var). Don't apply
   // address space if the table has local storage (semantic checks elsewhere
@@ -13130,6 +13162,9 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
 
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(VDecl);
+
+  if (getLangOpts().HLSL)
+    deduceHLSLAddressSpace(VDecl);
 
   // If this is a redeclaration, check that the type we just deduced matches
   // the previously declared type.

@@ -94,6 +94,8 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
            B == LangAS::cuda_shared)) ||
+         // Default is a superset of HLSL private.
+         (A == LangAS::Default && B == LangAS::hlsl_private) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
@@ -5168,6 +5170,9 @@ bool Type::isHLSLIntangibleType() const {
   CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
   assert(RD != nullptr &&
          "all HLSL structs and classes should be CXXRecordDecl");
+
+  if (!RD->isCompleteDefinition())
+    return false;
   assert(RD->isCompleteDefinition() && "expecting complete type");
   return RD->isHLSLIntangible();
 }
