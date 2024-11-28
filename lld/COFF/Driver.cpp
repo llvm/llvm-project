@@ -354,13 +354,17 @@ bool LinkerDriver::isDecorated(StringRef sym) {
          (!ctx.config.mingw && sym.contains('@'));
 }
 
+void LinkerDriver::processDirectivesSection(InputFile *file) {
+  for (StringRef s : file->getDrectves()) {
+    if (s.empty())
+      continue;
+    processDirectivesSection(file, s);
+  }
+}
+
 // Parses .drectve section contents and returns a list of files
 // specified by /defaultlib.
-void LinkerDriver::parseDirectives(InputFile *file) {
-  StringRef s = file->getDirectives();
-  if (s.empty())
-    return;
-
+void LinkerDriver::processDirectivesSection(InputFile *file, StringRef s) {
   log("Directives: " + toString(file) + ": " + s);
 
   ArgParser parser(ctx);
@@ -440,13 +444,13 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       break;
     case OPT_stack:
       parseNumbers(arg->getValue(), &ctx.config.stackReserve,
-                   &ctx.config.stackCommit);
+                  &ctx.config.stackCommit);
       break;
     case OPT_subsystem: {
       bool gotVersion = false;
       parseSubsystem(arg->getValue(), &ctx.config.subsystem,
-                     &ctx.config.majorSubsystemVersion,
-                     &ctx.config.minorSubsystemVersion, &gotVersion);
+                    &ctx.config.majorSubsystemVersion,
+                    &ctx.config.minorSubsystemVersion, &gotVersion);
       if (gotVersion) {
         ctx.config.majorOSVersion = ctx.config.majorSubsystemVersion;
         ctx.config.minorOSVersion = ctx.config.minorSubsystemVersion;

@@ -93,8 +93,8 @@ public:
   // An archive file name if this file is created from an archive.
   StringRef parentName;
 
-  // Returns .drectve section contents if exist.
-  StringRef getDirectives() { return directives; }
+  // Returns .drectve section(s) content if exist.
+  llvm::SmallVector<StringRef, 1>  getDrectves() { return directives; }
 
   COFFLinkerContext &ctx;
 
@@ -102,7 +102,7 @@ protected:
   InputFile(COFFLinkerContext &c, Kind k, MemoryBufferRef m, bool lazy = false)
       : mb(m), ctx(c), fileKind(k), lazy(lazy) {}
 
-  StringRef directives;
+  llvm::SmallVector<StringRef, 1> directives;
 
 private:
   const Kind fileKind;

@@ -97,7 +97,7 @@ void SymbolTable::addFile(InputFile *file) {
     ctx.driver.addWinSysRootLibSearchPaths();
   }
 
-  ctx.driver.parseDirectives(file);
+  ctx.driver.processDirectivesSection(file);
 }
 
 static void errorOrWarn(const Twine &s, bool forceUnresolved) {
