@@ -131,39 +131,6 @@ unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
   return AddressSpace::CrossWorkgroup;
 }
 
-std::pair<const Value *, unsigned>
-SPIRVTargetMachine::getPredicatedAddrSpace(const Value *V) const {
-  // TODO: this is will only fire for AMDGCN flavoured SPIR-V at the moment,
-  // where the intrinsics are available; we should re-implement the predicates
-  // on top of SPIR-V specific intrinsics OpGenericPtrMemSemantics directly.
-  using namespace PatternMatch;
-
-  if (auto *II = dyn_cast<IntrinsicInst>(V)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::amdgcn_is_shared:
-      return std::pair(II->getArgOperand(0), AddressSpace::Workgroup);
-    case Intrinsic::amdgcn_is_private:
-      return std::pair(II->getArgOperand(0), AddressSpace::Function);
-    default:
-      break;
-    }
-    return std::pair(nullptr, UINT32_MAX);
-  }
-  // Check the global pointer predication based on
-  // (!is_share(p) && !is_private(p)). Note that logic 'and' is commutative and
-  // the order of 'is_shared' and 'is_private' is not significant.
-  Value *Ptr;
-  if (getTargetTriple().getVendor() == Triple::VendorType::AMD &&
-      match(
-          const_cast<Value *>(V),
-          m_c_And(m_Not(m_Intrinsic<Intrinsic::amdgcn_is_shared>(m_Value(Ptr))),
-                  m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(
-                      m_Deferred(Ptr))))))
-    return std::pair(Ptr, AddressSpace::CrossWorkgroup);
-
-  return std::pair(nullptr, UINT32_MAX);
-}
-
 bool SPIRVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
                                              unsigned DestAS) const {
   if (SrcAS != AddressSpace::Generic && SrcAS != AddressSpace::CrossWorkgroup)
