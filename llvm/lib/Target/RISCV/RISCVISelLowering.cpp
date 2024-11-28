@@ -3505,6 +3505,10 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   if (Idx.getValueType() != Subtarget.getXLenVT())
     return SDValue();
 
+  if (Vec.getValueSizeInBits().getKnownMinValue() >
+      VT.getSizeInBits().getKnownMinValue())
+    return SDValue();
+
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
     ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
