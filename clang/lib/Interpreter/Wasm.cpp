@@ -41,12 +41,12 @@ struct DriverDef {
 };
 
 struct Result {
-    int retCode;
-    bool canRunAgain;
+  int retCode;
+  bool canRunAgain;
 };
 
 Result lldMain(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-                llvm::raw_ostream &stderrOS, llvm::ArrayRef<DriverDef> drivers);
+               llvm::raw_ostream &stderrOS, llvm::ArrayRef<DriverDef> drivers);
 
 namespace wasm {
 bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -76,8 +76,10 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
-  std::string ObjectFileName = PTU.TheModule->getName().str() + ".o";  // For the wasm object
-  std::string BinaryFileName = PTU.TheModule->getName().str() + ".wasm";  // For the wasm binary
+  std::string ObjectFileName =
+      PTU.TheModule->getName().str() + ".o"; // For the wasm object
+  std::string BinaryFileName =
+      PTU.TheModule->getName().str() + ".wasm"; // For the wasm binary
 
   std::error_code Error;
   llvm::raw_fd_ostream ObjectFileOutput(llvm::StringRef(ObjectFileName), Error);
@@ -109,7 +111,8 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   const lld::DriverDef WasmDriver = {lld::Flavor::Wasm, &lld::wasm::link};
   std::vector<lld::DriverDef> WasmDriverArgs;
   WasmDriverArgs.push_back(WasmDriver);
-  lld::Result Result = lld::lldMain(LinkerArgs, llvm::outs(), llvm::errs(), WasmDriverArgs);
+  lld::Result Result =
+      lld::lldMain(LinkerArgs, llvm::outs(), llvm::errs(), WasmDriverArgs);
 
   if (Result.retCode != 0)
     return llvm::make_error<llvm::StringError>(
