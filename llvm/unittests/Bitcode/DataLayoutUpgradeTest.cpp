@@ -95,12 +95,12 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   // Check that PowerPC64 targets add -i128:128.
   EXPECT_EQ(UpgradeDataLayoutString("e-m:e-i64:64-n32:64", "powerpc64le-linux"),
             "e-m:e-i64:64-i128:128-n32:64");
-  EXPECT_EQ(UpgradeDataLayoutString(
-              "E-m:e-Fn32-i64:64-n32:64", "powerpc64-linux"),
-            "E-m:e-Fn32-i64:64-i128:128-n32:64");
-  EXPECT_EQ(UpgradeDataLayoutString(
-              "E-m:a-Fi64-i64:64-n32:64", "powerpc64-ibm-aix"),
-            "E-m:a-Fi64-i64:64-i128:128-n32:64");
+  EXPECT_EQ(
+      UpgradeDataLayoutString("E-m:e-Fn32-i64:64-n32:64", "powerpc64-linux"),
+      "E-m:e-Fn32-i64:64-i128:128-n32:64");
+  EXPECT_EQ(
+      UpgradeDataLayoutString("E-m:a-Fi64-i64:64-n32:64", "powerpc64-ibm-aix"),
+      "E-m:a-Fi64-i64:64-i128:128-n32:64");
 
   // Check that SPIR && SPIRV targets add -G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spir"), "e-p:32:32-G1");
