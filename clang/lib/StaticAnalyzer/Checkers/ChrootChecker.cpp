@@ -112,27 +112,23 @@ void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
 }
 
 void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
+  ProgramStateRef State = C.getState();
 
   // If there are no jail state, just return.
-  const ChrootKind k = C.getState()->get<ChrootState>();
-  if (!k)
+  if (State->get<ChrootState>() == NO_CHROOT)
     return;
 
   // After chdir("/"), enter the jail, set the enum value JAIL_ENTERED.
-  const Expr *ArgExpr = Call.getArgExpr(0);
-  SVal ArgVal = C.getSVal(ArgExpr);
+  SVal ArgVal = Call.getArgSVal(0);
 
   if (const MemRegion *R = ArgVal.getAsRegion()) {
     R = R->StripCasts();
-    if (const StringRegion* StrRegion= dyn_cast<StringRegion>(R)) {
+    if (const auto *StrRegion = dyn_cast<StringRegion>(R)) {
       if (StrRegion->getStringLiteral()->getString() == "/") {
-        state = state->set<ChrootState>(JAIL_ENTERED);
+        C.addTransition(State->set<ChrootState>(JAIL_ENTERED));
       }
     }
   }
-
-  C.addTransition(state);
 }
 
 class ChrootInvocationVisitor final : public BugReporterVisitor {
