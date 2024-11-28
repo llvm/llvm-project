@@ -23,6 +23,62 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 
+template <uint32_t NumLanes>
+rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
+                                   rpc::Server::Port &Port) {
+
+  int Status = rpc::SUCCESS;
+  switch (Port.get_opcode()) {
+  case RPC_MALLOC: {
+    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
+          Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
+    });
+    break;
+  }
+  case RPC_FREE: {
+    Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+      Device.free(reinterpret_cast<void *>(Buffer->data[0]),
+                  TARGET_ALLOC_DEVICE_NON_BLOCKING);
+    });
+    break;
+  }
+  case OFFLOAD_HOST_CALL: {
+    uint64_t Sizes[NumLanes] = {0};
+    unsigned long long Results[NumLanes] = {0};
+    void *Args[NumLanes] = {nullptr};
+    Port.recv_n(Args, Sizes, [&](uint64_t Size) { return new char[Size]; });
+    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
+      using FuncPtrTy = unsigned long long (*)(void *);
+      auto Func = reinterpret_cast<FuncPtrTy>(buffer->data[0]);
+      Results[ID] = Func(Args[ID]);
+    });
+    Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
+      Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
+      delete[] reinterpret_cast<char *>(Args[ID]);
+    });
+    break;
+  }
+  default:
+    return rpc::UNHANDLED_OPCODE;
+    break;
+  }
+  return rpc::UNHANDLED_OPCODE;
+}
+
+static rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
+                                          rpc::Server::Port &Port,
+                                          uint32_t NumLanes) {
+  if (NumLanes == 1)
+    return handle_offload_opcodes<1>(Device, Port);
+  else if (NumLanes == 32)
+    return handle_offload_opcodes<32>(Device, Port);
+  else if (NumLanes == 64)
+    return handle_offload_opcodes<64>(Device, Port);
+  else
+    return rpc::ERROR;
+}
+
 RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
     : Buffers(Plugin.getNumDevices()) {}
 
@@ -78,43 +134,10 @@ Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
   if (!Port)
     return Error::success();
 
-  int Status = rpc::SUCCESS;
-  switch (Port->get_opcode()) {
-  case RPC_MALLOC: {
-    Port->recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
-          Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
-    });
-    break;
-  }
-  case RPC_FREE: {
-    Port->recv([&](rpc::Buffer *Buffer, uint32_t) {
-      Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                  TARGET_ALLOC_DEVICE_NON_BLOCKING);
-    });
-    break;
-  }
-  case OFFLOAD_HOST_CALL: {
-    uint64_t Sizes[64] = {0};
-    unsigned long long Results[64] = {0};
-    void *Args[64] = {nullptr};
-    Port->recv_n(Args, Sizes, [&](uint64_t Size) { return new char[Size]; });
-    Port->recv([&](rpc::Buffer *buffer, uint32_t ID) {
-      using FuncPtrTy = unsigned long long (*)(void *);
-      auto Func = reinterpret_cast<FuncPtrTy>(buffer->data[0]);
-      Results[ID] = Func(Args[ID]);
-    });
-    Port->send([&](rpc::Buffer *Buffer, uint32_t ID) {
-      Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
-      delete[] reinterpret_cast<char *>(Args[ID]);
-    });
-    break;
-  }
-  default:
-    // Let the `libc` library handle any other unhandled opcodes.
+  int Status = handle_offload_opcodes(Device, *Port, Device.getWarpSize());
+  // Let the `libc` library handle any other unhandled opcodes.
+  if (Status == rpc::UNHANDLED_OPCODE)
     Status = handle_libc_opcodes(*Port, Device.getWarpSize());
-    break;
-  }
   Port->close();
 
   if (Status != rpc::SUCCESS)
