@@ -1365,7 +1365,7 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
 }
 
 unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
-  auto getPriority = [this](StringRef Feature) -> unsigned {
+  auto getPriority = [](StringRef Feature) -> unsigned {
     // Valid CPUs have a 'key feature' that compares just better than its key
     // feature.
     using namespace llvm::X86;
