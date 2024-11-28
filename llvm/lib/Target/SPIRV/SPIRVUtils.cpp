@@ -519,8 +519,11 @@ bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
 }
 
 size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
-  size_t result = 0;
+  auto It = BlockToOrder.find(BB);
+  if (It != BlockToOrder.end())
+    return It->second.Rank;
 
+  size_t result = 0;
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore back-edges.
     if (DT.dominates(BB, P))
@@ -552,15 +555,20 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
   ToVisit.push(BB);
   Queued.insert(BB);
 
+  size_t QueueIndex = 0;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
 
     if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
+      assert(QueueIndex < ToVisit.size() &&
+             "No valid candidate in the queue. Is the graph reducible?");
+      QueueIndex++;
       continue;
     }
 
+    QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
     BlockToOrder.emplace(BB, Info);
