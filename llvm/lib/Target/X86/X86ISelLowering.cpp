@@ -28412,6 +28412,43 @@ SDValue X86TargetLowering::LowerRESET_FPENV(SDValue Op,
   return createSetFPEnvNodes(Env, Chain, DL, MVT::i32, MMO, DAG, Subtarget);
 }
 
+// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
+uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
+  assert((Amt < 8) && "Shift/Rotation amount out of range");
+  switch (Opcode) {
+  case ISD::BITREVERSE:
+    return 0x8040201008040201ULL;
+  case ISD::SHL:
+    return ((0x0102040810204080ULL >> (Amt)) &
+            (0x0101010101010101ULL * (0xFF >> (Amt))));
+  case ISD::SRL:
+    return ((0x0102040810204080ULL << (Amt)) &
+            (0x0101010101010101ULL * ((0xFF << (Amt)) & 0xFF)));
+  case ISD::SRA:
+    return (getGFNICtrlImm(ISD::SRL, Amt) |
+            (0x8080808080808080ULL >> (64 - (8 * Amt))));
+  case ISD::ROTL:
+    return getGFNICtrlImm(ISD::SRL, 8 - Amt) | getGFNICtrlImm(ISD::SHL, Amt);
+  case ISD::ROTR:
+    return getGFNICtrlImm(ISD::SHL, 8 - Amt) | getGFNICtrlImm(ISD::SRL, Amt);
+  }
+  llvm_unreachable("Unsupported GFNI opcode");
+}
+
+// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
+SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
+                        MVT VT, unsigned Amt = 0) {
+  assert(VT.getVectorElementType() == MVT::i8 &&
+         (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
+  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
+  SmallVector<SDValue> MaskBits;
+  for (unsigned I = 0, E = VT.getSizeInBits(); I != E; I += 8) {
+    uint64_t Bits = (Imm >> (I % 64)) & 255;
+    MaskBits.push_back(DAG.getConstant(Bits, DL, MVT::i8));
+  }
+  return DAG.getBuildVector(VT, DL, MaskBits);
+}
+
 /// Lower a vector CTLZ using native supported vector CTLZ instruction.
 //
 // i8/i16 vector implemented using dword LZCNT vector instruction
@@ -29595,43 +29632,6 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
   std::tie(Result, Chain) =
       makeLibCall(DAG, LC, VT, StackPtr, CallOptions, dl, Chain);
   return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
-}
-
-// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
-uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
-  assert((Amt < 8) && "Shift/Rotation amount out of range");
-  switch (Opcode) {
-  case ISD::BITREVERSE:
-    return 0x8040201008040201ULL;
-  case ISD::SHL:
-    return ((0x0102040810204080ULL >> (Amt)) &
-            (0x0101010101010101ULL * (0xFF >> (Amt))));
-  case ISD::SRL:
-    return ((0x0102040810204080ULL << (Amt)) &
-            (0x0101010101010101ULL * ((0xFF << (Amt)) & 0xFF)));
-  case ISD::SRA:
-    return (getGFNICtrlImm(ISD::SRL, Amt) |
-            (0x8080808080808080ULL >> (64 - (8 * Amt))));
-  case ISD::ROTL:
-    return getGFNICtrlImm(ISD::SRL, 8 - Amt) | getGFNICtrlImm(ISD::SHL, Amt);
-  case ISD::ROTR:
-    return getGFNICtrlImm(ISD::SHL, 8 - Amt) | getGFNICtrlImm(ISD::SRL, Amt);
-  }
-  llvm_unreachable("Unsupported GFNI opcode");
-}
-
-// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
-SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL, MVT VT,
-                        unsigned Amt = 0) {
-  assert(VT.getVectorElementType() == MVT::i8 &&
-         (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
-  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
-  SmallVector<SDValue> MaskBits;
-  for (unsigned I = 0, E = VT.getSizeInBits(); I != E; I += 8) {
-    uint64_t Bits = (Imm >> (I % 64)) & 255;
-    MaskBits.push_back(DAG.getConstant(Bits, DL, MVT::i8));
-  }
-  return DAG.getBuildVector(VT, DL, MaskBits);
 }
 
 // Return true if the required (according to Opcode) shift-imm form is natively
