@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "src/__support/threads/sleep.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/kill.h"
+#include "src/signal/raise.h"
 #include "src/stdlib/exit.h"
 #include "src/sys/mman/process_mrelease.h"
 #include "src/unistd/close.h"
@@ -30,13 +30,11 @@ TEST(LlvmLibcProcessMReleaseTest, NoError) {
   EXPECT_GE(child_pid, 0);
 
   if (child_pid == 0) {
-    // Child process: wait a bit then exit gracefully.
-    LIBC_NAMESPACE::sleep_briefly();
-    LIBC_NAMESPACE::exit(0);
+    // pause the child process
+    LIBC_NAMESPACE::raise(SIGSTOP);
   } else {
     // Parent process: wait a bit and then kill the child.
     // Give child process some time to start.
-    LIBC_NAMESPACE::sleep_briefly();
     int pidfd = pidfd_open(child_pid, 0);
     EXPECT_GE(pidfd, 0);
 
@@ -54,12 +52,9 @@ TEST(LlvmLibcProcessMReleaseTest, ErrorNotKilled) {
   EXPECT_GE(child_pid, 0);
 
   if (child_pid == 0) {
-    // Child process: wait a bit then exit gracefully.
-    LIBC_NAMESPACE::sleep_briefly();
-    LIBC_NAMESPACE::exit(0);
+    // pause the child process
+    LIBC_NAMESPACE::raise(SIGSTOP);
   } else {
-    // Give child process some time to start.
-    LIBC_NAMESPACE::sleep_briefly();
     int pidfd = pidfd_open(child_pid, 0);
     EXPECT_GE(pidfd, 0);
 
