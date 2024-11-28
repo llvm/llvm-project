@@ -27,6 +27,7 @@ unittest("UtilsTests") {
     "LoopUtilsTest.cpp",
     "MemTransferLowering.cpp",
     "ModuleUtilsTest.cpp",
+    "MergeFunctionsTest.cpp",
     "ProfDataUtilTest.cpp",
     "SSAUpdaterBulkTest.cpp",
     "ScalarEvolutionExpanderTest.cpp",
