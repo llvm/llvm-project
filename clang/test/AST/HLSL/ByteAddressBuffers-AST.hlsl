@@ -25,8 +25,8 @@
 // EMPTY: CXXRecordDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit <undeserialized declarations> class [[RESOURCE]]
 // EMPTY-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
 
-// There should be no more occurrences of ByteAddressBuffer
-// EMPTY-NOT: {{[^[:alnum:]]}}ByteAddressBuffer
+// There should be no more occurrences of RESOURCE
+// EMPTY-NOT: {{[^[:alnum:]]}}[[RESOURCE]]
 
 #ifndef EMPTY
 
