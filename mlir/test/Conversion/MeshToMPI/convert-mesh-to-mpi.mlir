@@ -164,7 +164,7 @@ func.func @update_halo_3d_tensor(
   // CHECK-NEXT: [[vc44_i32:%.*]] = arith.constant 44 : i32
   // CHECK-NEXT: [[vc4_i32:%.*]] = arith.constant 4 : i32
   // CHECK-NEXT: [[vc91_i32:%.*]] = arith.constant 91 : i32
-  // CHECK-NEXT: [[v0:%.*]] = bufferization.to_memref [[varg0]] : memref<120x120x120xi8>
+  // CHECK-NEXT: [[v0:%.*]] = bufferization.to_memref [[varg0]] : tensor<120x120x120xi8> to memref<120x120x120xi8>
   // CHECK-NEXT: [[valloc:%.*]] = memref.alloc() : memref<117x113x5xi8>
   // CHECK-NEXT: [[vsubview:%.*]] = memref.subview [[v0]][1, 3, 109] [117, 113, 5] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>>
   // CHECK-NEXT: memref.copy [[vsubview]], [[valloc]] : memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>> to memref<117x113x5xi8>
