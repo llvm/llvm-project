@@ -968,7 +968,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
           ? VPIntrinsic::getOrInsertDeclarationForParams(M, VectorIntrinsicID,
                                                          TysForDecl[0], Args)
           : Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
-  assert(VectorF && "Can't retrieve vector intrinsic.");
+  assert(VectorF &&
+         "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (!IsVPIntrinsic) {
@@ -976,16 +977,15 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
       CI->getOperandBundlesAsDefs(OpBundles);
   }
 
-  Value *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+  Instruction *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
   if (IsVPIntrinsic) {
-    // Currently vp-intrinsics only accept FMF flags.
-    // TODO: Enable other flags when support is added.
-    // vp_uitofp will get OperationType::NonNegOp
+    // Currently vp-intrinsics only accept FMF flags. llvm.vp.uitofp will get
+    // Flags of OperationType::NonNegOp && OperationType::FPMathOp.
     if (isa<FPMathOperator>(V) && VectorIntrinsicID != Intrinsic::vp_uitofp)
-      setFlags(cast<Instruction>(V));
+      setFlags(V);
   } else {
-    setFlags(cast<Instruction>(V));
+    setFlags(V);
   }
 
   if (!V->getType()->isVoidTy())

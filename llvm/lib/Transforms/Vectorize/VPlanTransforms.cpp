@@ -1446,7 +1446,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
-
+  VPValue *AllOneMask =
+      Plan.getOrAddLiveIn(ConstantInt::getTrue(IntegerType::getInt1Ty(Ctx)));
   for (VPUser *U : Plan.getVF().users()) {
     if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
       R->setOperand(1, &EVL);
@@ -1493,9 +1494,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
-                    Ops.push_back(Mask);
+                    Ops.push_back(AllOneMask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
                         *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
@@ -1513,9 +1512,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
-                    Ops.push_back(Mask);
+                    Ops.push_back(AllOneMask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
                         VPID, Ops, TypeInfo.inferScalarType(CInst),
