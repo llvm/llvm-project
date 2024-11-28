@@ -180,7 +180,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  auto getTargetBuiltinStorage() const
+      -> std::pair<const char *, ArrayRef<Builtin::Info>> override;
 
   std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;

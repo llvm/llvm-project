@@ -41,6 +41,10 @@ public:
                         MacroBuilder &Builder) const override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
+  auto getTargetBuiltinStorage() const
+      -> std::pair<const char *, ArrayRef<Builtin::Info>> override {
+    return {nullptr, {}};
+  }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
