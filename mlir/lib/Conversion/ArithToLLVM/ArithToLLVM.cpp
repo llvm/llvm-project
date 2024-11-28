@@ -478,7 +478,7 @@ struct ArithToLLVMConversionPass
       options.overrideIndexBitwidth(indexBitwidth);
 
     LLVMTypeConverter converter(&getContext(), options);
-    arith::populateArithExpandOpsPatterns(patterns);
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
@@ -505,7 +505,7 @@ struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
-    arith::populateArithExpandOpsPatterns(patterns);
+    arith::populateCeilFloorDivExpandOpsPatterns (patterns);
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   }
 };
