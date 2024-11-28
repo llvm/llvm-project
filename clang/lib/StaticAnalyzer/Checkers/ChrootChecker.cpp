@@ -78,37 +78,22 @@ bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 }
 
 void ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  SValBuilder &SVB = C.getSValBuilder();
-  BasicValueFactory &BVF = SVB.getBasicValueFactory();
-
-  const QualType IntTy = C.getASTContext().IntTy;
+  BasicValueFactory &BVF = C.getSValBuilder().getBasicValueFactory();
+  const LocationContext *LCtx = C.getLocationContext();
 
   // Using CallDescriptions to match on CallExpr, so no need
   // to do null checks.
-  const Expr *ChrootCE = Call.getOriginExpr();
-  const auto *CE = cast<CallExpr>(ChrootCE);
+  const auto *CE = cast<CallExpr>(Call.getOriginExpr());
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const QualType IntTy = C.getASTContext().IntTy;
+  SVal Zero = nonloc::ConcreteInt{BVF.getValue(0, IntTy)};
+  SVal Minus1 = nonloc::ConcreteInt{BVF.getValue(-1, IntTy)};
 
-  const llvm::APSInt &Zero = BVF.getValue(0, IntTy);
-  const llvm::APSInt &Minus1 = BVF.getValue(-1, IntTy);
-
-  // Setup path where chroot fails, returning -1
-  ProgramStateRef StateChrootFailed =
-      State->BindExpr(CE, LCtx, nonloc::ConcreteInt{Minus1});
-  if (StateChrootFailed) {
-    StateChrootFailed = StateChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED);
-    C.addTransition(StateChrootFailed);
-  }
-
-  // Setup path where chroot succeeds, returning 0
-  ProgramStateRef StateChrootSuccess =
-      State->BindExpr(CE, LCtx, nonloc::ConcreteInt{Zero});
-  if (StateChrootSuccess) {
-    StateChrootSuccess = StateChrootSuccess->set<ChrootState>(ROOT_CHANGED);
-    C.addTransition(StateChrootSuccess);
-  }
+  ProgramStateRef State = C.getState();
+  ProgramStateRef ChrootFailed = State->BindExpr(CE, LCtx, Minus1);
+  ProgramStateRef ChrootSucceeded = State->BindExpr(CE, LCtx, Zero);
+  C.addTransition(ChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED));
+  C.addTransition(ChrootSucceeded->set<ChrootState>(ROOT_CHANGED));
 }
 
 void ChrootChecker::evalChdir(const CallEvent &Call, CheckerContext &C) const {
