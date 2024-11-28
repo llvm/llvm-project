@@ -183,9 +183,8 @@ public:
   }
   bool shouldUseExplicitModule() const { return useExplicitModuleFlag; }
 
-  /// Set whether to check that emitted diagnostics match `expected-*` lines
-  /// on the corresponding line. This is meant for implementing diagnostic
-  /// tests.
+  /// Set whether to check that emitted diagnostics match `expected-*` lines on
+  /// the corresponding line. This is meant for implementing diagnostic tests.
   MlirOptMainConfig &verifyDiagnostics(bool verify) {
     verifyDiagnosticsFlag = verify;
     return *this;
