@@ -200,11 +200,17 @@ static bool checkLoadStoreShapes(unsigned srcId, unsigned dstId,
     for (Operation *storeOp : storeOps) {
       Value storeValue =
           cast<AffineWriteOpInterface>(storeOp).getValueToStore();
-      ShapedType storeShapedType = cast<ShapedType>(storeValue.getType());
+      auto storeShapedType = dyn_cast<ShapedType>(storeValue.getType());
+
+      if (!storeShapedType)
+        continue;
 
       for (Operation *loadOp : loadOps) {
         Value loadValue = cast<AffineReadOpInterface>(loadOp).getValue();
-        ShapedType loadShapedType = cast<ShapedType>(loadValue.getType());
+        auto loadShapedType = dyn_cast<ShapedType>(loadValue.getType());
+
+        if (!loadShapedType)
+          continue;
 
         for (int i = 0; i < loadShapedType.getRank(); ++i) {
           auto loadDim = loadShapedType.getDimSize(i);
@@ -904,19 +910,17 @@ public:
             }))
           continue;
 
-        if (!checkLoadStoreShapes(srcId, dstId, &producerConsumerMemrefs,
-                                  mdg)) {
-          LLVM_DEBUG(llvm::dbgs() << "Can't fuse: load domain not contained "
-                                     "within store domain\n");
+        if (!checkLoadStoreShapes(srcId, dstId, producerConsumerMemrefs, mdg)) {
+          LLVM_DEBUG(
+              llvm::dbgs()
+              << "Can't fuse: load dependent on a larger store region\n");
           continue;
         }
 
-        if (any_of(producerConsumerMemrefs, UnaryPredicate P))
-
-          // Gather memrefs in 'srcNode' that are written and escape out of
-          // the block (e.g., memref block arguments, returned memrefs,
-          // memrefs passed to function calls, etc.).
-          DenseSet<Value> srcEscapingMemRefs;
+        // Gather memrefs in 'srcNode' that are written and escape out of
+        // the block (e.g., memref block arguments, returned memrefs,
+        // memrefs passed to function calls, etc.).
+        DenseSet<Value> srcEscapingMemRefs;
         gatherEscapingMemrefs(srcNode->id, mdg, srcEscapingMemRefs);
 
         // Skip if there are non-affine operations in between the 'srcNode'
