@@ -2429,6 +2429,10 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,fp8" in {
   def FSCALE_X2 : Inst<"svscale[_{d}_x2]", "222.x", "fhd", MergeNone, "aarch64_sme_fp8_scale_x2", [IsStreaming],[]>;
   def FSCALE_X4 : Inst<"svscale[_{d}_x4]", "444.x", "fhd", MergeNone, "aarch64_sme_fp8_scale_x4", [IsStreaming],[]>;
 
+  // Convert from FP8 to half-precision/BFloat16 multi-vector
+  def SVF1CVT : Inst<"svcvt1_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1_x2", [IsStreaming, SetsFPMR], []>;
+  def SVF2CVT : Inst<"svcvt2_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2_x2", [IsStreaming, SetsFPMR], []>;
+
   // Convert from FP8 to deinterleaved half-precision/BFloat16 multi-vector
   def SVF1CVTL : Inst<"svcvtl1_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl1_x2",  [IsStreaming, SetsFPMR], []>;
   def SVF2CVTL : Inst<"svcvtl2_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl2_x2",  [IsStreaming, SetsFPMR], []>;
