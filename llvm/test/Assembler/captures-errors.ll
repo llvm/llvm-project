@@ -4,6 +4,9 @@
 ; RUN: not llvm-as < %t/missing-rparen-none.ll 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-RPAREN-NONE
 ; RUN: not llvm-as < %t/missing-colon.ll 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-COLON
 ; RUN: not llvm-as < %t/invalid-component.ll 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-COMPONENT
+; RUN: not llvm-as < %t/duplicate-ret.ll 2>&1 | FileCheck %s --check-prefix=CHECK-DUPLICATE-RET
+; RUN: not llvm-as < %t/none-after.ll 2>&1 | FileCheck %s --check-prefix=CHECK-NONE-AFTER
+; RUN: not llvm-as < %t/none-before.ll 2>&1 | FileCheck %s --check-prefix=CHECK-NONE-BEFORE
 
 ;--- missing-lparen.ll
 
@@ -21,7 +24,7 @@ define void @test(ptr captures(address %p) {
 
 ;--- missing-rparen-none.ll
 
-; CHECK-MISSING-RPAREN-NONE: <stdin>:[[@LINE+1]]:37: error: expected ')'
+; CHECK-MISSING-RPAREN-NONE: <stdin>:[[@LINE+1]]:37: error: expected ',' or ')'
 define void @test(ptr captures(none %p) {
   ret void
 }
@@ -35,7 +38,28 @@ define void @test(ptr captures(ret address) %p) {
 
 ;--- invalid-component.ll
 
-; CHECK-INVALID-COMPONENT: <stdin>:[[@LINE+1]]:32: error: expected one of 'address', 'address_is_null', 'provenance' or 'read_provenance'
+; CHECK-INVALID-COMPONENT: <stdin>:[[@LINE+1]]:32: error: expected one of 'none', 'address', 'address_is_null', 'provenance' or 'read_provenance'
 define void @test(ptr captures(foo) %p) {
+  ret void
+}
+
+;--- duplicate-ret.ll
+
+; CHECK-DUPLICATE-RET: <stdin>:[[@LINE+1]]:51: error: duplicate 'ret' location
+define void @test(ptr captures(ret: address, ret: provenance) %p) {
+  ret void
+}
+
+;--- none-after.ll
+
+; CHECK-NONE-AFTER: <stdin>:[[@LINE+1]]:45: error: cannot use 'none' with other component
+define void @test(ptr captures(address, none) %p) {
+  ret void
+}
+
+;--- none-before.ll
+
+; CHECK-NONE-BEFORE: <stdin>:[[@LINE+1]]:38: error: cannot use 'none' with other component
+define void @test(ptr captures(none, address) %p) {
   ret void
 }

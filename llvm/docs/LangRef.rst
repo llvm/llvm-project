@@ -1412,8 +1412,9 @@ Currently, only the following parameter attributes are defined:
     - ``read_provenance`` (subset of ``provenance``): The ability to access the
       pointer only for reads after the function returns.
 
-    Additionally, it is possible to specify that the pointer is captured via
-    the return value only, by using ``captures(ret: ...)``.
+    Additionally, it is possible to specify that some components are only
+    captured in certain locations. Currently only the return value (``ret``)
+    and other (default) locations are supported.
 
     The `pointer capture section <pointercapture>` discusses these semantics
     in more detail.
@@ -1428,6 +1429,9 @@ Currently, only the following parameter attributes are defined:
       captured, but only for read-only access.
     - ``captures(ret: address, provenance)``: Pointer captured through return
       value only.
+    - ``captures(address_is_null, ret: address, provenance)``: The whole pointer
+      is captured through the return value, and additionally whether the pointer
+      is null is captured in some other way.
 
 .. _nocapture:
 

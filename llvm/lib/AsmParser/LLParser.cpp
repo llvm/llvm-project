@@ -3168,8 +3168,8 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
 }
 
 bool LLParser::parseCapturesAttr(AttrBuilder &B) {
-  CaptureComponents CC = CaptureComponents::None;
-  bool ReturnOnly = false;
+  CaptureComponents Other = CaptureComponents::None;
+  std::optional<CaptureComponents> Ret;
 
   // We use syntax like captures(ret: address, provenance), so the colon
   // should not be interpreted as a label terminator.
@@ -3180,39 +3180,49 @@ bool LLParser::parseCapturesAttr(AttrBuilder &B) {
   if (parseToken(lltok::lparen, "expected '('"))
     return true;
 
-  if (EatIfPresent(lltok::kw_ret)) {
-    if (parseToken(lltok::colon, "expected ':'"))
-      return true;
-
-    ReturnOnly = true;
-  }
-
-  if (EatIfPresent(lltok::kw_none)) {
-    if (parseToken(lltok::rparen, "expected ')'"))
-      return true;
-  } else {
-    while (true) {
-      if (EatIfPresent(lltok::kw_address_is_null))
-        CC |= CaptureComponents::AddressIsNull;
-      else if (EatIfPresent(lltok::kw_address))
-        CC |= CaptureComponents::Address;
-      else if (EatIfPresent(lltok::kw_provenance))
-        CC |= CaptureComponents::Provenance;
-      else if (EatIfPresent(lltok::kw_read_provenance))
-        CC |= CaptureComponents::ReadProvenance;
-      else
-        return tokError("expected one of 'address', 'address_is_null', "
-                        "'provenance' or 'read_provenance'");
-
-      if (EatIfPresent(lltok::rparen))
-        break;
-
-      if (parseToken(lltok::comma, "expected ',' or ')'"))
+  CaptureComponents *Current = &Other;
+  bool SeenComponent = false;
+  while (true) {
+    if (EatIfPresent(lltok::kw_ret)) {
+      if (parseToken(lltok::colon, "expected ':'"))
         return true;
+      if (Ret)
+        return tokError("duplicate 'ret' location");
+      Ret = CaptureComponents::None;
+      Current = &*Ret;
+      SeenComponent = false;
     }
+
+    if (EatIfPresent(lltok::kw_none)) {
+      if (SeenComponent)
+        return tokError("cannot use 'none' with other component");
+      *Current = CaptureComponents::None;
+    } else {
+      if (SeenComponent && capturesNothing(*Current))
+        return tokError("cannot use 'none' with other component");
+
+      if (EatIfPresent(lltok::kw_address_is_null))
+        *Current |= CaptureComponents::AddressIsNull;
+      else if (EatIfPresent(lltok::kw_address))
+        *Current |= CaptureComponents::Address;
+      else if (EatIfPresent(lltok::kw_provenance))
+        *Current |= CaptureComponents::Provenance;
+      else if (EatIfPresent(lltok::kw_read_provenance))
+        *Current |= CaptureComponents::ReadProvenance;
+      else
+        return tokError("expected one of 'none', 'address', 'address_is_null', "
+                        "'provenance' or 'read_provenance'");
+    }
+
+    SeenComponent = true;
+    if (EatIfPresent(lltok::rparen))
+      break;
+
+    if (parseToken(lltok::comma, "expected ',' or ')'"))
+      return true;
   }
 
-  B.addCapturesAttr(CaptureInfo(CC, ReturnOnly));
+  B.addCapturesAttr(CaptureInfo(Other, Ret.value_or(Other)));
   return false;
 }
 

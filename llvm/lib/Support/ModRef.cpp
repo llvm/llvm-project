@@ -72,9 +72,15 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, CaptureComponents CC) {
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, CaptureInfo CI) {
+  ListSeparator LS;
+  CaptureComponents Other = CI.getOtherComponents();
+  CaptureComponents Ret = CI.getRetComponents();
+
   OS << "captures(";
-  if (CI.isReturnOnly())
-    OS << "ret: ";
-  OS << CaptureComponents(CI) << ")";
+  if (!capturesNothing(Other) || Other == Ret)
+    OS << LS << Other;
+  if (Other != Ret)
+    OS << LS << "ret: " << Ret;
+  OS << ")";
   return OS;
 }

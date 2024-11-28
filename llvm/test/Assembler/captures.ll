@@ -50,6 +50,22 @@ define void @test_ret(ptr captures(ret: address, provenance) %p) {
   ret void
 }
 
+define void @test_address_is_null_and_ret(ptr captures(address_is_null, ret: address, provenance) %p) {
+; CHECK-LABEL: define void @test_address_is_null_and_ret(
+; CHECK-SAME: ptr captures(address_is_null, ret: address, provenance) [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define void @test_address_and_ret_none(ptr captures(address, ret: none) %p) {
+; CHECK-LABEL: define void @test_address_and_ret_none(
+; CHECK-SAME: ptr captures(address, ret: none) [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
 ; Duplicates callpse into one.
 define void @test_duplicate(ptr captures(address, address) %p) {
 ; CHECK-LABEL: define void @test_duplicate(

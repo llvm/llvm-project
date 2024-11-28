@@ -311,55 +311,64 @@ inline bool capturesFullProvenance(CaptureComponents CC) {
 
 raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
 
-/// Represents which components of the pointer may be captured and whether
-/// the capture is via the return value only. This represents the captures(...)
-/// attribute in IR.
+/// Represents which components of the pointer may be captured in which
+/// location. This represents the captures(...) attribute in IR.
 ///
 /// For more information on the precise semantics see LangRef.
 class CaptureInfo {
-  CaptureComponents Components;
-  bool ReturnOnly;
+  CaptureComponents OtherComponents;
+  CaptureComponents RetComponents;
 
 public:
-  CaptureInfo(CaptureComponents Components, bool ReturnOnly = false)
-      : Components(Components),
-        ReturnOnly(capturesAnything(Components) && ReturnOnly) {}
+  CaptureInfo(CaptureComponents OtherComponents,
+              CaptureComponents RetComponents)
+      : OtherComponents(OtherComponents), RetComponents(RetComponents) {}
+
+  CaptureInfo(CaptureComponents Components)
+      : OtherComponents(Components), RetComponents(Components) {}
 
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
 
-  /// Get the potentially captured components of the pointer.
-  operator CaptureComponents() const { return Components; }
+  /// Get components potentially captured by the return value.
+  CaptureComponents getRetComponents() const { return RetComponents; }
 
-  /// Whether the pointer is captured through the return value only.
-  bool isReturnOnly() const { return ReturnOnly; }
+  /// Get components potentially captured through locations other than the
+  /// return value.
+  CaptureComponents getOtherComponents() const { return OtherComponents; }
+
+  /// Get the potentially captured components of the pointer (regardless of
+  /// location).
+  operator CaptureComponents() const { return OtherComponents | RetComponents; }
 
   bool operator==(CaptureInfo Other) const {
-    return Components == Other.Components && ReturnOnly == Other.ReturnOnly;
+    return OtherComponents == Other.OtherComponents &&
+           RetComponents == Other.RetComponents;
   }
 
   bool operator!=(CaptureInfo Other) const { return !(*this == Other); }
 
   /// Compute union of CaptureInfos.
   CaptureInfo operator|(CaptureInfo Other) const {
-    return CaptureInfo(Components | Other.Components,
-                       ReturnOnly && Other.ReturnOnly);
+    return CaptureInfo(OtherComponents | Other.OtherComponents,
+                       RetComponents | Other.RetComponents);
   }
 
   /// Compute intersection of CaptureInfos.
   CaptureInfo operator&(CaptureInfo Other) const {
-    return CaptureInfo(Components & Other.Components,
-                       ReturnOnly || Other.ReturnOnly);
+    return CaptureInfo(OtherComponents & Other.OtherComponents,
+                       RetComponents & Other.RetComponents);
   }
 
   static CaptureInfo createFromIntValue(uint32_t Data) {
-    return CaptureInfo(CaptureComponents(Data >> 1), Data & 1);
+    return CaptureInfo(CaptureComponents(Data >> 4),
+                       CaptureComponents(Data & 0xf));
   }
 
   /// Convert CaptureInfo into an encoded integer value (used by captures
   /// attribute).
   uint32_t toIntValue() const {
-    return (uint32_t(Components) << 1) | ReturnOnly;
+    return (uint32_t(OtherComponents) << 4) | uint32_t(RetComponents);
   }
 };
 

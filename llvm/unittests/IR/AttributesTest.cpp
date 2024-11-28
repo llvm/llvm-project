@@ -438,9 +438,11 @@ TEST(Attributes, SetIntersect) {
       case Attribute::Range:
         break;
       case Attribute::Captures:
-        V0 = CaptureInfo(CaptureComponents::Address, /*ReturnOnly=*/false)
+        V0 = CaptureInfo(CaptureComponents::AddressIsNull,
+                         CaptureComponents::None)
                  .toIntValue();
-        V1 = CaptureInfo(CaptureComponents::ReadProvenance, /*ReturnOnly=*/true)
+        V1 = CaptureInfo(CaptureComponents::None,
+                         CaptureComponents::ReadProvenance)
                  .toIntValue();
         break;
       default:
@@ -524,9 +526,8 @@ TEST(Attributes, SetIntersect) {
         break;
       case Attribute::Captures:
         ASSERT_EQ(Res->getCaptureInfo(),
-                  CaptureInfo(CaptureComponents::Address |
-                                  CaptureComponents::ReadProvenance,
-                              /*ReturnOnly=*/false));
+                  CaptureInfo(CaptureComponents::AddressIsNull,
+                              CaptureComponents::ReadProvenance));
         break;
       default:
         ASSERT_FALSE(true);
