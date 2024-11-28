@@ -50,8 +50,7 @@ struct throwing_t {
 
 template <class T>
 struct throwing_allocator {
-  using value_type      = T;
-  using is_always_equal = std::false_type;
+  using value_type = T;
 
   bool throw_on_copy_ = false;
 
