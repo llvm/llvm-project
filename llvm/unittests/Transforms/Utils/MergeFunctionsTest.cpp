@@ -239,9 +239,6 @@ TEST(MergeFunctions, FalseOutputFunctionsTest) {
   DenseMap<Function *, Function *> MergeResult =
       MergeFunctionsPass::runOnFunctions(FunctionsSet.getArrayRef());
 
-  for (auto P : MergeResult)
-    std::cout << P.first << " " << P.second << "\n";
-
   // Expects empty map
   EXPECT_EQ(MergeResult.size(), 0u);
 }
