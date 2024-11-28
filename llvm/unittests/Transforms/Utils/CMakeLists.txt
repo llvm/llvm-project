@@ -26,6 +26,7 @@ add_llvm_unittest(UtilsTests
   LoopUtilsTest.cpp
   MemTransferLowering.cpp
   ModuleUtilsTest.cpp
+  MergeFunctionsTest.cpp
   ScalarEvolutionExpanderTest.cpp
   SizeOptsTest.cpp
   SSAUpdaterBulkTest.cpp
