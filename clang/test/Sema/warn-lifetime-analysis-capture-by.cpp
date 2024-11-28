@@ -143,6 +143,20 @@ void use() {
 }
 } // namespace this_is_captured
 
+namespace temporary_capturing_object {
+struct S {
+  void add(const int& x [[clang::lifetime_capture_by(this)]]);
+};
+
+void test() {
+  // We still give an warning even the capturing object is a temoprary.
+  // It is possible that the capturing object uses the captured object in its
+  // destructor.
+  S().add(1); // expected-warning {{object whose reference is captured}}
+  S{}.add(1); // expected-warning {{object whose reference is captured}}
+}
+} // namespace ignore_temporary_class_object
+
 // ****************************************************************************
 // Capture by Global and Unknown.
 // ****************************************************************************
