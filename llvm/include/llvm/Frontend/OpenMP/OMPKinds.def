@@ -365,6 +365,9 @@ __OMP_RTL(__kmpc_omp_task_with_deps, false, Int32, IdentPtr, Int32,
 __OMP_RTL(__kmpc_taskloop, false, Void, IdentPtr, /* Int */ Int32, VoidPtr,
           /* Int */ Int32, Int64Ptr, Int64Ptr, Int64, /* Int */ Int32,
           /* Int */ Int32, Int64, VoidPtr)
+__OMP_RTL(__kmpc_taskloop_5, false, Void, IdentPtr, /* Int */ Int32, VoidPtr,
+          /* Int */ Int32, Int64Ptr, Int64Ptr, Int64, /* Int */ Int32,
+          /* Int */ Int32, Int64, Int32, VoidPtr)
 __OMP_RTL(__kmpc_omp_target_task_alloc, false, /* kmp_task_t */ VoidPtr,
           IdentPtr, Int32, Int32, SizeTy, SizeTy, TaskRoutineEntryPtr, Int64)
 __OMP_RTL(__kmpc_taskred_modifier_init, false, /* kmp_taskgroup */ VoidPtr,
