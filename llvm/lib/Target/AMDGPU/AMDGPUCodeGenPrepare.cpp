@@ -2303,10 +2303,12 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   SIModeRegisterDefaults Mode(F, *Impl.ST);
   Impl.HasFP32DenormalFlush =
       Mode.FP32Denormals == DenormalMode::getPreserveSign();
+  if (!Impl.run(F))
+    return PreservedAnalyses::all();
   PreservedAnalyses PA = PreservedAnalyses::none();
   if (!Impl.FlowChanged)
     PA.preserveSet<CFGAnalyses>();
-  return Impl.run(F) ? PA : PreservedAnalyses::all();
+  return PA;
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
