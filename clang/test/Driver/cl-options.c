@@ -101,6 +101,11 @@
 // CHECK-PROFILE-USE: "-fprofile-instrument-use-path=default.profdata"
 // CHECK-PROFILE-USE-FILE: "-fprofile-instrument-use-path=/tmp/somefile.prof"
 
+// RUN: %clang_cl -### /FA -fprofile-sample-use=%S/Inputs/file.prof -- %s 2>&1 | FileCheck --check-prefix=CHECK-PROFILE-SAMPLE-USE %s
+// RUN: %clang_cl -### /FA /fprofile-sample-use=%S/Inputs/file.prof -- %s 2>&1 | FileCheck --check-prefix=CHECK-PROFILE-SAMPLE-USE %s
+// RUN: %clang_cl -### /FA /fprofile-sample-use:%S/Inputs/file.prof -- %s 2>&1 | FileCheck --check-prefix=CHECK-PROFILE-SAMPLE-USE %s
+// CHECK-PROFILE-SAMPLE-USE: "-fprofile-sample-use={{.*}}/file.prof"
+
 // RUN: %clang_cl /GA -### -- %s 2>&1 | FileCheck -check-prefix=GA %s
 // GA: -ftls-model=local-exec
 
