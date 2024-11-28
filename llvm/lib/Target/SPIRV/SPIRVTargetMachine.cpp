@@ -125,7 +125,7 @@ unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
   const auto *Ptr = LD->getPointerOperand();
   if (Ptr->getType()->getPointerAddressSpace() != AddressSpace::UniformConstant)
     return UINT32_MAX;
-  // For a loaded from a pointer to UniformConstant, we can infer CrossWorkgroup
+  // For a load from a pointer to UniformConstant, we can infer CrossWorkgroup
   // storage, as this could only have been legally initialised with a
   // CrossWorkgroup (aka device) constant pointer.
   return AddressSpace::CrossWorkgroup;
