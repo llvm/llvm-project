@@ -50,92 +50,92 @@ bb:
 define void @ScalableVectorTestFullyOverlapping(ptr %arg, i32 %i) vscale_range(1, 2) {
 ; CHECK-LABEL: @ScalableVectorTestFullyOverlapping(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I7:%.*]] = add nuw nsw i32 [[I:%.*]], 1
-; CHECK-NEXT:    [[I8:%.*]] = zext i32 [[I7]] to i64
-; CHECK-NEXT:    [[I9:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I8]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[I9]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[I2]]
-; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[I3]], align 8
+; CHECK-NEXT:    [[I_1:%.*]] = add nuw nsw i32 [[I:%.*]], 1
+; CHECK-NEXT:    [[EXT_I_1:%.*]] = zext i32 [[I_1]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I_1:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_1]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_ARG_I_1]], align 4
+; CHECK-NEXT:    [[EXT_I:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[EXT_I]]
+; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i7 = add nuw nsw i32 %i, 1
-  %i8 = zext i32 %i7 to i64
-  %i9 = getelementptr inbounds float, ptr %arg, i64 %i8
-  store float 0.0, ptr %i9
-  %i2 = zext i32 %i to i64
-  %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
-  store <vscale x 2 x float> zeroinitializer, ptr %i3
+  %i.1 = add nuw nsw i32 %i, 1
+  %ext.i.1 = zext i32 %i.1 to i64
+  %gep.arg.i.1 = getelementptr inbounds float, ptr %arg, i64 %ext.i.1
+  store float 0.0, ptr %gep.arg.i.1
+  %ext.i = zext i32 %i to i64
+  %gep.arg.i = getelementptr inbounds float, ptr %arg, i64 %ext.i
+  store <vscale x 2 x float> zeroinitializer, ptr %gep.arg.i
   ret void
 }
 
 define void @ScalableVectorTestFullyOverlapping2(ptr %arg, i32 %i) {
 ; CHECK-LABEL: @ScalableVectorTestFullyOverlapping2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I7:%.*]] = add nuw nsw i32 [[I:%.*]], 1
-; CHECK-NEXT:    [[I8:%.*]] = zext i32 [[I7]] to i64
-; CHECK-NEXT:    [[I9:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I8]]
-; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[I9]], align 8
-; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[I2]]
-; CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[I3]], align 16
+; CHECK-NEXT:    [[I_1:%.*]] = add nuw nsw i32 [[I:%.*]], 1
+; CHECK-NEXT:    [[EXT_I_1:%.*]] = zext i32 [[I_1]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I_1:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_1]]
+; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I_1]], align 8
+; CHECK-NEXT:    [[EXT_I:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[EXT_I]]
+; CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 16
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i7 = add nuw nsw i32 %i, 1
-  %i8 = zext i32 %i7 to i64
-  %i9 = getelementptr inbounds float, ptr %arg, i64 %i8
-  store <vscale x 2 x float> zeroinitializer, ptr %i9
-  %i2 = zext i32 %i to i64
-  %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
-  store <vscale x 4 x float> zeroinitializer, ptr %i3
+  %i.1 = add nuw nsw i32 %i, 1
+  %ext.i.1 = zext i32 %i.1 to i64
+  %gep.arg.i.1 = getelementptr inbounds float, ptr %arg, i64 %ext.i.1
+  store <vscale x 2 x float> zeroinitializer, ptr %gep.arg.i.1
+  %ext.i = zext i32 %i to i64
+  %gep.arg.i = getelementptr inbounds float, ptr %arg, i64 %ext.i
+  store <vscale x 4 x float> zeroinitializer, ptr %gep.arg.i
   ret void
 }
 
 define void @ScalableVectorTestNonOverlapping(ptr %arg, i32 %i) vscale_range(1, 2) {
 ; CHECK-LABEL: @ScalableVectorTestNonOverlapping(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I7:%.*]] = add nuw nsw i32 [[I:%.*]], 10
-; CHECK-NEXT:    [[I8:%.*]] = zext i32 [[I7]] to i64
-; CHECK-NEXT:    [[I9:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I8]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[I9]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[I2]]
-; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[I3]], align 8
+; CHECK-NEXT:    [[I_10:%.*]] = add nuw nsw i32 [[I:%.*]], 10
+; CHECK-NEXT:    [[EXT_I_10:%.*]] = zext i32 [[I_10]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I_10:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_10]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_ARG_I_10]], align 4
+; CHECK-NEXT:    [[EXT_I:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[EXT_I]]
+; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i7 = add nuw nsw i32 %i, 10
-  %i8 = zext i32 %i7 to i64
-  %i9 = getelementptr inbounds float, ptr %arg, i64 %i8
-  store float 0.0, ptr %i9
-  %i2 = zext i32 %i to i64
-  %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
-  store <vscale x 2 x float> zeroinitializer, ptr %i3
+  %i.10 = add nuw nsw i32 %i, 10
+  %ext.i.10 = zext i32 %i.10 to i64
+  %gep.arg.i.10 = getelementptr inbounds float, ptr %arg, i64 %ext.i.10
+  store float 0.0, ptr %gep.arg.i.10
+  %ext.i = zext i32 %i to i64
+  %gep.arg.i = getelementptr inbounds float, ptr %arg, i64 %ext.i
+  store <vscale x 2 x float> zeroinitializer, ptr %gep.arg.i
   ret void
 }
 
 define void @ScalableVectorTestNonOverlapping2(ptr %arg, i32 %i) vscale_range(1, 2) {
 ; CHECK-LABEL: @ScalableVectorTestNonOverlapping2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I7:%.*]] = add nuw nsw i32 [[I:%.*]], 10
-; CHECK-NEXT:    [[I8:%.*]] = zext i32 [[I7]] to i64
-; CHECK-NEXT:    [[I9:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I8]]
-; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[I9]], align 8
-; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[I2]]
-; CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[I3]], align 16
+; CHECK-NEXT:    [[I_10:%.*]] = add nuw nsw i32 [[I:%.*]], 10
+; CHECK-NEXT:    [[EXT_I_10:%.*]] = zext i32 [[I_10]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I_10:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_10]]
+; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I_10]], align 8
+; CHECK-NEXT:    [[EXT_I:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[EXT_I]]
+; CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 16
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i7 = add nuw nsw i32 %i, 10
-  %i8 = zext i32 %i7 to i64
-  %i9 = getelementptr inbounds float, ptr %arg, i64 %i8
-  store <vscale x 2 x float> zeroinitializer, ptr %i9
-  %i2 = zext i32 %i to i64
-  %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
-  store <vscale x 4 x float> zeroinitializer, ptr %i3
+  %i.10 = add nuw nsw i32 %i, 10
+  %ext.i.10 = zext i32 %i.10 to i64
+  %gep.arg.i.10 = getelementptr inbounds float, ptr %arg, i64 %ext.i.10
+  store <vscale x 2 x float> zeroinitializer, ptr %gep.arg.i.10
+  %ext.i = zext i32 %i to i64
+  %gep.arg.i = getelementptr inbounds float, ptr %arg, i64 %ext.i
+  store <vscale x 4 x float> zeroinitializer, ptr %gep.arg.i
   ret void
 }
 
@@ -196,23 +196,23 @@ define void @ScalableVectorTestPartiallyOverlapping(ptr %arg, i32 %i) {
 ;
 ; CHECK-LABEL: @ScalableVectorTestPartiallyOverlapping(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I2]]
-; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[I3]], align 8
-; CHECK-NEXT:    [[I5:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[I6:%.*]] = zext i32 [[I5]] to i64
-; CHECK-NEXT:    [[I7:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[I6]]
-; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[I7]], align 8
+; CHECK-NEXT:    [[EXT_I:%.*]] = zext i32 [[I:%.*]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I]]
+; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 8
+; CHECK-NEXT:    [[I_1:%.*]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXT_I_1:%.*]] = zext i32 [[I_1]] to i64
+; CHECK-NEXT:    [[GEP_ARG_I_1:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[EXT_I_1]]
+; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i2 = zext i32 %i to i64
-  %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
-  store <vscale x 2 x float> zeroinitializer, ptr %i3
-  %i5 = add nuw nsw i32 %i, 1
-  %i6 = zext i32 %i5 to i64
-  %i7 = getelementptr inbounds float, ptr %arg, i64 %i6
-  store <vscale x 2 x float> zeroinitializer, ptr %i7
+  %ext.i = zext i32 %i to i64
+  %gep.arg.i = getelementptr inbounds float, ptr %arg, i64 %ext.i
+  store <vscale x 2 x float> zeroinitializer, ptr %gep.arg.i
+  %i.1 = add nuw nsw i32 %i, 1
+  %ext.i.1 = zext i32 %i.1 to i64
+  %gep.arg.i.1 = getelementptr inbounds float, ptr %arg, i64 %ext.i.1
+  store <vscale x 2 x float> zeroinitializer, ptr %gep.arg.i.1
   ret void
 }
 
