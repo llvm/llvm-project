@@ -275,11 +275,12 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[SCALAR_PH]]
 ; AVX1:       vec.epilog.ph:
 ; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX1-NEXT:    [[N_MOD_VF24:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; AVX1-NEXT:    [[N_VEC25:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF24]]
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       vec.epilog.vector.body:
-; AVX1-NEXT:    [[INDEX26:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT33:%.*]], [[FOR_BODY]] ]
+; AVX1-NEXT:    [[INDEX26:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[INDEX_NEXT33:%.*]], [[FOR_BODY]] ]
 ; AVX1-NEXT:    [[TMP67:%.*]] = add i64 [[INDEX26]], 0
 ; AVX1-NEXT:    [[TMP68:%.*]] = shl nuw nsw i64 [[TMP67]], 1
 ; AVX1-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i16, ptr [[S1]], i64 [[TMP68]]

@@ -82,6 +82,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; DEFAULT:       vec.epilog.ph:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    [[TMP47:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP48:%.*]] = mul i64 [[TMP47]], 4
 ; DEFAULT-NEXT:    [[N_MOD_VF5:%.*]] = urem i64 [[TMP0]], [[TMP48]]
@@ -93,7 +94,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP51:%.*]] = trunc <vscale x 4 x i32> [[BROADCAST_SPLAT9]] to <vscale x 4 x i16>
 ; DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; DEFAULT:       vec.epilog.vector.body:
-; DEFAULT-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP52:%.*]] = add i64 [[INDEX10]], 0
 ; DEFAULT-NEXT:    [[TMP53:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP52]]
 ; DEFAULT-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[TMP53]], i32 0

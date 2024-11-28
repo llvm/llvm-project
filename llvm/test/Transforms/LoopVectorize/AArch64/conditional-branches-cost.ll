@@ -356,9 +356,10 @@ define void @latch_branch_cost(ptr %dst) {
 ; DEFAULT-NEXT:    br i1 false, label [[SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; DEFAULT:       vec.epilog.ph:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
+; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ 96, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
 ; DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; DEFAULT:       vec.epilog.vector.body:
-; DEFAULT-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX1]], 0
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i32 0

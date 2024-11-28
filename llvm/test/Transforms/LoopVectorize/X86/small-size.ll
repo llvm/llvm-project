@@ -198,6 +198,11 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = and i32 [[TMP47]], [[TMP45]]
 ; CHECK-NEXT:    store i32 [[TMP49]], ptr [[TMP48]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE28]]
+; CHECK:       pred.store.continue28:
+; CHECK-NEXT:    [[INDEX_NEXT29]] = add nuw i64 [[INDEX16]], 4
+; CHECK-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[INDEX_NEXT29]], [[N_VEC12]]
+; CHECK-NEXT:    br i1 [[TMP50]], label [[MIDDLE_BLOCK7:%.*]], label [[VECTOR_BODY15]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block7:
 ; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[SCALAR_PH8]]
 ; CHECK:       scalar.ph8:
@@ -317,6 +322,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[NEXT_GEP5]], align 16
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE18]]
 ; CHECK:       pred.store.continue18:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
@@ -499,6 +505,10 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i16, ptr [[NEXT_GEP4]], align 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = zext i16 [[TMP21]] to i32
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw i32 [[TMP22]], 7
+; CHECK-NEXT:    store i32 [[TMP23]], ptr [[NEXT_GEP9]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE15]]
+; CHECK:       pred.store.continue15:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 260
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:

@@ -49,11 +49,12 @@ define signext i32 @f1(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; VF-TWO-CHECK:       vec.epilog.ph:
 ; VF-TWO-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; VF-TWO-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; VF-TWO-CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 2
 ; VF-TWO-CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF3]]
 ; VF-TWO-CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; VF-TWO-CHECK:       vec.epilog.vector.body:
-; VF-TWO-CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; VF-TWO-CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX6]], 0
 ; VF-TWO-CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP8]]
 ; VF-TWO-CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
@@ -64,7 +65,7 @@ define signext i32 @f1(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP13:%.*]] = add nsw <2 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD8]]
 ; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
 ; VF-TWO-CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC4]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; VF-TWO-CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
 ; VF-TWO-CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP13]], i32 1
 ; VF-TWO-CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC4]]
