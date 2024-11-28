@@ -1309,6 +1309,10 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       default:
         MI->print(errs());
         llvm_unreachable("Unsupported opcode for unwinding information");
+      case ARM::tLDRspi:
+        // Used to restore LR in a prologue which uses it as a temporary, has
+        // no effect on unwind tables.
+        return;
       case ARM::MOVr:
       case ARM::tMOVr:
         Offset = 0;

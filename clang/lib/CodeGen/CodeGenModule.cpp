@@ -4223,23 +4223,12 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
 static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
-static unsigned
-TargetMVPriority(const TargetInfo &TI,
-                 const CodeGenFunction::MultiVersionResolverOption &RO) {
-  unsigned Priority = 0;
-  unsigned NumFeatures = 0;
-  for (StringRef Feat : RO.Conditions.Features) {
-    Priority = std::max(Priority, TI.multiVersionSortPriority(Feat));
-    NumFeatures++;
-  }
-
-  if (!RO.Conditions.Architecture.empty())
-    Priority = std::max(
-        Priority, TI.multiVersionSortPriority(RO.Conditions.Architecture));
-
-  Priority += TI.multiVersionFeatureCost() * NumFeatures;
-
-  return Priority;
+static unsigned getFMVPriority(const TargetInfo &TI,
+                               const CodeGenFunction::FMVResolverOption &RO) {
+  llvm::SmallVector<StringRef, 8> Features{RO.Features};
+  if (RO.Architecture)
+    Features.push_back(*RO.Architecture);
+  return TI.getFMVPriority(Features);
 }
 
 // Multiversion functions should be at most 'WeakODRLinkage' so that a different
@@ -4285,7 +4274,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     // target_version("default")) or target_clones() is present and defined
     // in this TU. For other architectures it is always emitted.
     bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
-    SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
+    SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
 
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
@@ -4293,20 +4282,17 @@ void CodeGenModule::emitMultiVersionFunctions() {
           bool IsDefined = CurFD->doesThisDeclarationHaveABody();
 
           if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
-            TA->getAddedFeatures(Feats);
+            assert(getTarget().getTriple().isX86() && "Unsupported target");
+            TA->getX86AddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
-            Options.emplace_back(Func, TA->getArchitecture(), Feats);
+            Options.emplace_back(Func, Feats, TA->getX86Architecture());
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
             llvm::Function *Func = createFunction(CurFD);
-            if (getTarget().getTriple().isRISCV()) {
-              Feats.push_back(TVA->getName());
-            } else {
-              assert(getTarget().getTriple().isAArch64());
-              TVA->getFeatures(Feats);
-            }
-            Options.emplace_back(Func, /*Architecture*/ "", Feats);
+            char Delim = getTarget().getTriple().isAArch64() ? '+' : ',';
+            TVA->getFeatures(Feats, Delim);
+            Options.emplace_back(Func, Feats);
           } else if (const auto *TC = CurFD->getAttr<TargetClonesAttr>()) {
             if (IsDefined)
               ShouldEmitResolver = true;
@@ -4315,21 +4301,15 @@ void CodeGenModule::emitMultiVersionFunctions() {
                 continue;
 
               llvm::Function *Func = createFunction(CurFD, I);
-              StringRef Architecture;
               Feats.clear();
-              if (getTarget().getTriple().isAArch64())
-                TC->getFeatures(Feats, I);
-              else if (getTarget().getTriple().isRISCV()) {
-                StringRef Version = TC->getFeatureStr(I);
-                Feats.push_back(Version);
+              if (getTarget().getTriple().isX86()) {
+                TC->getX86Feature(Feats, I);
+                Options.emplace_back(Func, Feats, TC->getX86Architecture(I));
               } else {
-                StringRef Version = TC->getFeatureStr(I);
-                if (Version.starts_with("arch="))
-                  Architecture = Version.drop_front(sizeof("arch=") - 1);
-                else if (Version != "default")
-                  Feats.push_back(Version);
+                char Delim = getTarget().getTriple().isAArch64() ? '+' : ',';
+                TC->getFeatures(Feats, I, Delim);
+                Options.emplace_back(Func, Feats);
               }
-              Options.emplace_back(Func, Architecture, Feats);
             }
           } else
             llvm_unreachable("unexpected MultiVersionKind");
@@ -4368,9 +4348,9 @@ void CodeGenModule::emitMultiVersionFunctions() {
 
     const TargetInfo &TI = getTarget();
     llvm::stable_sort(
-        Options, [&TI](const CodeGenFunction::MultiVersionResolverOption &LHS,
-                       const CodeGenFunction::MultiVersionResolverOption &RHS) {
-          return TargetMVPriority(TI, LHS) > TargetMVPriority(TI, RHS);
+        Options, [&TI](const CodeGenFunction::FMVResolverOption &LHS,
+                       const CodeGenFunction::FMVResolverOption &RHS) {
+          return getFMVPriority(TI, LHS) > getFMVPriority(TI, RHS);
         });
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
@@ -4429,7 +4409,7 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
     ResolverFunc->setComdat(
         getModule().getOrInsertComdat(ResolverFunc->getName()));
 
-  SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
+  SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
   const TargetInfo &Target = getTarget();
   unsigned Index = 0;
   for (const IdentifierInfo *II : DD->cpus()) {
@@ -4463,25 +4443,23 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
     llvm::erase_if(Features, [&Target](StringRef Feat) {
       return !Target.validateCpuSupports(Feat);
     });
-    Options.emplace_back(cast<llvm::Function>(Func), StringRef{}, Features);
+    Options.emplace_back(cast<llvm::Function>(Func), Features);
     ++Index;
   }
 
-  llvm::stable_sort(
-      Options, [](const CodeGenFunction::MultiVersionResolverOption &LHS,
-                  const CodeGenFunction::MultiVersionResolverOption &RHS) {
-        return llvm::X86::getCpuSupportsMask(LHS.Conditions.Features) >
-               llvm::X86::getCpuSupportsMask(RHS.Conditions.Features);
-      });
+  llvm::stable_sort(Options, [](const CodeGenFunction::FMVResolverOption &LHS,
+                                const CodeGenFunction::FMVResolverOption &RHS) {
+    return llvm::X86::getCpuSupportsMask(LHS.Features) >
+           llvm::X86::getCpuSupportsMask(RHS.Features);
+  });
 
   // If the list contains multiple 'default' versions, such as when it contains
   // 'pentium' and 'generic', don't emit the call to the generic one (since we
   // always run on at least a 'pentium'). We do this by deleting the 'least
   // advanced' (read, lowest mangling letter).
-  while (Options.size() > 1 &&
-         llvm::all_of(llvm::X86::getCpuSupportsMask(
-                          (Options.end() - 2)->Conditions.Features),
-                      [](auto X) { return X == 0; })) {
+  while (Options.size() > 1 && llvm::all_of(llvm::X86::getCpuSupportsMask(
+                                                (Options.end() - 2)->Features),
+                                            [](auto X) { return X == 0; })) {
     StringRef LHSName = (Options.end() - 2)->Function->getName();
     StringRef RHSName = (Options.end() - 1)->Function->getName();
     if (LHSName.compare(RHSName) < 0)
