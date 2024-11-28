@@ -16,15 +16,14 @@
 
 using namespace clang::ast_matchers;
 
-namespace {
+namespace clang::tidy::modernize {
+
+
 std::string getText(const clang::Expr *E, const clang::ASTContext &Context) {
   auto &SM = Context.getSourceManager();
   auto Range = clang::CharSourceRange::getTokenRange(E->getSourceRange());
   return clang::Lexer::getSourceText(Range, SM, Context.getLangOpts()).str();
 }
-} // namespace
-
-namespace clang::tidy::modernize {
 
 void CleanupStaticCastCheck::registerMatchers(MatchFinder *Finder) {
   // Match static_cast expressions not in templates
@@ -42,7 +41,6 @@ void CleanupStaticCastCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Cast)
     return;
 
-  // Get the source expression and its type
   const Expr *SubExpr = Cast->getSubExpr()->IgnoreParenImpCasts();
   QualType SourceType = SubExpr->getType();
   QualType TargetType = Cast->getType();
@@ -61,10 +59,8 @@ void CleanupStaticCastCheck::check(const MatchFinder::MatchResult &Result) {
              "redundant static_cast to the same type %0")  // Removed single quotes
         << TargetType;
 
-    // Use our helper function to get the source text
     std::string ReplacementText = getText(SubExpr, *Result.Context);
     
-    // Suggest removing the cast
     Diag << FixItHint::CreateReplacement(
         Cast->getSourceRange(),
         ReplacementText);
