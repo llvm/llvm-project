@@ -336,8 +336,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
     return false;
   if (!isRecordWithAttr<PointerAttr>(
           Callee->getFunctionObjectParameterType()) &&
-      !isRecordWithAttr<OwnerAttr>(
-          Callee->getFunctionObjectParameterType()))
+      !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
     return false;
   if (Sema::isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
