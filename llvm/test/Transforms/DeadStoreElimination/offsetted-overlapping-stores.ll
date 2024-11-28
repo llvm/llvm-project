@@ -49,7 +49,6 @@ bb:
 
 define void @ScalableVectorTestFullyOverlapping(ptr %arg, i32 %i) vscale_range(1, 2) {
 ; CHECK-LABEL: @ScalableVectorTestFullyOverlapping(
-; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_1:%.*]] = add nuw nsw i32 [[I:%.*]], 1
 ; CHECK-NEXT:    [[EXT_I_1:%.*]] = zext i32 [[I_1]] to i64
 ; CHECK-NEXT:    [[GEP_ARG_I_1:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_1]]
@@ -59,7 +58,6 @@ define void @ScalableVectorTestFullyOverlapping(ptr %arg, i32 %i) vscale_range(1
 ; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 8
 ; CHECK-NEXT:    ret void
 ;
-bb:
   %i.1 = add nuw nsw i32 %i, 1
   %ext.i.1 = zext i32 %i.1 to i64
   %gep.arg.i.1 = getelementptr inbounds float, ptr %arg, i64 %ext.i.1
@@ -72,7 +70,6 @@ bb:
 
 define void @ScalableVectorTestFullyOverlapping2(ptr %arg, i32 %i) {
 ; CHECK-LABEL: @ScalableVectorTestFullyOverlapping2(
-; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_1:%.*]] = add nuw nsw i32 [[I:%.*]], 1
 ; CHECK-NEXT:    [[EXT_I_1:%.*]] = zext i32 [[I_1]] to i64
 ; CHECK-NEXT:    [[GEP_ARG_I_1:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_1]]
@@ -82,7 +79,6 @@ define void @ScalableVectorTestFullyOverlapping2(ptr %arg, i32 %i) {
 ; CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 16
 ; CHECK-NEXT:    ret void
 ;
-bb:
   %i.1 = add nuw nsw i32 %i, 1
   %ext.i.1 = zext i32 %i.1 to i64
   %gep.arg.i.1 = getelementptr inbounds float, ptr %arg, i64 %ext.i.1
@@ -95,7 +91,6 @@ bb:
 
 define void @ScalableVectorTestNonOverlapping(ptr %arg, i32 %i) vscale_range(1, 2) {
 ; CHECK-LABEL: @ScalableVectorTestNonOverlapping(
-; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_10:%.*]] = add nuw nsw i32 [[I:%.*]], 10
 ; CHECK-NEXT:    [[EXT_I_10:%.*]] = zext i32 [[I_10]] to i64
 ; CHECK-NEXT:    [[GEP_ARG_I_10:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_10]]
@@ -105,7 +100,6 @@ define void @ScalableVectorTestNonOverlapping(ptr %arg, i32 %i) vscale_range(1, 
 ; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 8
 ; CHECK-NEXT:    ret void
 ;
-bb:
   %i.10 = add nuw nsw i32 %i, 10
   %ext.i.10 = zext i32 %i.10 to i64
   %gep.arg.i.10 = getelementptr inbounds float, ptr %arg, i64 %ext.i.10
@@ -118,7 +112,6 @@ bb:
 
 define void @ScalableVectorTestNonOverlapping2(ptr %arg, i32 %i) vscale_range(1, 2) {
 ; CHECK-LABEL: @ScalableVectorTestNonOverlapping2(
-; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_10:%.*]] = add nuw nsw i32 [[I:%.*]], 10
 ; CHECK-NEXT:    [[EXT_I_10:%.*]] = zext i32 [[I_10]] to i64
 ; CHECK-NEXT:    [[GEP_ARG_I_10:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I_10]]
@@ -128,7 +121,6 @@ define void @ScalableVectorTestNonOverlapping2(ptr %arg, i32 %i) vscale_range(1,
 ; CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 16
 ; CHECK-NEXT:    ret void
 ;
-bb:
   %i.10 = add nuw nsw i32 %i, 10
   %ext.i.10 = zext i32 %i.10 to i64
   %gep.arg.i.10 = getelementptr inbounds float, ptr %arg, i64 %ext.i.10
@@ -195,7 +187,6 @@ define void @ScalableVectorTestPartiallyOverlapping(ptr %arg, i32 %i) {
 ; and won't fully clobber the original store.
 ;
 ; CHECK-LABEL: @ScalableVectorTestPartiallyOverlapping(
-; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[EXT_I:%.*]] = zext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[GEP_ARG_I:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[EXT_I]]
 ; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I]], align 8
@@ -205,7 +196,6 @@ define void @ScalableVectorTestPartiallyOverlapping(ptr %arg, i32 %i) {
 ; CHECK-NEXT:    store <vscale x 2 x float> zeroinitializer, ptr [[GEP_ARG_I_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
-bb:
   %ext.i = zext i32 %i to i64
   %gep.arg.i = getelementptr inbounds float, ptr %arg, i64 %ext.i
   store <vscale x 2 x float> zeroinitializer, ptr %gep.arg.i
