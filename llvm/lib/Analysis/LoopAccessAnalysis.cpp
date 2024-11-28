@@ -1983,7 +1983,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
 
   // Both Src and Sink have a constant stride, check if they are in the same
   // direction.
-  if (StrideAPtrInt > 0 != StrideBPtrInt > 0) {
+  if ((StrideAPtrInt > 0) != (StrideBPtrInt > 0)) {
     LLVM_DEBUG(
         dbgs() << "Pointer access with strides in different directions\n");
     return MemoryDepChecker::Dependence::Unknown;
