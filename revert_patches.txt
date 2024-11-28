@@ -20,3 +20,7 @@ Ron, Maneesh
 Revert: breaks build of rocRAND: assert SLP
 b8703369daf7 [SLP] Match poison as instruction with the same opcode 
 ---
+Revert: breaks build of rocFFT
+854d7301f989 [Clang/AMDGPU] Zero sized arrays not allowed in HIP device code. (#113470)
+Ron and Vigneshwar
+---

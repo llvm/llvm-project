@@ -5445,6 +5445,10 @@ def note_dependent_function_template_spec_discard_reason : Note<
   "candidate ignored: %select{not a function template|"
   "not a member of the enclosing %select{class template|"
   "namespace; did you mean to explicitly qualify the specialization?}1}0">;
+def warn_invalid_specialization : Warning<
+  "%0 cannot be specialized%select{|: %2}1">,
+  DefaultError, InGroup<DiagGroup<"invalid-specialization">>;
+def note_marked_here : Note<"marked %0 here">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<
@@ -6670,14 +6674,15 @@ def warn_counted_by_attr_elt_type_unknown_size :
 // __builtin_counted_by_ref diagnostics:
 def err_builtin_counted_by_ref_must_be_flex_array_member : Error<
   "'__builtin_counted_by_ref' argument must reference a flexible array member">;
-def err_builtin_counted_by_ref_cannot_leak_reference : Error<
-  "value returned by '__builtin_counted_by_ref' cannot be assigned to a "
-  "variable, have its address taken, or passed into or returned from a function">;
-def err_builtin_counted_by_ref_invalid_lhs_use : Error<
-  "value returned by '__builtin_counted_by_ref' cannot be used in "
-  "%select{an array subscript|a binary}0 expression">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
+
+def err_builtin_counted_by_ref_cannot_leak_reference : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
+  "variable|passed into a function|returned from a function}0">;
+def err_builtin_counted_by_ref_invalid_use : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be used in "
+  "%select{an array subscript|a binary}0 expression">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
