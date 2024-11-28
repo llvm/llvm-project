@@ -1540,8 +1540,7 @@ void llvm::gatherImportedSummariesForModule(
     auto &SummariesForIndex =
         LookupOrCreate(ModuleToSummariesForIndex, FromModule);
 
-    const auto &DefinedGVSummaries =
-        ModuleToDefinedGVSummaries.lookup(FromModule);
+    const auto &DefinedGVSummaries = ModuleToDefinedGVSummaries.at(FromModule);
     const auto &DS = DefinedGVSummaries.find(GUID);
     assert(DS != DefinedGVSummaries.end() &&
            "Expected a defined summary for imported global value");
