@@ -228,40 +228,40 @@ void checkElementAttributes(LVReader *Reader) {
   ASSERT_NE(ScopeIter, Scopes->end());
   LVScope *Scope = static_cast<LVScope *>(*ScopeIter);
   ASSERT_NE(Scope, nullptr);
-  EXPECT_EQ(Scope->getAccessibilityCode(), 1); // Element
-  EXPECT_EQ(Scope->getInlineCode(), 2);        // Element
-  EXPECT_EQ(Scope->getVirtualityCode(), 3);    // Element
-  EXPECT_EQ(Scope->getCallFilenameIndex(), 5); // ScopeFunctionInlined
-  EXPECT_EQ(Scope->getCallLineNumber(), 5);    // ScopeFunctionInlined
-  EXPECT_EQ(Scope->getFilenameIndex(), 7);     // Element
-  EXPECT_EQ(Scope->getLineNumber(), 7);        // Element
-  EXPECT_EQ(Scope->getDiscriminator(), 8);     // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getAccessibilityCode(), 1u); // Element
+  EXPECT_EQ(Scope->getInlineCode(), 2u);        // Element
+  EXPECT_EQ(Scope->getVirtualityCode(), 3u);    // Element
+  EXPECT_EQ(Scope->getCallFilenameIndex(), 5u); // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getCallLineNumber(), 5u);    // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getFilenameIndex(), 7u);     // Element
+  EXPECT_EQ(Scope->getLineNumber(), 7u);        // Element
+  EXPECT_EQ(Scope->getDiscriminator(), 8u);     // ScopeFunctionInlined
 
   // Check no-values.
   ASSERT_NE(++ScopeIter, Scopes->end());
   Scope = static_cast<LVScope *>(*ScopeIter);
   ASSERT_NE(Scope, nullptr);
-  EXPECT_EQ(Scope->getAccessibilityCode(), 0); // Element
-  EXPECT_EQ(Scope->getInlineCode(), 0);        // Element
-  EXPECT_EQ(Scope->getVirtualityCode(), 0);    // Element
-  EXPECT_EQ(Scope->getCallFilenameIndex(), 1); // ScopeFunctionInlined
-  EXPECT_EQ(Scope->getCallLineNumber(), 0);    // ScopeFunctionInlined
-  EXPECT_EQ(Scope->getFilenameIndex(), 1);     // Element
-  EXPECT_EQ(Scope->getLineNumber(), 0);        // Element
-  EXPECT_EQ(Scope->getDiscriminator(), 0);     // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getAccessibilityCode(), 0u); // Element
+  EXPECT_EQ(Scope->getInlineCode(), 0u);        // Element
+  EXPECT_EQ(Scope->getVirtualityCode(), 0u);    // Element
+  EXPECT_EQ(Scope->getCallFilenameIndex(), 1u); // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getCallLineNumber(), 0u);    // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getFilenameIndex(), 1u);     // Element
+  EXPECT_EQ(Scope->getLineNumber(), 0u);        // Element
+  EXPECT_EQ(Scope->getDiscriminator(), 0u);     // ScopeFunctionInlined
 
   // Check implicit values.
   ASSERT_NE(++ScopeIter, Scopes->end());
   Scope = static_cast<LVScope *>(*ScopeIter);
   ASSERT_NE(Scope, nullptr);
-  EXPECT_EQ(Scope->getAccessibilityCode(), 1); // Element
-  EXPECT_EQ(Scope->getInlineCode(), 2);        // Element
-  EXPECT_EQ(Scope->getVirtualityCode(), 3);    // Element
-  EXPECT_EQ(Scope->getCallFilenameIndex(), 5); // ScopeFunctionInlined
-  EXPECT_EQ(Scope->getCallLineNumber(), 5);    // ScopeFunctionInlined
-  EXPECT_EQ(Scope->getFilenameIndex(), 7);     // Element
-  EXPECT_EQ(Scope->getLineNumber(), 7);        // Element
-  EXPECT_EQ(Scope->getDiscriminator(), 8);     // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getAccessibilityCode(), 1u); // Element
+  EXPECT_EQ(Scope->getInlineCode(), 2u);        // Element
+  EXPECT_EQ(Scope->getVirtualityCode(), 3u);    // Element
+  EXPECT_EQ(Scope->getCallFilenameIndex(), 5u); // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getCallLineNumber(), 5u);    // ScopeFunctionInlined
+  EXPECT_EQ(Scope->getFilenameIndex(), 7u);     // Element
+  EXPECT_EQ(Scope->getLineNumber(), 7u);        // Element
+  EXPECT_EQ(Scope->getDiscriminator(), 8u);     // ScopeFunctionInlined
 
   const LVSymbols *Symbols = CompileUnit->getSymbols();
   ASSERT_NE(Symbols, nullptr);
@@ -271,17 +271,17 @@ void checkElementAttributes(LVReader *Reader) {
   ASSERT_NE(SymbolIter, Symbols->end());
   LVSymbol *Symbol = static_cast<LVSymbol *>(*SymbolIter);
   ASSERT_NE(Symbol, nullptr);
-  EXPECT_EQ(Symbol->getBitSize(), 1); // Symbol
+  EXPECT_EQ(Symbol->getBitSize(), 1u); // Symbol
 
   ASSERT_NE(++SymbolIter, Symbols->end());
   Symbol = static_cast<LVSymbol *>(*SymbolIter);
   ASSERT_NE(Symbol, nullptr);
-  EXPECT_EQ(Symbol->getBitSize(), 0); // Symbol
+  EXPECT_EQ(Symbol->getBitSize(), 0u); // Symbol
 
   ASSERT_NE(++SymbolIter, Symbols->end());
   Symbol = static_cast<LVSymbol *>(*SymbolIter);
   ASSERT_NE(Symbol, nullptr);
-  EXPECT_EQ(Symbol->getBitSize(), 1); // Symbol
+  EXPECT_EQ(Symbol->getBitSize(), 1u); // Symbol
 
   const LVTypes *Types = CompileUnit->getTypes();
   ASSERT_NE(Types, nullptr);
@@ -291,35 +291,35 @@ void checkElementAttributes(LVReader *Reader) {
   ASSERT_NE(TypeIter, Types->end());
   LVType *Type = static_cast<LVType *>(*TypeIter);
   ASSERT_NE(Type, nullptr);
-  EXPECT_EQ(Type->getCount(), 1); // Type
+  EXPECT_EQ(Type->getCount(), 1u); // Type
 
   ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
   ASSERT_NE(Type, nullptr);
-  EXPECT_EQ(Type->getCount(), 0); // Type
+  EXPECT_EQ(Type->getCount(), 0u); // Type
 
   ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
   ASSERT_NE(Type, nullptr);
-  EXPECT_EQ(Type->getCount(), 1); // Type
+  EXPECT_EQ(Type->getCount(), 1u); // Type
 
   ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
   ASSERT_NE(Type, nullptr);
-  EXPECT_EQ(Type->getLowerBound(), 1); // Type
-  EXPECT_EQ(Type->getUpperBound(), 2); // Type
+  EXPECT_EQ(Type->getLowerBound(), 1u); // Type
+  EXPECT_EQ(Type->getUpperBound(), 2u); // Type
 
   ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
   ASSERT_NE(Type, nullptr);
-  EXPECT_EQ(Type->getLowerBound(), 0); // Type
-  EXPECT_EQ(Type->getUpperBound(), 0); // Type
+  EXPECT_EQ(Type->getLowerBound(), 0u); // Type
+  EXPECT_EQ(Type->getUpperBound(), 0u); // Type
 
   ASSERT_NE(++TypeIter, Types->end());
   Type = static_cast<LVType *>(*TypeIter);
   ASSERT_NE(Type, nullptr);
-  EXPECT_EQ(Type->getLowerBound(), 5); // Type
-  EXPECT_EQ(Type->getUpperBound(), 6); // Type
+  EXPECT_EQ(Type->getLowerBound(), 5u); // Type
+  EXPECT_EQ(Type->getUpperBound(), 6u); // Type
 }
 
 TEST(LogicalViewTest, ElementAttributes) {
