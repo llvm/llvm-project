@@ -22,6 +22,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -1230,6 +1231,18 @@ bool StackFrame::IsHidden() {
   return false;
 }
 
+StructuredData::ObjectSP StackFrame::GetLanguageSpecificData() {
+  auto process_sp = CalculateProcess();
+  SourceLanguage language = GetLanguage();
+  if (!language)
+    return {};
+  if (auto runtime_sp =
+          process_sp->GetLanguageRuntime(language.AsLanguageType()))
+    return runtime_sp->GetLanguageSpecificData(
+        GetSymbolContext(eSymbolContextFunction));
+  return {};
+}
+
 const char *StackFrame::GetFunctionName() {
   const char *name = nullptr;
   SymbolContext sc = GetSymbolContext(
@@ -2007,19 +2020,9 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.
-          if (!m_sc.line_entry.line) {
-            ConstString fn_name = m_sc.GetFunctionName();
-
-            if (!fn_name.IsEmpty())
-              strm.Printf(
-                  "Note: this address is compiler-generated code in function "
-                  "%s that has no source code associated with it.",
-                  fn_name.AsCString());
-            else
-              strm.Printf("Note: this address is compiler-generated code that "
-                          "has no source code associated with it.");
-            strm.EOL();
-          }
+          if (!m_sc.line_entry.line)
+            strm << "note: This address is not associated with a specific line "
+                    "of code. This may be due to compiler optimizations.\n";
         }
       }
       switch (disasm_display) {

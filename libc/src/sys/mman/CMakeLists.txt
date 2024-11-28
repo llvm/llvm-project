@@ -113,3 +113,9 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.mremap
 )
+
+add_entrypoint_object(
+  process_mrelease 
+  ALIAS 
+  DEPENDS
+    .${LIBC_TARGET_OS}.process_mrelease)

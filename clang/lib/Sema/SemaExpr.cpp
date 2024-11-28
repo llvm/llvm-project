@@ -26,10 +26,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -63,7 +61,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -985,6 +982,9 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
 
   if (getLangOpts().MSVCCompat)
     return VAK_MSVCUndefined;
+
+  if (getLangOpts().HLSL && Ty->getAs<HLSLAttributedResourceType>())
+    return VAK_Valid;
 
   // FIXME: In C++11, these cases are conditionally-supported, meaning we're
   // permitted to reject them. We should consider doing so.
@@ -4897,6 +4897,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return ExprError();
   }
 
+  CheckInvalidBuiltinCountedByRef(base, ArraySubscriptKind);
+
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
   // operand might be an overloadable type, in which case the overload
@@ -6489,6 +6491,12 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (CheckArgsForPlaceholders(ArgExprs))
     return ExprError();
 
+  // The result of __builtin_counted_by_ref cannot be used as a function
+  // argument. It allows leaking and modification of bounds safety information.
+  for (const Expr *Arg : ArgExprs)
+    if (CheckInvalidBuiltinCountedByRef(Arg, FunctionArgKind))
+      return ExprError();
+
   if (getLangOpts().CPlusPlus) {
     // If this is a pseudo-destructor expression, build the call immediately.
     if (isa<CXXPseudoDestructorExpr>(Fn)) {
@@ -8026,9 +8034,9 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
 
   // OpenCL v1.1 s6.5 - Conversion between pointers to distinct address
   // spaces is disallowed.
-  if (lhQual.isAddressSpaceSupersetOf(rhQual))
+  if (lhQual.isAddressSpaceSupersetOf(rhQual, S.getASTContext()))
     ResultAddrSpace = LAddrSpace;
-  else if (rhQual.isAddressSpaceSupersetOf(lhQual))
+  else if (rhQual.isAddressSpaceSupersetOf(lhQual, S.getASTContext()))
     ResultAddrSpace = RAddrSpace;
   else {
     S.Diag(Loc, diag::err_typecheck_op_on_nonoverlapping_address_space_pointers)
@@ -8940,17 +8948,17 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
     rhq.removeObjCLifetime();
   }
 
-  if (!lhq.compatiblyIncludes(rhq)) {
+  if (!lhq.compatiblyIncludes(rhq, S.getASTContext())) {
     // Treat address-space mismatches as fatal.
-    if (!lhq.isAddressSpaceSupersetOf(rhq))
+    if (!lhq.isAddressSpaceSupersetOf(rhq, S.getASTContext()))
       return Sema::IncompatiblePointerDiscardsQualifiers;
 
     // It's okay to add or remove GC or lifetime qualifiers when converting to
     // and from void*.
-    else if (lhq.withoutObjCGCAttr().withoutObjCLifetime()
-                        .compatiblyIncludes(
-                                rhq.withoutObjCGCAttr().withoutObjCLifetime())
-             && (lhptee->isVoidType() || rhptee->isVoidType()))
+    else if (lhq.withoutObjCGCAttr().withoutObjCLifetime().compatiblyIncludes(
+                 rhq.withoutObjCGCAttr().withoutObjCLifetime(),
+                 S.getASTContext()) &&
+             (lhptee->isVoidType() || rhptee->isVoidType()))
       ; // keep old
 
     // Treat lifetime mismatches as fatal.
@@ -9137,7 +9145,7 @@ checkObjCPointerTypesForAssignment(Sema &S, QualType LHSType,
   QualType lhptee = LHSType->castAs<ObjCObjectPointerType>()->getPointeeType();
   QualType rhptee = RHSType->castAs<ObjCObjectPointerType>()->getPointeeType();
 
-  if (!lhptee.isAtLeastAsQualifiedAs(rhptee) &&
+  if (!lhptee.isAtLeastAsQualifiedAs(rhptee, S.getASTContext()) &&
       // make an exception for id<P>
       !LHSType->isObjCQualifiedIdType())
     return Sema::CompatiblePointerDiscardsQualifiers;
@@ -9198,38 +9206,6 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   // them.
   LHSType = Context.getCanonicalType(LHSType).getUnqualifiedType();
   RHSType = Context.getCanonicalType(RHSType).getUnqualifiedType();
-
-  // __builtin_counted_by_ref cannot be assigned to a variable, used in
-  // function call, or in a return.
-  auto FindBuiltinCountedByRefExpr = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
-      CallExpr *TheCall = nullptr;
-      bool VisitCallExpr(CallExpr *CE) override {
-        if (CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
-          TheCall = CE;
-          return false;
-        }
-        return true;
-      }
-      bool
-      VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE) override {
-        // A UnaryExprOrTypeTraitExpr---e.g. sizeof, __alignof, etc.---isn't
-        // the same as a CallExpr, so if we find a __builtin_counted_by_ref()
-        // call in one, ignore it.
-        return false;
-      }
-    } V;
-    V.TraverseStmt(E);
-    return V.TheCall;
-  };
-  static llvm::SmallPtrSet<CallExpr *, 4> Diagnosed;
-  if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get());
-      CE && !Diagnosed.count(CE)) {
-    Diagnosed.insert(CE);
-    Diag(CE->getExprLoc(),
-         diag::err_builtin_counted_by_ref_cannot_leak_reference)
-        << CE->getSourceRange();
-  }
 
   // Common case: no conversion required.
   if (LHSType == RHSType) {
@@ -10834,7 +10810,8 @@ static bool checkArithmeticBinOpPointerOperands(Sema &S, SourceLocation Loc,
 
   // if both are pointers check if operation is valid wrt address spaces
   if (isLHSPointer && isRHSPointer) {
-    if (!LHSPointeeTy.isAddressSpaceOverlapping(RHSPointeeTy)) {
+    if (!LHSPointeeTy.isAddressSpaceOverlapping(RHSPointeeTy,
+                                                S.getASTContext())) {
       S.Diag(Loc,
              diag::err_typecheck_op_on_nonoverlapping_address_space_pointers)
           << LHSExpr->getType() << RHSExpr->getType() << 1 /*arithmetic op*/
@@ -12365,7 +12342,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     if (LCanPointeeTy != RCanPointeeTy) {
       // Treat NULL constant as a special case in OpenCL.
       if (getLangOpts().OpenCL && !LHSIsNull && !RHSIsNull) {
-        if (!LCanPointeeTy.isAddressSpaceOverlapping(RCanPointeeTy)) {
+        if (!LCanPointeeTy.isAddressSpaceOverlapping(RCanPointeeTy,
+                                                     getASTContext())) {
           Diag(Loc,
                diag::err_typecheck_op_on_nonoverlapping_address_space_pointers)
               << LHSType << RHSType << 0 /* comparison */
@@ -13779,42 +13757,6 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
 
-  // __builtin_counted_by_ref can't be used in a binary expression or array
-  // subscript on the LHS.
-  int DiagOption = -1;
-  auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
-      CallExpr *CE = nullptr;
-      bool InvalidUse = false;
-      int Option = -1;
-
-      bool VisitCallExpr(CallExpr *E) override {
-        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
-          CE = E;
-          return false;
-        }
-        return true;
-      }
-
-      bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) override {
-        InvalidUse = true;
-        Option = 0; // report 'array expression' in diagnostic.
-        return true;
-      }
-      bool VisitBinaryOperator(BinaryOperator *E) override {
-        InvalidUse = true;
-        Option = 1; // report 'binary expression' in diagnostic.
-        return true;
-      }
-    } V;
-    V.TraverseStmt(E);
-    DiagOption = V.Option;
-    return V.InvalidUse ? V.CE : nullptr;
-  };
-  if (auto *CE = FindInvalidUseOfBoundsSafetyCounter(LHSExpr))
-    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
-        << DiagOption << CE->getSourceRange();
-
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
                                AssignmentAction::Assigning))
     return QualType();
@@ -13822,7 +13764,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   CheckForNullPointerDereference(*this, LHSExpr);
 
   AssignedEntity AE{LHSExpr};
-  checkExprLifetime(*this, AE, RHS.get());
+  checkAssignmentLifetime(*this, AE, RHS.get());
 
   if (getLangOpts().CPlusPlus20 && LHSType.isVolatileQualified()) {
     if (CompoundType.isNull()) {
@@ -15274,6 +15216,12 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // type precision.
   if (Kind == tok::TokenKind::slash)
     DetectPrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
+
+  BuiltinCountedByRefKind K =
+      BinaryOperator::isAssignmentOp(Opc) ? AssignmentKind : BinaryExprKind;
+
+  CheckInvalidBuiltinCountedByRef(LHSExpr, K);
+  CheckInvalidBuiltinCountedByRef(RHSExpr, K);
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }

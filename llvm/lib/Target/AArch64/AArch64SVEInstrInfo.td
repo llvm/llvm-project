@@ -376,7 +376,11 @@ def AArch64fadda_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
      (AArch64fadda_p_node (SVEAllActive), node:$op2,
              (vselect node:$op1, node:$op3, (splat_vector (f64 fpimm_minus0))))]>;
 
-def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
+def SDT_AArch64PTest : SDTypeProfile<1, 2, [
+  SDTCisVT<0, i32>,  // out flags
+  SDTCisVec<1>,      // governing predicate
+  SDTCisSameAs<2, 1> // source predicate
+]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def AArch64ptest_any : SDNode<"AArch64ISD::PTEST_ANY", SDT_AArch64PTest>;
 
@@ -429,6 +433,13 @@ def SDT_AArch64Arith_Unpred : SDTypeProfile<1, 2, [
 ]>;
 
 def AArch64bic_node : SDNode<"AArch64ISD::BIC",  SDT_AArch64Arith_Unpred>;
+
+def SDT_AArch64addw : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>]>;
+
+def AArch64saddwt : SDNode<"AArch64ISD::SADDWT", SDT_AArch64addw>;
+def AArch64saddwb : SDNode<"AArch64ISD::SADDWB", SDT_AArch64addw>;
+def AArch64uaddwt : SDNode<"AArch64ISD::UADDWT", SDT_AArch64addw>;
+def AArch64uaddwb : SDNode<"AArch64ISD::UADDWB", SDT_AArch64addw>;
 
 def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                           [(and node:$op1, (xor node:$op2, (splat_vector (i32 -1)))),
@@ -964,7 +975,7 @@ let Predicates = [HasSVEorSME] in {
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
 } // End HasSVEorSME
 
-let Predicates = [HasSVE] in {
+let Predicates = [HasNonStreamingSVEorSME2p2] in {
   defm FEXPA_ZZ : sve_int_bin_cons_misc_0_c_fexpa<"fexpa", int_aarch64_sve_fexpa_x>;
 } // End HasSVE
 
@@ -3674,10 +3685,10 @@ let Predicates = [HasSVE2orSME] in {
   defm UABDLT_ZZZ : sve2_wide_int_arith_long<0b01111, "uabdlt", int_aarch64_sve_uabdlt>;
 
   // SVE2 integer add/subtract wide
-  defm SADDWB_ZZZ : sve2_wide_int_arith_wide<0b000, "saddwb", int_aarch64_sve_saddwb>;
-  defm SADDWT_ZZZ : sve2_wide_int_arith_wide<0b001, "saddwt", int_aarch64_sve_saddwt>;
-  defm UADDWB_ZZZ : sve2_wide_int_arith_wide<0b010, "uaddwb", int_aarch64_sve_uaddwb>;
-  defm UADDWT_ZZZ : sve2_wide_int_arith_wide<0b011, "uaddwt", int_aarch64_sve_uaddwt>;
+  defm SADDWB_ZZZ : sve2_wide_int_arith_wide<0b000, "saddwb", AArch64saddwb>;
+  defm SADDWT_ZZZ : sve2_wide_int_arith_wide<0b001, "saddwt", AArch64saddwt>;
+  defm UADDWB_ZZZ : sve2_wide_int_arith_wide<0b010, "uaddwb", AArch64uaddwb>;
+  defm UADDWT_ZZZ : sve2_wide_int_arith_wide<0b011, "uaddwt", AArch64uaddwt>;
   defm SSUBWB_ZZZ : sve2_wide_int_arith_wide<0b100, "ssubwb", int_aarch64_sve_ssubwb>;
   defm SSUBWT_ZZZ : sve2_wide_int_arith_wide<0b101, "ssubwt", int_aarch64_sve_ssubwt>;
   defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb", int_aarch64_sve_usubwb>;

@@ -20,6 +20,12 @@
 // DISASM-NEXT:   leaq -4(%r15), %r15
 // DISASM-NEXT:   addq $-4, %rsp
 // DISASM-NEXT:   addq $-4, %r12
+// DISASM-NEXT:   movq $-8, %r16
+// DISASM-NEXT:   movq $-8, %r20
+// DISASM-NEXT:   movq $-4, %r16
+// DISASM-NEXT:   addq $-8, %r16
+// DISASM-NEXT:   addq $-8, %r28
+// DISASM-NEXT:   addq $-4, %r16
 
 // LD to LE:
 // DISASM-NEXT:   movq %fs:0, %rax
@@ -69,6 +75,13 @@ _start:
  addq tls1@GOTTPOFF(%rip), %r15
  addq tls1@GOTTPOFF(%rip), %rsp
  addq tls1@GOTTPOFF(%rip), %r12
+ # EGPR
+ movq tls0@GOTTPOFF(%rip), %r16
+ movq tls0@GOTTPOFF(%rip), %r20
+ movq tls1@GOTTPOFF(%rip), %r16
+ addq tls0@GOTTPOFF(%rip), %r16
+ addq tls0@GOTTPOFF(%rip), %r28
+ addq tls1@GOTTPOFF(%rip), %r16
 
  // LD to LE
  leaq tls0@tlsld(%rip), %rdi

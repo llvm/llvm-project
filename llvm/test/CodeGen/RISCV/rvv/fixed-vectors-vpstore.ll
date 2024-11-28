@@ -28,6 +28,18 @@ define void @vpstore_v4i8(<4 x i8> %val, ptr %ptr, <4 x i1> %m, i32 zeroext %evl
   ret void
 }
 
+declare void @llvm.vp.store.v8i7.v8i7.p0(<8 x i7>, ptr, <8 x i1>, i32)
+
+define void @vpstore_v8i7(<8 x i7> %val, ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpstore_v8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  call void @llvm.vp.store.v8i7.v8i7.p0(<8 x i7> %val, ptr %ptr, <8 x i1> %m, i32 %evl)
+  ret void
+}
+
 declare void @llvm.vp.store.v8i8.p0(<8 x i8>, ptr, <8 x i1>, i32)
 
 define void @vpstore_v8i8(<8 x i8> %val, ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
@@ -285,10 +297,10 @@ define void @vpstore_v32f64(<32 x double> %val, ptr %ptr, <32 x i1> %m, i32 zero
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 16
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    bltu a1, a3, .LBB23_2
+; CHECK-NEXT:    bltu a1, a3, .LBB24_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:  .LBB23_2:
+; CHECK-NEXT:  .LBB24_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a2, a1, -16

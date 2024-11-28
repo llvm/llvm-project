@@ -15,7 +15,6 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
 using namespace llvm;

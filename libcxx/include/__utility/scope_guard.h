@@ -26,26 +26,22 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Func>
 class __scope_guard {
   _Func __func_;
-  bool __moved_from_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __scope_guard(_Func __func) : __func_(std::move(__func)) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __scope_guard(_Func __func) : __func_(std::move(__func)) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__scope_guard() { __func_(); }
 
-  __scope_guard(const __scope_guard&) = delete;
+  __scope_guard(const __scope_guard&)            = delete;
+  __scope_guard& operator=(const __scope_guard&) = delete;
+  __scope_guard& operator=(__scope_guard&&)      = delete;
 
-// C++17 has mandatory RVO, so we don't need the move constructor anymore to make __make_scope_guard work.
+// C++14 doesn't have mandatory RVO, so we have to provide a declaration even though no compiler will ever generate
+// a call to the move constructor.
 #if _LIBCPP_STD_VER <= 14
-  __scope_guard(__scope_guard&& __other) : __func_(__other.__func_) {
-    _LIBCPP_ASSERT_INTERNAL(!__other.__moved_from_, "Cannot move twice from __scope_guard");
-    __other.__moved_from_ = true;
-  }
+  __scope_guard(__scope_guard&&);
 #else
   __scope_guard(__scope_guard&&) = delete;
 #endif
-
-  __scope_guard& operator=(const __scope_guard&) = delete;
-  __scope_guard& operator=(__scope_guard&&)      = delete;
 };
 
 template <class _Func>
