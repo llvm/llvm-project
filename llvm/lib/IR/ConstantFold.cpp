@@ -71,50 +71,51 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   if (SrcTy == DestTy)
     return V; // no-op cast
 
-  // Handle casts from one vector constant to another.  We know that the src
-  // and dest type have the same size (otherwise its an illegal cast).
-  if (VectorType *DestPTy = dyn_cast<VectorType>(DestTy)) {
-    if (V->isAllOnesValue())
-      return Constant::getAllOnesValue(DestTy);
+  if (V->isAllOnesValue())
+    return Constant::getAllOnesValue(DestTy);
 
+  // Handle ConstantInt -> ConstantFP
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
-    if (!isa<VectorType>(SrcTy))
-      if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
-        return ConstantExpr::getBitCast(ConstantVector::get(V), DestPTy);
-    return nullptr;
-  }
+    if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
+      return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
 
-  // Handle integral constant input.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+    // Make sure dest type is compatible with the folded fp constant.
     // See note below regarding the PPC_FP128 restriction.
-    if (DestTy->isFloatingPointTy() && !DestTy->isPPC_FP128Ty())
-      return ConstantFP::get(DestTy->getContext(),
-                             APFloat(DestTy->getFltSemantics(),
-                                     CI->getValue()));
+    if (!DestTy->isFPOrFPVectorTy() || DestTy->isPPC_FP128Ty() ||
+        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
+      return nullptr;
 
-    // Otherwise, can't fold this (vector?)
-    return nullptr;
+    return ConstantFP::get(
+        DestTy,
+        APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
   }
 
-  // Handle ConstantFP input: FP -> Integral.
+  // Handle ConstantFP -> ConstantInt
   if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
+    // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
+    // This allows for other simplifications (although some of them
+    // can only be handled by Analysis/ConstantFolding.cpp).
+    if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
+      return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
+
     // PPC_FP128 is really the sum of two consecutive doubles, where the first
     // double is always stored first in memory, regardless of the target
     // endianness. The memory layout of i128, however, depends on the target
     // endianness, and so we can't fold this without target endianness
     // information. This should instead be handled by
     // Analysis/ConstantFolding.cpp
-    if (FP->getType()->isPPC_FP128Ty())
+    if (SrcTy->isPPC_FP128Ty())
       return nullptr;
 
     // Make sure dest type is compatible with the folded integer constant.
-    if (!DestTy->isIntegerTy())
+    if (!DestTy->isIntOrIntVectorTy() ||
+        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
       return nullptr;
 
-    return ConstantInt::get(FP->getContext(),
-                            FP->getValueAPF().bitcastToAPInt());
+    return ConstantInt::get(DestTy, FP->getValueAPF().bitcastToAPInt());
   }
 
   return nullptr;

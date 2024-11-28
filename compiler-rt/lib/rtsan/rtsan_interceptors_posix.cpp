@@ -190,6 +190,23 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return REAL(fcntl)(filedes, cmd, arg);
 }
 
+INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+  __rtsan_notify_intercepted_call("ioctl");
+
+  // See fcntl for discussion on why we use intptr_t
+  // And why we read from va_args on all request types
+  using arg_type = intptr_t;
+  static_assert(sizeof(arg_type) >= sizeof(struct ifreq *));
+  static_assert(sizeof(arg_type) >= sizeof(int));
+
+  va_list args;
+  va_start(args, request);
+  arg_type arg = va_arg(args, arg_type);
+  va_end(args);
+
+  return REAL(ioctl)(filedes, request, arg);
+}
+
 #if SANITIZER_INTERCEPT_FCNTL64
 INTERCEPTOR(int, fcntl64, int filedes, int cmd, ...) {
   __rtsan_notify_intercepted_call("fcntl64");
@@ -437,6 +454,11 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
             struct timespec *rmtp) {
   __rtsan_notify_intercepted_call("nanosleep");
   return REAL(nanosleep)(rqtp, rmtp);
+}
+
+INTERCEPTOR(int, sched_yield, void) {
+  __rtsan_notify_intercepted_call("sched_yield");
+  return REAL(sched_yield)();
 }
 
 // Memory
@@ -736,6 +758,16 @@ INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
 #define RTSAN_MAYBE_INTERCEPT_KEVENT64
 #endif // SANITIZER_INTERCEPT_KQUEUE
 
+INTERCEPTOR(int, pipe, int pipefd[2]) {
+  __rtsan_notify_intercepted_call("pipe");
+  return REAL(pipe)(pipefd);
+}
+
+INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkfifo");
+  return REAL(mkfifo)(pathname, mode);
+}
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -786,6 +818,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
   INTERCEPT_FUNCTION(dup2);
+  INTERCEPT_FUNCTION(ioctl);
 
 #if SANITIZER_APPLE
   INTERCEPT_FUNCTION(OSSpinLockLock);
@@ -809,6 +842,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sleep);
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
+  INTERCEPT_FUNCTION(sched_yield);
 
   INTERCEPT_FUNCTION(accept);
   INTERCEPT_FUNCTION(bind);
@@ -836,6 +870,9 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_KQUEUE;
   RTSAN_MAYBE_INTERCEPT_KEVENT;
   RTSAN_MAYBE_INTERCEPT_KEVENT64;
+
+  INTERCEPT_FUNCTION(pipe);
+  INTERCEPT_FUNCTION(mkfifo);
 }
 
 #endif // SANITIZER_POSIX
