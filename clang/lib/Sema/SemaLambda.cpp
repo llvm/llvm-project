@@ -1164,14 +1164,14 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       CheckCXXThisCapture(C->Loc, /*Explicit=*/true, /*BuildAndDiagnose*/ true,
                           /*FunctionScopeIndexToStopAtPtr*/ nullptr,
                           C->Kind == LCK_StarThis);
-      if (!LSI->Captures.empty())
-      {
-          SourceManager &SourceMgr = Context.getSourceManager(); 
-          const LangOptions &LangOpts = Context.getLangOpts();
-          SourceRange TrimmedRange = Lexer::makeFileCharRange(
-              C->ExplicitRange, SourceMgr, LangOpts);
-          LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
-      }
+    if (!LSI->Captures.empty())
+{
+    SourceManager &SourceMgr = Context.getSourceManager();
+    const LangOptions &LangOpts = Context.getLangOpts();
+    SourceRange TrimmedRange = Lexer::makeFileCharRange(
+        CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr, LangOpts).getAsRange();
+    LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
+}
     }
 
     assert(C->Id && "missing identifier for capture");
@@ -1336,12 +1336,13 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
     }
     if (!LSI->Captures.empty())
       {
-    SourceManager &SourceMgr = Context.getSourceManager(); 
+    SourceManager &SourceMgr = Context.getSourceManager();
     const LangOptions &LangOpts = Context.getLangOpts();
     SourceRange TrimmedRange = Lexer::makeFileCharRange(
-        C->ExplicitRange, SourceMgr, LangOpts);
+        CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr, LangOpts).getAsRange();
     LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
-}
+      }
+    }
   }
   finishLambdaExplicitCaptures(LSI);
   LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
