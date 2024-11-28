@@ -1702,13 +1702,7 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
 
     // Create a vector splat to use in the induction update.
-    //
-    // FIXME: If the step is non-constant, we create the vector splat with
-    //        IRBuilder. IRBuilder can constant-fold the multiply, but it
-    //        doesn't handle a constant vector splat.
-    SplatVF = isa<Constant>(Mul)
-                  ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
-                  : Builder.CreateVectorSplat(State.VF, Mul);
+    SplatVF = Builder.CreateVectorSplat(State.VF, Mul);
   }
 
   Builder.restoreIP(CurrIP);
