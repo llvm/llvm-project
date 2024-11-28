@@ -9,6 +9,7 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
@@ -253,9 +254,17 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   LocalVisitor Visit);
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
-  if (auto *RD = Type->getAsCXXRecordDecl())
-    return RD->hasAttr<T>();
-  return false;
+  auto *RD = Type->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+  return RD->hasAttr<T>();
+}
+
+bool isPointerLikeType(QualType QT) {
+  return isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
+         QT->isNullPtrType();
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
@@ -274,11 +283,6 @@ static bool isInStlNamespace(const Decl *D) {
     }
 
   return DC->isStdNamespace();
-}
-
-static bool isPointerLikeType(QualType Type) {
-  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
-         Type->isNullPtrType();
 }
 
 // Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
