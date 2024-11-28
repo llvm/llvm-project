@@ -1108,6 +1108,113 @@ public:
   }
 };
 
+class EvaluateIntoMemoryAssignBufferization
+    : public mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp> {
+
+public:
+  using mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::EvaluateInMemoryOp,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+
+static bool mayReadOrWrite(mlir::Region &region, mlir::Value var) {
+  fir::AliasAnalysis aliasAnalysis;
+  for (mlir::Operation &op : region.getOps()) {
+    if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
+      for (mlir::Region &subRegion : op.getRegions())
+        if (mayReadOrWrite(subRegion, var))
+          return true;
+      // In MLIR, RecursiveMemoryEffects can be combined with
+      // MemoryEffectOpInterface to describe extra effects on top of the
+      // effects of the nested operations.  However, the presence of
+      // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
+      // implies the operation has no other memory effects than the one of its
+      // nested operations.
+      if (!mlir::isa<mlir::MemoryEffectOpInterface>(op))
+        continue;
+    }
+    if (!aliasAnalysis.getModRef(&op, var).isNoModRef())
+      return true;
+  }
+  return false;
+}
+
+static llvm::LogicalResult
+tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
+                          mlir::PatternRewriter &rewriter) {
+  mlir::Location loc = evalInMem.getLoc();
+  hlfir::DestroyOp destroy;
+  hlfir::AssignOp assign;
+  for (auto user : llvm::enumerate(evalInMem->getUsers())) {
+    if (user.index() > 2)
+      return mlir::failure();
+    mlir::TypeSwitch<mlir::Operation *, void>(user.value())
+        .Case([&](hlfir::AssignOp op) { assign = op; })
+        .Case([&](hlfir::DestroyOp op) { destroy = op; });
+  }
+  if (!assign || !destroy || destroy.mustFinalizeExpr() ||
+      assign.isAllocatableAssignment())
+    return mlir::failure();
+
+  hlfir::Entity lhs{assign.getLhs()};
+  // EvaluateInMemoryOp memory is contiguous, so in general, it can only be
+  // replace by the LHS if the LHS is contiguous.
+  if (!lhs.isSimplyContiguous())
+    return mlir::failure();
+  // Character assignment may involves truncation/padding, so the LHS
+  // cannot be used to evaluate RHS in place without proving the LHS and
+  // RHS lengths are the same.
+  if (lhs.isCharacter())
+    return mlir::failure();
+
+  // The region must not read or write the LHS.
+  if (mayReadOrWrite(evalInMem.getBody(), lhs))
+    return mlir::failure();
+  // Any variables affected between the hlfir.evalInMem and assignment must not
+  // be read or written inside the region since it will be moved at the
+  // assignment insertion point.
+  auto effects = getEffectsBetween(evalInMem->getNextNode(), assign);
+  if (!effects) {
+    LLVM_DEBUG(
+        llvm::dbgs()
+        << "operation with unknown effects between eval_in_mem and assign\n");
+    return mlir::failure();
+  }
+  for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
+    mlir::Value affected = effect.getValue();
+    if (!affected || mayReadOrWrite(evalInMem.getBody(), affected))
+      return mlir::failure();
+  }
+
+  rewriter.setInsertionPoint(assign);
+  fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
+  mlir::Value rawLhs = hlfir::genVariableRawAddress(loc, builder, lhs);
+  hlfir::computeEvaluateOpIn(loc, builder, evalInMem, rawLhs);
+  rewriter.eraseOp(assign);
+  rewriter.eraseOp(destroy);
+  rewriter.eraseOp(evalInMem);
+  return mlir::success();
+}
+
+llvm::LogicalResult EvaluateIntoMemoryAssignBufferization::matchAndRewrite(
+    hlfir::EvaluateInMemoryOp evalInMem,
+    mlir::PatternRewriter &rewriter) const {
+  if (mlir::succeeded(tryUsingAssignLhsDirectly(evalInMem, rewriter)))
+    return mlir::success();
+  // Rewrite to temp + as_expr here so that the assign + as_expr pattern can
+  // kick-in for simple types and at least implement the assignment inline
+  // instead of call Assign runtime.
+  fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
+  mlir::Location loc = evalInMem.getLoc();
+  auto [temp, isHeapAllocated] = hlfir::computeEvaluateOpInNewTemp(
+      loc, builder, evalInMem, evalInMem.getShape(), evalInMem.getTypeparams());
+  rewriter.replaceOpWithNewOp<hlfir::AsExprOp>(
+      evalInMem, temp, /*mustFree=*/builder.createBool(loc, isHeapAllocated));
+  return mlir::success();
+}
+
 class OptimizedBufferizationPass
     : public hlfir::impl::OptimizedBufferizationBase<
           OptimizedBufferizationPass> {
@@ -1130,6 +1237,7 @@ public:
     patterns.insert<ElementalAssignBufferization>(context);
     patterns.insert<BroadcastAssignBufferization>(context);
     patterns.insert<VariableAssignBufferization>(context);
+    patterns.insert<EvaluateIntoMemoryAssignBufferization>(context);
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AllOp>>(context);

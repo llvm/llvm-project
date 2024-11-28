@@ -91,6 +91,13 @@ bool AliasAnalysis::Source::isDummyArgument() const {
   return false;
 }
 
+static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
+  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
+          v.getParentRegion()->getParentOp()))
+    return evalInMem.getMemory() == v;
+  return false;
+}
+
 bool AliasAnalysis::Source::isData() const { return origin.isData; }
 bool AliasAnalysis::Source::isBoxData() const {
   return mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(valueType)) &&
@@ -698,7 +705,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         });
   }
-  if (!defOp && type == SourceKind::Unknown)
+  if (!defOp && type == SourceKind::Unknown) {
     // Check if the memory source is coming through a dummy argument.
     if (isDummyArgument(v)) {
       type = SourceKind::Argument;
@@ -708,7 +715,12 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
 
       if (isPointerReference(ty))
         attributes.set(Attribute::Pointer);
+    } else if (isEvaluateInMemoryBlockArg(v)) {
+      // hlfir.eval_in_mem block operands is allocated by the operation.
+      type = SourceKind::Allocate;
+      ty = v.getType();
     }
+  }
 
   if (type == SourceKind::Global) {
     return {{global, instantiationPoint, followingData},
