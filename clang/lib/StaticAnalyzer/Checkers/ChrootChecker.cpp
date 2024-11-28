@@ -47,21 +47,17 @@ namespace {
 //                      bug<--foo()--          JAIL_ENTERED<--foo()--
 //
 class ChrootChecker : public Checker<eval::Call, check::PreCall> {
-  // This bug refers to possibly break out of a chroot() jail.
-  const BugType BreakJailBug{this, "Break out of jail"};
-
-  const CallDescription Chroot{CDM::CLibrary, {"chroot"}, 1},
-      Chdir{CDM::CLibrary, {"chdir"}, 1};
-
 public:
-  ChrootChecker() {}
-
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
 private:
   void evalChroot(const CallEvent &Call, CheckerContext &C) const;
   void evalChdir(const CallEvent &Call, CheckerContext &C) const;
+
+  const BugType BreakJailBug{this, "Break out of jail"};
+  const CallDescription Chroot{CDM::CLibrary, {"chroot"}, 1};
+  const CallDescription Chdir{CDM::CLibrary, {"chdir"}, 1};
 };
 
 bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
