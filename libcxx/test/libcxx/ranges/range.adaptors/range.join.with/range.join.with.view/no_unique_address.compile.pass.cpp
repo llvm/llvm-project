@@ -33,8 +33,15 @@ struct Pattern : std::ranges::view_base {
 template <class View>
 struct Test {
   [[no_unique_address]] View view;
-  char c;
+  unsigned char pad;
 };
 
-static_assert(sizeof(Test<std::ranges::join_with_view<ForwardView, Pattern>>) ==
-              sizeof(std::ranges::join_with_view<ForwardView, Pattern>));
+using JWV = std::ranges::join_with_view<ForwardView, Pattern>;
+
+// Expected JWV layout:
+// [[no_unique_address]] _View __base_             // offset: 0
+// [[no_unique_address]] __empty_cache __outer_it; //         0
+// [[no_unique_address]] __empty_cache __inner_;   //         1
+// [[no_unique_address]] _Patter __pattern_        //         0
+static_assert(sizeof(JWV) == 2);
+static_assert(sizeof(Test<JWV>) == 2);
