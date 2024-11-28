@@ -1342,7 +1342,6 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
         CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr, LangOpts).getAsRange();
     LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
       }
-    }
   }
   finishLambdaExplicitCaptures(LSI);
   LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
