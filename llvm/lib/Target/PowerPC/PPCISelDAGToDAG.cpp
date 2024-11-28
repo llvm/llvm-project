@@ -193,8 +193,8 @@ namespace {
     }
 
     /// getSmallIPtrImm - Return a target constant of pointer type.
-    inline SDValue getSmallIPtrImm(uint64_t Imm, const SDLoc &dl) {
-      return CurDAG->getTargetConstant(
+    inline SDValue getSmallIPtrImm(int64_t Imm, const SDLoc &dl) {
+      return CurDAG->getSignedTargetConstant(
           Imm, dl, PPCLowering->getPointerTy(CurDAG->getDataLayout()));
     }
 
@@ -207,7 +207,7 @@ namespace {
     /// base register.  Return the virtual register that holds this value.
     SDNode *getGlobalBaseReg();
 
-    void selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset = 0);
+    void selectFrameIndex(SDNode *SN, SDNode *N, int64_t Offset = 0);
 
     // Select - Convert the specified operand from a target-independent to a
     // target-specific node if it hasn't already been changed.
@@ -639,7 +639,7 @@ static bool isOpcWithIntImmediate(SDNode *N, unsigned Opc, unsigned& Imm) {
          && isInt32Immediate(N->getOperand(1).getNode(), Imm);
 }
 
-void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset) {
+void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, int64_t Offset) {
   SDLoc dl(SN);
   int FI = cast<FrameIndexSDNode>(N)->getIndex();
   SDValue TFI = CurDAG->getTargetFrameIndex(FI, N->getValueType(0));
