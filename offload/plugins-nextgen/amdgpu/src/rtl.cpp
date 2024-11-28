@@ -150,19 +150,16 @@ static Error timeDataTransferInNsAsync(void *Data) {
   auto [Start, End] = getCopyStartAndEndTime(Args);
 
   auto OmptEventInfo = *Args->OmptEventInfo.get();
-  auto RIFunc = std::get<2>(OmptEventInfo.RIFunction);
-  std::invoke(RIFunc, OmptEventInfo.RegionInterface, OmptEventInfo.TraceRecord,
-              Start, End);
+  llvm::omp::target::ompt::RegionInterface.stopTargetDataMovementTraceAsync(
+      OmptEventInfo.TraceRecord, Start, End);
 
   return Plugin::success();
 }
 
 /// Print out some debug info for the OmptEventInfoTy
 static void printOmptEventInfoTy(ompt::OmptEventInfoTy &OmptEventInfo) {
-  DP("OMPT-Async Trace Info: NumTeams %lu, TR %p, "
-     "RegionInterface %p\n",
-     OmptEventInfo.NumTeams, OmptEventInfo.TraceRecord,
-     OmptEventInfo.RegionInterface);
+  DP("OMPT-Async Trace Info (%p): NumTeams %lu, TR %p, \n", &OmptEventInfo,
+     OmptEventInfo.NumTeams, OmptEventInfo.TraceRecord);
 }
 
 /// Returns a pointer to an OmptEventInfoTy object to be used for OMPT tracing
@@ -178,7 +175,6 @@ getOrNullOmptEventInfo(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   // between multiple async operations.
   auto LocalOmptEventInfo =
       std::make_unique<ompt::OmptEventInfoTy>(*AI->OmptEventInfo);
-  DP("OMPT-Async: Two times printing\n");
   printOmptEventInfoTy(*AI->OmptEventInfo);
   printOmptEventInfoTy(*LocalOmptEventInfo);
   return LocalOmptEventInfo;
@@ -2091,14 +2087,10 @@ private:
 
     assert(Args->OmptEventInfo && "Invalid OEI pointer in OMPT profiling");
     auto OmptEventInfo = *Args->OmptEventInfo;
-    auto RIFunc = std::get<1>(OmptEventInfo.RIFunction);
 
-    assert(OmptEventInfo.RegionInterface &&
-           "Invalid RegionInterface pointer in OMPT profiling");
     assert(OmptEventInfo.TraceRecord && "Invalid TraceRecord");
-    std::invoke(RIFunc, OmptEventInfo.RegionInterface,
-                OmptEventInfo.TraceRecord, OmptEventInfo.NumTeams, StartTime,
-                EndTime);
+    llvm::omp::target::ompt::RegionInterface.stopTargetSubmitTraceAsync(
+        OmptEventInfo.TraceRecord, OmptEventInfo.NumTeams, StartTime, EndTime);
 
     return Plugin::success();
   }
@@ -5269,11 +5261,6 @@ static OmptKernelTimingArgsAsyncTy *getOmptTimingsArgs(void *Data) {
   assert(Args->Signal && "Invalid signal");
   assert(Args->OmptEventInfo && "Invalid OMPT Async data (nullptr)");
   assert(Args->OmptEventInfo->TraceRecord && "Invalid Trace Record Pointer");
-  assert(Args->OmptEventInfo->RegionInterface &&
-         "Invalid RegionInterface pointer");
-  assert((!std::holds_alternative<std::monostate>(
-             Args->OmptEventInfo->RIFunction)) &&
-         "Unset OMPT Interface Function Pointer Set");
   return Args;
 }
 

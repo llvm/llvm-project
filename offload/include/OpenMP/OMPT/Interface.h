@@ -468,16 +468,6 @@ struct OmptEventInfoTy {
   uint64_t NumTeams;
   /// Pointer to the actual buffer storage location
   ompt_record_ompt_t *TraceRecord;
-  /// Pointer to OMPT Interface instance (required to cross shared library
-  /// boundary)
-  llvm::omp::target::ompt::Interface *RegionInterface;
-  /// Pointer to OMPT Interface member function
-  /// The type of the function depends on the operation that is performed
-  std::variant<std::monostate,
-               decltype(std::mem_fn(&Interface::stopTargetSubmitTraceAsync)),
-               decltype(std::mem_fn(
-                   &Interface::stopTargetDataMovementTraceAsync))>
-      RIFunction;
 };
 
 /// Similar to the original InterfaceRAII this class is used for tracing and
@@ -502,8 +492,6 @@ public:
         AI->OmptEventInfo = new OmptEventInfoTy();
       AI->OmptEventInfo->TraceRecord = Record;
       AI->OmptEventInfo->NumTeams = 0;
-      AI->OmptEventInfo->RegionInterface = &RegionInterface;
-      AI->OmptEventInfo->RIFunction = std::get<1>(Callbacks);
     } else {
       // Actively prevent further tracing of this event
       AI->OmptEventInfo = nullptr;
