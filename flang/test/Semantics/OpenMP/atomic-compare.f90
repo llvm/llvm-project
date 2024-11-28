@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp-version=51 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=51
   use omp_lib
   implicit none
   ! Check atomic compare. This combines elements from multiple other "atomic*.f90", as
