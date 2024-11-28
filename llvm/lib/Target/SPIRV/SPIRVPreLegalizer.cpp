@@ -83,13 +83,14 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           GR->add(Const, &MF, SrcReg);
           TrackedConstRegs.insert(SrcReg);
           if (Const->getType()->isTargetExtTy()) {
-            // remember association so that we can restore it when assign types
+            // Remember association so that we can restore it when assign types.
             MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
             if (SrcMI && (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT ||
                           SrcMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
               TargetExtConstTypes[SrcMI] = Const->getType();
             if (Const->isNullValue()) {
               MachineIRBuilder MIB(MF);
+              MIB.setInsertPt(*MI.getParent(), MI);
               SPIRVType *ExtType =
                   GR->getOrCreateSPIRVType(Const->getType(), MIB);
               SrcMI->setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
