@@ -49,7 +49,7 @@ define <vscale x 16 x i8> @bfcvt(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloa
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfcvt z0.b, { z0.h, z1.h }
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.fp8.cvt.x2.nxv8f16(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1)
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.fp8.cvt.x2.nxv8bf16(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1)
   ret <vscale x 16 x i8> %res
 }
 
