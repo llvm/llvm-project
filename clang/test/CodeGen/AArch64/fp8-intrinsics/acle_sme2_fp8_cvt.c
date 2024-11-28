@@ -28,7 +28,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8f16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
-svfloat16x2_t test_cvtl1_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+svfloat16x2_t test_cvtl1_f16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
   return SVE_ACLE_FUNC(svcvtl1_f16,_mf8,_x2_fpm)(zn, fpmr);
 }
 
@@ -44,7 +44,7 @@ svfloat16x2_t test_cvtl1_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming 
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxv8f16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
-svfloat16x2_t test_cvtl2_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+svfloat16x2_t test_cvtl2_f16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
   return SVE_ACLE_FUNC(svcvtl2_f16,_mf8,_x2_fpm)(zn, fpmr);
 }
 
@@ -60,7 +60,7 @@ svfloat16x2_t test_cvtl2_f16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming 
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl1.x2.nxv8bf16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x2_t test_cvtl1_bf16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+svbfloat16x2_t test_cvtl1_bf16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
   return SVE_ACLE_FUNC(svcvtl1_bf16,_mf8,_x2_fpm)(zn, fpmr);
 }
 
@@ -76,6 +76,6 @@ svbfloat16x2_t test_cvtl1_bf16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streamin
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.fp8.cvtl2.x2.nxv8bf16(<vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
 //
-svbfloat16x2_t test_cvtl2_bf16_x2(svmfloat8_t zn, uint64_t fpmr)  __arm_streaming {
+svbfloat16x2_t test_cvtl2_bf16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
   return SVE_ACLE_FUNC(svcvtl2_bf16,_mf8,_x2_fpm)(zn, fpmr);
 }

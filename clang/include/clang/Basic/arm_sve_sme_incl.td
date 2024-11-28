@@ -94,6 +94,7 @@ include "arm_immcheck_incl.td"
 // l: int64_t
 // m: uint32_t
 // n: uint64_t
+// >: fpm_t
 
 // [: svuint8_t
 // t: svint32_t
