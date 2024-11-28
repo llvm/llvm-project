@@ -200,7 +200,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // On P10, the default lowering generates better code using the
   // setbc instruction.
-  if (!Subtarget.hasP10Vector() && isPPC64)
+  if (!Subtarget.hasP10Vector())
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
 
   // Match BITREVERSE to customized fast code sequence in the td file.
