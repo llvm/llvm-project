@@ -16,12 +16,71 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "../types.h"
+
+struct ProxyInt {
+  int& val;
+};
+
+class ExtraProxyInt {
+public:
+  constexpr ExtraProxyInt(ProxyInt i) : val(i.val) {}
+  constexpr ExtraProxyInt(int i) : val(i) {}
+
+  constexpr int get() const { return val; }
+
+private:
+  int val;
+};
+
+template <template <class> class TQual, template <class> class UQual>
+struct std::basic_common_reference<ProxyInt, int, TQual, UQual> {
+  using type = ExtraProxyInt;
+};
+
+template <template <class> class TQual, template <class> class UQual>
+struct std::basic_common_reference<int, ProxyInt, TQual, UQual> {
+  using type = ExtraProxyInt;
+};
+
+static_assert(std::common_reference_with<int&, ProxyInt>);
+static_assert(std::common_reference_with<int&, ExtraProxyInt>);
+
+class ProxyIter {
+public:
+  using value_type      = int;
+  using difference_type = std::ptrdiff_t;
+
+  constexpr ProxyIter() : ptr_(nullptr) {}
+  constexpr explicit ProxyIter(int* p) : ptr_(p) {}
+
+  constexpr ProxyInt operator*() const { return ProxyInt{*ptr_}; }
+
+  constexpr ProxyIter& operator++() {
+    ++ptr_;
+    return *this;
+  }
+
+  constexpr ProxyIter operator++(int) {
+    ProxyIter tmp = *this;
+    ++ptr_;
+    return tmp;
+  }
+
+  constexpr bool operator==(const ProxyIter& other) const { return ptr_ == other.ptr_; }
+
+private:
+  int* ptr_;
+};
+
+static_assert(std::forward_iterator<ProxyIter>);
 
 constexpr bool test() {
   { // Result of `operator*` is (maybe const) lvalue reference
@@ -131,6 +190,28 @@ constexpr bool test() {
       std::same_as<const char&&> decltype(auto) cpattern_ref = *cit;
       assert(cpattern_ref == ' ');
     }
+  }
+
+  { // Result of `operator*` is type different from range_reference_t<InnerRng> and range_reference_t<Pattern>
+    using Inner   = std::vector<int>;
+    using V       = std::vector<Inner>;
+    using Pattern = std::ranges::subrange<ProxyIter, ProxyIter>;
+    using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, std::ranges::owning_view<Pattern>>;
+
+    static_assert(!std::same_as<std::ranges::range_reference_t<V>, std::ranges::range_reference_t<JWV>>);
+    static_assert(!std::same_as<std::ranges::range_reference_t<Pattern>, std::ranges::range_reference_t<JWV>>);
+
+    std::array<int, 2> pattern = {-1, -1};
+    Pattern pattern_as_subrange(ProxyIter{pattern.data()}, ProxyIter{pattern.data() + pattern.size()});
+
+    JWV jwv(V{Inner{1, 1}, Inner{2, 2}, Inner{3, 3}}, std::move(pattern_as_subrange));
+
+    auto it                                          = jwv.begin();
+    std::same_as<ExtraProxyInt> decltype(auto) v_ref = *it;
+    assert(v_ref.get() == 1);
+    std::ranges::advance(it, 7);
+    std::same_as<ExtraProxyInt> decltype(auto) pattern_ref = *std::as_const(it);
+    assert(pattern_ref.get() == -1);
   }
 
   return true;
