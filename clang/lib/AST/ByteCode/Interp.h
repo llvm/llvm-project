@@ -3084,6 +3084,9 @@ inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
   Pointer &ToPtr = S.Stk.peek<Pointer>();
 
+  if (!CheckLoad(S, OpPC, FromPtr))
+    return false;
+
   if (!DoBitCastPtr(S, OpPC, FromPtr, ToPtr))
     return false;
 

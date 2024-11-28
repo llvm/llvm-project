@@ -402,7 +402,7 @@ static bool flattenArrays(Module &M) {
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
   flattenGlobalArrays(M, GlobalMap);
   for (auto &F : make_early_inc_range(M.functions())) {
-    if (F.isIntrinsic())
+    if (F.isDeclaration())
       continue;
     MadeChange |= Impl.visit(F);
   }

@@ -1,5 +1,5 @@
-! Offloading test checking interaction of an
-! explicit member map utilising array bounds
+! Offloading test checking interaction of an explicit member map utilising 
+! array bounds
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

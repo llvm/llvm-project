@@ -222,7 +222,7 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
     if (EC)
       return createStringError(
           EC, "Could not open %s to write the post-opt IR module\n",
-          PreOptIRModuleFileName.get().c_str());
+          PostOptIRModuleFileName.get().c_str());
     M.print(FD, nullptr);
   }
 

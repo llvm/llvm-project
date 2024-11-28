@@ -164,7 +164,59 @@ void BottomUpVec::tryEraseDeadInstrs() {
   DeadInstrCandidates.clear();
 }
 
-Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
+Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack) {
+  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack);
+
+  Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
+  unsigned Lanes = VecUtils::getNumLanes(ToPack);
+  Type *VecTy = VecUtils::getWideType(ScalarTy, Lanes);
+
+  // Create a series of pack instructions.
+  Value *LastInsert = PoisonValue::get(VecTy);
+
+  Context &Ctx = ToPack[0]->getContext();
+
+  unsigned InsertIdx = 0;
+  for (Value *Elm : ToPack) {
+    // An element can be either scalar or vector. We need to generate different
+    // IR for each case.
+    if (Elm->getType()->isVectorTy()) {
+      unsigned NumElms =
+          cast<FixedVectorType>(Elm->getType())->getNumElements();
+      for (auto ExtrLane : seq<int>(0, NumElms)) {
+        // We generate extract-insert pairs, for each lane in `Elm`.
+        Constant *ExtrLaneC =
+            ConstantInt::getSigned(Type::getInt32Ty(Ctx), ExtrLane);
+        // This may return a Constant if Elm is a Constant.
+        auto *ExtrI =
+            ExtractElementInst::create(Elm, ExtrLaneC, WhereIt, Ctx, "VPack");
+        if (!isa<Constant>(ExtrI))
+          WhereIt = std::next(cast<Instruction>(ExtrI)->getIterator());
+        Constant *InsertLaneC =
+            ConstantInt::getSigned(Type::getInt32Ty(Ctx), InsertIdx++);
+        // This may also return a Constant if ExtrI is a Constant.
+        auto *InsertI = InsertElementInst::create(
+            LastInsert, ExtrI, InsertLaneC, WhereIt, Ctx, "VPack");
+        if (!isa<Constant>(InsertI)) {
+          LastInsert = InsertI;
+          WhereIt = std::next(cast<Instruction>(LastInsert)->getIterator());
+        }
+      }
+    } else {
+      Constant *InsertLaneC =
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), InsertIdx++);
+      // This may be folded into a Constant if LastInsert is a Constant. In
+      // that case we only collect the last constant.
+      LastInsert = InsertElementInst::create(LastInsert, Elm, InsertLaneC,
+                                             WhereIt, Ctx, "Pack");
+      if (auto *NewI = dyn_cast<Instruction>(LastInsert))
+        WhereIt = std::next(NewI->getIterator());
+    }
+  }
+  return LastInsert;
+}
+
+Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
   Value *NewVec = nullptr;
   const auto &LegalityRes = Legality->canVectorize(Bndl);
   switch (LegalityRes.getSubclassID()) {
@@ -178,7 +230,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
       break;
     case Instruction::Opcode::Store: {
       // Don't recurse towards the pointer operand.
-      auto *VecOp = vectorizeRec(getOperand(Bndl, 0));
+      auto *VecOp = vectorizeRec(getOperand(Bndl, 0), Depth + 1);
       VecOperands.push_back(VecOp);
       VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
       break;
@@ -186,7 +238,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
     default:
       // Visit all operands.
       for (auto OpIdx : seq<unsigned>(I->getNumOperands())) {
-        auto *VecOp = vectorizeRec(getOperand(Bndl, OpIdx));
+        auto *VecOp = vectorizeRec(getOperand(Bndl, OpIdx), Depth + 1);
         VecOperands.push_back(VecOp);
       }
       break;
@@ -201,8 +253,11 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
     break;
   }
   case LegalityResultID::Pack: {
-    // TODO: Unimplemented
-    llvm_unreachable("Unimplemented");
+    // If we can't vectorize the seeds then just return.
+    if (Depth == 0)
+      return nullptr;
+    NewVec = createPack(Bndl);
+    break;
   }
   }
   return NewVec;
@@ -210,7 +265,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
 
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   DeadInstrCandidates.clear();
-  vectorizeRec(Bndl);
+  vectorizeRec(Bndl, /*Depth=*/0);
   tryEraseDeadInstrs();
   return Change;
 }

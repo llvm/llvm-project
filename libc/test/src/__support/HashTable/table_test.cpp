@@ -82,7 +82,7 @@ TEST(LlvmLibcTableTest, GrowthSequence) {
 }
 
 TEST(LlvmLibcTableTest, Insertion) {
-  union key {
+  struct key {
     char bytes[2];
   } keys[256];
   for (size_t k = 0; k < 256; ++k) {

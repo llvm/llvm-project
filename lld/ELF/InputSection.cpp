@@ -35,13 +35,13 @@ using namespace lld;
 using namespace lld::elf;
 
 // Returns a string to construct an error message.
-std::string lld::toString(const InputSectionBase *sec) {
-  return (toString(sec->file) + ":(" + sec->name + ")").str();
+std::string elf::toStr(Ctx &ctx, const InputSectionBase *sec) {
+  return (toStr(ctx, sec->file) + ":(" + sec->name + ")").str();
 }
 
 const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
                                      const InputSectionBase *sec) {
-  return s << toString(sec);
+  return s << toStr(s.ctx, sec);
 }
 
 template <class ELFT>
@@ -52,13 +52,14 @@ static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
   return check(file.getObj().getSectionContents(hdr));
 }
 
-InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
-                                   uint32_t type, uint64_t entsize,
-                                   uint32_t link, uint32_t info,
-                                   uint32_t addralign, ArrayRef<uint8_t> data,
-                                   StringRef name, Kind sectionKind)
-    : SectionBase(sectionKind, file, name, flags, entsize, addralign, type,
-                  info, link),
+InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
+                                   uint32_t type, uint64_t flags, uint32_t link,
+                                   uint32_t info, uint32_t addralign,
+                                   uint32_t entsize, ArrayRef<uint8_t> data,
+                                   Kind sectionKind)
+    : SectionBase(sectionKind, file, name, type, flags, link, info, addralign,
+                  entsize),
+      bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
       content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
@@ -95,10 +96,10 @@ template <class ELFT>
 InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
                                    const typename ELFT::Shdr &hdr,
                                    StringRef name, Kind sectionKind)
-    : InputSectionBase(&file, getFlags(file.ctx, hdr.sh_flags), hdr.sh_type,
-                       hdr.sh_entsize, hdr.sh_link, hdr.sh_info,
-                       hdr.sh_addralign, getSectionContents(file, hdr), name,
-                       sectionKind) {
+    : InputSectionBase(&file, name, hdr.sh_type,
+                       getFlags(file.ctx, hdr.sh_flags), hdr.sh_link,
+                       hdr.sh_info, hdr.sh_addralign, hdr.sh_entsize,
+                       getSectionContents(file, hdr), sectionKind) {
   // We reject object files having insanely large alignments even though
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
@@ -121,8 +122,7 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
-    Fatal(ctx) << &sec
-               << ": decompress failed: " << llvm::toString(std::move(e));
+    Fatal(ctx) << &sec << ": decompress failed: " << std::move(e);
 }
 
 void InputSectionBase::decompress() const {
@@ -131,7 +131,7 @@ void InputSectionBase::decompress() const {
   {
     static std::mutex mu;
     std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
+    uncompressedBuf = ctx.bAlloc.Allocate<uint8_t>(size);
   }
 
   invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
@@ -274,7 +274,7 @@ void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
                         "not built with zstd support";
   } else {
     ErrAlways(ctx) << this << ": unsupported compression type ("
-                   << Twine(hdr->ch_type) << ")";
+                   << uint32_t(hdr->ch_type) << ")";
     return;
   }
 
@@ -309,9 +309,9 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
-  std::string filename = toString(file);
+  std::string filename = toStr(getCtx(), file);
   if (Defined *d = getEnclosingFunction(offset))
-    return filename + ":(function " + toString(*d) + ": " + secAndOffset;
+    return filename + ":(function " + toStr(getCtx(), *d) + ": " + secAndOffset;
 
   return filename + ":(" + secAndOffset;
 }
@@ -347,7 +347,7 @@ std::string InputSectionBase::getObjMsg(uint64_t off) const {
   // before ObjFile::initSectionsAndLocalSyms where local symbols are
   // initialized.
   if (Defined *d = getEnclosingSymbol(off))
-    return filename + ":(" + toString(*d) + ")" + archive;
+    return filename + ":(" + toStr(getCtx(), *d) + ")" + archive;
 
   // If there's no symbol, print out the offset in the section.
   return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
@@ -356,18 +356,19 @@ std::string InputSectionBase::getObjMsg(uint64_t off) const {
 
 PotentialSpillSection::PotentialSpillSection(const InputSectionBase &source,
                                              InputSectionDescription &isd)
-    : InputSection(source.file, source.flags, source.type, source.addralign, {},
-                   source.name, SectionBase::Spill),
+    : InputSection(source.file, source.name, source.type, source.flags,
+                   source.addralign, source.addralign, {}, SectionBase::Spill),
       isd(&isd) {}
 
-InputSection InputSection::discarded(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
+InputSection InputSection::discarded(nullptr, "", 0, 0, 0, 0,
+                                     ArrayRef<uint8_t>());
 
-InputSection::InputSection(InputFile *f, uint64_t flags, uint32_t type,
-                           uint32_t addralign, ArrayRef<uint8_t> data,
-                           StringRef name, Kind k)
-    : InputSectionBase(f, flags, type,
-                       /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, addralign, data,
-                       name, k) {
+InputSection::InputSection(InputFile *f, StringRef name, uint32_t type,
+                           uint64_t flags, uint32_t addralign, uint32_t entsize,
+                           ArrayRef<uint8_t> data, Kind k)
+    : InputSectionBase(f, name, type, flags,
+                       /*link=*/0, /*info=*/0, addralign, /*entsize=*/entsize,
+                       data, k) {
   assert(f || this == &InputSection::discarded);
 }
 
@@ -487,7 +488,7 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
           uint32_t secIdx = cast<Undefined>(sym).discardedSecIdx;
           Elf_Shdr_Impl<ELFT> sec = file->template getELFShdrs<ELFT>()[secIdx];
           Warn(ctx) << "relocation refers to a discarded section: "
-                    << CHECK(file->getObj().getSectionName(sec), file)
+                    << CHECK2(file->getObj().getSectionName(sec), file)
                     << "\n>>> referenced by " << getObjMsg(p->r_offset);
         }
         p->setSymbolAndType(0, 0, false);
@@ -1032,9 +1033,8 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
                 (f->getRelocTargetSym(*it).getVA(ctx) + getAddend<ELFT>(*it));
         }
         if (overwriteULEB128(bufLoc, val) >= 0x80)
-          Err(ctx) << getLocation(offset) << ": ULEB128 value " << Twine(val)
-                   << " exceeds available space; references '"
-                   << lld::toString(sym) << "'";
+          Err(ctx) << getLocation(offset) << ": ULEB128 value " << val
+                   << " exceeds available space; references '" << &sym << "'";
         continue;
       }
       Err(ctx) << getLocation(offset)
@@ -1094,7 +1094,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
     // sections.
     if (LLVM_LIKELY(expr == R_ABS) || expr == R_DTPREL || expr == R_GOTPLTREL ||
-        expr == R_RISCV_ADD) {
+        expr == R_RISCV_ADD || expr == R_ARM_SBREL) {
       target.relocateNoSym(bufLoc, type,
                            SignExtend64<bits>(sym.getVA(ctx, addend)));
       continue;
@@ -1104,14 +1104,6 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
       target.relocateNoSym(bufLoc, type,
                            SignExtend64<bits>(sym.getSize() + addend));
       continue;
-    }
-
-    std::string msg = getLocation(offset) + ": has non-ABS relocation " +
-                      toString(type) + " against symbol '" + toString(sym) +
-                      "'";
-    if (expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC)) {
-      Err(ctx) << msg;
-      return;
     }
 
     // If the control reaches here, we found a PC-relative relocation in a
@@ -1126,10 +1118,18 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed in
     // 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we need to
     // keep this bug-compatible code for a while.
-    Warn(ctx) << msg;
-    target.relocateNoSym(
-        bufLoc, type,
-        SignExtend64<bits>(sym.getVA(ctx, addend - offset - outSecOff)));
+    bool isErr = expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC);
+    {
+      ELFSyncStream diag(ctx, isErr && !ctx.arg.noinhibitExec
+                                  ? DiagLevel::Err
+                                  : DiagLevel::Warn);
+      diag << getLocation(offset) << ": has non-ABS relocation " << type
+           << " against symbol '" << &sym << "'";
+    }
+    if (!isErr)
+      target.relocateNoSym(
+          bufLoc, type,
+          SignExtend64<bits>(sym.getVA(ctx, addend - offset - outSecOff)));
   }
 }
 
@@ -1238,9 +1238,9 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
                                                        f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
-        ErrAlways(ctx)
-            << lld::toString(this) << ": " << f->getName()
-            << " (with -fsplit-stack) calls " << rel.sym->getName()
+        Err(ctx)
+            << this << ": " << f->getName() << " (with -fsplit-stack) calls "
+            << rel.sym->getName()
             << " (without -fsplit-stack), but couldn't adjust its prologue";
     }
   }
@@ -1279,8 +1279,7 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)
                       : compression::zstd::decompress(compressed, buf, size))
-      Fatal(ctx) << this
-                 << ": decompress failed: " << llvm::toString(std::move(e));
+      Fatal(ctx) << this << ": decompress failed: " << std::move(e);
     uint8_t *bufEnd = buf + size;
     relocate<ELFT>(ctx, buf, bufEnd);
     return;
@@ -1370,8 +1369,7 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
     d = d.slice(size);
   }
   if (msg)
-    Err(file->ctx) << "corrupted .eh_frame: " << Twine(msg)
-                   << "\n>>> defined in "
+    Err(file->ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
                    << getObjMsg(d.data() - content().data());
 }
 
@@ -1441,12 +1439,13 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> &f,
                                      StringRef name)
     : InputSectionBase(f, header, name, InputSectionBase::Merge) {}
 
-MergeInputSection::MergeInputSection(Ctx &ctx, uint64_t flags, uint32_t type,
-                                     uint64_t entsize, ArrayRef<uint8_t> data,
-                                     StringRef name)
-    : InputSectionBase(ctx.internalFile, flags, type, entsize, /*link=*/0,
+MergeInputSection::MergeInputSection(Ctx &ctx, StringRef name, uint32_t type,
+                                     uint64_t flags, uint64_t entsize,
+                                     ArrayRef<uint8_t> data)
+    : InputSectionBase(ctx.internalFile, name, type, flags, /*link=*/0,
                        /*info=*/0,
-                       /*alignment=*/entsize, data, name, SectionBase::Merge) {}
+                       /*addralign=*/entsize, entsize, data,
+                       SectionBase::Merge) {}
 
 // This function is called after we obtain a complete list of input sections
 // that need to be linked. This is responsible to split section contents
