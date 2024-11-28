@@ -261,16 +261,12 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
     RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
   return RD->hasAttr<T>();
 }
-} // namespace clang::sema
 
-namespace clang {
-bool Sema::isPointerLikeType(QualType QT) {
-  return sema::isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
+bool isPointerLikeType(QualType QT) {
+  return isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
          QT->isNullPtrType();
 }
-} // namespace clang
 
-namespace clang::sema {
 // Decl::isInStdNamespace will return false for iterators in some STL
 // implementations due to them being defined in a namespace outside of the std
 // namespace.
@@ -298,7 +294,7 @@ static bool isContainerOfPointer(const RecordDecl *Container) {
       return false;
     const auto &TAs = CTSD->getTemplateArgs();
     return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
-           Sema::isPointerLikeType(TAs[0].getAsType());
+           isPointerLikeType(TAs[0].getAsType());
   }
   return false;
 }
@@ -322,7 +318,7 @@ static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
     return isInStlNamespace(RD) && RD->getIdentifier() &&
            RD->getName() == "initializer_list" && TAs.size() > 0 &&
            TAs[0].getKind() == TemplateArgument::Type &&
-           Sema::isPointerLikeType(TAs[0].getAsType());
+           isPointerLikeType(TAs[0].getAsType());
   }
   return false;
 }
@@ -338,7 +334,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
           Callee->getFunctionObjectParameterType()) &&
       !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
     return false;
-  if (Sema::isPointerLikeType(Callee->getReturnType())) {
+  if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
       return false;
     return llvm::StringSwitch<bool>(Callee->getName())
@@ -1446,7 +1442,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     break;
   }
   case LK_LifetimeCapture: {
-    if (Sema::isPointerLikeType(Init->getType()))
+    if (isPointerLikeType(Init->getType()))
       Path.push_back({IndirectLocalPathEntry::GslPointerInit, Init});
     break;
   }

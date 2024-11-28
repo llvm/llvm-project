@@ -1763,10 +1763,6 @@ public:
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
-  // Tells whether the type is annotated with [[gsl::Pointer]] or is a pointer
-  // type.
-  static bool isPointerLikeType(QualType QT);
-
   LifetimeCaptureByAttr *ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
                                                     StringRef ParamName);
   // Processes the argument 'X' in [[clang::lifetime_capture_by(X)]]. Since 'X'

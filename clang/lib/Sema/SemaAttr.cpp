@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
@@ -286,7 +287,7 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
     if (PVD->hasAttr<LifetimeCaptureByAttr>())
       return;
   for (ParmVarDecl *PVD : MD->parameters()) {
-    if (isPointerLikeType(PVD->getType().getNonReferenceType())) {
+    if (sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
       int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
       PVD->addAttr(
           LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
