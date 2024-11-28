@@ -90,12 +90,9 @@ private:
 
   bool closeControlFlow(BasicBlock *BB);
 
-  Function *getDecl(Function *&Cache, Intrinsic::ID ID, unsigned NumTypes) {
-    if (!Cache) {
-      Module *M = F->getParent();
-      SmallVector<Type *, 2> Types(NumTypes, IntMask);
-      Cache = Intrinsic::getOrInsertDeclaration(M, ID, Types);
-    }
+  Function *getDecl(Function *&Cache, Intrinsic::ID ID, ArrayRef<Type *> Tys) {
+    if (!Cache)
+      Cache = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
     return Cache;
   }
 
@@ -190,7 +187,7 @@ bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
     return false;
 
   IRBuilder<> IRB(Term);
-  Value *IfCall = IRB.CreateCall(getDecl(If, Intrinsic::amdgcn_if, 1),
+  Value *IfCall = IRB.CreateCall(getDecl(If, Intrinsic::amdgcn_if, IntMask),
                                  {Term->getCondition()});
   Value *Cond = IRB.CreateExtractValue(IfCall, {0});
   Value *Mask = IRB.CreateExtractValue(IfCall, {1});
@@ -206,8 +203,8 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
   }
 
   IRBuilder<> IRB(Term);
-  Value *ElseCall =
-      IRB.CreateCall(getDecl(Else, Intrinsic::amdgcn_else, 2), {popSaved()});
+  Value *ElseCall = IRB.CreateCall(
+      getDecl(Else, Intrinsic::amdgcn_else, {IntMask, IntMask}), {popSaved()});
   Value *Cond = IRB.CreateExtractValue(ElseCall, {0});
   Value *Mask = IRB.CreateExtractValue(ElseCall, {1});
   Term->setCondition(Cond);
@@ -221,7 +218,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
 
   auto CreateBreak = [this, Cond, Broken](Instruction *I) -> CallInst * {
     return IRBuilder<>(I).CreateCall(
-        getDecl(IfBreak, Intrinsic::amdgcn_if_break, 1), {Cond, Broken});
+        getDecl(IfBreak, Intrinsic::amdgcn_if_break, IntMask), {Cond, Broken});
   };
 
   if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
@@ -283,7 +280,7 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
   }
 
   CallInst *LoopCall = IRBuilder<>(Term).CreateCall(
-      getDecl(Loop, Intrinsic::amdgcn_loop, 1), {Arg});
+      getDecl(Loop, Intrinsic::amdgcn_loop, IntMask), {Arg});
   Term->setCondition(LoopCall);
 
   push(Term->getSuccessor(0), Arg);
@@ -328,7 +325,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
     // condition, for now just avoid copying these DebugLocs so that stepping
     // out of the then/else block in a debugger doesn't step to the condition.
     IRB.SetCurrentDebugLocation(DebugLoc());
-    IRB.CreateCall(getDecl(EndCf, Intrinsic::amdgcn_end_cf, 1), {Exec});
+    IRB.CreateCall(getDecl(EndCf, Intrinsic::amdgcn_end_cf, IntMask), {Exec});
   }
 
   return true;
