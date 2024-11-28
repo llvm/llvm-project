@@ -6,6 +6,7 @@ define i64 @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $-4294967295, %rax # imm = 0xFFFFFFFF00000001
+; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    retq
   %x = bitcast i64 u0xffffffff00000001 to i64
   %t = trunc i64 %x to i32
