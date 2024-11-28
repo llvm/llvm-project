@@ -31,7 +31,7 @@ module @named_module_acceptable {
 // The IR contains both conditional and unconditional branches with a loop
 // in which the last cf.cond_br is referncing the first cf.br
 //
-func.func @acceptable_ir_has_cleanable_simple_op_with_unconditional_branch_op(%arg0: i1) {
+func.func @acceptable_ir_has_cleanable_loop_of_conditional_and_branch_op(%arg0: i1) {
   %non_live = arith.constant 0 : i32
   // CHECK-NOT: arith.constant
   cf.br ^bb1(%non_live : i32)
