@@ -1888,7 +1888,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
 
       // A subreg use of a partially undef (super) register may be a complete
       // undef use now and then has to be marked that way.
-      if (MO.isUse() && !DstIsPhys) {
+      if (MO.isUse() && !MO.isUndef() && !DstIsPhys) {
         unsigned SubUseIdx = TRI->composeSubRegIndices(SubIdx, MO.getSubReg());
         if (SubUseIdx != 0 && MRI->shouldTrackSubRegLiveness(DstReg)) {
           if (!DstInt->hasSubRanges()) {
