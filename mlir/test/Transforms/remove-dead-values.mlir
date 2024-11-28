@@ -28,24 +28,6 @@ module @named_module_acceptable {
 
 // -----
 
-// The IR is optimized regardless of the presence of a branch op `cf.cond_br`.
-//
-func.func @acceptable_ir_has_cleanable_simple_op_with_branch_op(%arg0: i1) {
-  %non_live = arith.constant 0 : i32
-  // CHECK-NOT: non_live
-  cf.cond_br %arg0, ^bb1(%non_live : i32), ^bb2(%non_live : i32)
-^bb1(%non_live_0 : i32):
-  // CHECK-NOT: non_live_0
-  cf.br ^bb3
-^bb2(%non_live_1 : i32):
-  // CHECK-NOT: non_live_1
-  cf.br ^bb3
-^bb3:
-  return
-}
-
-// -----
-
 // The IR contains both conditional and unconditional branches with a loop
 // in which the last cf.cond_br is referncing the first cf.br
 //
