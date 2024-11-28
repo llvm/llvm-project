@@ -491,6 +491,70 @@ static bool isTrivialFiller(Expr *E) {
   return false;
 }
 
+
+
+// emit a flat cast where the RHS is a scalar, including vector
+static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
+			    QualType DestTy, llvm::Value *SrcVal,
+			    QualType SrcTy, SourceLocation Loc) {
+  // Flatten our destination
+  SmallVector<QualType> DestTypes; // Flattened type
+  SmallVector<llvm::Value *, 4> IdxList;
+  SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
+  // ^^ Flattened accesses to DestVal we want to store into
+  CGF.FlattenAccessAndType(DestVal, DestTy, IdxList, StoreGEPList,
+		       DestTypes);
+
+  if (const VectorType *VT = SrcTy->getAs<VectorType>()) {
+    SrcTy = VT->getElementType();
+    assert(StoreGEPList.size() <= VT->getNumElements() &&
+	   "Cannot perform HLSL flat cast when vector source \
+           object has less elements than flattened destination \
+           object.");
+      for(unsigned i = 0; i < StoreGEPList.size(); i ++) {
+        llvm::Value *Load = CGF.Builder.CreateExtractElement(SrcVal, i,
+							     "vec.load");
+	llvm::Value *Cast = CGF.EmitScalarConversion(Load, SrcTy,
+						     DestTypes[i],
+						     Loc);
+	CGF.PerformStore(StoreGEPList[i], Cast);
+      }
+      return;
+  }
+  llvm_unreachable("HLSL Flat cast doesn't handle splatting.");
+}
+
+// emit a flat cast where the RHS is an aggregate
+static void EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address DestVal,
+			       QualType DestTy, Address SrcVal,
+			       QualType SrcTy, SourceLocation Loc) {
+  // Flatten our destination
+  SmallVector<QualType> DestTypes; // Flattened type
+  SmallVector<llvm::Value *, 4> IdxList;
+  SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
+  // ^^ Flattened accesses to DestVal we want to store into
+  CGF.FlattenAccessAndType(DestVal, DestTy, IdxList, StoreGEPList,
+		       DestTypes);
+  // Flatten our src
+  SmallVector<QualType> SrcTypes; // Flattened type
+  SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
+  // ^^ Flattened accesses to SrcVal we want to load from
+  IdxList.clear();
+  CGF.FlattenAccessAndType(SrcVal, SrcTy, IdxList, LoadGEPList, SrcTypes);
+
+  assert(StoreGEPList.size() <= LoadGEPList.size() &&
+	 "Cannot perform HLSL flat cast when flattened source object \
+          has less elements than flattened destination object.");
+  // apply casts to what we load from LoadGEPList
+  // and store result in Dest
+  for(unsigned i = 0; i < StoreGEPList.size(); i ++) {
+    llvm::Value *Load = CGF.PerformLoad(LoadGEPList[i]);
+    llvm::Value *Cast = CGF.EmitScalarConversion(Load, SrcTypes[i],
+						 DestTypes[i], Loc);
+    CGF.PerformStore(StoreGEPList[i], Cast);
+  }
+}
+
 /// Emit initialization of an array from an initializer list. ExprToVisit must
 /// be either an InitListEpxr a CXXParenInitListExpr.
 void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
@@ -890,7 +954,24 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_HLSLArrayRValue:
     Visit(E->getSubExpr());
     break;
+  case CK_HLSLAggregateCast: {
+    Expr *Src = E->getSubExpr();
+    QualType SrcTy = Src->getType();
+    RValue RV = CGF.EmitAnyExpr(Src);
+    QualType DestTy = E->getType();
+    Address DestVal = Dest.getAddress();
+    SourceLocation Loc = E->getExprLoc();
 
+    if (RV.isScalar()) {
+      llvm::Value *SrcVal = RV.getScalarVal();
+      EmitHLSLScalarFlatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
+    } else { // RHS is an aggregate
+      assert(RV.isAggregate() &&
+	     "Can't perform HLSL Aggregate cast on a complex type.");
+      Address SrcVal = RV.getAggregateAddress();
+      EmitHLSLAggregateFlatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
+    }
+    break; }
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_ConstructorConversion:

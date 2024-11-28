@@ -2262,6 +2262,35 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
   return true;
 }
 
+// RHS is an aggregate type
+static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
+					QualType RHSTy, QualType LHSTy,
+					SourceLocation Loc) {
+  SmallVector<llvm::Value *, 4> IdxList;
+  SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
+  SmallVector<QualType> SrcTypes; // Flattened type
+  CGF.FlattenAccessAndType(RHSVal, RHSTy, IdxList, LoadGEPList, SrcTypes);
+  // LHS is either a vector or a builtin?
+  // if its a vector create a temp alloca to store into and return that
+  if (auto *VecTy = LHSTy->getAs<VectorType>()) {
+    llvm::Value *V = CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
+    // write to V.
+    for(unsigned i = 0; i < VecTy->getNumElements(); i ++) {
+      llvm::Value *Load = CGF.PerformLoad(LoadGEPList[i]);
+      llvm::Value *Cast = CGF.EmitScalarConversion(Load, SrcTypes[i],
+						   VecTy->getElementType(), Loc);
+      V = CGF.Builder.CreateInsertElement(V, Cast, i);
+    }
+    return V;
+  }
+  // i its a builtin just do an extract element or load.
+  assert(LHSTy->isBuiltinType() &&
+	 "Destination type must be a vector or builtin type.");
+  // TODO add asserts about things being long enough
+  return CGF.EmitScalarConversion(CGF.PerformLoad(LoadGEPList[0]),
+				  LHSTy, SrcTypes[0], Loc);
+}
+
 // VisitCastExpr - Emit code for an explicit or implicit cast.  Implicit casts
 // have to handle a more broad range of conversions than explicit casts, as they
 // handle things like function to ptr-to-function decay etc.
@@ -2752,7 +2781,17 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
+  case CK_HLSLAggregateCast: {
+    RValue RV = CGF.EmitAnyExpr(E);
+    SourceLocation Loc = CE->getExprLoc();
+    QualType SrcTy = E->getType();
 
+    if (RV.isAggregate()) { // RHS is an aggregate
+      Address SrcVal = RV.getAggregateAddress();
+      return EmitHLSLAggregateFlatCast(CGF, SrcVal, SrcTy, DestTy, Loc);
+    }
+    llvm_unreachable("Not a valid HLSL Flat Cast.");
+  }
   } // end of switch
 
   llvm_unreachable("unknown scalar cast");
