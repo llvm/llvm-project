@@ -46,17 +46,24 @@ func.func @acceptable_ir_has_cleanable_simple_op_with_branch_op(%arg0: i1) {
 
 // -----
 
-// Arguments of unconditional branch op `cf.br` are properly removed.
+// The IR contains both conditional and unconditional branches with a loop
+// in which the last cf.cond_br is referncing the first cf.br
 //
 func.func @acceptable_ir_has_cleanable_simple_op_with_unconditional_branch_op(%arg0: i1) {
   %non_live = arith.constant 0 : i32
-  // CHECK-NOT: non_live
+  // CHECK-NOT: arith.constant
   cf.br ^bb1(%non_live : i32)
 ^bb1(%non_live_1 : i32):
-  // CHECK-NOT: non_live_1
+  // CHECK: ^[[BB1:bb[0-9]+]]:
   cf.br ^bb3(%non_live_1 : i32)
-  // CHECK-NOT: non_live_2
+  // CHECK: cf.br ^[[BB3:bb[0-9]+]]
+  // CHECK-NOT: i32
 ^bb3(%non_live_2 : i32):
+  // CHECK: ^[[BB3]]:
+  cf.cond_br %arg0, ^bb1(%non_live_2 : i32), ^bb4(%non_live_2 : i32)
+  // CHECK: cf.cond_br %arg0, ^[[BB1]], ^[[BB4:bb[0-9]+]]
+^bb4(%non_live_4 : i32):
+  // CHECK: ^[[BB4]]:
   return
 }
 
@@ -69,13 +76,14 @@ func.func @cleanable_loop_iter_args_value(%arg0: index) -> index {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   %non_live = arith.constant 0 : index
-  // CHECK-NOT: non_live
+  // CHECK: [[RESULT:%.+]] = scf.for [[ARG_1:%.*]] = %c0 to %c10 step %c1 iter_args([[ARG_2:%.*]] = %arg0) -> (index) {
   %result, %result_non_live = scf.for %i = %c0 to %c10 step %c1 iter_args(%live_arg = %arg0, %non_live_arg = %non_live) -> (index, index) {
+    // CHECK: [[SUM:%.+]] = arith.addi [[ARG_2]], [[ARG_1]] : index
     %new_live = arith.addi %live_arg, %i : index
-    // CHECK: scf.for %[[ARG_0:.*]] = %c0 to %c10 step %c1 iter_args(%[[ARG_1:.*]] = %arg0)
+    // CHECK: scf.yield [[SUM:%.+]]
     scf.yield %new_live, %non_live_arg : index, index
   }
-  // CHECK-NOT: result_non_live
+  // CHECK: return [[RESULT]] : index
   return %result : index
 }
 

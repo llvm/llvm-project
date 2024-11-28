@@ -165,17 +165,6 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
   return opOperands;
 }
 
-// Check if any of the operations implements BranchOpInterface
-template <typename UserRange>
-static bool anyBranchUsers(const UserRange &users) {
-  for (auto user : users) {
-    if (auto subBranchOp = dyn_cast<BranchOpInterface>(user)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Clean a simple op `op`, given the liveness analysis information in `la`.
 /// Here, cleaning means:
 ///   (1) Dropping all its uses, AND
@@ -186,8 +175,7 @@ static bool anyBranchUsers(const UserRange &users) {
 /// symbol op, a symbol-user op, a region branch op, a branch op, a region
 /// branch terminator op, or return-like.
 static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
-  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), la) ||
-      anyBranchUsers(op->getUsers()))
+  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), la))
     return;
 
   op->dropAllUses();
@@ -606,10 +594,14 @@ static void cleanBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la) {
     // Do (3)
     for (int argIdx = successorLiveOperands.size() - 1; argIdx >= 0; --argIdx) {
       if (!successorLiveOperands[argIdx]) {
-        if (anyBranchUsers(successorBlock->getArgument(argIdx).getUsers())) {
+        if (successorBlock->getNumArguments() < successorOperands.size()) {
+          // if block was cleaned through a different code path
+          // we only need to remove operands from the invokation
+          successorOperands.erase(argIdx);
           continue;
         }
 
+        successorBlock->getArgument(argIdx).dropAllUses();
         successorOperands.erase(argIdx);
         successorBlock->eraseArgument(argIdx);
       }
