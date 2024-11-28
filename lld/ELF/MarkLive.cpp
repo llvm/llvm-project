@@ -75,6 +75,8 @@ private:
   // There are normally few input sections whose names are valid C
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
+
+  DenseMap<InputSectionBase*, LiveParent> parents;
 };
 } // namespace
 
@@ -208,6 +210,9 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
   if (sec->partition == 1 || sec->partition == partition)
     return;
   sec->partition = sec->partition ? 1 : partition;
+
+  if (parent)
+    parents.try_emplace(sec, *parent);
 
   // Add input section to the queue.
   if (InputSection *s = dyn_cast<InputSection>(sec))
