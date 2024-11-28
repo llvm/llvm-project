@@ -181,10 +181,8 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
 
 } // namespace
 
-void ento::registerChrootChecker(CheckerManager &mgr) {
-  mgr.registerChecker<ChrootChecker>();
+void ento::registerChrootChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<ChrootChecker>();
 }
 
-bool ento::shouldRegisterChrootChecker(const CheckerManager &mgr) {
-  return true;
-}
+bool ento::shouldRegisterChrootChecker(const CheckerManager &) { return true; }
