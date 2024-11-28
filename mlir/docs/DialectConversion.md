@@ -258,7 +258,7 @@ materializations depending on the situation.
 *   Source Materialization
 
     -   A source materialization is used when a value was replaced with a value
-        of different type, but there are still users that expects the original
+        of a different type, but there are still users that expects the original
         ("source") type at the end of the conversion process. A source
         materialization converts the replacement value back to the source type.
     -   This materialization is used in the following situations:
