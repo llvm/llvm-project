@@ -529,9 +529,18 @@ Error RewriteInstance::discoverStorage() {
       BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{
           Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
           Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
-      if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
-          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
-        BC->IsLinuxKernel = true;
+
+      switch (BC->TheTriple->getArch()) {
+      case llvm::Triple::x86_64:
+        if (Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
+          BC->IsLinuxKernel = true;
+        break;
+      case llvm::Triple::aarch64:
+        if (Phdr.p_vaddr >= BinaryContext::KernelStartAArch64)
+          BC->IsLinuxKernel = true;
+        break;
+      }
+
       break;
     case ELF::PT_INTERP:
       BC->HasInterpHeader = true;

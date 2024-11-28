@@ -196,7 +196,6 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Section containing the Linux exception table.
   ErrorOr<BinarySection &> ExceptionsSection = std::errc::bad_address;
-  static constexpr size_t EXCEPTION_TABLE_ENTRY_SIZE = 12;
 
   /// Functions with exception handling code.
   DenseSet<BinaryFunction *> FunctionsWithExceptions;
@@ -224,6 +223,17 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// .pci_fixup section.
   ErrorOr<BinarySection &> PCIFixupSection = std::errc::bad_address;
   static constexpr size_t PCI_FIXUP_ENTRY_SIZE = 16;
+
+  size_t getExceptionTableEntrySize() {
+    switch (BC.TheTriple->getArch()) {
+    case llvm::Triple::x86_64:
+      return 12;
+    case llvm::Triple::aarch64:
+      return 8;
+    default:
+      llvm_unreachable("Unsupported architecture");
+    }
+  }
 
   /// Process linux kernel special sections and their relocations.
   void processLKSections();
@@ -474,8 +484,8 @@ void LinuxKernelRewriter::processInstructionFixups() {
       continue;
 
     Fixup.Section.addRelocation(Fixup.Offset, &Fixup.Label,
-                                Fixup.IsPCRelative ? ELF::R_X86_64_PC32
-                                                   : ELF::R_X86_64_64,
+                                Fixup.IsPCRelative ? Relocation::getPC32()
+                                                   : Relocation::getAbs64(),
                                 /*Addend*/ 0);
   }
 }
@@ -998,7 +1008,7 @@ Error LinuxKernelRewriter::rewriteStaticCalls() {
                                  StaticCallSection->getAddress() +
                                  (Entry.ID - 1) * STATIC_CALL_ENTRY_SIZE;
     StaticCallSection->addRelocation(EntryOffset, Entry.Label,
-                                     ELF::R_X86_64_PC32, /*Addend*/ 0);
+                                     Relocation::getPC32(), /*Addend*/ 0);
   }
 
   return Error::success();
@@ -1023,7 +1033,8 @@ Error LinuxKernelRewriter::readExceptionTable() {
   if (!ExceptionsSection)
     return Error::success();
 
-  if (ExceptionsSection->getSize() % EXCEPTION_TABLE_ENTRY_SIZE)
+  size_t EntrySize = getExceptionTableEntrySize();
+  if (ExceptionsSection->getSize() % EntrySize)
     return createStringError(errc::executable_format_error,
                              "exception table size error");
 
@@ -1038,7 +1049,19 @@ Error LinuxKernelRewriter::readExceptionTable() {
         SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
     const uint64_t FixupAddress =
         SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t Data = DE.getU32(Cursor);
+
+    auto ReadData = [this, &DE, &Cursor]() {
+      switch (BC.TheTriple->getArch()) {
+      case llvm::Triple::x86_64:
+        return DE.getU32(Cursor);
+      case llvm::Triple::aarch64:
+        return 0U;
+      default:
+        llvm_unreachable("Unsupported architecture");
+      }
+    };
+
+    const uint64_t Data = ReadData();
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1100,8 +1123,7 @@ Error LinuxKernelRewriter::readExceptionTable() {
     }
   }
 
-  BC.outs() << "BOLT-INFO: parsed "
-            << ExceptionsSection->getSize() / EXCEPTION_TABLE_ENTRY_SIZE
+  BC.outs() << "BOLT-INFO: parsed " << ExceptionsSection->getSize() / EntrySize
             << " exception table entries\n";
 
   return Error::success();
@@ -1305,7 +1327,8 @@ Error LinuxKernelRewriter::rewriteBugTable() {
         MCSymbol *Label =
             BC.MIB->getOrCreateInstLabel(Inst, "__BUG_", BC.Ctx.get());
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
-        BugTableSection->addRelocation(EntryOffset, Label, ELF::R_X86_64_PC32,
+        BugTableSection->addRelocation(EntryOffset, Label,
+                                       Relocation::getPC32(),
                                        /*Addend*/ 0);
       }
     }
@@ -1315,7 +1338,8 @@ Error LinuxKernelRewriter::rewriteBugTable() {
     for (const uint32_t ID : FunctionBugList[&BF]) {
       if (!EmittedIDs.count(ID)) {
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
-        BugTableSection->addRelocation(EntryOffset, nullptr, ELF::R_X86_64_PC32,
+        BugTableSection->addRelocation(EntryOffset, nullptr,
+                                       Relocation::getPC32(),
                                        /*Addend*/ 0);
       }
     }
@@ -1589,6 +1613,41 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
   return Error::success();
 }
 
+static bool checkStaticKeysJumpInstSize(const BinaryContext &BC, size_t Size) {
+  switch (BC.TheTriple->getArch()) {
+  case llvm::Triple::x86_64:
+    return Size == 2 || Size == 5;
+  case llvm::Triple::aarch64:
+    return Size == 4;
+  default:
+    llvm_unreachable("Unsupported architecture");
+  }
+}
+
+static bool checkStaticKeysJumpInstSize(const BinaryContext &BC, size_t Size,
+                                        uint64_t &NumShort, uint64_t &NumLong) {
+  switch (BC.TheTriple->getArch()) {
+  case llvm::Triple::x86_64:
+    if (Size == 2) {
+      ++NumShort;
+      return true;
+    }
+    if (Size == 5) {
+      ++NumLong;
+      return true;
+    }
+    return false;
+  case llvm::Triple::aarch64:
+    if (Size == 4) {
+      ++NumLong;
+      return true;
+    }
+    return false;
+  default:
+    llvm_unreachable("Unsupported architecture");
+  }
+}
+
 /// Runtime code modification used by static keys is the most ubiquitous
 /// self-modifying feature of the Linux kernel. The idea is to eliminate the
 /// condition check and associated conditional jump on a hot path if that
@@ -1719,7 +1778,7 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
                                JumpAddress);
 
     const uint64_t Size = BC.computeInstructionSize(*Inst);
-    if (Size != 2 && Size != 5) {
+    if (!checkStaticKeysJumpInstSize(BC, Size)) {
       return createStringError(
           errc::executable_format_error,
           "unexpected static keys jump size at address 0x%" PRIx64,
@@ -1805,11 +1864,7 @@ Error LinuxKernelRewriter::rewriteStaticKeysJumpTable() {
         const bool IsBranch = Info.Likely ^ Info.InitValue;
 
         uint32_t Size = *BC.MIB->getSize(Inst);
-        if (Size == 2)
-          ++NumShort;
-        else if (Size == 5)
-          ++NumLong;
-        else
+        if (!checkStaticKeysJumpInstSize(BC, Size, NumShort, NumLong))
           llvm_unreachable("Wrong size for static keys jump instruction.");
 
         MCInst NewInst;
@@ -1839,10 +1894,10 @@ Error LinuxKernelRewriter::rewriteStaticKeysJumpTable() {
                                      StaticKeysJumpSection->getAddress() +
                                      (EntryID - 1) * 16;
         StaticKeysJumpSection->addRelocation(EntryOffset, Label,
-                                             ELF::R_X86_64_PC32,
+                                             Relocation::getPC32(),
                                              /*Addend*/ 0);
-        StaticKeysJumpSection->addRelocation(EntryOffset + 4, Target,
-                                             ELF::R_X86_64_PC32, /*Addend*/ 0);
+        StaticKeysJumpSection->addRelocation(
+            EntryOffset + 4, Target, Relocation::getPC32(), /*Addend*/ 0);
       }
     }
   }
@@ -1915,11 +1970,7 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
     }
     assert(BC.MIB->isBranch(Inst) && "Branch instruction expected.");
 
-    if (Size == 2)
-      ++NumShort;
-    else if (Size == 5)
-      ++NumLong;
-    else
+    if (!checkStaticKeysJumpInstSize(BC, Size, NumShort, NumLong))
       llvm_unreachable("Unexpected size for static keys jump instruction.");
 
     // Check if we need to convert jump instruction into a nop.
