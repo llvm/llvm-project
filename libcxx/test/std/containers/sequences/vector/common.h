@@ -94,4 +94,4 @@ inline void check_new_delete_called() {
   assert(globalMemCounter.aligned_new_array_called == globalMemCounter.aligned_delete_array_called);
 }
 
-#endif // COMMON_H
+#endif // TEST_STD_CONTAINERS_SEQUENCES_VECTOR_COMMON_H
