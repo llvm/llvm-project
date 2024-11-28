@@ -4,8 +4,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 
 ! CHECK: omp.declare_reduction @[[RED:add_reduction_i32]] : i32
-! CHECK: omp.private {type = private} @[[DUMMY_PRIV:.*test_privateEdummy_private.*]] : !fir.ref<i32>
-! CHECK: omp.private {type = private} @[[I_PRIV:.*test_no_clausesEi.*]] : !fir.ref<i32>
+! CHECK: omp.private {type = private} @[[DUMMY_PRIV:.*test_privateEdummy_private.*]] : i32
+! CHECK: omp.private {type = private} @[[I_PRIV:.*test_no_clausesEi.*]] : i32
 
 ! CHECK-LABEL: func.func @_QPtest_no_clauses
 subroutine test_no_clauses()
