@@ -45,6 +45,8 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
@@ -350,6 +352,9 @@ add_subdirectory(tools)
 
 # Build target agnostic offloading library.
 add_subdirectory(src)
+
+add_subdirectory(tools/offload-tblgen)
+add_subdirectory(liboffload)
 
 # Add tests.
 add_subdirectory(test)
