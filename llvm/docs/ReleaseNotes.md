@@ -211,7 +211,8 @@ Changes to the RISC-V Backend
 * `f` and `cf` inline assembly constraints, when using F-/D-/H-in-X extensions,
   will use the relevant GPR rather than FPR. This makes inline assembly portable
   between e.g. F and Zfinx code.
-
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicsr` (CSR)
+  extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------

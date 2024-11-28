@@ -1341,6 +1341,16 @@ def HasVendorXwchc
       AssemblerPredicate<(all_of FeatureVendorXwchc),
                          "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
 
+// Qualcomm Extension(s)
+
+def FeatureVendorXqcicsr
+    : RISCVExperimentalExtension<"xqcicsr", 0, 2,
+                                 "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+def HasVendorXqcicsr
+    : Predicate<"Subtarget->hasVendorXqcicsr()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicsr),
+                         "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

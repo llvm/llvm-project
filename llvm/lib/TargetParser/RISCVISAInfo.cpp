@@ -771,6 +771,10 @@ Error RISCVISAInfo::checkDependency() {
       return getIncompatibleError("xwchc", "zcb");
   }
 
+  if (Exts.count("xqcicsr") != 0 && (XLen != 32)) {
+    return getError("'xqcicsr' is only supported for 'rv32'");
+  }
+
   return Error::success();
 }
 
