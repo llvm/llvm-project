@@ -123,13 +123,14 @@ typedef struct Color NewColor; // expected-error {{use of 'Color' with tag type 
 
 // Enumerations with a fixed underlying type. 
 // https://github.com/llvm/llvm-project/issues/116880
-#if __STDC_VERSION__ >= 202311L && !__has_feature(c_fixed_enum)
-    #error c_fixed_enum should be set a feature in C23 mode
-#elif __STDC_VERSION__ < 202311L && !__has_extension(c_fixed_enum)
-    #error c_fixed_enum should be a language extension in <C23 mode
+#if __STDC_VERSION__ >= 202311L
+  static_assert(__has_feature(c_fixed_enum));
+  static_assert(__has_extension(c_fixed_enum)); // Matches behavior for c_alignas, etc
 #else
-    typedef enum : unsigned char { Pink, Black, Cyan } Color; // pre-c23-warning {{enumeration types with a fixed underlying type are a C23 extension}}
+  _Static_assert(__has_extension(c_fixed_enum), "");
+  _Static_assert(!__has_feature(c_fixed_enum), "");
 #endif
+typedef enum : unsigned char { Pink, Black, Cyan } Color; // pre-c23-warning {{enumeration types with a fixed underlying type are a C23 extension}}
 
 // PR28903
 // In C it is valid to define tags inside enums.
