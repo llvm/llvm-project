@@ -27,17 +27,14 @@ public:
   SubsystemRAII<FileSystem, Socket> subsystems;
 
   void SetUp() override {
-    bool child_processes_inherit = false;
     Status error;
-    std::unique_ptr<TCPSocket> listen_socket_up(
-        new TCPSocket(true, child_processes_inherit));
+    auto listen_socket_up = std::make_unique<TCPSocket>(true);
     ASSERT_TRUE(error.Success());
     error = listen_socket_up->Listen("localhost:0", 5);
     ASSERT_TRUE(error.Success());
 
     Socket *accept_socket;
-    std::unique_ptr<TCPSocket> connect_socket_up(
-        new TCPSocket(true, child_processes_inherit));
+    auto connect_socket_up = std::make_unique<TCPSocket>(true);
     error = connect_socket_up->Connect(
         llvm::formatv("localhost:{0}", listen_socket_up->GetLocalPortNumber())
             .str());
