@@ -52,7 +52,7 @@ namespace {
 class SVEType {
   bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat, MFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
-      Svcount;
+      Svcount, Fpm;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
 
 public:
@@ -62,7 +62,7 @@ public:
       : Float(false), Signed(true), Immediate(false), Void(false),
         Constant(false), Pointer(false), BFloat(false), MFloat(false),
         DefaultType(false), IsScalable(true), Predicate(false),
-        PredicatePattern(false), PrefetchOp(false), Svcount(false),
+        PredicatePattern(false), PrefetchOp(false), Svcount(false), Fpm(false),
         Bitwidth(128), ElementBitwidth(~0U), NumVectors(NumVectors) {
     if (!TS.empty())
       applyTypespec(TS);
@@ -101,6 +101,7 @@ public:
   bool isPrefetchOp() const { return PrefetchOp; }
   bool isSvcount() const { return Svcount; }
   bool isConstant() const { return Constant; }
+  bool isFpm() const { return Fpm; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
   unsigned getNumVectors() const { return NumVectors; }
 
@@ -497,6 +498,9 @@ std::string SVEType::str() const {
   if (isPrefetchOp())
     return "enum svprfop";
 
+  if (isFpm())
+    return "fpm_t";
+
   std::string S;
   if (Void)
     S += "void";
@@ -752,6 +756,9 @@ void SVEType::applyModifier(char Mod) {
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     break;
+  case '>':
+    Fpm = true;
+    [[fallthrough]];
   case 'n':
     Predicate = false;
     Svcount = false;
@@ -925,6 +932,12 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     Float = false;
     BFloat = false;
+    break;
+  case '~':
+    Float = false;
+    BFloat = false;
+    MFloat = true;
+    ElementBitwidth = 8;
     break;
   case '.':
     llvm_unreachable(". is never a type in itself");
