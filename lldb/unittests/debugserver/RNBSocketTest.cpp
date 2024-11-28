@@ -29,7 +29,7 @@ static void ServerCallbackv4(const void *baton, in_port_t port) {
     char addr_buffer[256];
     sprintf(addr_buffer, "%s:%d", (const char *)baton, port);
     llvm::Expected<std::unique_ptr<Socket>> socket_or_err =
-        Socket::TcpConnect(addr_buffer, false);
+        Socket::TcpConnect(addr_buffer);
     ASSERT_THAT_EXPECTED(socket_or_err, llvm::Succeeded());
     Socket *client_socket = socket_or_err->get();
 
