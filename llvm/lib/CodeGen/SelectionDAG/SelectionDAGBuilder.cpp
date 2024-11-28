@@ -8127,7 +8127,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_ADD, dl, AccVT, Acc, Input));
       return;
     }
-    setValue(&I, DAG.expandPartialReduceAdd(dl, AccVT, Acc, Input));
+    setValue(&I, DAG.expandPartialReduceAdd(dl, Acc, Input));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

@@ -1604,10 +1604,11 @@ public:
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Expands partial reduce node which can't be lowered to wide add or dot
-  /// product instruction(s)
-  SDValue expandPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                                 SDValue Op2);
+  /// Expands PARTIAL_REDUCE_ADD nodes which can't be lowered.
+  /// @param Op1 Accumulator for where the result is stored for the partial
+  /// reduction operation
+  /// @param Op2 Input for the partial reduction operation
+  SDValue expandPartialReduceAdd(SDLoc DL, SDValue Op1, SDValue Op2);
 
   /// Expands a node with multiple results to an FP or vector libcall. The
   /// libcall is expected to take all the operands of the \p Node followed by
