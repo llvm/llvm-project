@@ -53,7 +53,7 @@ config_setting(
 
 ################################## Base Config #################################
 
-cc_library(
+libc_support_library(
     name = "__support_macros_config",
     hdrs = ["src/__support/macros/config.h"],
 )
@@ -196,6 +196,30 @@ libc_support_library(
 )
 
 ############################ Type Proxy Header Files ###########################
+
+libc_support_library(
+    name = "func_aligned_alloc",
+    hdrs = ["hdr/func/aligned_alloc.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
+    name = "func_free",
+    hdrs = ["hdr/func/free.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
+    name = "func_malloc",
+    hdrs = ["hdr/func/malloc.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
+    name = "func_realloc",
+    hdrs = ["hdr/func/realloc.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
 
 libc_support_library(
     name = "types_clockid_t",
@@ -401,7 +425,7 @@ libc_support_library(
     name = "__support_common",
     hdrs = [
         "src/__support/common.h",
-        "src/__support/endian.h",
+        "src/__support/endian_internal.h",
     ],
     deps = [
         ":__support_macros_attributes",
@@ -503,6 +527,9 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_macros_properties_os",
+        ":func_aligned_alloc",
+        ":func_free",
+        ":func_malloc",
     ],
 )
 
@@ -549,6 +576,9 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_string_view",
         ":__support_integer_to_string",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
         ":string_memory_utils",
         ":string_utils",
     ],
@@ -630,6 +660,9 @@ libc_support_library(
     hdrs = ["src/__support/char_vector.h"],
     deps = [
         ":__support_common",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
     ],
 )
 
@@ -834,6 +867,10 @@ libc_support_library(
         ":__support_error_or",
         ":__support_threads_mutex",
         ":errno",
+        ":func_aligned_alloc",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
         ":types_off_t",
@@ -2163,6 +2200,13 @@ libc_math_function(
     name = "exp10m1f16",
     additional_deps = [
         ":expxf16",
+    ],
+)
+
+libc_math_function(
+    name = "exp10m1f",
+    additional_deps = [
+        ":explogxf",
     ],
 )
 
@@ -3611,7 +3655,6 @@ libc_function(
     name = "memcpy",
     srcs = ["src/string/memcpy.cpp"],
     hdrs = ["src/string/memcpy.h"],
-    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     weak = True,
     deps = [
@@ -3648,7 +3691,6 @@ libc_function(
     name = "mempcpy",
     srcs = ["src/string/mempcpy.cpp"],
     hdrs = ["src/string/mempcpy.h"],
-    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     weak = True,
     deps = [
@@ -4613,6 +4655,7 @@ libc_function(
     name = "socket",
     srcs = ["src/sys/socket/linux/socket.cpp"],
     hdrs = ["src/sys/socket/socket.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4624,6 +4667,7 @@ libc_function(
     name = "socketpair",
     srcs = ["src/sys/socket/linux/socketpair.cpp"],
     hdrs = ["src/sys/socket/socketpair.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4635,6 +4679,7 @@ libc_function(
     name = "send",
     srcs = ["src/sys/socket/linux/send.cpp"],
     hdrs = ["src/sys/socket/send.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4649,6 +4694,7 @@ libc_function(
     name = "sendto",
     srcs = ["src/sys/socket/linux/sendto.cpp"],
     hdrs = ["src/sys/socket/sendto.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4663,6 +4709,7 @@ libc_function(
     name = "sendmsg",
     srcs = ["src/sys/socket/linux/sendmsg.cpp"],
     hdrs = ["src/sys/socket/sendmsg.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4676,6 +4723,7 @@ libc_function(
     name = "recv",
     srcs = ["src/sys/socket/linux/recv.cpp"],
     hdrs = ["src/sys/socket/recv.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4690,6 +4738,7 @@ libc_function(
     name = "recvfrom",
     srcs = ["src/sys/socket/linux/recvfrom.cpp"],
     hdrs = ["src/sys/socket/recvfrom.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4704,6 +4753,7 @@ libc_function(
     name = "recvmsg",
     srcs = ["src/sys/socket/linux/recvmsg.cpp"],
     hdrs = ["src/sys/socket/recvmsg.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",

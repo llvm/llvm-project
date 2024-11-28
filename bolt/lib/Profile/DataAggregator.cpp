@@ -778,42 +778,75 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
-                              uint64_t Mispreds) {
-  bool IsReturn = false;
-  auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
-    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
-      Addr -= Func->getAddress();
-      if (IsFrom) {
-        auto checkReturn = [&](auto MaybeInst) {
-          IsReturn = MaybeInst && BC->MIB->isReturn(*MaybeInst);
-        };
-        if (Func->hasInstructions())
-          checkReturn(Func->getInstructionAtOffset(Addr));
-        else
-          checkReturn(Func->disassembleInstructionAtOffset(Addr));
-      }
-
-      if (BAT)
-        Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
-
-      if (BinaryFunction *ParentFunc = getBATParentFunction(*Func)) {
-        Func = ParentFunc;
-        if (IsFrom)
-          NumColdSamples += Count;
-      }
-
-      return Func;
-    }
-    return nullptr;
+                              uint64_t Mispreds, bool IsPreagg) {
+  // Returns whether \p Offset in \p Func contains a return instruction.
+  auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
+    auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
+    return Func.hasInstructions()
+               ? isReturn(Func.getInstructionAtOffset(Offset))
+               : isReturn(Func.disassembleInstructionAtOffset(Offset));
   };
 
-  BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  // Returns whether \p Offset in \p Func may be a call continuation excluding
+  // entry points and landing pads.
+  auto checkCallCont = [&](const BinaryFunction &Func, const uint64_t Offset) {
+    // No call continuation at a function start.
+    if (!Offset)
+      return false;
+
+    // FIXME: support BAT case where the function might be in empty state
+    // (split fragments declared non-simple).
+    if (!Func.hasCFG())
+      return false;
+
+    // The offset should not be an entry point or a landing pad.
+    const BinaryBasicBlock *ContBB = Func.getBasicBlockAtOffset(Offset);
+    return ContBB && !ContBB->isEntryPoint() && !ContBB->isLandingPad();
+  };
+
+  // Mutates \p Addr to an offset into the containing function, performing BAT
+  // offset translation and parent lookup.
+  //
+  // Returns the containing function (or BAT parent) and whether the address
+  // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
+  auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
+    BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
+    if (!Func)
+      return std::pair{Func, false};
+
+    Addr -= Func->getAddress();
+
+    bool IsRetOrCallCont =
+        IsFrom ? checkReturn(*Func, Addr) : checkCallCont(*Func, Addr);
+
+    if (BAT)
+      Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
+
+    BinaryFunction *ParentFunc = getBATParentFunction(*Func);
+    if (!ParentFunc)
+      return std::pair{Func, IsRetOrCallCont};
+
+    if (IsFrom)
+      NumColdSamples += Count;
+
+    return std::pair{ParentFunc, IsRetOrCallCont};
+  };
+
+  uint64_t ToOrig = To;
+  auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
+  auto [ToFunc, IsCallCont] = handleAddress(To, /*IsFrom*/ false);
+  if (!FromFunc && !ToFunc)
+    return false;
+
+  // Record call to continuation trace.
+  if (IsPreagg && FromFunc != ToFunc && (IsReturn || IsCallCont)) {
+    LBREntry First{ToOrig - 1, ToOrig - 1, false};
+    LBREntry Second{ToOrig, ToOrig, false};
+    return doTrace(First, Second, Count);
+  }
   // Ignore returns.
   if (IsReturn)
     return true;
-  BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
-  if (!FromFunc && !ToFunc)
-    return false;
 
   // Treat recursive control transfers as inter-branches.
   if (FromFunc == ToFunc && To != 0) {
@@ -830,10 +863,19 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(Second.From);
   if (!FromFunc || !ToFunc) {
     LLVM_DEBUG({
-      dbgs() << "Out of range trace starting in " << FromFunc->getPrintName()
-             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
-             << " and ending in " << ToFunc->getPrintName()
-             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+      dbgs() << "Out of range trace starting in ";
+      if (FromFunc)
+        dbgs() << formatv("{0} @ {1:x}", *FromFunc,
+                          First.To - FromFunc->getAddress());
+      else
+        dbgs() << Twine::utohexstr(First.To);
+      dbgs() << " and ending in ";
+      if (ToFunc)
+        dbgs() << formatv("{0} @ {1:x}", *ToFunc,
+                          Second.From - ToFunc->getAddress());
+      else
+        dbgs() << Twine::utohexstr(Second.From);
+      dbgs() << '\n';
     });
     NumLongRangeTraces += Count;
     return false;
@@ -1620,7 +1662,8 @@ void DataAggregator::processBranchEvents() {
   for (const auto &AggrLBR : BranchLBRs) {
     const Trace &Loc = AggrLBR.first;
     const TakenBranchInfo &Info = AggrLBR.second;
-    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
+    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount,
+             /*IsPreagg*/ false);
   }
 }
 
@@ -1781,7 +1824,7 @@ void DataAggregator::processPreAggregated() {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds);
+               AggrEntry.Mispreds, /*IsPreagg*/ true);
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {

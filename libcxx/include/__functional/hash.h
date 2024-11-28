@@ -10,6 +10,7 @@
 #define _LIBCPP___FUNCTIONAL_HASH_H
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
 #include <__type_traits/conjunction.h>
@@ -372,12 +373,12 @@ struct _LIBCPP_TEMPLATE_VIS hash<char32_t> : public __unary_function<char32_t, s
   _LIBCPP_HIDE_FROM_ABI size_t operator()(char32_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<wchar_t> : public __unary_function<wchar_t, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(wchar_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<short> : public __unary_function<short, size_t> {

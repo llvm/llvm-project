@@ -13,13 +13,19 @@ void NormalFunc() {
   // CHECK-NEXT: CompoundStmt
 
 #pragma acc loop
-  for(;;);
+  for(int i = 0; i < 5;++i);
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} <orphan>
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl {{.*}} used i 'int'
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}} prefix '++'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'i' 'int'
   // CHECK-NEXT: NullStmt
 
   int array[5];
@@ -36,17 +42,23 @@ void NormalFunc() {
   // CHECK-NEXT: CompoundStmt
   {
 #pragma acc parallel
-    // CHECK-NEXT: OpenACCComputeConstruct [[PAR_ADDR:[0-9a-fx]+]] {{.*}}parallel
+    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
     // CHECK-NEXT: CompoundStmt
     {
 #pragma acc loop
-      for(;;);
-    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR]]
+      for(int i = 0; i < 5;++i);
+    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
     // CHECK-NEXT: ForStmt
+    // CHECK-NEXT: DeclStmt
+    // CHECK-NEXT: VarDecl {{.*}} used i 'int'
+    // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
     // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+    // CHECK-NEXT: ImplicitCastExpr
+    // CHECK-NEXT: DeclRefExpr
+    // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 5
+    // CHECK-NEXT: UnaryOperator{{.*}} prefix '++'
+    // CHECK-NEXT: DeclRefExpr{{.*}} 'i' 'int'
     // CHECK-NEXT: NullStmt
     }
   }
@@ -79,33 +91,45 @@ void TemplFunc() {
 
   }
 
-#pragma acc parallel
+#pragma acc serial
   {
-    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
     // CHECK-NEXT: CompoundStmt
 #pragma acc parallel
     {
-    // CHECK-NEXT: OpenACCComputeConstruct [[PAR_ADDR_UNINST:[0-9a-fx]+]] {{.*}}parallel
+    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
     // CHECK-NEXT: CompoundStmt
 #pragma acc loop
-    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_UNINST]]
+    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
     // CHECK-NEXT: ForStmt
+    // CHECK-NEXT: DeclStmt
+    // CHECK-NEXT: VarDecl {{.*}} i 'int'
+    // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
     // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+    // CHECK-NEXT: ImplicitCastExpr
+    // CHECK-NEXT: DeclRefExpr
+    // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 5
+    // CHECK-NEXT: UnaryOperator{{.*}} prefix '++'
+    // CHECK-NEXT: DeclRefExpr{{.*}} 'i' 'int'
     // CHECK-NEXT: NullStmt
-      for(;;);
+      for(int i = 0; i < 5;++i);
 
 #pragma acc loop
-    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_UNINST]]
+    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
     // CHECK-NEXT: ForStmt
+    // CHECK-NEXT: DeclStmt
+    // CHECK-NEXT: VarDecl {{.*}} i 'int'
+    // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
     // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
-    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+    // CHECK-NEXT: ImplicitCastExpr
+    // CHECK-NEXT: DeclRefExpr
+    // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 5
+    // CHECK-NEXT: UnaryOperator{{.*}} prefix '++'
+    // CHECK-NEXT: DeclRefExpr{{.*}} 'i' 'int'
     // CHECK-NEXT: NullStmt
-      for(;;);
+      for(int i = 0; i < 5;++i);
     }
   }
 
@@ -142,26 +166,38 @@ void TemplFunc() {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} I 'typename S::type':'int'
 
-  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
   // CHECK-NEXT: CompoundStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct [[PAR_ADDR_INST:[0-9a-fx]+]] {{.*}}parallel
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
   // CHECK-NEXT: CompoundStmt
 
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_INST]]
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl {{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}} prefix '++'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'i' 'int'
   // CHECK-NEXT: NullStmt
 
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_INST]]
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl {{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}} prefix '++'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'i' 'int'
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: DeclStmt

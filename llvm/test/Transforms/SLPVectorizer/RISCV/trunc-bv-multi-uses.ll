@@ -8,7 +8,7 @@ define i32 @test(i64 %v1, i64 %v2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[V2]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP1]], <i64 32, i64 32>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0

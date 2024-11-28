@@ -847,3 +847,5 @@ def BitCast : Opcode {
   let Args = [ArgBool, ArgUint32, ArgFltSemantics];
   let HasGroup = 1;
 }
+
+def BitCastPtr : Opcode;

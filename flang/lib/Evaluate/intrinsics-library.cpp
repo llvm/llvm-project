@@ -15,6 +15,7 @@
 #include "fold-implementation.h"
 #include "host.h"
 #include "flang/Common/erfc-scaled.h"
+#include "flang/Common/idioms.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
 #include <cfloat>
@@ -277,6 +278,76 @@ static std::complex<HostT> StdPowF2B(
   return std::pow(x, y);
 }
 
+#ifdef _AIX
+#ifdef __clang_major__
+#pragma clang diagnostic ignored "-Wc99-extensions"
+#endif
+
+extern "C" {
+float _Complex cacosf(float _Complex);
+double _Complex cacos(double _Complex);
+float _Complex csqrtf(float _Complex);
+double _Complex csqrt(double _Complex);
+}
+
+enum CRI { Real, Imag };
+template <typename TR, typename TA> static TR &reIm(TA &x, CRI n) {
+  return reinterpret_cast<TR(&)[2]>(x)[n];
+}
+template <typename TR, typename T> static TR CppToC(const std::complex<T> &x) {
+  TR r;
+  reIm<T, TR>(r, CRI::Real) = x.real();
+  reIm<T, TR>(r, CRI::Imag) = x.imag();
+  return r;
+}
+template <typename T, typename TA> static std::complex<T> CToCpp(const TA &x) {
+  TA &z{const_cast<TA &>(x)};
+  return std::complex<T>(reIm<T, TA>(z, CRI::Real), reIm<T, TA>(z, CRI::Imag));
+}
+#endif
+
+template <typename HostT>
+static std::complex<HostT> CSqrt(const std::complex<HostT> &x) {
+  std::complex<HostT> res;
+#ifdef _AIX
+  // On AIX, the implementation of csqrt[f] and std::sqrt is different,
+  // use csqrt[f] in folding.
+  if constexpr (std::is_same_v<HostT, float>) {
+    float _Complex r{csqrtf(CppToC<float _Complex, float>(x))};
+    res = CToCpp<float, float _Complex>(r);
+  } else if constexpr (std::is_same_v<HostT, double>) {
+    double _Complex r{csqrt(CppToC<double _Complex, double>(x))};
+    res = CToCpp<double, double _Complex>(r);
+  } else {
+    DIE("bad complex component type");
+  }
+#else
+  res = std::sqrt(x);
+#endif
+  return res;
+}
+
+template <typename HostT>
+static std::complex<HostT> CAcos(const std::complex<HostT> &x) {
+  std::complex<HostT> res;
+#ifdef _AIX
+  // On AIX, the implementation of cacos[f] and std::acos is different,
+  // use cacos[f] in folding.
+  if constexpr (std::is_same_v<HostT, float>) {
+    float _Complex r{cacosf(CppToC<float _Complex, float>(x))};
+    res = CToCpp<float, float _Complex>(r);
+  } else if constexpr (std::is_same_v<HostT, double>) {
+    double _Complex r{cacos(CppToC<double _Complex, double>(x))};
+    res = CToCpp<double, double _Complex>(r);
+  } else {
+    DIE("bad complex component type");
+  }
+#else
+  res = std::acos(x);
+#endif
+  return res;
+}
+
 template <typename HostT>
 struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
   using F = FuncPointer<std::complex<HostT>, const std::complex<HostT> &>;
@@ -287,7 +358,7 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
   using F2B = FuncPointer<std::complex<HostT>, const std::complex<HostT> &,
       const HostT &>;
   static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{std::acos}>::Create("acos"),
+      FolderFactory<F, F{CAcos}>::Create("acos"),
       FolderFactory<F, F{std::acosh}>::Create("acosh"),
       FolderFactory<F, F{std::asin}>::Create("asin"),
       FolderFactory<F, F{std::asinh}>::Create("asinh"),
@@ -302,7 +373,7 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
       FolderFactory<F2B, F2B{StdPowF2B}>::Create("pow"),
       FolderFactory<F, F{std::sin}>::Create("sin"),
       FolderFactory<F, F{std::sinh}>::Create("sinh"),
-      FolderFactory<F, F{std::sqrt}>::Create("sqrt"),
+      FolderFactory<F, F{CSqrt}>::Create("sqrt"),
       FolderFactory<F, F{std::tan}>::Create("tan"),
       FolderFactory<F, F{std::tanh}>::Create("tanh"),
   };

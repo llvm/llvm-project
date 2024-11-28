@@ -9,13 +9,13 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i40> poison, i40 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i40> [[BROADCAST_SPLATINSERT1]], <16 x i40> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i40> [[BROADCAST_SPLAT2]], <i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24>
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i40> [[TMP1]], <i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i40> [[BROADCAST_SPLAT2]], splat (i40 24)
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i40> [[TMP1]], splat (i40 28)
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <16 x i40> [[TMP2]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <16 x i32> [[TMP3]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i1> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i1> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <16 x i1> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -23,7 +23,7 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x i32> poison, i32 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT2]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <16 x i32> [[BROADCAST_SPLAT3]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <16 x i32> [[VEC_IV]], <i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <16 x i32> [[VEC_IV]], splat (i32 9)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:

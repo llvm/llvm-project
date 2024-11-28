@@ -103,7 +103,8 @@ std::string AsFortran(IgnoreTKRSet tkr) {
 /// dummy argument attribute while `y` represents the actual argument attribute.
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
-    bool allowUnifiedMatchingRule, const LanguageFeatureControl *features) {
+    std::optional<std::string> *warning, bool allowUnifiedMatchingRule,
+    const LanguageFeatureControl *features) {
   bool isCudaManaged{features
           ? features->IsEnabled(common::LanguageFeature::CudaManaged)
           : false};
@@ -134,8 +135,12 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     } else {
       if (*x == CUDADataAttr::Device) {
         if ((y &&
-                (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) ||
+                (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
+                    *y == CUDADataAttr::Shared)) ||
             (!y && (isCudaUnified || isCudaManaged))) {
+          if (y && *y == CUDADataAttr::Shared && warning) {
+            *warning = "SHARED attribute ignored"s;
+          }
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {

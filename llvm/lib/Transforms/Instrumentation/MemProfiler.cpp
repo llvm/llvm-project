@@ -42,6 +42,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LongestCommonSequence.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <map>
 #include <set>
@@ -716,19 +717,22 @@ computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
 }
 
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
-                                   const AllocationInfo *AllocInfo) {
+                                   const AllocationInfo *AllocInfo,
+                                   uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
   auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
-  uint64_t TotalSize = 0;
+  std::vector<ContextTotalSize> ContextSizeInfo;
   if (MemProfReportHintedSizes) {
-    TotalSize = AllocInfo->Info.getTotalSize();
+    auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
+    assert(FullStackId != 0);
+    ContextSizeInfo.push_back({FullStackId, TotalSize});
   }
-  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
+  AllocTrie.addCallStack(AllocType, StackIds, std::move(ContextSizeInfo));
   return AllocType;
 }
 
@@ -794,6 +798,95 @@ struct AllocMatchInfo {
   AllocationType AllocType = AllocationType::None;
   bool Matched = false;
 };
+
+DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
+memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
+  DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
+
+  auto GetOffset = [](const DILocation *DIL) {
+    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+           0xffff;
+  };
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
+          continue;
+
+        auto *CB = dyn_cast<CallBase>(&I);
+        auto *CalledFunction = CB->getCalledFunction();
+        // Disregard indirect calls and intrinsics.
+        if (!CalledFunction || CalledFunction->isIntrinsic())
+          continue;
+
+        StringRef CalleeName = CalledFunction->getName();
+        bool IsAlloc = isAllocationWithHotColdVariant(CalledFunction, TLI);
+        for (const DILocation *DIL = I.getDebugLoc(); DIL;
+             DIL = DIL->getInlinedAt()) {
+          StringRef CallerName = DIL->getSubprogramLinkageName();
+          assert(!CallerName.empty() &&
+                 "Be sure to enable -fdebug-info-for-profiling");
+          uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
+          uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
+          // Pretend that we are calling a function with GUID == 0 if we are
+          // calling a heap allocation function.
+          if (IsAlloc)
+            CalleeGUID = 0;
+          LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
+          Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
+          CalleeName = CallerName;
+          // FIXME: Recognize other frames that are associated with heap
+          // allocation functions.  It may be too early to reset IsAlloc to
+          // false here.
+          IsAlloc = false;
+        }
+      }
+    }
+  }
+
+  // Sort each call list by the source location.
+  for (auto &[CallerGUID, CallList] : Calls) {
+    llvm::sort(CallList);
+    CallList.erase(llvm::unique(CallList), CallList.end());
+  }
+
+  return Calls;
+}
+
+DenseMap<uint64_t, LocToLocMap>
+memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
+                           const TargetLibraryInfo &TLI) {
+  DenseMap<uint64_t, LocToLocMap> UndriftMaps;
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromProfile =
+      MemProfReader->getMemProfCallerCalleePairs();
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromIR =
+      extractCallsFromIR(M, TLI);
+
+  // Compute an undrift map for each CallerGUID.
+  for (const auto &[CallerGUID, IRAnchors] : CallsFromIR) {
+    auto It = CallsFromProfile.find(CallerGUID);
+    if (It == CallsFromProfile.end())
+      continue;
+    const auto &ProfileAnchors = It->second;
+
+    LocToLocMap Matchings;
+    longestCommonSequence<LineLocation, GlobalValue::GUID>(
+        ProfileAnchors, IRAnchors, std::equal_to<GlobalValue::GUID>(),
+        [&](LineLocation A, LineLocation B) { Matchings.try_emplace(A, B); });
+    bool Inserted = UndriftMaps.try_emplace(CallerGUID, Matchings).second;
+
+    // The insertion must succeed because we visit each GUID exactly once.
+    assert(Inserted);
+    (void)Inserted;
+  }
+
+  return UndriftMaps;
+}
 
 static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
@@ -964,11 +1057,14 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
-            auto AllocType = addCallStack(AllocTrie, AllocInfo);
+            uint64_t FullStackId = 0;
+            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes)
+              FullStackId = computeFullStackId(AllocInfo->CallStack);
+            auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             // Record information about the allocation if match info printing
             // was requested.
             if (ClPrintMemProfMatchInfo) {
-              auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+              assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
                   AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
             }
@@ -1025,6 +1121,10 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
+  // Return immediately if the module doesn't contain any function.
+  if (M.empty())
+    return PreservedAnalyses::all();
+
   LLVM_DEBUG(dbgs() << "Read in memory profile:");
   auto &Ctx = M.getContext();
   auto ReaderOrErr = IndexedInstrProfReader::create(MemoryProfileFileName, *FS);

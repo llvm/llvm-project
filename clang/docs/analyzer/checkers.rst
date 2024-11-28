@@ -1899,6 +1899,29 @@ Check the size argument passed into C string functions for common erroneous patt
      // warn: potential buffer overflow
  }
 
+.. _unix-cstring-NotNullTerminated:
+
+unix.cstring.NotNullTerminated (C)
+""""""""""""""""""""""""""""""""""
+Check for arguments which are not null-terminated strings;
+applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
+
+Only very fundamental cases are detected where the passed memory block is
+absolutely different from a null-terminated string. This checker does not
+find if a memory buffer is passed where the terminating zero character
+is missing.
+
+.. code-block:: c
+
+ void test1() {
+   int l = strlen((char *)&test1); // warn
+ }
+
+ void test2() {
+ label:
+   int l = strlen((char *)&&label); // warn
+ }
+
 .. _unix-cstring-NullArg:
 
 unix.cstring.NullArg (C)
@@ -3367,29 +3390,6 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmem
    memcpy(a + 2, a + 1, 8); // warn
  }
 
-.. _alpha-unix-cstring-NotNullTerminated:
-
-alpha.unix.cstring.NotNullTerminated (C)
-""""""""""""""""""""""""""""""""""""""""
-Check for arguments which are not null-terminated strings;
-applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
-
-Only very fundamental cases are detected where the passed memory block is
-absolutely different from a null-terminated string. This checker does not
-find if a memory buffer is passed where the terminating zero character
-is missing.
-
-.. code-block:: c
-
- void test1() {
-   int l = strlen((char *)&test); // warn
- }
-
- void test2() {
- label:
-   int l = strlen((char *)&&label); // warn
- }
-
 .. _alpha-unix-cstring-OutOfBounds:
 
 alpha.unix.cstring.OutOfBounds (C)
@@ -3459,8 +3459,8 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
 .. code-block:: cpp
 
  struct CheckableObj {
-   void incrementPtrCount() {}
-   void decrementPtrCount() {}
+   void incrementCheckedPtrCount() {}
+   void decrementCheckedPtrCount() {}
  };
 
  struct Foo {
@@ -3559,6 +3559,12 @@ We also define a set of safe transformations which if passed a safe value as an 
 - member overloaded operators
 - casts
 - unary operators like ``&`` or ``*``
+
+alpha.webkit.UncheckedCallArgsChecker
+"""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
+
+The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""

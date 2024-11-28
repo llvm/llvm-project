@@ -696,7 +696,7 @@ val named_struct_type : llcontext -> string -> lltype
 
 (** [struct_set_body ty elts ispacked] sets the body of the named struct [ty]
     to the [elts] elements.
-    See the moethd [llvm::StructType::setBody]. *)
+    See the method [llvm::StructType::setBody]. *)
 val struct_set_body : lltype -> lltype array -> bool -> unit
 
 (** [struct_element_types sty] returns the constituent types of the struct type

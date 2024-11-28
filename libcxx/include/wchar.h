@@ -137,7 +137,7 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #    endif
 #  endif
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 #    if defined(__cplusplus) && !defined(_LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS) && defined(_LIBCPP_PREFERRED_OVERLOAD)
 extern "C++" {
 inline _LIBCPP_HIDE_FROM_ABI wchar_t* __libcpp_wcschr(const wchar_t* __s, wchar_t __c) {
@@ -203,6 +203,6 @@ size_t wcsnrtombs(
     char* __restrict __dst, const wchar_t** __restrict __src, size_t __nwc, size_t __len, mbstate_t* __restrict __ps);
 } // extern "C"
 #    endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
-#  endif   // !_LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif   // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #endif // _LIBCPP_WCHAR_H

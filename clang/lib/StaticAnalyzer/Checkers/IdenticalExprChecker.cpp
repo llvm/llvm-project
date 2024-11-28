@@ -15,8 +15,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -32,8 +32,7 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class FindIdenticalExprVisitor
-    : public RecursiveASTVisitor<FindIdenticalExprVisitor> {
+class FindIdenticalExprVisitor : public DynamicRecursiveASTVisitor {
   BugReporter &BR;
   const CheckerBase *Checker;
   AnalysisDeclContext *AC;
@@ -45,9 +44,9 @@ public:
   // FindIdenticalExprVisitor only visits nodes
   // that are binary operators, if statements or
   // conditional operators.
-  bool VisitBinaryOperator(const BinaryOperator *B);
-  bool VisitIfStmt(const IfStmt *I);
-  bool VisitConditionalOperator(const ConditionalOperator *C);
+  bool VisitBinaryOperator(BinaryOperator *B) override;
+  bool VisitIfStmt(IfStmt *I) override;
+  bool VisitConditionalOperator(ConditionalOperator *C) override;
 
 private:
   void reportIdenticalExpr(const BinaryOperator *B, bool CheckBitwise,
@@ -103,7 +102,7 @@ void FindIdenticalExprVisitor::checkBitwiseOrLogicalOp(const BinaryOperator *B,
   }
 }
 
-bool FindIdenticalExprVisitor::VisitIfStmt(const IfStmt *I) {
+bool FindIdenticalExprVisitor::VisitIfStmt(IfStmt *I) {
   const Stmt *Stmt1 = I->getThen();
   const Stmt *Stmt2 = I->getElse();
 
@@ -178,7 +177,7 @@ bool FindIdenticalExprVisitor::VisitIfStmt(const IfStmt *I) {
   return true;
 }
 
-bool FindIdenticalExprVisitor::VisitBinaryOperator(const BinaryOperator *B) {
+bool FindIdenticalExprVisitor::VisitBinaryOperator(BinaryOperator *B) {
   BinaryOperator::Opcode Op = B->getOpcode();
 
   if (BinaryOperator::isBitwiseOp(Op))
@@ -268,7 +267,7 @@ void FindIdenticalExprVisitor::checkComparisonOp(const BinaryOperator *B) {
 }
 
 bool FindIdenticalExprVisitor::VisitConditionalOperator(
-    const ConditionalOperator *C) {
+    ConditionalOperator *C) {
 
   // Check if expressions in conditional expression are identical
   // from a symbolic point of view.

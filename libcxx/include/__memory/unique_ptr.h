@@ -143,7 +143,7 @@ class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  typedef _LIBCPP_NODEBUG typename __pointer<_Tp, deleter_type>::type pointer;
+  using pointer _LIBCPP_NODEBUG = __pointer<_Tp, deleter_type>;
 
   static_assert(!is_rvalue_reference<deleter_type>::value, "the specified deleter type cannot be an rvalue reference");
 
@@ -410,7 +410,7 @@ class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp>
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  typedef typename __pointer<_Tp, deleter_type>::type pointer;
+  using pointer = __pointer<_Tp, deleter_type>;
 
   // A unique_ptr contains the following members which may be trivially relocatable:
   // - pointer: this may be trivially relocatable, so it's checked
@@ -546,7 +546,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
     reset(__u.release());
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
-    __checker_ = std::move(std::move(__u.__checker_));
+    __checker_ = std::move(__u.__checker_);
     return *this;
   }
 

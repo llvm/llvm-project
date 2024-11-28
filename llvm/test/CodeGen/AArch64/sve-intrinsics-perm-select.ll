@@ -628,10 +628,17 @@ define dso_local <vscale x 8 x half> @dupq_f16_repeat_complex(half %x, half %y) 
 }
 
 define <vscale x 16 x i8> @ext_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
-; CHECK-LABEL: ext_i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #255
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_i8:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #255
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_i8:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #255
+; SVE2-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.ext.nxv16i8(<vscale x 16 x i8> %a,
                                                                <vscale x 16 x i8> %b,
                                                                i32 255)
@@ -639,10 +646,17 @@ define <vscale x 16 x i8> @ext_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 }
 
 define <vscale x 8 x i16> @ext_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
-; CHECK-LABEL: ext_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #0
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_i16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #0
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_i16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #0
+; SVE2-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ext.nxv8i16(<vscale x 8 x i16> %a,
                                                                <vscale x 8 x i16> %b,
                                                                i32 0)
@@ -650,10 +664,17 @@ define <vscale x 8 x i16> @ext_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 }
 
 define <vscale x 4 x i32> @ext_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: ext_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #4
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_i32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #4
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_i32:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #4
+; SVE2-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ext.nxv4i32(<vscale x 4 x i32> %a,
                                                                <vscale x 4 x i32> %b,
                                                                i32 1)
@@ -661,10 +682,17 @@ define <vscale x 4 x i32> @ext_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 }
 
 define <vscale x 2 x i64> @ext_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
-; CHECK-LABEL: ext_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #16
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #16
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_i64:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #16
+; SVE2-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ext.nxv2i64(<vscale x 2 x i64> %a,
                                                                <vscale x 2 x i64> %b,
                                                                i32 2)
@@ -672,10 +700,17 @@ define <vscale x 2 x i64> @ext_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 }
 
 define <vscale x 8 x bfloat> @ext_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
-; CHECK-LABEL: ext_bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #6
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #6
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_bf16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #6
+; SVE2-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ext.nxv8bf16(<vscale x 8 x bfloat> %a,
                                                                    <vscale x 8 x bfloat> %b,
                                                                    i32 3)
@@ -683,10 +718,17 @@ define <vscale x 8 x bfloat> @ext_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x b
 }
 
 define <vscale x 8 x half> @ext_f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: ext_f16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #6
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_f16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #6
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_f16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #6
+; SVE2-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.ext.nxv8f16(<vscale x 8 x half> %a,
                                                                 <vscale x 8 x half> %b,
                                                                 i32 3)
@@ -694,10 +736,17 @@ define <vscale x 8 x half> @ext_f16(<vscale x 8 x half> %a, <vscale x 8 x half> 
 }
 
 define <vscale x 4 x float> @ext_f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: ext_f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #16
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_f32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #16
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_f32:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #16
+; SVE2-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.ext.nxv4f32(<vscale x 4 x float> %a,
                                                                  <vscale x 4 x float> %b,
                                                                  i32 4)
@@ -705,10 +754,17 @@ define <vscale x 4 x float> @ext_f32(<vscale x 4 x float> %a, <vscale x 4 x floa
 }
 
 define <vscale x 2 x double> @ext_f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: ext_f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #40
-; CHECK-NEXT:    ret
+; SVE-LABEL: ext_f64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ext z0.b, z0.b, z1.b, #40
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: ext_f64:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #40
+; SVE2-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.ext.nxv2f64(<vscale x 2 x double> %a,
                                                                   <vscale x 2 x double> %b,
                                                                   i32 5)

@@ -9,8 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
-#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-
 #define DEBUG_TYPE "orc"
 
 using namespace llvm;
@@ -23,14 +21,13 @@ constexpr StringRef StubSuffix = "$__stub_ptr";
 } // namespace
 
 void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
-    std::unique_ptr<MaterializationResponsibility> R,
-    const SymbolAddrMap &InitialDests) {
+    std::unique_ptr<MaterializationResponsibility> R, SymbolMap InitialDests) {
 
   auto &ES = ObjLinkingLayer.getExecutionSession();
   Triple TT = ES.getTargetTriple();
 
   auto G = std::make_unique<jitlink::LinkGraph>(
-      ("<INDIRECT STUBS #" + Twine(++StubGraphIdx) + ">").str(), TT,
+      ("<indirect stubs graph #" + Twine(++StubGraphIdx) + ">").str(), TT,
       TT.isArch64Bit() ? 8 : 4,
       TT.isLittleEndian() ? endianness::little : endianness::big,
       jitlink::getGenericEdgeKindName);
@@ -66,8 +63,8 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
   ObjLinkingLayer.emit(std::move(R), std::move(G));
 }
 
-Error JITLinkRedirectableSymbolManager::redirect(
-    JITDylib &JD, const SymbolAddrMap &NewDests) {
+Error JITLinkRedirectableSymbolManager::redirect(JITDylib &JD,
+                                                 const SymbolMap &NewDests) {
   auto &ES = ObjLinkingLayer.getExecutionSession();
   SymbolLookupSet LS;
   DenseMap<NonOwningSymbolStringPtr, SymbolStringPtr> PtrToStub;

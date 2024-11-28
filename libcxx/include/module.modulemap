@@ -63,12 +63,10 @@ module std_core [system] {
   }
 
   module type_traits {
-    module add_const                                  { header "__type_traits/add_const.h" }
-    module add_cv                                     { header "__type_traits/add_cv.h" }
+    module add_cv_quals                               { header "__type_traits/add_cv_quals.h" }
     module add_lvalue_reference                       { header "__type_traits/add_lvalue_reference.h" }
     module add_pointer                                { header "__type_traits/add_pointer.h" }
     module add_rvalue_reference                       { header "__type_traits/add_rvalue_reference.h" }
-    module add_volatile                               { header "__type_traits/add_volatile.h" }
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
@@ -89,6 +87,7 @@ module std_core [system] {
     module decay                                      { header "__type_traits/decay.h" }
     module dependent_type                             { header "__type_traits/dependent_type.h" }
     module desugars_to                                { header "__type_traits/desugars_to.h" }
+    module detected_or                                { header "__type_traits/detected_or.h" }
     module disjunction                                { header "__type_traits/disjunction.h" }
     module enable_if                                  { header "__type_traits/enable_if.h" }
     module extent                                     { header "__type_traits/extent.h" }
@@ -846,7 +845,6 @@ module std [system] {
 
   module atomic {
     module aliases                { header "__atomic/aliases.h" }
-    module atomic_base            { header "__atomic/atomic_base.h" }
     module atomic_flag            { header "__atomic/atomic_flag.h" }
     module atomic_init            { header "__atomic/atomic_init.h" }
     module atomic_lock_free       { header "__atomic/atomic_lock_free.h" }
@@ -1442,6 +1440,7 @@ module std [system] {
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }
     module sortable                   { header "__iterator/sortable.h" }
+    module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
 
@@ -1461,14 +1460,25 @@ module std [system] {
 
   module locale {
     header "locale"
-    header "__locale_dir/locale_base_api.h"
-    header "__locale_dir/locale_guard.h"
+
+    module locale_guard   { header "__locale_dir/locale_guard.h" }
+    module pad_and_output { header "__locale_dir/pad_and_output.h" }
+
+    module support {
+      header "__locale_dir/locale_base_api.h"
+      export *
+    }
+
+    module support_impl {
+      textual header "__locale_dir/support/apple.h"
+      textual header "__locale_dir/support/bsd_like.h"
+      textual header "__locale_dir/support/freebsd.h"
+    }
+
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/android.h"
-      textual header "__locale_dir/locale_base_api/apple.h"
       textual header "__locale_dir/locale_base_api/bsd_locale_defaults.h"
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
-      textual header "__locale_dir/locale_base_api/freebsd.h"
       textual header "__locale_dir/locale_base_api/fuchsia.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
       textual header "__locale_dir/locale_base_api/musl.h"
@@ -1534,6 +1544,7 @@ module std [system] {
       export std.algorithm.in_out_result
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
+    module shared_count                       { header "__memory/shared_count.h" }
     module shared_ptr                         { header "__memory/shared_ptr.h" }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
     module temp_value                         { header "__memory/temp_value.h" }
@@ -1632,6 +1643,7 @@ module std [system] {
       header "__ostream/print.h"
       export *
     }
+    module put_character_sequence { header "__ostream/put_character_sequence.h" }
 
     header "ostream"
     export *
@@ -1912,6 +1924,7 @@ module std [system] {
     }
     module error_condition    { header "__system_error/error_condition.h" }
     module system_error       { header "__system_error/system_error.h" }
+    module throw_system_error { header "__system_error/throw_system_error.h" }
 
     header "system_error"
     export *
@@ -2004,6 +2017,7 @@ module std [system] {
     module priority_tag               { header "__utility/priority_tag.h" }
     module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
     module rel_ops                    { header "__utility/rel_ops.h" }
+    module scope_guard                { header "__utility/scope_guard.h" }
     module small_buffer               { header "__utility/small_buffer.h" }
     module swap                       { header "__utility/swap.h" }
     module to_underlying              { header "__utility/to_underlying.h" }

@@ -314,7 +314,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 
 #include <__config>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__fwd/sstream.h>
 #  include <__ostream/basic_ostream.h>
@@ -1283,7 +1283,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <ostream>

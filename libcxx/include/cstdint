@@ -142,7 +142,9 @@ Types:
 
 #include <__config>
 
-#include <stdint.h>
+#if __has_include(<stdint.h>)
+#  include <stdint.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

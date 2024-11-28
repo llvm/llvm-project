@@ -16,8 +16,9 @@ Goal and usage
 ==============
 
 Users of sanitizer tools, such as :doc:`AddressSanitizer`,
-:doc:`ThreadSanitizer`, :doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer`
-may want to disable or alter some checks for certain source-level entities to:
+:doc:`HardwareAssistedAddressSanitizerDesign`, :doc:`ThreadSanitizer`,
+:doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer` may want to disable
+or alter some checks for certain source-level entities to:
 
 * speedup hot function, which is known to be correct;
 * ignore a function that does some low-level magic (e.g. walks through the
@@ -51,11 +52,10 @@ Example
 Usage with UndefinedBehaviorSanitizer
 =====================================
 
-The arithmetic overflow sanitizers ``unsigned-integer-overflow`` and
-``signed-integer-overflow`` as well as the implicit integer truncation
-sanitizers ``implicit-signed-integer-truncation`` and
-``implicit-unsigned-integer-truncation`` support the ability to adjust
-instrumentation based on type.
+``unsigned-integer-overflow``, ``signed-integer-overflow``,
+``implicit-signed-integer-truncation``,
+``implicit-unsigned-integer-truncation``, and ``enum`` sanitizers support the
+ability to adjust instrumentation based on type.
 
 By default, supported sanitizers will have their instrumentation disabled for
 types specified within an ignorelist.

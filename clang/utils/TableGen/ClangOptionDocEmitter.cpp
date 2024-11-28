@@ -1,4 +1,4 @@
-//===- ClangOptionDocEmitter.cpp - Documentation for command line flags ---===//
+//===-- ClangOptionDocEmitter.cpp - Documentation for command line flags --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +9,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>

@@ -465,3 +465,17 @@ define <2 x fp128> @load_v2f128(ptr %p) {
   %a = load <2 x fp128>, ptr %p
   ret <2 x fp128> %a
 }
+
+define i32 @load_i8_s16_extrasuse(ptr %ptr, ptr %ptr2) {
+; CHECK-LABEL: load_i8_s16_extrasuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    sxtb w0, w8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %a = load i32, ptr %ptr
+  %s = shl i32 %a, 24
+  %b = ashr i32 %s, 24
+  store i32 %a, ptr %ptr2
+  ret i32 %b
+}

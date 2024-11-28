@@ -266,9 +266,11 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
         // Disassemble the address range given:
         const char *plugin_name = nullptr;
         const char *flavor = nullptr;
+        const char *cpu = nullptr;
+        const char *features = nullptr;
         m_instruction_ranges[i] = Disassembler::DisassembleRange(
-            GetTarget().GetArchitecture(), plugin_name, flavor, GetTarget(),
-            m_address_ranges[i]);
+            GetTarget().GetArchitecture(), plugin_name, flavor, cpu, features,
+            GetTarget(), m_address_ranges[i]);
       }
       if (!m_instruction_ranges[i])
         return nullptr;
@@ -379,10 +381,10 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
             !m_next_branch_bp_sp->HasResolvedLocations())
           m_could_not_resolve_hw_bp = true;
 
+        BreakpointLocationSP bp_loc =
+            m_next_branch_bp_sp->GetLocationAtIndex(0);
         if (log) {
           lldb::break_id_t bp_site_id = LLDB_INVALID_BREAK_ID;
-          BreakpointLocationSP bp_loc =
-              m_next_branch_bp_sp->GetLocationAtIndex(0);
           if (bp_loc) {
             BreakpointSiteSP bp_site = bp_loc->GetBreakpointSite();
             if (bp_site) {
@@ -395,7 +397,51 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
                     m_next_branch_bp_sp->GetID(), bp_site_id,
                     run_to_address.GetLoadAddress(&m_process.GetTarget()));
         }
-
+        // The "next branch breakpoint might land on a virtual inlined call
+        // stack.  If that's true, we should always stop at the top of the
+        // inlined call stack.  Only virtual steps should walk deeper into the
+        // inlined call stack.
+        Block *block = run_to_address.CalculateSymbolContextBlock();
+        if (bp_loc && block) {
+          LineEntry top_most_line_entry;
+          lldb::addr_t run_to_addr = run_to_address.GetFileAddress();
+          for (Block *inlined_parent = block->GetContainingInlinedBlock();
+               inlined_parent;
+               inlined_parent = inlined_parent->GetInlinedParent()) {
+            AddressRange range;
+            if (!inlined_parent->GetRangeContainingAddress(run_to_address,
+                                                           range))
+              break;
+            Address range_start_address = range.GetBaseAddress();
+            // Only compare addresses here, we may have different symbol
+            // contexts (for virtual inlined stacks), but we just want to know
+            // that they are all at the same address.
+            if (range_start_address.GetFileAddress() != run_to_addr)
+              break;
+            const InlineFunctionInfo *inline_info =
+                inlined_parent->GetInlinedFunctionInfo();
+            if (!inline_info)
+              break;
+            const Declaration &call_site = inline_info->GetCallSite();
+            top_most_line_entry.line = call_site.GetLine();
+            top_most_line_entry.column = call_site.GetColumn();
+            FileSpec call_site_file_spec = call_site.GetFile();
+            top_most_line_entry.original_file_sp.reset(
+                new SupportFile(call_site_file_spec));
+            top_most_line_entry.range = range;
+            top_most_line_entry.file_sp.reset();
+            top_most_line_entry.ApplyFileMappings(
+                GetThread().CalculateTarget());
+            if (!top_most_line_entry.file_sp)
+              top_most_line_entry.file_sp =
+                  top_most_line_entry.original_file_sp;
+          }
+          if (top_most_line_entry.IsValid()) {
+            LLDB_LOG(log, "Setting preferred line entry: {0}:{1}",
+                     top_most_line_entry.GetFile(), top_most_line_entry.line);
+            bp_loc->SetPreferredLineEntry(top_most_line_entry);
+          }
+        }
         m_next_branch_bp_sp->SetThreadID(m_tid);
         m_next_branch_bp_sp->SetBreakpointKind("next-branch-location");
 

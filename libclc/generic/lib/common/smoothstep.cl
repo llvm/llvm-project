@@ -21,8 +21,7 @@
  */
 
 #include <clc/clc.h>
-
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_OVERLOAD _CLC_DEF float smoothstep(float edge0, float edge1, float x) {
   float t = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);

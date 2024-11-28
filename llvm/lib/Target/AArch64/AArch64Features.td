@@ -243,7 +243,7 @@ def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO", "FEAT_LRCPC2",
 //===----------------------------------------------------------------------===//
 
 def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV", "FEAT_FlagM2",
-  "Enable alternative NZCV format for floating point comparisons">;
+  "Enable alternative NZCV format for floating point comparisons", [FeatureFlagM]>;
 
 def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
@@ -259,7 +259,7 @@ def FeaturePredRes : ExtensionWithMArch<"predres", "PredRes", "FEAT_SPECRES",
   "Enable Armv8.5-A execution and data prediction invalidation instructions">;
 
 def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP", "FEAT_DPB2",
-  "Enable Armv8.5-A Cache Clean to Point of Deep Persistence">;
+  "Enable Armv8.5-A Cache Clean to Point of Deep Persistence", [FeatureCCPP]>;
 
 def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI", "FEAT_BTI",
   "Enable Branch Target Identification">;
@@ -358,16 +358,16 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
-  "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
-
 def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
   "Enable Scalable Vector Extension 2 (SVE2) instructions",
-  [FeatureSVE, FeatureUseScalarIncVL]>;
+  [FeatureSVE]>;
 
-def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
+def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
   "FEAT_SVE_AES, FEAT_SVE_PMULL128",
-  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+  "Enable SVE AES and quadword SVE polynomial multiply instructions", [FeatureAES]>;
+
+def FeatureAliasSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
+  "", "Shorthand for +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
 
 def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
   "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
@@ -403,7 +403,7 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
   "Enable Realm Management Extension">;
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
-  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16]>;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -538,13 +538,13 @@ def FeatureSME2p2: ExtensionWithMArch<"sme2p2", "SME2p2", "FEAT_SME2p2",
   "Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
 
 def FeatureSSVE_AES : ExtensionWithMArch<"ssve-aes", "SSVE_AES", "FEAT_SSVE_AES",
-  "Enable Armv9.6-A SVE2 AES support in streaming SVE mode", [FeatureSME2, FeatureSVE2AES]>;
+  "Enable Armv9.6-A SVE AES support in streaming SVE mode", [FeatureSME2, FeatureSVEAES]>;
 
 def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
   "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
 
 def FeatureSVEAES2: ExtensionWithMArch<"sve-aes2", "SVE_AES2", "FEAT_SVE_AES2",
-  "Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions">;
+  "Enable Armv9.6-A SVE multi-vector AES and multi-vector quadword polynomial multiply instructions">;
 
 def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SVE_BFSCALE",
   "Enable Armv9.6-A SVE BFloat16 scaling instructions">;
@@ -847,7 +847,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX, FeatureSPE_EEF],
   !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],

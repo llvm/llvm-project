@@ -17,6 +17,13 @@ func.func @constant_splat() -> vector<8xi32> {
   func.return %1 : vector<8xi32>
 }
 
+// CHECK-LABEL: func @float_constant_splat
+// Don't crash on splat floats.
+func.func @float_constant_splat() -> vector<8xf32> {
+  %0 = arith.constant dense<3.0> : vector<8xf32>
+  func.return %0: vector<8xf32>
+}
+
 // CHECK-LABEL: func @vector_splat
 // CHECK: test.reflect_bounds {smax = 5 : index, smin = 4 : index, umax = 5 : index, umin = 4 : index}
 func.func @vector_splat() -> vector<4xindex> {
@@ -96,11 +103,20 @@ func.func @vector_insertelement() -> vector<4xindex> {
 
 // CHECK-LABEL: func @test_loaded_vector_extract
 // No bounds
-// CHECK: test.reflect_bounds %{{.*}} : i32
+// CHECK: test.reflect_bounds {smax = 2147483647 : si32, smin = -2147483648 : si32, umax = 4294967295 : ui32, umin = 0 : ui32} %{{.*}} : i32
 func.func @test_loaded_vector_extract(%memref : memref<16xi32>) -> i32 {
   %c0 = arith.constant 0 : index
   %v = vector.load %memref[%c0] : memref<16xi32>, vector<4xi32>
   %e = vector.extract %v[0] : i32 from vector<4xi32>
   %bounds = test.reflect_bounds %e : i32
   func.return %bounds : i32
+}
+
+// CHECK-LABEL: func @test_vector_extsi
+// CHECK: test.reflect_bounds {smax = 5 : si32, smin = 1 : si32, umax = 5 : ui32, umin = 1 : ui32}
+func.func @test_vector_extsi() -> vector<2xi32> {
+  %0 = test.with_bounds {smax = 5 : si8, smin = 1 : si8, umax = 5 : ui8, umin = 1 : ui8 } : vector<2xi8>
+  %1 = arith.extsi %0 : vector<2xi8> to vector<2xi32>
+  %2 = test.reflect_bounds %1 : vector<2xi32>
+  func.return %2 : vector<2xi32>
 }
