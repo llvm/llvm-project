@@ -6270,7 +6270,7 @@ def err_typecheck_invalid_restrict_invalid_pointee : Error<
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<
-  "zero-length arrays are not permitted in %select{C++|SYCL device code}0">;
+  "zero-length arrays are not permitted in %select{C++|SYCL device code|HIP device code}0">;
 def err_array_size_non_int : Error<"size of array has non-integer type %0">;
 def err_init_element_not_constant : Error<
   "initializer element is not a compile-time constant">;
@@ -6670,14 +6670,15 @@ def warn_counted_by_attr_elt_type_unknown_size :
 // __builtin_counted_by_ref diagnostics:
 def err_builtin_counted_by_ref_must_be_flex_array_member : Error<
   "'__builtin_counted_by_ref' argument must reference a flexible array member">;
-def err_builtin_counted_by_ref_cannot_leak_reference : Error<
-  "value returned by '__builtin_counted_by_ref' cannot be assigned to a "
-  "variable, have its address taken, or passed into or returned from a function">;
-def err_builtin_counted_by_ref_invalid_lhs_use : Error<
-  "value returned by '__builtin_counted_by_ref' cannot be used in "
-  "%select{an array subscript|a binary}0 expression">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
+
+def err_builtin_counted_by_ref_cannot_leak_reference : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
+  "variable|passed into a function|returned from a function}0">;
+def err_builtin_counted_by_ref_invalid_use : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be used in "
+  "%select{an array subscript|a binary}0 expression">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

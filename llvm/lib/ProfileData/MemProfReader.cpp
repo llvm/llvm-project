@@ -63,6 +63,14 @@ template <> struct MappingTraits<memprof::Frame> {
     static_assert(std::is_same_v<remove_cvref_t<decltype(Column)>, uint32_t>);
     static_assert(
         std::is_same_v<remove_cvref_t<decltype(IsInlineFrame)>, bool>);
+
+    // MSVC issues unused variable warnings despite the uses in static_assert
+    // above.
+    (void)Function;
+    (void)SymbolName;
+    (void)LineOffset;
+    (void)Column;
+    (void)IsInlineFrame;
   }
 };
 
@@ -591,7 +599,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
       const Frame &F = idToFrame(Callstack[I]);
       IndexedMemProfRecord &Record = MemProfData.Records[F.Function];
-      Record.AllocSites.emplace_back(Callstack, CSId, MIB);
+      Record.AllocSites.emplace_back(CSId, MIB);
 
       if (!F.IsInlineFrame)
         break;
@@ -606,7 +614,6 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     for (LocationPtr Loc : Locs) {
       CallStackId CSId = hashCallStack(*Loc);
       MemProfData.CallStacks.insert({CSId, *Loc});
-      Record.CallSites.push_back(*Loc);
       Record.CallSiteIds.push_back(CSId);
     }
   }

@@ -5155,6 +5155,28 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
 
+// Matches a subset of compress masks with a contiguous prefix of output
+// elements.  This could be extended to allow gaps by deciding which
+// source elements to spuriously demand.
+static bool isCompressMask(ArrayRef<int> Mask) {
+  int Last = -1;
+  bool SawUndef = false;
+  for (unsigned i = 0; i < Mask.size(); i++) {
+    if (Mask[i] == -1) {
+      SawUndef = true;
+      continue;
+    }
+    if (SawUndef)
+      return false;
+    if (i > (unsigned)Mask[i])
+      return false;
+    if (Mask[i] <= Last)
+      return false;
+    Last = Mask[i];
+  }
+  return true;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -5371,6 +5393,25 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // shifts and a vor will have a higher throughput than a vrgather.
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
+
+    // Can we generate a vcompress instead of a vrgather?  These scale better
+    // at high LMUL, at the cost of not being able to fold a following select
+    // into them.  The mask constants are also smaller than the index vector
+    // constants, and thus easier to materialize.
+    if (isCompressMask(Mask)) {
+      SmallVector<SDValue> MaskVals(NumElts,
+                                    DAG.getConstant(false, DL, XLenVT));
+      for (auto Idx : Mask) {
+        if (Idx == -1)
+          break;
+        assert(Idx >= 0 && (unsigned)Idx < NumElts);
+        MaskVals[Idx] = DAG.getConstant(true, DL, XLenVT);
+      }
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+      SDValue CompressMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+      return DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, V1, CompressMask,
+                         DAG.getUNDEF(VT));
+    }
 
     if (VT.getScalarSizeInBits() == 8 &&
         any_of(Mask, [&](const auto &Idx) { return Idx > 255; })) {
