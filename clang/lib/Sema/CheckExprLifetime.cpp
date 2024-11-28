@@ -1509,4 +1509,4 @@ void checkCaptureByLifetime(Sema &SemaRef, const CapturingEntity &Entity,
                                /*CapEntity=*/&Entity, Init);
 }
 
-} // namespace sema
+} // namespace clang::sema
