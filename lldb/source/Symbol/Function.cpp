@@ -282,7 +282,7 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
       m_range(CollapseRanges(ranges)), m_prologue_byte_size(0) {
   assert(comp_unit != nullptr);
   lldb::addr_t base_file_addr = m_range.GetBaseAddress().GetFileAddress();
-  for (const AddressRange &range: ranges)
+  for (const AddressRange &range : ranges)
     m_block.AddRange(
         Block::Range(range.GetBaseAddress().GetFileAddress() - base_file_addr,
                      range.GetByteSize()));

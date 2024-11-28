@@ -420,15 +420,14 @@ static size_t ParseFunctionBlocksForPDBSymbol(
     block->AddRange(Block::Range(
         raw_sym.getVirtualAddress() - func_file_vm_addr, raw_sym.getLength()));
     block->FinalizeRanges();
-
   }
   auto results_up = pdb_symbol->findAllChildren();
   if (!results_up)
     return num_added;
 
   while (auto symbol_up = results_up->getNext()) {
-    num_added += ParseFunctionBlocksForPDBSymbol(func_file_vm_addr,
-                                                 symbol_up.get(), parent_block, false);
+    num_added += ParseFunctionBlocksForPDBSymbol(
+        func_file_vm_addr, symbol_up.get(), parent_block, false);
   }
   return num_added;
 }

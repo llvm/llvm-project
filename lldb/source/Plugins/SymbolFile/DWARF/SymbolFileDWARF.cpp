@@ -3197,10 +3197,9 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
   if (function_die) {
     // We can't use the file address from the Function object as (in the OSO
     // case) it will already be remapped to the main module.
-    DWARFRangeList ranges =
-            function_die.GetDIE()->GetAttributeAddressRanges(
-                function_die.GetCU(),
-                /*check_hi_lo_pc=*/true);
+    DWARFRangeList ranges = function_die.GetDIE()->GetAttributeAddressRanges(
+        function_die.GetCU(),
+        /*check_hi_lo_pc=*/true);
     lldb::addr_t function_file_addr =
         ranges.GetMinRangeBase(LLDB_INVALID_ADDRESS);
     if (function_file_addr != LLDB_INVALID_ADDRESS)
