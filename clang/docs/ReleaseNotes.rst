@@ -436,10 +436,10 @@ Modified Compiler Flags
   to utilize these vector libraries. The behavior for all other vector function
   libraries remains unchanged.
 
-- The ``-Wnontrivial-memaccess`` warning has been updated to also warn about
+- The ``-Wnontrivial-memcall`` warning has been added to warn about
   passing non-trivially-copyable destrination parameter to ``memcpy``,
   ``memset`` and similar functions for which it is a documented undefined
-  behavior.
+  behavior. It is implied by ``-Wnontrivial-memaccess``
 
 Removed Compiler Flags
 -------------------------
@@ -472,6 +472,11 @@ Attribute Changes in Clang
 
 - The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
   that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
+- The attribute ``[[clang::no_specializations]]`` has been added to warn
+  users that a specific template shouldn't be specialized. This is useful for
+  e.g. standard library type traits, where adding a specialization results in
+  undefined behaviour.
 
 - ``[[clang::lifetimebound]]`` is now explicitly disallowed on explicit object member functions
   where they were previously silently ignored.
