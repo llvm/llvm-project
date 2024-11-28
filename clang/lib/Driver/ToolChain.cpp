@@ -846,6 +846,21 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(getTriple()))
     return *Path;
 
+  if (T.isOSzOS() &&
+      (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
+    // Build the triple without version information
+    const llvm::Triple &TripleWithoutVersion =
+        (T.hasEnvironment()
+             ? llvm::Triple(
+                   T.getArchName(), T.getVendorName(),
+                   llvm::Triple::getOSTypeName(T.getOS()),
+                   llvm::Triple::getEnvironmentTypeName(T.getEnvironment()))
+             : llvm::Triple(T.getArchName(), T.getVendorName(),
+                            llvm::Triple::getOSTypeName(T.getOS())));
+    if (auto Path = getPathForTriple(TripleWithoutVersion))
+      return *Path;
+  }
+
   // When building with per target runtime directories, various ways of naming
   // the Arm architecture may have been normalised to simply "arm".
   // For example "armv8l" (Armv8 AArch32 little endian) is replaced with "arm".

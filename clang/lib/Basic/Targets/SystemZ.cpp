@@ -168,6 +168,21 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__VX__");
   if (Opts.ZVector)
     Builder.defineMacro("__VEC__", "10304");
+
+  /* Set __TARGET_LIB__ only if a value was given.  If no value was given  */
+  /* we rely on the LE headers to define __TARGET_LIB__.                   */
+  if (!getTriple().getOSVersion().empty()) {
+    llvm::VersionTuple V = getTriple().getOSVersion();
+    // Create string with form: 0xPVRRMMMM, where P=4
+    std::string Str("0x");
+    unsigned int Librel = 0x40000000;
+    Librel |= V.getMajor() << 24;
+    Librel |= (V.getMinor() ? V.getMinor().value() : 1) << 16;
+    Librel |= V.getSubminor() ? V.getSubminor().value() : 0;
+    Str += llvm::utohexstr(Librel);
+
+    Builder.defineMacro("__TARGET_LIB__", Str.c_str());
+  }
 }
 
 ArrayRef<Builtin::Info> SystemZTargetInfo::getTargetBuiltins() const {

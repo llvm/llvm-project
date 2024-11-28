@@ -277,6 +277,11 @@ def err_cpu_unsupported_isa
 def err_arch_unsupported_isa
   : Error<"architecture '%0' does not support '%1' execution mode">;
 
+def err_zos_target_release_discontinued
+  : Error<"z/OS target level \"%0\" is discontinued.  Unexpected behavior might occur if an out-of-support target level is specified.  Use z/OS target level \"zOSv2r4\", or later instead">;
+def err_zos_target_unrecognized_release
+  : Error<"\"%0\" is not recognized as a valid z/OS target level.  The z/OS target level must be \"current\", or of the form \"zosvVrR\", where \"V\" is the version and \"R\" is the release, or given as a \"0x\"-prefixed eight digit hexadecimal value">;
+
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
 def err_drv_unknown_argument : Error<"unknown argument: '%0'">;
