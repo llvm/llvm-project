@@ -1336,7 +1336,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"stat", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
-    {"backtrace", {}, {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"co_broadcast",
         {{"a", AnyData, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
