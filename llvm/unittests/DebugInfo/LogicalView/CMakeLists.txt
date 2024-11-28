@@ -4,9 +4,11 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDisassemblers
   AllTargetsInfos
   AsmPrinter
+  DebugInfoDWARF
   DebugInfoLogicalView
   MC
   MCDisassembler
+  Object
   TargetParser
   )
 
