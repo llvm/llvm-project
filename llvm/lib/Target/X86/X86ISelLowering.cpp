@@ -29774,20 +29774,22 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
 // UnpairedInputs contains values yet to be paired, mapping an unpaired value to
 // its current neighbor's value and index.
 // Do not use llvm::DenseMap as ~0 is reserved key.
-template <typename InputTy,
-         typename PermutationTy,
-         typename MapTy = SmallMapVector<typename InputTy::value_type,
-                                         std::pair<typename InputTy::value_type, typename PermutationTy::value_type>, 8>>
-static bool PermuteAndPairVector(const InputTy& Inputs,
-                                 PermutationTy &Permutation,
-                                 MapTy UnpairedInputs = SmallMapVector<typename InputTy::value_type,
-                                                                       std::pair<typename InputTy::value_type, typename PermutationTy::value_type>, 8>()) {
+template <typename InputTy, typename PermutationTy,
+          typename MapTy =
+              SmallMapVector<typename InputTy::value_type,
+                             std::pair<typename InputTy::value_type,
+                                       typename PermutationTy::value_type>,
+                             8>>
+static bool PermuteAndPairVector(
+    const InputTy &Inputs, PermutationTy &Permutation,
+    MapTy UnpairedInputs = MapTy()) {
   const auto Wildcard = ~typename InputTy::value_type();
   SmallVector<typename PermutationTy::value_type, 16> WildcardPairs;
 
   size_t OutputOffset = Permutation.size();
   typename PermutationTy::value_type I = 0;
-  for (auto InputIt = Inputs.begin(), InputEnd = Inputs.end(); InputIt != InputEnd;) {
+  for (auto InputIt = Inputs.begin(), InputEnd = Inputs.end();
+       InputIt != InputEnd;) {
     Permutation.push_back(OutputOffset + I);
     Permutation.push_back(OutputOffset + I + 1);
 
@@ -29802,14 +29804,18 @@ static bool PermuteAndPairVector(const InputTy& Inputs,
 
     // If both are equal, they are in good position.
     if (Even != Odd) {
-      auto DoWork = [&] (auto &This, auto ThisIndex, auto Other, auto OtherIndex) {
+      auto DoWork = [&](auto &This, auto ThisIndex, auto Other,
+                        auto OtherIndex) {
         if (This != Wildcard) {
           // For non-wildcard value, check if it can pair with an exisiting
           // unpaired value from UnpairedInputs, if so, swap with the unpaired
           // value's neighbor, otherwise the current value is added to the map.
-          if (auto [MapIt, Inserted] = UnpairedInputs.try_emplace(This, std::make_pair(Other, OtherIndex)); !Inserted) {
+          if (auto [MapIt, Inserted] = UnpairedInputs.try_emplace(
+                  This, std::make_pair(Other, OtherIndex));
+              !Inserted) {
             auto [SwapValue, SwapIndex] = MapIt->second;
-            std::swap(Permutation[OutputOffset + SwapIndex], Permutation[OutputOffset + ThisIndex]);
+            std::swap(Permutation[OutputOffset + SwapIndex],
+                      Permutation[OutputOffset + ThisIndex]);
             This = SwapValue;
             UnpairedInputs.erase(MapIt);
 
@@ -29831,7 +29837,9 @@ static bool PermuteAndPairVector(const InputTy& Inputs,
                 UnpairedInputs[This] = std::make_pair(Other, OtherIndex);
               }
               // If its neighbor is also in UnpairedInputs, update its info too.
-              if (auto OtherMapIt = UnpairedInputs.find(Other); OtherMapIt != UnpairedInputs.end() && OtherMapIt->second.second == ThisIndex) {
+              if (auto OtherMapIt = UnpairedInputs.find(Other);
+                  OtherMapIt != UnpairedInputs.end() &&
+                  OtherMapIt->second.second == ThisIndex) {
                 OtherMapIt->second.first = This;
               }
             }
@@ -29849,11 +29857,12 @@ static bool PermuteAndPairVector(const InputTy& Inputs,
   // Now check if each remaining unpaired neighboring values can be swapped with
   // a wildcard pair to form two paired values.
   for (auto &[Unpaired, V] : UnpairedInputs) {
-    auto [Neighbor, NeighborIndex]  = V;
+    auto [Neighbor, NeighborIndex] = V;
     if (Neighbor != Wildcard) {
       assert(UnpairedInputs.count(Neighbor));
       if (WildcardPairs.size()) {
-        std::swap(Permutation[OutputOffset + WildcardPairs.back()], Permutation[OutputOffset + NeighborIndex]);
+        std::swap(Permutation[OutputOffset + WildcardPairs.back()],
+                  Permutation[OutputOffset + NeighborIndex]);
         WildcardPairs.pop_back();
         // Mark the neighbor as processed.
         UnpairedInputs[Neighbor].first = Wildcard;
@@ -30151,8 +30160,9 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // (shift (shuffle X P1) S1) ->
   // (shuffle (shift (shuffle X (shuffle P2 P1)) S2) P2^-1) where S2 can be
   // widened, and P2^-1 is the inverse shuffle of P2.
-  if (ConstantAmt && (VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) && R.hasOneUse()
-      && Subtarget.hasSSE3() && !Subtarget.hasAVX512()) {
+  if (ConstantAmt &&
+      (VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
+      R.hasOneUse() && Subtarget.hasSSE3() && !Subtarget.hasAVX512()) {
     constexpr size_t LaneBytes = 16;
     const size_t NumLanes = VT.getVectorNumElements() / LaneBytes;
 
@@ -30169,7 +30179,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // if so, this transformation may be profitable.
     bool Profitable;
     for (size_t I = 0; I < NumLanes; ++I) {
-      if (!(Profitable = PermuteAndPairVector(ArrayRef(&ShiftAmt[I * LaneBytes], LaneBytes), Permutation)))
+      if (!(Profitable = PermuteAndPairVector(
+                ArrayRef(&ShiftAmt[I * LaneBytes], LaneBytes), Permutation)))
         break;
     }
 
@@ -30187,7 +30198,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       }
       SmallVector<int, 32> Permutation2;
       for (size_t I = 0; I < NumLanes; ++I) {
-        if (!(IsAdjacentQuads = PermuteAndPairVector(ArrayRef(&EveryOtherShiftAmt[I * LaneBytes / 2], LaneBytes / 2), Permutation2)))
+        if (!(IsAdjacentQuads = PermuteAndPairVector(
+                  ArrayRef(&EveryOtherShiftAmt[I * LaneBytes / 2],
+                           LaneBytes / 2),
+                  Permutation2)))
           break;
       }
       if (IsAdjacentQuads) {
@@ -30235,7 +30249,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         if (!IsAdjacentQuads || (VT == MVT::v64i8 && Opc == ISD::SHL))
           Profitable = false;
       } else {
-        if (Opc == ISD::SHL || ((VT == MVT::v16i8 || VT == MVT::v32i8) && Opc == ISD::SRL))
+        if (Opc == ISD::SHL ||
+            ((VT == MVT::v16i8 || VT == MVT::v32i8) && Opc == ISD::SRL))
           Profitable = false;
       }
     }
