@@ -26,6 +26,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
+#include "clang/Lex/Lexer.h"
 #include <optional>
 using namespace clang;
 using namespace sema;
@@ -1165,6 +1166,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
                           C->Kind == LCK_StarThis);
       if (!LSI->Captures.empty())
       {
+          SourceManager &SourceMgr = Context.getSourceManager(); 
+          const LangOptions &LangOpts = Context.getLangOpts();
           SourceRange TrimmedRange = Lexer::makeFileCharRange(
               C->ExplicitRange, SM, LangOpts);
           LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
@@ -1333,6 +1336,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
     }
     if (!LSI->Captures.empty())
       {
+    SourceManager &SourceMgr = Context.getSourceManager(); 
+    const LangOptions &LangOpts = Context.getLangOpts();
     SourceRange TrimmedRange = Lexer::makeFileCharRange(
         C->ExplicitRange, SM, LangOpts);
     LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
