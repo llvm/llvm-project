@@ -19,10 +19,10 @@
 ;       b += 2;
 ;       break;
 ;     case 3:
-;       {
-;         b += 3;
-;         break;
-;       }
+;     {
+;       b += 3;
+;       break;
+;     }
 ;     case t:
 ;       b += t;
 ;     case 4:
@@ -30,10 +30,10 @@
 ;       b += 5;
 ;       break;
 ;     case 6: {
-;               case 7:
-;                 break;}
+;     case 7:
+;       break;}
 ;     default:
-;             break;
+;       break;
 ;   }
 ;
 ;   return a + b + c;
