@@ -1169,7 +1169,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
           SourceManager &SourceMgr = Context.getSourceManager(); 
           const LangOptions &LangOpts = Context.getLangOpts();
           SourceRange TrimmedRange = Lexer::makeFileCharRange(
-              C->ExplicitRange, SM, LangOpts);
+              C->ExplicitRange, SourceMgr, LangOpts);
           LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
       }
     }
@@ -1339,7 +1339,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
     SourceManager &SourceMgr = Context.getSourceManager(); 
     const LangOptions &LangOpts = Context.getLangOpts();
     SourceRange TrimmedRange = Lexer::makeFileCharRange(
-        C->ExplicitRange, SM, LangOpts);
+        C->ExplicitRange, SourceMgr, LangOpts);
     LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
 }
   }
