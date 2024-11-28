@@ -75,6 +75,7 @@ bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 bool ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   BasicValueFactory &BVF = C.getSValBuilder().getBasicValueFactory();
   const LocationContext *LCtx = C.getLocationContext();
+  ProgramStateRef State = C.getState();
 
   // Using CallDescriptions to match on CallExpr, so no need
   // to do null checks.
@@ -84,10 +85,10 @@ bool ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   SVal Zero = nonloc::ConcreteInt{BVF.getValue(0, IntTy)};
   SVal Minus1 = nonloc::ConcreteInt{BVF.getValue(-1, IntTy)};
 
-  ProgramStateRef State = C.getState();
   ProgramStateRef ChrootFailed = State->BindExpr(CE, LCtx, Minus1);
-  ProgramStateRef ChrootSucceeded = State->BindExpr(CE, LCtx, Zero);
   C.addTransition(ChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED));
+
+  ProgramStateRef ChrootSucceeded = State->BindExpr(CE, LCtx, Zero);
   C.addTransition(ChrootSucceeded->set<ChrootState>(ROOT_CHANGED));
   return true;
 }
