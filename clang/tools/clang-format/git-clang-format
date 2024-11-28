@@ -94,11 +94,13 @@ def main():
       # Other languages that clang-format supports
       'proto', 'protodevel',  # Protocol Buffers
       'java',  # Java
-      'js',  # JavaScript
+      'mjs', 'js',  # JavaScript
       'ts',  # TypeScript
       'cs',  # C Sharp
       'json',  # Json
-      'sv', 'svh', 'v', 'vh', # Verilog
+      'sv', 'svh', 'v', 'vh',  # Verilog
+      'td',  # TableGen
+      'txtpb', 'textpb', 'pb.txt', 'textproto', 'asciipb',  # TextProto
       ])
 
   p = argparse.ArgumentParser(

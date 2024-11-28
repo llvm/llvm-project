@@ -14,7 +14,6 @@
 #include "ARMLatencyMutations.h"
 #include "ARMSubtarget.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
@@ -23,7 +22,6 @@
 #include <array>
 #include <initializer_list>
 #include <memory>
-#include <utility>
 
 namespace llvm {
 

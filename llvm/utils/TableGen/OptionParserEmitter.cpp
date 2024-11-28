@@ -482,7 +482,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       HelpTextsForVariants.push_back(std::make_pair(
           VisibilityNames, VisibilityHelp->getValueAsString("Text")));
     }
-    emitHelpTextsForVariants(OS, HelpTextsForVariants);
+    emitHelpTextsForVariants(OS, std::move(HelpTextsForVariants));
 
     // The option meta-variable name.
     OS << ", ";

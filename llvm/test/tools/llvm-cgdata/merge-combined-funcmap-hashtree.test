@@ -21,7 +21,7 @@ RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-funcmap-bytes.txt)/g" %t/merge-both-hasht
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-both-hashtree-funcmap.ll -o %t/merge-both-hashtree-funcmap.o
 
 # Merge an object file having cgdata (__llvm_outline and __llvm_merge)
-RUN: llvm-cgdata -m %t/merge-both-hashtree-funcmap.o -o %t/merge-both-hashtree-funcmap.cgdata
+RUN: llvm-cgdata -m --skip-trim %t/merge-both-hashtree-funcmap.o -o %t/merge-both-hashtree-funcmap.cgdata
 RUN: llvm-cgdata -s %t/merge-both-hashtree-funcmap.cgdata | FileCheck %s
 
 CHECK: Outlined hash tree:

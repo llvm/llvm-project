@@ -12,7 +12,6 @@
 
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 using namespace clang;
 

@@ -23,7 +23,6 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
-#include "AMDGPURegBankSelect.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -79,7 +78,6 @@
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
-#include "llvm/Transforms/Scalar/LICM.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
 #include "llvm/Transforms/Scalar/NaryReassociate.h"
 #include "llvm/Transforms/Scalar/SeparateConstOffsetFromGEP.h"
@@ -491,7 +489,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
-  initializeAMDGPURegBankSelectPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
@@ -660,9 +657,10 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OptLevel)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
-                        FS, Options, getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
+    : CodeGenTargetMachineImpl(
+          T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU), FS, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
   if (TT.getArch() == Triple::amdgcn) {
@@ -1008,8 +1006,8 @@ namespace {
 
 class GCNPassConfig final : public AMDGPUPassConfig {
 public:
-  GCNPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
-    : AMDGPUPassConfig(TM, PM) {
+  GCNPassConfig(TargetMachine &TM, PassManagerBase &PM)
+      : AMDGPUPassConfig(TM, PM) {
     // It is necessary to know the register usage of the entire call graph.  We
     // allow calls without EnableAMDGPUFunctionCalls if they are marked
     // noinline, so this is always required.
@@ -1071,7 +1069,7 @@ public:
 
 } // end anonymous namespace
 
-AMDGPUPassConfig::AMDGPUPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
+AMDGPUPassConfig::AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.
@@ -1386,7 +1384,7 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  addPass(new AMDGPURegBankSelect());
+  addPass(new RegBankSelect());
   return false;
 }
 
@@ -1434,7 +1432,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
 
   if (isPassEnabled(EnablePreRAOptimizations))
-    insertPass(&RenameIndependentSubregsID, &GCNPreRAOptimizationsID);
+    insertPass(&MachineSchedulerID, &GCNPreRAOptimizationsID);
 
   // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
   // instructions that cause scheduling barriers.

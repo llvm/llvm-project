@@ -31,6 +31,11 @@ hfinkel@anl.gov (email), [hfinkel](https://github.com/hfinkel) (GitHub)
 Johannes Doerfert \
 jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
 
+#### ConstraintElimination
+
+Florian Hahn \
+flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
+
 #### InferAddressSpaces
 
 Matt Arsenault \
@@ -66,6 +71,13 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 Florian Hahn \
 flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
+#### SandboxVectorizer
+
+Vasileios Porpodas \
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+Jorge Gorbe Moya \
+jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
+
 #### ScalarEvolution, IndVarSimplify
 
 Philip Reames \
@@ -93,6 +105,11 @@ kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
 Evgeniy Stepanov \
 eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
 
+#### NumericalStabilitySanitizer
+
+Alexander Shaposhnikov \
+ashaposhnikov@google.com (email), [alexander-shaposhnikov](https://github.com/alexander-shaposhnikov) (GitHub)
+
 #### RealtimeSanitizer
 
 Christopher Apple \
@@ -104,13 +121,15 @@ david.trevelyan@gmail.com (email), [davidtrevelyan](https://github.com/davidtrev
 
 #### Parts of code generator not covered by someone else
 
-Evan Cheng \
-evan.cheng@apple.com (email)
+Matt Arsenault \
+Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
 
 #### SelectionDAG
 
-Justin Bogner \
-mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+Simon Pilgrim \
+llvm-dev@redking.me.uk (email), [RKSimon](https://github.com/RKSimon) (GitHub) \
+Craig Topper \
+craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
 
 #### FastISel
 
@@ -161,8 +180,16 @@ marksl@synopsys.com (email), [markschimmel](https://github.com/markschimmel) (Gi
 
 #### ARM backend
 
-Renato Golin \
-rengolin@systemcall.eu (email), [rengolin](https://github.com/rengolin) (GitHub)
+David Green \
+david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
+Oliver Stannard (Especially assembly/dissassembly) \
+oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
+Nashe Mncube \
+nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub) \
+Peter Smith (Anything ABI) \
+peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
+Ties Stuij (GlobalISel and early arch support) \
+ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
 
 #### AVR backend
 
@@ -179,10 +206,15 @@ alexei.starovoitov@gmail.com (email), [4ast](https://github.com/4ast) (GitHub)
 Zi Xuan Wu (Zeson) \
 zixuan.wu@linux.alibaba.com (email), [zixuan-wu](https://github.com/zixuan-wu) (GitHub)
 
+#### DirectX backend
+
+Justin Bogner \
+mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email)
+sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
 
 #### Lanai backend
 
@@ -208,6 +240,12 @@ anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
 Justin Holewinski \
 jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub)
+Artem Belevich \
+tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub)
+Alex MacLean \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+Justin Fargnoli \
+jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
 #### PowerPC backend
 
@@ -303,6 +341,13 @@ peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 Lang Hames \
 lhames@gmail.com (email), [lhames](https://github.com/lhames) (GitHub)
 
+#### SandboxIR
+
+Vasileios Porpodas \
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+Jorge Gorbe Moya \
+jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
+
 #### TableGen
 
 Paul C. Anagnostopoulos \
@@ -369,11 +414,6 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 Anton Korobeynikov \
 anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
-#### ARM EABI
-
-Anton Korobeynikov \
-anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
-
 #### LLVM Buildbot
 
 Galina Kistanova \
@@ -386,17 +426,17 @@ Others only have a lead maintainer listed here.
 
 [Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/CODE_OWNERS.TXT)
 
-[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/CodeOwners.rst)
+[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
 
 [Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/CODE_OWNERS.TXT)
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/CODE_OWNERS.TXT)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/CODE_OWNERS.TXT)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/CODE_OWNERS.TXT)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/CodeOwners.rst)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
 
 #### libc++
 
@@ -431,7 +471,11 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 ### Inactive or former component maintainers
 
-Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management
+Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
+Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
+Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
+Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 
 ### Former maintainers of removed components
 
