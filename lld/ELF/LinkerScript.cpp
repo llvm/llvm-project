@@ -1784,7 +1784,7 @@ static void checkMemoryRegion(Ctx &ctx, const MemoryRegion *region,
   if (osecEnd > regionEnd) {
     ErrAlways(ctx) << "section '" << osec->name << "' will not fit in region '"
                    << region->name << "': overflowed by "
-                   << Twine(osecEnd - regionEnd) << " bytes";
+                   << (osecEnd - regionEnd) << " bytes";
   }
 }
 

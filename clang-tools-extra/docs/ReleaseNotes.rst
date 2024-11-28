@@ -73,6 +73,8 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Added completion for C++20 keywords.
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -207,6 +209,10 @@ Changes in existing checks
   fix false positive that floating point variable is only used in increment
   expression.
 
+- Improved :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
+  <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check to
+  avoid false positives when detecting a templated class with inheritance.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers.
@@ -229,8 +235,9 @@ Changes in existing checks
   false positive for C++23 deducing this.
 
 - Improved :doc:`misc-use-internal-linkage
-  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
-  before type qualifiers such as ``const`` and ``volatile``.
+  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static``
+  keyword before type qualifiers such as ``const`` and ``volatile`` and fix
+  false positives for function declaration without body.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
@@ -255,8 +262,9 @@ Changes in existing checks
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
 
 - Improved :doc:`modernize-use-starts-ends-with
-  <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two cases
-  that can be replaced with ``ends_with``
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two new
+  cases from ``rfind`` and ``compare`` to ``ends_with``, and one new case from
+  ``substr`` to ``starts_with``, and a small adjustment to the  diagnostic message.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing

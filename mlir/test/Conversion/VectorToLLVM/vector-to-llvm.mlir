@@ -78,6 +78,38 @@ func.func @bitcast_index_to_i8_vector_scalable(%input: vector<[16]xindex>) -> ve
 
 // -----
 
+// CHECK-LABEL:   func.func @bitcast_2d(
+// CHECK-SAME:      %[[ARG_0:.*]]: vector<2x4xi32>) -> vector<2x2xi64> {
+// CHECK:           %[[T0:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : vector<2x4xi32> to !llvm.array<2 x vector<4xi32>>
+// CHECK:           %[[VEC_1:.*]] = llvm.extractvalue %[[T0]][0] : !llvm.array<2 x vector<4xi32>>
+// CHECK:           %[[BCAST_1:.*]] = llvm.bitcast %[[VEC_1]] : vector<4xi32> to vector<2xi64>
+// CHECK:           %[[OUT_1:.*]] = llvm.insertvalue %[[BCAST_1]], {{.*}}[0] : !llvm.array<2 x vector<2xi64>>
+// CHECK:           %[[VEC_2:.*]] = llvm.extractvalue %[[T0]][1] : !llvm.array<2 x vector<4xi32>>
+// CHECK:           %[[BCAST_2:.*]] = llvm.bitcast %[[VEC_2]] : vector<4xi32> to vector<2xi64>
+// CHECK:           %[[OUT_2:.*]] = llvm.insertvalue %[[BCAST_2]], %[[OUT_1]][1] : !llvm.array<2 x vector<2xi64>>
+func.func @bitcast_2d(%arg0: vector<2x4xi32>) -> vector<2x2xi64> {
+  %0 = vector.bitcast %arg0 : vector<2x4xi32> to vector<2x2xi64>
+  return %0 : vector<2x2xi64>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @bitcast_2d_scalable(
+// CHECK-SAME:      %[[ARG_0:.*]]: vector<2x[4]xi32>) -> vector<2x[2]xi64> {
+// CHECK:           %[[T0:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : vector<2x[4]xi32> to !llvm.array<2 x vector<[4]xi32>>
+// CHECK:           %[[VEC_1:.*]] = llvm.extractvalue %[[T0]][0] : !llvm.array<2 x vector<[4]xi32>>
+// CHECK:           %[[BCAST_1:.*]] = llvm.bitcast %[[VEC_1]] : vector<[4]xi32> to vector<[2]xi64>
+// CHECK:           %[[OUT_1:.*]] = llvm.insertvalue %[[BCAST_1]], {{.*}}[0] : !llvm.array<2 x vector<[2]xi64>>
+// CHECK:           %[[VEC_2:.*]] = llvm.extractvalue %[[T0]][1] : !llvm.array<2 x vector<[4]xi32>>
+// CHECK:           %[[BCAST_2:.*]] = llvm.bitcast %[[VEC_2]] : vector<[4]xi32> to vector<[2]xi64>
+// CHECK:           %[[OUT_2:.*]] = llvm.insertvalue %[[BCAST_2]], %[[OUT_1]][1] : !llvm.array<2 x vector<[2]xi64>>
+func.func @bitcast_2d_scalable(%arg0: vector<2x[4]xi32>) -> vector<2x[2]xi64> {
+  %0 = vector.bitcast %arg0 : vector<2x[4]xi32> to vector<2x[2]xi64>
+  return %0 : vector<2x[2]xi64>
+}
+
+// -----
+
 func.func @broadcast_vec0d_from_f32(%arg0: f32) -> vector<f32> {
   %0 = vector.broadcast %arg0 : f32 to vector<f32>
   return %0 : vector<f32>
@@ -3520,6 +3552,23 @@ func.func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
 
 // -----
 
+// CHECK-LABEL: @splat_scalable
+// CHECK-SAME: %[[A:arg[0-9]+]]: vector<[4]xf32>
+// CHECK-SAME: %[[ELT:arg[0-9]+]]: f32
+func.func @splat_scalable(%a: vector<[4]xf32>, %b: f32) -> vector<[4]xf32> {
+  %vb = vector.splat %b : vector<[4]xf32>
+  %r = arith.mulf %a, %vb : vector<[4]xf32>
+  return %r : vector<[4]xf32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : vector<[4]xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<[4]xf32>
+// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
+// CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[A]], %[[SPLAT]] : vector<[4]xf32>
+// CHECK-NEXT: return %[[SCALE]] : vector<[4]xf32>
+
+// -----
+
 // CHECK-LABEL: @vector_scalable_insert
 // CHECK-SAME: %[[SUB:.*]]: vector<4xf32>, %[[SV:.*]]: vector<[4]xf32>
 func.func @vector_scalable_insert(%sub: vector<4xf32>, %dsv: vector<[4]xf32>) -> vector<[4]xf32> {
@@ -3538,16 +3587,6 @@ func.func @vector_scalable_extract(%vec: vector<[4]xf32>) -> vector<8xf32> {
   // CHECK-NEXT: %{{.*}} = llvm.intr.vector.extract %[[VEC]][0] : vector<8xf32> from vector<[4]xf32>
   %0 = vector.scalable.extract %vec[0] : vector<8xf32> from vector<[4]xf32>
   return %0 : vector<8xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @make_fixed_vector_of_scalable_vector
-func.func @make_fixed_vector_of_scalable_vector(%f : f64) -> vector<3x[2]xf64>
-{
-  // CHECK: %{{.*}} = llvm.mlir.undef : !llvm.array<3 x vector<[2]xf64>>
-  %res = vector.broadcast %f : f64 to vector<3x[2]xf64>
-  return %res : vector<3x[2]xf64>
 }
 
 // -----
@@ -3643,16 +3682,6 @@ func.func @vector_deinterleave_2d_scalable(%a: vector<2x[8]xf32>) -> (vector<2x[
     // CHECK-NOT: vector.deinterleave %{{.*}} : vector<2x[8]xf32>
     %0, %1 = vector.deinterleave %a : vector<2x[8]xf32> -> vector<2x[4]xf32>
     return %0, %1 : vector<2x[4]xf32>, vector<2x[4]xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @vector_bitcast_2d
-// CHECK:         llvm.bitcast
-// CHECK-NOT:     vector.bitcast
-func.func @vector_bitcast_2d(%arg0: vector<2x4xi32>) -> vector<2x2xi64> {
-  %0 = vector.bitcast %arg0 : vector<2x4xi32> to vector<2x2xi64>
-  return %0 : vector<2x2xi64>
 }
 
 // -----
