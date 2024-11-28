@@ -2036,7 +2036,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   // (*) Non-unit dims get folded away in practice.
   // TODO: Relax these conditions as good motivating examples are identified.
 
-  // Find the first scalable flag, and ...
+  // Find the first scalable flag.
   bool seenNonUnitParallel = false;
   auto iterators = linalgOp.getIteratorTypesArray();
   SmallVector<bool> scalableFlags(inputScalableVecDims);
@@ -2048,10 +2048,10 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
     iterators.pop_back();
     scalableFlags.pop_back();
-    idx--;
+    --idx;
   }
 
-  // ... analyze the corresponding iterator.
+  // Analyze the iterator corresponding to the first scalable dim.
   switch (iterators.back()) {
   case utils::IteratorType::reduction: {
     // Check 3. above is met.
