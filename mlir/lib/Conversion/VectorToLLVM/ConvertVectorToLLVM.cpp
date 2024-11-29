@@ -1118,17 +1118,14 @@ public:
     // Since the LLVM type converter converts 0-d vectors to 1-d vectors, we
     // need to add a position for this change.
     if (extractOp.getSourceVectorType().getRank() == 0) {
-      auto idxType = rewriter.getIndexType();
-      Value position = rewriter.create<LLVM::ConstantOp>(
-          loc, typeConverter->convertType(idxType),
-          rewriter.getIntegerAttr(idxType, 0));
-      positionVec.push_back(position);
+      Type idxType = typeConverter->convertType(rewriter.getIndexType());
+      positionVec.push_back(rewriter.getZeroAttr(idxType));
     }
 
     Value extracted = adaptor.getVector();
-    if (extractsScalar) {
+    if (extractsAggregate) {
       ArrayRef<OpFoldResult> position(positionVec);
-      if (extractsAggregate) {
+      if (extractsScalar) {
         // If we are extracting a scalar from the extracted member, we drop
         // the last index, which will be used to extract the scalar out of the
         // vector.

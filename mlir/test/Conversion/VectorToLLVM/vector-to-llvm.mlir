@@ -1344,7 +1344,7 @@ func.func @extract_scalar_from_vec_0d_index(%arg0: vector<index>) -> index {
 // CHECK-LABEL: @extract_scalar_from_vec_0d_index(
 //  CHECK-SAME:   %[[A:.*]]: vector<index>)
 //       CHECK:   %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<index> to vector<1xi64>
-//       CHECK:   %[[T1:.*]] = llvm.mlir.constant(0 : index) : i64
+//       CHECK:   %[[T1:.*]] = llvm.mlir.constant(0 : i64) : i64
 //       CHECK:   %[[T2:.*]] = llvm.extractelement %[[T0]][%[[T1]] : i64] : vector<1xi64>
 //       CHECK:   %[[T3:.*]] = builtin.unrealized_conversion_cast %[[T2]] : i64 to index
 //       CHECK:   return %[[T3]] : index
