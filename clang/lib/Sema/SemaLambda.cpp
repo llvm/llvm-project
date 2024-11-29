@@ -1164,20 +1164,26 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       CheckCXXThisCapture(C->Loc, /*Explicit=*/true, /*BuildAndDiagnose*/ true,
                           /*FunctionScopeIndexToStopAtPtr*/ nullptr,
                           C->Kind == LCK_StarThis);
-    if (!LSI->Captures.empty())
-{
-    SourceManager &SourceMgr = Context.getSourceManager();
-    const LangOptions &LangOpts = Context.getLangOpts();
-    SourceRange TrimmedRange = Lexer::makeFileCharRange(
-        CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr, LangOpts).getAsRange();
-    LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
-}
+      if (!LSI->Captures.empty()) { // 
+        SourceManager &SourceMgr = Context.getSourceManager();
+        const LangOptions &LangOpts = Context.getLangOpts();
+        SourceRange TrimmedRange = Lexer::makeFileCharRange(
+            CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr, LangOpts)
+            .getAsRange();
+        LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
+      }
+      continue; // // skip further processing for `this` and `*this` captures.
     }
 
-    assert(C->Id && "missing identifier for capture");
+    if (!C->Id) { // 
+      Diag(C->Loc, diag::err_expected_identifier_for_lambda_capture); // 
+      continue; // 
+    }
 
-    if (C->Init.isInvalid())
-      continue;
+    if (C->Init.isInvalid()) {
+      Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);  // 
+      continue; // 
+    }
 
     ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
@@ -1190,8 +1196,10 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
       // FIXME: we should create the init capture variable and mark it invalid
       // in this case.
-      if (C->InitCaptureType.get().isNull())
-        continue;
+      if (C->InitCaptureType.get().isNull() && !C->Init.isUsable()) {
+        Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type); // 
+        continue; // 
+      }
 
       if (C->Init.get()->containsUnexpandedParameterPack() &&
           !C->InitCaptureType.get()->getAs<PackExpansionType>())
