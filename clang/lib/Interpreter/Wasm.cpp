@@ -76,10 +76,8 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
-  std::string ObjectFileName =
-      PTU.TheModule->getName().str() + ".o"; // For the wasm object
-  std::string BinaryFileName =
-      PTU.TheModule->getName().str() + ".wasm"; // For the wasm binary
+  std::string ObjectFileName = PTU.TheModule->getName().str() + ".o";
+  std::string BinaryFileName = PTU.TheModule->getName().str() + ".wasm";
 
   std::error_code Error;
   llvm::raw_fd_ostream ObjectFileOutput(llvm::StringRef(ObjectFileName), Error);
@@ -92,6 +90,7 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   }
 
   if (!PM.run(*PTU.TheModule)) {
+
     return llvm::make_error<llvm::StringError>("Failed to emit Wasm object.",
                                                llvm::inconvertibleErrorCode());
   }
