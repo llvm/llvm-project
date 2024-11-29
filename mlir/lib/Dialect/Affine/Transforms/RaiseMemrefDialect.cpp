@@ -1,29 +1,27 @@
-
+//===- RaiseMemrefDialect.cpp - raise memref.store and load to affine ops -===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements functionality to convert memref load and store ops to
+// the corresponding affine ops, inferring the affine map as needed.
+//
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
-#include <algorithm>
-#include <cstddef>
-#include <functional>
-#include <iterator>
-#include <memory>
-#include <optional>
 
 namespace mlir {
 namespace affine {
@@ -39,17 +37,24 @@ using namespace mlir::affine;
 
 namespace {
 
+/// Find the index of the given value in the `dims` list,
+/// and append it if it was not already in the list. The
+/// dims list is a list of symbols or dimensions of the
+/// affine map. Within the results of an affine map, they
+/// are identified by their index, which is why we need
+/// this function.
 static std::optional<size_t>
 findInListOrAdd(Value value, llvm::SmallVectorImpl<Value> &dims,
-                const std::function<bool(Value)> &isValidElement) {
+                function_ref<bool(Value)> isValidElement) {
 
   Value *loopIV = std::find(dims.begin(), dims.end(), value);
   if (loopIV != dims.end()) {
-    // found an IV that already has an index
+    // We found an IV that already has an index, return that index.
     return {std::distance(dims.begin(), loopIV)};
   }
   if (isValidElement(value)) {
-    // push this IV in the parameters
+    // This is a valid element for the dim/symbol list, push this as a
+    // parameter.
     size_t idx = dims.size();
     dims.push_back(value);
     return idx;
@@ -57,14 +62,15 @@ findInListOrAdd(Value value, llvm::SmallVectorImpl<Value> &dims,
   return std::nullopt;
 }
 
-static LogicalResult toAffineExpr(Value value, AffineExpr &result,
-                                  llvm::SmallVectorImpl<Value> &affineDims,
-                                  llvm::SmallVectorImpl<Value> &affineSymbols) {
+/// Convert a value to an affine expr if possible. Adds dims and symbols
+/// if needed.
+static AffineExpr toAffineExpr(Value value,
+                               llvm::SmallVectorImpl<Value> &affineDims,
+                               llvm::SmallVectorImpl<Value> &affineSymbols) {
   using namespace matchers;
   IntegerAttr::ValueType cst;
   if (matchPattern(value, m_ConstantInt(&cst))) {
-    result = getAffineConstantExpr(cst.getSExtValue(), value.getContext());
-    return success();
+    return getAffineConstantExpr(cst.getSExtValue(), value.getContext());
   }
   Value lhs;
   Value rhs;
@@ -72,48 +78,46 @@ static LogicalResult toAffineExpr(Value value, AffineExpr &result,
       matchPattern(value, m_Op<arith::MulIOp>(m_Any(&lhs), m_Any(&rhs)))) {
     AffineExpr lhsE;
     AffineExpr rhsE;
-    if (succeeded(toAffineExpr(lhs, lhsE, affineDims, affineSymbols)) &&
-        succeeded(toAffineExpr(rhs, rhsE, affineDims, affineSymbols))) {
+    if ((lhsE = toAffineExpr(lhs, affineDims, affineSymbols)) &&
+        (rhsE = toAffineExpr(rhs, affineDims, affineSymbols))) {
       AffineExprKind kind;
       if (isa<arith::AddIOp>(value.getDefiningOp())) {
         kind = mlir::AffineExprKind::Add;
       } else {
         kind = mlir::AffineExprKind::Mul;
       }
-      result = getAffineBinaryOpExpr(kind, lhsE, rhsE);
-      return success();
+      return getAffineBinaryOpExpr(kind, lhsE, rhsE);
     }
   }
 
   if (auto dimIx = findInListOrAdd(value, affineSymbols, [](Value v) {
         return affine::isValidSymbol(v);
       })) {
-    result = getAffineSymbolExpr(*dimIx, value.getContext());
-    return success();
+    return getAffineSymbolExpr(*dimIx, value.getContext());
   }
 
   if (auto dimIx = findInListOrAdd(
           value, affineDims, [](Value v) { return affine::isValidDim(v); })) {
 
-    result = getAffineDimExpr(*dimIx, value.getContext());
-    return success();
+    return getAffineDimExpr(*dimIx, value.getContext());
   }
 
-  return failure();
+  return {};
 }
 
 static LogicalResult
 computeAffineMapAndArgs(MLIRContext *ctx, ValueRange indices, AffineMap &map,
                         llvm::SmallVectorImpl<Value> &mapArgs) {
-  llvm::SmallVector<AffineExpr> results;
-  llvm::SmallVector<Value, 2> symbols;
-  llvm::SmallVector<Value, 8> dims;
+  SmallVector<AffineExpr> results;
+  SmallVector<Value> symbols;
+  SmallVector<Value> dims;
 
-  for (auto indexExpr : indices) {
-    if (failed(
-            toAffineExpr(indexExpr, results.emplace_back(), dims, symbols))) {
+  for (Value indexExpr : indices) {
+    AffineExpr res = toAffineExpr(indexExpr, dims, symbols);
+    if (!res) {
       return failure();
     }
+    results.push_back(res);
   }
 
   map = AffineMap::get(dims.size(), symbols.size(), results, ctx);
@@ -140,21 +144,21 @@ struct RaiseMemrefDialect
                                               mapArgs))) {
           rewriter.replaceOpWithNewOp<AffineStoreOp>(
               op, store.getValueToStore(), store.getMemRef(), map, mapArgs);
-        } else {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "[affine] Cannot raise memref op: " << op << "\n");
+          return;
         }
 
-      } else if (auto load = llvm::dyn_cast_or_null<memref::LoadOp>(op)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "[affine] Cannot raise memref op: " << op << "\n");
 
+      } else if (auto load = llvm::dyn_cast_or_null<memref::LoadOp>(op)) {
         if (succeeded(computeAffineMapAndArgs(ctx, load.getIndices(), map,
                                               mapArgs))) {
           rewriter.replaceOpWithNewOp<AffineLoadOp>(op, load.getMemRef(), map,
                                                     mapArgs);
-        } else {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "[affine] Cannot raise memref op: " << op << "\n");
+          return;
         }
+        LLVM_DEBUG(llvm::dbgs()
+                   << "[affine] Cannot raise memref op: " << op << "\n");
       }
     });
   }

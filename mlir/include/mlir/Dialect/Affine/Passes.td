@@ -406,7 +406,7 @@ def RaiseMemrefDialect : Pass<"affine-raise-from-memref", "func::FuncOp"> {
     They can be turned back to memref dialect ops with --lower-affine.
   }];
   let constructor = "mlir::affine::createRaiseMemrefToAffine()";
-  let dependentDialects = ["memref::MemRefDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {
