@@ -285,7 +285,6 @@ def NoReturn : DXILAttribute;
 class DXILProperty;
 
 def IsBarrier : DXILProperty;
-def IsDerivative : DXILProperty;
 def IsGradient : DXILProperty;
 def IsFeedback : DXILProperty;
 def IsWave : DXILProperty;
