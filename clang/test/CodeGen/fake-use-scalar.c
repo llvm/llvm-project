@@ -21,13 +21,13 @@ int foo(volatile int vol_param, int param)
   struct SmallAggr small;
   volatile int vol_local;
   int local;
-  char long_arr[17];
-  char short_arr[16];
+  unsigned long_arr[5];
+  unsigned short_arr[4];
   return 0;
 }
 
-// CHECK: [[SMALL_ARR_FAKE_USE:%.+]] = load [16 x i8], ptr %short_arr
-// CHECK: call void (...) @llvm.fake.use([16 x i8] [[SMALL_ARR_FAKE_USE]])
+// CHECK: [[SMALL_ARR_FAKE_USE:%.+]] = load [4 x i[[#UINT_SIZE:]]], ptr %short_arr
+// CHECK: call void (...) @llvm.fake.use([4 x i[[#UINT_SIZE]]] [[SMALL_ARR_FAKE_USE]])
 
 // CHECK: [[LOCAL_FAKE_USE:%.+]] = load i32, ptr %local
 // CHECK: call void (...) @llvm.fake.use(i32 [[LOCAL_FAKE_USE]])
