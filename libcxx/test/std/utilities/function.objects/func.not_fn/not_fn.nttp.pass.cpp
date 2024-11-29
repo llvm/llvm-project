@@ -47,6 +47,14 @@ struct MaybeNoexceptFn {
   bool operator()() const noexcept(IsNoexcept); // not defined
 };
 
+template <bool IsNoexcept>
+struct MaybeNoexceptNegation {
+  bool operator!() noexcept(IsNoexcept); // not defined
+};
+
+template <bool IsNoexcept>
+MaybeNoexceptNegation<IsNoexcept> maybe_noexcept_negation() noexcept; // not defined
+
 constexpr void basic_tests() {
   { // Test constant functions
     auto false_fn = std::not_fn<std::false_type{}>();
@@ -267,6 +275,12 @@ constexpr void test_return_type() {
 
     auto never_noexcept = std::not_fn<MaybeNoexceptFn<false>{}>();
     static_assert(!noexcept(never_noexcept()));
+
+    auto always_noexcept_negation = std::not_fn<maybe_noexcept_negation<true>>();
+    static_assert(noexcept(always_noexcept_negation()));
+
+    auto never_noexcept_negation = std::not_fn<maybe_noexcept_negation<false>>();
+    static_assert(!noexcept(never_noexcept_negation()));
   }
 
   { // Test calling volatile wrapper
