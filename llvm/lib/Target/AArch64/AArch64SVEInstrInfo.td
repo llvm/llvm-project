@@ -4279,7 +4279,7 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
   def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
   // Placing corresponding
-  defm BFCVT_ZPzZ_StoH  : sve_fp_z2op_p_zd_bfcvt<0b1001010, "bfcvt", int_aarch64_sve_fcvt_bf16f32_v2>;
+  defm BFCVT_ZPzZ_StoH  : sve_fp_z2op_p_zd_bfcvt<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2>;
 
   // Floating-point convert to integer, zeroing predicate
   defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;

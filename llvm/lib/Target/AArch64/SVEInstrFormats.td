@@ -3278,10 +3278,10 @@ multiclass sve_fp_z2op_p_zd_frint<bits<2> opc, string asm> {
   def _D : sve_fp_z2op_p_zd<{ 0b0010, opc{1}, 1, opc{0} }, asm, ZPR64, ZPR64>;
 }
 
-multiclass sve_fp_z2op_p_zd_bfcvt<bits<7> opc, string asm, SDPatternOperator op> {
-  def _StoH : sve_fp_z2op_p_zd<opc, asm, ZPR32, ZPR16>;
+multiclass sve_fp_z2op_p_zd_bfcvt<string asm, SDPatternOperator op> {
+  def NAME : sve_fp_z2op_p_zd<0b1001010, asm, ZPR32, ZPR16>;
 
-  def : SVE_3_Op_UndefZero_Pat<nxv8bf16, op, nxv8bf16, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _StoH)>;
+  def : SVE_3_Op_UndefZero_Pat<nxv8bf16, op, nxv8bf16, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
 }
 
 multiclass sve_fp_z2op_p_zd_d<bit U, string asm> {
