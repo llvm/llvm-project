@@ -156,6 +156,10 @@ Changes in existing checks
   <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
   crashes from invalid code.
 
+- Improved :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
+  branch clones by now detecting duplicate inner and outer if statements.
+
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
@@ -229,6 +233,11 @@ Changes in existing checks
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
+
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check by extending the
+  checker to detect floating point and integer literals in redundant
+  expressions.
 
 - Improved :doc:`misc-unconventional-assign-operator
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
