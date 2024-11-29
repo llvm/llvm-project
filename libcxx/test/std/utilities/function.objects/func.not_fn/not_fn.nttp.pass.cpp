@@ -148,7 +148,7 @@ constexpr void test_perfect_forwarding_call_wrapper() {
 
   // Call to `not_fn<NTTP>` unspecified-type's operator() should always result in call to const& overload of .
   {
-    { // Make sure unspecified-type is still callable when we delete & overload.
+    { // Make sure unspecified-type is still callable when we delete the & overload.
       struct X {
         FakeBool operator()() & = delete;
         FakeBool operator()() const&;
@@ -163,7 +163,7 @@ constexpr void test_perfect_forwarding_call_wrapper() {
       static_assert(std::invocable<const F>);
     }
 
-    { // Make sure unspecified-type is not callable when we delete const& overload.
+    { // Make sure unspecified-type is not callable when we delete the const& overload.
       struct X {
         FakeBool operator()() &;
         FakeBool operator()() const& = delete;
@@ -178,7 +178,7 @@ constexpr void test_perfect_forwarding_call_wrapper() {
       static_assert(!std::invocable<const F>);
     }
 
-    { // Make sure unspecified-type is still callable when we delete && overload.
+    { // Make sure unspecified-type is still callable when we delete the && overload.
       struct X {
         FakeBool operator()() &;
         FakeBool operator()() const&;
@@ -193,7 +193,7 @@ constexpr void test_perfect_forwarding_call_wrapper() {
       static_assert(std::invocable<const F>);
     }
 
-    { // Make sure unspecified-type is still callable when we delete const&& overload.
+    { // Make sure unspecified-type is still callable when we delete the const&& overload.
       struct X {
         FakeBool operator()() &;
         FakeBool operator()() const&;
