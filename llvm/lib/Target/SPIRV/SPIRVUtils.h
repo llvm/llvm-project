@@ -34,6 +34,7 @@ class Register;
 class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
+class SPIRVGlobalRegistry;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -198,6 +199,8 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
+// Check if it's a SPIR-V specific intrinsic call.
+bool isSpvIntrinsic(const Value *Arg);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
@@ -276,10 +279,17 @@ inline Type *getTypedPointerWrapper(Type *ElemTy, unsigned AS) {
                             {ElemTy}, {AS});
 }
 
-inline bool isTypedPointerWrapper(TargetExtType *ExtTy) {
+inline bool isTypedPointerWrapper(const TargetExtType *ExtTy) {
   return ExtTy->getName() == TYPED_PTR_TARGET_EXT_NAME &&
          ExtTy->getNumIntParameters() == 1 &&
          ExtTy->getNumTypeParameters() == 1;
+}
+
+// True if this is an instance of PointerType or TypedPointerType.
+inline bool isPointerTyOrWrapper(const Type *Ty) {
+  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
+    return isTypedPointerWrapper(ExtTy);
+  return isPointerTy(Ty);
 }
 
 inline Type *applyWrappers(Type *Ty) {
@@ -296,12 +306,14 @@ inline Type *applyWrappers(Type *Ty) {
   return Ty;
 }
 
-inline Type *getPointeeType(Type *Ty) {
-  if (auto PType = dyn_cast<TypedPointerType>(Ty))
-    return PType->getElementType();
-  else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
-    if (isTypedPointerWrapper(ExtTy))
-      return applyWrappers(ExtTy->getTypeParameter(0));
+inline Type *getPointeeType(const Type *Ty) {
+  if (Ty) {
+    if (auto PType = dyn_cast<TypedPointerType>(Ty))
+      return PType->getElementType();
+    else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
+      if (isTypedPointerWrapper(ExtTy))
+        return ExtTy->getTypeParameter(0);
+  }
   return nullptr;
 }
 
@@ -359,6 +371,24 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 bool getVacantFunctionName(Module &M, std::string &Name);
+
+void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder &MIRBuilder, bool Force = false);
+void setRegClassType(Register Reg, const MachineInstr *SpvType,
+                     SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
+                     const MachineFunction &MF, bool Force = false);
+Register createVirtualRegister(const MachineInstr *SpvType,
+                               SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo *MRI,
+                               const MachineFunction &MF);
+Register createVirtualRegister(const MachineInstr *SpvType,
+                               SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder);
+
+// Return true if there is an opaque pointer type nested in the argument.
+bool isNestedPointer(const Type *Ty);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
