@@ -3572,6 +3572,20 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           Cost *= 4;
         return Cost;
       } else {
+        // If the information about individual scalars being vectorized is
+        // available, this yeilds better cost estimation.
+        if (auto *VTy = dyn_cast<FixedVectorType>(Ty); VTy && !Args.empty()) {
+          InstructionCost InsertExtractCost =
+              ST->getVectorInsertExtractBaseCost();
+          Cost = (3 * InsertExtractCost) * VTy->getNumElements();
+          for (int i = 0, Sz = Args.size(); i < Sz; i += 2) {
+            Cost += getArithmeticInstrCost(
+                Opcode, VTy->getScalarType(), CostKind,
+                TTI::getOperandInfo(Args[i]), TTI::getOperandInfo(Args[i + 1]));
+          }
+          return Cost;
+        }
+
         // If one of the operands is a uniform constant then the cost for each
         // element is Cost for insertion, extraction and division.
         // Insertion cost = 2, Extraction Cost = 2, Division = cost for the
