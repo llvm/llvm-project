@@ -771,6 +771,7 @@ Bug Fixes to AST Handling
   and ``relatedalso`` comment commands.
 - Clang now uses the location of the begin of the member expression for ``CallExpr``
   involving deduced ``this``. (#GH116928)
+- Fixed printout of AST that uses pack indexing expression. (#GH116486)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
