@@ -30,7 +30,7 @@ public:
 };
 
 /// A vector type with no scalable dimensions.
-class FixedWidthVectorType : public VectorType {
+class FixedVectorType : public VectorType {
 public:
   using VectorType::VectorType;
   static bool classof(Type type) {
