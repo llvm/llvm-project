@@ -1647,38 +1647,6 @@ public:
                                                UI->getPredicate(), CostKind);
           }
         }
-        if (VPReductionIntrinsic::isVPReduction(ICA.getID())) {
-          std::optional<Intrinsic::ID> RedID =
-              VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
-          assert(RedID.has_value());
-          switch (ICA.getID()) {
-          case Intrinsic::vp_reduce_add:
-          case Intrinsic::vp_reduce_fadd:
-          case Intrinsic::vp_reduce_mul:
-          case Intrinsic::vp_reduce_fmul:
-          case Intrinsic::vp_reduce_and:
-          case Intrinsic::vp_reduce_or:
-          case Intrinsic::vp_reduce_xor: {
-            unsigned RedOp = getArithmeticReductionInstruction(*RedID);
-            return thisT()->getArithmeticReductionCost(
-                RedOp, cast<VectorType>(ICA.getArgTypes()[1]), ICA.getFlags(),
-                CostKind);
-          }
-          case Intrinsic::vp_reduce_smax:
-          case Intrinsic::vp_reduce_smin:
-          case Intrinsic::vp_reduce_umax:
-          case Intrinsic::vp_reduce_umin:
-          case Intrinsic::vp_reduce_fmax:
-          case Intrinsic::vp_reduce_fmaximum:
-          case Intrinsic::vp_reduce_fmin:
-          case Intrinsic::vp_reduce_fminimum: {
-            Intrinsic::ID MinMaxID = getMinMaxReductionIntrinsicOp(*RedID);
-            return thisT()->getMinMaxReductionCost(
-                MinMaxID, cast<VectorType>(ICA.getArgTypes()[1]),
-                ICA.getFlags(), CostKind);
-          }
-          }
-        }
       }
 
       std::optional<Intrinsic::ID> FID =
