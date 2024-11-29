@@ -1803,6 +1803,14 @@ func.func @invalid_from_elements(%a: f32, %b: i32) {
 
 // -----
 
+func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
+  // expected-error @+1 {{'result' must be fixed-length vector of any type values, but got 'vector<[2]xf32>'}}
+  vector.from_elements %a, %b : vector<[2]xf32>
+  return
+}
+
+// -----
+
 func.func @invalid_step_0d() {
   // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<f32>'}}
   vector.step : vector<f32>
