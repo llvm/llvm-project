@@ -73,7 +73,7 @@ jobs:
       - name: Push Container
         run: |
           podman load -i ${{ needs.build-metrics-container.outptus.container-filename }}
-          podman tag ${{ needs.build-metrics-container.outputs.container-name-tag }} ${{ sneeds.build-metrics-container.outputs.container-name }}:latest
+          podman tag ${{ needs.build-metrics-container.outputs.container-name-tag }} ${{ needs.build-metrics-container.outputs.container-name }}:latest
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
           podman push ${{ needs.build-metrics-container.outputs.container-name-tag }}
           podman push ${{ needs.build-metrics-container.outputs.container-name }}:latest
