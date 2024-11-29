@@ -219,9 +219,9 @@ protected:
   bool contains_imp(const void *Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
-      for (const void *const *APtr = SmallArray, *const *E =
-                                                     SmallArray + NumNonEmpty;
-           APtr != E; ++APtr)
+      const void *const *APtr = SmallArray;
+      const void *const *E = SmallArray + NumNonEmpty;
+      for (; APtr != E; ++APtr)
         if (*APtr == Ptr)
           return true;
       return false;
