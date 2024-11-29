@@ -190,8 +190,8 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     AR_TextualHeader = 0,
     AR_ImportOrTextualHeader = 1,
   };
-  auto AssignMostImportant = [](AffectedReason &L, AffectedReason R) {
-    L = std::max(L, R);
+  auto AssignMostImportant = [](AffectedReason &LHS, AffectedReason RHS) {
+    LHS = std::max(LHS, RHS);
   };
   llvm::DenseMap<FileID, AffectedReason> ModuleMaps;
   llvm::DenseMap<const Module *, AffectedReason> ProcessedModules;
