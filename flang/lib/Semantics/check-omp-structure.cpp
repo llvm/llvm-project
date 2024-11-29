@@ -3444,7 +3444,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
         first != dirLeafs.end()) {
       // A leaf can only appear once in a compound directive, so if `part`
       // is a subsequence of `dir`, it must start here.
-      long firstPos{std::distance(dirLeafs.begin(), first)};
+      size_t firstPos{
+          static_cast<size_t>(std::distance(dirLeafs.begin(), first))};
       llvm::ArrayRef<Directive> subSeq{
           first, std::min<size_t>(dirSize - firstPos, partSize)};
       return subSeq == partLeafs;
