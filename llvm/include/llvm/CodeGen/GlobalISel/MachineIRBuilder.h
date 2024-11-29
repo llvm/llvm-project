@@ -1783,7 +1783,7 @@ public:
 
   /// Build and insert \p Res = G_ABDU \p Op0, \p Op1
   ///
-  /// G_ABDS return the unsigned absolute difference of \p Op0 and \p Op1.
+  /// G_ABDU return the unsigned absolute difference of \p Op0 and \p Op1.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
