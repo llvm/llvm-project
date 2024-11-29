@@ -5190,6 +5190,9 @@ static LogicalResult isContiguousIndices(Value indexVec) {
   if (!vecType || vecType.getRank() != 1 || vecType.isScalable())
     return failure();
 
+  if (indexVec.getDefiningOp<StepOp>())
+    return success();
+
   DenseIntElementsAttr elements;
   if (!matchPattern(indexVec, m_Constant(&elements)))
     return failure();
