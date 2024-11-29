@@ -627,6 +627,8 @@ Improvements to Clang's diagnostics
 - Clang now supports using alias templates in deduction guides, aligning with the C++ standard,
   which treats alias templates as synonyms for their underlying types (#GH54909).
 
+- Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
