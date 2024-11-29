@@ -806,10 +806,12 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
     // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
     %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
     ```
+
+    Note, scalable vectors are not supported.
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyVectorOfAnyRank:$result);
+  let results = (outs AnyFixedVectorOfAnyRank:$result);
   let assemblyFormat = "$elements attr-dict `:` type($result)";
   let hasCanonicalizer = 1;
 }
