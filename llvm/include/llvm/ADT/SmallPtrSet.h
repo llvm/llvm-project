@@ -248,16 +248,16 @@ protected:
   void swap(const void **SmallStorage, const void **RHSSmallStorage,
             SmallPtrSetImplBase &RHS);
 
-  void CopyFrom(const void **SmallStorage, const SmallPtrSetImplBase &RHS);
-  void MoveFrom(const void **SmallStorage, unsigned SmallSize,
+  void copyFrom(const void **SmallStorage, const SmallPtrSetImplBase &RHS);
+  void moveFrom(const void **SmallStorage, unsigned SmallSize,
                 const void **RHSSmallStorage, SmallPtrSetImplBase &&RHS);
 
 private:
-  /// Code shared by MoveFrom() and move constructor.
-  void MoveHelper(const void **SmallStorage, unsigned SmallSize,
+  /// Code shared by moveFrom() and move constructor.
+  void moveHelper(const void **SmallStorage, unsigned SmallSize,
                   const void **RHSSmallStorage, SmallPtrSetImplBase &&RHS);
-  /// Code shared by CopyFrom() and copy constructor.
-  void CopyHelper(const SmallPtrSetImplBase &RHS);
+  /// Code shared by copyFrom() and copy constructor.
+  void copyHelper(const SmallPtrSetImplBase &RHS);
 };
 
 /// SmallPtrSetIteratorImpl - This is the common base class shared between all
@@ -559,14 +559,14 @@ public:
   SmallPtrSet<PtrType, SmallSize> &
   operator=(const SmallPtrSet<PtrType, SmallSize> &RHS) {
     if (&RHS != this)
-      this->CopyFrom(SmallStorage, RHS);
+      this->copyFrom(SmallStorage, RHS);
     return *this;
   }
 
   SmallPtrSet<PtrType, SmallSize> &
   operator=(SmallPtrSet<PtrType, SmallSize> &&RHS) {
     if (&RHS != this)
-      this->MoveFrom(SmallStorage, SmallSizePowTwo, RHS.SmallStorage,
+      this->moveFrom(SmallStorage, SmallSizePowTwo, RHS.SmallStorage,
                      std::move(RHS));
     return *this;
   }

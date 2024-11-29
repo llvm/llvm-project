@@ -149,17 +149,17 @@ SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
   }
 
   // Copy over the that array.
-  CopyHelper(that);
+  copyHelper(that);
 }
 
 SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
                                          unsigned SmallSize,
                                          const void **RHSSmallStorage,
                                          SmallPtrSetImplBase &&that) {
-  MoveHelper(SmallStorage, SmallSize, RHSSmallStorage, std::move(that));
+  moveHelper(SmallStorage, SmallSize, RHSSmallStorage, std::move(that));
 }
 
-void SmallPtrSetImplBase::CopyFrom(const void **SmallStorage,
+void SmallPtrSetImplBase::copyFrom(const void **SmallStorage,
                                    const SmallPtrSetImplBase &RHS) {
   assert(&RHS != this && "Self-copy should be handled by the caller.");
 
@@ -185,10 +185,10 @@ void SmallPtrSetImplBase::CopyFrom(const void **SmallStorage,
     IsSmall = false;
   }
 
-  CopyHelper(RHS);
+  copyHelper(RHS);
 }
 
-void SmallPtrSetImplBase::CopyHelper(const SmallPtrSetImplBase &RHS) {
+void SmallPtrSetImplBase::copyHelper(const SmallPtrSetImplBase &RHS) {
   // Copy over the new array size
   CurArraySize = RHS.CurArraySize;
 
@@ -199,16 +199,16 @@ void SmallPtrSetImplBase::CopyHelper(const SmallPtrSetImplBase &RHS) {
   NumTombstones = RHS.NumTombstones;
 }
 
-void SmallPtrSetImplBase::MoveFrom(const void **SmallStorage,
+void SmallPtrSetImplBase::moveFrom(const void **SmallStorage,
                                    unsigned SmallSize,
                                    const void **RHSSmallStorage,
                                    SmallPtrSetImplBase &&RHS) {
   if (!isSmall())
     free(CurArray);
-  MoveHelper(SmallStorage, SmallSize, RHSSmallStorage, std::move(RHS));
+  moveHelper(SmallStorage, SmallSize, RHSSmallStorage, std::move(RHS));
 }
 
-void SmallPtrSetImplBase::MoveHelper(const void **SmallStorage,
+void SmallPtrSetImplBase::moveHelper(const void **SmallStorage,
                                      unsigned SmallSize,
                                      const void **RHSSmallStorage,
                                      SmallPtrSetImplBase &&RHS) {
