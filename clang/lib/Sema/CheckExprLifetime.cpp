@@ -204,6 +204,7 @@ struct IndirectLocalPathEntry {
     GslPointerInit,
     GslPointerAssignment,
     DefaultArg,
+    ParenAggInit,
   } Kind;
   Expr *E;
   union {
@@ -985,6 +986,17 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   if (isa<CallExpr>(Init) || isa<CXXConstructExpr>(Init))
     return visitFunctionCallArguments(Path, Init, Visit);
 
+  if (auto *CPE = dyn_cast<CXXParenListInitExpr>(Init)) {
+    RevertToOldSizeRAII RAII(Path);
+    Path.push_back({IndirectLocalPathEntry::ParenAggInit, CPE});
+    for (auto *I : CPE->getInitExprs()) {
+      if (I->isGLValue())
+        visitLocalsRetainedByReferenceBinding(Path, I, RK_ReferenceBinding,
+                                              Visit);
+      else
+        visitLocalsRetainedByInitializer(Path, I, Visit, true);
+    }
+  }
   switch (Init->getStmtClass()) {
   case Stmt::UnaryOperatorClass: {
     auto *UO = cast<UnaryOperator>(Init);
@@ -1081,6 +1093,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslPointerAssignment:
+    case IndirectLocalPathEntry::ParenAggInit:
       // These exist primarily to mark the path as not permitting or
       // supporting lifetime extension.
       break;
@@ -1392,6 +1405,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       switch (Elem.Kind) {
       case IndirectLocalPathEntry::AddressOf:
       case IndirectLocalPathEntry::LValToRVal:
+      case IndirectLocalPathEntry::ParenAggInit:
         // These exist primarily to mark the path as not permitting or
         // supporting lifetime extension.
         break;
