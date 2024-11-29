@@ -1144,37 +1144,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                                   : RISCV::VMV_V_X,
                                               LT.second, CostKind);
   }
-  case Intrinsic::vp_reduce_add:
-  case Intrinsic::vp_reduce_fadd:
-  case Intrinsic::vp_reduce_mul:
-  case Intrinsic::vp_reduce_fmul:
-  case Intrinsic::vp_reduce_and:
-  case Intrinsic::vp_reduce_or:
-  case Intrinsic::vp_reduce_xor: {
-    std::optional<Intrinsic::ID> RedID =
-        VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
-    assert(RedID.has_value());
-    unsigned RedOp = getArithmeticReductionInstruction(*RedID);
-    return getArithmeticReductionCost(RedOp,
-                                      cast<VectorType>(ICA.getArgTypes()[1]),
-                                      ICA.getFlags(), CostKind);
-  }
-  case Intrinsic::vp_reduce_smax:
-  case Intrinsic::vp_reduce_smin:
-  case Intrinsic::vp_reduce_umax:
-  case Intrinsic::vp_reduce_umin:
-  case Intrinsic::vp_reduce_fmax:
-  case Intrinsic::vp_reduce_fmaximum:
-  case Intrinsic::vp_reduce_fmin:
-  case Intrinsic::vp_reduce_fminimum: {
-    std::optional<Intrinsic::ID> RedID =
-        VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
-    assert(RedID.has_value());
-    Intrinsic::ID MinMaxID = getMinMaxReductionIntrinsicOp(*RedID);
-    return getMinMaxReductionCost(MinMaxID,
-                                  cast<VectorType>(ICA.getArgTypes()[1]),
-                                  ICA.getFlags(), CostKind);
-  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
