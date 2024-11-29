@@ -219,6 +219,37 @@ class SME2_Tile_Movaz_Pat<string name, SDPatternOperator intrinsic, ValueType ou
     : Pat<(out_vt (intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)))),
           (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset)>;
 
+
+// FP8 SME FDOT instructions
+
+// Selection DAG patterns - map to first level of pseudo-instructions (xxx_PSEUDO)
+class SME2_FP8_FMLA_FDOT_Index_VG1x2_Pat<string name, SDPatternOperator intrinsic,
+                                         ComplexPattern tileslice, Operand offset_ty, Operand imm_ty,
+                                         ValueType vt = nxv16i8>
+  : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset)),
+                    vt:$Zn1, vt:$Zn2, vt:$Zm, (i32 imm_ty:$i)),
+        (!cast<Instruction>(name # _PSEUDO) $base, $offset,
+                                            (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1),
+                                            ZPR4b8:$Zm, imm_ty:$i)>;
+
+class SME2_FP8_FMLA_FDOT_Index_VG1x4_Pat<string name, SDPatternOperator intrinsic,
+                                         ComplexPattern tileslice, Operand offset_ty, Operand imm_ty,
+                                         ValueType vt = nxv16i8>
+  : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset)),
+                   vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4,
+                   vt:$Zm, (i32 imm_ty:$i)),
+        (!cast<Instruction>(name # _PSEUDO) $base, $offset,
+                                            (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3),
+                                            ZPR4b8:$Zm, imm_ty:$i)>;
+
+class sme2_fp8_fmla_fdot_index_pseudo<string name, Operand offset_ty, RegisterOperand src1_ty, RegisterOperand src2_ty, Operand imm_ty>
+  : SMEPseudo2Instr<name, 0>,
+    Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rv, offset_ty:$offs, src1_ty:$Zn, src2_ty:$Zm, imm_ty:$i), []> {
+  let mayLoad = 1;
+  let SMEMatrixType = SMEMatrixArray;
+  let usesCustomInserter = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -5736,4 +5767,114 @@ multiclass sme2_fmop4a_fp8_fp16_2way<string mnemonic> {
 
   // Multiple vectors
   def _M2Z2Z_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b1, 0b1, mnemonic, ZZ_b_mul_r_Lo, ZZ_b_mul_r_Hi>;
+}
+
+// FP8 SME FDOT instructions
+
+// Selection DAG patterns - map to first level of pseudo-instructions (xxx_PSEUDO)
+
+class SME2_FP8_FDOT_Index_VG1x2_Pat<string name, SDPatternOperator intrinsic,
+                                    ComplexPattern tileslice, Operand offset_ty, Operand imm_ty,
+                                    ValueType vt = nxv16i8>
+  : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset)),
+                    vt:$Zn1, vt:$Zn2, vt:$Zm, (i32 imm_ty:$i), i64:$fpmr),
+        (!cast<Instruction>(name # _PSEUDO) $base, $offset,
+                                            (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1),
+                                            ZPR4b8:$Zm, imm_ty:$i, GPR64:$fpmr)>;
+
+class SME2_FP8_FDOT_Index_VG1x4_Pat<string name, SDPatternOperator intrinsic,
+                                    ComplexPattern tileslice, Operand offset_ty, Operand imm_ty,
+                                    ValueType vt = nxv16i8>
+  : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset)),
+                   vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4,
+                   vt:$Zm, (i32 imm_ty:$i), i64:$fpmr),
+        (!cast<Instruction>(name # _PSEUDO) $base, $offset,
+                                            (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3),
+                                            ZPR4b8:$Zm, imm_ty:$i, GPR64:$fpmr)>;
+
+// First level pseudo-instructions (xxx_PSEUDO) - transformed to second level pseudo-instructions (xxx_FPMR_PSEUDO)
+// during instruction selection.
+class sme2_fp8_fdot_index_pseudo<string name, Operand offset_ty, RegisterOperand src1_ty, RegisterOperand src2_ty, Operand imm_ty>
+  : SMEPseudo2Instr<name, 0>,
+    Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rv, offset_ty:$offs, src1_ty:$Zn, src2_ty:$Zm, imm_ty:$i, GPR64:$fpmr), []> {
+  let SMEMatrixType = SMEMatrixArray;
+  let usesCustomInserter = 1;
+}
+
+class sme2_fp8_fdot_pseudo<string name, Operand offset_ty, RegisterOperand src1_ty, RegisterOperand src2_ty>
+  : SMEPseudo2Instr<name, 0>,
+    Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rv, offset_ty:$offs, src1_ty:$Zn, src2_ty:$Zm, GPR64:$fpmr), []> {
+  let SMEMatrixType = SMEMatrixArray;
+  let usesCustomInserter = 1;
+}
+
+// Second level pseudo-instruction - expanded to real instruction by the AArch64 pseudo instruction expansion pass
+class sme2_fp8_fdot_index_fpmr_pseudo<string name, MatrixOperand matrix_ty, Operand offset_ty,
+                                      RegisterOperand src1_ty, RegisterOperand src2_ty,
+                                      Operand imm_ty>
+  : Pseudo<(outs matrix_ty:$ZAda),
+           (ins matrix_ty:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, offset_ty:$offs,
+            src1_ty:$Zn, src2_ty:$Zm, imm_ty:$i, GPR64:$fpmr), []>,
+    SMEPseudo2Instr<name, 1> {
+  let hasNoSchedulingInfo = 1;
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+class sme2_fp8_fdot_fpmr_pseudo<string name, MatrixOperand matrix_ty, Operand offset_ty,
+                                RegisterOperand src1_ty, RegisterOperand src2_ty>
+  : Pseudo<(outs matrix_ty:$ZAda),
+           (ins matrix_ty:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, offset_ty:$offs,
+            src1_ty:$Zn, src2_ty:$Zm, GPR64:$fpmr), []>,
+    SMEPseudo2Instr<name, 1> {
+  let hasNoSchedulingInfo = 1;
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+// FDOT instructions
+multiclass sme2_fp8_fdot_index_za16_vg1x2<string mnemonic, bits<2> sz, bits<3> op,
+                                          RegisterOperand multi_vector_ty, SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg2_index<sz, {op{2},?,?,op{1-0},?}, MatrixOp16,
+                                            multi_vector_ty, ZPR4b8,
+                                            VectorIndexH32b_timm, mnemonic>,
+                                            SMEPseudo2Instr<NAME, 1>{
+    let Uses=[FPMR, FPCR];
+    let mayLoad = 1;
+
+    bits<3> i;
+    let Inst{11-10} = i{2-1};
+    let Inst{3}     = i{0};
+  }
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+                 (!cast<Instruction>(NAME) MatrixOp16:$ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+                                           multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexH32b_timm:$i), 0>;
+
+
+  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexH32b_timm>;
+
+  def : SME2_FP8_FMLA_FDOT_Index_VG1x2_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexH32b_timm>;
+}
+
+multiclass sme2_fp8_fdot_index_za16_vg1x4<string mnemonic, bits<3> op,
+                                          RegisterOperand multi_vector_ty, SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg4_index<0b0,{0b1,?,?,op,?}, MatrixOp16,
+                                            multi_vector_ty, ZPR4b8,
+                                            VectorIndexH32b_timm, mnemonic>,
+                                            SMEPseudo2Instr<NAME, 1> {
+    let Uses=[FPMR, FPCR];
+    let mayLoad = 1;
+
+    bits<3> i;
+    let Inst{11-10} = i{2-1};
+    let Inst{3}     = i{0};
+  }
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+                 (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
+                                           sme_elm_idx0_7:$imm3, multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexH32b_timm:$i), 0>;
+
+
+  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexH32b_timm>;
+
+  def : SME2_FP8_FMLA_FDOT_Index_VG1x4_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexH32b_timm>;
 }
