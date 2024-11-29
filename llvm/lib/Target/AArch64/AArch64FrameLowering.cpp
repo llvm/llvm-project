@@ -3171,12 +3171,15 @@ static void computeCalleeSaveRegisterPairs(
       if (RPI.isPaired())
         return IsWindows ? RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR
                          : RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP;
-      // -aarch64-stack-hazard-size=<val> disables register pairing, so look
-      // for the frame record as two unpaired registers.
-      if (AFI->hasStackHazardSlotIndex())
-        return i > 0 && RPI.Reg1 == AArch64::FP &&
-               CSI[i - 1].getReg() == AArch64::LR;
-      return false;
+      // Otherwise, look for the frame record as two unpaired registers. This is
+      // needed for -aarch64-stack-hazard-size=<val>, which disables register
+      // pairing (as the padding may be too large for the LDP/STP offset). Note:
+      // On Windows, this check works out as current reg == FP, next reg == LR,
+      // and on other platforms current reg == FP, previous reg == LR. This
+      // works out as the correct pre-increment or post-increment offsets
+      // respectively.
+      return i > 0 && RPI.Reg1 == AArch64::FP &&
+             CSI[i - 1].getReg() == AArch64::LR;
     };
 
     // Save the offset to frame record so that the FP register can point to the
