@@ -859,10 +859,14 @@ Init make(const parser::OmpClause::Init &inp,
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpInReductionClause
-  auto &t0 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(m0 && "OmpReductionIdentifier is required");
+
   return InReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*m0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 
@@ -1155,17 +1159,17 @@ Reduction make(const parser::OmpClause::Reduction &inp,
   );
 
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 =
+  auto *m0 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionModifier>(mods);
-  auto *t1 =
+  auto *m1 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
-  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
-  assert(t1 && "OmpReductionIdentifier is required");
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(m1 && "OmpReductionIdentifier is required");
 
   return Reduction{
-      {/*ReductionModifier=*/maybeApplyToV(convert, t0),
-       /*ReductionIdentifiers=*/{makeReductionOperator(*t1, semaCtx)},
-       /*List=*/makeObjects(t2, semaCtx)}};
+      {/*ReductionModifier=*/maybeApplyToV(convert, m0),
+       /*ReductionIdentifiers=*/{makeReductionOperator(*m1, semaCtx)},
+       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 // Relaxed: empty
@@ -1259,13 +1263,13 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 =
+  auto *m0 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
-  assert(t0 && "OmpReductionIdentifier is required");
+  assert(m0 && "OmpReductionIdentifier is required");
 
   return TaskReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(*t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*m0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 
