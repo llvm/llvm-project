@@ -1295,7 +1295,7 @@ func.func @extract_scalar_from_vec_2d_f32_inner_dynamic_idx(%arg0: vector<1x16xf
   return %0 : f32
 }
 
-// Multi-dim vectors are supported if the inner most dimension is dynamic.
+// Multi-dim vectors are supported if the innermost index is dynamic.
 
 // CHECK-LABEL: @extract_scalar_from_vec_2d_f32_inner_dynamic_idx(
 //       CHECK:   llvm.extractvalue
@@ -1306,7 +1306,7 @@ func.func @extract_scalar_from_vec_2d_f32_inner_dynamic_idx_scalable(%arg0: vect
   return %0 : f32
 }
 
-// Multi-dim vectors are supported if the inner most dimension is dynamic.
+// Multi-dim vectors are supported if the innermost index is dynamic.
 
 // CHECK-LABEL: @extract_scalar_from_vec_2d_f32_inner_dynamic_idx_scalable(
 //       CHECK:   llvm.extractvalue
@@ -1329,7 +1329,7 @@ func.func @extract_scalar_from_vec_2d_f32_outer_dynamic_idx_scalable(%arg0: vect
   return %0 : f32
 }
 
-// Multi-dim vectors with outer dimension as dynamic are not supported, but it
+// Multi-dim vectors with outer indices as dynamic are not supported, but it
 // shouldn't crash.
 
 // CHECK-LABEL: @extract_scalar_from_vec_2d_f32_outer_dynamic_idx_scalable(

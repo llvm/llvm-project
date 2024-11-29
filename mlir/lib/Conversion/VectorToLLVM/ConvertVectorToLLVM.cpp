@@ -1096,53 +1096,55 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
-    // The LLVM lowering models multi dimension vectors as stacked 1-d vectors.
-    // The stacking is modeled using arrays. We do this conversion from a
-    // N-d vector extract to stacked 1-d vector extract in two steps:
-    //  - Extract a 1-d vector or a stack of 1-d vectors (llvm.extractvalue)
-    //  - Extract a scalar out of the 1-d vector if needed (llvm.extractelement)
+    // The Vector -> LLVM lowering models N-D vectors as nested aggregates of
+    // 1-d vectors. This nesting is modeled using arrays. We do this conversion
+    // from a N-d vector extract to a nested aggregate vector extract in two
+    // steps:
+    //  - Extract a member from the nested aggregate. The result can be
+    //    a lower rank nested aggregate or a vector (1-D). This is done using
+    //    `llvm.extractvalue`.
+    //  - Extract a scalar out of the vector if needed. This is done using
+    //   `llvm.extractelement`.
 
-    // Determine if we need to extract a slice out of the original vector. We
-    // always need to extract a slice if the input rank >= 2.
-    bool isSlicingExtract = extractOp.getSourceVectorType().getRank() >= 2;
+    // Determine if we need to extract a member out of the aggregate. We
+    // always need to extract a member if the input rank >= 2.
+    bool extractsAggregate = extractOp.getSourceVectorType().getRank() >= 2;
     // Determine if we need to extract a scalar as the result. We extract
-    // a scalar if the extract is full rank i.e. the number of indices is equal
-    // to source vector rank.
-    bool isScalarExtract = static_cast<int64_t>(positionVec.size()) ==
-                           extractOp.getSourceVectorType().getRank();
+    // a scalar if the extract is full rank, i.e., the number of indices is
+    // equal to source vector rank.
+    bool extractsScalar = static_cast<int64_t>(positionVec.size()) ==
+                          extractOp.getSourceVectorType().getRank();
+
+    // Since the LLVM type converter converts 0-d vectors to 1-d vectors, we
+    // need to add a position for this change.
+    if (extractOp.getSourceVectorType().getRank() == 0) {
+      auto idxType = rewriter.getIndexType();
+      Value position = rewriter.create<LLVM::ConstantOp>(
+          loc, typeConverter->convertType(idxType),
+          rewriter.getIntegerAttr(idxType, 0));
+      positionVec.push_back(position);
+    }
 
     Value extracted = adaptor.getVector();
-    if (isSlicingExtract) {
+    if (extractsScalar) {
       ArrayRef<OpFoldResult> position(positionVec);
-      if (isScalarExtract) {
-        // If we are extracting a scalar from the returned slice, we need to
-        // extract a N-1 D slice.
+      if (extractsAggregate) {
+        // If we are extracting a scalar from the extracted member, we drop
+        // the last index, which will be used to extract the scalar out of the
+        // vector.
         position = position.drop_back();
       }
       // llvm.extractvalue does not support dynamic dimensions.
-      if (!llvm::all_of(position,
-                        [](OpFoldResult x) { return isa<Attribute>(x); })) {
+      if (!llvm::all_of(position, llvm::IsaPred<Attribute>)) {
         return failure();
       }
       extracted = rewriter.create<LLVM::ExtractValueOp>(
           loc, extracted, getAsIntegers(position));
     }
 
-    if (isScalarExtract) {
-      Value position;
-      if (positionVec.empty()) {
-        // A scalar extract with no position is a 0-D vector extract. The LLVM
-        // type converter converts 0-D vectors to 1-D vectors, so we need to add
-        // a constant position.
-        auto idxType = rewriter.getIndexType();
-        position = rewriter.create<LLVM::ConstantOp>(
-            loc, typeConverter->convertType(idxType),
-            rewriter.getIntegerAttr(idxType, 0));
-      } else {
-        position = getAsLLVMValue(rewriter, loc, positionVec.back());
-      }
-      extracted =
-          rewriter.create<LLVM::ExtractElementOp>(loc, extracted, position);
+    if (extractsScalar) {
+      extracted = rewriter.create<LLVM::ExtractElementOp>(
+          loc, extracted, getAsLLVMValue(rewriter, loc, positionVec.back()));
     }
 
     rewriter.replaceOp(extractOp, extracted);
