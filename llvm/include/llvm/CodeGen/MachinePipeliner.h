@@ -215,7 +215,7 @@ class SwingSchedulerDDG {
   SwingSchedulerDDGEdges EntrySUEdges;
   SwingSchedulerDDGEdges ExitSUEdges;
 
-  void addEdge(SUnit *SU, const SwingSchedulerDDGEdge &Edge);
+  void addEdge(const SUnit *SU, const SwingSchedulerDDGEdge &Edge);
 
   SwingSchedulerDDGEdges &getEdges(const SUnit *SU);
   const SwingSchedulerDDGEdges &getEdges(const SUnit *SU) const;

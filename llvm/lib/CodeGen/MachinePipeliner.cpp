@@ -3777,7 +3777,8 @@ SwingSchedulerDDG::getEdges(const SUnit *SU) const {
   return EdgesVec[SU->NodeNum];
 }
 
-void SwingSchedulerDDG::addEdge(SUnit *SU, const SwingSchedulerDDGEdge &Edge) {
+void SwingSchedulerDDG::addEdge(const SUnit *SU,
+                                const SwingSchedulerDDGEdge &Edge) {
   auto &Edges = getEdges(SU);
   if (Edge.getSrc() == SU)
     Edges.Succs.push_back(Edge);
