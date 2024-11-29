@@ -798,7 +798,7 @@ public:
       if (!DemandedElts[i])
         continue;
       if (Insert) {
-        Value *InsertedVal = VL.size() ? VL[i] : nullptr;
+        Value *InsertedVal = VL.empty() ? nullptr : VL[i];
         Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, Ty,
                                             CostKind, i, nullptr, InsertedVal);
       }
