@@ -143,6 +143,11 @@ struct RelaxAux {
 // This corresponds to a section of an input file.
 class InputSectionBase : public SectionBase {
 public:
+  struct ObjMsg {
+    const InputSectionBase *sec;
+    uint64_t offset;
+  };
+
   template <class ELFT>
   InputSectionBase(ObjFile<ELFT> &file, const typename ELFT::Shdr &header,
                    StringRef name, Kind sectionKind);
@@ -248,7 +253,7 @@ public:
   // Returns a source location string. Used to construct an error message.
   std::string getLocation(uint64_t offset) const;
   std::string getSrcMsg(const Symbol &sym, uint64_t offset) const;
-  std::string getObjMsg(uint64_t offset) const;
+  ObjMsg getObjMsg(uint64_t offset) const { return {this, offset}; }
 
   // Each section knows how to relocate itself. These functions apply
   // relocations, assuming that Buf points to this section's copy in
@@ -515,6 +520,8 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 std::string toStr(elf::Ctx &, const elf::InputSectionBase *);
 const ELFSyncStream &operator<<(const ELFSyncStream &,
                                 const InputSectionBase *);
+const ELFSyncStream &operator<<(const ELFSyncStream &,
+                                InputSectionBase::ObjMsg &&);
 } // namespace elf
 } // namespace lld
 
