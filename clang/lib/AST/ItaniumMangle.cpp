@@ -3544,7 +3544,7 @@ enum class AAPCSBitmaskSME : unsigned {
   ArmOut = 0b010,
   ArmInOut = 0b011,
   ArmPreserves = 0b100,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ArmPreserves)
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ArmPreserves << ZT0_Shift)
 };
 
 static AAPCSBitmaskSME encodeAAPCSZAState(unsigned SMEAttrs) {
@@ -3579,24 +3579,21 @@ void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
   if (!SMEAttrs)
     return;
 
-  unsigned Bitmask = 0;
+  AAPCSBitmaskSME Bitmask = AAPCSBitmaskSME(0);
   if (SMEAttrs & FunctionType::SME_PStateSMEnabledMask)
-    Bitmask |= static_cast<unsigned>(AAPCSBitmaskSME::ArmStreamingBit);
+    Bitmask |= AAPCSBitmaskSME::ArmStreamingBit;
   else if (SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)
-    Bitmask |=
-        static_cast<unsigned>(AAPCSBitmaskSME::ArmStreamingCompatibleBit);
+    Bitmask |= AAPCSBitmaskSME::ArmStreamingCompatibleBit;
 
   // TODO: Must represent __arm_agnostic("sme_za_state")
 
-  Bitmask |= static_cast<unsigned>(
-      encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
-      << AAPCSBitmaskSME::ZA_Shift);
+  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
+             << AAPCSBitmaskSME::ZA_Shift;
 
-  Bitmask |= static_cast<unsigned>(
-      encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
-      << AAPCSBitmaskSME::ZT0_Shift);
+  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
+             << AAPCSBitmaskSME::ZT0_Shift;
 
-  Out << "Lj" << Bitmask << "EE";
+  Out << "Lj" << static_cast<unsigned>(Bitmask) << "EE";
 }
 
 void
