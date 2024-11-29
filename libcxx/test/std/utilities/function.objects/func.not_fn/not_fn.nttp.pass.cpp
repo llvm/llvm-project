@@ -154,7 +154,7 @@ constexpr void test_perfect_forwarding_call_wrapper() {
     assert(static_cast<const F&&>(f)() == -2);
   }
 
-  // Call to `not_fn<NTTP>` unspecified-type's operator() should always result in call to const& overload of .
+  // Call to `not_fn<NTTP>` unspecified-type's operator() should always result in call to the const& overload of the underlying function object.
   {
     { // Make sure unspecified-type is still callable when we delete the & overload.
       struct X {
@@ -261,7 +261,7 @@ constexpr void test_return_type() {
     assert(!copied(32));
   }
 
-  { // Make sure `not_fn<NTTP>` unspecified type's operator() is SFINAE-friendly.
+  { // Make sure `not_fn<NTTP>` unspecified-type's operator() is SFINAE-friendly.
     using F = decltype(std::not_fn<[](int x) { return !x; }>());
     static_assert(!std::is_invocable<F>::value);
     static_assert(std::is_invocable<F, int>::value);
