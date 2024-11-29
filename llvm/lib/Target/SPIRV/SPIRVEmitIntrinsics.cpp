@@ -133,6 +133,7 @@ class SPIRVEmitIntrinsics
 
   // deduce Types of operands of the Instruction if possible
   void deduceOperandElementType(Instruction *I,
+                                SmallPtrSet<Instruction *, 4> *UncompleteRets,
                                 const SmallPtrSet<Value *, 4> *AskOps = nullptr,
                                 bool IsPostprocessing = false);
 
@@ -935,8 +936,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
 // types which differ from expected, this function tries to insert a bitcast to
 // resolve the issue.
 void SPIRVEmitIntrinsics::deduceOperandElementType(
-    Instruction *I, const SmallPtrSet<Value *, 4> *AskOps,
-    bool IsPostprocessing) {
+    Instruction *I, SmallPtrSet<Instruction *, 4> *UncompleteRets,
+    const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing) {
   SmallVector<std::pair<Value *, unsigned>> Ops;
   Type *KnownElemTy = nullptr;
   bool Uncomplete = false;
@@ -1015,6 +1016,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
         GR->addDeducedElementType(CurrF, OpElemTy);
         GR->addReturnType(CurrF, TypedPointerType::get(
                                      OpElemTy, getPointerAddressSpace(RetTy)));
+        // non-recursive update of types in function uses
         DenseSet<std::pair<Value *, Value *>> VisitedSubst{
             std::make_pair(I, Op)};
         for (User *U : CurrF->users()) {
@@ -1029,6 +1031,17 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
           }
         }
         TypeValidated.insert(I);
+        // Non-recursive update of types in the function uncomplete returns.
+        // This may happen just once per a function, the latch is a pair of
+        // findDeducedElementType(F) / addDeducedElementType(F, ...).
+        // With or without the latch it is a non-recursive call due to
+        // UncompleteRets set to nullptr in this call.
+        if (UncompleteRets)
+          for (Instruction *UncompleteRetI : *UncompleteRets)
+            deduceOperandElementType(UncompleteRetI, nullptr, AskOps,
+                                     IsPostprocessing);
+      } else if (UncompleteRets) {
+        UncompleteRets->insert(I);
       }
       return;
     }
@@ -2151,15 +2164,16 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   // Pass backward: use instructions results to specify/update/cast operands
   // where needed.
+  SmallPtrSet<Instruction *, 4> UncompleteRets;
   for (auto &I : llvm::reverse(instructions(Func)))
-    deduceOperandElementType(&I);
+    deduceOperandElementType(&I, &UncompleteRets);
 
   // Pass forward for PHIs only, their operands are not preceed the instruction
   // in meaning of `instructions(Func)`.
   for (BasicBlock &BB : Func)
     for (PHINode &Phi : BB.phis())
       if (isPointerTy(Phi.getType()))
-        deduceOperandElementType(&Phi);
+        deduceOperandElementType(&Phi, nullptr);
 
   for (auto *I : Worklist) {
     TrackConstants = true;
@@ -2221,6 +2235,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
 
   for (auto &F : M) {
     CurrF = &F;
+    SmallPtrSet<Instruction *, 4> UncompleteRets;
     for (auto &I : llvm::reverse(instructions(F))) {
       auto It = ToProcess.find(&I);
       if (It == ToProcess.end())
@@ -2228,7 +2243,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
       It->second.remove_if([this](Value *V) { return !isTodoType(V); });
       if (It->second.size() == 0)
         continue;
-      deduceOperandElementType(&I, &It->second, true);
+      deduceOperandElementType(&I, &UncompleteRets, &It->second, true);
       if (TodoTypeSz == 0)
         return true;
     }
