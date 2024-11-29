@@ -52,6 +52,7 @@ namespace {
 class SVEType {
 
   enum TypeKind {
+    Invalid,
     Void,
     Float,
     SInt,
@@ -72,7 +73,7 @@ public:
   SVEType() : SVEType("", 'v') {}
 
   SVEType(StringRef TS, char CharMod, unsigned NumVectors = 1)
-      : Kind(SInt), Immediate(false), Constant(false), Pointer(false),
+      : Kind(Invalid), Immediate(false), Constant(false), Pointer(false),
         DefaultType(false), IsScalable(true), Bitwidth(128),
         ElementBitwidth(~0U), NumVectors(NumVectors) {
     if (!TS.empty())
@@ -111,6 +112,7 @@ public:
   bool isPrefetchOp() const { return Kind == PrefetchOp; }
   bool isSvcount() const { return Kind == Svcount; }
   bool isFpm() const { return Kind == Fpm; }
+  bool isInvalid() const { return Kind == Invalid; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
   unsigned getNumVectors() const { return NumVectors; }
 
@@ -445,6 +447,8 @@ std::string SVEType::builtinBaseType() const {
   case TypeKind::PrefetchOp:
   case TypeKind::PredicatePattern:
     return "i";
+  case TypeKind::Fpm:
+    return "Wi";
   case TypeKind::Predicate:
     return "b";
   case TypeKind::BFloat16:
@@ -482,6 +486,8 @@ std::string SVEType::builtinBaseType() const {
     default:
       llvm_unreachable("Unhandled bitwidth!");
     }
+  case TypeKind::Invalid:
+    llvm_unreachable("Attempting to resolve builtin string from Invalid type!");
   }
   llvm_unreachable("Unhandled TypeKind!");
 }
@@ -547,6 +553,9 @@ std::string SVEType::str() const {
     break;
   case TypeKind::UInt:
     TypeStr += "uint" + llvm::utostr(ElementBitwidth);
+    break;
+  case TypeKind::Invalid:
+    llvm_unreachable("Attempting to resolve type name from Invalid type!");
   }
 
   if (isFixedLengthVector())
@@ -570,27 +579,35 @@ void SVEType::applyTypespec(StringRef TS) {
   for (char I : TS) {
     switch (I) {
     case 'Q':
+      assert(Kind == Invalid && "Invalid use of modifer!");
       Kind = Svcount;
       break;
     case 'P':
+      assert(Kind == Invalid && "Invalid use of modifer!");
       Kind = Predicate;
       break;
     case 'U':
+      assert(Kind == Invalid && "Invalid use of modifer!");
       Kind = UInt;
       break;
     case 'c':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 8;
       break;
     case 's':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 16;
       break;
     case 'i':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 32;
       break;
     case 'l':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 64;
       break;
     case 'q':
+      Kind = SInt;
       ElementBitwidth = 128;
       break;
     case 'h':
