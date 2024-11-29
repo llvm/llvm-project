@@ -1,22 +1,16 @@
-# RUN: llvm-mc -triple riscv32 < %s \
+# RUN: llvm-mc -triple riscv32 %s \
 # RUN:   | FileCheck -check-prefix=CHECK-ASM %s
-# RUN: llvm-mc -triple riscv64 < %s \
+# RUN: llvm-mc -triple riscv64 %s \
 # RUN:   | FileCheck -check-prefix=CHECK-ASM %s
 
-# RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 %s \
 # RUN:   | llvm-objdump -dr -M no-aliases - \
 # RUN:   | FileCheck -check-prefix=CHECK-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv64 %s \
 # RUN:   | llvm-objdump -dr -M no-aliases  - \
 # RUN:   | FileCheck -check-prefix=CHECK-OBJ %s
 
   # CHECK-ASM: .text
-
-  # If `.set` is used instead, the relocation expression will be evaluated.
-  # This leaves an undef, global symbol called VENDOR_NAME, which I'm not happy
-  # about.
-  .global VENDOR_NAME
-
   # CHECK-OBJ: <.text>:
 
   nop
@@ -39,5 +33,3 @@
   nop
   # CHECK-ASM: nop
   # CHECK-OBJ: addi zero, zero, 0x0
-
-
