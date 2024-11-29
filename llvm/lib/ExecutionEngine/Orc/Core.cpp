@@ -1809,7 +1809,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
     if (R)
       PromisedResult.set_value(std::move(*R));
     else {
-      ErrorAsOutParameter _(&ResolutionError);
+      ErrorAsOutParameter _(ResolutionError);
       ResolutionError = R.takeError();
       PromisedResult.set_value(SymbolMap());
     }
@@ -1820,7 +1820,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
   Error ResolutionError = Error::success();
 
   auto NotifyComplete = [&](Expected<SymbolMap> R) {
-    ErrorAsOutParameter _(&ResolutionError);
+    ErrorAsOutParameter _(ResolutionError);
     if (R)
       Result = std::move(*R);
     else
