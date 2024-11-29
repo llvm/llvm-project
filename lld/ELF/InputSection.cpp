@@ -336,22 +336,22 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym,
 // or
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
-std::string InputSectionBase::getObjMsg(uint64_t off) const {
-  std::string filename = std::string(file->getName());
-
-  std::string archive;
-  if (!file->archiveName.empty())
-    archive = (" in archive " + file->archiveName).str();
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     InputSectionBase::ObjMsg &&msg) {
+  auto *sec = msg.sec;
+  s << sec->file->getName() << ":(";
 
   // Find a symbol that encloses a given location. getObjMsg may be called
   // before ObjFile::initSectionsAndLocalSyms where local symbols are
   // initialized.
-  if (Defined *d = getEnclosingSymbol(off))
-    return filename + ":(" + toStr(getCtx(), *d) + ")" + archive;
-
-  // If there's no symbol, print out the offset in the section.
-  return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
-      .str();
+  if (Defined *d = sec->getEnclosingSymbol(msg.offset))
+    s << d;
+  else
+    s << sec->name << "+0x" << Twine::utohexstr(msg.offset);
+  s << ')';
+  if (!sec->file->archiveName.empty())
+    s << (" in archive " + sec->file->archiveName).str();
+  return s;
 }
 
 PotentialSpillSection::PotentialSpillSection(const InputSectionBase &source,
