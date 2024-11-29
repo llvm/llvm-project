@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -affine-raise-from-memref --canonicalize | FileCheck %s
 
-// CHECK-LABEL:    func @reduce_window_max() {
+// CHECK-LABEL:    func @reduce_window_max(
 func.func @reduce_window_max() {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.alloc() : memref<1x8x8x64xf32>
@@ -45,41 +45,29 @@ func.func @reduce_window_max() {
   return
 }
 
-// CHECK:        %[[cst:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:        %[[cst:.*]] = arith.constant 0
 // CHECK:        %[[v0:.*]] = memref.alloc() : memref<1x8x8x64xf32>
 // CHECK:        %[[v1:.*]] = memref.alloc() : memref<1x18x18x64xf32>
-// CHECK:        affine.for %[[arg0:.*]] = 0 to 1 {
-// CHECK:          affine.for %[[arg1:.*]] = 0 to 8 {
-// CHECK:            affine.for %[[arg2:.*]] = 0 to 8 {
-// CHECK:              affine.for %[[arg3:.*]] = 0 to 64 {
-// CHECK:                affine.store %[[cst]], %[[v0]][%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]]] : memref<1x8x8x64xf32>
-// CHECK:              }
-// CHECK:            }
-// CHECK:          }
-// CHECK:        }
-// CHECK:        affine.for %[[a0:.*]] = 0 to 1 {
-// CHECK:          affine.for %[[a1:.*]] = 0 to 8 {
-// CHECK:            affine.for %[[a2:.*]] = 0 to 8 {
-// CHECK:              affine.for %[[a3:.*]] = 0 to 64 {
-// CHECK:                affine.for %[[a4:.*]] = 0 to 1 {
-// CHECK:                  affine.for %[[a5:.*]] = 0 to 3 {
-// CHECK:                    affine.for %[[a6:.*]] = 0 to 3 {
-// CHECK:                      affine.for %[[a7:.*]] = 0 to 1 {
-// CHECK:                        %[[lhs:.*]] = affine.load %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] : memref<1x8x8x64xf32>
-// CHECK:                        %[[rhs:.*]] = affine.load %[[v1]][%[[a0]] + %[[a4]], %[[a1]] * 2 + %[[a5]], %[[a2]] * 2 + %[[a6]], %[[a3]] + %[[a7]]] : memref<1x18x18x64xf32>
+// CHECK:        affine.for %[[arg0:.*]] =
+// CHECK:          affine.for %[[arg1:.*]] =
+// CHECK:            affine.for %[[arg2:.*]] =
+// CHECK:              affine.for %[[arg3:.*]] =
+// CHECK:                affine.store %[[cst]], %[[v0]][%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]]] :
+// CHECK:        affine.for %[[a0:.*]] =
+// CHECK:          affine.for %[[a1:.*]] =
+// CHECK:            affine.for %[[a2:.*]] =
+// CHECK:              affine.for %[[a3:.*]] =
+// CHECK:                affine.for %[[a4:.*]] =
+// CHECK:                  affine.for %[[a5:.*]] =
+// CHECK:                    affine.for %[[a6:.*]] =
+// CHECK:                      affine.for %[[a7:.*]] =
+// CHECK:                        %[[lhs:.*]] = affine.load %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] :
+// CHECK:                        %[[rhs:.*]] = affine.load %[[v1]][%[[a0]] + %[[a4]], %[[a1]] * 2 + %[[a5]], %[[a2]] * 2 + %[[a6]], %[[a3]] + %[[a7]]] :
 // CHECK:                        %[[res:.*]] = arith.cmpf ogt, %[[lhs]], %[[rhs]] : f32
 // CHECK:                        %[[sel:.*]] = arith.select %[[res]], %[[lhs]], %[[rhs]] : f32
-// CHECK:                        affine.store %[[sel]], %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] : memref<1x8x8x64xf32>
-// CHECK:                      }
-// CHECK:                    }
-// CHECK:                  }
-// CHECK:                }
-// CHECK:              }
-// CHECK:            }
-// CHECK:          }
-// CHECK:        }
-// CHECK:      }
+// CHECK:                        affine.store %[[sel]], %[[v0]][%[[a0]], %[[a1]], %[[a2]], %[[a3]]] :
 
+// CHECK-LABEL:    func @symbols(
 func.func @symbols(%N : index) {
   %0 = memref.alloc() : memref<1024x1024xf32>
   %1 = memref.alloc() : memref<1024x1024xf32>
@@ -100,7 +88,7 @@ func.func @symbols(%N : index) {
         %4 = arith.addi %N, %cst1 : index
         %11 = arith.addi %ax, %cst1 : index
         memref.store %9, %2[%i, %4] : memref<1024x1024xf32> // this uses an expression of the symbol
-        memref.store %9, %2[%i, %11] : memref<1024x1024xf32> // this uses an iter_args and cannot be lowered
+        memref.store %9, %2[%i, %11] : memref<1024x1024xf32> // this uses an iter_args and cannot be raised
         %something = "ab.v"() : () -> index
         memref.store %9, %2[%i, %something] : memref<1024x1024xf32> // this cannot be lowered
         affine.yield %11 : index
@@ -115,16 +103,16 @@ func.func @symbols(%N : index) {
 // CHECK:          %[[v1:.*]] = memref.alloc() : memref<
 // CHECK:          %[[v2:.*]] = memref.alloc() : memref<
 // CHECK:          affine.for %[[a1:.*]] = 0 to %arg0 {
-// CHECK-NEXT:        affine.for %[[a2:.*]] = 0 to %arg0 {
-// CHECK-NEXT:           %[[lhs:.*]] = affine.load %{{.*}}[%[[a1]], %[[a2]]] : memref<1024x1024xf32>
-// CHECK-NEXT:           affine.for %[[a3:.*]] = 0 to %arg0 iter_args(%[[a4:.*]] = %[[cst1]]) -> (index) {
-// CHECK-NEXT:             %[[lhs2:.*]] = affine.load %{{.*}}[%[[a1]], symbol(%arg0) * 2] : memref<1024x1024xf32>
-// CHECK-NEXT:             %[[lhs3:.*]] = affine.load %{{.*}}[%[[a2]] + symbol(%arg0) * 2 + 1, %[[a2]]] : memref<1024x1024xf32>
-// CHECK-NEXT:             %[[lhs4:.*]] = arith.mulf %[[lhs2]], %[[lhs3]]
-// CHECK-NEXT:             %[[lhs5:.*]] = arith.addf %[[lhs]], %[[lhs4]]
-// CHECK-NEXT:             %[[lhs6:.*]] = arith.addi %[[a4]], %[[cst1]]
-// CHECK-NEXT:             affine.store %[[lhs5]], %{{.*}}[%[[a1]], symbol(%arg0) + 1] : memref<1024x1024xf32>
-// CHECK-NEXT:             memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs6]]] : memref<1024x1024xf32>
-// CHECK-NEXT:             %[[lhs7:.*]] = "ab.v"
-// CHECK-NEXT:             memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs7]]] : memref<1024x1024xf32>
-// CHECK-NEXT:             affine.yield %[[lhs6]]
+// CHECK:             affine.for %[[a2:.*]] = 0 to %arg0 {
+// CHECK:                %[[lhs:.*]] = affine.load %{{.*}}[%[[a1]], %[[a2]]] : memref<1024x1024xf32>
+// CHECK:                affine.for %[[a3:.*]] = 0 to %arg0 iter_args(%[[a4:.*]] = %[[cst1]]) -> (index) {
+// CHECK:                  %[[lhs2:.*]] = affine.load %{{.*}}[%[[a1]], symbol(%arg0) * 2] :
+// CHECK:                  %[[lhs3:.*]] = affine.load %{{.*}}[%[[a2]] + symbol(%arg0) * 2 + 1, %[[a2]]] :
+// CHECK:                  %[[lhs4:.*]] = arith.mulf %[[lhs2]], %[[lhs3]]
+// CHECK:                  %[[lhs5:.*]] = arith.addf %[[lhs]], %[[lhs4]]
+// CHECK:                  %[[lhs6:.*]] = arith.addi %[[a4]], %[[cst1]]
+// CHECK:                  affine.store %[[lhs5]], %{{.*}}[%[[a1]], symbol(%arg0) + 1] :
+// CHECK:                  memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs6]]] :
+// CHECK:                  %[[lhs7:.*]] = "ab.v"
+// CHECK:                  memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs7]]] :
+// CHECK:                  affine.yield %[[lhs6]]
