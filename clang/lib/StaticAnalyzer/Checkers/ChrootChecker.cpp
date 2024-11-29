@@ -76,9 +76,6 @@ bool ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   BasicValueFactory &BVF = C.getSValBuilder().getBasicValueFactory();
   const LocationContext *LCtx = C.getLocationContext();
   ProgramStateRef State = C.getState();
-
-  // Using CallDescriptions to match on CallExpr, so no need
-  // to do null checks.
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
 
   const QualType IntTy = C.getASTContext().IntTy;
