@@ -4,9 +4,8 @@
 define i8 @add_and_sgt(i8 %x) {
 ; CHECK-LABEL: define i8 @add_and_sgt(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 8
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[ADD]], i8 24
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 8)
+; CHECK-NEXT:    [[S:%.*]] = add nuw i8 [[TMP1]], 16
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %add = add nsw i8 %x, 16
@@ -18,9 +17,8 @@ define i8 @add_and_sgt(i8 %x) {
 define i8 @add_sgt_nuw(i8 %x) {
 ; CHECK-LABEL: define i8 @add_sgt_nuw(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 8
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[ADD]], i8 24
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 8)
+; CHECK-NEXT:    [[S:%.*]] = add nuw i8 [[TMP1]], 16
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %add = add nuw i8 %x, 16
@@ -32,9 +30,8 @@ define i8 @add_sgt_nuw(i8 %x) {
 define i8 @sub_and_ugt(i8 %x) {
 ; CHECK-LABEL: define i8 @sub_and_ugt(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i8 [[X]], -50
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 100
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 50, i8 [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = add nsw i8 [[TMP1]], -50
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %sub = sub nsw i8 %x, 50
@@ -46,9 +43,8 @@ define i8 @sub_and_ugt(i8 %x) {
 define i8 @sub_ugt_nuw_nsw(i8 %x) {
 ; CHECK-LABEL: define i8 @sub_ugt_nuw_nsw(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i8 [[X]], -50
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 100
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 50, i8 [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 100)
+; CHECK-NEXT:    [[S:%.*]] = add nsw i8 [[TMP1]], -50
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %sub = sub nuw nsw i8 %x, 50
@@ -60,9 +56,8 @@ define i8 @sub_ugt_nuw_nsw(i8 %x) {
 define i8 @mul_and_ult(i8 %x) {
 ; CHECK-LABEL: define i8 @mul_and_ult(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = mul nsw i8 [[X]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 10
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 100, i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 10)
+; CHECK-NEXT:    [[S:%.*]] = mul nuw i8 [[TMP1]], 10
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %add = mul nsw i8 %x, 10
@@ -74,9 +69,8 @@ define i8 @mul_and_ult(i8 %x) {
 define i8 @mul_and_non_strict_predicate(i8 %x) {
 ; CHECK-LABEL: define i8 @mul_and_non_strict_predicate(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = mul nsw i8 [[X]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 9
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 100, i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 10)
+; CHECK-NEXT:    [[S:%.*]] = mul i8 [[TMP1]], 10
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %add = mul nsw i8 %x, 10
@@ -88,9 +82,8 @@ define i8 @mul_and_non_strict_predicate(i8 %x) {
 define i8 @mul_ult_noflags(i8 %x) {
 ; CHECK-LABEL: define i8 @mul_ult_noflags(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = mul i8 [[X]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 10
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 100, i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 10)
+; CHECK-NEXT:    [[S:%.*]] = mul nuw i8 [[TMP1]], 10
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %add = mul i8 %x, 10
@@ -130,9 +123,8 @@ define i8 @udiv_slt_exact(i8 %x) {
 define i8 @canonicalize_icmp_operands(i8 %x) {
 ; CHECK-LABEL: define i8 @canonicalize_icmp_operands(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 119
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 127, i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 119)
+; CHECK-NEXT:    [[S:%.*]] = add nsw i8 [[TMP1]], 8
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %add = add nsw i8 %x, 8
@@ -144,9 +136,8 @@ define i8 @canonicalize_icmp_operands(i8 %x) {
 define i8 @flipped_strictness_predicate_and_constant(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @flipped_strictness_predicate_and_constant(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], -2
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 2
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 -1, i8 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 1)
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, -2
@@ -161,10 +152,10 @@ declare void @use_byte(i8)
 define i8 @multi_use_cond_and_sel(i8 %x) {
 ; CHECK-LABEL: define i8 @multi_use_cond_and_sel(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], 16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 8
 ; CHECK-NEXT:    call void @use(i1 [[CMP]])
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[ADD]], i8 24
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 8)
+; CHECK-NEXT:    [[S:%.*]] = add nuw i8 [[TMP1]], 16
 ; CHECK-NEXT:    call void @use_byte(i8 [[S]])
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
@@ -183,11 +174,9 @@ define void @rust_noop_loop() {
 ; CHECK:       [[BB2_I]]:
 ; CHECK-NEXT:    [[ITER_SROA_0_07:%.*]] = phi i32 [ 0, %[[START]] ], [ [[SPEC_SELECT5:%.*]], %[[BB2_I]] ]
 ; CHECK-NEXT:    [[_0_I3_I:%.*]] = icmp sgt i32 [[ITER_SROA_0_07]], 99
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ITER_SROA_0_07]], 1
-; CHECK-NEXT:    [[SPEC_SELECT5]] = select i1 [[_0_I3_I]], i32 100, i32 [[TMP0]]
-; CHECK-NEXT:    [[_0_I_NOT_I:%.*]] = icmp sgt i32 [[SPEC_SELECT5]], 100
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[_0_I3_I]], i1 true, i1 [[_0_I_NOT_I]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label %[[BASICBLOCK4:.*]], label %[[BB2_I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[ITER_SROA_0_07]], i32 99)
+; CHECK-NEXT:    [[SPEC_SELECT5]] = add nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[_0_I3_I]], label %[[BASICBLOCK4:.*]], label %[[BB2_I]]
 ; CHECK:       [[BASICBLOCK4]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -210,9 +199,8 @@ basicblock4:
 define <2 x i8> @add_non_splat_vector(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @add_non_splat_vector(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 0>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X]], <i8 0, i8 1>
-; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> splat (i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X]], <2 x i8> <i8 0, i8 1>)
+; CHECK-NEXT:    [[S:%.*]] = add nuw <2 x i8> [[TMP1]], <i8 1, i8 0>
 ; CHECK-NEXT:    ret <2 x i8> [[S]]
 ;
   %add = add <2 x i8> %x, <i8 1, i8 0>
@@ -224,9 +212,8 @@ define <2 x i8> @add_non_splat_vector(<2 x i8> %x) {
 define <2 x i8> @or_splat_vector(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @or_splat_vector(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = or <2 x i8> [[X]], splat (i8 1)
-; CHECK-NEXT:    [[CMP_INV:%.*]] = icmp slt <2 x i8> [[X]], splat (i8 1)
-; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[CMP_INV]], <2 x i8> splat (i8 1), <2 x i8> [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X]], <2 x i8> splat (i8 1))
+; CHECK-NEXT:    [[S:%.*]] = or <2 x i8> [[TMP1]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i8> [[S]]
 ;
   %add = or <2 x i8> %x, <i8 1, i8 1>
