@@ -134,7 +134,7 @@ public:
     if (!Call)
       return nullptr;
 
-    if (!matchesAnyAsWritten(*Call, Chroot))
+    if (!Chroot.matchesAsWritten(*Call))
       return nullptr;
 
     Satisfied = true;
