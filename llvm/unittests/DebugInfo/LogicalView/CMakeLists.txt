@@ -1,8 +1,5 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
-  AllTargetsDescs
-  AllTargetsDisassemblers
-  AllTargetsInfos
   AsmPrinter
   DebugInfoDWARF
   DebugInfoLogicalView
