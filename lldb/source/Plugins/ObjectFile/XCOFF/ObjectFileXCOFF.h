@@ -100,9 +100,9 @@ public:
                   const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
 protected:
-  typedef struct XCOFFFileHeader64 xcoff_header_t;
+  typedef struct llvm::object::XCOFFFileHeader64 xcoff_header_t;
 
-  typedef struct XCOFFAuxiliaryHeader64 xcoff_aux_header_t;
+  typedef struct llvm::object::XCOFFAuxiliaryHeader64 xcoff_aux_header_t;
 
   static bool ParseXCOFFHeader(lldb_private::DataExtractor &data,
                                lldb::offset_t *offset_ptr,
@@ -117,8 +117,8 @@ protected:
 private:
   bool CreateBinary();
 
-  xcoff_header_t m_xcoff_header;
-  xcoff_aux_header_t m_xcoff_aux_header;
+  xcoff_header_t m_xcoff_header = {};
+  xcoff_aux_header_t m_xcoff_aux_header = {};
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };
 

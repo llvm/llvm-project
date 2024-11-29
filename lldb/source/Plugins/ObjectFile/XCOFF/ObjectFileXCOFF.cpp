@@ -177,6 +177,7 @@ bool ObjectFileXCOFF::ParseHeader() {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     lldb::offset_t offset = 0;
 
+    m_data.SetByteOrder(eByteOrderBig);
     if (ParseXCOFFHeader(m_data, &offset, m_xcoff_header)) {
       m_data.SetAddressByteSize(GetAddressByteSize());
       if (m_xcoff_header.AuxHeaderSize > 0)
