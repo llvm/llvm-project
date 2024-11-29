@@ -187,8 +187,8 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   // Module maps used only by textual headers are special. Their FileID is
   // non-affecting, but their FileEntry is (i.e. must be written as InputFile).
   enum AffectedReason : bool {
-    ARTextualHeader = 0,
-    ARImportOrTextualHeader = 1,
+    AR_TextualHeader = 0,
+    AR_ImportOrTextualHeader = 1,
   };
   auto AssignMostImportant = [](AffectedReason &L, AffectedReason R) {
     L = std::max(L, R);
@@ -232,7 +232,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
   // Handle all the affecting modules referenced from the root module.
 
-  CollectModuleMapsForHierarchy(RootModule, ARImportOrTextualHeader);
+  CollectModuleMapsForHierarchy(RootModule, AR_ImportOrTextualHeader);
 
   std::queue<const Module *> Q;
   Q.push(RootModule);
@@ -241,9 +241,9 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     Q.pop();
 
     for (const Module *ImportedModule : CurrentModule->Imports)
-      CollectModuleMapsForHierarchy(ImportedModule, ARImportOrTextualHeader);
+      CollectModuleMapsForHierarchy(ImportedModule, AR_ImportOrTextualHeader);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      CollectModuleMapsForHierarchy(UndeclaredModule, ARImportOrTextualHeader);
+      CollectModuleMapsForHierarchy(UndeclaredModule, AR_ImportOrTextualHeader);
 
     for (auto *M : CurrentModule->submodules())
       Q.push(M);
@@ -272,7 +272,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File))
       if (const Module *M = KH.getModule())
-        CollectModuleMapsForHierarchy(M, ARTextualHeader);
+        CollectModuleMapsForHierarchy(M, AR_TextualHeader);
   }
 
   // FIXME: This algorithm is not correct for module map hierarchies where
@@ -296,7 +296,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   llvm::DenseSet<const FileEntry *> ModuleFileEntries;
   llvm::DenseSet<FileID> ModuleFileIDs;
   for (auto [FID, Reason] : ModuleMaps) {
-    if (Reason == ARImportOrTextualHeader)
+    if (Reason == AR_ImportOrTextualHeader)
       ModuleFileIDs.insert(FID);
     if (auto *FE = SM.getFileEntryForID(FID))
       ModuleFileEntries.insert(FE);
