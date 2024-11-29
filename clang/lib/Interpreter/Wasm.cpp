@@ -113,7 +113,7 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   lld::Result Result =
       lld::lldMain(LinkerArgs, llvm::outs(), llvm::errs(), WasmDriverArgs);
 
-  if (Result.retCode != 0)
+  if (Result.retCode)
     return llvm::make_error<llvm::StringError>(
         "Failed to link incremental module", llvm::inconvertibleErrorCode());
 
