@@ -9,13 +9,14 @@
 // Implementation of the default eviction advisor and of the Analysis pass.
 //
 //===----------------------------------------------------------------------===//
-
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "AllocationOrder.h"
 #include "RegAllocGreedy.h"
 #include "RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Module.h"
@@ -69,9 +70,12 @@ namespace {
 class DefaultEvictionAdvisorProvider final
     : public RegAllocEvictionAdvisorProvider {
 public:
-  DefaultEvictionAdvisorProvider(bool NotAsRequested)
-      : RegAllocEvictionAdvisorProvider(AdvisorMode::Default),
-        NotAsRequested(NotAsRequested) {}
+  DefaultEvictionAdvisorProvider(bool NotAsRequested, LLVMContext &Ctx)
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Default, Ctx) {
+    if (NotAsRequested)
+      Ctx.emitError("Requested regalloc eviction advisor analysis "
+                    "could not be created. Using default");
+  }
 
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
@@ -82,16 +86,6 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
   }
-
-  bool doInitialization(Module &M) override {
-    if (NotAsRequested)
-      M.getContext().emitError("Requested regalloc eviction advisor analysis "
-                               "could not be created. Using default");
-    return RegAllocEvictionAdvisorProvider::doInitialization(M);
-  }
-
-private:
-  const bool NotAsRequested;
 };
 
 class DefaultEvictionAdvisorAnalysisLegacy final
@@ -103,12 +97,14 @@ public:
 
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+    // MBFI and Loops not required here.
     return Provider->getAdvisor(MF, RA);
   }
 
   bool doInitialization(Module &M) override {
-    Provider.reset(new DefaultEvictionAdvisorProvider(NotAsRequested));
-    return Provider->doInitialization(M);
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(NotAsRequested, M.getContext()));
+    return false;
   }
 
   // support for isa<> and dyn_cast.
@@ -124,27 +120,37 @@ private:
 
 AnalysisKey RegAllocEvictionAdvisorAnalysis::Key;
 
-RegAllocEvictionAdvisorAnalysis::Result
-RegAllocEvictionAdvisorAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
-  std::unique_ptr<RegAllocEvictionAdvisorProvider> Provider;
+void RegAllocEvictionAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
+  if (Provider)
+    return;
   switch (Mode) {
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
     Provider.reset(
-        new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ false));
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ false, Ctx));
     break;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
-    Provider.reset(createDevelopmentModeAdvisorProvider());
+    Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
 #endif
     break;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
-    Provider.reset(createReleaseModeAdvisorProvider());
+    Provider.reset(createReleaseModeAdvisorProvider(Ctx));
     break;
   }
   if (!Provider)
-    Provider.reset(new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ true));
-  Provider->doInitialization(M);
-  return Provider;
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ true, Ctx));
+}
+
+RegAllocEvictionAdvisorAnalysis::Result
+RegAllocEvictionAdvisorAnalysis::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  // Lazy initialization of the provider.
+  initializeProvider(MF.getFunction().getContext());
+  auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  Provider->setAnalyses(MBFI, Loops);
+  return Result{Provider.get()};
 }
 
 template <>

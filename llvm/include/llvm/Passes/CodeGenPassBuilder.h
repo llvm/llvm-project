@@ -1062,10 +1062,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineSSAOptimization(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
     AddMachinePass &addPass, bool Optimized) const {
-  if (Optimized) {
-    addPass(RequireAnalysis<RegAllocEvictionAdvisorAnalysis>());
+  if (Optimized)
     addPass(RAGreedyPass());
-  } else
+  else
     addPass(RegAllocFastPass());
 }
 
