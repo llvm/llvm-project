@@ -504,8 +504,6 @@ private:
 
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
-
-  void SelectFormTuplePseudo(SDNode *N);
 };
 
 class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {

@@ -1144,26 +1144,14 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     if (!VRM->hasPhys(FirstLoadVirtReg))
       continue;
 
-    unsigned SubRegIdx = 0;
+    int64_t SubRegIdx = -1;
     MCRegister FirstLoadPhysReg = VRM->getPhys(FirstLoadVirtReg);
 
     // The subreg number is used to access the correct unit of the
     // strided register found in the map above.
-    switch (MI.getOperand(1).getSubReg()) {
-    case AArch64::zsub0:
-      break;
-    case AArch64::zsub1:
-      SubRegIdx = 1;
-      break;
-    case AArch64::zsub2:
-      SubRegIdx = 2;
-      break;
-    case AArch64::zsub3:
-      SubRegIdx = 3;
-      break;
-    default:
+    SubRegIdx = MI.getOperand(1).getSubReg() - AArch64::zsub0;
+    if (SubRegIdx < 0 || SubRegIdx > 3)
       continue;
-    }
 
     SmallVector<Register, 4> RegUnits;
     for (MCRegUnit Unit : TRI->regunits(FirstLoadPhysReg))
