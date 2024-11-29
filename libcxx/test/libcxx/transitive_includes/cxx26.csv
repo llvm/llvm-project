@@ -464,7 +464,6 @@ future iosfwd
 future istream
 future limits
 future locale
-future mutex
 future new
 future ratio
 future sstream
@@ -691,11 +690,9 @@ memory_resource compare
 memory_resource cstdint
 memory_resource ctime
 memory_resource limits
-memory_resource mutex
 memory_resource new
 memory_resource ratio
 memory_resource tuple
-memory_resource typeinfo
 memory_resource version
 mutex cerrno
 mutex climits
@@ -1075,7 +1072,6 @@ syncstream iosfwd
 syncstream limits
 syncstream locale
 syncstream map
-syncstream mutex
 syncstream new
 syncstream optional
 syncstream ostream

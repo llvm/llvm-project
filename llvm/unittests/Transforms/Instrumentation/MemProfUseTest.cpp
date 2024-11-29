@@ -26,7 +26,6 @@ using namespace llvm;
 using namespace llvm::memprof;
 using testing::Contains;
 using testing::ElementsAre;
-using testing::FieldsAre;
 using testing::Pair;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;
@@ -107,12 +106,12 @@ declare !dbg !19 void @_Z2f3v()
 
   // Verify that call sites show up in the ascending order of their source
   // locations.
-  EXPECT_THAT(CallSites[0],
-              Pair(FieldsAre(1U, 3U), IndexedMemProfRecord::getGUID("_Z2f1v")));
-  EXPECT_THAT(CallSites[1],
-              Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2f2v")));
-  EXPECT_THAT(CallSites[2],
-              Pair(FieldsAre(2U, 9U), IndexedMemProfRecord::getGUID("_Z2f3v")));
+  EXPECT_THAT(CallSites[0], Pair(LineLocation(1, 3),
+                                 IndexedMemProfRecord::getGUID("_Z2f1v")));
+  EXPECT_THAT(CallSites[1], Pair(LineLocation(2, 3),
+                                 IndexedMemProfRecord::getGUID("_Z2f2v")));
+  EXPECT_THAT(CallSites[2], Pair(LineLocation(2, 9),
+                                 IndexedMemProfRecord::getGUID("_Z2f3v")));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRInline) {
@@ -207,9 +206,9 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
   EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
   ASSERT_THAT(FooCallSites, SizeIs(2));
-  EXPECT_THAT(FooCallSites[0], Pair(FieldsAre(1U, 3U),
+  EXPECT_THAT(FooCallSites[0], Pair(LineLocation(1, 3),
                                     IndexedMemProfRecord::getGUID("_ZL2f3v")));
-  EXPECT_THAT(FooCallSites[1], Pair(FieldsAre(2U, 9U),
+  EXPECT_THAT(FooCallSites[1], Pair(LineLocation(2, 9),
                                     IndexedMemProfRecord::getGUID("_ZL2g3v")));
 
   auto F2It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f2v"));
@@ -217,15 +216,15 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   const auto &[F2CallerGUID, F2CallSites] = *F2It;
   EXPECT_EQ(F2CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f2v"));
   ASSERT_THAT(F2CallSites, SizeIs(1));
-  EXPECT_THAT(F2CallSites[0],
-              Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2f1v")));
+  EXPECT_THAT(F2CallSites[0], Pair(LineLocation(2, 3),
+                                   IndexedMemProfRecord::getGUID("_Z2f1v")));
 
   auto F3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f3v"));
   ASSERT_NE(F3It, Calls.end());
   const auto &[F3CallerGUID, F3CallSites] = *F3It;
   EXPECT_EQ(F3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f3v"));
   ASSERT_THAT(F3CallSites, SizeIs(1));
-  EXPECT_THAT(F3CallSites[0], Pair(FieldsAre(1U, 10U),
+  EXPECT_THAT(F3CallSites[0], Pair(LineLocation(1, 10),
                                    IndexedMemProfRecord::getGUID("_ZL2f2v")));
 
   auto G3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2g3v"));
@@ -233,10 +232,10 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   const auto &[G3CallerGUID, G3CallSites] = *G3It;
   EXPECT_EQ(G3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2g3v"));
   ASSERT_THAT(G3CallSites, SizeIs(2));
-  EXPECT_THAT(G3CallSites[0],
-              Pair(FieldsAre(1U, 8U), IndexedMemProfRecord::getGUID("_Z2g1v")));
-  EXPECT_THAT(G3CallSites[1],
-              Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2g2v")));
+  EXPECT_THAT(G3CallSites[0], Pair(LineLocation(1, 8),
+                                   IndexedMemProfRecord::getGUID("_Z2g1v")));
+  EXPECT_THAT(G3CallSites[1], Pair(LineLocation(2, 3),
+                                   IndexedMemProfRecord::getGUID("_Z2g2v")));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRCallingNew) {
@@ -302,7 +301,7 @@ attributes #2 = { builtin allocsize(0) }
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
   EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
   ASSERT_THAT(FooCallSites, SizeIs(1));
-  EXPECT_THAT(FooCallSites[0], Pair(FieldsAre(1U, 10U), 0));
+  EXPECT_THAT(FooCallSites[0], Pair(LineLocation(1, 10), 0));
 }
 
 // Populate those fields returned by getHotColdSchema.
@@ -323,7 +322,7 @@ makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
   for (const auto &CSId : AllocFrames) {
     // We don't populate IndexedAllocationInfo::CallStack because we use it only
     // in Version1.
-    MR.AllocSites.push_back({{}, CSId, Block, Schema});
+    MR.AllocSites.emplace_back(CSId, Block, Schema);
   }
   for (const auto &CSId : CallSiteFrames)
     MR.CallSiteIds.push_back(CSId);
@@ -434,31 +433,30 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const std::pair<memprof::FrameId, memprof::Frame> Frames[] = {
-      // The call sites within foo.
-      {0, {GUIDFoo, 1, 8, false}},
-      {1, {GUIDFoo, 2, 3, false}},
-      {2, {GUIDFoo, 3, 3, false}},
-      // Line/column numbers below don't matter.
-      {3, {GUIDBar, 9, 9, false}},
-      {4, {GUIDZzz, 9, 9, false}},
-      {5, {GUIDBaz, 9, 9, false}}};
-  for (const auto &[FrameId, Frame] : Frames)
-    Writer.addMemProfFrame(FrameId, Frame, Err);
-
-  const std::pair<memprof::CallStackId, SmallVector<memprof::FrameId>>
-      CallStacks[] = {
-          {0x111, {3, 0}}, // bar called by foo
-          {0x222, {4, 1}}, // zzz called by foo
-          {0x333, {5, 2}}  // baz called by foo
-      };
-  for (const auto &[CSId, CallStack] : CallStacks)
-    Writer.addMemProfCallStack(CSId, CallStack, Err);
-
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222, 0x333},
       /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  memprof::IndexedMemProfData MemProfData;
+  // The call sites within foo.
+  MemProfData.Frames.try_emplace(0, GUIDFoo, 1, 8, false);
+  MemProfData.Frames.try_emplace(1, GUIDFoo, 2, 3, false);
+  MemProfData.Frames.try_emplace(2, GUIDFoo, 3, 3, false);
+  // Line/column numbers below don't matter.
+  MemProfData.Frames.try_emplace(3, GUIDBar, 9, 9, false);
+  MemProfData.Frames.try_emplace(4, GUIDZzz, 9, 9, false);
+  MemProfData.Frames.try_emplace(5, GUIDBaz, 9, 9, false);
+  MemProfData.CallStacks.try_emplace(
+      0x111,
+      std::initializer_list<memprof::FrameId>{3, 0}); // bar called by foo
+  MemProfData.CallStacks.try_emplace(
+      0x222,
+      std::initializer_list<memprof::FrameId>{4, 1}); // zzz called by foo
+  MemProfData.CallStacks.try_emplace(
+      0x333,
+      std::initializer_list<memprof::FrameId>{5, 2}); // baz called by foo
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
 
   auto Profile = Writer.writeBuffer();
 

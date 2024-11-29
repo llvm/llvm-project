@@ -686,7 +686,7 @@ private:
   // The number of elements in the radix tree array.
   unsigned RadixTreeSize = 0;
 
-  Error deserializeV12(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:

@@ -665,7 +665,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
-    Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
+    Diag.Report(diag::err_sloc_space_too_large);
     // FIXME: call `noteSLocAddressSpaceUsage` to report details to users and
     // use a source location from `Info` to point at an error.
     // Currently, both cause Clang to run indefinitely, this needs to be fixed.
@@ -2295,7 +2295,7 @@ void SourceManager::noteSLocAddressSpaceUsage(
   uint64_t LoadedUsage = MaxLoadedOffset - CurrentLoadedOffset;
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
-  Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
+  Diag.Report(diag::note_total_sloc_usage)
       << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage)
       << UsagePercent;
 
@@ -2311,7 +2311,7 @@ void SourceManager::noteSLocAddressSpaceUsage(
 
   // Describe any remaining usage not reported in the per-file usage.
   if (ReportedSize != CountedSize) {
-    Diag.Report(SourceLocation(), diag::note_file_misc_sloc_usage)
+    Diag.Report(diag::note_file_misc_sloc_usage)
         << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize;
   }
 }
