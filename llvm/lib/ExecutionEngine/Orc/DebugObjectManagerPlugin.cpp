@@ -234,7 +234,7 @@ static bool isDwarfSection(StringRef SectionName) {
 
 std::unique_ptr<WritableMemoryBuffer>
 ELFDebugObject::CopyBuffer(MemoryBufferRef Buffer, Error &Err) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   size_t Size = Buffer.getBufferSize();
   StringRef Name = Buffer.getBufferIdentifier();
   if (auto Copy = WritableMemoryBuffer::getNewUninitMemBuffer(Size, Name)) {
