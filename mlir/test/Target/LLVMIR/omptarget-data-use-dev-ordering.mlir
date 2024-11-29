@@ -67,22 +67,23 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // CHECK: define void @mix_use_device_ptr_and_addr_and_map_(ptr %[[ARG_0:.*]], ptr %[[ARG_1:.*]], ptr %[[ARG_2:.*]], ptr %[[ARG_3:.*]], ptr %[[ARG_4:.*]], ptr %[[ARG_5:.*]], ptr %[[ARG_6:.*]], ptr %[[ARG_7:.*]]) {
 // CHECK: %[[ALLOCA:.*]] = alloca ptr, align 8
-// CHECK: %[[BASEPTR_0_GEP:.*]] = getelementptr inbounds [8 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+// CHECK: %[[BASEPTR_0_GEP:.*]] = getelementptr inbounds [10 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr %[[ARG_0]], ptr %[[BASEPTR_0_GEP]], align 8
-// CHECK: %[[BASEPTR_4_GEP:.*]] = getelementptr inbounds [8 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
-// CHECK: store ptr %[[ARG_2]], ptr %[[BASEPTR_4_GEP]], align 8
-// CHECK: %[[BASEPTR_7_GEP:.*]] = getelementptr inbounds [8 x ptr], ptr %.offload_baseptrs, i32 0, i32 7
-// CHECK: store ptr %[[ARG_4]], ptr %[[BASEPTR_7_GEP]], align 8
+// CHECK: %[[BASEPTR_2_GEP:.*]] = getelementptr inbounds [10 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+// CHECK: store ptr %[[ARG_2]], ptr %[[BASEPTR_2_GEP]], align 8
+// CHECK: %[[BASEPTR_6_GEP:.*]] = getelementptr inbounds [10 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
+// CHECK: store ptr %[[ARG_4]], ptr %[[BASEPTR_6_GEP]], align 8
+
 // CHECK: call void @__tgt_target_data_begin_mapper({{.*}})
 // CHECK: %[[LOAD_BASEPTR_0:.*]] = load ptr, ptr %[[BASEPTR_0_GEP]], align 8
 // store ptr %[[LOAD_BASEPTR_0]], ptr %[[ALLOCA]], align 8
-// CHECK: %[[LOAD_BASEPTR_4:.*]] = load ptr, ptr %[[BASEPTR_4_GEP]], align 8
-// CHECK: %[[LOAD_BASEPTR_7:.*]] = load ptr, ptr %[[BASEPTR_7_GEP]], align 8
+// CHECK: %[[LOAD_BASEPTR_2:.*]] = load ptr, ptr %[[BASEPTR_2_GEP]], align 8
+// CHECK: %[[LOAD_BASEPTR_6:.*]] = load ptr, ptr %[[BASEPTR_6_GEP]], align 8
 // CHECK: %[[GEP_A4:.*]] = getelementptr { i64 }, ptr %[[ARG_4]], i32 0, i32 0
 // CHECK: %[[GEP_A7:.*]] = getelementptr { i64 }, ptr %[[ARG_7]], i32 0, i32 0
 // CHECK: %[[LOAD_A4:.*]] = load i64, ptr %[[GEP_A4]], align 4
 // CHECK: store i64 %[[LOAD_A4]], ptr %[[GEP_A7]], align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[ARG_6]], ptr %[[LOAD_BASEPTR_4]], i32 48, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[ARG_6]], ptr %[[LOAD_BASEPTR_2]], i32 48, i1 false)
 // CHECK: %[[GEP_A6:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG_6]], i32 0, i32 0
 // CHECK: %[[LOAD_A6:.*]] = load ptr, ptr %[[GEP_A6]], align 8
 // CHECK: %[[GEP_A6_2:.*]] = getelementptr i8, ptr %[[LOAD_A6]], i64 2
@@ -92,22 +93,22 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // CHECK: define void @mix_use_device_ptr_and_addr_and_map_2(ptr %[[ARG_0:.*]], ptr %[[ARG_1:.*]], ptr %[[ARG_2:.*]], ptr %[[ARG_3:.*]], ptr %[[ARG_4:.*]], ptr %[[ARG_5:.*]], ptr %[[ARG_6:.*]], ptr %[[ARG_7:.*]]) {
 // CHECK: %[[ALLOCA:.*]] = alloca ptr, align 8
-// CHECK: %[[BASEPTR_1_GEP:.*]] = getelementptr inbounds [8 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+// CHECK: %[[BASEPTR_1_GEP:.*]] = getelementptr inbounds [10 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr %[[ARG_0]], ptr %[[BASEPTR_1_GEP]], align 8
-// CHECK: %[[BASEPTR_4_GEP:.*]] = getelementptr inbounds [8 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
-// CHECK: store ptr %[[ARG_2]], ptr %[[BASEPTR_4_GEP]], align 8
-// CHECK: %[[BASEPTR_7_GEP:.*]] = getelementptr inbounds [8 x ptr], ptr %.offload_baseptrs, i32 0, i32 7
-// CHECK: store ptr %[[ARG_4]], ptr %[[BASEPTR_7_GEP]], align 8
+// CHECK: %[[BASEPTR_2_GEP:.*]] = getelementptr inbounds [10 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+// CHECK: store ptr %[[ARG_2]], ptr %[[BASEPTR_2_GEP]], align 8
+// CHECK: %[[BASEPTR_6_GEP:.*]] = getelementptr inbounds [10 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
+// CHECK: store ptr %[[ARG_4]], ptr %[[BASEPTR_6_GEP]], align 8
 // CHECK: call void @__tgt_target_data_begin_mapper({{.*}})
 // CHECK: %[[LOAD_BASEPTR_1:.*]] = load ptr, ptr %[[BASEPTR_1_GEP]], align 8
 // store ptr %[[LOAD_BASEPTR_1]], ptr %[[ALLOCA]], align 8
-// CHECK: %[[LOAD_BASEPTR_4:.*]] = load ptr, ptr %[[BASEPTR_4_GEP]], align 8
-// CHECK: %[[LOAD_BASEPTR_7:.*]] = load ptr, ptr %[[BASEPTR_7_GEP]], align 8
+// CHECK: %[[LOAD_BASEPTR_2:.*]] = load ptr, ptr %[[BASEPTR_2_GEP]], align 8
+// CHECK: %[[LOAD_BASEPTR_6:.*]] = load ptr, ptr %[[BASEPTR_6_GEP]], align 8
 // CHECK: %[[GEP_A4:.*]] = getelementptr { i64 }, ptr %[[ARG_4]], i32 0, i32 0
 // CHECK: %[[GEP_A7:.*]] = getelementptr { i64 }, ptr %[[ARG_7]], i32 0, i32 0
 // CHECK: %[[LOAD_A4:.*]] = load i64, ptr %[[GEP_A4]], align 4
 // CHECK: store i64 %[[LOAD_A4]], ptr %[[GEP_A7]], align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[ARG_6]], ptr %[[LOAD_BASEPTR_4]], i32 48, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[ARG_6]], ptr %[[LOAD_BASEPTR_2]], i32 48, i1 false)
 // CHECK: %[[GEP_A6:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG_6]], i32 0, i32 0
 // CHECK: %[[LOAD_A6:.*]] = load ptr, ptr %[[GEP_A6]], align 8
 // CHECK: %[[GEP_A6_2:.*]] = getelementptr i8, ptr %[[LOAD_A6]], i64 2

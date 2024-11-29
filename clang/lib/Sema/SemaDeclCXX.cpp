@@ -12,7 +12,6 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
@@ -50,8 +49,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -9221,7 +9218,7 @@ struct SpecialMemberVisitor {
     if (auto *B = Subobj.dyn_cast<CXXBaseSpecifier*>())
       return B->getBaseTypeLoc();
     else
-      return Subobj.get<FieldDecl*>()->getLocation();
+      return cast<FieldDecl *>(Subobj)->getLocation();
   }
 
   enum BasesToVisit {
@@ -9372,7 +9369,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
           << /*IsField*/ true << Field << DiagKind << IsDtorCallInCtor
           << /*IsObjCPtr*/ false;
     } else {
-      CXXBaseSpecifier *Base = Subobj.get<CXXBaseSpecifier*>();
+      CXXBaseSpecifier *Base = cast<CXXBaseSpecifier *>(Subobj);
       S.Diag(Base->getBeginLoc(),
              diag::note_deleted_special_member_class_subobject)
           << llvm::to_underlying(getEffectiveCSM()) << MD->getParent()
@@ -11454,23 +11451,29 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     bool MightInstantiateToSpecialization = false;
     if (auto RetTST =
             TSI->getTypeLoc().getAsAdjusted<TemplateSpecializationTypeLoc>()) {
-      TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
-      bool TemplateMatches = Context.hasSameTemplateName(
-          SpecifiedName, GuidedTemplate, /*IgnoreDeduced=*/true);
+      const TemplateSpecializationType *TST = RetTST.getTypePtr();
+      while (TST && TST->isTypeAlias())
+        TST = TST->getAliasedType()->getAs<TemplateSpecializationType>();
 
-      const QualifiedTemplateName *Qualifiers =
-          SpecifiedName.getAsQualifiedTemplateName();
-      assert(Qualifiers && "expected QualifiedTemplate");
-      bool SimplyWritten = !Qualifiers->hasTemplateKeyword() &&
-                           Qualifiers->getQualifier() == nullptr;
-      if (SimplyWritten && TemplateMatches)
-        AcceptableReturnType = true;
-      else {
-        // This could still instantiate to the right type, unless we know it
-        // names the wrong class template.
-        auto *TD = SpecifiedName.getAsTemplateDecl();
-        MightInstantiateToSpecialization = !(TD && isa<ClassTemplateDecl>(TD) &&
-                                             !TemplateMatches);
+      if (TST) {
+        TemplateName SpecifiedName = TST->getTemplateName();
+        bool TemplateMatches = Context.hasSameTemplateName(
+            SpecifiedName, GuidedTemplate, /*IgnoreDeduced=*/true);
+
+        const QualifiedTemplateName *Qualifiers =
+            SpecifiedName.getAsQualifiedTemplateName();
+        assert(Qualifiers && "expected QualifiedTemplate");
+        bool SimplyWritten = !Qualifiers->hasTemplateKeyword() &&
+                             Qualifiers->getQualifier() == nullptr;
+        if (SimplyWritten && TemplateMatches)
+          AcceptableReturnType = true;
+        else {
+          // This could still instantiate to the right type, unless we know it
+          // names the wrong class template.
+          auto *TD = SpecifiedName.getAsTemplateDecl();
+          MightInstantiateToSpecialization =
+              !(TD && isa<ClassTemplateDecl>(TD) && !TemplateMatches);
+        }
       }
     } else if (!RetTy.hasQualifiers() && RetTy->isDependentType()) {
       MightInstantiateToSpecialization = true;
@@ -17490,7 +17493,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     if (getDepthAndIndex(U).first >= FriendDeclDepth) {
       auto *ND = U.first.dyn_cast<NamedDecl *>();
       if (!ND)
-        ND = U.first.get<const TemplateTypeParmType *>()->getDecl();
+        ND = cast<const TemplateTypeParmType *>(U.first)->getDecl();
       Diag(U.second, diag::friend_template_decl_malformed_pack_expansion)
           << ND->getDeclName() << SourceRange(SS.getBeginLoc(), EllipsisLoc);
       return true;

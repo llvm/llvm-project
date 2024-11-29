@@ -491,6 +491,35 @@ TEST(CallHierarchy, HierarchyOnVar) {
                                 fromRanges(Source.range("Callee")))));
 }
 
+TEST(CallHierarchy, CallInDifferentFileThanCaller) {
+  Annotations Header(R"cpp(
+    #define WALDO void caller() {
+  )cpp");
+  Annotations Source(R"cpp(
+    void call^ee();
+    WALDO
+      callee();
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Source.code());
+  TU.HeaderCode = Header.code();
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
+
+  auto Incoming = incomingCalls(Items[0], Index.get());
+
+  // The only call site is in the source file, which is a different file from
+  // the declaration of the function containing the call, which is in the
+  // header. The protocol does not allow us to represent such calls, so we drop
+  // them. (The call hierarchy item itself is kept.)
+  EXPECT_THAT(Incoming,
+              ElementsAre(AllOf(from(withName("caller")), fromRanges())));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

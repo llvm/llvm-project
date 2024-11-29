@@ -4,7 +4,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @matrix_access_chain
   spirv.func @matrix_access_chain(%arg0 : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>, %arg1 : i32) -> !spirv.ptr<vector<3xf32>, Function> "None" {
     // CHECK: {{%.*}} = spirv.AccessChain {{%.*}}[{{%.*}}] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>
-    %0 = spirv.AccessChain %arg0[%arg1] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>,Function>, i32
+    %0 = spirv.AccessChain %arg0[%arg1] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>, i32 -> !spirv.ptr<vector<3xf32>, Function>
     spirv.ReturnValue %0 : !spirv.ptr<vector<3xf32>, Function>
   }
 

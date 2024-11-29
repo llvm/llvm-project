@@ -41,7 +41,7 @@ public:
     return s->kind() == SectionBase::Output;
   }
 
-  uint64_t getLMA() const { return ptLoad ? addr + ptLoad->lmaOffset : addr; }
+  uint64_t getLMA() const;
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *sHdr);
 
   Ctx &ctx;

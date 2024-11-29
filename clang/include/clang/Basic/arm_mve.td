@@ -753,8 +753,8 @@ let params = T.Float in {
   defm: compare<"ne", fcmp_ne>;
   defm: compare<"gt", fcmp_gt>;
   defm: compare<"ge", fcmp_ge>;
-  defm: compare<"lt", fcmp_lt>;
-  defm: compare<"le", fcmp_le>;
+  defm: compare<"lt", fcmp_ult>;
+  defm: compare<"le", fcmp_ule>;
 }
 
 let params = T.Signed in {

@@ -116,7 +116,7 @@ void ScriptLexer::lex() {
       if (e == StringRef::npos) {
         size_t lineno =
             StringRef(curBuf.begin, s.data() - curBuf.begin).count('\n');
-        ErrAlways(ctx) << curBuf.filename << ":" << Twine(lineno + 1)
+        ErrAlways(ctx) << curBuf.filename << ":" << (lineno + 1)
                        << ": unclosed quote";
         return;
       }
