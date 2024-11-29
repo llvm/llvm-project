@@ -2,7 +2,9 @@ import requests
 import time
 import os
 from dataclasses import dataclass
+import sys
 
+import github
 from github import Github
 from github import Auth
 
@@ -11,6 +13,7 @@ GRAFANA_URL = (
 )
 GITHUB_PROJECT = "llvm/llvm-project"
 WORKFLOWS_TO_TRACK = ["Check code formatting"]
+SCRAPE_INTERVAL_SECONDS = 5 * 60
 
 
 @dataclass
@@ -23,7 +26,7 @@ class JobMetrics:
     workflow_id: int
 
 
-def get_metrics(github_repo, workflows_to_track):
+def get_metrics(github_repo: github.Repository, workflows_to_track: dict[str, int]):
     """Gets the metrics for specified Github workflows.
 
     This function takes in a list of workflows to track, and optionally the
@@ -44,25 +47,27 @@ def get_metrics(github_repo, workflows_to_track):
 
     workflow_metrics = []
 
-    workflows_to_include = {}
-    for workflow_to_track in workflows_to_track:
-        workflows_to_include[workflow_to_track] = True
-    workflows_left_to_include = len(workflows_to_track)
+    workflows_to_include = set(workflows_to_track.keys())
 
-    while True:
+    while len(workflows_to_include) > 0:
         workflow_run = next(workflow_runs)
         if workflow_run.status != "completed":
             continue
 
-        interesting_workflow = False
-        for workflow_name in workflows_to_track:
-            if workflow_run.name == workflow_name:
-                interesting_workflow = True
-                break
-        if not interesting_workflow:
+        # This workflow is not tracked at all. Ignoring.
+        if workflow_run.name not in workflows_to_track:
             continue
 
-        if not workflows_to_include[workflow_run.name]:
+        # This workflow was already sampled for this run. Ignoring.
+        if workflow_run.name not in workflows_to_include:
+            continue
+
+        # There were no new workflow invocations since the previous scrape.
+        # The API returns a sorted list with the most recent invocations first,
+        # so we can stop looking for this particular workflow. Continue to grab
+        # information on the other workflows of interest, if present.
+        if workflows_to_track[workflow_run.name] == workflow_run.id:
+            workflows_to_include.remove(workflow_run.name)
             continue
 
         workflow_jobs = workflow_run.jobs()
@@ -89,14 +94,15 @@ def get_metrics(github_repo, workflows_to_track):
             workflows_to_track[workflow_run.name] is None
             or workflows_to_track[workflow_run.name] == workflow_run.id
         ):
-            workflows_left_to_include -= 1
-            workflows_to_include[workflow_run.name] = False
+            workflows_to_include.remove(workflow_run.name)
         if (
             workflows_to_track[workflow_run.name] is not None
-            and workflows_left_to_include == 0
+            and len(workflows_to_include) == 0
         ):
             break
 
+        # The timestamp associated with the event is expected by Grafana to be
+        # in nanoseconds.
         created_at_ns = int(created_at.timestamp()) * 10**9
 
         workflow_metrics.append(
@@ -109,9 +115,6 @@ def get_metrics(github_repo, workflows_to_track):
                 workflow_run.id,
             )
         )
-
-        if workflows_left_to_include == 0:
-            break
 
     return workflow_metrics
 
@@ -143,7 +146,9 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
     )
 
     if response.status_code < 200 or response.status_code >= 300:
-        print(f"Failed to submit data to Grafana: {response.status_code}")
+        print(
+            f"Failed to submit data to Grafana: {response.status_code}", file=sys.stderr
+        )
 
 
 def main():
@@ -164,16 +169,16 @@ def main():
     while True:
         current_metrics = get_metrics(github_repo, workflows_to_track)
         if len(current_metrics) == 0:
-            print("No metrics found to upload.")
+            print("No metrics found to upload.", file=sys.stderr)
             continue
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
-        print(f"Uploaded {len(current_metrics)} metrics")
+        print(f"Uploaded {len(current_metrics)} metrics", file=sys.stderr)
 
         for workflow_metric in reversed(current_metrics):
             workflows_to_track[workflow_metric.job_name] = workflow_metric.workflow_id
 
-        time.sleep(5 * 60)
+        time.sleep(SCRAPE_INTERVAL_SECONDS)
 
 
 if __name__ == "__main__":
