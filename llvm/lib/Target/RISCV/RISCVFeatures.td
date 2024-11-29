@@ -1351,6 +1351,14 @@ def HasVendorXqcicsr
       AssemblerPredicate<(all_of FeatureVendorXqcicsr),
                          "'Xqcicsr' (Qualcomm uC CSR Extension)">;
 
+def FeatureVendorXqcisls
+    : RISCVExperimentalExtension<"xqcisls", 0, 2,
+                                 "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
+def HasVendorXqcisls
+    : Predicate<"Subtarget->hasVendorXqcisls()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcisls),
+                         "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
