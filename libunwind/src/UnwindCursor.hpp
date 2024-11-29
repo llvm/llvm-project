@@ -1010,7 +1010,7 @@ private:
   template <typename Registers> int stepThroughSigReturn(Registers &) {
     return UNW_STEP_END;
   }
-#elif defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
+#elif defined(_LIBUNWIND_TARGET_HAIKU)
   bool setInfoForSigReturn();
   int stepThroughSigReturn();
 #endif
@@ -1317,7 +1317,7 @@ private:
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    (defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64))
+    defined(_LIBUNWIND_TARGET_HAIKU)
   bool             _isSigReturn = false;
 #endif
 };
@@ -2554,7 +2554,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    (defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64))
+    defined(_LIBUNWIND_TARGET_HAIKU)
   _isSigReturn = false;
 #endif
 
@@ -2679,7 +2679,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    (defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64))
+    defined(_LIBUNWIND_TARGET_HAIKU)
   if (setInfoForSigReturn())
     return;
 #endif
@@ -2981,7 +2981,7 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   // Use unwinding info to modify register set as if function returned.
   int result;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    (defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64))
+    defined(_LIBUNWIND_TARGET_HAIKU)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();
   } else
