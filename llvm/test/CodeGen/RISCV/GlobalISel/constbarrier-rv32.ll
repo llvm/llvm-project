@@ -21,34 +21,34 @@ define void @constant_fold_barrier_i128(ptr %p) {
 ; RV32-LABEL: constant_fold_barrier_i128:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    li a1, 1
-; RV32-NEXT:    slli a1, a1, 11
 ; RV32-NEXT:    lw a2, 0(a0)
 ; RV32-NEXT:    lw a3, 4(a0)
 ; RV32-NEXT:    lw a4, 8(a0)
 ; RV32-NEXT:    lw a5, 12(a0)
+; RV32-NEXT:    slli a1, a1, 11
 ; RV32-NEXT:    and a2, a2, a1
 ; RV32-NEXT:    and a3, a3, zero
 ; RV32-NEXT:    and a4, a4, zero
 ; RV32-NEXT:    and a5, a5, zero
 ; RV32-NEXT:    add a2, a2, a1
-; RV32-NEXT:    sltu a1, a2, a1
 ; RV32-NEXT:    add a6, a3, zero
+; RV32-NEXT:    sltu a1, a2, a1
 ; RV32-NEXT:    sltu a3, a6, a3
 ; RV32-NEXT:    add a6, a6, a1
 ; RV32-NEXT:    seqz a7, a6
 ; RV32-NEXT:    and a1, a7, a1
-; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    add a3, a4, zero
-; RV32-NEXT:    sltu a4, a3, a4
-; RV32-NEXT:    add a3, a3, a1
-; RV32-NEXT:    seqz a7, a3
-; RV32-NEXT:    and a1, a7, a1
-; RV32-NEXT:    or a1, a4, a1
+; RV32-NEXT:    add a7, a4, zero
 ; RV32-NEXT:    add a5, a5, zero
+; RV32-NEXT:    sltu a4, a7, a4
+; RV32-NEXT:    or a1, a3, a1
+; RV32-NEXT:    add a7, a7, a1
+; RV32-NEXT:    seqz a3, a7
+; RV32-NEXT:    and a1, a3, a1
+; RV32-NEXT:    or a1, a4, a1
 ; RV32-NEXT:    add a1, a5, a1
 ; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a6, 4(a0)
-; RV32-NEXT:    sw a3, 8(a0)
+; RV32-NEXT:    sw a7, 8(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
 ; RV32-NEXT:    ret
 entry:

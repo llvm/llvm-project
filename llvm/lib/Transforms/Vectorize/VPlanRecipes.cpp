@@ -859,7 +859,9 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   if (getNumOperands() != 0) {
     assert(getNumOperands() == 1 && "can have at most 1 operand");
     O << " (extra operand: ";
-    printOperands(O, SlotTracker);
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    O << " from ";
+    getParent()->getPredecessors()[0]->printAsOperand(O);
     O << ")";
   }
 }
@@ -941,7 +943,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1))
+  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1, State.TTI))
     TysForDecl.push_back(VectorType::get(getResultType(), State.VF));
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
@@ -952,7 +954,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
       Arg = State.get(I.value(), VPLane(0));
     else
       Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
-    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
+    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index(),
+                                               State.TTI))
       TysForDecl.push_back(Arg->getType());
     Args.push_back(Arg);
   }
@@ -990,6 +993,15 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
+      // Push all the VP Intrinsic's ops into the Argments even if is nullptr.
+      // Some VP Intrinsic's cost will assert the number of parameters.
+      // Mainly appears in the following two scenarios:
+      // 1. EVL Op is nullptr
+      // 2. The Argmunt of the VP Intrinsic is also the VP Intrinsic
+      if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
+        Arguments.push_back(V);
+        continue;
+      }
       if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
         Arguments.push_back(UI->getArgOperand(Idx));
         continue;
@@ -1484,6 +1496,8 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
   State.set(this, Cast);
   State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
+  if (auto *CastOp = dyn_cast<Instruction>(Cast))
+    setFlags(CastOp);
 }
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
@@ -1688,13 +1702,7 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
 
     // Create a vector splat to use in the induction update.
-    //
-    // FIXME: If the step is non-constant, we create the vector splat with
-    //        IRBuilder. IRBuilder can constant-fold the multiply, but it
-    //        doesn't handle a constant vector splat.
-    SplatVF = isa<Constant>(Mul)
-                  ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
-                  : Builder.CreateVectorSplat(State.VF, Mul);
+    SplatVF = Builder.CreateVectorSplat(State.VF, Mul);
   }
 
   Builder.restoreIP(CurrIP);
@@ -3314,6 +3322,10 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
 InstructionCost
 VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
                                              VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  if (VF.isScalar())
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, CostKind);
+
   if (VF.isScalable() && VF.getKnownMinValue() == 1)
     return InstructionCost::getInvalid();
 
@@ -3322,7 +3334,6 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   Type *VectorTy =
       ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
 
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
                                 cast<VectorType>(VectorTy), Mask, CostKind,
                                 VF.getKnownMinValue() - 1);

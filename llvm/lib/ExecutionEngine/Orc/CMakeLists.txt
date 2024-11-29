@@ -7,6 +7,7 @@ if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
 endif()
 
 add_llvm_component_library(LLVMOrcJIT
+  AbsoluteSymbols.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
@@ -28,6 +29,7 @@ add_llvm_component_library(LLVMOrcJIT
   IRTransformLayer.cpp
   IRPartitionLayer.cpp
   JITTargetMachineBuilder.cpp
+  LazyObjectLinkingLayer.cpp
   LazyReexports.cpp
   Layer.cpp
   LoadLinkableFile.cpp

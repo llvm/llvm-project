@@ -529,8 +529,6 @@ void XtensaInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 unsigned XtensaInstrInfo::insertConstBranchAtInst(
     MachineBasicBlock &MBB, MachineInstr *I, int64_t offset,
     ArrayRef<MachineOperand> Cond, DebugLoc DL, int *BytesAdded) const {
-  // Shouldn't be a fall through.
-  assert(&MBB && "InsertBranch must not be told to insert a fallthrough");
   assert(Cond.size() <= 4 &&
          "Xtensa branch conditions have less than four components!");
 

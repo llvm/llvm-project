@@ -2289,6 +2289,61 @@ INTERCEPTOR(int, pthread_getcpuclockid, uptr thread,
 #define INIT_CLOCK_GETCPUCLOCKID
 #endif
 
+#if SANITIZER_INTERCEPT_TIMER_CREATE
+INTERCEPTOR(int, timer_create, __sanitizer_clockid_t clockid, void *sevp,
+            __sanitizer_timer_t *timer) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, timer_create, clockid, sevp, timer);
+  int res = REAL(timer_create)(clockid, sevp, timer);
+  if (!res && timer) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, timer, sizeof *timer);
+  }
+  return res;
+}
+
+INTERCEPTOR(int, timer_delete, __sanitizer_timer_t timer) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, timer_delete, timer);
+  int res = REAL(timer_delete)(timer);
+  return res;
+}
+
+INTERCEPTOR(int, timer_gettime, __sanitizer_timer_t timer,
+            struct __sanitizer_itimerspec *curr_value) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, timer_gettime, timer, curr_value);
+  int res = REAL(timer_gettime)(timer, curr_value);
+  if (!res && curr_value) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, curr_value, sizeof *curr_value);
+  }
+  return res;
+}
+
+INTERCEPTOR(int, timer_settime, __sanitizer_timer_t timer, int flags,
+            const struct __sanitizer_itimerspec *new_value,
+            struct __sanitizer_itimerspec *old_value) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, timer_settime, timer, flags, new_value,
+                           old_value);
+  int res = REAL(timer_settime)(timer, flags, new_value, old_value);
+  if (!res) {
+    if (new_value)
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, new_value, sizeof *new_value);
+    if (old_value)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, old_value, sizeof *old_value);
+  }
+  return res;
+}
+
+#  define INIT_TIMER_CREATE                                                \
+    COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(timer_create, "GLIBC_2.3.3");  \
+    COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(timer_delete, "GLIBC_2.3.3");  \
+    COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(timer_gettime, "GLIBC_2.3.3"); \
+    COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(timer_settime, "GLIBC_2.3.3");
+#else
+#  define INIT_TIMER_CREATE
+#endif
+
 #if SANITIZER_INTERCEPT_GETITIMER
 INTERCEPTOR(int, getitimer, int which, void *curr_value) {
   void *ctx;
@@ -2332,6 +2387,25 @@ INTERCEPTOR(int, setitimer, int which, const void *new_value, void *old_value) {
   COMMON_INTERCEPT_FUNCTION(setitimer);
 #else
 #define INIT_GETITIMER
+#endif
+
+#if SANITIZER_INTERCEPT_TIMESPEC_GET
+INTERCEPTOR(int, timespec_get, struct __sanitizer_timespec *ts, int base) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, timespec_get, ts, base);
+  // We don't yet know if ts is addressable, so we use our own scratch buffer
+  struct __sanitizer_timespec ts_local;
+  int res = REAL(timespec_get)(&ts_local, base);
+  if (res) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ts,
+                                   sizeof(struct __sanitizer_timespec));
+    internal_memcpy(ts, &ts_local, sizeof(struct __sanitizer_timespec));
+  }
+  return res;
+}
+#  define INIT_TIMESPEC_GET COMMON_INTERCEPT_FUNCTION(timespec_get);
+#else
+#  define INIT_TIMESPEC_GET
 #endif
 
 #if SANITIZER_INTERCEPT_GLOB
@@ -10266,8 +10340,10 @@ static void InitializeCommonInterceptors() {
   INIT_SETPWENT;
   INIT_CLOCK_GETTIME;
   INIT_CLOCK_GETCPUCLOCKID;
+  INIT_TIMER_CREATE;
   INIT_GETITIMER;
   INIT_TIME;
+  INIT_TIMESPEC_GET;
   INIT_GLOB;
   INIT_GLOB64;
   INIT___B64_TO;

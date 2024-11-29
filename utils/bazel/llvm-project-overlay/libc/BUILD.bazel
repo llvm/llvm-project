@@ -53,7 +53,7 @@ config_setting(
 
 ################################## Base Config #################################
 
-cc_library(
+libc_support_library(
     name = "__support_macros_config",
     hdrs = ["src/__support/macros/config.h"],
 )
@@ -425,7 +425,7 @@ libc_support_library(
     name = "__support_common",
     hdrs = [
         "src/__support/common.h",
-        "src/__support/endian.h",
+        "src/__support/endian_internal.h",
     ],
     deps = [
         ":__support_macros_attributes",
@@ -2200,6 +2200,13 @@ libc_math_function(
     name = "exp10m1f16",
     additional_deps = [
         ":expxf16",
+    ],
+)
+
+libc_math_function(
+    name = "exp10m1f",
+    additional_deps = [
+        ":explogxf",
     ],
 )
 

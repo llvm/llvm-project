@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Block.h"
+
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -331,7 +334,7 @@ unsigned PredecessorIterator::getSuccessorIndex() const {
 }
 
 //===----------------------------------------------------------------------===//
-// SuccessorRange
+// Successors
 //===----------------------------------------------------------------------===//
 
 SuccessorRange::SuccessorRange() : SuccessorRange(nullptr, 0) {}
@@ -347,6 +350,26 @@ SuccessorRange::SuccessorRange(Block *block) : SuccessorRange() {
 SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange() {
   if ((count = term->getNumSuccessors()))
     base = term->getBlockOperands().data();
+}
+
+bool Block::isReachable(Block *other, SmallPtrSet<Block *, 16> &&except) {
+  assert(getParent() == other->getParent() && "expected same region");
+  if (except.contains(other)) {
+    // Fast path: If `other` is in the `except` set, there can be no path from
+    // "this" to `other` (that does not pass through an excluded block).
+    return false;
+  }
+  SmallVector<Block *> worklist(succ_begin(), succ_end());
+  while (!worklist.empty()) {
+    Block *next = worklist.pop_back_val();
+    if (next == other)
+      return true;
+    // Note: `except` keeps track of already visited blocks.
+    if (!except.insert(next).second)
+      continue;
+    worklist.append(next->succ_begin(), next->succ_end());
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

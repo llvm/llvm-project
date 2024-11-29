@@ -46,7 +46,7 @@ done:
 
 ; GCN-LABEL: {{^}}legal_offset_fi_offset:
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
-; GCN-DAG: v_mov_b32_e32 [[K8000:v[0-9]+]], 0x8004
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[OFFSET:v[0-9]+]], vcc, 4,
 ; GCN-DAG: v_add_{{[iu]}}32_e32 [[OFFSET:v[0-9]+]], vcc, 0x8004
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 
@@ -84,8 +84,10 @@ done:
 }
 
 ; GCN-LABEL: {{^}}neg_vaddr_offset_inbounds:
-; GCN: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 16, v{{[0-9]+}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
+; GCN: s_add_i32 [[ADD0:s[0-9]+]], s{{[0-9]+}}, 4
+; GCN: s_add_i32 [[ADD1:s[0-9]+]], [[ADD0]], 16
+; GCN: v_mov_b32_e32 [[V_ADD:v[0-9]+]], [[ADD1]]
+; GCN: buffer_store_dword v{{[0-9]+}}, [[V_ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
 define amdgpu_kernel void @neg_vaddr_offset_inbounds(i32 %offset) {
 entry:
   %array = alloca [8192 x i32], addrspace(5)
@@ -96,8 +98,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}neg_vaddr_offset:
-; GCN: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 16, v{{[0-9]+}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
+; GCN: s_add_i32 [[ADD0:s[0-9]+]], s{{[0-9]+}}, 4
+; GCN: s_add_i32 [[ADD1:s[0-9]+]], [[ADD0]], 16
+; GCN: v_mov_b32_e32 [[V_ADD:v[0-9]+]], [[ADD1]]
+; GCN: buffer_store_dword v{{[0-9]+}}, [[V_ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
 define amdgpu_kernel void @neg_vaddr_offset(i32 %offset) {
 entry:
   %array = alloca [8192 x i32], addrspace(5)

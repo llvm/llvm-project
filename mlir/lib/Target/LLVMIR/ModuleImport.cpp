@@ -683,6 +683,26 @@ void ModuleImport::setIntegerOverflowFlags(llvm::Instruction *inst,
   iface.setOverflowFlags(value);
 }
 
+void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
+  auto iface = cast<ExactFlagInterface>(op);
+
+  iface.setIsExact(inst->isExact());
+}
+
+void ModuleImport::setDisjointFlag(llvm::Instruction *inst,
+                                   Operation *op) const {
+  auto iface = cast<DisjointFlagInterface>(op);
+  auto instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
+
+  iface.setIsDisjoint(instDisjoint->isDisjoint());
+}
+
+void ModuleImport::setNonNegFlag(llvm::Instruction *inst, Operation *op) const {
+  auto iface = cast<NonNegFlagInterface>(op);
+
+  iface.setNonNeg(inst->hasNonNeg());
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
@@ -2002,7 +2022,11 @@ ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
       mlirAttr = builder.getI64IntegerAttr(llvmAttr.getValueAsInt());
     else if (llvmAttr.isEnumAttribute())
       mlirAttr = builder.getUnitAttr();
-    else
+    else if (llvmAttr.isConstantRangeAttribute()) {
+      const llvm::ConstantRange &value = llvmAttr.getValueAsConstantRange();
+      mlirAttr = builder.getAttr<LLVM::ConstantRangeAttr>(value.getLower(),
+                                                          value.getUpper());
+    } else
       llvm_unreachable("unexpected parameter attribute kind");
     paramAttrs.push_back(builder.getNamedAttr(mlirName, mlirAttr));
   }

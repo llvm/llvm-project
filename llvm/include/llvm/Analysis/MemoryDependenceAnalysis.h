@@ -355,7 +355,7 @@ private:
   const TargetLibraryInfo &TLI;
   DominatorTree &DT;
   PredIteratorCache PredCache;
-  EarliestEscapeInfo EII;
+  EarliestEscapeAnalysis EEA;
 
   unsigned DefaultBlockScanLimit;
 
@@ -367,7 +367,7 @@ public:
   MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI, DominatorTree &DT,
                           unsigned DefaultBlockScanLimit)
-      : AA(AA), AC(AC), TLI(TLI), DT(DT), EII(DT),
+      : AA(AA), AC(AC), TLI(TLI), DT(DT), EEA(DT),
         DefaultBlockScanLimit(DefaultBlockScanLimit) {}
 
   /// Handle invalidation in the new PM.

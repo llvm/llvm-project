@@ -162,6 +162,26 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
+  MachineFunction *MF = I.getParent()->getParent();
+  MachineBasicBlock *MBB = &MF->front();
+  MachineBasicBlock::iterator It = MBB->SkipPHIsAndLabels(MBB->begin()),
+                              E = MBB->end();
+  bool IsHeader = false;
+  unsigned Opcode;
+  for (; It != E && It != I; ++It) {
+    Opcode = It->getOpcode();
+    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
+      IsHeader = true;
+    } else if (IsHeader &&
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+      ++It;
+      break;
+    }
+  }
+  return It;
+}
+
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
@@ -185,6 +205,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
                : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
+  case 9:
+    return SPIRV::StorageClass::CodeSectionINTEL;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -497,8 +519,11 @@ bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
 }
 
 size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
-  size_t result = 0;
+  auto It = BlockToOrder.find(BB);
+  if (It != BlockToOrder.end())
+    return It->second.Rank;
 
+  size_t result = 0;
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore back-edges.
     if (DT.dominates(BB, P))
@@ -530,15 +555,20 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
   ToVisit.push(BB);
   Queued.insert(BB);
 
+  size_t QueueIndex = 0;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
 
     if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
+      assert(QueueIndex < ToVisit.size() &&
+             "No valid candidate in the queue. Is the graph reducible?");
+      QueueIndex++;
       continue;
     }
 
+    QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
     BlockToOrder.emplace(BB, Info);
@@ -613,15 +643,12 @@ bool sortBlocks(Function &F) {
     return false;
 
   bool Modified = false;
-
   std::vector<BasicBlock *> Order;
   Order.reserve(F.size());
 
-  PartialOrderingVisitor Visitor(F);
-  Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
-    Order.push_back(Block);
-    return true;
-  });
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT)
+    Order.push_back(BB);
 
   assert(&*F.begin() == Order[0]);
   BasicBlock *LastBlock = &*F.begin();

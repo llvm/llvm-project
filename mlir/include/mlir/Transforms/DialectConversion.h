@@ -189,9 +189,9 @@ public:
   }
 
   /// This method registers a materialization that will be called when
-  /// converting a legal replacement value back to an illegal source type.
-  /// This is used when some uses of the original, illegal value must persist
-  /// beyond the main conversion.
+  /// converting a replacement value back to its original source type.
+  /// This is used when some uses of the original value persist beyond the main
+  /// conversion.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
@@ -200,17 +200,18 @@ public:
   }
 
   /// This method registers a materialization that will be called when
-  /// converting an illegal (source) value to a legal (target) type.
+  /// converting a value to a target type according to a pattern's type
+  /// converter.
   ///
-  /// Note: For target materializations, users can optionally take the original
-  /// type. This type may be different from the type of the input. For example,
-  /// let's assume that a conversion pattern "P1" replaced an SSA value "v1"
-  /// (type "t1") with "v2" (type "t2"). Then a different conversion pattern
-  /// "P2" matches an op that has "v1" as an operand. Let's furthermore assume
-  /// that "P2" determines that the legalized type of "t1" is "t3", which may
-  /// be different from "t2". In this example, the target materialization
-  /// will be invoked with: outputType = "t3", inputs = "v2",
-  // originalType = "t1". Note  that the original type "t1" cannot be recovered
+  /// Note: Target materializations can optionally inspect the "original"
+  /// type. This type may be different from the type of the input value.
+  /// For example, let's assume that a conversion pattern "P1" replaced an SSA
+  /// value "v1" (type "t1") with "v2" (type "t2"). Then a different conversion
+  /// pattern "P2" matches an op that has "v1" as an operand. Let's furthermore
+  /// assume that "P2" determines that the converted target type of "t1" is
+  /// "t3", which may be different from "t2". In this example, the target
+  /// materialization will be invoked with: outputType = "t3", inputs = "v2",
+  /// originalType = "t1". Note that the original type "t1" cannot be recovered
   /// from just "t3" and "v2"; that's why the originalType parameter exists.
   ///
   /// Note: During a 1:N conversion, the result types can be a TypeRange. In
@@ -795,11 +796,31 @@ public:
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
 
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the new values. The number of op results
+  /// and replacement values must match. The types may differ: the dialect
+  /// conversion driver will reconcile any surviving type mismatches at the end
+  /// of the conversion process with source materializations. The given
+  /// operation is erased.
   void replaceOp(Operation *op, ValueRange newValues) override;
 
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the results of the new op. The number of
+  /// op results must match. The types may differ: the dialect conversion
+  /// driver will reconcile any surviving type mismatches at the end of the
+  /// conversion process with source materializations. The original operation
+  /// is erased.
   void replaceOp(Operation *op, Operation *newOp) override;
+
+  /// Replace the given operation with the new value ranges. The number of op
+  /// results and value ranges must match. If an original SSA value is replaced
+  /// by multiple SSA values (i.e., a value range has more than 1 element), the
+  /// conversion driver will insert an argument materialization to convert the
+  /// N SSA values back into 1 SSA value of the original type. The given
+  /// operation is erased.
+  ///
+  /// Note: The argument materialization is a workaround until we have full 1:N
+  /// support in the dialect conversion. (It is going to disappear from both
+  /// `replaceOpWithMultiple` and `applySignatureConversion`.)
+  void replaceOpWithMultiple(Operation *op, ArrayRef<ValueRange> newValues);
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
   /// operation *must* be made dead by the end of the conversion process,

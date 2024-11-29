@@ -77,17 +77,18 @@
 // CHECK-NEXT:     profile             FEAT_SPE                                               Enable Statistical Profiling extension
 // CHECK-NEXT:     predres2            FEAT_SPECRES2                                          Enable Speculation Restriction Instruction
 // CHECK-NEXT:     ssbs                FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
-// CHECK-NEXT:     ssve-aes            FEAT_SSVE_AES                                          Enable Armv9.6-A SVE2 AES support in streaming SVE mode
+// CHECK-NEXT:     ssve-aes            FEAT_SSVE_AES                                          Enable Armv9.6-A SVE AES support in streaming SVE mode
 // CHECK-NEXT:     ssve-fp8dot2        FEAT_SSVE_FP8DOT2                                      Enable SVE2 FP8 2-way dot product instructions
 // CHECK-NEXT:     ssve-fp8dot4        FEAT_SSVE_FP8DOT4                                      Enable SVE2 FP8 4-way dot product instructions
 // CHECK-NEXT:     ssve-fp8fma         FEAT_SSVE_FP8FMA                                       Enable SVE2 FP8 multiply-add instructions
 // CHECK-NEXT:     sve                 FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
-// CHECK-NEXT:     sve-aes2            FEAT_SVE_AES2                                          Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions
+// CHECK-NEXT:     sve-aes             FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword SVE polynomial multiply instructions
+// CHECK-NEXT:     sve-aes2            FEAT_SVE_AES2                                          Enable Armv9.6-A SVE multi-vector AES and multi-vector quadword polynomial multiply instructions
 // CHECK-NEXT:     sve-b16b16          FEAT_SVE_B16B16                                        Enable SVE2 non-widening and SME2 Z-targeting non-widening BFloat16 instructions
 // CHECK-NEXT:     sve-bfscale         FEAT_SVE_BFSCALE                                       Enable Armv9.6-A SVE BFloat16 scaling instructions
 // CHECK-NEXT:     sve-f16f32mm        FEAT_SVE_F16F32MM                                      Enable Armv9.6-A FP16 to FP32 Matrix Multiply
 // CHECK-NEXT:     sve2                FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
-// CHECK-NEXT:     sve2-aes            FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable AES SVE2 instructions
+// CHECK-NEXT:     sve2-aes                                                                   Shorthand for +sve2+sve-aes
 // CHECK-NEXT:     sve2-bitperm        FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
 // CHECK-NEXT:     sve2-sha3           FEAT_SVE_SHA3                                          Enable SHA3 SVE2 instructions
 // CHECK-NEXT:     sve2-sm4            FEAT_SVE_SM4                                           Enable SM4 SVE2 instructions

@@ -74,8 +74,7 @@ def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al, i8mem:$regsavefi, variable_ops),
                               "#VASTART_SAVE_XMM_REGS $al, $regsavefi",
-                              [(X86vastart_save_xmm_regs GR8:$al, addr:$regsavefi),
-                               (implicit EFLAGS)]>;
+                              [(X86vastart_save_xmm_regs GR8:$al, addr:$regsavefi)]>;
 }
 
 let usesCustomInserter = 1, Defs = [EFLAGS] in {
@@ -87,15 +86,15 @@ def VAARG_64 : I<0, Pseudo,
                  (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
                  "#VAARG_64 $dst, $ap, $size, $mode, $align",
                  [(set GR64:$dst,
-                    (X86vaarg64 addr:$ap, timm:$size, timm:$mode, timm:$align)),
-                  (implicit EFLAGS)]>, Requires<[In64BitMode, IsLP64]>;
+                    (X86vaarg64 addr:$ap, timm:$size, timm:$mode, timm:$align))]>,
+               Requires<[In64BitMode, IsLP64]>;
 def VAARG_X32 : I<0, Pseudo,
                  (outs GR32:$dst),
                  (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
                  "#VAARG_X32 $dst, $ap, $size, $mode, $align",
                  [(set GR32:$dst,
-                    (X86vaargx32 addr:$ap, timm:$size, timm:$mode, timm:$align)),
-                  (implicit EFLAGS)]>, Requires<[In64BitMode, NotLP64]>;
+                    (X86vaargx32 addr:$ap, timm:$size, timm:$mode, timm:$align))]>,
+                Requires<[In64BitMode, NotLP64]>;
 }
 
 // When using segmented stacks these are lowered into instructions which first
@@ -2185,6 +2184,18 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
 defm : EFLAGSDefiningPats<"", NoNDD>;
 defm : EFLAGSDefiningPats<"_ND", HasNDD>;
 
+let Predicates = [HasZU] in {
+  // zext (mul reg/mem, imm) -> imulzu
+  def : Pat<(i32 (zext (i16 (mul GR16:$src1, imm:$src2)))),
+            (SUBREG_TO_REG (i32 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i32 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
+            (SUBREG_TO_REG (i32 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i64 (zext (i16 (mul GR16:$src1, imm:$src2)))),
+            (SUBREG_TO_REG (i64 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i64 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
+            (SUBREG_TO_REG (i64 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+}
+  
 // mul reg, imm
 def : Pat<(mul GR16:$src1, imm:$src2),
           (IMUL16rri GR16:$src1, imm:$src2)>;

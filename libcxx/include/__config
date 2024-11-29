@@ -402,7 +402,11 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
-#    define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
+
+// TODO: Make this a proper customization point or remove the option to override it.
+#    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
+#      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
+#    endif
 
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 // The inline should be removed once PR32114 is resolved
@@ -858,7 +862,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if !_LIBCPP_HAS_THREADS && _LIBCPP_HAS_THREAD_API_EXTERNAL
-#    error _LIBCPP_HAS_THREAD_API_EXTERNAL may not be true when _LIBCPP_HAS_THREADS is true.
+#    error _LIBCPP_HAS_THREAD_API_EXTERNAL may only be true when _LIBCPP_HAS_THREADS is true.
 #  endif
 
 #  if !_LIBCPP_HAS_MONOTONIC_CLOCK && _LIBCPP_HAS_THREADS

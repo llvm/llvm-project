@@ -56,6 +56,7 @@ protected:
   bool ATTRIBUTE = DEFAULT;
 #include "AArch64GenSubtargetInfo.inc"
 
+  unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
@@ -237,6 +238,9 @@ public:
            hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
+  unsigned getEpilogueVectorizationMinVF() const {
+    return EpilogueVectorizationMinVF;
+  }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
@@ -417,6 +421,10 @@ public:
     return DefaultSVETFOpts;
   }
 
+  /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
+  /// add + cnt instructions.
+  bool useScalarIncVL() const;
+
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
@@ -442,29 +450,6 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
-
-  const PseudoSourceValue *getAddressCheckPSV() const {
-    return AddressCheckPSV.get();
-  }
-
-private:
-  /// Pseudo value representing memory load performed to check an address.
-  ///
-  /// This load operation is solely used for its side-effects: if the address
-  /// is not mapped (or not readable), it triggers CPU exception, otherwise
-  /// execution proceeds and the value is not used.
-  class AddressCheckPseudoSourceValue : public PseudoSourceValue {
-  public:
-    AddressCheckPseudoSourceValue(const TargetMachine &TM)
-        : PseudoSourceValue(TargetCustom, TM) {}
-
-    bool isConstant(const MachineFrameInfo *) const override { return false; }
-    bool isAliased(const MachineFrameInfo *) const override { return true; }
-    bool mayAlias(const MachineFrameInfo *) const override { return true; }
-    void printCustom(raw_ostream &OS) const override { OS << "AddressCheck"; }
-  };
-
-  std::unique_ptr<AddressCheckPseudoSourceValue> AddressCheckPSV;
 };
 } // End llvm namespace
 

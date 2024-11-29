@@ -50,7 +50,7 @@ namespace std
 #if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
-#  include <__atomic/atomic_base.h>
+#  include <__atomic/atomic.h>
 #  include <__atomic/memory_order.h>
 #  include <__cstddef/ptrdiff_t.h>
 #  include <__memory/unique_ptr.h>
@@ -109,9 +109,9 @@ template <class _CompletionF>
 class __barrier_base {
   ptrdiff_t __expected_;
   unique_ptr<__barrier_algorithm_base, void (*)(__barrier_algorithm_base*)> __base_;
-  __atomic_base<ptrdiff_t> __expected_adjustment_;
+  atomic<ptrdiff_t> __expected_adjustment_;
   _CompletionF __completion_;
-  __atomic_base<__barrier_phase_t> __phase_;
+  atomic<__barrier_phase_t> __phase_;
 
 public:
   using arrival_token = __barrier_phase_t;
@@ -167,10 +167,10 @@ Two versions of this algorithm are provided:
 
 template <class _CompletionF>
 class __barrier_base {
-  __atomic_base<ptrdiff_t> __expected;
-  __atomic_base<ptrdiff_t> __arrived;
+  atomic<ptrdiff_t> __expected;
+  atomic<ptrdiff_t> __arrived;
   _CompletionF __completion;
-  __atomic_base<bool> __phase;
+  atomic<bool> __phase;
 
 public:
   using arrival_token = bool;
@@ -212,7 +212,7 @@ class __barrier_base<__empty_completion> {
   static constexpr uint64_t __phase_bit     = 1ull << 63;
   static constexpr uint64_t __arrived_mask  = (__phase_bit - 1) & ~__expected_mask;
 
-  __atomic_base<uint64_t> __phase_arrived_expected;
+  atomic<uint64_t> __phase_arrived_expected;
 
   static _LIBCPP_HIDE_FROM_ABI constexpr uint64_t __init(ptrdiff_t __count) _NOEXCEPT {
     return ((uint64_t(1u << 31) - __count) << 32) | (uint64_t(1u << 31) - __count);
