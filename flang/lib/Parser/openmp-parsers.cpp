@@ -10,7 +10,6 @@
 // See OpenMP-4.5-grammar.txt for documentation.
 
 #include "basic-parsers.h"
-#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
