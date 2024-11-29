@@ -2011,7 +2011,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 const StringMap<bool> sys::getHostCPUFeatures() {
   unsigned long hwcap = getauxval(AT_HWCAP);
   bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
-  const uint32_t cpucfg2 = 0x2, cpucfg3 = 0x3;
+  uint32_t cpucfg2 = 0x2, cpucfg3 = 0x3;
   __asm__("cpucfg %[cpucfg2], %[cpucfg2]\n\t" : [cpucfg2] "+r"(cpucfg2));
   __asm__("cpucfg %[cpucfg3], %[cpucfg3]\n\t" : [cpucfg3] "+r"(cpucfg3));
 
@@ -2025,13 +2025,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["lvz"] = hwcap & (1UL << 9);  // HWCAP_LOONGARCH_LVZ
 
   Features["frecipe"] = cpucfg2 & (1U << 25); // CPUCFG.2.FRECIPE
+  Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
   Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
+  Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
 
   Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
 
   // TODO: Need to complete.
-  // Features["div32"] = cpucfg2 & (1U << 26);       // CPUCFG.2.DIV32
-  // Features["lamcas"] = cpucfg2 & (1U << 28);      // CPUCFG.2.LAMCAS
   // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
   // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
   return Features;
