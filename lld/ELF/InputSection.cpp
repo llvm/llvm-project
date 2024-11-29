@@ -324,7 +324,7 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
 //  Returns an empty string if there's no way to get line info.
 std::string InputSectionBase::getSrcMsg(const Symbol &sym,
                                         uint64_t offset) const {
-  return file->getSrcMsg(sym, *this, offset);
+  return file->getSrcMsg(*this, sym, offset);
 }
 
 // Returns a filename string along with an optional section name. This
