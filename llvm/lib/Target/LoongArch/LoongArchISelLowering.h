@@ -68,6 +68,7 @@ enum NodeType : unsigned {
   REVB_2H,
   REVB_2W,
   BITREV_4B,
+  BITREV_8B,
   BITREV_W,
 
   // Intrinsic operations start ============================================
@@ -334,6 +335,7 @@ private:
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
