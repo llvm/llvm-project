@@ -1894,7 +1894,7 @@ static bool pred_L(SetVector<SUnit *> &NodeOrder,
 
     // FIXME: The following loop-carried dependencies may also need to be
     // considered.
-    //   - Physical register dependnecies (true-dependnece and WAW).
+    //   - Physical register dependencies (true-dependence and WAW).
     //   - Memory dependencies.
     for (const auto &OE : DDG->getOutEdges(SU)) {
       SUnit *SuccSU = OE.getDst();

@@ -118,7 +118,7 @@ private:
   bool useWindowScheduler(bool Changed);
 };
 
-/// Represents a dependnece between two instruction.
+/// Represents a dependence between two instruction.
 class SwingSchedulerDDGEdge {
   SUnit *Dst = nullptr;
   SDep Pred;
