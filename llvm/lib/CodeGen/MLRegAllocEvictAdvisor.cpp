@@ -393,8 +393,8 @@ private:
 class ReleaseModeEvictionAdvisorProvider final
     : public RegAllocEvictionAdvisorProvider {
 public:
-  ReleaseModeEvictionAdvisorProvider()
-      : RegAllocEvictionAdvisorProvider(AdvisorMode::Release) {
+  ReleaseModeEvictionAdvisorProvider(LLVMContext &Ctx)
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {
     if (EnableDevelopmentFeatures) {
       InputFeatures = {RA_EVICT_FEATURES_LIST(
           _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
@@ -406,15 +406,6 @@ public:
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Release;
-  }
-
-  void setAnalyses(std::initializer_list<llvm::Any> AnalysisList) override {
-    for (auto Analysis : AnalysisList) {
-      if (auto **MBFI = llvm::any_cast<MachineBlockFrequencyInfo *>(&Analysis))
-        this->MBFI = *MBFI;
-      if (auto **Loops = llvm::any_cast<MachineLoopInfo *>(&Analysis))
-        this->Loops = *Loops;
-    }
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
@@ -429,6 +420,8 @@ public:
             InteractiveChannelBaseName + ".out",
             InteractiveChannelBaseName + ".in");
     }
+    assert((MBFI && Loops) &&
+           "Invalid provider state: must have analysis available");
     return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), *MBFI,
                                             *Loops);
   }
@@ -436,8 +429,6 @@ public:
 private:
   std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
-  MachineBlockFrequencyInfo *MBFI;
-  MachineLoopInfo *Loops;
 };
 
 class ReleaseModeEvictionAdvisorAnalysisLegacy final
@@ -450,12 +441,19 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
     auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-    Provider.setAnalyses({MBFI, Loops});
-    return Provider.getAdvisor(MF, RA);
+    Provider->setAnalyses(MBFI, Loops);
+    return Provider->getAdvisor(MF, RA);
+  }
+
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
+    // No-op in release mode
   }
 
   bool doInitialization(Module &M) override {
-    return Provider.doInitialization(M);
+    Provider =
+        std::make_unique<ReleaseModeEvictionAdvisorProvider>(M.getContext());
+    return false;
   }
 
   static bool classof(const RegAllocEvictionAdvisorAnalysisLegacy *R) {
@@ -469,7 +467,7 @@ public:
   }
 
 private:
-  ReleaseModeEvictionAdvisorProvider Provider;
+  std::unique_ptr<ReleaseModeEvictionAdvisorProvider> Provider;
 };
 
 // ===================================
@@ -507,11 +505,8 @@ private:
 class DevelopmentModeEvictionAdvisorProvider final
     : public RegAllocEvictionAdvisorProvider {
 public:
-  DevelopmentModeEvictionAdvisorProvider(
-      MachineBlockFrequencyInfo *MBFI = nullptr,
-      MachineLoopInfo *Loops = nullptr)
-      : RegAllocEvictionAdvisorProvider(AdvisorMode::Development), MBFI(MBFI),
-        Loops(Loops) {
+  DevelopmentModeEvictionAdvisorProvider(LLVMContext &Ctx)
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Development, Ctx) {
     if (EnableDevelopmentFeatures) {
       InputFeatures = {RA_EVICT_FEATURES_LIST(
           _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
@@ -531,7 +526,41 @@ public:
           TensorSpec::createSpec<int32_t>("action_step_type", {1}),
           TensorSpec::createSpec<float>("action_reward", {1})};
     }
+    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
+      Ctx.emitError("Regalloc development mode should be requested with at "
+                    "least logging enabled and/or a training model");
+      return;
+    }
+    if (ModelUnderTraining.empty())
+      Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
+    else
+      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
+          Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
+    if (!Runner) {
+      Ctx.emitError("Regalloc: could not set up the model runner");
+      return;
+    }
+    if (TrainingLog.empty())
+      return;
+    std::error_code EC;
+    auto OS = std::make_unique<raw_fd_ostream>(TrainingLog, EC);
+    if (EC) {
+      Ctx.emitError(EC.message() + ":" + TrainingLog);
+      return;
+    }
+    std::vector<TensorSpec> LFS = InputFeatures;
+    if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
+      append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
+    // We always log the output; in particular, if we're not evaluating, we
+    // don't have an output spec json file. That's why we handle the
+    // 'normal' output separately.
+    LFS.push_back(DecisionSpec);
+
+    Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
+                                   /*IncludeReward*/ true);
+    return;
   }
+
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Development;
@@ -553,52 +582,6 @@ public:
       Log->logReward<float>(GetReward());
   }
 
-  void setAnalyses(std::initializer_list<llvm::Any> AnalysisList) override {
-    for (auto Analysis : AnalysisList) {
-      if (auto **MBFI = llvm::any_cast<MachineBlockFrequencyInfo *>(&Analysis))
-        this->MBFI = *MBFI;
-      if (auto **Loops = llvm::any_cast<MachineLoopInfo *>(&Analysis))
-        this->Loops = *Loops;
-    }
-  }
-
-  bool doInitialization(Module &M) override {
-    LLVMContext &Ctx = M.getContext();
-    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
-      Ctx.emitError("Regalloc development mode should be requested with at "
-                    "least logging enabled and/or a training model");
-      return false;
-    }
-    if (ModelUnderTraining.empty())
-      Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
-    else
-      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
-          Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
-    if (!Runner) {
-      Ctx.emitError("Regalloc: could not set up the model runner");
-      return false;
-    }
-    if (TrainingLog.empty())
-      return false;
-    std::error_code EC;
-    auto OS = std::make_unique<raw_fd_ostream>(TrainingLog, EC);
-    if (EC) {
-      M.getContext().emitError(EC.message() + ":" + TrainingLog);
-      return false;
-    }
-    std::vector<TensorSpec> LFS = InputFeatures;
-    if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
-      append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
-    // We always log the output; in particular, if we're not evaluating, we
-    // don't have an output spec json file. That's why we handle the
-    // 'normal' output separately.
-    LFS.push_back(DecisionSpec);
-
-    Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
-                                   /*IncludeReward*/ true);
-    return false;
-  }
-
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     if (!Runner)
@@ -617,8 +600,6 @@ private:
 
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
-  const MachineBlockFrequencyInfo *MBFI;
-  const MachineLoopInfo *Loops;
 };
 
 class DevelopmentModeEvictionAdvisorAnalysisLegacy final
@@ -628,15 +609,22 @@ public:
       : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Development) {}
 
   bool doInitialization(Module &M) override {
-    auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-    auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-    Provider.setAnalyses({MBFI, Loops});
-    return Provider.doInitialization(M);
+    Provider = std::make_unique<DevelopmentModeEvictionAdvisorProvider>(
+        M.getContext());
+    return false;
+  }
+
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
+    Provider->logRewardIfNeeded(MF, GetReward);
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
-    return Provider.getAdvisor(MF, RA);
+    auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+    auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    Provider->setAnalyses(MBFI, Loops);
+    return Provider->getAdvisor(MF, RA);
   }
 
   // support for isa<> and dyn_cast.
@@ -651,7 +639,7 @@ public:
   }
 
 private:
-  DevelopmentModeEvictionAdvisorProvider Provider;
+  std::unique_ptr<DevelopmentModeEvictionAdvisorProvider> Provider;
 };
 
 #endif // #ifdef LLVM_HAVE_TFLITE
@@ -1204,8 +1192,9 @@ void llvm::extractMBBFrequency(
 // Development mode-specific implementations
 #ifdef LLVM_HAVE_TFLITE
 
-RegAllocEvictionAdvisorProvider *llvm::createDevelopmentModeAdvisorProvider() {
-  return new DevelopmentModeEvictionAdvisorProvider();
+RegAllocEvictionAdvisorProvider *
+llvm::createDevelopmentModeAdvisorProvider(LLVMContext &Ctx) {
+  return new DevelopmentModeEvictionAdvisorProvider(Ctx);
 }
 
 RegAllocEvictionAdvisorAnalysisLegacy *
@@ -1284,8 +1273,9 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
 }
 #endif // #ifdef LLVM_HAVE_TFLITE
 
-RegAllocEvictionAdvisorProvider *llvm::createReleaseModeAdvisorProvider() {
-  return new ReleaseModeEvictionAdvisorProvider();
+RegAllocEvictionAdvisorProvider *
+llvm::createReleaseModeAdvisorProvider(LLVMContext &Ctx) {
+  return new ReleaseModeEvictionAdvisorProvider(Ctx);
 }
 
 RegAllocEvictionAdvisorAnalysisLegacy *
