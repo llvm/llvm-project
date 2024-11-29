@@ -129,8 +129,6 @@ void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
                                       llvm::Value *Block, llvm::Type *BlockTy,
                                       bool isBlkExprInOCLKern) {
 
-  // FIXME: Since OpenCL Kernels are emitted twice (kernel version and stub
-  // version), its constituent BlockExpr will also be emitted twice.
   assert((!EnqueuedBlockMap.contains(E) ||
           EnqueuedBlockMap[E].isBlkExprInOCLKern != isBlkExprInOCLKern) &&
          "Block expression emitted twice");

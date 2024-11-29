@@ -213,10 +213,9 @@ public:
   }
 
   bool isDeclOpenCLKernel() const {
-    auto FD = dyn_cast<FunctionDecl>(getDecl());
-    if (FD)
+    if (auto FD = dyn_cast<FunctionDecl>(getDecl()))
       return FD->hasAttr<OpenCLKernelAttr>();
-    return FD;
+    return false;
   }
 };
 
