@@ -774,9 +774,7 @@ Error RISCVISAInfo::checkDependency() {
 
   for (auto Ext : XqciExts)
     if (Exts.count(Ext.str()) && (XLen != 32))
-      return createStringError(errc::invalid_argument,
-                               "'" + Twine(Ext) + "'" +
-                                   " is only supported for 'rv32'");
+      return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");
 
   return Error::success();
 }
