@@ -1035,43 +1035,21 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
-  case Intrinsic::fabs: {
-    auto LT = getTypeLegalizationCost(RetTy);
-    // FIXME: not get the correct cost about the llvm.sqrt.vxbf16
-    // LT.second is promote llvm::MVT::f32
-    if (ST->hasVInstructions() && LT.second.isVector()) {
-      // lui a0, 8
-      // addi a0, a0, -1
-      // vsetvli a1, zero, e16, m1, ta, ma
-      // vand.vx v8, v8, a0
-      if (LT.second.getVectorElementType() == MVT::bf16 ||
-          (LT.second.getVectorElementType() == MVT::f16 &&
-           !ST->hasVInstructionsF16()))
-        return LT.first * getRISCVInstructionCost(RISCV::VAND_VX, LT.second,
-                                                  CostKind) +
-               2;
-      else
-        return LT.first *
-               getRISCVInstructionCost(RISCV::VFSGNJX_VV, LT.second, CostKind);
-    }
-    break;
-  }
+  case Intrinsic::fabs:
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    // FIXME: not get the correct cost about the llvm.sqrt.vxbf16
-    // LT.second is promote llvm::MVT::f32
+    // TODO: add f16/bf16, bf16 with zvfhbmin && f16 with zvfhmin
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      SmallVector<unsigned, 3> Opcodes;
-      if (LT.second.getVectorElementType() == MVT::bf16)
-        Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
-                   RISCV::VFNCVTBF16_F_F_W};
-      else if (LT.second.getVectorElementType() == MVT::f16 &&
-               !ST->hasVInstructionsF16())
-        Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
-      else
-        Opcodes = {RISCV::VFSQRT_V};
-      return LT.first *
-             getRISCVInstructionCost(RISCV::VFSQRT_V, LT.second, CostKind);
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::fabs:
+        Op = RISCV::VFSGNJX_VV;
+        break;
+      case Intrinsic::sqrt:
+        Op = RISCV::VFSQRT_V;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
     }
     break;
   }
@@ -1080,9 +1058,18 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector()) {
-      unsigned Op = (Intrinsic::cttz)   ? RISCV::VCTZ_V
-                    : (Intrinsic::ctlz) ? RISCV::VCLZ_V
-                                        : RISCV::VCPOP_V;
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::cttz:
+        Op = RISCV::VCTZ_V;
+        break;
+      case Intrinsic::ctlz:
+        Op = RISCV::VCLZ_V;
+        break;
+      case Intrinsic::ctpop:
+        Op = RISCV::VCPOP_V;
+        break;
+      }
       return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
     }
     break;
