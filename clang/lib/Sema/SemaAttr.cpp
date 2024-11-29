@@ -287,7 +287,12 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
     if (PVD->hasAttr<LifetimeCaptureByAttr>())
       return;
   for (ParmVarDecl *PVD : MD->parameters()) {
-    if (sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
+    // Methods in standard containers that capture values typically accept
+    // reference-type parameters, e.g., `void push_back(const T& value)`.
+    // We only apply the lifetime_capture_by attribute to parameters of
+    // pointer-like reference types (`const T&`, `T&&`).
+    if (PVD->getType()->isReferenceType() &&
+        sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
       int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
       PVD->addAttr(
           LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
