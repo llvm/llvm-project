@@ -5184,13 +5184,14 @@ std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
-static LogicalResult isContiguousIndices(Value val) {
-  auto vecType = dyn_cast<VectorType>(val.getType());
+/// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
+static LogicalResult isContiguousIndices(Value indexVec) {
+  auto vecType = dyn_cast<VectorType>(indexVec.getType());
   if (!vecType || vecType.getRank() != 1 || vecType.isScalable())
     return failure();
 
   DenseIntElementsAttr elements;
-  if (!matchPattern(val, m_Constant(&elements)))
+  if (!matchPattern(indexVec, m_Constant(&elements)))
     return failure();
 
   return success(
@@ -5216,6 +5217,8 @@ public:
   }
 };
 
+/// Fold gathers with consecutive offsets [0, 1, 2, ...] into contiguous
+/// maskedload. Only 1D non-scalable vectors are supported for now.
 class GatherTrivialIndices final : public OpRewritePattern<GatherOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -5277,6 +5280,8 @@ public:
   }
 };
 
+/// Fold scatters with consecutive offsets [0, 1, 2, ...] into contiguous
+/// maskedstore. Only 1D non-scalable vectors are supported for now.
 class ScatterTrivialIndices final : public OpRewritePattern<ScatterOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
