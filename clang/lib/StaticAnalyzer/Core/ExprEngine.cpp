@@ -1206,15 +1206,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
         while ((ASE = dyn_cast<ArraySubscriptExpr>(Init)))
           Init = ASE->getBase()->IgnoreImplicit();
 
-        SVal LValue = State->getSVal(Init, stackFrame);
-        if (!Field->getType()->isReferenceType()) {
-          if (std::optional<Loc> LValueLoc = LValue.getAs<Loc>()) {
-            InitVal = State->getSVal(*LValueLoc);
-          } else if (auto CV = LValue.getAs<nonloc::CompoundVal>()) {
-            // Initializer list for an array.
-            InitVal = *CV;
-          }
-        }
+        InitVal = State->getSVal(Init, stackFrame);
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
