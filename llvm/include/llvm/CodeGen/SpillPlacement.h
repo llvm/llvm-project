@@ -160,7 +160,6 @@ public:
   bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &Inv);
 
-  // Out of line definitions so unique_ptr<Node[]> doesn't need to be complete.
   SpillPlacement(SpillPlacement &&);
   ~SpillPlacement();
 
