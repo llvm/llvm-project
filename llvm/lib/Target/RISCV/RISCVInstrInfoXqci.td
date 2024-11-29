@@ -50,7 +50,7 @@ class QCIStore_ScaleIdx<bits<4> func4, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXqcicsr, IsRV32], DecoderNamespace = "Xqcicsr" in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
   def QC_CSRRWR : RVInstR<0b1000110, 0b000, OPC_SYSTEM, (outs GPR:$rd),
                           (ins GPR:$rs1, GPRNoX0:$rs2), "qc.csrrwr",
                           "$rd, $rs1, $rs2">;
