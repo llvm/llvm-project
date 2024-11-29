@@ -203,6 +203,18 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+void Flang::AddLoongArch64TargetArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  // Currently, flang only support `-mabi=lp64d` in LoongArch64.
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V != "lp64d") {
+      D.Diag(diag::err_drv_argument_not_allowed_with) << "-mabi" << V;
+    }
+  }
+}
+
 void Flang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const Driver &D = getToolChain().getDriver();
@@ -416,6 +428,7 @@ void Flang::addTargetOptions(const ArgList &Args,
     break;
   case llvm::Triple::loongarch64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddLoongArch64TargetArgs(Args, CmdArgs);
     break;
   }
 
