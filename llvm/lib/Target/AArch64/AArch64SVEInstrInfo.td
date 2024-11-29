@@ -675,6 +675,14 @@ let Predicates = [HasSVEorSME] in {
   defm FABS_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b101, "fneg", AArch64fneg_mt>;
 
+  let Predicates = [HasSVEorSME, UseUnaryUndefPseudos] in {
+    defm FABS_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fabs_mt>;
+    defm FNEG_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fneg_mt>;
+
+    defm ABS_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64abs_mt>;
+    defm NEG_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64neg_mt>;
+  }
+
   foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
     // No dedicated instruction, so just clear the sign bit.
     def : Pat<(VT (fabs VT:$op)),
@@ -4321,16 +4329,16 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm NOT_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b110, "not">;
 
   // floating point
-  defm FABS_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b100, "fabs">;
-  defm FNEG_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b101, "fneg">;
+  defm FABS_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b100, "fabs", AArch64fabs_mt>;
+  defm FNEG_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b101, "fneg", AArch64fneg_mt>;
 
   // SVE2p2 integer unary arithmetic, zeroing predicate
   defm SXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b000, "sxtb">;
   defm UXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b001, "uxtb">;
   defm SXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b010, "sxth">;
   defm UXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b011, "uxth">;
-  defm ABS_ZPzZ   : sve_int_un_pred_arit_z<  0b110, "abs">;
-  defm NEG_ZPzZ   : sve_int_un_pred_arit_z<  0b111, "neg">;
+  defm ABS_ZPzZ   : sve_int_un_pred_arit_z<  0b110, "abs", AArch64abs_mt>;
+  defm NEG_ZPzZ   : sve_int_un_pred_arit_z<  0b111, "neg", AArch64neg_mt>;
   def SXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1000, "sxtw", ZPR64>;
   def UXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1010, "uxtw", ZPR64>;
 
