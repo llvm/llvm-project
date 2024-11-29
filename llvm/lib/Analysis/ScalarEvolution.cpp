@@ -5927,7 +5927,8 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
 
     // Do not allow refinement in rewriting of BEValue.
-    if (isGuaranteedNotToCauseUB(BEValue)) {
+    if (isGuaranteedNotToCauseUB(BEValue) &&
+        isGuaranteedNotToBePoison(BEValue)) {
       const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
       const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
       if (Shifted != getCouldNotCompute() && Start != getCouldNotCompute()) {

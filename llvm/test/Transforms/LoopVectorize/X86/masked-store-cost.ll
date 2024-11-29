@@ -128,9 +128,9 @@ exit:
   ret i32 0
 }
 
-define void @test_scalar_cost_single_store_loop_invariant_cond(ptr %dst, i1 %c) #0 {
+define void @test_scalar_cost_single_store_loop_invariant_cond(ptr noundef %dst, i1 %c) #0 {
 ; CHECK-LABEL: define void @test_scalar_cost_single_store_loop_invariant_cond(
-; CHECK-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -191,9 +191,9 @@ exit:
   ret void
 }
 
-define void @test_scalar_cost_single_store_loop_varying_cond(ptr %dst, ptr noalias %src) #0 {
+define void @test_scalar_cost_single_store_loop_varying_cond(ptr noundef %dst, ptr noalias %src) #0 {
 ; CHECK-LABEL: define void @test_scalar_cost_single_store_loop_varying_cond(
-; CHECK-SAME: ptr [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

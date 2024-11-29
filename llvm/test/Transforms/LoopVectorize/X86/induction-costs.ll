@@ -706,9 +706,9 @@ exit:
   ret void
 }
 
-define void @wombat(i32 %arg, ptr %dst) #1 {
+define void @wombat(i32 noundef %arg, ptr %dst) #1 {
 ; CHECK-LABEL: define void @wombat(
-; CHECK-SAME: i32 [[ARG:%.*]], ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[ARG:%.*]], ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ARG]], 3
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ARG]] to i64
@@ -780,9 +780,9 @@ exit:
   ret void
 }
 
-define void @wombat2(i32 %arg, ptr %dst) #1 {
+define void @wombat2(i32 noundef %arg, ptr %dst) #1 {
 ; CHECK-LABEL: define void @wombat2(
-; CHECK-SAME: i32 [[ARG:%.*]], ptr [[DST:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i32 noundef [[ARG:%.*]], ptr [[DST:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ARG]], 3
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ARG]] to i64
@@ -857,9 +857,9 @@ exit:
 }
 
 
-define void @with_dead_use(i32 %arg, ptr %dst) #1 {
+define void @with_dead_use(i32 noundef %arg, ptr %dst) #1 {
 ; CHECK-LABEL: define void @with_dead_use(
-; CHECK-SAME: i32 [[ARG:%.*]], ptr [[DST:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i32 noundef [[ARG:%.*]], ptr [[DST:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ARG]], 3
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ARG]] to i64

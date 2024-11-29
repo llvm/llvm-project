@@ -371,7 +371,7 @@ return:
 ; Two phis should remain, one starting at %init, and one at %init1.
 ; Two increments should remain, one by %step and one by %step1.
 ; Five live-outs should remain.
-define i32 @isomorphic(i32 %init, i32 %step, i32 %lim) nounwind {
+define i32 @isomorphic(i32 noundef %init, i32 noundef %step, i32 %lim) nounwind {
 ; CHECK-LABEL: @isomorphic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STEP1:%.*]] = add i32 [[STEP:%.*]], 1
