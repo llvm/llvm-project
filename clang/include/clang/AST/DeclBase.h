@@ -562,27 +562,29 @@ public:
 
   template <typename T> void dropAttr() { dropAttrs<T>(); }
 
-  template <typename T>
-  llvm::iterator_range<specific_attr_iterator<T>> specific_attrs() const {
-    return llvm::make_range(specific_attr_begin<T>(), specific_attr_end<T>());
+  template <typename... Ts>
+  llvm::iterator_range<specific_attr_iterator<AttrVec, Ts...>>
+  specific_attrs() const {
+    return llvm::make_range(specific_attr_begin<Ts...>(),
+                            specific_attr_end<Ts...>());
   }
 
-  template <typename T>
-  specific_attr_iterator<T> specific_attr_begin() const {
-    return specific_attr_iterator<T>(attr_begin());
+  template <typename... Ts>
+  specific_attr_iterator<AttrVec, Ts...> specific_attr_begin() const {
+    return specific_attr_iterator<AttrVec, Ts...>(attr_begin());
   }
 
-  template <typename T>
-  specific_attr_iterator<T> specific_attr_end() const {
-    return specific_attr_iterator<T>(attr_end());
+  template <typename... Ts>
+  specific_attr_iterator<AttrVec, Ts...> specific_attr_end() const {
+    return specific_attr_iterator<AttrVec, Ts...>(attr_end());
   }
 
-  template<typename T> T *getAttr() const {
-    return hasAttrs() ? getSpecificAttr<T>(getAttrs()) : nullptr;
+  template <typename... Ts> auto *getAttr() const {
+    return hasAttrs() ? getSpecificAttr<Ts...>(getAttrs()) : nullptr;
   }
 
-  template<typename T> bool hasAttr() const {
-    return hasAttrs() && hasSpecificAttr<T>(getAttrs());
+  template <typename... Ts> bool hasAttr() const {
+    return hasAttrs() && hasSpecificAttr<Ts...>(getAttrs());
   }
 
   /// getMaxAlignment - return the maximum alignment specified by attributes

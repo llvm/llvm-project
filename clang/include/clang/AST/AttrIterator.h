@@ -27,11 +27,23 @@ class Attr;
 /// AttrVec - A vector of Attr, which is how they are stored on the AST.
 using AttrVec = SmallVector<Attr *, 4>;
 
-/// specific_attr_iterator - Iterates over a subrange of an AttrVec, only
-/// providing attributes that are of a specific type.
-template <typename SpecificAttr, typename Container = AttrVec>
-class specific_attr_iterator {
+/// Iterates over a subrange of container, only providing attributes that are of
+/// a specific type/s.
+template <typename Container, typename... SpecificAttrs>
+class specific_attr_iterator_impl {
   using Iterator = typename Container::const_iterator;
+
+  /// Helper class to get either the singular 'specific-attr', or Attr,
+  /// depending on how many are specified.
+  template <typename... Ts> struct type_helper {
+    using type = Attr;
+  };
+  template <typename T> struct type_helper<T> {
+    using type = T;
+  };
+
+  /// The pointee type of the value_type, used for internal implementation.
+  using base_type = typename type_helper<SpecificAttrs...>::type;
 
   /// Current - The current, underlying iterator.
   /// In order to ensure we don't dereference an invalid iterator unless
@@ -43,46 +55,46 @@ class specific_attr_iterator {
   mutable Iterator Current;
 
   void AdvanceToNext() const {
-    while (!isa<SpecificAttr>(*Current))
+    while (!isa<SpecificAttrs...>(*Current))
       ++Current;
   }
 
   void AdvanceToNext(Iterator I) const {
-    while (Current != I && !isa<SpecificAttr>(*Current))
+    while (Current != I && !isa<SpecificAttrs...>(*Current))
       ++Current;
   }
 
 public:
-  using value_type = SpecificAttr *;
-  using reference = SpecificAttr *;
-  using pointer = SpecificAttr *;
+  using value_type = base_type *;
+  using reference = value_type;
+  using pointer = value_type;
   using iterator_category = std::forward_iterator_tag;
   using difference_type = std::ptrdiff_t;
 
-  specific_attr_iterator() = default;
-  explicit specific_attr_iterator(Iterator i) : Current(i) {}
+  specific_attr_iterator_impl() = default;
+  explicit specific_attr_iterator_impl(Iterator i) : Current(i) {}
 
   reference operator*() const {
     AdvanceToNext();
-    return cast<SpecificAttr>(*Current);
+    return cast<base_type>(*Current);
   }
   pointer operator->() const {
     AdvanceToNext();
-    return cast<SpecificAttr>(*Current);
+    return cast<base_type>(*Current);
   }
 
-  specific_attr_iterator& operator++() {
+  specific_attr_iterator_impl &operator++() {
     ++Current;
     return *this;
   }
-  specific_attr_iterator operator++(int) {
-    specific_attr_iterator Tmp(*this);
+  specific_attr_iterator_impl operator++(int) {
+    specific_attr_iterator_impl Tmp(*this);
     ++(*this);
     return Tmp;
   }
 
-  friend bool operator==(specific_attr_iterator Left,
-                         specific_attr_iterator Right) {
+  friend bool operator==(specific_attr_iterator_impl Left,
+                         specific_attr_iterator_impl Right) {
     assert((Left.Current == nullptr) == (Right.Current == nullptr));
     if (Left.Current < Right.Current)
       Left.AdvanceToNext(Right.Current);
@@ -90,33 +102,55 @@ public:
       Right.AdvanceToNext(Left.Current);
     return Left.Current == Right.Current;
   }
-  friend bool operator!=(specific_attr_iterator Left,
-                         specific_attr_iterator Right) {
+  friend bool operator!=(specific_attr_iterator_impl Left,
+                         specific_attr_iterator_impl Right) {
     return !(Left == Right);
   }
 };
 
-template <typename SpecificAttr, typename Container>
-inline specific_attr_iterator<SpecificAttr, Container>
-          specific_attr_begin(const Container& container) {
-  return specific_attr_iterator<SpecificAttr, Container>(container.begin());
-}
-template <typename SpecificAttr, typename Container>
-inline specific_attr_iterator<SpecificAttr, Container>
-          specific_attr_end(const Container& container) {
-  return specific_attr_iterator<SpecificAttr, Container>(container.end());
+/// Iterates over a subrange of a collection, only providing attributes that are
+/// of a specific type/s.
+template <typename Container, typename... SpecificAttrs>
+class specific_attr_iterator;
+
+template <typename SpecificAttr>
+class specific_attr_iterator<SpecificAttr>
+    : public specific_attr_iterator_impl<AttrVec, SpecificAttr> {
+  using specific_attr_iterator_impl<AttrVec,
+                                    SpecificAttr>::specific_attr_iterator_impl;
+};
+
+template <typename Container, typename... SpecificAttrs>
+class specific_attr_iterator
+    : public specific_attr_iterator_impl<Container, SpecificAttrs...> {
+  using specific_attr_iterator_impl<
+      Container, SpecificAttrs...>::specific_attr_iterator_impl;
+};
+
+template <typename... SpecificAttrs, typename Container>
+inline specific_attr_iterator<Container, SpecificAttrs...>
+specific_attr_begin(const Container &container) {
+  return specific_attr_iterator<Container, SpecificAttrs...>(container.begin());
 }
 
-template <typename SpecificAttr, typename Container>
-inline bool hasSpecificAttr(const Container& container) {
-  return specific_attr_begin<SpecificAttr>(container) !=
-          specific_attr_end<SpecificAttr>(container);
+template <typename... SpecificAttrs, typename Container>
+inline specific_attr_iterator<Container, SpecificAttrs...>
+specific_attr_end(const Container &container) {
+  return specific_attr_iterator<Container, SpecificAttrs...>(container.end());
 }
-template <typename SpecificAttr, typename Container>
-inline SpecificAttr *getSpecificAttr(const Container& container) {
-  specific_attr_iterator<SpecificAttr, Container> i =
-      specific_attr_begin<SpecificAttr>(container);
-  if (i != specific_attr_end<SpecificAttr>(container))
+
+template <typename... SpecificAttrs, typename Container>
+inline bool hasSpecificAttr(const Container &container) {
+  return specific_attr_begin<SpecificAttrs...>(container) !=
+         specific_attr_end<SpecificAttrs...>(container);
+}
+
+template <typename... SpecificAttrs, typename Container>
+inline typename specific_attr_iterator_impl<Container,
+                                            SpecificAttrs...>::value_type
+getSpecificAttr(const Container &container) {
+  auto i = specific_attr_begin<SpecificAttrs...>(container);
+  if (i != specific_attr_end<SpecificAttrs...>(container))
     return *i;
   else
     return nullptr;
