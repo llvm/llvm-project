@@ -18,4 +18,7 @@
 void test() {
   using F = std::true_type;
   std::not_fn<F{}>(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  auto negated = std::not_fn<F{}>();
+  negated(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
