@@ -4836,8 +4836,6 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
     setStaticBasis(*maybeStaticBasis);
     return getResult();
   }
-  // setStaticBasis(foldCstValueToCstAttrBasis(
-  //     getMixedBasis(), getDynamicBasisMutable(), adaptor.getDynamicBasis()));
   // No indices linearizes to zero.
   if (getMultiIndex().empty())
     return IntegerAttr::get(getResult().getType(), 0);
