@@ -5,9 +5,9 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
 ; Test case for https://github.com/llvm/llvm-project/issues/106417.
-define void @skip_free_iv_truncate(i16 noundef %x, ptr %A) #0 {
+define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-LABEL: define void @skip_free_iv_truncate(
-; CHECK-SAME: i16 noundef [[X:%.*]], ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i16 [[X:%.*]], ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X_I32:%.*]] = sext i16 [[X]] to i32
 ; CHECK-NEXT:    [[X_I64:%.*]] = sext i16 [[X]] to i64

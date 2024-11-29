@@ -4,7 +4,7 @@
 ; PR79137: If the noalias.scope.decl is located inside the loop, we cannot
 ; assume that the accesses don't alias across iterations.
 
-define void @test_scope_in_loop(ptr noundef %arg, i64 %num) {
+define void @test_scope_in_loop(ptr %arg, i64 %num) {
 ; CHECK-LABEL: 'test_scope_in_loop'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
