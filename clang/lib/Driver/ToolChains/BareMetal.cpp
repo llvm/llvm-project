@@ -132,7 +132,7 @@ namespace clang {
 namespace driver {
 namespace toolchains {
 /// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
-bool isARMBareMetal(const llvm::Triple &Triple) {
+bool isARMEABIBareMetal(const llvm::Triple &Triple) {
   auto arch = Triple.getArch();
   if (arch != llvm::Triple::arm && arch != llvm::Triple::thumb &&
       arch != llvm::Triple::armeb && arch != llvm::Triple::thumbeb)
@@ -272,7 +272,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return isARMBareMetal(Triple) || isAArch64BareMetal(Triple) ||
+  return isARMEABIBareMetal(Triple) || isAArch64BareMetal(Triple) ||
          isRISCVBareMetal(Triple) || isPPCBareMetal(Triple);
 }
 
@@ -566,7 +566,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
   // arm*-*-*bsd).
-  if (isARMBareMetal(TC.getTriple()))
+  if (isARMEABIBareMetal(TC.getTriple()))
     CmdArgs.push_back("--target2=rel");
 
   CmdArgs.push_back("-o");

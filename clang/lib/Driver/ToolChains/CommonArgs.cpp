@@ -152,7 +152,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
     }
   }
 
-  if (toolchains::isARMBareMetal(Triple))
+  if (toolchains::isARMEABIBareMetal(Triple))
     return false;
 
   return true;
