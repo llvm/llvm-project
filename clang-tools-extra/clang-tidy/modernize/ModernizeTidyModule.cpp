@@ -16,6 +16,7 @@
 #include "DeprecatedIosBaseAliasesCheck.h"
 #include "LoopConvertCheck.h"
 #include "MacroToEnumCheck.h"
+#include "MakeFunctionToDirectCheck.h"
 #include "MakeSharedCheck.h"
 #include "MakeUniqueCheck.h"
 #include "MinMaxUseInitializerListCheck.h"
@@ -125,6 +126,8 @@ public:
     CheckFactories.registerCheck<UseUncaughtExceptionsCheck>(
         "modernize-use-uncaught-exceptions");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
+    CheckFactories.registerCheck<MakeFunctionToDirectCheck>(
+    "modernize-make-direct");
   }
 };
 

@@ -124,6 +124,12 @@ New checks
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
 
+- New :doc:`modernize-make-direct <clang-tidy/checks/modernize/make-direct>` check.
+
+  Converts std::make_* function calls to direct constructor calls using CTAD.
+  Transforms make_optional, make_unique, make_shared and make_pair into equivalent 
+  direct constructor calls using C++17's class template argument deduction.
+
 - New :doc:`bugprone-misleading-setter-of-reference
   <clang-tidy/checks/bugprone/misleading-setter-of-reference>` check.
 
