@@ -1717,7 +1717,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   if (CGM.getCodeGenOpts().ExtendLifetimes) {
     if (extendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
       EHStack.pushCleanup<FakeUse>(NormalFakeUse,
-                                   emission.getAllocatedAddress());
+                                   emission.getOriginalAllocatedAddress());
   }
 
   return emission;

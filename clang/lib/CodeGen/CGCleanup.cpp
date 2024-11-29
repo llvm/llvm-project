@@ -116,7 +116,11 @@ bool EHScopeStack::containsOnlyNoopCleanups(
     EHScopeStack::stable_iterator Old) const {
   for (EHScopeStack::iterator it = begin(); stabilize(it) != Old; it++) {
     EHCleanupScope *cleanup = dyn_cast<EHCleanupScope>(&*it);
-    if (!cleanup || !(cleanup->isLifetimeMarker() || cleanup->isFakeUse()))
+    // If this is anything other than a lifetime marker or fake use cleanup,
+    // then the scope stack does not contain only noop cleanups.
+    if (!cleanup)
+      return false;
+    if (!cleanup->isLifetimeMarker() && !cleanup->isFakeUse())
       return false;
   }
 
