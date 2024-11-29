@@ -760,7 +760,6 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; DEFAULT:       vector.scevcheck:
 ; DEFAULT-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
-; DEFAULT-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = add i32 1, [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 1
@@ -810,7 +809,6 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED:       vector.scevcheck:
 ; PRED-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
-; PRED-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; PRED-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; PRED-NEXT:    [[TMP3:%.*]] = add i32 1, [[TMP2]]
 ; PRED-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 1

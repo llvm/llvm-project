@@ -390,7 +390,6 @@ define void @zext_iv_increment(ptr %dst, i64 %N) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 1
