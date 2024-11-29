@@ -911,9 +911,11 @@ public:
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.  The involved values may be passed in VL if
   /// Insert is true.
-  InstructionCost getScalarizationOverhead(
-      VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const;
+  InstructionCost getScalarizationOverhead(VectorType *Ty,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
@@ -2582,10 +2584,11 @@ public:
     return Impl.isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx);
   }
 
-  InstructionCost
-  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
-                           bool Insert, bool Extract, TargetCostKind CostKind,
-                           ArrayRef<Value *> VL = {}) override {
+  InstructionCost getScalarizationOverhead(VectorType *Ty,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) override {
     return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                          CostKind, VL);
   }
