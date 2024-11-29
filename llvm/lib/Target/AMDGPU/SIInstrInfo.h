@@ -675,7 +675,6 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
-#if LLPC_BUILD_NPI
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -688,7 +687,6 @@ public:
     }
   }
 
-#endif /* LLPC_BUILD_NPI */
   static bool isEXP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::EXP;
   }
@@ -1356,8 +1354,8 @@ public:
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-
 #if LLPC_BUILD_NPI
+
   /// Check whether this is a bundle formed with v_load/store_idx
   /// surrounding a core v_mem/alu instruction, return that core
   /// instruction if true. In case it is just a v_load_idx bundled
@@ -1367,8 +1365,8 @@ public:
   /// v_load/store_idx that is the source/dest of its operand
   static const MachineInstr *getBundledIndexingInst(const MachineInstr &MI,
                                                     const MachineOperand &Op);
-
 #endif /* LLPC_BUILD_NPI */
+
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -1469,12 +1467,10 @@ public:
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF)
     const override;
-#if LLPC_BUILD_NPI
 
   const TargetRegisterClass *
   getRegClassForBlockOp(const TargetRegisterInfo *TRI,
                         const MachineFunction &MF) const;
-#endif /* LLPC_BUILD_NPI */
 
   void fixImplicitOperands(MachineInstr &MI) const;
 

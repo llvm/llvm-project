@@ -41,6 +41,7 @@
 ; CHECK-NEXT: .amdhsa_exception_fp_ieee_underflow 0
 ; CHECK-NEXT: .amdhsa_exception_fp_ieee_inexact 0
 ; CHECK-NEXT: .amdhsa_exception_int_div_zero 0
+; CHECK-NEXT: ; WGP_TAKEOVER 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_queue_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
@@ -95,6 +96,7 @@
 ; CHECK-NEXT: .amdhsa_exception_fp_ieee_underflow 0
 ; CHECK-NEXT: .amdhsa_exception_fp_ieee_inexact 0
 ; CHECK-NEXT: .amdhsa_exception_int_div_zero 0
+; CHECK-NEXT: ; WGP_TAKEOVER 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_queue_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0

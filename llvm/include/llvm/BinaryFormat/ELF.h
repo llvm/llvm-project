@@ -839,19 +839,15 @@ enum : unsigned {
 #if LLPC_BUILD_NPI
   EF_AMDGPU_MACH_AMDGCN_GFX1211         = 0x05a,
   EF_AMDGPU_MACH_AMDGCN_GFX12_1_GENERIC = 0x05b,
+#endif /* LLPC_BUILD_NPI */
   EF_AMDGPU_MACH_AMDGCN_GFX120E         = 0x0f3,
   EF_AMDGPU_MACH_AMDGCN_GFX120F         = 0x0f4,
   EF_AMDGPU_MACH_AMDGCN_GFX115F         = 0x0f7,
-#endif /* LLPC_BUILD_NPI */
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-#if LLPC_BUILD_NPI
   EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX115F,
-#else /* LLPC_BUILD_NPI */
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC,
-#endif /* LLPC_BUILD_NPI */
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.

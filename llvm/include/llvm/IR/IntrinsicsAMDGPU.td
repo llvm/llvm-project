@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLPC_BUILD_NPI
 def flat_ptr_ty : LLVMQualPointerType<0>;
-#endif /* LLPC_BUILD_NPI */
 def global_ptr_ty : LLVMQualPointerType<1>;
 def local_ptr_ty : LLVMQualPointerType<3>;
 
@@ -2528,7 +2526,6 @@ def int_amdgcn_mulhi_u24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
-#ifdef LLPC_BUILD_NPI
 let Properties = [SDNPMemOperand] in {
 
   // T @llvm.amdgcn.s.mov.from.global(i16 immarg sgpr, i32 m0)
@@ -2563,7 +2560,6 @@ let Properties = [SDNPMemOperand] in {
 
 } // End Properties = [SDNPMemOperand]
 
-#endif /* LLPC_BUILD_NPI */
 // llvm.amdgcn.ds.gws.init(i32 bar_val, i32 resource_id)
 //
 // bar_val is the total number of waves that will wait on this
@@ -2962,11 +2958,7 @@ def int_amdgcn_ds_sub_gs_reg_rtn :
             [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree],
             "", [SDNPMemOperand]>;
 
-#ifdef LLPC_BUILD_NPI
 class IntDSBVHStackRtn :
-#else /* LLPC_BUILD_NPI */
-def int_amdgcn_ds_bvh_stack_rtn :
-#endif /* LLPC_BUILD_NPI */
   Intrinsic<
     [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
     [
@@ -2978,10 +2970,8 @@ def int_amdgcn_ds_bvh_stack_rtn :
     [ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
-#ifdef LLPC_BUILD_NPI
 def int_amdgcn_ds_bvh_stack_rtn : IntDSBVHStackRtn;
 
-#endif /* LLPC_BUILD_NPI */
 def int_amdgcn_s_wait_event_export_ready :
   ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]
@@ -3057,7 +3047,6 @@ def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_anyint_ty
 // GFX12 Intrinsics
 //===----------------------------------------------------------------------===//
 
-#ifdef LLPC_BUILD_NPI
 def int_amdgcn_ds_bvh_stack_push4_pop1_rtn : IntDSBVHStackRtn;
 
 def int_amdgcn_ds_bvh_stack_push8_pop1_rtn :
@@ -3106,7 +3095,6 @@ def int_amdgcn_image_bvh8_intersect_ray :
              llvm_v3f32_ty, llvm_i32_ty, llvm_v4i32_ty],
             [IntrReadMem, IntrWillReturn]>;
 
-#endif /* LLPC_BUILD_NPI */
 // llvm.amdgcn.permlane16.var <old> <src0> <src1> <fi> <bound_control>
 def int_amdgcn_permlane16_var : ClangBuiltin<"__builtin_amdgcn_permlane16_var">,
   Intrinsic<[llvm_i32_ty],

@@ -330,18 +330,14 @@ private:
   void SelectFMAD_FMA(SDNode *N);
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
-#if LLPC_BUILD_NPI
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
   void SelectPOPSExitingWaveID(SDNode *N);
-#else /* LLPC_BUILD_NPI */
-  void SelectDSBvhStackIntrinsic(SDNode *N);
-#endif /* LLPC_BUILD_NPI */
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
 #if LLPC_BUILD_NPI
   void SelectCvtTensor(SDNode *N, unsigned IntrID);
-  void SelectMoveGlobalSReg(SDNode *N);
 #endif /* LLPC_BUILD_NPI */
+  void SelectMoveGlobalSReg(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
   void SelectINTRINSIC_WO_CHAIN(SDNode *N);
   void SelectINTRINSIC_VOID(SDNode *N);

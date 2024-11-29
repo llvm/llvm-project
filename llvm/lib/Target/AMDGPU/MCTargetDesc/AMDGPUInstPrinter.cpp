@@ -87,6 +87,7 @@ void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
     O << "lit64(" << formatHex(Imm) << ')';
 }
 
+#endif /* LLPC_BUILD_NPI */
 void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
@@ -106,7 +107,6 @@ void AMDGPUInstPrinter::printGlobalSReg64(const MCInst *MI, unsigned OpNo,
   O << getRegisterName(RegCl.getRegister(Idx / 2));
 }
 
-#endif /* LLPC_BUILD_NPI */
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O, StringRef BitName) {
   if (MI->getOperand(OpNo).getImm()) {

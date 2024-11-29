@@ -671,17 +671,9 @@ def : GCNPat<
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
-#ifdef LLPC_BUILD_NPI
 // Pseudos for the llvm.amdgcn.cs.chain intrinsic.
 multiclass SI_CS_CHAIN_TC<
-#else /* LLPC_BUILD_NPI */
-// Pseudo for the llvm.amdgcn.cs.chain intrinsic.
-// This is essentially a tail call, but it also takes a mask to put in EXEC
-// right before jumping to the callee.
-class SI_CS_CHAIN_TC<
-#endif /* LLPC_BUILD_NPI */
     ValueType execvt, Predicate wavesizepred,
-#ifdef LLPC_BUILD_NPI
     RegisterOperand execrc = getSOPSrcForVT<execvt>.ret> {
   let FixedSize = 0,
       isCall = 1,
@@ -703,45 +695,18 @@ class SI_CS_CHAIN_TC<
       (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
            SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
   } // End FixedSize = 0 etc
-#else /* LLPC_BUILD_NPI */
-    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
-    : SPseudoInstSI <(outs),
-      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
-  let FixedSize = 0;
-  let isCall = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let isReturn = 1;
-  let UseNamedOperandTable = 1;
-  let SchedRW = [WriteBranch];
-  let isConvergent = 1;
-
-  let WaveSizePredicate = wavesizepred;
-#endif /* LLPC_BUILD_NPI */
 }
 
-#ifdef LLPC_BUILD_NPI
 defm SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
 defm SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
-#else /* LLPC_BUILD_NPI */
-def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
-def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
-#endif /* LLPC_BUILD_NPI */
 
 // Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
 multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
-#ifdef LLPC_BUILD_NPI
   def : GCNPat<
     (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
     (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
   >;
-#else /* LLPC_BUILD_NPI */
-def : GCNPat<
-  (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
-  (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
->;
-#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass si_cs_chain_tc_patterns<
@@ -756,7 +721,6 @@ multiclass si_cs_chain_tc_patterns<
 defm : si_cs_chain_tc_patterns<i32>;
 defm : si_cs_chain_tc_patterns<i64>;
 
-#ifdef LLPC_BUILD_NPI
 // Match dynamic VGPR case. This is always indirect since we choose the callee
 // dynamically based on the result of the VGPR reallocation, so make sure to
 // drop the callee info if there is any.
@@ -777,7 +741,6 @@ multiclass si_cs_chain_tc_dvgpr_patterns<
 
 defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
 
-#endif /* LLPC_BUILD_NPI */
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
   [(callseq_start timm:$amt0, timm:$amt1)],
@@ -1036,25 +999,16 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
-#ifdef LLPC_BUILD_NPI
 multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
                           bit UsesTmp = 0, bit HasMask = 0> {
-#else /* LLPC_BUILD_NPI */
-multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
-#endif /* LLPC_BUILD_NPI */
   let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
-#ifdef LLPC_BUILD_NPI
       !con(
         (ins vgpr_class:$vdata, i32imm:$vaddr,
              SReg_32:$soffset, i32imm:$offset),
         !if(HasMask, (ins SReg_32:$mask), (ins)))> {
-#else /* LLPC_BUILD_NPI */
-      (ins vgpr_class:$vdata, i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset)> {
-#endif /* LLPC_BUILD_NPI */
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -1065,15 +1019,10 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
 
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
-#ifdef LLPC_BUILD_NPI
       !con(
         (ins i32imm:$vaddr,
              SReg_32:$soffset, i32imm:$offset),
         !if(HasMask, (ins SReg_32:$mask), (ins)))> {
-#else /* LLPC_BUILD_NPI */
-      (ins i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset)> {
-#endif /* LLPC_BUILD_NPI */
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -1103,14 +1052,12 @@ defm SI_SPILL_V576 : SI_SPILL_VGPR <VReg_576>;
 #endif /* LLPC_BUILD_NPI */
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
 
-#ifdef LLPC_BUILD_NPI
 let Defs = [M0] in {
   // Spills a block of 32 VGPRs. M0 will contain a mask describing which
   // registers in the block need to be transferred.
   defm SI_BLOCK_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024, 0, 1>;
 }
 
-#endif /* LLPC_BUILD_NPI */
 defm SI_SPILL_A32  : SI_SPILL_VGPR <AGPR_32, 1>;
 defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64, 1>;
 defm SI_SPILL_A96  : SI_SPILL_VGPR <AReg_96, 1>;
@@ -4225,8 +4172,8 @@ def G_AMDGPU_BUFFER_LOAD_FORMAT_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
-
 #ifdef LLPC_BUILD_NPI
+
 class BufferDiscardInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$rsrc, type1:$vindex, type1:$voffset,
@@ -4239,8 +4186,8 @@ class BufferDiscardInstruction : AMDGPUGenericInstruction {
 def G_AMDGPU_BUFFER_DISCARD_B32   : BufferDiscardInstruction;
 def G_AMDGPU_BUFFER_DISCARD_B128  : BufferDiscardInstruction;
 def G_AMDGPU_BUFFER_DISCARD_B1024 : BufferDiscardInstruction;
-
 #endif /* LLPC_BUILD_NPI */
+
 class BufferStoreGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
@@ -4465,13 +4412,8 @@ def G_AMDGPU_INTRIN_IMAGE_STORE_D16 : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
-#ifdef LLPC_BUILD_NPI
 def G_AMDGPU_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
-#else /* LLPC_BUILD_NPI */
-def G_AMDGPU_INTRIN_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
-#endif /* LLPC_BUILD_NPI */
   let OutOperandList = (outs type0:$dst);
-#ifdef LLPC_BUILD_NPI
   let InOperandList = (ins unknown:$opcode, variable_ops);
   let hasSideEffects = 0;
   let mayLoad = 1;
@@ -4489,9 +4431,6 @@ def G_AMDGPU_BVH_DUAL_INTERSECT_RAY : AMDGPUGenericInstruction {
 def G_AMDGPU_BVH8_INTERSECT_RAY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
   let InOperandList = (ins unknown:$opcode, variable_ops);
-#else /* LLPC_BUILD_NPI */
-  let InOperandList = (ins unknown:$intrin, variable_ops);
-#endif /* LLPC_BUILD_NPI */
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;

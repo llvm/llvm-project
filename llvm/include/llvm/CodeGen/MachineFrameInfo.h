@@ -53,11 +53,9 @@ class CalleeSavedInfo {
   /// Flag indicating whether the register is spilled to stack or another
   /// register.
   bool SpilledToReg = false;
-#if LLPC_BUILD_NPI
   /// Flag indicating whether this CSI has been handled by the target and can be
   /// skipped by the generic code in the prolog/epilog inserter.
   bool IsHandledByTarget = false;
-#endif /* LLPC_BUILD_NPI */
 
 public:
   explicit CalleeSavedInfo(unsigned R, int FI = 0) : Reg(R), FrameIdx(FI) {}
@@ -66,9 +64,7 @@ public:
   Register getReg()                        const { return Reg; }
   int getFrameIdx()                        const { return FrameIdx; }
   unsigned getDstReg()                     const { return DstReg; }
-#if LLPC_BUILD_NPI
   void setReg(Register R) { Reg = R; }
-#endif /* LLPC_BUILD_NPI */
   void setFrameIdx(int FI) {
     FrameIdx = FI;
     SpilledToReg = false;
@@ -80,11 +76,9 @@ public:
   bool isRestored()                        const { return Restored; }
   void setRestored(bool R)                       { Restored = R; }
   bool isSpilledToReg()                    const { return SpilledToReg; }
-#if LLPC_BUILD_NPI
 
   bool isHandledByTarget() const { return IsHandledByTarget; }
   void setHandledByTarget() { IsHandledByTarget = true; }
-#endif /* LLPC_BUILD_NPI */
 };
 
 /// The MachineFrameInfo class represents an abstract stack frame until

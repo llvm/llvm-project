@@ -1085,14 +1085,12 @@ def DepCtr : CustomOperand<i32>;
 
 def SDelayALU : CustomOperand<i32>;
 
-#ifdef LLPC_BUILD_NPI
 // Global register references are represented as immediate operands but printed
 // and parsed like registers.
 def GlobalSReg32 : CustomOperand<i16>;
 
 def GlobalSReg64 : CustomOperand<i16>;
 
-#endif /* LLPC_BUILD_NPI */
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
 

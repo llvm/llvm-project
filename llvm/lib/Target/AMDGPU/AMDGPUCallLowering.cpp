@@ -946,14 +946,9 @@ getAssignFnsForCC(CallingConv::ID CC, const SITargetLowering &TLI) {
 }
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
-#if LLPC_BUILD_NPI
                               bool IsTailCall, bool IsWave32,
                               CallingConv::ID CC,
                               bool IsDynamicVGPRChainCall = false) {
-#else /* LLPC_BUILD_NPI */
-                              bool IsTailCall, bool isWave32,
-                              CallingConv::ID CC) {
-#endif /* LLPC_BUILD_NPI */
   // For calls to amdgpu_cs_chain functions, the address is known to be uniform.
   assert((AMDGPU::isChainCC(CC) || !IsIndirect || !IsTailCall) &&
          "Indirect calls can't be tail calls, "
@@ -961,17 +956,12 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
   if (!IsTailCall)
     return AMDGPU::G_SI_CALL;
 
-#if LLPC_BUILD_NPI
   if (AMDGPU::isChainCC(CC)) {
     if (IsDynamicVGPRChainCall)
       return IsWave32 ? AMDGPU::SI_CS_CHAIN_TC_W32_DVGPR
                       : AMDGPU::SI_CS_CHAIN_TC_W64_DVGPR;
     return IsWave32 ? AMDGPU::SI_CS_CHAIN_TC_W32 : AMDGPU::SI_CS_CHAIN_TC_W64;
   }
-#else /* LLPC_BUILD_NPI */
-  if (AMDGPU::isChainCC(CC))
-    return isWave32 ? AMDGPU::SI_CS_CHAIN_TC_W32 : AMDGPU::SI_CS_CHAIN_TC_W64;
-#endif /* LLPC_BUILD_NPI */
 
   return CC == CallingConv::AMDGPU_Gfx ? AMDGPU::SI_TCRETURN_GFX :
                                          AMDGPU::SI_TCRETURN;
@@ -980,12 +970,8 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
 // Add operands to call instruction to track the callee.
 static bool addCallTargetOperands(MachineInstrBuilder &CallInst,
                                   MachineIRBuilder &MIRBuilder,
-#if LLPC_BUILD_NPI
                                   AMDGPUCallLowering::CallLoweringInfo &Info,
                                   bool IsDynamicVGPRChainCall = false) {
-#else /* LLPC_BUILD_NPI */
-                                  AMDGPUCallLowering::CallLoweringInfo &Info) {
-#endif /* LLPC_BUILD_NPI */
   if (Info.Callee.isReg()) {
     CallInst.addReg(Info.Callee.getReg());
     CallInst.addImm(0);
@@ -996,16 +982,12 @@ static bool addCallTargetOperands(MachineInstrBuilder &CallInst,
     auto Ptr = MIRBuilder.buildGlobalValue(
       LLT::pointer(GV->getAddressSpace(), 64), GV);
     CallInst.addReg(Ptr.getReg(0));
-#if LLPC_BUILD_NPI
 
     if (IsDynamicVGPRChainCall)
       // DynamicVGPR chain calls are always indirect.
       CallInst.addImm(0);
     else
       CallInst.add(Info.Callee);
-#else /* LLPC_BUILD_NPI */
-    CallInst.add(Info.Callee);
-#endif /* LLPC_BUILD_NPI */
   } else
     return false;
 
@@ -1199,7 +1181,6 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
   }
 }
 
-#if LLPC_BUILD_NPI
 namespace {
 // Chain calls have special arguments that we need to handle. These have the
 // same index as they do in the llvm.amdgcn.cs.chain intrinsic.
@@ -1212,7 +1193,6 @@ enum ChainCallArgIdx {
 };
 } // anonymous namespace
 
-#endif /* LLPC_BUILD_NPI */
 bool AMDGPUCallLowering::lowerTailCall(
     MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
     SmallVectorImpl<ArgInfo> &OutArgs) const {
@@ -1221,10 +1201,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-#if LLPC_BUILD_NPI
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-#endif /* LLPC_BUILD_NPI */
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
 
   // True when we're tail calling, but without -tailcallopt.
@@ -1240,7 +1218,6 @@ bool AMDGPUCallLowering::lowerTailCall(
   if (!IsSibCall)
     CallSeqStart = MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKUP);
 
-#if LLPC_BUILD_NPI
   bool IsChainCall = AMDGPU::isChainCC(Info.CallConv);
   bool IsDynamicVGPRChainCall = false;
 
@@ -1278,23 +1255,14 @@ bool AMDGPUCallLowering::lowerTailCall(
 
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), /*IsTailCall*/ true,
                                ST.isWave32(), CalleeCC, IsDynamicVGPRChainCall);
-#else /* LLPC_BUILD_NPI */
-  unsigned Opc =
-      getCallOpcode(MF, Info.Callee.isReg(), true, ST.isWave32(), CalleeCC);
-#endif /* LLPC_BUILD_NPI */
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
-#if LLPC_BUILD_NPI
   if (!addCallTargetOperands(MIB, MIRBuilder, Info, IsDynamicVGPRChainCall))
-#else /* LLPC_BUILD_NPI */
-  if (!addCallTargetOperands(MIB, MIRBuilder, Info))
-#endif /* LLPC_BUILD_NPI */
     return false;
 
   // Byte offset for the tail call. When we are sibcalling, this will always
   // be 0.
   MIB.addImm(0);
 
-#if LLPC_BUILD_NPI
   // If this is a chain call, we need to pass in the EXEC mask as well as any
   // other special args.
   if (IsChainCall) {
@@ -1311,41 +1279,17 @@ bool AMDGPUCallLowering::lowerTailCall(
     };
 
     ArgInfo ExecArg = Info.OrigArgs[ChainCallArgIdx::Exec];
-#else /* LLPC_BUILD_NPI */
-  // If this is a chain call, we need to pass in the EXEC mask.
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  if (AMDGPU::isChainCC(Info.CallConv)) {
-    ArgInfo ExecArg = Info.OrigArgs[1];
-#endif /* LLPC_BUILD_NPI */
     assert(ExecArg.Regs.size() == 1 && "Too many regs for EXEC");
 
-#if LLPC_BUILD_NPI
     if (!ExecArg.Ty->isIntegerTy(ST.getWavefrontSize())) {
       LLVM_DEBUG(dbgs() << "Bad type for fallback EXEC");
-#else /* LLPC_BUILD_NPI */
-    if (!ExecArg.Ty->isIntegerTy(ST.getWavefrontSize()))
-#endif /* LLPC_BUILD_NPI */
       return false;
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-
-    if (const auto *CI = dyn_cast<ConstantInt>(ExecArg.OrigValue)) {
-      MIB.addImm(CI->getSExtValue());
-    } else {
-      MIB.addReg(ExecArg.Regs[0]);
-      unsigned Idx = MIB->getNumOperands() - 1;
-      MIB->getOperand(Idx).setReg(constrainOperandRegClass(
-          MF, *TRI, MRI, *ST.getInstrInfo(), *ST.getRegBankInfo(), *MIB,
-          MIB->getDesc(), MIB->getOperand(Idx), Idx));
-#endif /* LLPC_BUILD_NPI */
     }
-#if LLPC_BUILD_NPI
 
     AddRegOrImm(ExecArg);
     if (IsDynamicVGPRChainCall)
       std::for_each(Info.OrigArgs.begin() + ChainCallArgIdx::NumVGPRs,
                     Info.OrigArgs.end(), AddRegOrImm);
-#endif /* LLPC_BUILD_NPI */
   }
 
   // Tell the call which registers are clobbered.
@@ -1447,15 +1391,9 @@ bool AMDGPUCallLowering::lowerTailCall(
   // FIXME: We should define regbankselectable call instructions to handle
   // divergent call targets.
   if (MIB->getOperand(0).isReg()) {
-#if LLPC_BUILD_NPI
     MIB->getOperand(0).setReg(
         constrainOperandRegClass(MF, *TRI, MRI, *TII, *ST.getRegBankInfo(),
                                  *MIB, MIB->getDesc(), MIB->getOperand(0), 0));
-#else /* LLPC_BUILD_NPI */
-    MIB->getOperand(0).setReg(constrainOperandRegClass(
-        MF, *TRI, MRI, *ST.getInstrInfo(), *ST.getRegBankInfo(), *MIB,
-        MIB->getDesc(), MIB->getOperand(0), 0));
-#endif /* LLPC_BUILD_NPI */
   }
 
   MF.getFrameInfo().setHasTailCall();
@@ -1469,14 +1407,6 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
   ArgInfo Callee = Info.OrigArgs[0];
   ArgInfo SGPRArgs = Info.OrigArgs[2];
   ArgInfo VGPRArgs = Info.OrigArgs[3];
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  ArgInfo Flags = Info.OrigArgs[4];
-
-  assert(cast<ConstantInt>(Flags.OrigValue)->isZero() &&
-         "Non-zero flags aren't supported yet.");
-  assert(Info.OrigArgs.size() == 5 && "Additional args aren't supported yet.");
-#endif /* LLPC_BUILD_NPI */
 
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();

@@ -612,9 +612,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
-#if LLPC_BUILD_NPI
   ID_SCHED_MODE = 26,
-#endif /* LLPC_BUILD_NPI */
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
   ID_SHADER_CYCLES = 29,
   ID_SHADER_CYCLES_HI = 30,
@@ -657,9 +655,7 @@ enum Id { // HwRegCode, (6) [5:0]
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
-#if LLPC_BUILD_NPI
   OFFSET_ME_ID = 8,
-#endif /* LLPC_BUILD_NPI */
 };
 
 enum ModeRegisterMasks : uint32_t {

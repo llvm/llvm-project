@@ -39,12 +39,8 @@ class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
   enum AMDGPUPSVKind : unsigned {
     PSVImage = PseudoSourceValue::TargetCustom,
-#if LLPC_BUILD_NPI
     GWSResource,
     GlobalRegister,
-#else /* LLPC_BUILD_NPI */
-    GWSResource
-#endif /* LLPC_BUILD_NPI */
   };
 
 protected:
@@ -91,7 +87,6 @@ public:
   }
 };
 
-#if LLPC_BUILD_NPI
 class AMDGPUGlobalRegisterPseudoSourceValue final
     : public AMDGPUPseudoSourceValue {
 public:
@@ -111,7 +106,6 @@ public:
   void printCustom(raw_ostream &OS) const override { OS << "GlobalRegister"; }
 };
 
-#endif /* LLPC_BUILD_NPI */
 namespace yaml {
 
 struct SIArgument {
@@ -413,11 +407,14 @@ public:
   SGPRSaveKind getKind() const { return Kind; }
 };
 
-#if LLPC_BUILD_NPI
 constexpr unsigned FirstVGPRBlock = AMDGPU::
     VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7_VGPR8_VGPR9_VGPR10_VGPR11_VGPR12_VGPR13_VGPR14_VGPR15_VGPR16_VGPR17_VGPR18_VGPR19_VGPR20_VGPR21_VGPR22_VGPR23_VGPR24_VGPR25_VGPR26_VGPR27_VGPR28_VGPR29_VGPR30_VGPR31;
 constexpr unsigned LastVGPRBlock = AMDGPU::
+#if LLPC_BUILD_NPI
     VGPR992_VGPR993_VGPR994_VGPR995_VGPR996_VGPR997_VGPR998_VGPR999_VGPR1000_VGPR1001_VGPR1002_VGPR1003_VGPR1004_VGPR1005_VGPR1006_VGPR1007_VGPR1008_VGPR1009_VGPR1010_VGPR1011_VGPR1012_VGPR1013_VGPR1014_VGPR1015_VGPR1016_VGPR1017_VGPR1018_VGPR1019_VGPR1020_VGPR1021_VGPR1022_VGPR1023;
+#else /* LLPC_BUILD_NPI */
+    VGPR224_VGPR225_VGPR226_VGPR227_VGPR228_VGPR229_VGPR230_VGPR231_VGPR232_VGPR233_VGPR234_VGPR235_VGPR236_VGPR237_VGPR238_VGPR239_VGPR240_VGPR241_VGPR242_VGPR243_VGPR244_VGPR245_VGPR246_VGPR247_VGPR248_VGPR249_VGPR250_VGPR251_VGPR252_VGPR253_VGPR254_VGPR255;
+#endif /* LLPC_BUILD_NPI */
 
 struct VGPRBlock2IndexFunctor {
   using argument_type = Register;
@@ -428,7 +425,6 @@ struct VGPRBlock2IndexFunctor {
   }
 };
 
-#endif /* LLPC_BUILD_NPI */
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
@@ -489,9 +485,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
-#if LLPC_BUILD_NPI
   const AMDGPUGlobalRegisterPseudoSourceValue GlobalRegisterPSV;
-#endif /* LLPC_BUILD_NPI */
 
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
@@ -508,12 +502,10 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
-#if LLPC_BUILD_NPI
   // The size of the scratch space reserved for the CWSR trap handler to spill
   // some of the dynamic VGPRs.
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
-#endif /* LLPC_BUILD_NPI */
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
@@ -638,15 +630,20 @@ private:
   std::optional<int> ScavengeFI;
 
 #if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+  LdsSpill LdsSpillInfo;
+
+#endif /* LLPC_BUILD_NPI */
   // Map each VGPR CSR to the mask needed to save and restore it using block
   // load/store instructions. Only used if the subtarget feature for VGPR block
   // load/store is enabled.
   // This is only useful during prolog/epilog insertion, so it doesn't need to
   // be serialized.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
+#if LLPC_BUILD_NPI
 
-#endif /* LLPC_BUILD_NPI */
   LdsSpill LdsSpillInfo;
+#endif /* LLPC_BUILD_NPI */
 
 private:
   Register VGPRForAGPRCopy;
@@ -668,7 +665,6 @@ public:
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
-#if LLPC_BUILD_NPI
   void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
     MaskForVGPRBlockOps.grow(RegisterBlock);
     MaskForVGPRBlockOps[RegisterBlock] = Mask;
@@ -678,7 +674,6 @@ public:
     return MaskForVGPRBlockOps[RegisterBlock];
   }
 
-#endif /* LLPC_BUILD_NPI */
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
   SIMachineFunctionInfo(const Function &F, const GCNSubtarget *STI);
@@ -719,12 +714,10 @@ public:
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
 
-#if LLPC_BUILD_NPI
   bool isWWMReservedRegister(Register Reg) const {
     return WWMReservedRegs.contains(Reg);
   }
 
-#endif /* LLPC_BUILD_NPI */
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
     return PrologEpilogSGPRSpills;
@@ -879,7 +872,6 @@ public:
     BytesInStackArgArea = Bytes;
   }
 
-#if LLPC_BUILD_NPI
   // This is only used if we need to save any dynamic VGPRs in scratch.
   unsigned getScratchReservedForDynamicVGPRs() const {
     return ScratchReservedForDynamicVGPRs;
@@ -889,7 +881,6 @@ public:
     ScratchReservedForDynamicVGPRs = Size;
   }
 
-#endif /* LLPC_BUILD_NPI */
   // Add user SGPRs.
   Register addPrivateSegmentBuffer(const SIRegisterInfo &TRI);
   Register addDispatchPtr(const SIRegisterInfo &TRI);
@@ -1206,13 +1197,11 @@ public:
   const AMDGPUGWSResourcePseudoSourceValue *
   getGWSPSV(const AMDGPUTargetMachine &TM) {
     return &GWSResourcePSV;
-#if LLPC_BUILD_NPI
   }
 
   const AMDGPUGlobalRegisterPseudoSourceValue *
   getGlobalRegisterPSV(const AMDGPUTargetMachine &TM) {
     return &GlobalRegisterPSV;
-#endif /* LLPC_BUILD_NPI */
   }
 
   unsigned getOccupancy() const {

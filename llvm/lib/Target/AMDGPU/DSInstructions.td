@@ -282,22 +282,18 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
-#ifdef LLPC_BUILD_NPI
 class DS_BVH_STACK<string opName,
                    RegisterClass rc,
                    RegisterClass src>
-#else /* LLPC_BUILD_NPI */
-class DS_BVH_STACK<string opName>
-#endif /* LLPC_BUILD_NPI */
 : DS_Pseudo<opName,
 #ifdef LLPC_BUILD_NPI
   (outs getLdStRegisterOperand<rc>.ret:$vdst, VGPRSrc_32:$addr),
   (ins VGPRSrc_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
-   src:$data1, Offset:$offset),
 #else /* LLPC_BUILD_NPI */
-  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst, VGPR_32:$addr),
-  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0, VReg_128:$data1, Offset:$offset),
+  (outs getLdStRegisterOperand<rc>.ret:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
 #endif /* LLPC_BUILD_NPI */
+   src:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let DisableEncoding = "$addr_in";
@@ -795,12 +791,8 @@ def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 let SubtargetPredicate = isGFX11Plus in {
 
 let OtherPredicates = [HasImageInsts] in
-#ifdef LLPC_BUILD_NPI
 def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
                                         VGPR_32, VReg_128> ;
-#else /* LLPC_BUILD_NPI */
-def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
-#endif /* LLPC_BUILD_NPI */
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -810,7 +802,6 @@ def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 
 let SubtargetPredicate = isGFX12Plus in {
 
-#ifdef LLPC_BUILD_NPI
 let OtherPredicates = [HasImageInsts] in {
 def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop1_rtn_b32", VGPR_32, VReg_256>;
@@ -818,7 +809,6 @@ def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
 } // End OtherPredicates = [HasImageInsts].
 
-#endif /* LLPC_BUILD_NPI */
 defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
 defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
@@ -1451,17 +1441,6 @@ defm DS_LOAD_TR4_B64      : DS_Real_gfx12_gfx13<0x0fa>;
 defm DS_LOAD_TR6_B96      : DS_Real_gfx12_gfx13<0x0fb>;
 defm DS_LOAD_TR16_B128    : DS_Real_gfx12_gfx13<0x0fc>;
 defm DS_LOAD_TR8_B64      : DS_Real_gfx12_gfx13<0x0fd>;
-
-defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
-  "ds_bvh_stack_push4_pop1_rtn_b32">;
-defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
-defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
-
-defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
-defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
-
-defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;
-defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12_gfx13<0x075>;
 #else /* LLPC_BUILD_NPI */
 defm DS_MIN_F32           : DS_Real_gfx12<0x012, "ds_min_num_f32">;
 defm DS_MAX_F32           : DS_Real_gfx12<0x013, "ds_max_num_f32">;
@@ -1481,6 +1460,23 @@ defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 #endif /* LLPC_BUILD_NPI */
 
+defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
+#ifdef LLPC_BUILD_NPI
+  "ds_bvh_stack_push4_pop1_rtn_b32">;
+#else /* LLPC_BUILD_NPI */
+  "ds_bvh_stack_push4_pop1_rtn_b32", true>;
+#endif /* LLPC_BUILD_NPI */
+defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
+defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
+
+#ifdef LLPC_BUILD_NPI
+defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
+defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
+
+defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12_gfx13<0x075>;
+
+#endif /* LLPC_BUILD_NPI */
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">;

@@ -198,10 +198,8 @@ protected:
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
-#if LLPC_BUILD_NPI
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
-#endif /* LLPC_BUILD_NPI */
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -258,8 +256,8 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
-#if LLPC_BUILD_NPI
   bool HasSafeSmemPrefetch = false;
+#if LLPC_BUILD_NPI
   bool HasSafeCUPrefetch = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasVcmpxExecWARHazard = false;
@@ -298,8 +296,8 @@ protected:
 #endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
-#if LLPC_BUILD_NPI
   bool UseBlockVGPROpsForCSR = false;
+#if LLPC_BUILD_NPI
   bool HasGloballyAddressableScratch = false;
 #endif /* LLPC_BUILD_NPI */
 
@@ -1057,8 +1055,10 @@ public:
 #if LLPC_BUILD_NPI
   bool hasVectorPrefetch() const { return GFX1210Insts; }
 
+#endif /* LLPC_BUILD_NPI */
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
+#if LLPC_BUILD_NPI
   bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
 
 #endif /* LLPC_BUILD_NPI */
@@ -1407,9 +1407,9 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
-#if LLPC_BUILD_NPI
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
+#if LLPC_BUILD_NPI
   bool hasGloballyAddressableScratch() const {
     return HasGloballyAddressableScratch;
   }
@@ -1531,12 +1531,10 @@ public:
     return HasMinimum3Maximum3PKF16;
   }
 
-#if LLPC_BUILD_NPI
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
 
-#endif /* LLPC_BUILD_NPI */
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
@@ -1916,9 +1914,9 @@ public:
     // to the same register.
     return false;
   }
-#if LLPC_BUILD_NPI
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+#if LLPC_BUILD_NPI
 
   unsigned getBarrierMemberCountShift() const {
     return getGeneration() >= GFX13 ? 12 : 16;

@@ -2950,7 +2950,6 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
 
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
-#if LLPC_BUILD_NPI
 void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
   unsigned Opc;
   switch (IntrID) {
@@ -2965,10 +2964,6 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
     Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP2_RTN_B64;
     break;
   }
-#else /* LLPC_BUILD_NPI */
-void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N) {
-  unsigned Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
-#endif /* LLPC_BUILD_NPI */
   SDValue Ops[] = {N->getOperand(2), N->getOperand(3), N->getOperand(4),
                    N->getOperand(5), N->getOperand(0)};
 
@@ -3553,14 +3548,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
     return;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     SelectDSBvhStackIntrinsic(N, IntrID);
-#else /* LLPC_BUILD_NPI */
-    SelectDSBvhStackIntrinsic(N);
-#endif /* LLPC_BUILD_NPI */
     return;
   case Intrinsic::amdgcn_init_whole_wave:
     CurDAG->getMachineFunction()

@@ -18,9 +18,7 @@
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#if LLPC_BUILD_NPI
 #include "SIMachineFunctionInfo.h"
-#endif /* LLPC_BUILD_NPI */
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
@@ -200,7 +198,6 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
   return AsmPrinter::lowerConstant(CV);
 }
 
-#if LLPC_BUILD_NPI
 static void emitVGPRBlockComment(const MachineInstr *MI, MCStreamer &OS) {
   // The instruction will only transfer a subset of the registers in the block,
   // based on the mask that is stored in m0. We could search for the instruction
@@ -231,7 +228,6 @@ static void emitVGPRBlockComment(const MachineInstr *MI, MCStreamer &OS) {
     OS.emitRawComment(" transferring at most " + TransferredRegs);
 }
 
-#endif /* LLPC_BUILD_NPI */
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -318,8 +314,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       if (isVerbose())
         OutStreamer->emitRawComment(" meta instruction");
       return;
-    }
 #if LLPC_BUILD_NPI
+    }
 
     if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
       unsigned V = MI->getOperand(0).getImm();
@@ -338,12 +334,12 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
                               " vsrc1_msb=" + Twine((V >> 10) & 3) +
                               " vsrc2_msb=" + Twine((V >> 12) & 3) +
                               " vdst_msb=" + Twine((V >> 14) & 3));
+#endif /* LLPC_BUILD_NPI */
     }
 
     if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
       if (isVerbose())
         emitVGPRBlockComment(MI, *OutStreamer);
-#endif /* LLPC_BUILD_NPI */
 
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);

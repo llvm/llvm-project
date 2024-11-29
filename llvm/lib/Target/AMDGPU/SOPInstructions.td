@@ -375,7 +375,6 @@ def S_MOVRELD_B32 : SOP1_32_movreld <"s_movreld_b32">;
 def S_MOVRELD_B64 : SOP1_64_movreld <"s_movreld_b64">;
 } // End Uses = [M0]
 
-#ifdef LLPC_BUILD_NPI
 // Move from/to global registers.
 //
 // Global register operands are represented as constant operands in Machine IR
@@ -416,7 +415,6 @@ def S_SWAP_TO_GLOBAL_B32 : SOP1_Pseudo <"s_swap_to_global_b32",
 }
 } // End SubtargetPredicate = isGFX12Plus, maybeAtomic = 1, Uses = [M0]
 
-#endif /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in {
 def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 } // End SubtargetPredicate = isGFX6GFX7GFX8GFX9
@@ -483,14 +481,12 @@ let SubtargetPredicate = isGFX11Plus in {
   }
 } // End SubtargetPredicate = isGFX11Plus
 
-#ifdef LLPC_BUILD_NPI
 let SubtargetPredicate = isGFX12Plus in {
   let hasSideEffects = 1, Defs = [SCC] in {
     def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr">;
   }
 } // End SubtargetPredicate = isGFX12Plus
 
-#endif /* LLPC_BUILD_NPI */
 class SOP1_F32_Inst<string opName, SDPatternOperator Op, ValueType vt0=f32,
                     ValueType vt1=vt0> :
   SOP1_32<opName, [(set vt0:$sdst, (UniformUnaryFrag<Op> vt1:$src0))]>;
@@ -2350,6 +2346,12 @@ defm S_MOV_TO_GLOBAL_B32          : SOP1_Real_gfx12_gfx13<0x05d>;
 defm S_MOV_TO_GLOBAL_B64          : SOP1_Real_gfx12_gfx13<0x05e>;
 defm S_SWAP_TO_GLOBAL_B32         : SOP1_Real_gfx12_gfx13<0x05f>;
 let OtherPredicates = [isNotGFX1210Plus] in {
+#else /* LLPC_BUILD_NPI */
+defm S_MOV_FROM_GLOBAL_B32        : SOP1_Real_gfx12<0x05b>;
+defm S_MOV_FROM_GLOBAL_B64        : SOP1_Real_gfx12<0x05c>;
+defm S_MOV_TO_GLOBAL_B32          : SOP1_Real_gfx12<0x05d>;
+defm S_MOV_TO_GLOBAL_B64          : SOP1_Real_gfx12<0x05e>;
+defm S_SWAP_TO_GLOBAL_B32         : SOP1_Real_gfx12<0x05f>;
 #endif /* LLPC_BUILD_NPI */
 defm S_GETPC_B64                  : SOP1_Real_gfx11_gfx12<0x047>;
 defm S_SETPC_B64                  : SOP1_Real_gfx11_gfx12<0x048>;
@@ -2395,8 +2397,9 @@ defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
 defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12<0x051>;
 defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12<0x052>;
+defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12<0x057>;
-defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
+defm S_SLEEP_VAR                  : SOP1_Real_gfx12<0x058>;
 #endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
@@ -2450,15 +2453,15 @@ multiclass SOP1_Real_gfx10<bits<8> op> {
 #ifdef LLPC_BUILD_NPI
 multiclass SOP1_Real_gfx10_gfx13<bits<8> op> :
   SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op>;
-
-multiclass SOP1_Real_gfx10_Renamed_gfx13<bits<8> op, string gfx13_name> :
-  SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op, gfx13_name>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOP1_Real_gfx10_gfx11_gfx12<bits<8> op> :
   SOP1_Real_gfx10<op>, SOP1_Real_gfx11_gfx12<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+multiclass SOP1_Real_gfx10_Renamed_gfx13<bits<8> op, string gfx13_name> :
+  SOP1_Real_gfx10<op>, SOP1_Real_gfx13<op, gfx13_name>;
+
 defm S_ANDN1_SAVEEXEC_B64   : SOP1_Real_gfx10_Renamed_gfx13<0x37, "s_and_not0_saveexec_b64">;
 defm S_ORN1_SAVEEXEC_B64    : SOP1_Real_gfx10_Renamed_gfx13<0x38, "s_or_not0_saveexec_b64">;
 defm S_ANDN1_WREXEC_B64     : SOP1_Real_gfx10_Renamed_gfx13<0x39, "s_and_not0_wrexec_b64">;

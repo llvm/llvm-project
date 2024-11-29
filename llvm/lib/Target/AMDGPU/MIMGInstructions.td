@@ -778,13 +778,8 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
         let samp = 0 in
 #ifdef LLPC_BUILD_NPI
           def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32, enableDisasm>;
-#else /* LLPC_BUILD_NPI */
-          def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32,
-                                                !if(enableDisasm, "GFX12", "")>;
-#endif /* LLPC_BUILD_NPI */
       }
       else {
-#ifdef LLPC_BUILD_NPI
         def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4, enableDisasm>;
       }
     }
@@ -792,8 +787,13 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       if isVSample then {
         let samp = 0 in
           def _V4_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 4, VGPR_32, enableDisasm>;
+#else /* LLPC_BUILD_NPI */
+          def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32,
+                                                !if(enableDisasm, "GFX12", "")>;
+#endif /* LLPC_BUILD_NPI */
       }
       else {
+#ifdef LLPC_BUILD_NPI
         def _V4_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 4, enableDisasm>;
 #else /* LLPC_BUILD_NPI */
         def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4,
@@ -1868,30 +1868,19 @@ multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
 multiclass MIMG_Gather_WQM <mimgopc op, AMDGPUSampleVariant sample>
     : MIMG_Gather<op, sample, 1>;
 
-#ifdef LLPC_BUILD_NPI
 class MIMG_IntersectRay_Helper<bit Is64, bit IsA16, bit isDual, bit isBVH8> {
   int num_addrs = !if(isBVH8, 11, !if(Is64, !if(IsA16, 9, 12), !if(IsA16, 8, 11)));
-#else /* LLPC_BUILD_NPI */
-class MIMG_IntersectRay_Helper<bit Is64, bit IsA16> {
-  int num_addrs = !if(Is64, !if(IsA16, 9, 12), !if(IsA16, 8, 11));
-#endif /* LLPC_BUILD_NPI */
   RegisterClass RegClass = MIMGAddrSize<num_addrs, 0>.RegClass;
   int VAddrDwords = !srl(RegClass.Size, 5);
 
   int GFX11PlusNSAAddrs = !if(IsA16, 4, 5);
   RegisterClass node_ptr_type = !if(Is64, VReg_64, VGPR_32);
   list<RegisterClass> GFX11PlusAddrTypes =
-#ifdef LLPC_BUILD_NPI
     !if(isBVH8, [VReg_64, VReg_64, VReg_96, VReg_96, VGPR_32],
       !if(isDual, [VReg_64, VReg_64, VReg_96, VReg_96, VReg_64],
-#endif /* LLPC_BUILD_NPI */
           !if(IsA16,
               [node_ptr_type, VGPR_32, VReg_96, VReg_96],
-#ifdef LLPC_BUILD_NPI
               [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96])));
-#else /* LLPC_BUILD_NPI */
-              [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96]);
-#endif /* LLPC_BUILD_NPI */
 }
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC>
@@ -1926,29 +1915,37 @@ class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
 
 #ifdef LLPC_BUILD_NPI
 class VIMAGE_IntersectRay<int op, string opcode, int num_addrs, dag RsrcIns, Predicate pred, MIMGEncoding encoding,
+#else /* LLPC_BUILD_NPI */
+class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
+#endif /* LLPC_BUILD_NPI */
                                 bit isDual, bit isBVH8,
+#ifdef LLPC_BUILD_NPI
                                 list<RegisterClass> addr_types, string dns>
     : VIMAGE<op, !if(!or(isDual, isBVH8),
+#else /* LLPC_BUILD_NPI */
+                                list<RegisterClass> addr_types>
+    : VIMAGE_gfx12<op.GFX12, !if(!or(isDual, isBVH8),
+#endif /* LLPC_BUILD_NPI */
                                  (outs VReg_320:$vdata, VReg_96:$ray_origin_out,
                                        VReg_96:$ray_dir_out),
                                  (outs VReg_128:$vdata)),
+#ifdef LLPC_BUILD_NPI
                    num_addrs, pred, encoding, dns, addr_types> {
+#else /* LLPC_BUILD_NPI */
+                   num_addrs, "GFX12", addr_types> {
+#endif /* LLPC_BUILD_NPI */
   let Constraints = !if(!or(isDual, isBVH8),
                         "$ray_origin_out = $vaddr2, $ray_dir_out = $vaddr3", "");
+#ifdef LLPC_BUILD_NPI
   let InOperandList = !con(nsah.AddrIns, RsrcIns,
+#else /* LLPC_BUILD_NPI */
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc),
+#endif /* LLPC_BUILD_NPI */
                            !if(!or(isDual, isBVH8), (ins), (ins A16:$a16)));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc"#
                   !if(!or(isDual, isBVH8), "", "$a16");
   let SchedRW = !if(!or(isDual, isBVH8),
                     [WriteVMEM, WriteVMEM, WriteVMEM], [WriteVMEM]);
-#else /* LLPC_BUILD_NPI */
-class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
-                                list<RegisterClass> addr_types>
-    : VIMAGE_gfx12<op.GFX12, (outs VReg_128:$vdata),
-                   num_addrs, "GFX12", addr_types> {
-  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc, A16:$a16));
-  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc$a16";
-#endif /* LLPC_BUILD_NPI */
 }
 
 #ifdef LLPC_BUILD_NPI
@@ -1956,13 +1953,10 @@ class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
                                 bit isDual, bit isBVH8, list<RegisterClass> addr_types>
   : VIMAGE_IntersectRay<op.GFX12, opcode, num_addrs, (ins SReg_128:$rsrc), isGFX12Only, MIMGEncGfx12, isDual, isBVH8, addr_types, "GFX12">;
 
+#endif /* LLPC_BUILD_NPI */
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
                              bit isDual, bit isBVH8 = 0> {
   defvar info = MIMG_IntersectRay_Helper<Is64, IsA16, isDual, isBVH8>;
-#else /* LLPC_BUILD_NPI */
-multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16> {
-  defvar info = MIMG_IntersectRay_Helper<Is64, IsA16>;
-#endif /* LLPC_BUILD_NPI */
   def "" : MIMGBaseOpcode {
     let BVH = 1;
     let A16 = IsA16;
@@ -2000,13 +1994,9 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16> {
       }
     }
     def _gfx12 : VIMAGE_IntersectRay_gfx12<op, opcode, info.GFX11PlusNSAAddrs,
-#ifdef LLPC_BUILD_NPI
                                            isDual, isBVH8,
-#endif /* LLPC_BUILD_NPI */
                                            info.GFX11PlusAddrTypes> {
-#ifdef LLPC_BUILD_NPI
       let VDataDwords = !if(!or(isDual, isBVH8), 10, 4);
-#endif /* LLPC_BUILD_NPI */
       let VAddrDwords = info.num_addrs;
     }
   }
@@ -2379,18 +2369,21 @@ defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x19, 0
 defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1, 0>;
 #else /* LLPC_BUILD_NPI */
-defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
-defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1>;
-defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
-defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
+defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0, 0>;
+defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1, 0>;
 #endif /* LLPC_BUILD_NPI */
 } // End OtherPredicates = [HasImageInsts, HasGFX10_AEncoding]
 
 #ifdef LLPC_BUILD_NPI
 defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x80, MIMG.NOP, MIMG.NOP>, "image_bvh_dual_intersect_ray", 1, 0, 1>;
 defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
-
+#else /* LLPC_BUILD_NPI */
+defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<0x80, MIMG.NOP, MIMG.NOP>, "image_bvh_dual_intersect_ray", 1, 0, 1>;
+defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
 #endif /* LLPC_BUILD_NPI */
+
 } // End let OtherPredicates = [HasImageInsts]
 
 /********** ========================================= **********/

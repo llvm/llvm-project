@@ -26,9 +26,7 @@ namespace llvm {
 class GCNSubtarget;
 class LiveIntervals;
 class LiveRegUnits;
-#if LLPC_BUILD_NPI
 class MachineInstrBuilder;
-#endif /* LLPC_BUILD_NPI */
 class RegisterBank;
 struct SGPRSpillBuilder;
 
@@ -119,7 +117,6 @@ public:
     return 100;
   }
 
-#if LLPC_BUILD_NPI
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of
   // the mask, so it might consider that any register in the block is available
@@ -130,7 +127,6 @@ public:
   void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                       Register BlockReg) const;
 
-#endif /* LLPC_BUILD_NPI */
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;

@@ -7376,13 +7376,8 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
   return true;
 }
 
-#if LLPC_BUILD_NPI
 bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B) const {
-#else /* LLPC_BUILD_NPI */
-bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
-                                               MachineIRBuilder &B) const {
-#endif /* LLPC_BUILD_NPI */
   MachineRegisterInfo &MRI = *B.getMRI();
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
@@ -7518,21 +7513,14 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Ops.push_back(MergedOps);
   }
 
-#if LLPC_BUILD_NPI
   auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
                  .addDef(DstReg)
                  .addImm(Opcode);
-#else /* LLPC_BUILD_NPI */
-  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY)
-    .addDef(DstReg)
-    .addImm(Opcode);
-#endif /* LLPC_BUILD_NPI */
 
   for (Register R : Ops) {
     MIB.addUse(R);
   }
 
-#if LLPC_BUILD_NPI
   MIB.addUse(TDescr);
 
   MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
@@ -7595,11 +7583,6 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
     MIB.addUse(R);
 
   MIB.addUse(TDescr).cloneMemRefs(MI);
-#else /* LLPC_BUILD_NPI */
-  MIB.addUse(TDescr)
-     .addImm(IsA16 ? 1 : 0)
-     .cloneMemRefs(MI);
-#endif /* LLPC_BUILD_NPI */
 
   MI.eraseFromParent();
   return true;
@@ -8046,11 +8029,11 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
-#if LLPC_BUILD_NPI
     return legalizeBVHIntersectRayIntrinsic(MI, B);
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray:
     return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
+#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
   case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
   case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
@@ -8059,8 +8042,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
   case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
   case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8:
-#else /* LLPC_BUILD_NPI */
-    return legalizeBVHIntrinsic(MI, B);
 #endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:

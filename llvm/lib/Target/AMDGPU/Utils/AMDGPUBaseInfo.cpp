@@ -421,22 +421,39 @@ struct VOPTrue16Info {
 
 #if LLPC_BUILD_NPI
 struct DPMACCInstructionInfo {
-  uint16_t Opcode;
-  bool IsDPMACCInstruction;
-};
-
-#endif /* LLPC_BUILD_NPI */
+#else /* LLPC_BUILD_NPI */
 struct FP8DstByteSelInfo {
+#endif /* LLPC_BUILD_NPI */
   uint16_t Opcode;
+#if LLPC_BUILD_NPI
+  bool IsDPMACCInstruction;
+#else /* LLPC_BUILD_NPI */
   bool HasFP8DstByteSel;
+#endif /* LLPC_BUILD_NPI */
 };
 
 #if LLPC_BUILD_NPI
-#define GET_DPMACCInstructionTable_DECL
-#define GET_DPMACCInstructionTable_IMPL
-#endif /* LLPC_BUILD_NPI */
+struct FP8DstByteSelInfo {
+#else /* LLPC_BUILD_NPI */
 #define GET_FP8DstByteSelTable_DECL
 #define GET_FP8DstByteSelTable_IMPL
+
+struct DPMACCInstructionInfo {
+#endif /* LLPC_BUILD_NPI */
+  uint16_t Opcode;
+#if LLPC_BUILD_NPI
+  bool HasFP8DstByteSel;
+#else /* LLPC_BUILD_NPI */
+  bool IsDPMACCInstruction;
+#endif /* LLPC_BUILD_NPI */
+};
+
+#define GET_DPMACCInstructionTable_DECL
+#define GET_DPMACCInstructionTable_IMPL
+#if LLPC_BUILD_NPI
+#define GET_FP8DstByteSelTable_DECL
+#define GET_FP8DstByteSelTable_IMPL
+#endif /* LLPC_BUILD_NPI */
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -816,17 +833,25 @@ bool isTrue16Inst(unsigned Opc) {
 }
 
 #if LLPC_BUILD_NPI
-bool isDPMACCInstruction(unsigned Opc) {
-  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
-  return Info && Info->IsDPMACCInstruction;
-}
-
-#endif /* LLPC_BUILD_NPI */
+#else /* LLPC_BUILD_NPI */
 bool isFP8DstSelInst(unsigned Opc) {
   const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
   return Info ? Info->HasFP8DstByteSel : false;
 }
 
+#endif /* LLPC_BUILD_NPI */
+bool isDPMACCInstruction(unsigned Opc) {
+  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
+  return Info && Info->IsDPMACCInstruction;
+}
+
+#if LLPC_BUILD_NPI
+bool isFP8DstSelInst(unsigned Opc) {
+  const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
+  return Info ? Info->HasFP8DstByteSel : false;
+}
+
+#endif /* LLPC_BUILD_NPI */
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
@@ -1470,11 +1495,9 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
-#if LLPC_BUILD_NPI
   if (STI->getFeatureBits().test(FeatureDynamicVGPR))
     return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
 
-#endif /* LLPC_BUILD_NPI */
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1532,11 +1555,9 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
 #endif /* LLPC_BUILD_NPI */
     return 512;
-#if LLPC_BUILD_NPI
   if (STI->getFeatureBits().test(FeatureDynamicVGPR))
     // On GFX12 we can allocate at most 8 blocks of VGPRs.
     return 8 * getVGPRAllocGranule(STI);
-#endif /* LLPC_BUILD_NPI */
   return getAddressableNumArchVGPRs(STI);
 }
 
@@ -2113,12 +2134,10 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                              STI);
 }
 
-#if LLPC_BUILD_NPI
 unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
 
 unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
 
-#endif /* LLPC_BUILD_NPI */
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }

@@ -143,11 +143,7 @@ private:
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
   bool selectBufferLoadLds(MachineInstr &MI) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
-#if LLPC_BUILD_NPI
   bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
-#else /* LLPC_BUILD_NPI */
-  bool selectBVHIntrinsic(MachineInstr &I) const;
-#endif /* LLPC_BUILD_NPI */
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
   bool selectWaveAddress(MachineInstr &I) const;

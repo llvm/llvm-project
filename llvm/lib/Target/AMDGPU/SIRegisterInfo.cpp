@@ -521,7 +521,6 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI = ST.getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-#if LLPC_BUILD_NPI
 
   // If we need to reserve scratch space for saving the VGPRs, then we should
   // use the frame register for accessing our own frame (which may start at a
@@ -530,7 +529,6 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
     return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
                           : FuncInfo->getStackPtrOffsetReg();
 
-#endif /* LLPC_BUILD_NPI */
   // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use
@@ -1187,18 +1185,11 @@ SIRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   return RC;
 }
 
-#if LLPC_BUILD_NPI
 static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
                                         const SIInstrInfo *TII) {
-#else /* LLPC_BUILD_NPI */
-static unsigned getNumSubRegsForSpillOp(unsigned Op) {
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   unsigned Op = MI.getOpcode();
-#endif /* LLPC_BUILD_NPI */
   switch (Op) {
-#if LLPC_BUILD_NPI
   case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
   case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     // FIXME: This assumes the mask is statically known and not computed at
@@ -1206,7 +1197,6 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
     // this will need to be updated.
     return llvm::popcount(
         (uint64_t)TII->getNamedOperand(MI, AMDGPU::OpName::mask)->getImm());
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::SI_SPILL_S1024_SAVE:
   case AMDGPU::SI_SPILL_S1024_RESTORE:
   case AMDGPU::SI_SPILL_V1024_SAVE:
@@ -1556,12 +1546,10 @@ static unsigned getFlatScratchSpillOpcode(const SIInstrInfo *TII,
   bool UseST =
       !HasVAddr && !AMDGPU::hasNamedOperand(LoadStoreOp, AMDGPU::OpName::saddr);
 
-#if LLPC_BUILD_NPI
   // Handle block load/store first.
   if (TII->isBlockLoadStore(LoadStoreOp))
     return LoadStoreOp;
 
-#endif /* LLPC_BUILD_NPI */
   switch (EltSize) {
   case 4:
     LoadStoreOp = IsStore ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
@@ -1689,9 +1677,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   const MCInstrDesc *Desc = &TII->get(LoadStoreOp);
   bool IsStore = Desc->mayStore();
   bool IsFlat = TII->isFLATScratch(LoadStoreOp);
-#if LLPC_BUILD_NPI
   bool IsBlock = TII->isBlockLoadStore(LoadStoreOp);
-#endif /* LLPC_BUILD_NPI */
 
   bool CanClobberSCC = false;
   bool Scavenged = false;
@@ -1705,14 +1691,10 @@ void SIRegisterInfo::buildSpillLoadStore(
 
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
-#if LLPC_BUILD_NPI
   // If we're using a block operation, the element should be the whole block.
   unsigned EltSize = IsBlock               ? RegWidth
                      : (IsFlat && !IsAGPR) ? std::min(RegWidth, 16u)
                                            : 4u;
-#else /* LLPC_BUILD_NPI */
-  unsigned EltSize = (IsFlat && !IsAGPR) ? std::min(RegWidth, 16u) : 4u;
-#endif /* LLPC_BUILD_NPI */
   unsigned NumSubRegs = RegWidth / EltSize;
   unsigned Size = NumSubRegs * EltSize;
   unsigned RemSize = RegWidth - Size;
@@ -1869,9 +1851,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       LoadStoreOp = AMDGPU::getFlatScratchInstSVfromSS(LoadStoreOp);
     } else {
       assert(ST.hasFlatScratchSTMode());
-#if LLPC_BUILD_NPI
       assert(!TII->isBlockLoadStore(LoadStoreOp) && "Block ops don't have ST");
-#endif /* LLPC_BUILD_NPI */
       LoadStoreOp = AMDGPU::getFlatScratchInstSTfromSS(LoadStoreOp);
     }
 
@@ -2078,7 +2058,6 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB.addReg(SubReg, RegState::Implicit);
       MIB->tieOperands(0, MIB->getNumOperands() - 1);
     }
-#if LLPC_BUILD_NPI
 
     //  If we're building a block load, we should add artificial uses for the
     //  CSR VGPRs that are *not* being transferred. This is because liveness
@@ -2087,7 +2066,6 @@ void SIRegisterInfo::buildSpillLoadStore(
     //  scavenged.
     if (!IsStore && TII->isBlockLoadStore(LoadStoreOp))
       addImplicitUsesForBlockCSRLoad(MIB, ValueReg);
-#endif /* LLPC_BUILD_NPI */
   }
 
   if (UninitStackPtrOffset) {
@@ -2101,7 +2079,6 @@ void SIRegisterInfo::buildSpillLoadStore(
   }
 }
 
-#if LLPC_BUILD_NPI
 void SIRegisterInfo::addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                                     Register BlockReg) const {
   const MachineFunction *MF = MIB->getParent()->getParent();
@@ -2114,7 +2091,6 @@ void SIRegisterInfo::addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
       MIB.addUse(BaseVGPR + RegOffset, RegState::Implicit);
 }
 
-#endif /* LLPC_BUILD_NPI */
 void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
                                              int Offset, bool IsLoad,
                                              bool IsKill) const {
@@ -2539,7 +2515,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
 
     // VGPR register spill
-#if LLPC_BUILD_NPI
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE: {
       // Put mask into M0.
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
@@ -2547,7 +2522,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
       LLVM_FALLTHROUGH;
     }
-#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_V1024_SAVE:
 #if LLPC_BUILD_NPI
     case AMDGPU::SI_SPILL_V576_SAVE:
@@ -2579,11 +2553,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             *MI->memoperands_begin());
 
         if (ldsSpill) {
-#if LLPC_BUILD_NPI
           MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(*MI, TII));
-#else /* LLPC_BUILD_NPI */
-          MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
-#endif /* LLPC_BUILD_NPI */
           MI->eraseFromParent();
           break;
         }
@@ -2631,16 +2601,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
-#if LLPC_BUILD_NPI
       unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
                          ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
                      : ST.enableFlatScratch()
                          ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                          : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
-#else /* LLPC_BUILD_NPI */
-      unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                                            : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
-#endif /* LLPC_BUILD_NPI */
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
@@ -2651,18 +2616,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
-#if LLPC_BUILD_NPI
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(*MI, TII));
-#else /* LLPC_BUILD_NPI */
-      MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
-#endif /* LLPC_BUILD_NPI */
       if (IsWWMRegSpill)
         TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
 
       MI->eraseFromParent();
       return true;
     }
-#if LLPC_BUILD_NPI
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE: {
       // Put mask into M0.
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
@@ -2670,7 +2630,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
       LLVM_FALLTHROUGH;
     }
-#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_V32_RESTORE:
     case AMDGPU::SI_SPILL_V64_RESTORE:
     case AMDGPU::SI_SPILL_V96_RESTORE:
@@ -2746,16 +2705,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
-#if LLPC_BUILD_NPI
       unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
                          ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
                      : ST.enableFlatScratch()
                          ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                          : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
-#else /* LLPC_BUILD_NPI */
-      unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                                            : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
-#endif /* LLPC_BUILD_NPI */
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {

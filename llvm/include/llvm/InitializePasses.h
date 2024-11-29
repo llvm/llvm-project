@@ -65,16 +65,7 @@ void initializeBranchRelaxationPass(PassRegistry &);
 void initializeBreakCriticalEdgesPass(PassRegistry &);
 void initializeBreakFalseDepsPass(PassRegistry &);
 void initializeCanonicalizeFreezeInLoopsPass(PassRegistry &);
-#if LLPC_BUILD_NPI
 void initializeCFGPrinterLegacyPassPass(PassRegistry &);
-#else /* LLPC_BUILD_NPI */
-void initializeCFGPrinterLegacyPassPass(PassRegistry&);
-void initializeCFGSimplifyPassPass(PassRegistry&);
-void initializeCFGuardPass(PassRegistry&);
-void initializeCFGuardLongjmpPass(PassRegistry&);
-void initializeCFIFixupPass(PassRegistry&);
-void initializeCFIInstrInserterPass(PassRegistry&);
-#endif /* LLPC_BUILD_NPI */
 void initializeCFGSimplifyPassPass(PassRegistry &);
 void initializeCFGuardPass(PassRegistry &);
 void initializeCFGuardLongjmpPass(PassRegistry &);
@@ -299,7 +290,7 @@ void initializeSinkingLegacyPassPass(PassRegistry &);
 void initializeSjLjEHPreparePass(PassRegistry &);
 void initializeSlotIndexesWrapperPassPass(PassRegistry &);
 void initializeSpeculativeExecutionLegacyPassPass(PassRegistry &);
-void initializeSpillPlacementPass(PassRegistry &);
+void initializeSpillPlacementWrapperLegacyPass(PassRegistry &);
 void initializeStackColoringLegacyPass(PassRegistry &);
 void initializeStackFrameLayoutAnalysisPassPass(PassRegistry &);
 void initializeStackMapLivenessPass(PassRegistry &);

@@ -514,6 +514,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
+     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
 
      ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -772,6 +778,12 @@ For example:
                                                   enabled will execute correctly but may be less
                                                   performant than code generated for XNACK replay
                                                   disabled.
+
+     dynamic-vgpr    TODO                         Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
+                                                  Waves launched in this mode may allocate or deallocate the VGPRs
+                                                  using dedicated instructions, but may not send the DEALLOC_VGPRS
+                                                  message.
+
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -5402,8 +5414,15 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        which is set by the CP if
                                                        the runtime has installed a
                                                        trap handler.
-                                                     GFX12
-                                                       Reserved, must be 0.
+                     ENABLE_DYNAMIC_VGPR             GFX12
+                                                       Enables dynamic VGPR mode, where
+                                                       each wave allocates one VGPR chunk
+                                                       at launch and can request for
+                                                       additional space to use during
+                                                       execution in SQ.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.DYNAMIC_VGPR``.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
@@ -5525,7 +5544,21 @@ The fields used by CP for code objects before V3 also match those specified in
      30      1 bit   ENABLE_EXCEPTION_INT_DIVIDE_BY  Integer Division by Zero
                      _ZERO                           (rcp_iflag_f32 instruction
                                                      only)
-     31      1 bit   RESERVED                        Reserved, must be 0.
+     31      1 bit   RESERVED                        GFX6-GFX11
+                                                       Reserved, must be 0.
+                     WGP_TAKEOVER                    GFX12
+                                                       Places 16 waves on each of
+                                                       the 4 SIMD of a WGP and
+                                                       allocates all the VGPRs
+                                                       in the WGP to the 64 waves.
+                                                       The only defined usage mode
+                                                       is: ME0.Pipe0,1 (CSG), CS
+                                                       Wave 32, 256 VGPRs per wave,
+                                                       16 waves per workgroup,
+                                                       WGP-centric, 64KB LDS.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.WGP_TAKEOVER``.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
@@ -5978,8 +6011,13 @@ Frame Pointer
 
 If the kernel needs a frame pointer for the reasons defined in
 ``SIFrameLowering`` then SGPR33 is used and is always set to ``0`` in the
-kernel prolog. If a frame pointer is not required then all uses of the frame
-pointer are replaced with immediate ``0`` offsets.
+kernel prolog. On GFX12+, when dynamic VGPRs are enabled, the prologue will
+check if the kernel is running on a compute queue, and if so it will reserve
+some scratch space for any dynamic VGPRs that might need to be saved by the
+CWSR trap handler. In this case, the frame pointer will be initialized to
+a suitably aligned offset above this reserved area. If a frame pointer is not
+required then all uses of the frame pointer are replaced with immediate ``0``
+offsets.
 
 .. _amdgpu-amdhsa-kernel-prolog-flat-scratch:
 
@@ -17106,33 +17144,35 @@ within a map that has been added by the same *vendor-name*.
   .. table:: AMDPAL Code Object Hardware Stage Metadata Map
      :name: amdgpu-amdpal-code-object-hardware-stage-metadata-map-table
 
-     ========================== ============== ========= ===============================================================
-     String Key                 Value Type     Required? Description
-     ========================== ============== ========= ===============================================================
-     ".entry_point"             string                   The ELF symbol pointing to this pipeline's stage entry point.
-     ".scratch_memory_size"     integer                  Scratch memory size in bytes.
-     ".lds_size"                integer                  Local Data Share size in bytes.
-     ".perf_data_buffer_size"   integer                  Performance data buffer size in bytes.
-     ".vgpr_count"              integer                  Number of VGPRs used.
-     ".agpr_count"              integer                  Number of AGPRs used.
-     ".sgpr_count"              integer                  Number of SGPRs used.
-     ".vgpr_limit"              integer                  If non-zero, indicates the shader was compiled with a
-                                                         directive to instruct the compiler to limit the VGPR usage to
-                                                         be less than or equal to the specified value (only set if
-                                                         different from HW default).
-     ".sgpr_limit"              integer                  SGPR count upper limit (only set if different from HW
-                                                         default).
-     ".threadgroup_dimensions"  sequence of              Thread-group X/Y/Z dimensions (Compute only).
-                                3 integers
-     ".wavefront_size"          integer                  Wavefront size (only set if different from HW default).
-     ".uses_uavs"               boolean                  The shader reads or writes UAVs.
-     ".uses_rovs"               boolean                  The shader reads or writes ROVs.
-     ".writes_uavs"             boolean                  The shader writes to one or more UAVs.
-     ".writes_depth"            boolean                  The shader writes out a depth value.
-     ".uses_append_consume"     boolean                  The shader uses append and/or consume operations, either
-                                                         memory or GDS.
-     ".uses_prim_id"            boolean                  The shader uses PrimID.
-     ========================== ============== ========= ===============================================================
+     =========================== ============== ========= ===============================================================
+     String Key                  Value Type     Required? Description
+     =========================== ============== ========= ===============================================================
+     ".entry_point"              string                   The ELF symbol pointing to this pipeline's stage entry point.
+     ".scratch_memory_size"      integer                  Scratch memory size in bytes.
+     ".lds_size"                 integer                  Local Data Share size in bytes.
+     ".perf_data_buffer_size"    integer                  Performance data buffer size in bytes.
+     ".vgpr_count"               integer                  Number of VGPRs used.
+     ".agpr_count"               integer                  Number of AGPRs used.
+     ".sgpr_count"               integer                  Number of SGPRs used.
+     ".dynamic_vgpr_saved_count" integer        No        Number of dynamic VGPRs that can be stored in scratch by the
+                                                          CWSR trap handler. Only used on GFX12+.
+     ".vgpr_limit"               integer                  If non-zero, indicates the shader was compiled with a
+                                                          directive to instruct the compiler to limit the VGPR usage to
+                                                          be less than or equal to the specified value (only set if
+                                                          different from HW default).
+     ".sgpr_limit"               integer                  SGPR count upper limit (only set if different from HW
+                                                          default).
+     ".threadgroup_dimensions"   sequence of              Thread-group X/Y/Z dimensions (Compute only).
+                                 3 integers
+     ".wavefront_size"           integer                  Wavefront size (only set if different from HW default).
+     ".uses_uavs"                boolean                  The shader reads or writes UAVs.
+     ".uses_rovs"                boolean                  The shader reads or writes ROVs.
+     ".writes_uavs"              boolean                  The shader writes to one or more UAVs.
+     ".writes_depth"             boolean                  The shader writes out a depth value.
+     ".uses_append_consume"      boolean                  The shader uses append and/or consume operations, either
+                                                          memory or GDS.
+     ".uses_prim_id"             boolean                  The shader uses PrimID.
+     =========================== ============== ========= ===============================================================
 
 ..
 

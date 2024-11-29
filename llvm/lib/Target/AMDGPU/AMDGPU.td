@@ -265,13 +265,13 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "S_INST_PREFETCH instruction causes shader to hang"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
   "HasSafeSmemPrefetch",
   "true",
   "SMEM prefetches do not fail on illegal address"
 >;
 
+#ifdef LLPC_BUILD_NPI
 def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
   "HasSafeCUPrefetch",
   "true",
@@ -1383,7 +1383,6 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
   "true",
@@ -1396,7 +1395,6 @@ def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32
   "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "RequiresCOV6",
   "true",
@@ -1410,7 +1408,6 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
-#ifdef LLPC_BUILD_NPI
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
 // restoring the callee-saved registers.
 def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
@@ -1419,6 +1416,7 @@ def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
   "Use block load/store for VGPR callee saved registers"
 >;
 
+#ifdef LLPC_BUILD_NPI
 def FeatureGloballyAddressableScratch : SubtargetFeature<
   "globally-addressable-scratch",
   "HasGloballyAddressableScratch",

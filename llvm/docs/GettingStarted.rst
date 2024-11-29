@@ -292,7 +292,7 @@ uses the package and provides other details.
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `CMake <http://cmake.org/>`_                                >=3.20.0     Makefile/workspace generator
-`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`1`
+`python <http://www.python.org/>`_                          >=3.8        Automated test suite\ :sup:`1`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`2`
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`3`
 `PyYAML <https://pypi.org/project/PyYAML/>`_                >=5.1        Header generator\ :sup:`4`

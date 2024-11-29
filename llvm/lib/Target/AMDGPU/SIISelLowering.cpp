@@ -1006,7 +1006,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 #if LLPC_BUILD_NPI
   if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVectorPrefetch())
 #else /* LLPC_BUILD_NPI */
-  if (Subtarget->hasPrefetch())
+  if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
 #endif /* LLPC_BUILD_NPI */
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
@@ -1636,23 +1636,15 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray: {
-#else /* LLPC_BUILD_NPI */
-  case Intrinsic::amdgcn_image_bvh_intersect_ray: {
-#endif /* LLPC_BUILD_NPI */
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-#if LLPC_BUILD_NPI
     Info.memVT =
         MVT::getVT(IntrID == Intrinsic::amdgcn_image_bvh_intersect_ray
                        ? CI.getType()
                        : cast<StructType>(CI.getType())
                              ->getElementType(0)); // XXX: what is correct VT?
-#else /* LLPC_BUILD_NPI */
-    Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
-#endif /* LLPC_BUILD_NPI */
 
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
     Info.align.reset();
@@ -1792,14 +1784,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn: {
-#else /* LLPC_BUILD_NPI */
-  case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
-#endif /* LLPC_BUILD_NPI */
     Info.opc = ISD::INTRINSIC_W_CHAIN;
 
     const GCNTargetMachine &TM =
@@ -1829,7 +1817,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad;
     return true;
   }
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_s_mov_from_global:
   case Intrinsic::amdgcn_s_mov_to_global:
   case Intrinsic::amdgcn_s_swap_to_global: {
@@ -1858,7 +1845,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
-#endif /* LLPC_BUILD_NPI */
   default:
     return false;
   }
@@ -4152,7 +4138,6 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return true;
 }
 
-#if LLPC_BUILD_NPI
 namespace {
 // Chain calls have special arguments that we need to handle. These are
 // tagging along at the end of the arguments list(s), after the SGPR and VGPR
@@ -4166,7 +4151,6 @@ enum ChainCallArgIdx {
 };
 } // anonymous namespace
 
-#endif /* LLPC_BUILD_NPI */
 // The wave scratch offset register is used as the global base pointer.
 SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                                     SmallVectorImpl<SDValue> &InVals) const {
@@ -4175,21 +4159,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SelectionDAG &DAG = CLI.DAG;
 
-#if LLPC_BUILD_NPI
   const SDLoc &DL = CLI.DL;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-#else /* LLPC_BUILD_NPI */
-  TargetLowering::ArgListEntry RequestedExec;
-  if (IsChainCallConv) {
-    // The last argument should be the value that we need to put in EXEC.
-    // Pop it out of CLI.Outs and CLI.OutVals before we do any processing so we
-    // don't treat it like the rest of the arguments.
-    RequestedExec = CLI.Args.back();
-    assert(RequestedExec.Node && "No node for EXEC");
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   llvm::SmallVector<SDValue, 6> ChainCallSpecialArgs;
   if (IsChainCallConv) {
     // The last arguments should be the value that we need to put in EXEC,
@@ -4212,12 +4185,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     TargetLowering::ArgListEntry RequestedExecArg =
         CLI.Args[ChainCallArgIdx::Exec];
     if (!RequestedExecArg.Ty->isIntegerTy(Subtarget->getWavefrontSize()))
-#else /* LLPC_BUILD_NPI */
-    if (!RequestedExec.Ty->isIntegerTy(Subtarget->getWavefrontSize()))
-#endif /* LLPC_BUILD_NPI */
       return lowerUnhandledCall(CLI, InVals, "Invalid value for EXEC");
 
-#if LLPC_BUILD_NPI
     // Convert constants into TargetConstants, so they become immediate operands
     // instead of being selected into S_MOV.
     auto PushNodeOrTargetConstant = [&](TargetLowering::ArgListEntry Arg) {
@@ -4232,19 +4201,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     // Process any other special arguments depending on the value of the flags.
     TargetLowering::ArgListEntry Flags = CLI.Args[ChainCallArgIdx::Flags];
-#else /* LLPC_BUILD_NPI */
-    assert(CLI.Outs.back().OrigArgIndex == 2 && "Unexpected last arg");
-    CLI.Outs.pop_back();
-    CLI.OutVals.pop_back();
 
-    if (RequestedExec.Ty->isIntegerTy(64)) {
-      assert(CLI.Outs.back().OrigArgIndex == 2 && "Exec wasn't split up");
-      CLI.Outs.pop_back();
-      CLI.OutVals.pop_back();
-    }
-#endif /* LLPC_BUILD_NPI */
-
-#if LLPC_BUILD_NPI
     const APInt &FlagsValue = cast<ConstantSDNode>(Flags.Node)->getAPIntValue();
     if (FlagsValue.isZero()) {
       if (CLI.Args.size() > ChainCallArgIdx::Flags + 1)
@@ -4258,24 +4215,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       std::for_each(CLI.Args.begin() + ChainCallArgIdx::NumVGPRs,
                     CLI.Args.end(), PushNodeOrTargetConstant);
     }
-#else /* LLPC_BUILD_NPI */
-    assert(CLI.Outs.back().OrigArgIndex != 2 &&
-           "Haven't popped all the pieces of the EXEC mask");
-#endif /* LLPC_BUILD_NPI */
   }
 
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  const SDLoc &DL = CLI.DL;
-#endif /* LLPC_BUILD_NPI */
   SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
   SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
   SmallVector<ISD::InputArg, 32> &Ins = CLI.Ins;
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  SDValue Chain = CLI.Chain;
-  SDValue Callee = CLI.Callee;
-#endif /* LLPC_BUILD_NPI */
   bool &IsTailCall = CLI.IsTailCall;
   bool IsVarArg = CLI.IsVarArg;
   bool IsSibCall = false;
@@ -4563,12 +4507,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (IsChainCallConv)
-#if LLPC_BUILD_NPI
     Ops.insert(Ops.end(), ChainCallSpecialArgs.begin(),
                ChainCallSpecialArgs.end());
-#else /* LLPC_BUILD_NPI */
-    Ops.push_back(RequestedExec.Node);
-#endif /* LLPC_BUILD_NPI */
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -10765,7 +10705,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    Op->getVTList(), Ops, VT,
                                    M->getMemOperand());
   }
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -10811,7 +10750,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     DAG.setNodeMemRefs(NewNode, {MemRef});
     return SDValue(NewNode, 0);
   }
-#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     MemSDNode *M = cast<MemSDNode>(Op);
     SDValue NodePtr = M->getOperand(2);

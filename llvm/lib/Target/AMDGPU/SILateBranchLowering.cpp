@@ -29,12 +29,8 @@ private:
   const SIInstrInfo *TII = nullptr;
   MachineDominatorTree *MDT = nullptr;
 
-#if LLPC_BUILD_NPI
   void expandChainCall(MachineInstr &MI, const GCNSubtarget &ST,
                        bool DynamicVGPR);
-#else /* LLPC_BUILD_NPI */
-  void expandChainCall(MachineInstr &MI);
-#endif /* LLPC_BUILD_NPI */
   void earlyTerm(MachineInstr &MI, MachineBasicBlock *EarlyExitBlock);
 
 public:
@@ -121,16 +117,11 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   MDT->getBase().applyUpdates(DTUpdates);
 }
 
-#if LLPC_BUILD_NPI
 void SILateBranchLowering::expandChainCall(MachineInstr &MI,
                                            const GCNSubtarget &ST,
                                            bool DynamicVGPR) {
-#else /* LLPC_BUILD_NPI */
-void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
-#endif /* LLPC_BUILD_NPI */
   // This is a tail call that needs to be expanded into at least
   // 2 instructions, one for setting EXEC and one for the actual tail call.
-#if LLPC_BUILD_NPI
   unsigned ExecIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::exec);
   if (DynamicVGPR) {
@@ -158,19 +149,10 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
     BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MovOpc), ExecReg)
         ->addOperand(*TII->getNamedOperand(MI, AMDGPU::OpName::exec));
   }
-#else /* LLPC_BUILD_NPI */
-  constexpr unsigned ExecIdx = 3;
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   for (unsigned OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx;
        --OpIdx)
     MI.removeOperand(OpIdx);
-#else /* LLPC_BUILD_NPI */
-  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MovOpc), ExecReg)
-      ->addOperand(MI.getOperand(ExecIdx));
-  MI.removeOperand(ExecIdx);
-#endif /* LLPC_BUILD_NPI */
 
   MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));
 }
@@ -219,16 +201,12 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
 
       case AMDGPU::SI_CS_CHAIN_TC_W32:
       case AMDGPU::SI_CS_CHAIN_TC_W64:
-#if LLPC_BUILD_NPI
         expandChainCall(MI, ST, /*DynamicVGPR*/ false);
         MadeChange = true;
         break;
       case AMDGPU::SI_CS_CHAIN_TC_W32_DVGPR:
       case AMDGPU::SI_CS_CHAIN_TC_W64_DVGPR:
         expandChainCall(MI, ST, /*DynamicVGPR*/ true);
-#else /* LLPC_BUILD_NPI */
-        expandChainCall(MI);
-#endif /* LLPC_BUILD_NPI */
         MadeChange = true;
         break;
 

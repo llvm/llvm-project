@@ -54,11 +54,7 @@ private:
 #ifndef NDEBUG
   void printWWMInfo(const MachineInstr &MI);
 #endif
-#if LLPC_BUILD_NPI
   bool processDef(MachineOperand &MO, bool CanReallocate);
-#else /* LLPC_BUILD_NPI */
-  bool processDef(MachineOperand &MO,  bool CanReallocate);
-#endif /* LLPC_BUILD_NPI */
   void rewriteRegs(MachineFunction &MF);
 
 public:

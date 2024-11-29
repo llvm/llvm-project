@@ -1382,7 +1382,6 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
         // DsCnt corresponds to LGKMCnt here.
         return (Decoded.DsCnt == 0);
       }
-#if LLPC_BUILD_NPI
       case AMDGPU::S_WAIT_STORECNT:
       case AMDGPU::S_WAIT_STORECNT_DSCNT:
       case AMDGPU::S_WAIT_LOADCNT:
@@ -1393,7 +1392,6 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
       case AMDGPU::S_WAIT_EXPCNT:
       case AMDGPU::S_WAIT_KMCNT:
         llvm_unreachable("unexpected wait count instruction");
-#endif /* LLPC_BUILD_NPI */
       default:
         // SOPP instructions cannot mitigate the hazard.
         if (TII->isSOPP(MI))
@@ -1776,11 +1774,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-#if LLPC_BUILD_NPI
       .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
-#else /* LLPC_BUILD_NPI */
-      .addImm(0x0fff);
-#endif /* LLPC_BUILD_NPI */
 
   return true;
 }
@@ -1830,11 +1824,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
         SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-#if LLPC_BUILD_NPI
          AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
-#else /* LLPC_BUILD_NPI */
-         I.getOperand(0).getImm() == 0x0fff))
-#endif /* LLPC_BUILD_NPI */
       return HazardExpired;
 
     // Track registers writes
@@ -2078,7 +2068,6 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     case AMDGPU::S_WAITCNT_EXPCNT:
     case AMDGPU::S_WAITCNT_LGKMCNT:
     case AMDGPU::S_WAIT_IDLE:
-#if LLPC_BUILD_NPI
     case AMDGPU::S_WAIT_LOADCNT:
     case AMDGPU::S_WAIT_LOADCNT_DSCNT:
     case AMDGPU::S_WAIT_SAMPLECNT:
@@ -2088,7 +2077,6 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     case AMDGPU::S_WAIT_EXPCNT:
     case AMDGPU::S_WAIT_DSCNT:
     case AMDGPU::S_WAIT_KMCNT:
-#endif /* LLPC_BUILD_NPI */
       return true;
     default:
       break;

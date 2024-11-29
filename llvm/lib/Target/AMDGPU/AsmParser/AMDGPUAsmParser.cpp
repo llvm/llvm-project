@@ -191,9 +191,9 @@ public:
     ImmTyWaitEXP,
     ImmTyWaitVAVDst,
     ImmTyWaitVMVSrc,
-#if LLPC_BUILD_NPI
     ImmTyGlobalSReg32,
     ImmTyGlobalSReg64,
+#if LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
     ImmTyByteSel,
 #endif /* LLPC_BUILD_NPI */
@@ -488,10 +488,8 @@ public:
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
-#if LLPC_BUILD_NPI
   bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
   bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
-#endif /* LLPC_BUILD_NPI */
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1296,13 +1294,13 @@ public:
     case ImmTyWaitEXP: OS << "WaitEXP"; break;
     case ImmTyWaitVAVDst: OS << "WaitVAVDst"; break;
     case ImmTyWaitVMVSrc: OS << "WaitVMVSrc"; break;
-#if LLPC_BUILD_NPI
     case ImmTyGlobalSReg32:
       OS << "GlobalSReg32";
       break;
     case ImmTyGlobalSReg64:
       OS << "GlobalSReg64";
       break;
+#if LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
     case ImmTyByteSel: OS << "ByteSel" ; break;
 #endif /* LLPC_BUILD_NPI */
@@ -1868,13 +1866,11 @@ public:
   ParseStatus parseRegWithFPInputMods(OperandVector &Operands);
   ParseStatus parseRegWithIntInputMods(OperandVector &Operands);
   ParseStatus parseVReg32OrOff(OperandVector &Operands);
-#if LLPC_BUILD_NPI
   ParseStatus parseGlobalRegImm(OperandVector &Operands,
                                 AMDGPUOperand::ImmTy ImmTy,
                                 unsigned ExpectedWidth);
   ParseStatus parseGlobalSReg32(OperandVector &Operands);
   ParseStatus parseGlobalSReg64(OperandVector &Operands);
-#endif /* LLPC_BUILD_NPI */
   ParseStatus tryParseIndexKey(OperandVector &Operands,
                                AMDGPUOperand::ImmTy ImmTy);
   ParseStatus parseIndexKey8bit(OperandVector &Operands);
@@ -3916,7 +3912,6 @@ ParseStatus AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) {
   return ParseStatus::Failure;
 }
 
-#if LLPC_BUILD_NPI
 ParseStatus AMDGPUAsmParser::parseGlobalRegImm(OperandVector &Operands,
                                                AMDGPUOperand::ImmTy ImmTy,
                                                unsigned ExpectedWidth) {
@@ -3933,11 +3928,19 @@ ParseStatus AMDGPUAsmParser::parseGlobalRegImm(OperandVector &Operands,
 
   // Map VCC to its underlying SGPR alias.
   if (RegKind == IS_SPECIAL) {
+#if LLPC_BUILD_NPI
     if (Reg.id() == AMDGPU::VCC) {
+#else /* LLPC_BUILD_NPI */
+    if (Reg == AMDGPU::VCC) {
+#endif /* LLPC_BUILD_NPI */
       RegKind = IS_SGPR;
       RegNum = 106;
       RegWidth = ExpectedWidth;
+#if LLPC_BUILD_NPI
     } else if (Reg.id() == AMDGPU::VCC_LO || Reg.id() == AMDGPU::VCC_HI) {
+#else /* LLPC_BUILD_NPI */
+    } else if (Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI) {
+#endif /* LLPC_BUILD_NPI */
       RegKind = IS_SGPR;
       RegNum = Reg == AMDGPU::VCC_LO ? 106 : 107;
       RegWidth = 32;
@@ -3963,7 +3966,6 @@ ParseStatus AMDGPUAsmParser::parseGlobalSReg64(OperandVector &Operands) {
   return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg64, 64);
 }
 
-#endif /* LLPC_BUILD_NPI */
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
 
@@ -4206,9 +4208,7 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   if (MO.isReg()) {
     auto Reg = MO.getReg();
     if (!Reg)
-#if LLPC_BUILD_NPI
       // TODO-GFX12: why is this needed only for a few GFX12 instructions?
-#endif /* LLPC_BUILD_NPI */
       return false;
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);
@@ -6880,6 +6880,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (isGFX1210Plus()) {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
+  AMDGPU::MCKernelDescriptor::bits_set(
+      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
+      COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_SHIFT,
+      COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT, getContext());
+  } else {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
 #else /* LLPC_BUILD_NPI */
   if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
     return TokError("too many user SGPRs enabled");
@@ -6887,13 +6894,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   AMDGPU::MCKernelDescriptor::bits_set(
       KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
 #if LLPC_BUILD_NPI
-      COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT, getContext());
-  } else {
-    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-      return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
       COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
       COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT, getContext());
   }

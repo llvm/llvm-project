@@ -2219,7 +2219,6 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   Register Data1 = MI.getOperand(5).getReg();
   unsigned Offset = MI.getOperand(6).getImm();
 
-#if LLPC_BUILD_NPI
   unsigned Opc;
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
@@ -2235,9 +2234,6 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   }
 
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), Dst0)
-#else /* LLPC_BUILD_NPI */
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::DS_BVH_STACK_RTN_B32), Dst0)
-#endif /* LLPC_BUILD_NPI */
                  .addDef(Dst1)
                  .addUse(Addr)
                  .addUse(Data0)
@@ -2295,11 +2291,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     }
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
-#endif /* LLPC_BUILD_NPI */
     return selectDSBvhStackIntrinsic(I);
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
@@ -3626,24 +3620,14 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-#if LLPC_BUILD_NPI
 bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
     MachineInstr &MI) const {
   unsigned OpcodeOpIdx =
       MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY ? 1 : 3;
   MI.setDesc(TII.get(MI.getOperand(OpcodeOpIdx).getImm()));
   MI.removeOperand(OpcodeOpIdx);
-#else /* LLPC_BUILD_NPI */
-bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
-  MI.setDesc(TII.get(MI.getOperand(1).getImm()));
-  MI.removeOperand(1);
-#endif /* LLPC_BUILD_NPI */
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
-#if LLPC_BUILD_NPI
   return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-#else /* LLPC_BUILD_NPI */
-  return true;
-#endif /* LLPC_BUILD_NPI */
 }
 
 // FIXME: This should be removed and let the patterns select. We just need the
@@ -4156,15 +4140,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
-#if LLPC_BUILD_NPI
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
     return selectBVHIntersectRayIntrinsic(I);
-#else /* LLPC_BUILD_NPI */
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
-    return selectBVHIntrinsic(I);
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);

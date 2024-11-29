@@ -1151,9 +1151,9 @@ struct Waitcnt {
   unsigned KmCnt = ~0u;     // gfx12+ only.
 #if LLPC_BUILD_NPI
   unsigned XCnt = ~0u;      // gfx1210.
+#endif /* LLPC_BUILD_NPI */
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
-#endif /* LLPC_BUILD_NPI */
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
@@ -1163,7 +1163,7 @@ struct Waitcnt {
         SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u), XCnt(~0u), VaVdst(~0u),
         VmVsrc(~0u) {}
 #else /* LLPC_BUILD_NPI */
-        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u) {}
+        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u), VaVdst(~0u), VmVsrc(~0u) {}
 #endif /* LLPC_BUILD_NPI */
 
   // gfx12+ constructor.
@@ -1172,34 +1172,34 @@ struct Waitcnt {
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
           unsigned VaVdst, unsigned VmVsrc)
 #else /* LLPC_BUILD_NPI */
-          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt)
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned VaVdst,
+          unsigned VmVsrc)
 #endif /* LLPC_BUILD_NPI */
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
 #if LLPC_BUILD_NPI
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
         VaVdst(VaVdst), VmVsrc(VmVsrc) {}
 #else /* LLPC_BUILD_NPI */
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), VaVdst(VaVdst),
+        VmVsrc(VmVsrc) {}
 #endif /* LLPC_BUILD_NPI */
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-#if LLPC_BUILD_NPI
            SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || VaVdst != ~0u ||
+#if LLPC_BUILD_NPI
            VmVsrc != ~0u || XCnt != ~0u;
 #else /* LLPC_BUILD_NPI */
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u;
+           VmVsrc != ~0u;
 #endif /* LLPC_BUILD_NPI */
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
 
-#if LLPC_BUILD_NPI
   bool hasWaitDepctr() const { return VaVdst != ~0u || VmVsrc != ~0u; }
 
-#endif /* LLPC_BUILD_NPI */
   Waitcnt combined(const Waitcnt &Other) const {
     // Does the right thing provided self and Other are either both pre-gfx12
     // or both gfx12+.
@@ -1211,7 +1211,8 @@ struct Waitcnt {
         std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
         std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
 #else /* LLPC_BUILD_NPI */
-        std::min(KmCnt, Other.KmCnt));
+        std::min(KmCnt, Other.KmCnt), std::min(VaVdst, Other.VaVdst),
+        std::min(VmVsrc, Other.VmVsrc));
 #endif /* LLPC_BUILD_NPI */
   }
 };
@@ -1376,14 +1377,12 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
 
-#if LLPC_BUILD_NPI
 /// \returns Maximum VaVdst value that can be encoded.
 unsigned getVaVdstBitMask();
 
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();
 
-#endif /* LLPC_BUILD_NPI */
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);
 

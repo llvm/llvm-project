@@ -127,21 +127,19 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1152"},   {"gfx1152"}, GK_GFX1152, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1153"},   {"gfx1153"}, GK_GFX1153, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
-#if LLPC_BUILD_NPI
     {{"gfx115F"},   {"gfx115F"}, GK_GFX115F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
-#endif /* LLPC_BUILD_NPI */
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
-#if LLPC_BUILD_NPI
     {{"gfx120E"},   {"gfx120E"}, GK_GFX120E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx120F"},   {"gfx120F"}, GK_GFX120F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+#if LLPC_BUILD_NPI
     {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     {{"gfx1211"},   {"gfx1211"}, GK_GFX1211, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     {{"gfx1300"},   {"gfx1300"}, GK_GFX1300, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1301"},   {"gfx1301"}, GK_GFX1301, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1302"},   {"gfx1302"}, GK_GFX1302, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx10-3-generic"},   {"gfx10-3-generic"}, GK_GFX10_3_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
@@ -301,14 +299,12 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1152: return {11, 5, 2};
   case GK_GFX1153: return {11, 5, 3};
-#if LLPC_BUILD_NPI
   case GK_GFX115F: return {11, 5, 0xFFFF};
-#endif /* LLPC_BUILD_NPI */
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
-#if LLPC_BUILD_NPI
   case GK_GFX120E: return {12, 0, 0xFFFE};
   case GK_GFX120F: return {12, 0, 0xFFFF};
+#if LLPC_BUILD_NPI
   case GK_GFX1210: return {12, 1, 0};
   case GK_GFX1211: return {12, 1, 1};
   case GK_GFX1300: return {13, 0, 0};
@@ -440,9 +436,9 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
       break;
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX120F:
     case GK_GFX120E:
-#endif /* LLPC_BUILD_NPI */
     case GK_GFX1201:
     case GK_GFX1200:
     case GK_GFX12_GENERIC:
@@ -471,9 +467,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["fp8-conversion-insts"] = true;
       break;
-#if LLPC_BUILD_NPI
     case GK_GFX115F:
-#endif /* LLPC_BUILD_NPI */
     case GK_GFX1153:
     case GK_GFX1152:
     case GK_GFX1151:
@@ -703,14 +697,12 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     case GK_GFX1300:
     case GK_GFX1211:
     case GK_GFX1210:
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX120E:
     case GK_GFX120F:
-#endif /* LLPC_BUILD_NPI */
     case GK_GFX1201:
     case GK_GFX1200:
-#if LLPC_BUILD_NPI
     case GK_GFX115F:
-#endif /* LLPC_BUILD_NPI */
     case GK_GFX1153:
     case GK_GFX1152:
     case GK_GFX1151:

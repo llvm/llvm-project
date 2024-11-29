@@ -1545,15 +1545,15 @@ let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
       defm V_MUL_F64_pseudo : VOP2Inst <"v_mul_f64_pseudo", VOP_F64_F64_F64, fmul>;
 #endif /* LLPC_BUILD_NPI */
     } // End FPDPRounding = 1
-#ifdef LLPC_BUILD_NPI
     let IsDPMACCInstruction = 1 in {
+#ifdef LLPC_BUILD_NPI
       defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
       defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
-    } // IsDPMACCInstruction = 1
 #else /* LLPC_BUILD_NPI */
-    defm V_MIN_NUM_F64 : VOP2Inst <"v_min_num_f64", VOP_F64_F64_F64, fminnum_like>;
-    defm V_MAX_NUM_F64 : VOP2Inst <"v_max_num_f64", VOP_F64_F64_F64, fmaxnum_like>;
+      defm V_MIN_NUM_F64 : VOP2Inst <"v_min_num_f64", VOP_F64_F64_F64, fminnum_like>;
+      defm V_MAX_NUM_F64 : VOP2Inst <"v_max_num_f64", VOP_F64_F64_F64, fmaxnum_like>;
 #endif /* LLPC_BUILD_NPI */
+    } // IsDPMACCInstruction = 1
   } // End SchedRW = [WriteDoubleAdd], isCommutable = 1
   let SchedRW = [Write64Bit] in {
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;

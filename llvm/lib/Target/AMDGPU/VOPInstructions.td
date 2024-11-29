@@ -17,9 +17,7 @@ class LetDummies {
   bit isReMaterializable;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
-#ifdef LLPC_BUILD_NPI
   bit IsDPMACCInstruction;
-#endif /* LLPC_BUILD_NPI */
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -85,9 +83,7 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   string Mnemonic = opName;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
-#ifdef LLPC_BUILD_NPI
   bit IsDPMACCInstruction = 0;
-#endif /* LLPC_BUILD_NPI */
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -184,9 +180,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
 class VOP_Real<VOP_Pseudo ps> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsSingle = ps.Pfl.IsSingle;
-#ifdef LLPC_BUILD_NPI
   bit IsDPMACCInstruction = ps.IsDPMACCInstruction;
-#endif /* LLPC_BUILD_NPI */
 }
 
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
@@ -2431,7 +2425,6 @@ def VOPTrue16Table : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getTrue16OpcodeHelper";
-#ifdef LLPC_BUILD_NPI
 }
 
 def DPMACCInstructionTable : GenericTable {
@@ -2441,5 +2434,4 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getDPMACCInstructionHelper";
-#endif /* LLPC_BUILD_NPI */
 }
