@@ -4059,6 +4059,20 @@ TEST_F(DIExpressionTest, createNewFragmentExpression) {
   EXPECT_EQ(High9FragInfo.OffsetInBits, 15u);
 }
 
+TEST_F(DIExpressionTest, DIOpisEqualExpression) {
+  auto *IntTy = Type::getInt32Ty(Context);
+  DIExpression *EmptyOld = DIExpression::get(Context, {});
+  DIOp::Variant Ops[] = {DIOp::Arg(0, IntTy)};
+  DIExpression *EmptyNew = DIExpression::get(Context, bool(), Ops);
+
+  EXPECT_FALSE(
+      DIExpression::isEqualExpression(EmptyOld, false, EmptyNew, false));
+  EXPECT_FALSE(
+      DIExpression::isEqualExpression(EmptyNew, true, EmptyNew, false));
+  EXPECT_TRUE(
+      DIExpression::isEqualExpression(EmptyNew, true, EmptyNew, true));
+}
+
 TEST_F(DIExpressionTest, convertToUndefExpression) {
 #define EXPECT_UNDEF_OPS_EQUAL(TestExpr, Expected)                             \
   do {                                                                         \

@@ -312,8 +312,10 @@ public:
 /// the value, and Boolean of whether or not it's indirect.
 class DbgValueProperties {
 public:
-  DbgValueProperties(const DIExpression *DIExpr, bool Indirect, bool IsVariadic)
-      : DIExpr(DIExpr), Indirect(Indirect), IsVariadic(IsVariadic) {}
+  DbgValueProperties(const DIExpression *DIExpr, bool Indirect, bool IsVariadic,
+                     unsigned NumLocOps)
+      : DIExpr(DIExpr), Indirect(Indirect), IsVariadic(IsVariadic),
+        NumLocOps(NumLocOps) {}
 
   /// Extract properties from an existing DBG_VALUE instruction.
   DbgValueProperties(const MachineInstr &MI) {
@@ -324,6 +326,7 @@ public:
     IsVariadic = MI.isDebugValueList();
     DIExpr = MI.getDebugExpression();
     Indirect = MI.isDebugOffsetImm();
+    NumLocOps = MI.getNumDebugOperands();
   }
 
   bool isJoinable(const DbgValueProperties &Other) const {
@@ -332,21 +335,20 @@ public:
   }
 
   bool operator==(const DbgValueProperties &Other) const {
-    return std::tie(DIExpr, Indirect, IsVariadic) ==
-           std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic);
+    return std::tie(DIExpr, Indirect, IsVariadic, NumLocOps) ==
+           std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic, NumLocOps);
   }
 
   bool operator!=(const DbgValueProperties &Other) const {
     return !(*this == Other);
   }
 
-  unsigned getLocationOpCount() const {
-    return IsVariadic ? DIExpr->getNumLocationOperands() : 1;
-  }
+  unsigned getLocationOpCount() const { return NumLocOps; }
 
   const DIExpression *DIExpr;
   bool Indirect;
   bool IsVariadic;
+  unsigned NumLocOps;
 };
 
 /// TODO: Might pack better if we changed this to a Struct of Arrays, since
@@ -1057,7 +1059,7 @@ public:
   VLocTracker(DebugVariableMap &DVMap, const OverlapMap &O,
               const DIExpression *EmptyExpr)
       : DVMap(DVMap), OverlappingFragments(O),
-        EmptyProperties(EmptyExpr, false, false) {}
+        EmptyProperties(EmptyExpr, false, false, 1) {}
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               const SmallVectorImpl<DbgOpID> &DebugOps) {

@@ -1511,9 +1511,11 @@ public:
       return true;
     if (Env->Arguments.empty())
       return error("DIOpReferrer requires an argument");
-    return expectSameSize(
-        ResultType, Env->Arguments[0]->getType(),
-        "DIOpReferrer type must be same size in bits as argument");
+    const Value *V = Env->Arguments[0];
+    return isa<PoisonValue>(V) ||
+           expectSameSize(
+               ResultType, V->getType(),
+               "DIOpReferrer type must be same size in bits as argument");
   }
 
   bool visit(DIOp::Arg Op, Type *ResultType, ArrayRef<StackEntry>) {
@@ -1521,7 +1523,9 @@ public:
       return true;
     if (Op.getIndex() >= Env->Arguments.size())
       return error("DIOpArg index out of range");
-    return expectSameSize(ResultType, Env->Arguments[Op.getIndex()]->getType(),
+    const Value *V = Env->Arguments[Op.getIndex()];
+    return isa<PoisonValue>(V) ||
+           expectSameSize(ResultType, V->getType(),
                           "DIOpArg type must be same size in bits as argument");
   }
 
@@ -1833,6 +1837,9 @@ DIExpression::convertToUndefExpression(const DIExpression *Expr) {
 
 const DIExpression *
 DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
+  if (Expr->holdsNewElements())
+    return Expr;
+
   if (any_of(Expr->expr_ops(), [](auto ExprOp) {
         return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
       }))
@@ -1846,10 +1853,10 @@ DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
 
 std::optional<const DIExpression *>
 DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
-  if (Expr->holdsNewElements())
+  if (!Expr)
     return std::nullopt;
 
-  if (!Expr)
+  if (Expr->holdsNewElements())
     return std::nullopt;
 
   if (auto Elts = Expr->getSingleLocationExpressionElements())
@@ -1892,6 +1899,11 @@ bool DIExpression::isEqualExpression(const DIExpression *FirstExpr,
                                      bool FirstIndirect,
                                      const DIExpression *SecondExpr,
                                      bool SecondIndirect) {
+  if (FirstExpr->holdsNewElements() != SecondExpr->holdsNewElements())
+    return false;
+  if (FirstExpr->holdsNewElements())
+    return FirstIndirect == SecondIndirect && FirstExpr == SecondExpr;
+
   SmallVector<uint64_t> FirstOps;
   DIExpression::canonicalizeExpressionOps(FirstOps, FirstExpr, FirstIndirect);
   SmallVector<uint64_t> SecondOps;
@@ -2043,6 +2055,8 @@ bool DIExpression::hasAllLocationOps(unsigned N) const {
   for (auto ExprOp : expr_ops())
     if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
       SeenOps.insert(ExprOp.getArg(0));
+    else if (ExprOp.getOp() == dwarf::DW_OP_LLVM_poisoned)
+      return true;
   for (uint64_t Idx = 0; Idx < N; ++Idx)
     if (!SeenOps.contains(Idx))
       return false;

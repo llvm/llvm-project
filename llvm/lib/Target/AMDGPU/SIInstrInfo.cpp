@@ -4544,6 +4544,7 @@ static void copyFlagsToImplicitVCC(MachineInstr &MI,
 MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
                                            unsigned Op32) const {
   MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
 
   const MCInstrDesc &Op32Desc = get(Op32);
   MachineInstrBuilder Inst32 =
@@ -4555,8 +4556,15 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
 
   // We assume the defs of the shrunk opcode are in the same order, and the
   // shrunk opcode loses the last def (SGPR def, in the VOP3->VOPC case).
-  for (int I = 0, E = Op32Desc.getNumDefs(); I != E; ++I)
+  for (int I = 0, E = Op32Desc.getNumDefs(); I != E; ++I) {
     Inst32.add(MI.getOperand(I));
+
+    // If this def is used by a DBG_INSTR_REF, create a substitution for the new
+    // instruction.
+    if (unsigned DINum = MI.peekDebugInstrNum())
+      MF->makeDebugValueSubstitution({DINum, I},
+                                     {Inst32->getDebugInstrNum(), I});
+  }
 
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
 
