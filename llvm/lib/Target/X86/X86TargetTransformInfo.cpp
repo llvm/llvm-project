@@ -4854,10 +4854,9 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
          RegisterFileMoveCost;
 }
 
-InstructionCost
-X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
-                                     bool Insert, bool Extract,
-                                     TTI::TargetCostKind CostKind) {
+InstructionCost X86TTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
