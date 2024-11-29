@@ -6287,7 +6287,7 @@ bool AsmParser::parseMSInlineAsm(
   if (AsmStart != AsmEnd)
     OS << StringRef(AsmStart, AsmEnd - AsmStart);
 
-  AsmString = AsmStringIR;
+  AsmString = std::move(AsmStringIR);
   return false;
 }
 
