@@ -26265,6 +26265,9 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       }
       if (!NewOp)
         NewOp = DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2, Src3);
+      if (IntrData->Opc0 == X86ISD::VFMADDCSH ||
+          IntrData->Opc0 == X86ISD::VFCMADDCSH)
+        return getScalarMaskingNode(NewOp, Mask, PassThru, Subtarget, DAG);
       return getVectorMaskingNode(NewOp, Mask, PassThru, Subtarget, DAG);
     }
     case IFMA_OP:
