@@ -3543,21 +3543,22 @@ enum class AAPCSBitmaskSME : unsigned {
   ArmIn = 0b001,
   ArmOut = 0b010,
   ArmInOut = 0b011,
-  ArmPreserves = 0b100
+  ArmPreserves = 0b100,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ArmPreserves)
 };
 
-static unsigned encodeAAPCSZAState(unsigned SMEAttrs) {
+static AAPCSBitmaskSME encodeAAPCSZAState(unsigned SMEAttrs) {
   switch (SMEAttrs) {
   case FunctionType::ARM_None:
-    return static_cast<unsigned>(AAPCSBitmaskSME::NoState);
+    return AAPCSBitmaskSME::NoState;
   case FunctionType::ARM_In:
-    return static_cast<unsigned>(AAPCSBitmaskSME::ArmIn);
+    return AAPCSBitmaskSME::ArmIn;
   case FunctionType::ARM_Out:
-    return static_cast<unsigned>(AAPCSBitmaskSME::ArmOut);
+    return AAPCSBitmaskSME::ArmOut;
   case FunctionType::ARM_InOut:
-    return static_cast<unsigned>(AAPCSBitmaskSME::ArmInOut);
+    return AAPCSBitmaskSME::ArmInOut;
   case FunctionType::ARM_Preserves:
-    return static_cast<unsigned>(AAPCSBitmaskSME::ArmPreserves);
+    return AAPCSBitmaskSME::ArmPreserves;
   default:
     llvm_unreachable("Unrecognised SME attribute");
   }
@@ -3578,7 +3579,6 @@ void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
   if (!SMEAttrs)
     return;
 
-  // Streaming Mode
   unsigned Bitmask = 0;
   if (SMEAttrs & FunctionType::SME_PStateSMEnabledMask)
     Bitmask |= static_cast<unsigned>(AAPCSBitmaskSME::ArmStreamingBit);
@@ -3588,11 +3588,13 @@ void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
 
   // TODO: Must represent __arm_agnostic("sme_za_state")
 
-  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
-             << static_cast<unsigned>(AAPCSBitmaskSME::ZA_Shift);
+  Bitmask |= static_cast<unsigned>(
+      encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
+      << AAPCSBitmaskSME::ZA_Shift);
 
-  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
-             << static_cast<unsigned>(AAPCSBitmaskSME::ZT0_Shift);
+  Bitmask |= static_cast<unsigned>(
+      encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
+      << AAPCSBitmaskSME::ZT0_Shift);
 
   Out << "Lj" << Bitmask << "EE";
 }
