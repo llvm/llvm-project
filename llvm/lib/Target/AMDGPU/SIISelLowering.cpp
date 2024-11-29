@@ -14651,8 +14651,8 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
 
       SDValue SelectNode =
           DAG.getNode(ISD::SELECT, SL, IntVT, RHS.getOperand(0),
-                      DAG.getConstant(TrueNodeExpVal, SL, IntVT),
-                      DAG.getConstant(FalseNodeExpVal, SL, IntVT));
+                      DAG.getSignedConstant(TrueNodeExpVal, SL, IntVT),
+                      DAG.getSignedConstant(FalseNodeExpVal, SL, IntVT));
       return DAG.getNode(ISD::FLDEXP, SL, VT, LHS, SelectNode, Flags);
     }
   }
