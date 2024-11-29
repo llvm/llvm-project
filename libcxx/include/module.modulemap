@@ -1240,11 +1240,18 @@ module std [system] {
   }
 
   module flat_map {
-    module flat_map                       { header "__flat_map/flat_map.h" }
-    module flat_multimap                  { header "__flat_map/flat_multimap.h" }
+    module flat_map                       {
+      header "__flat_map/flat_map.h"
+      export std.vector.vector
+    }
+    module flat_multimap                  {
+      header "__flat_map/flat_multimap.h"
+      export std.vector.vector
+    }
     module key_value_iterator             { header "__flat_map/key_value_iterator.h" }
     module sorted_unique                  { header "__flat_map/sorted_unique.h" }
     module sorted_equivalent              { header "__flat_map/sorted_equivalent.h" }
+    module utils                          { header "__flat_map/utils.h" }
 
     header "flat_map"
     export *

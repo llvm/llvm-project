@@ -31,6 +31,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_equivalent.h>
+#include <__flat_map/utils.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
@@ -444,8 +445,8 @@ public:
     auto __key_it    = ranges::upper_bound(__containers_.keys, __pair.first, __compare_);
     auto __mapped_it = __corresponding_mapped_it(*this, __key_it);
 
-    return __emplace_exact_pos(
-        std::move(__key_it), std::move(__mapped_it), std::move(__pair.first), std::move(__pair.second));
+    return __flat_map_utils::__emplace_exact_pos(
+        *this, std::move(__key_it), std::move(__mapped_it), std::move(__pair.first), std::move(__pair.second));
   }
 
   template <class... _Args>
@@ -486,7 +487,8 @@ public:
       __key_iter    = ranges::lower_bound(__key_iter, __containers_.keys.end(), __pair.first, __compare_);
       __mapped_iter = __corresponding_mapped_it(*this, __key_iter);
     }
-    return __emplace_exact_pos(__key_iter, __mapped_iter, std::move(__pair.first), std::move(__pair.second));
+    return __flat_map_utils::__emplace_exact_pos(
+        *this, __key_iter, __mapped_iter, std::move(__pair.first), std::move(__pair.second));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return emplace(__x); }
@@ -766,22 +768,10 @@ private:
                ranges::distance(__self.__containers_.keys.begin(), __key_iter));
   }
 
-  template <class _InputIterator, class _Sentinel>
-  _LIBCPP_HIDE_FROM_ABI size_type __append(_InputIterator __first, _Sentinel __last) {
-    size_type __num_appended = 0;
-    for (; __first != __last; ++__first) {
-      value_type __kv = *__first;
-      __containers_.keys.insert(__containers_.keys.end(), std::move(__kv.first));
-      __containers_.values.insert(__containers_.values.end(), std::move(__kv.second));
-      ++__num_appended;
-    }
-    return __num_appended;
-  }
-
   template <bool _WasSorted, class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI void __append_sort_merge(_InputIterator __first, _Sentinel __last) {
     auto __on_failure     = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    size_t __num_appended = __append(std::move(__first), std::move(__last));
+    size_t __num_appended = __flat_map_utils::__append(*this, std::move(__first), std::move(__last));
     if (__num_appended != 0) {
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
       auto __append_start_offset = __containers_.keys.size() - __num_appended;
@@ -834,49 +824,6 @@ private:
     return _Res(std::move(__key_iter), std::move(__mapped_iter));
   }
 
-  template <class _IterK, class _IterM, class _KeyArg, class... _MArgs>
-  _LIBCPP_HIDE_FROM_ABI iterator
-  __emplace_exact_pos(_IterK&& __it_key, _IterM&& __it_mapped, _KeyArg&& __key, _MArgs&&... __mapped_args) {
-    auto __on_key_failed = std::__make_exception_guard([&]() noexcept {
-      if constexpr (__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
-        // Nothing to roll back!
-      } else {
-        // we need to clear both because we don't know the state of our keys anymore
-        clear() /* noexcept */;
-      }
-    });
-    auto __key_it        = __containers_.keys.emplace(__it_key, std::forward<_KeyArg>(__key));
-    __on_key_failed.__complete();
-
-    auto __on_value_failed = std::__make_exception_guard([&]() noexcept {
-      if constexpr (!__container_traits<_MappedContainer>::__emplacement_has_strong_exception_safety_guarantee) {
-        // we need to clear both because we don't know the state of our values anymore
-        clear() /* noexcept */;
-      } else {
-        // In this case, we know the values are just like before we attempted emplacement,
-        // and we also know that the keys have been emplaced successfully. Just roll back the keys.
-#  if _LIBCPP_HAS_EXCEPTIONS
-        try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-          __containers_.keys.erase(__key_it);
-#  if _LIBCPP_HAS_EXCEPTIONS
-        } catch (...) {
-          // Now things are funky for real. We're failing to rollback the keys.
-          // Just give up and clear the whole thing.
-          //
-          // Also, swallow the exception that happened during the rollback and let the
-          // original value-emplacement exception propagate normally.
-          clear() /* noexcept */;
-        }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      }
-    });
-    auto __mapped_it = __containers_.values.emplace(__it_mapped, std::forward<_MArgs>(__mapped_args)...);
-    __on_value_failed.__complete();
-
-    return iterator(std::move(__key_it), std::move(__mapped_it));
-  }
-
   _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __size) {
     if constexpr (requires { __containers_.keys.reserve(__size); }) {
       __containers_.keys.reserve(__size);
@@ -899,6 +846,8 @@ private:
   template <class _Key2, class _Tp2, class _Compare2, class _KeyContainer2, class _MappedContainer2, class _Predicate>
   friend typename flat_multimap<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>::size_type
   erase_if(flat_multimap<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>&, _Predicate);
+
+  friend __flat_map_utils;
 
   containers __containers_;
   [[no_unique_address]] key_compare __compare_;
