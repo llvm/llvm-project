@@ -853,6 +853,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 6;
 
     case 0xec8148:    // 48 81 EC XX XX XX XX : sub rsp, XXXXXXXX
+    case 0xc0c748:    // 48 C7 C0 XX XX XX XX : mov rax, XX XX XX XX
       return 7;
 
     // clang-format off
@@ -916,6 +917,8 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 5;
     case 0x24648348:  // 48 83 64 24 XX YY : and QWORD PTR [rsp + XX], YY
       return 6;
+    case 0x24A48D48:  // 48 8D A4 24 XX YY ZZ WW : lea rsp, [rsp + WWZZYYXX]
+      return 8;
   }
 
   switch (0xFFFFFFFFFFULL & *(u64*)(address)) {
