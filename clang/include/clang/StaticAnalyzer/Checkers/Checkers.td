@@ -457,6 +457,12 @@ def CStringModeling : Checker<"CStringModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def CStringNotNullTerm : Checker<"NotNullTerminated">,
+  HelpText<"Check for arguments passed to C string functions which are not "
+           "null-terminated strings">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 def CStringNullArg : Checker<"NullArg">,
   HelpText<"Check for null pointers being passed as arguments to C string "
            "functions">,
@@ -480,11 +486,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringNotNullTerm : Checker<"NotNullTerminated">,
-  HelpText<"Check for arguments which are not null-terminating strings">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
@@ -598,13 +599,13 @@ def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   Documentation<HasDocumentation>;
 
-} // end "unix"
-
-let ParentPackage = UnixAlpha in {
-
 def ChrootChecker : Checker<"Chroot">,
   HelpText<"Check improper use of chroot">,
   Documentation<HasDocumentation>;
+
+} // end "unix"
+
+let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,

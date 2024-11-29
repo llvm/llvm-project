@@ -10827,9 +10827,9 @@ Example:
 
 .. code-block:: llvm
 
-      %agg1 = insertvalue {i32, float} undef, i32 1, 0              ; yields {i32 1, float undef}
-      %agg2 = insertvalue {i32, float} %agg1, float %val, 1         ; yields {i32 1, float %val}
-      %agg3 = insertvalue {i32, {float}} undef, float %val, 1, 0    ; yields {i32 undef, {float %val}}
+      %agg1 = insertvalue {i32, float} poison, i32 1, 0              ; yields {i32 1, float poison}
+      %agg2 = insertvalue {i32, float} %agg1, float %val, 1          ; yields {i32 1, float %val}
+      %agg3 = insertvalue {i32, {float}} poison, float %val, 1, 0    ; yields {i32 poison, {float %val}}
 
 .. _memoryops:
 
@@ -20876,7 +20876,7 @@ Example:
 
       ;;; Expansion.
       ;; Lanes at and above %pivot are taken from %on_false
-      %atfirst = insertelement <4 x i32> undef, i32 %pivot, i32 0
+      %atfirst = insertelement <4 x i32> poison, i32 %pivot, i32 0
       %splat = shufflevector <4 x i32> %atfirst, <4 x i32> poison, <4 x i32> zeroinitializer
       %pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> %splat
       %mergemask = and <4 x i1> %cond, <4 x i1> %pivotmask
@@ -25291,7 +25291,7 @@ Examples:
 
 .. code-block:: llvm
 
-      %r = call <4 x i32> @llvm.vp.ctlz.v4i32(<4 x i32> %a, , i1 false, <4 x i1> %mask, i32 %evl)
+      %r = call <4 x i32> @llvm.vp.ctlz.v4i32(<4 x i32> %a, i1 false, <4 x i1> %mask, i32 %evl)
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
