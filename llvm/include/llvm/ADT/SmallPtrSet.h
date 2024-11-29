@@ -216,6 +216,20 @@ protected:
     return EndPointer();
   }
 
+  bool contains_imp(const void *Ptr) const {
+    if (isSmall()) {
+      // Linear search for the item.
+      const void *const *APtr = SmallArray;
+      const void *const *E = SmallArray + NumNonEmpty;
+      for (; APtr != E; ++APtr)
+        if (*APtr == Ptr)
+          return true;
+      return false;
+    }
+
+    return doFind(Ptr) != nullptr;
+  }
+
   bool isSmall() const { return CurArray == SmallArray; }
 
 private:
@@ -433,13 +447,13 @@ public:
 
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
   size_type count(ConstPtrType Ptr) const {
-    return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();
+    return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
   iterator find(ConstPtrType Ptr) const {
     return makeIterator(find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)));
   }
   bool contains(ConstPtrType Ptr) const {
-    return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();
+    return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
 
   template <typename IterT>
