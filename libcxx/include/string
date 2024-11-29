@@ -1884,6 +1884,8 @@ private:
   operator==(const basic_string<char, char_traits<char>, _Alloc>& __lhs,
              const basic_string<char, char_traits<char>, _Alloc>& __rhs) _NOEXCEPT;
 
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __shrink_or_extend(size_type __target_capacity);
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS bool
   __is_long() const _NOEXCEPT {
     if (__libcpp_is_constant_evaluated() && __builtin_constant_p(__rep_.__l.__is_long_)) {
@@ -2077,21 +2079,6 @@ private:
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
 #endif
   }
-
-  // Disable ASan annotations and enable them again when going out of scope. It is assumed that the string is in a valid
-  // state at that point, so `size()` can be called safely.
-  struct [[__nodiscard__]] __annotation_guard {
-    __annotation_guard(const __annotation_guard&)            = delete;
-    __annotation_guard& operator=(const __annotation_guard&) = delete;
-
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __annotation_guard(basic_string& __str) : __str_(__str) {
-      __str_.__annotate_delete();
-    }
-
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__annotation_guard() { __str_.__annotate_new(__str_.size()); }
-
-    basic_string& __str_;
-  };
 
   template <size_type __a>
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __align_it(size_type __s) _NOEXCEPT {
@@ -3371,16 +3358,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
   if (__requested_capacity <= capacity())
     return;
 
-  __annotation_guard __g(*this);
-  auto __allocation = std::__allocate_at_least(__alloc_, __recommend(__requested_capacity) + 1);
-  auto __size       = size();
-  __begin_lifetime(__allocation.ptr, __allocation.count);
-  traits_type::copy(std::__to_address(__allocation.ptr), data(), __size + 1);
-  if (__is_long())
-    __alloc_traits::deallocate(__alloc_, __get_long_pointer(), __get_long_size() + 1);
-  __set_long_cap(__allocation.count);
-  __set_long_size(__size);
-  __set_long_pointer(__allocation.ptr);
+  __shrink_or_extend(__recommend(__requested_capacity));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3389,46 +3367,69 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
   if (__target_capacity == capacity())
     return;
 
-  _LIBCPP_ASSERT_INTERNAL(__is_long(), "Trying to shrink small string");
+  __shrink_or_extend(__target_capacity);
+}
 
-  // We're a long string and we're shrinking into the small buffer.
+template <class _CharT, class _Traits, class _Allocator>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target_capacity) {
+  __annotate_delete();
+  auto __guard    = std::__make_scope_guard(__annotate_new_size(*this));
+  size_type __cap = capacity();
+  size_type __sz  = size();
+
+  pointer __new_data, __p;
+  bool __was_long, __now_long;
   if (__fits_in_sso(__target_capacity)) {
-    __annotation_guard __g(*this);
-    auto __ptr  = __get_long_pointer();
-    auto __size = __get_long_size();
-    auto __cap  = __get_long_cap();
-    traits_type::copy(std::__to_address(__get_short_pointer()), std::__to_address(__ptr), __size + 1);
-    __set_short_size(__size);
-    __alloc_traits::deallocate(__alloc_, __ptr, __cap);
-    return;
-  }
-
+    __was_long = true;
+    __now_long = false;
+    __new_data = __get_short_pointer();
+    __p        = __get_long_pointer();
+  } else {
+    if (__target_capacity > __cap) {
+      // Extend
+      // - called from reserve should propagate the exception thrown.
+      auto __allocation = std::__allocate_at_least(__alloc_, __target_capacity + 1);
+      __new_data        = __allocation.ptr;
+      __target_capacity = __allocation.count - 1;
+    } else {
+      // Shrink
+      // - called from shrink_to_fit should not throw.
+      // - called from reserve may throw but is not required to.
 #if _LIBCPP_HAS_EXCEPTIONS
-  try {
+      try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-    __annotation_guard __g(*this);
-    auto __size       = size();
-    auto __allocation = std::__allocate_at_least(__alloc_, __target_capacity + 1);
+        auto __allocation = std::__allocate_at_least(__alloc_, __target_capacity + 1);
 
-    // The Standard mandates shrink_to_fit() does not increase the capacity.
-    // With equal capacity keep the existing buffer. This avoids extra work
-    // due to swapping the elements.
-    if (__allocation.count - 1 > capacity()) {
-      __alloc_traits::deallocate(__alloc_, __allocation.ptr, __allocation.count);
-      return;
+        // The Standard mandates shrink_to_fit() does not increase the capacity.
+        // With equal capacity keep the existing buffer. This avoids extra work
+        // due to swapping the elements.
+        if (__allocation.count - 1 > capacity()) {
+          __alloc_traits::deallocate(__alloc_, __allocation.ptr, __allocation.count);
+          return;
+        }
+        __new_data        = __allocation.ptr;
+        __target_capacity = __allocation.count - 1;
+#if _LIBCPP_HAS_EXCEPTIONS
+      } catch (...) {
+        return;
+      }
+#endif // _LIBCPP_HAS_EXCEPTIONS
     }
-
-    __begin_lifetime(__allocation.ptr, __allocation.count);
-    auto __ptr = __get_long_pointer();
-    traits_type::copy(std::__to_address(__allocation.ptr), std::__to_address(__ptr), __size + 1);
-    __alloc_traits::deallocate(__alloc_, __ptr, __get_long_cap());
-    __set_long_cap(__allocation.count);
-    __set_long_pointer(__allocation.ptr);
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    return;
+    __begin_lifetime(__new_data, __target_capacity + 1);
+    __now_long = true;
+    __was_long = __is_long();
+    __p        = __get_pointer();
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  traits_type::copy(std::__to_address(__new_data), std::__to_address(__p), size() + 1);
+  if (__was_long)
+    __alloc_traits::deallocate(__alloc_, __p, __cap + 1);
+  if (__now_long) {
+    __set_long_cap(__target_capacity + 1);
+    __set_long_size(__sz);
+    __set_long_pointer(__new_data);
+  } else
+    __set_short_size(__sz);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
