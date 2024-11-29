@@ -131,7 +131,9 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
 
       // This offset can't be negative. Therefore we must be accessing something
       // partially inside the last type
-      if (TDA->Struct.Members[Idx].Offset > OffsetA)
+      // We shouldn't check this if we are on the first member, Idx will underflow
+      // The first member can be offset in rare cases such as llvm::cl::Option
+      if (TDA->Struct.Members[Idx].Offset > OffsetA && Idx > 0)
         Idx -= 1;
 
       OffsetA -= TDA->Struct.Members[Idx].Offset;
