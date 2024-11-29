@@ -4063,17 +4063,18 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = YuArg = nullptr;
   }
 
-  unsigned LastPLSize = 0;
+  bool LinkOnly = phases::Link == FinalPhase && Inputs.size() > 0;
   for (auto &I : Inputs) {
     types::ID InputType = I.first;
     const Arg *InputArg = I.second;
 
     auto PL = types::getCompilationPhases(InputType);
-    LastPLSize = PL.size();
+
+    phases::ID InitialPhase = PL[0];
+    LinkOnly = LinkOnly && phases::Link == InitialPhase && PL.size() == 1;
 
     // If the first step comes after the final phase we are doing as part of
     // this compilation, warn the user about it.
-    phases::ID InitialPhase = PL[0];
     if (InitialPhase > FinalPhase) {
       if (InputArg->isClaimed())
         continue;
@@ -4128,10 +4129,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  // If we are linking, claim any options which are obviously only used for
-  // compilation.
-  // FIXME: Understand why the last Phase List length is used here.
-  if (FinalPhase == phases::Link && LastPLSize == 1) {
+  // Claim any options which are obviously only used for compilation.
+  if (LinkOnly) {
     Args.ClaimAllArgs(options::OPT_CompileOnly_Group);
     Args.ClaimAllArgs(options::OPT_cl_compile_Group);
   }
