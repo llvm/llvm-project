@@ -48,7 +48,7 @@ namespace {
 //                                  |                               |
 //                      bug<--foo()--          JAIL_ENTERED<--foo()--
 //
-class ChrootChecker : public Checker<eval::Call, check::PreCall> {
+class ChrootChecker final : public Checker<eval::Call, check::PreCall> {
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
