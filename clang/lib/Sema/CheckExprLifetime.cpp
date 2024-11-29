@@ -269,10 +269,14 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   //
   // Note: it is possible for a specialization declaration to have an attribute
   // even if the primary template does not.
+  //
+  // FIXME: What if the primary template and explicit specialization
+  // declarations have conflicting attributes? We should consider diagnosing
+  // this scenario.
   bool Result = RD->hasAttr<T>();
 
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    Result |= (bool)CTSD->getSpecializedTemplate()->getTemplatedDecl();
+    Result |= CTSD->getSpecializedTemplate()->getTemplatedDecl()->hasAttr<T>();
 
   return Result;
 }
