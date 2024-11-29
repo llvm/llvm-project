@@ -13,7 +13,6 @@ on:
   pull_request:
     branches:
       - main
-      - users/boomanaiden154/build-metrics-container
     paths:
       - .github/workflows/build-metrics-container.yml
       - '.ci/metrics/**'
