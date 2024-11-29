@@ -271,9 +271,9 @@ define void @str_with_off_15(ptr %ptr) {
 define void @str_with_off_15mulvl(ptr %ptr) {
 ; CHECK-LABEL: str_with_off_15mulvl:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    incb x0, all, mul #15
 ; CHECK-NEXT:    mov w12, #15 // =0xf
-; CHECK-NEXT:    addvl x8, x0, #15
-; CHECK-NEXT:    str za[w12, 0], [x8]
+; CHECK-NEXT:    str za[w12, 0], [x0]
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 240
@@ -285,9 +285,9 @@ define void @str_with_off_15mulvl(ptr %ptr) {
 define void @str_with_off_16mulvl(ptr %ptr) {
 ; CHECK-LABEL: str_with_off_16mulvl:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    incb x0, all, mul #16
 ; CHECK-NEXT:    mov w12, #16 // =0x10
-; CHECK-NEXT:    addvl x8, x0, #16
-; CHECK-NEXT:    str za[w12, 0], [x8]
+; CHECK-NEXT:    str za[w12, 0], [x0]
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 256

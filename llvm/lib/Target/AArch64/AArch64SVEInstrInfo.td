@@ -142,11 +142,13 @@ def AArch64st1q_scatter : SDNode<"AArch64ISD::SST1Q_PRED", SDT_AArch64_SCATTER_V
 
 // SVE CNT/INC/RDVL
 def sve_rdvl_imm : ComplexPattern<i64, 1, "SelectRDVLImm<-32, 31, 16>">;
+def sve_cntb_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 16>">;
 def sve_cnth_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 8>">;
 def sve_cntw_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 4>">;
 def sve_cntd_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 2>">;
 
 // SVE DEC
+def sve_cntb_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -16>">;
 def sve_cnth_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -8>">;
 def sve_cntw_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -4>">;
 def sve_cntd_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -2>">;
@@ -2678,14 +2680,8 @@ let Predicates = [HasSVE_or_SME] in {
   }
 
   let Predicates = [HasSVE_or_SME, UseScalarIncVL], AddedComplexity = 5 in {
-    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-              (ADDVL_XXI GPR64:$op, $imm)>;
-
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
-              (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (IMPLICIT_DEF),
-                                        GPR32:$op, sub_32), $imm),
-                              sub_32)>;
-
+    def : Pat<(add GPR64:$op, (vscale (sve_cntb_imm i32:$imm))),
+              (INCB_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm i32:$imm))),
               (INCH_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm i32:$imm))),
@@ -2693,6 +2689,8 @@ let Predicates = [HasSVE_or_SME] in {
     def : Pat<(add GPR64:$op, (vscale (sve_cntd_imm i32:$imm))),
               (INCD_XPiI GPR64:$op, 31, $imm)>;
 
+    def : Pat<(add GPR64:$op, (vscale (sve_cntb_imm_neg i32:$imm))),
+              (DECB_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm_neg i32:$imm))),
               (DECH_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm_neg i32:$imm))),
@@ -2700,6 +2698,13 @@ let Predicates = [HasSVE_or_SME] in {
     def : Pat<(add GPR64:$op, (vscale (sve_cntd_imm_neg i32:$imm))),
               (DECD_XPiI GPR64:$op, 31, $imm)>;
 
+    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
+              (ADDVL_XXI GPR64:$op, $imm)>;
+
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntb_imm i32:$imm))))),
+              (EXTRACT_SUBREG (INCB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                          GPR32:$op, sub_32), 31, $imm),
+                               sub_32)>;
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cnth_imm i32:$imm))))),
               (EXTRACT_SUBREG (INCH_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
@@ -2713,6 +2718,10 @@ let Predicates = [HasSVE_or_SME] in {
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
 
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntb_imm_neg i32:$imm))))),
+              (EXTRACT_SUBREG (DECB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                          GPR32:$op, sub_32), 31, $imm),
+                               sub_32)>;
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm))))),
               (EXTRACT_SUBREG (DECH_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
@@ -2725,6 +2734,11 @@ let Predicates = [HasSVE_or_SME] in {
               (EXTRACT_SUBREG (DECD_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
+
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
+              (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (IMPLICIT_DEF),
+                                        GPR32:$op, sub_32), $imm),
+                              sub_32)>;
   }
 
   // For big endian, only BITCASTs involving same sized vector types with same
