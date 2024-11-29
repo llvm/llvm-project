@@ -4,8 +4,7 @@
 define i32 @test(i32 %a) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w8, w0, #1
-; CHECK-NEXT:    orr w0, w8, #0xc0
+; CHECK-NEXT:    add w0, w0, #193
 ; CHECK-NEXT:    ret
 entry:
   %add = add i32 %a, 1
