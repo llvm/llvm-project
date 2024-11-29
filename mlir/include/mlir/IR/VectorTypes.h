@@ -16,7 +16,7 @@
 namespace mlir {
 namespace vector {
 
-/// A vector type containing at least one scalable dimension
+/// A vector type containing at least one scalable dimension.
 class ScalableVectorType : public VectorType {
 public:
   using VectorType::VectorType;
@@ -29,7 +29,7 @@ public:
   }
 };
 
-/// A vector type with no scalable dimensions
+/// A vector type with no scalable dimensions.
 class FixedWidthVectorType : public VectorType {
 public:
   using VectorType::VectorType;
