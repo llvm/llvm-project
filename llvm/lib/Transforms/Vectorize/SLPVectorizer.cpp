@@ -17799,6 +17799,8 @@ bool BoUpSLP::collectValuesToDemote(
     // original type and the sign bit of the truncate type are similar.
     auto AShrChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
       return all_of(E.Scalars, [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
         unsigned ShiftedBits = OrigBitWidth - BitWidth;
