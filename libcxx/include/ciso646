@@ -24,7 +24,6 @@
 #if _LIBCPP_STD_VER >= 20
 
 using __standard_header_ciso646 _LIBCPP_DEPRECATED_("removed in C++20. Include <version> instead.") = void;
-// NOLINTNEXTLINE(clang-diagnostic-deprecated-declarations)
 using __use_standard_header_ciso646 = __standard_header_ciso646;
 
 #endif

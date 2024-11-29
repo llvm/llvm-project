@@ -31,13 +31,11 @@ Macros:
 #if _LIBCPP_STD_VER >= 20
 
 using __standard_header_cstdbool _LIBCPP_DEPRECATED_("removed in C++20.") = void;
-// NOLINTNEXTLINE(clang-diagnostic-deprecated-declarations)
 using __use_standard_header_cstdbool = __standard_header_cstdbool;
 
 #elif _LIBCPP_STD_VER >= 17
 
 using __standard_header_cstdbool _LIBCPP_DEPRECATED = void;
-// NOLINTNEXTLINE(clang-diagnostic-deprecated-declarations)
 using __use_standard_header_cstdbool = __standard_header_cstdbool;
 
 #endif
