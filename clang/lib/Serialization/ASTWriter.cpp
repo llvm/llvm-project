@@ -199,7 +199,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
                                            AffectedReason Reason) {
     M = M->getTopLevelModule();
 
-    // We need to process the header either when it was not present of when we
+    // We need to process the header either when it was not present or when we
     // previously flagged module map as textual headers and now we found a
     // proper import.
     if (auto [It, Inserted] = ProcessedModules.insert({M, Reason});
