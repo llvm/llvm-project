@@ -58,3 +58,11 @@ void f7(void) {
       // expected-note@-2    {{No call of chdir("/") immediately after chroot}}
   }
 }
+
+void f8() {
+  chroot("/usr/local"); // expected-note {{chroot called here}}
+  chdir("/usr"); // This chdir was ineffective because it's not exactly `chdir("/")`.
+  foo();
+  // expected-warning@-1 {{No call of chdir("/") immediately after chroot}}
+  // expected-note@-2    {{No call of chdir("/") immediately after chroot}}
+}
