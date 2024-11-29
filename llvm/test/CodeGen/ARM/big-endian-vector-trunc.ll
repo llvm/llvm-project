@@ -4,8 +4,23 @@
 define i32 @test(i64 %arg1) "target-features"="+neon" {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    subs r1, r1, #1
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    sbcs r0, r0, #0
+; CHECK-NEXT:    vldr s0, .LCPI0_0
+; CHECK-NEXT:    movwhs r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    mvnne r2, #0
+; CHECK-NEXT:    vmov s1, r2
+; CHECK-NEXT:    vmovn.i32 d16, q0
+; CHECK-NEXT:    vmovn.i16 d16, q8
+; CHECK-NEXT:    vmov.u8 r0, d16[0]
+; CHECK-NEXT:    and r0, r0, #1
 ; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI0_0:
+; CHECK-NEXT:    .long 0xffffffff @ float NaN
 entry:
   %insert_zero = insertelement <8 x i64> poison, i64 %arg1, i64 0
   %splat_zero = shufflevector <8 x i64> %insert_zero, <8 x i64> poison, <8 x i32> zeroinitializer
