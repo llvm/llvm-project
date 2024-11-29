@@ -17,7 +17,14 @@
 
 struct NonEmptyFunctionObject {
   bool val = true;
-  bool operator()() const; // not defined
+  bool operator()() const;
+};
+
+bool func();
+
+struct SomeClass {
+  bool member_object;
+  bool member_function();
 };
 
 using ResultWithEmptyFuncObject = decltype(std::not_fn<std::false_type{}>());
@@ -25,3 +32,12 @@ static_assert(std::is_empty_v<ResultWithEmptyFuncObject>);
 
 using ResultWithNotEmptyFuncObject = decltype(std::not_fn<NonEmptyFunctionObject{}>());
 static_assert(std::is_empty_v<ResultWithNotEmptyFuncObject>);
+
+using ResultWithFunctionPointer = decltype(std::not_fn<&func>());
+static_assert(std::is_empty_v<ResultWithFunctionPointer>);
+
+using ResultWithMemberObjectPointer = decltype(std::not_fn<&SomeClass::member_object>());
+static_assert(std::is_empty_v<ResultWithMemberObjectPointer>);
+
+using ResultWithMemberFunctionPointer = decltype(std::not_fn<&SomeClass::member_function>());
+static_assert(std::is_empty_v<ResultWithMemberFunctionPointer>);
