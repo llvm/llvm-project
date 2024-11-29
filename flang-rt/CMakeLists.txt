@@ -73,13 +73,22 @@ if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSIO
 endif()
 
 if (LLVM_TREE_AVAILABLE)
+  # In a bootstrap build emit the libraries into a default search path in the
+  # build directory of the just-built compiler. This allows using the
+  # just-built compiler without specifying paths to runtime libraries.
+  #
   # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
   # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
   get_clang_resource_dir(FLANG_RT_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
   get_clang_resource_dir(FLANG_RT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command finds the install prefix itself
 else ()
-  set(FLANG_RT_BUILD_LIB_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
+  # In a runtimes build never write into LLVM's build dir. It might be reused
+  # for mutliple Flang-RT builds (e.g. Debug/Release). Instead create our own
+  # library directory.
+  #
+  # TODO: Support multi-config generators
+  set(FLANG_RT_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
   set(FLANG_RT_INSTALL_LIB_DIR "lib${LLVM_LIBDIR_SUFFIX}")
 endif ()
 

@@ -70,6 +70,8 @@ tools = [
     )
 ]
 
+tools.append(ToolSubst("%libdir", command=config.flangrt_build_lib_dir, unresolved="fatal"))
+
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler.
 libruntime = os.path.join(config.flangrt_build_lib_dir, "libflang_rt.a")

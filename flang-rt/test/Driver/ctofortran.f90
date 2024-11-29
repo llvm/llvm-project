@@ -1,7 +1,7 @@
 ! UNSUPPORTED: system-windows
 ! RUN: split-file %s %t
 ! RUN: chmod +x %t/runtest.sh
-! RUN: %t/runtest.sh %t %t/ffile.f90 %t/cfile.c %flang | FileCheck %s
+! RUN: %t/runtest.sh %t %t/ffile.f90 %t/cfile.c %flang %libdir | FileCheck %s
 
 !--- ffile.f90
 program fmain
@@ -71,16 +71,16 @@ TMPDIR=$1
 FFILE=$2
 CFILE=$3
 FLANG=$4
-shift 4
+LIBDIR=$5
+shift 5
 FLAGS="$*"
 BINDIR=`dirname $FLANG`
-LIBDIR=$BINDIR/../lib
 CCOMP=$BINDIR/clang
 if [ -x $CCOMP ]
 then
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBDIR
   $CCOMP $FLAGS -c $CFILE -o $TMPDIR/cfile.o
-  $FLANG $FLAGS $FFILE $TMPDIR/cfile.o -o $TMPDIR/ctofortran
+  $FLANG $FLAGS $FFILE $TMPDIR/cfile.o -o $TMPDIR/ctofortran -L"${LIBDIR}"
   $TMPDIR/ctofortran # should print "PASS"
 else
   # No clang compiler, just pass by default
