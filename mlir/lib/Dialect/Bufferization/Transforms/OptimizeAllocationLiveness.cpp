@@ -95,14 +95,11 @@ public:
   OptimizeAllocationLiveness() = default;
 
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-
-    if (func.isExternal())
-      return;
+    Operation* func = getOperation();
 
     BufferViewFlowAnalysis analysis = BufferViewFlowAnalysis(func);
 
-    func.walk([&](MemoryEffectOpInterface memEffectOp) -> WalkResult {
+    func->walk([&](MemoryEffectOpInterface memEffectOp) -> WalkResult {
       if (!hasMemoryAllocEffect(memEffectOp))
         return WalkResult::advance();
 

@@ -166,7 +166,6 @@ struct RaiseMemrefDialect
 
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::affine::createRaiseMemrefToAffine() {
+std::unique_ptr<AffineScopePassBase> mlir::affine::createRaiseMemrefToAffine() {
   return std::make_unique<RaiseMemrefDialect>();
 }
