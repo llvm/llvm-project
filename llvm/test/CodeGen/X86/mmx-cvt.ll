@@ -287,8 +287,7 @@ define noundef <2 x i64> @cvt_f64_v2i64(double %a0) {
 ;
 ; X64-LABEL: cvt_f64_v2i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %xmm0, %rax
-; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    retq
   %bc = bitcast double %a0 to <1 x i64>
   %r = shufflevector <1 x i64> %bc, <1 x i64> zeroinitializer, <2 x i32> <i32 0, i32 1>
