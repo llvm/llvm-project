@@ -403,7 +403,7 @@ public:
 
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = std::nullopt) const {
+      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const {
     return 0;
   }
 

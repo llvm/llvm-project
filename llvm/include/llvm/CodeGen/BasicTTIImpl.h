@@ -779,10 +779,7 @@ public:
   /// extracted from vectors.
   InstructionCost getScalarizationOverhead(
       VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = std::nullopt) {
-    assert((VL.empty() ||
-            VL.size() == cast<FixedVectorType>(InTy)->getNumElements()) &&
-           "Type does not match the values.");
+      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -790,6 +787,7 @@ public:
     auto *Ty = cast<FixedVectorType>(InTy);
 
     assert(DemandedElts.getBitWidth() == Ty->getNumElements() &&
+           (VL.empty() || VL.size() == Ty->getNumElements()) &&
            "Vector size mismatch");
 
     InstructionCost Cost = 0;
