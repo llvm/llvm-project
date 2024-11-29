@@ -31,7 +31,7 @@ using __use_standard_header_ccomplex = __standard_header_ccomplex;
 #elif _LIBCPP_STD_VER >= 17
 
 using __standard_header_ccomplex _LIBCPP_DEPRECATED_("Include <complex> instead.") = void;
-using __use_standard_header_ccomplex = __standard_header_ccomplex;
+using __use_standard_header_ccomplex                                               = __standard_header_ccomplex;
 
 #endif
 
