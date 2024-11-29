@@ -467,7 +467,7 @@ StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(
     GetObjectFileInterface GetObjFileInterface, Error &Err)
     : L(L), GetObjFileInterface(std::move(GetObjFileInterface)),
       ArchiveBuffer(std::move(ArchiveBuffer)), Archive(std::move(Archive)) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   if (!this->GetObjFileInterface)
     this->GetObjFileInterface = getObjectFileInterface;
   if (!Err)
