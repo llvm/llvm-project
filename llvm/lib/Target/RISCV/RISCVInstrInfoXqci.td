@@ -58,7 +58,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_CSRRWRI : RVInstR<0b1000111, 0b000, OPC_SYSTEM, (outs GPR:$rd),
                            (ins uimm5:$rs1, GPRNoX0:$rs2), "qc.csrrwri",
                            "$rd, $rs1, $rs2">;
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcicsr, IsRV32], DecoderNamespace = "Xqcicsr"
 
 let Predicates = [HasVendorXqcisls, IsRV32], DecoderNamespace = "Xqcisls" in {
