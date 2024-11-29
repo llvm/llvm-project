@@ -54,11 +54,8 @@ def get_metrics(github_repo: github.Repository, workflows_to_track: dict[str, in
         if workflow_run.status != "completed":
             continue
 
-        # This workflow is not tracked at all. Ignoring.
-        if workflow_run.name not in workflows_to_track:
-            continue
-
-        # This workflow was already sampled for this run. Ignoring.
+        # This workflow was already sampled for this run, or is not tracked at
+        # all. Ignoring.
         if workflow_run.name not in workflows_to_include:
             continue
 
