@@ -45,7 +45,7 @@ FunctionPass *createAMDGPUBundleIdxLdStPass();
 #endif /* LLPC_BUILD_NPI */
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
-FunctionPass *createSIOptimizeVGPRLiveRangePass();
+FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
@@ -410,8 +410,8 @@ struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
 void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
 extern char &SIOptimizeExecMaskingPreRAID;
 
-void initializeSIOptimizeVGPRLiveRangePass(PassRegistry &);
-extern char &SIOptimizeVGPRLiveRangeID;
+void initializeSIOptimizeVGPRLiveRangeLegacyPass(PassRegistry &);
+extern char &SIOptimizeVGPRLiveRangeLegacyID;
 
 void initializeAMDGPUAnnotateUniformValuesLegacyPass(PassRegistry &);
 extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
