@@ -3259,7 +3259,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       auto RegWidth =
           getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
               .getFixedValue();
-      return (Idx == 0 || (Idx * EltSz) % RegWidth == 0);
+      return Idx == 0 || (RegWidth != 0 && (Idx * EltSz) % RegWidth == 0);
     };
 
     // Check if the type constraints on input vector type and result scalar type
