@@ -8,7 +8,7 @@ define i32 @simplify_load_ext_drop_trunc_nsw(ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X]], 255
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i32 [[TMP0]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    [[EXT1:%.*]] = sext i8 [[TRUNC]] to i16
 ; CHECK-NEXT:    call void @use(i32 [[TMP0]])
 ; CHECK-NEXT:    [[EXT2:%.*]] = zext i16 [[EXT1]] to i32
@@ -31,7 +31,7 @@ define i32 @simplify_load_ext_drop_shl_nsw(ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X]], 255
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[TMP0]], 24
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP0]], 24
 ; CHECK-NEXT:    call void @use(i32 [[TMP0]])
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
