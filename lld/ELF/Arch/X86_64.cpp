@@ -607,7 +607,7 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   } else if (rel.type == R_X86_64_CODE_4_GOTTPOFF) {
     if (loc[-4] != 0xd5) {
       Err(ctx) << getErrorLoc(ctx, loc - 4)
-               << "Invalid prefix with R_X86_64_CODE_4_GOTTPOFF!";
+               << "invalid prefix with R_X86_64_CODE_4_GOTTPOFF!";
       return;
     }
     const uint8_t rex = loc[-3];
@@ -628,7 +628,7 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   } else if (rel.type == R_X86_64_CODE_6_GOTTPOFF) {
     if (loc[-6] != 0x62) {
       Err(ctx) << getErrorLoc(ctx, loc - 6)
-               << "Invalid prefix with R_X86_64_CODE_6_GOTTPOFF!";
+               << "invalid prefix with R_X86_64_CODE_6_GOTTPOFF!";
       return;
     }
     // Check bits are satisfied:
