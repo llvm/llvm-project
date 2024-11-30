@@ -288,10 +288,25 @@ if(OPENMP_STANDALONE_BUILD)
     REQUIRED
   )
 
+  find_path (
+    LIBOMP_INCLUDE_DIR
+    NAMES
+      omp.h
+    HINTS
+    ${COMPILER_RESOURCE_DIR}/include
+    ${CMAKE_INSTALL_PREFIX}/include
+  )
+
+  get_filename_component(LIBOMP_LIBRARY_DIR ${LIBOMP_STANDALONE} DIRECTORY)
+
   set(OPENMP_TEST_FLAGS "" CACHE STRING
     "Extra compiler flags to send to the test compiler.")
   set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
     "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
+  set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
+    "Path to folder containing omp.h")
+  set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
+    "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 endif()
 
 macro(pythonize_bool var)
