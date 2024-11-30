@@ -1380,6 +1380,12 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         Level.getSpeedupLevel(), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
         PTO.ForgetAllSCEVInLoopUnroll)));
+    {
+      ExtraLoopPassManager<ShouldRunExtraUnrollPasses> ExtraPasses;
+      ExtraPasses.addPass((IndVarSimplifyPass()));
+      FPM.addPass(createFunctionToLoopPassAdaptor(std::move(ExtraPasses)));
+    }
+
     FPM.addPass(WarnMissedTransformationsPass());
     // Now that we are done with loop unrolling, be it either by LoopVectorizer,
     // or LoopUnroll passes, some variable-offset GEP's into alloca's could have
