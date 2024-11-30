@@ -289,7 +289,7 @@ void initializeSinkingLegacyPassPass(PassRegistry &);
 void initializeSjLjEHPreparePass(PassRegistry &);
 void initializeSlotIndexesWrapperPassPass(PassRegistry &);
 void initializeSpeculativeExecutionLegacyPassPass(PassRegistry &);
-void initializeSpillPlacementPass(PassRegistry &);
+void initializeSpillPlacementWrapperLegacyPass(PassRegistry &);
 void initializeStackColoringLegacyPass(PassRegistry &);
 void initializeStackFrameLayoutAnalysisPassPass(PassRegistry &);
 void initializeStackMapLivenessPass(PassRegistry &);

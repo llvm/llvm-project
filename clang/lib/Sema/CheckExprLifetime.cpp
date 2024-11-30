@@ -204,6 +204,7 @@ struct IndirectLocalPathEntry {
     GslPointerInit,
     GslPointerAssignment,
     DefaultArg,
+    ParenAggInit,
   } Kind;
   Expr *E;
   union {
@@ -257,9 +258,27 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   auto *RD = Type->getAsCXXRecordDecl();
   if (!RD)
     return false;
+  // Generally, if a primary template class declaration is annotated with an
+  // attribute, all its specializations generated from template instantiations
+  // should inherit the attribute.
+  //
+  // However, since lifetime analysis occurs during parsing, we may encounter
+  // cases where a full definition of the specialization is not required. In
+  // such cases, the specialization declaration remains incomplete and lacks the
+  // attribute. Therefore, we fall back to checking the primary template class.
+  //
+  // Note: it is possible for a specialization declaration to have an attribute
+  // even if the primary template does not.
+  //
+  // FIXME: What if the primary template and explicit specialization
+  // declarations have conflicting attributes? We should consider diagnosing
+  // this scenario.
+  bool Result = RD->hasAttr<T>();
+
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
-  return RD->hasAttr<T>();
+    Result |= CTSD->getSpecializedTemplate()->getTemplatedDecl()->hasAttr<T>();
+
+  return Result;
 }
 
 bool isPointerLikeType(QualType QT) {
@@ -985,6 +1004,17 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   if (isa<CallExpr>(Init) || isa<CXXConstructExpr>(Init))
     return visitFunctionCallArguments(Path, Init, Visit);
 
+  if (auto *CPE = dyn_cast<CXXParenListInitExpr>(Init)) {
+    RevertToOldSizeRAII RAII(Path);
+    Path.push_back({IndirectLocalPathEntry::ParenAggInit, CPE});
+    for (auto *I : CPE->getInitExprs()) {
+      if (I->isGLValue())
+        visitLocalsRetainedByReferenceBinding(Path, I, RK_ReferenceBinding,
+                                              Visit);
+      else
+        visitLocalsRetainedByInitializer(Path, I, Visit, true);
+    }
+  }
   switch (Init->getStmtClass()) {
   case Stmt::UnaryOperatorClass: {
     auto *UO = cast<UnaryOperator>(Init);
@@ -1081,6 +1111,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslPointerAssignment:
+    case IndirectLocalPathEntry::ParenAggInit:
       // These exist primarily to mark the path as not permitting or
       // supporting lifetime extension.
       break;
@@ -1392,6 +1423,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       switch (Elem.Kind) {
       case IndirectLocalPathEntry::AddressOf:
       case IndirectLocalPathEntry::LValToRVal:
+      case IndirectLocalPathEntry::ParenAggInit:
         // These exist primarily to mark the path as not permitting or
         // supporting lifetime extension.
         break;
