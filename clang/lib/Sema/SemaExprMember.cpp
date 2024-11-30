@@ -1655,8 +1655,10 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     // We disallow element access for ext_vector_type bool.  There is no way to
     // materialize a reference to a vector element as a pointer (each element is
     // one bit in the vector).
+    assert(MemberName.isIdentifier() &&
+           "Ext vector component name not an identifier!");
     S.Diag(R.getNameLoc(), diag::err_ext_vector_component_name_illegal)
-        << MemberName
+        << MemberName.getAsIdentifierInfo()->getName()
         << (BaseExpr.get() ? BaseExpr.get()->getSourceRange() : SourceRange());
     return ExprError();
   }
