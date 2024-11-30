@@ -261,6 +261,11 @@ SYMBOL(data, std::ranges::, <ranges>)
 SYMBOL(data, std::ranges::, <iterator>)
 SYMBOL(cdata, std::ranges::, <ranges>)
 SYMBOL(cdata, std::ranges::, <iterator>)
+// https://eel.is/c++draft/tuple.general#2:
+// In addition to being available via inclusion of the <tuple> header,
+// ignore ... is available when <utility> ... is included.
+SYMBOL(ignore, std::, <tuple>)
+SYMBOL(ignore, std::, <utility>)
 
 // Ignore specializations
 SYMBOL(hash, std::, <functional>)
