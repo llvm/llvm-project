@@ -1204,7 +1204,8 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       // TODO: This is a 1:N conversion. The conversion value mapping does not
       // store such materializations yet. If the types of the most recently
       // mapped values do not match, build a target materialization.
-      if (TypeRange(unpacked) == legalTypes) {
+      ValueRange unpackedRange(unpacked);
+      if (TypeRange(unpackedRange) == legalTypes) {
         remapped.push_back(std::move(unpacked));
         continue;
       }
@@ -1677,7 +1678,7 @@ void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";
   });
   SmallVector<ValueRange> newVals;
-  for (int i = 0; i < newValues.size(); ++i)
+  for (size_t i = 0; i < newValues.size(); ++i)
     newVals.push_back(newValues.slice(i, 1));
   impl->notifyOpReplaced(op, newVals);
 }
@@ -2669,8 +2670,11 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
       break;
     }
     if (!newMaterialization.empty()) {
-      assert(TypeRange(newMaterialization) == op.getResultTypes() &&
+#ifndef NDEBUG
+      ValueRange newMaterializationRange(newMaterialization);
+      assert(TypeRange(newMaterializationRange) == op.getResultTypes() &&
              "materialization callback produced value of incorrect type");
+#endif // NDEBUG
       rewriter.replaceOp(op, newMaterialization);
       return success();
     }
