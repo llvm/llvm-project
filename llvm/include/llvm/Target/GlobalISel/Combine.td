@@ -1860,8 +1860,7 @@ def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 def anyext_undef: GICombineRule<
    (defs root:$root),
    (match (G_IMPLICIT_DEF $undef),
-          (G_ANYEXT $root, $undef):$Aext,
-   [{ return true; }]),
+          (G_ANYEXT $root, $undef):$Aext),
    (apply [{ Helper.replaceInstWithUndef(*${Aext}); }])>;
 
 def zext_undef: GICombineRule<
