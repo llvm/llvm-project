@@ -2248,6 +2248,25 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
+  /// If ``true``, a line break will be placed before the ``>`` in a multiline
+  /// template declaration.
+  /// \code
+  ///    true:
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar,
+  ///        typename Baz
+  ///    >
+  ///
+  ///    false:
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar,
+  ///        typename Baz>
+  /// \endcode
+  /// \version 20
+  bool BreakBeforeTemplateClose;
+
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
   ///    true:
@@ -5184,6 +5203,7 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
+           BreakBeforeTemplateClose == R.BreakBeforeTemplateClose &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&

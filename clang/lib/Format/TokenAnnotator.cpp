@@ -6254,7 +6254,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
 
   if (Right.is(TT_TemplateCloser))
-    return false;
+    return Right.ClosesTemplateDeclaration && Style.BreakBeforeTemplateClose;
   if (Right.is(tok::r_square) && Right.MatchingParen &&
       Right.MatchingParen->is(TT_LambdaLSquare)) {
     return false;

@@ -11077,6 +11077,137 @@ TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
       Style);
 }
 
+TEST_F(FormatTest, BreakBeforeTemplateClose) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  Style.ColumnLimit = 0;
+  verifyNoChange("template <typename Foo>\n"
+                 "void foo() {}",
+                 Style);
+  verifyNoChange("template <\n"
+                 "    typename Foo,\n"
+                 "    typename Bar>\n"
+                 "void foo() {}",
+                 Style);
+  // when BreakBeforeTemplateClose is off, this line break is removed:
+  verifyFormat("template <\n"
+               "    typename Foo,\n"
+               "    typename Bar>\n"
+               "void foo() {}",
+               "template <\n"
+               "    typename Foo,\n"
+               "    typename Bar\n"
+               ">\n"
+               "void foo() {}",
+               Style);
+  Style.BreakBeforeTemplateClose = true;
+  // BreakBeforeTemplateClose should NOT force multiline templates
+  verifyNoChange("template <typename Foo>\n"
+                 "void foo() {}",
+                 Style);
+  verifyNoChange("template <typename Foo, typename Bar>\n"
+                 "void foo() {}",
+                 Style);
+  // it should allow a line break:
+  verifyNoChange("template <\n"
+                 "    typename Foo\n"
+                 ">\n"
+                 "void foo() {}",
+                 Style);
+  verifyNoChange("template <\n"
+                 "    typename Foo,\n"
+                 "    typename Bar\n"
+                 ">\n"
+                 "void foo() {}",
+                 Style);
+  // it should add a line break if not already present:
+  verifyFormat("template <\n"
+               "    typename Foo\n"
+               ">\n"
+               "void foo() {}",
+               "template <\n"
+               "    typename Foo>\n"
+               "void foo() {}",
+               Style);
+  verifyFormat("template <\n"
+               "    typename Foo,\n"
+               "    typename Bar\n"
+               ">\n"
+               "void foo() {}",
+               "template <\n"
+               "    typename Foo,\n"
+               "    typename Bar>\n"
+               "void foo() {}",
+               Style);
+  // when within an indent scope, the > should be placed appropriately:
+  verifyFormat("struct Baz {\n"
+               "  template <\n"
+               "      typename Foo,\n"
+               "      typename Bar\n"
+               "  >\n"
+               "  void foo() {}\n"
+               "};",
+               "struct Baz {\n"
+               "  template <\n"
+               "      typename Foo,\n"
+               "      typename Bar>\n"
+               "  void foo() {}\n"
+               "};",
+               Style);
+
+  // now test that it handles the cases when the column limit forces wrapping
+  Style.ColumnLimit = 40;
+  // when the column limit allows it, the template should be combined back into
+  // one line:
+  verifyFormat("template <typename Foo, typename Bar>\n"
+               "void foo() {}",
+               "template <\n"
+               "    typename Foo,\n"
+               "    typename Bar\n"
+               ">\n"
+               "void foo() {}",
+               Style);
+  // but not when the name is looong
+  verifyFormat("template <\n"
+               "    typename Foo,\n"
+               "    typename Barrrrrrrrrrrrrrrrrrrrrrrrrr\n"
+               ">\n"
+               "void foo() {}",
+               Style);
+  verifyFormat("template <\n"
+               "    typename Fooooooooooooooooooooooooooo,\n"
+               "    typename Bar\n"
+               ">\n"
+               "void foo() {}",
+               Style);
+  // additionally, long names should be split in one step:
+  verifyFormat(
+      "template <\n"
+      "    typename Foo,\n"
+      "    typename Barrrrrrrrrrrrrrrrrrrrrrrrrr\n"
+      ">\n"
+      "void foo() {}",
+      "template <typename Foo, typename Barrrrrrrrrrrrrrrrrrrrrrrrrr>\n"
+      "void foo() {}",
+      Style);
+  verifyFormat(
+      "template <\n"
+      "    typename Fooooooooooooooooooooooooooo,\n"
+      "    typename Bar\n"
+      ">\n"
+      "void foo() {}",
+      "template <typename Fooooooooooooooooooooooooooo, typename Bar>\n"
+      "void foo() {}",
+      Style);
+  // even when there is only one long name:
+  verifyFormat("template <\n"
+               "    typename Fooooooooooooooooooooooooooo\n"
+               ">\n"
+               "void foo() {}",
+               "template <typename Fooooooooooooooooooooooooooo>\n"
+               "void foo() {}",
+               Style);
+}
+
 TEST_F(FormatTest, WrapsTemplateParameters) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
