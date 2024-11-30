@@ -1834,14 +1834,15 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     if (!NE.Name.empty()) {
       CBA.write(NE.Name.data(), NE.Name.size());
       CBA.write('\0');
-      CBA.padToAlignment(Align);
     }
 
     // Write description and padding.
     if (NE.Desc.binary_size() != 0) {
-      CBA.writeAsBinary(NE.Desc);
       CBA.padToAlignment(Align);
+      CBA.writeAsBinary(NE.Desc);
     }
+
+    CBA.padToAlignment(Align);
   }
 
   SHeader.sh_size = CBA.tell() - Offset;
