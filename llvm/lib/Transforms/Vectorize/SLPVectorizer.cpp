@@ -3110,9 +3110,8 @@ private:
       SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
       unsigned NumParts, bool ForOrder = false);
 
-  /// \returns the scalarization cost for this list of values. Assuming that
-  /// this subtree gets vectorized, we may need to extract the values from the
-  /// roots. This method calculates the cost of extracting the values.
+  /// \returns the cost of gathering (inserting) the values in \p VL into a
+  /// vector.
   /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
@@ -13498,9 +13497,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
               TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
               I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
     } else {
-      Cost = TTI->getScalarizationOverhead(VecTy, ~ShuffledElements,
+      Cost = TTI->getScalarizationOverhead(VecTy,
+                                           /*DemandedElts*/ ~ShuffledElements,
                                            /*Insert*/ true,
-                                           /*Extract*/ false, CostKind);
+                                           /*Extract*/ false, CostKind, VL);
     }
   }
   if (DuplicateNonConst)

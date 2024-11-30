@@ -762,6 +762,7 @@ Bug Fixes to C++ Support
   missing placeholder return type. (#GH78694)
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
+- Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1014,6 +1015,10 @@ Improvements
 
 Moved checkers
 ^^^^^^^^^^^^^^
+
+- The checker ``alpha.core.IdenticalExpr`` was deleted because it was
+  duplicated in the clang-tidy checkers ``misc-redundant-expression`` and
+  ``bugprone-branch-clone``.
 
 - The checker ``alpha.security.MallocOverflow`` was deleted because it was
   badly implemented and its agressive logic produced too many false positives.

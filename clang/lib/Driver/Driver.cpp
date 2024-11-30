@@ -998,14 +998,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   //
 }
 
-static void appendOneArg(InputArgList &Args, const Arg *Opt,
-                         const Arg *BaseArg) {
+static void appendOneArg(InputArgList &Args, const Arg *Opt) {
   // The args for config files or /clang: flags belong to different InputArgList
   // objects than Args. This copies an Arg from one of those other InputArgLists
   // to the ownership of Args.
   unsigned Index = Args.MakeIndex(Opt->getSpelling());
-  Arg *Copy = new llvm::opt::Arg(Opt->getOption(), Args.getArgString(Index),
-                                 Index, BaseArg);
+  Arg *Copy = new Arg(Opt->getOption(), Args.getArgString(Index), Index);
   Copy->getValues() = Opt->getValues();
   if (Opt->isClaimed())
     Copy->claim();
@@ -1052,7 +1050,7 @@ bool Driver::readConfigFile(StringRef FileName,
   llvm::SmallString<128> CfgFileName(FileName);
   llvm::sys::path::native(CfgFileName);
   bool ContainErrors;
-  std::unique_ptr<InputArgList> NewOptions = std::make_unique<InputArgList>(
+  auto NewOptions = std::make_unique<InputArgList>(
       ParseArgStrings(NewCfgArgs, /*UseDriverMode=*/true, ContainErrors));
   if (ContainErrors)
     return true;
@@ -1066,12 +1064,8 @@ bool Driver::readConfigFile(StringRef FileName,
     CfgOptions = std::move(NewOptions);
   else {
     // If this is a subsequent config file, append options to the previous one.
-    for (auto *Opt : *NewOptions) {
-      const Arg *BaseArg = &Opt->getBaseArg();
-      if (BaseArg == Opt)
-        BaseArg = nullptr;
-      appendOneArg(*CfgOptions, Opt, BaseArg);
-    }
+    for (auto *Opt : *NewOptions)
+      appendOneArg(*CfgOptions, Opt);
   }
   ConfigFiles.push_back(std::string(CfgFileName));
   return false;
@@ -1256,14 +1250,9 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
                                               : std::move(*CLOptions));
 
   if (HasConfigFile)
-    for (auto *Opt : *CLOptions) {
-      if (Opt->getOption().matches(options::OPT_config))
-        continue;
-      const Arg *BaseArg = &Opt->getBaseArg();
-      if (BaseArg == Opt)
-        BaseArg = nullptr;
-      appendOneArg(Args, Opt, BaseArg);
-    }
+    for (auto *Opt : *CLOptions)
+      if (!Opt->getOption().matches(options::OPT_config))
+        appendOneArg(Args, Opt);
 
   // In CL mode, look for any pass-through arguments
   if (IsCLMode() && !ContainsError) {
@@ -1281,9 +1270,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
                           ContainsError));
 
       if (!ContainsError)
-        for (auto *Opt : *CLModePassThroughOptions) {
-          appendOneArg(Args, Opt, nullptr);
-        }
+        for (auto *Opt : *CLModePassThroughOptions)
+          appendOneArg(Args, Opt);
     }
   }
 
@@ -4063,17 +4051,18 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = YuArg = nullptr;
   }
 
-  unsigned LastPLSize = 0;
+  bool LinkOnly = phases::Link == FinalPhase && Inputs.size() > 0;
   for (auto &I : Inputs) {
     types::ID InputType = I.first;
     const Arg *InputArg = I.second;
 
     auto PL = types::getCompilationPhases(InputType);
-    LastPLSize = PL.size();
+
+    phases::ID InitialPhase = PL[0];
+    LinkOnly = LinkOnly && phases::Link == InitialPhase && PL.size() == 1;
 
     // If the first step comes after the final phase we are doing as part of
     // this compilation, warn the user about it.
-    phases::ID InitialPhase = PL[0];
     if (InitialPhase > FinalPhase) {
       if (InputArg->isClaimed())
         continue;
@@ -4128,10 +4117,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  // If we are linking, claim any options which are obviously only used for
-  // compilation.
-  // FIXME: Understand why the last Phase List length is used here.
-  if (FinalPhase == phases::Link && LastPLSize == 1) {
+  // Claim any options which are obviously only used for compilation.
+  if (LinkOnly) {
     Args.ClaimAllArgs(options::OPT_CompileOnly_Group);
     Args.ClaimAllArgs(options::OPT_cl_compile_Group);
   }
