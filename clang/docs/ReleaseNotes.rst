@@ -714,6 +714,8 @@ Bug Fixes to C++ Support
   assumption if they also occur inside of a dependent lambda. (#GH114787)
 - Clang now uses valid deduced type locations when diagnosing functions with trailing return type
   missing placeholder return type. (#GH78694)
+- Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
+  captures at the end of a full expression. (#GH115931)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
