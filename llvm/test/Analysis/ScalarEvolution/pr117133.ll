@@ -51,3 +51,47 @@ b7:                                              ; preds = %b3
 b8:                                              ; preds = %b1
   ret i32 7
 }
+
+; Don't fold %indvar2 into (zext {0,+,1}) * %a
+define i64 @test_poisonous(i64 %a, i32 %n) {
+; CHECK-LABEL: 'test_poisonous'
+; CHECK-NEXT:  Classifying expressions for: @test_poisonous
+; CHECK-NEXT:    %indvar1 = phi i32 [ 0, %entry ], [ %indvar1.next, %loop.body ]
+; CHECK-NEXT:    --> {0,+,1}<%loop.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:    %indvar2 = phi i64 [ 0, %entry ], [ %mul, %loop.body ]
+; CHECK-NEXT:    --> %indvar2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Variant }
+; CHECK-NEXT:    %indvar1.next = add i32 %indvar1, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:    %ext = zext i32 %indvar1.next to i64
+; CHECK-NEXT:    --> (zext i32 {1,+,1}<%loop.body> to i64) U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:    %mul = mul i64 %ext, %a
+; CHECK-NEXT:    --> ((zext i32 {1,+,1}<%loop.body> to i64) * %a) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_poisonous
+; CHECK-NEXT:  Loop %loop.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.body: Predicated backedge-taken count is (-1 + (1 smax (1 + (sext i32 %n to i64))<nsw>))<nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nssw>
+; CHECK-NEXT:  Loop %loop.body: Predicated constant max backedge-taken count is i64 2147483647
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nssw>
+; CHECK-NEXT:  Loop %loop.body: Predicated symbolic max backedge-taken count is (-1 + (1 smax (1 + (sext i32 %n to i64))<nsw>))<nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nssw>
+;
+entry:
+  br label %loop.body
+
+loop.body:
+  %indvar1 = phi i32 [ 0, %entry ], [ %indvar1.next, %loop.body ]
+  %indvar2 = phi i64 [ 0, %entry ], [ %mul, %loop.body ]
+  %indvar1.next = add i32 %indvar1, 1
+  %ext = zext i32 %indvar1.next to i64
+  %mul = mul i64 %ext, %a
+  %exitcond = icmp sgt i32 %indvar1.next, %n
+  br i1 %exitcond, label %loop.exit, label %loop.body
+
+loop.exit:
+  ret i64 %mul
+}
