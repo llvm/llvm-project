@@ -1223,6 +1223,9 @@ uptr GetPageSize() {
 #      if SANITIZER_ANDROID && __ANDROID_API__ < 35
   // The 16 KB page size was introduced in Android 15 (API level 35), while
   // earlier versions of Android always used a 4 KB page size.
+  // We are checking the weak definition of `strerrorname_np` (introduced in API
+  // level 35) because some earlier API levels crashed when
+  // `getauxval(AT_PAGESZ)` was called from the `.preinit_array`.
   if (!strerrorname_np)
     return 4096;
 #      endif
