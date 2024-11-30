@@ -340,7 +340,7 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 namespace llvm {
 namespace bolt {
 
-void IdenticalCodeFolding::processDataRelocations(
+Error IdenticalCodeFolding::processDataRelocations(
     BinaryContext &BC, const SectionRef &SecRefRelData) {
   for (const RelocationRef &Rel : SecRefRelData.relocations()) {
     symbol_iterator SymbolIter = Rel.getSymbol();
@@ -351,39 +351,35 @@ void IdenticalCodeFolding::processDataRelocations(
     const uint64_t SymbolAddress = cantFail(Symbol.getAddress());
     const ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(OwningObj);
     if (!ELFObj)
-      llvm_unreachable("Only ELFObjectFileBase is supported");
+      return createFatalBOLTError(
+          Twine("BOLT-ERROR: Only ELFObjectFileBase is supported"));
     const int64_t Addend = getRelocationAddend(ELFObj, Rel);
     BinaryFunction *BF = BC.getBinaryFunctionAtAddress(SymbolAddress + Addend);
     if (!BF)
       continue;
     BF->setUnsafeICF();
   }
+  return Error::success();
 }
 
 Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
-  Error ErrorStatus = Error::success();
-  if (!BC.HasRelocations)
-    ErrorStatus = joinErrors(
-        std::move(ErrorStatus),
-        createFatalBOLTError(Twine("BOLT-ERROR: Binary built without "
-                                   "relocations. Safe ICF is not supported")));
-  if (ErrorStatus)
-    return ErrorStatus;
   ErrorOr<BinarySection &> SecRelData = BC.getUniqueSectionByName(".rela.data");
   if (SecRelData) {
     SectionRef SecRefRelData = SecRelData->getSectionRef();
-    processDataRelocations(BC, SecRefRelData);
+    Error ErrorStatus = processDataRelocations(BC, SecRefRelData);
+    if (ErrorStatus)
+      return ErrorStatus;
   }
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    if (BF.getState() == BinaryFunction::State::CFG) {
-      for (const BinaryBasicBlock *BB : BF.getLayout().blocks())
-        for (const MCInst &Inst : *BB)
-          BC.processInstructionForFuncReferences(Inst);
-    }
+    for (const BinaryBasicBlock *BB : BF.getLayout().blocks())
+      for (const MCInst &Inst : *BB)
+        BC.processInstructionForFuncReferences(Inst);
   };
   ParallelUtilities::PredicateTy SkipFunc =
-      [&](const BinaryFunction &BF) -> bool { return (bool)ErrorStatus; };
+      [&](const BinaryFunction &BF) -> bool {
+    return BF.getState() != BinaryFunction::State::CFG;
+  };
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
       SkipFunc, "markUnsafe", /*ForceSequential*/ false, 2);
@@ -396,7 +392,7 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
              << '\n';
     }
   });
-  return ErrorStatus;
+  return Error::success();
 }
 
 Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {

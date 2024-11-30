@@ -45,8 +45,8 @@ private:
   Error markFunctionsUnsafeToFold(BinaryContext &BC);
   /// Process relocations in the .data section to identify function
   /// references.
-  void processDataRelocations(BinaryContext &BC,
-                              const SectionRef &SecRefRelData);
+  Error processDataRelocations(BinaryContext &BC,
+                               const SectionRef &SecRefRelData);
 };
 
 } // namespace bolt
