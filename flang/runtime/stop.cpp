@@ -12,11 +12,11 @@
 #include "io-error.h"
 #include "terminator.h"
 #include "unit.h"
+#include "config.h"
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
 
-#include "llvm/Config/config.h"
 #ifdef HAVE_BACKTRACE
 #include BACKTRACE_HEADER
 #endif
@@ -175,7 +175,7 @@ static void PrintBacktrace() {
 
   // TODO: Need to implement the version for other platforms.
   Fortran::runtime::Terminator{}.PrintCrashArgs(
-      "Handle the case when a backtrace is not available");
+      "Handle the case when a backtrace is not available\n");
 
 #endif
 }

@@ -8,4 +8,9 @@
    don't. */
 #cmakedefine01 HAVE_DECL_STRERROR_S
 
+/* Define to 1 if you have the `backtrace' function. */
+#cmakedefine01 HAVE_BACKTRACE
+
+#define BACKTRACE_HEADER <execinfo.h>
+
 #endif
