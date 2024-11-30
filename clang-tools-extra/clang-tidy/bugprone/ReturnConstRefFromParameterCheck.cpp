@@ -21,11 +21,13 @@ void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
           to(parmVarDecl(hasType(hasCanonicalType(
                              qualType(lValueReferenceType(pointee(
                                           qualType(isConstQualified()))))
-                                 .bind("type"))))
+                                 .bind("type"))),
+                         hasDeclContext(functionDecl().bind("owner")))
                  .bind("param")))
           .bind("dref"));
   const auto Func =
-      functionDecl(hasReturnTypeLoc(loc(
+      functionDecl(equalsBoundNode("owner"),
+                   hasReturnTypeLoc(loc(
                        qualType(hasCanonicalType(equalsBoundNode("type"))))))
           .bind("func");
 
