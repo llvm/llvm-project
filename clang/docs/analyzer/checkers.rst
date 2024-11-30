@@ -2842,36 +2842,6 @@ Check for assignment of a fixed address to a pointer.
    p = (int *) 0x10000; // warn
  }
 
-.. _alpha-core-IdenticalExpr:
-
-alpha.core.IdenticalExpr (C, C++)
-"""""""""""""""""""""""""""""""""
-Warn about unintended use of identical expressions in operators.
-
-.. code-block:: cpp
-
- // C
- void test() {
-   int a = 5;
-   int b = a | 4 | a; // warn: identical expr on both sides
- }
-
- // C++
- bool f(void);
-
- void test(bool b) {
-   int i = 10;
-   if (f()) { // warn: true and false branches are identical
-     do {
-       i--;
-     } while (f());
-   } else {
-     do {
-       i--;
-     } while (f());
-   }
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
