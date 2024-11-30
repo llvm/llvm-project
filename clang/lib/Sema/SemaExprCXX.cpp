@@ -2749,8 +2749,8 @@ static bool resolveAllocationOverloadInterior(
                                                /*AlignArg=*/nullptr, Diagnose);
     }
     if (Mode == ResolveMode::Typed) {
-      // If we can't find a matching type aware operator we don't consider this a
-      // failure.
+      // If we can't find a matching type aware operator we don't consider this
+      // a failure.
       Operator = nullptr;
       return false;
     }
