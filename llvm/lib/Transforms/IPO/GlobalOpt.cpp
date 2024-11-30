@@ -2702,23 +2702,18 @@ static bool OptimizeNonTrivialIFuncs(
 
     TargetTransformInfo &TTI = GetTTI(*Resolver);
 
+    // This IFunc is not FMV.
+    if (any_of(Callees, [&TTI](Function *F) {
+          return !TTI.isMultiversionedFunction(*F);
+        }))
+      continue;
+
     // Cache the feature mask for each callee.
-    bool IsFMV = true;
     for (Function *Callee : Callees) {
       auto [It, Inserted] = FeatureMask.try_emplace(Callee);
-      if (Inserted) {
+      if (Inserted)
         It->second = TTI.getFeatureMask(*Callee);
-        // Empty mask means this isn't an FMV callee.
-        if (It->second == 0) {
-          IsFMV = false;
-          break;
-        }
-      }
     }
-
-    // This IFunc is not FMV.
-    if (!IsFMV)
-      continue;
 
     // Sort the callee versions in decreasing priority order.
     sort(Callees, [&](auto *LHS, auto *RHS) {

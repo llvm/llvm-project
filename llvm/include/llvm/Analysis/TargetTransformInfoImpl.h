@@ -1026,6 +1026,8 @@ public:
 
   uint64_t getFeatureMask(Function &F) const { return 0; }
 
+  bool isMultiversionedFunction(Function &F) const { return false; }
+
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
   unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {

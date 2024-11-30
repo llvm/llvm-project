@@ -90,6 +90,8 @@ public:
 
   uint64_t getFeatureMask(Function &F) const;
 
+  bool isMultiversionedFunction(Function &F) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 

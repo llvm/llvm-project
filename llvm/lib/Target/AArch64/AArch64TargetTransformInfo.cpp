@@ -250,9 +250,14 @@ uint64_t AArch64TTIImpl::getFeatureMask(Function &F) const {
   StringRef FeatureStr = F.getFnAttribute("target-features").getValueAsString();
   SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, ",");
-  if (none_of(Features, [](StringRef Feat) { return Feat == "+fmv"; }))
-    return 0;
   return AArch64::getPriorityMask(Features);
+}
+
+bool AArch64TTIImpl::isMultiversionedFunction(Function &F) const {
+  StringRef FeatureStr = F.getFnAttribute("target-features").getValueAsString();
+  SmallVector<StringRef, 8> Features;
+  FeatureStr.split(Features, ",");
+  return any_of(Features, [](StringRef Feat) { return Feat == "+fmv"; });
 }
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
