@@ -16,6 +16,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/DWARF.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
@@ -316,15 +317,40 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
   return filename + ":(" + secAndOffset;
 }
 
-// This function is intended to be used for constructing an error message.
-// The returned message looks like this:
+static void printFileLine(const ELFSyncStream &s, StringRef path,
+                          unsigned line) {
+  StringRef filename = path::filename(path);
+  s << filename << ':' << line;
+  if (filename != path)
+    s << " (" << path << ':' << line << ')';
+}
+
+// Print an error message that looks like this:
 //
 //   foo.c:42 (/home/alice/possibly/very/long/path/foo.c:42)
-//
-//  Returns an empty string if there's no way to get line info.
-std::string InputSectionBase::getSrcMsg(const Symbol &sym,
-                                        uint64_t offset) const {
-  return file->getSrcMsg(*this, sym, offset);
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     InputSectionBase::SrcMsg &&msg) {
+  auto &sec = msg.sec;
+  if (sec.file->kind() != InputFile::ObjKind)
+    return s;
+  auto &file = cast<ELFFileBase>(*sec.file);
+
+  // First, look up the DWARF line table.
+  ArrayRef<InputSectionBase *> sections = file.getSections();
+  auto it = llvm::find(sections, &sec);
+  uint64_t sectionIndex = it != sections.end()
+                              ? it - sections.begin()
+                              : object::SectionedAddress::UndefSection;
+  DWARFCache *dwarf = file.getDwarf();
+  if (auto info = dwarf->getDILineInfo(msg.offset, sectionIndex))
+    printFileLine(s, info->FileName, info->Line);
+  else if (auto fileLine = dwarf->getVariableLoc(msg.sym.getName()))
+    // If it failed, look up again as a variable.
+    printFileLine(s, fileLine->first, fileLine->second);
+  else
+    // File.sourceFile contains STT_FILE symbol, and that is a last resort.
+    s << file.sourceFile;
+  return s;
 }
 
 // Returns a filename string along with an optional section name. This

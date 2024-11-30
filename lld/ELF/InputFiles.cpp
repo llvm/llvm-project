@@ -367,39 +367,6 @@ void elf::parseFiles(Ctx &ctx,
 }
 
 // Concatenates arguments to construct a string representing an error location.
-static std::string createFileLineMsg(StringRef path, unsigned line) {
-  std::string filename = std::string(path::filename(path));
-  std::string lineno = ":" + std::to_string(line);
-  if (filename == path)
-    return filename + lineno;
-  return filename + lineno + " (" + path.str() + lineno + ")";
-}
-
-std::string InputFile::getSrcMsg(const InputSectionBase &sec, const Symbol &sym,
-                                 uint64_t offset) {
-  if (kind() != ObjKind)
-    return "";
-
-  // First, look up the DWARF line table.
-  ArrayRef<InputSectionBase *> sections = getSections();
-  auto it = llvm::find(sections, &sec);
-  uint64_t sectionIndex = it != sections.end()
-                              ? it - sections.begin()
-                              : object::SectionedAddress::UndefSection;
-  DWARFCache *dwarf = cast<ELFFileBase>(this)->getDwarf();
-  if (std::optional<DILineInfo> info =
-          dwarf->getDILineInfo(offset, sectionIndex))
-    return createFileLineMsg(info->FileName, info->Line);
-
-  // If it failed, look up again as a variable.
-  if (std::optional<std::pair<std::string, unsigned>> fileLine =
-          dwarf->getVariableLoc(sym.getName()))
-    return createFileLineMsg(fileLine->first, fileLine->second);
-
-  // File.sourceFile contains STT_FILE symbol, and that is a last resort.
-  return std::string(cast<ELFFileBase>(this)->sourceFile);
-}
-
 StringRef InputFile::getNameForScript() const {
   if (archiveName.empty())
     return getName();

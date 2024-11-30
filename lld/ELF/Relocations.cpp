@@ -91,9 +91,10 @@ static void printLocation(ELFSyncStream &s, InputSectionBase &sec,
                           const Symbol &sym, uint64_t off) {
   printDefinedLocation(s, sym);
   s << "\n>>> referenced by ";
-  std::string src = sec.getSrcMsg(sym, off);
-  if (!src.empty())
-    s << src << "\n>>>               ";
+  auto tell = s.tell();
+  s << sec.getSrcMsg(sym, off);
+  if (tell != s.tell())
+    s << "\n>>>               ";
   s << sec.getObjMsg(off);
 }
 
@@ -738,9 +739,12 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     // In the absence of line number information, utilize DW_TAG_variable (if
     // present) for the enclosing symbol (e.g. var in `int *a[] = {&undef};`).
     Symbol *enclosing = sec.getEnclosingSymbol(offset);
-    std::string src = sec.getSrcMsg(enclosing ? *enclosing : sym, offset);
-    if (!src.empty())
-      msg << src << "\n>>>               ";
+
+    ELFSyncStream msg1(ctx, DiagLevel::None);
+    auto tell = msg.tell();
+    msg << sec.getSrcMsg(enclosing ? *enclosing : sym, offset);
+    if (tell != msg.tell())
+      msg << "\n>>>               ";
     msg << sec.getObjMsg(offset);
   }
 
