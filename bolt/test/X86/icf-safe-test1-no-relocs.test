@@ -3,179 +3,18 @@
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
 # RUN: %clang %cflags %t1.o -o %t.exe
-# RUN: llvm-bolt --no-threads %t.exe --icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
 # RUN: not llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
-
-# ICFCHECK:      ICF iteration 1
-# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
-# ICFCHECK-NEXT: folding barMulFunc into fooMulFunc
-# ICFCHECK-NEXT: folding barSubFunc into fooSubFunc
 
 # SAFEICFCHECK: BOLT-ERROR: Binary built without relocations. Safe ICF is not supported
 
-# clang++ -c main.cpp -o main.o
-# extern int FooVar;
-# extern int BarVar;
-# [[clang::noinline]]
-# int fooSub(int a, int b) {
-#   return a - b;
-# }
-# [[clang::noinline]]
-# int barSub(int a, int b) {
-#   return a - b;
-# }
-# [[clang::noinline]]
-# int fooMul(int a, int b) {
-#   return a * b;
-# }
-# [[clang::noinline]]
-# int barMul(int a, int b) {
-#   return a * b;
-# }
-# [[clang::noinline]]
-# int fooAdd(int a, int b) {
-#   return a + b;
-# }
-# [[clang::noinline]]
-# int barAdd(int a, int b) {
-#   return a + b;
-# }
-# [[clang::noinline]]
-# int helper1(int (*func)(int, int), int a, int b) {
-#   if (func == barAdd)
-#     return 1;
-#   return func(a, b) - 4;
-# }
-# [[clang::noinline]]
-# int helper2(int (*func)(int, int), int (*func2)(int, int), int a, int b) {
-#   if (func == func2)
-#     return 2;
-#   return func(a, b) + func2(a, b);
-# }
-# int main(int argc, char **argv) {
-#   int temp = helper1(barAdd, FooVar, BarVar) +
-#              helper2(fooMul, barMul, FooVar, BarVar) + fooSub(FooVar, BarVar) +
-#              barSub(FooVar, BarVar) + fooAdd(FooVar, BarVar);
-#   return temp;
-# }
-	.globl	fooSubFunc
-	.p2align	4, 0x90
-	.type	fooSubFunc,@function
-fooSubFunc:
-	.cfi_startproc
-	subl	-8(%rbp), %eax
-	retq
-.Lfunc_end0:
-	.size	fooSubFunc, .Lfunc_end0-fooSubFunc
-	.cfi_endproc
-
-	.globl	barSubFunc
-	.p2align	4, 0x90
-	.type	barSubFunc,@function
-barSubFunc:
-	.cfi_startproc
-	subl	-8(%rbp), %eax
-	retq
-.Lfunc_end1:
-	.size	barSubFunc, .Lfunc_end1-barSubFunc
-	.cfi_endproc
-
-	.globl	fooMulFunc
-	.p2align	4, 0x90
-	.type	fooMulFunc,@function
-fooMulFunc:
-	.cfi_startproc
-	imull	-8(%rbp), %eax
-	retq
-.Lfunc_end2:
-	.size	fooMulFunc, .Lfunc_end2-fooMulFunc
-	.cfi_endproc
-
-	.globl	barMulFunc
-	.p2align	4, 0x90
-	.type	barMulFunc,@function
-barMulFunc:
-	.cfi_startproc
-	imull	-8(%rbp), %eax
-	retq
-.Lfunc_end3:
-	.size	barMulFunc, .Lfunc_end3-barMulFunc
-	.cfi_endproc
-
-	.globl	fooAddFunc
-	.p2align	4, 0x90
-	.type	fooAddFunc,@function
-fooAddFunc:
-	.cfi_startproc
-	addl	-8(%rbp), %eax
-	retq
-.Lfunc_end4:
-	.size	fooAddFunc, .Lfunc_end4-fooAddFunc
-	.cfi_endproc
-
-	.globl	barAddFunc
-	.p2align	4, 0x90
-	.type	barAddFunc,@function
-barAddFunc:
-	.cfi_startproc
-	addl	-8(%rbp), %eax
-	retq
-.Lfunc_end5:
-	.size	barAddFunc, .Lfunc_end5-barAddFunc
-	.cfi_endproc
-
-	.globl	helper1Func
-	.p2align	4, 0x90
-	.type	helper1Func,@function
-helper1Func:
-	.cfi_startproc
-	leaq	barAddFunc(%rip), %rax
-	cmpq	%rax, -16(%rbp)
-	jne	.LBB6_2
-	jmp	.LBB6_3
-.LBB6_2:
-	callq	*%rax
-.LBB6_3:
-	retq
-.Lfunc_end6:
-	.size	helper1Func, .Lfunc_end6-helper1Func
-	.cfi_endproc
-
-	.globl	helper2Func
-	.p2align	4, 0x90
-	.type	helper2Func,@function
-helper2Func:
-	.cfi_startproc
-  # Operates on registers.
-	retq
-.Lfunc_end7:
-	.size	helper2Func, .Lfunc_end7-helper2Func
-	.cfi_endproc
-
+## int main(int argc, char **argv) {
+##   return temp;
+## }
 	.globl	main
-	.p2align	4, 0x90
 	.type	main,@function
 main:
 	.cfi_startproc
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
-	leaq	barAddFunc(%rip), %rdi
-	callq	helper1Func
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
-	leaq	fooMulFunc(%rip), %rdi
-	leaq	barMulFunc(%rip), %rsi
-	callq	helper2Func
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
-	callq	fooSubFunc
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
-	callq	barSubFunc
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
-	callq	fooAddFunc
 	retq
 .Lfunc_end8:
-	.size	main, .Lfunc_end8-main
+	.size	main, .-main
 	.cfi_endproc

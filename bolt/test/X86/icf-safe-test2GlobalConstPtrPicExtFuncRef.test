@@ -1,4 +1,4 @@
-## Check that BOLT handles correctly folding functions with --icf-safe that can be referenced.
+## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced.
 ## This checks global const function pointer with external function reference in -fpic mode is handled correctly.
 
 # REQUIRES: system-linux
@@ -22,174 +22,158 @@
 # SAFEICFCHECK-NEXT: ===---------
 
 
-# clang++ main.cpp -c -o
-# #define MY_CONST const
-# extern int FooVar;
-# extern int BarVar;
-# [[clang::noinline]]
-# MY_CONST int fooSub(int a, int b) {
-#   return a - b;
-# }
-# [[clang::noinline]]
-# MY_CONST int barSub(int a, int b) {
-#   return a - b;
-# }
-# [[clang::noinline]]
-# MY_CONST int fooMul(int a, int b) {
-#   return a * b;
-# }
-# [[clang::noinline]]
-# MY_CONST int barMul(int a, int b) {
-#   return a * b;
-# }
-# [[clang::noinline]]
-# MY_CONST int fooAdd(int a, int b) {
-#   return a + b;
-# }
-# [[clang::noinline]]
-# MY_CONST int barAdd(int a, int b) {
-#   return a + b;
-# }
-# [[clang::noinline]]
-# MY_CONST int helper1(MY_CONST int (*func)(int, int), int a, int b) {
-#   if (func == barAdd)
-#     return 1;
-#   return func(a, b) - 4;
-# }
-# [[clang::noinline]]
-# MY_CONST int helper2(MY_CONST int (*func)(int, int), MY_CONST int (*func2)(int, int), int a, int b) {
-#   if (func == func2)
-#     return 2;
-#   return func(a, b) + func2(a, b);
-# }
-# extern MY_CONST int barAddHdlper(int a, int b);
-# extern MY_CONST int fooGlobalFuncHelper(int a, int b);
-# MY_CONST static int (*const funcGlobalBarAdd)(int, int) = barAddHdlper;
-# MY_CONST int (* const funcGlobalBarMul)(int, int) = fooGlobalFuncHelper;
-# int main(int argc, char **argv) {
-#   int temp = helper1(funcGlobalBarAdd, FooVar, BarVar) +
-#              helper2(fooMul, funcGlobalBarMul, FooVar, BarVar) + fooSub(FooVar, BarVar) +
-#              barSub(FooVar, BarVar) + fooAdd(FooVar, BarVar);
-#   MY_PRINTF("val: %d", temp);
-#   return temp;
-# }
-# clang++ helper.cpp -c -o
-# #define MY_CONST const
-# int FooVar = 1;
-# int BarVar = 2;
-# [[clang::noinline]]
-# MY_CONST int barAddHdlper(int a, int b) {
-#   return a + b;
-# }
-#
-# MY_CONST int (*const funcGlobalBarMulExt)(int, int) = barAddHdlper;
-# MY_CONST int fooGlobalFuncHelper(int a, int b) {
-#   return 5 + funcGlobalBarMulExt(a, b);
-# }
-# clang++ helper.cpp -c -o
-# #define MY_CONST const
-# int FooVar = 1;
-# int BarVar = 2;
-# [[clang::noinline]]
-# MY_CONST int barAddHdlper(int a, int b) {
-#   return a + b;
-# }
-#
-# MY_CONST int (*const funcGlobalBarMulExt)(int, int) = barAddHdlper;
-# MY_CONST int fooGlobalFuncHelper(int a, int b) {
-#   return 5 + funcGlobalBarMulExt(a, b);
-# }
+## clang++ main.cpp -c -o
+## #define MY_CONST const
+## extern int FooVar;
+## extern int BarVar;
+## [[clang::noinline]]
+## MY_CONST int fooSub(int a, int b) {
+##   return a - b;
+## }
+## [[clang::noinline]]
+## MY_CONST int barSub(int a, int b) {
+##   return a - b;
+## }
+## [[clang::noinline]]
+## MY_CONST int fooMul(int a, int b) {
+##   return a * b;
+## }
+## [[clang::noinline]]
+## MY_CONST int barMul(int a, int b) {
+##   return a * b;
+## }
+## [[clang::noinline]]
+## MY_CONST int fooAdd(int a, int b) {
+##   return a + b;
+## }
+## [[clang::noinline]]
+## MY_CONST int barAdd(int a, int b) {
+##   return a + b;
+## }
+## [[clang::noinline]]
+## MY_CONST int helper1(MY_CONST int (*func)(int, int), int a, int b) {
+##   if (func == barAdd)
+##     return 1;
+##   return func(a, b) - 4;
+## }
+## [[clang::noinline]]
+## MY_CONST int helper2(MY_CONST int (*func)(int, int), MY_CONST int (*func2)(int, int), int a, int b) {
+##   if (func == func2)
+##     return 2;
+##   return func(a, b) + func2(a, b);
+## }
+## extern MY_CONST int barAddHdlper(int a, int b);
+## extern MY_CONST int fooGlobalFuncHelper(int a, int b);
+## MY_CONST static int (*const funcGlobalBarAdd)(int, int) = barAddHdlper;
+## MY_CONST int (* const funcGlobalBarMul)(int, int) = fooGlobalFuncHelper;
+## int main(int argc, char **argv) {
+##   int temp = helper1(funcGlobalBarAdd, FooVar, BarVar) +
+##              helper2(fooMul, funcGlobalBarMul, FooVar, BarVar) + fooSub(FooVar, BarVar) +
+##              barSub(FooVar, BarVar) + fooAdd(FooVar, BarVar);
+##   MY_PRINTF("val: %d", temp);
+##   return temp;
+## }
+## clang++ helper.cpp -c -o
+## #define MY_CONST const
+## int FooVar = 1;
+## int BarVar = 2;
+## [[clang::noinline]]
+## MY_CONST int barAddHdlper(int a, int b) {
+##   return a + b;
+## }
+##
+## MY_CONST int (*const funcGlobalBarMulExt)(int, int) = barAddHdlper;
+## MY_CONST int fooGlobalFuncHelper(int a, int b) {
+##   return 5 + funcGlobalBarMulExt(a, b);
+## }
+## clang++ helper.cpp -c -o
+## #define MY_CONST const
+## int FooVar = 1;
+## int BarVar = 2;
+## [[clang::noinline]]
+## MY_CONST int barAddHdlper(int a, int b) {
+##   return a + b;
+## }
+##
+## MY_CONST int (*const funcGlobalBarMulExt)(int, int) = barAddHdlper;
+## MY_CONST int fooGlobalFuncHelper(int a, int b) {
+##   return 5 + funcGlobalBarMulExt(a, b);
+## }
 	.globl	fooSubFunc
-	.p2align	4, 0x90
 	.type	fooSubFunc,@function
 fooSubFunc:
 	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
-.Lfunc_end0:
-	.size	fooSubFunc, .Lfunc_end0-fooSubFunc
+	.size	fooSubFunc, .-fooSubFunc
 	.cfi_endproc
 
 	.globl	barSubFunc
-	.p2align	4, 0x90
 	.type	barSubFunc,@function
 barSubFunc:
 	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
 .Lfunc_end1:
-	.size	barSubFunc, .Lfunc_end1-barSubFunc
+	.size	barSubFunc, .-barSubFunc
 	.cfi_endproc
 
 	.globl	fooMulFunc
-	.p2align	4, 0x90
 	.type	fooMulFunc,@function
 fooMulFunc:
 	.cfi_startproc
 	imull	-8(%rbp), %eax
 	retq
-.Lfunc_end2:
-	.size	fooMulFunc, .Lfunc_end2-fooMulFunc
+	.size	fooMulFunc, .-fooMulFunc
 	.cfi_endproc
 
 	.globl	barMulFunc
-	.p2align	4, 0x90
 	.type	barMulFunc,@function
 barMulFunc:
 	.cfi_startproc
 	imull	-8(%rbp), %eax
 	retq
-.Lfunc_end3:
-	.size	barMulFunc, .Lfunc_end3-barMulFunc
+	.size	barMulFunc, .-barMulFunc
 	.cfi_endproc
 
 	.globl	fooAddFunc
-	.p2align	4, 0x90
 	.type	fooAddFunc,@function
 fooAddFunc:
 	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
-.Lfunc_end4:
-	.size	fooAddFunc, .Lfunc_end4-fooAddFunc
+	.size	fooAddFunc, .-fooAddFunc
 	.cfi_endproc
 
 	.globl	barAddFunc
-	.p2align	4, 0x90
 	.type	barAddFunc,@function
 barAddFunc:
 	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
-.Lfunc_end5:
-	.size	barAddFunc, .Lfunc_end5-barAddFunc
+	.size	barAddFunc, .-barAddFunc
 	.cfi_endproc
 
 	.globl	_Z7helper1PFKiiiEii
-	.p2align	4, 0x90
 	.type	_Z7helper1PFKiiiEii,@function
 _Z7helper1PFKiiiEii:
 	.cfi_startproc
 	leaq	barAddFunc(%rip), %rax
 	cmpq	%rax, -16(%rbp)
 	retq
-.Lfunc_end6:
-	.size	_Z7helper1PFKiiiEii, .Lfunc_end6-_Z7helper1PFKiiiEii
+	.size	_Z7helper1PFKiiiEii, .-_Z7helper1PFKiiiEii
 	.cfi_endproc
 
 	.globl	_Z7helper2PFKiiiES1_ii
-	.p2align	4, 0x90
 	.type	_Z7helper2PFKiiiES1_ii,@function
 _Z7helper2PFKiiiES1_ii:
 	.cfi_startproc
   # Operates on registers.
 	retq
-.Lfunc_end7:
-	.size	_Z7helper2PFKiiiES1_ii, .Lfunc_end7-_Z7helper2PFKiiiES1_ii
+	.size	_Z7helper2PFKiiiES1_ii, .-_Z7helper2PFKiiiES1_ii
 	.cfi_endproc
 
 	.globl	main
-	.p2align	4, 0x90
 	.type	main,@function
 main:
 	.cfi_startproc
@@ -197,58 +181,43 @@ main:
 	movq	BarVar@GOTPCREL(%rip), %rax
 	movq	_Z12barAddHdlperii@GOTPCREL(%rip), %rdi
 	callq	_Z7helper1PFKiiiEii
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
 	leaq	fooMulFunc(%rip), %rdi
 	movq	fooGlobalFuncHelperFunc@GOTPCREL(%rip), %rsi
 	callq	_Z7helper2PFKiiiES1_ii
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
 	callq	fooSubFunc
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
 	callq	barSubFunc
-	movq	FooVar@GOTPCREL(%rip), %rax
-	movq	BarVar@GOTPCREL(%rip), %rax
 	callq	fooAddFunc
 	retq
-.Lfunc_end8:
-	.size	main, .Lfunc_end8-main
+	.size	main, .-main
 	.cfi_endproc
 
 	.globl	_Z12barAddHdlperii
-	.p2align	4, 0x90
 	.type	_Z12barAddHdlperii,@function
 _Z12barAddHdlperii:
 	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
-.Lfunc_end01:
-	.size	_Z12barAddHdlperii, .Lfunc_end01-_Z12barAddHdlperii
+	.size	_Z12barAddHdlperii, .-_Z12barAddHdlperii
 	.cfi_endproc
 
 	.globl	fooGlobalFuncHelperFunc
-	.p2align	4, 0x90
 	.type	fooGlobalFuncHelperFunc,@function
 fooGlobalFuncHelperFunc:
 	.cfi_startproc
 	callq	_Z12barAddHdlperii
 	retq
-.Lfunc_end11:
-	.size	fooGlobalFuncHelperFunc, .Lfunc_end11-fooGlobalFuncHelperFunc
+	.size	fooGlobalFuncHelperFunc, .-fooGlobalFuncHelperFunc
 	.cfi_endproc
 
 	.type	FooVar,@object
 	.data
 	.globl	FooVar
-	.p2align	2, 0x0
 FooVar:
 	.long	1
 	.size	FooVar, 4
 
 	.type	BarVar,@object
 	.globl	BarVar
-	.p2align	2, 0x0
 BarVar:
 	.long	2
 	.size	BarVar, 4

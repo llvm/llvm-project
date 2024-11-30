@@ -38,12 +38,9 @@ static cl::opt<bool>
     ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
               cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-TimeICF("time-icf",
-  cl::desc("time icf steps"),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> TimeICF("time-icf", cl::desc("time icf steps"),
+                             cl::ReallyHidden, cl::ZeroOrMore,
+                             cl::cat(BoltOptCategory));
 } // namespace opts
 
 /// Compare two jump tables in 2 functions. The function relies on consistent
@@ -388,8 +385,8 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   ParallelUtilities::PredicateTy SkipFunc =
       [&](const BinaryFunction &BF) -> bool { return (bool)ErrorStatus; };
   ParallelUtilities::runOnEachFunction(
-      BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, SkipFunc,
-      "markUnsafe", /*ForceSequential*/ false, 2);
+      BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
+      SkipFunc, "markUnsafe", /*ForceSequential*/ false, 2);
 
   LLVM_DEBUG({
     for (auto &BFIter : BC.getBinaryFunctions()) {
