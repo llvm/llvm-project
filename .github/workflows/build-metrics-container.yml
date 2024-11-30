@@ -35,7 +35,7 @@ jobs:
         run: |
           tag=`date +%s`
           container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/metrics"
-          echo "container-name=$container-name" >> $GITHUB_OUTPUT
+          echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
           echo "container-filename=$(echo $container_name:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
       - name: Build Container
@@ -71,7 +71,7 @@ jobs:
           name: container
       - name: Push Container
         run: |
-          podman load -i ${{ needs.build-metrics-container.outptus.container-filename }}
+          podman load -i ${{ needs.build-metrics-container.outputs.container-filename }}
           podman tag ${{ needs.build-metrics-container.outputs.container-name-tag }} ${{ needs.build-metrics-container.outputs.container-name }}:latest
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
           podman push ${{ needs.build-metrics-container.outputs.container-name-tag }}

@@ -13,6 +13,14 @@
 using namespace mlir;
 using namespace mlir::func;
 
+/// Flatten the given value ranges into a single vector of values.
+static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const auto &vals : values)
+    llvm::append_range(result, vals);
+  return result;
+}
+
 namespace {
 /// Converts the operand and result types of the CallOp, used together with the
 /// FuncOpSignatureConversion.
@@ -21,7 +29,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
   /// Hook for derived classes to implement combined matching and rewriting.
   LogicalResult
-  matchAndRewrite(CallOp callOp, OpAdaptor adaptor,
+  matchAndRewrite(CallOp callOp, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Convert the original function results. Keep track of how many result
     // types an original result type is converted into.
@@ -38,9 +46,9 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
-    auto newCallOp =
-        rewriter.create<CallOp>(callOp.getLoc(), callOp.getCallee(),
-                                convertedResults, adaptor.getOperands());
+    auto newCallOp = rewriter.create<CallOp>(
+        callOp.getLoc(), callOp.getCallee(), convertedResults,
+        flattenValues(adaptor.getOperands()));
     SmallVector<ValueRange> replacements;
     size_t offset = 0;
     for (int i = 0, e = callOp->getNumResults(); i < e; ++i) {
