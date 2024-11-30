@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeProcessAIX.h"
-
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
@@ -20,50 +19,20 @@
 #include <unordered_map>
 #include "NativeThreadAIX.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
-#include "lldb/Host/PseudoTerminal.h"
-#include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Host/aix/Ptrace.h"
-#include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Threading.h"
-#include <sys/reg.h>
-#include <sys/ptrace.h>
-#include <sys/ldr.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/user.h>
-#include <sys/wait.h>
-#include <sys/mman.h>
-#ifdef __aarch64__
-#include <asm/hwcap.h>
-#include <sys/auxv.h>
-#endif
-
-// Support hardware breakpoints in case it has not been defined
-#ifndef TRAP_HWBKPT
-#define TRAP_HWBKPT 4
-#endif
-
-#ifndef HWCAP2_MTE
-#define HWCAP2_MTE (1 << 18)
-#endif
 
 using namespace lldb;
 using namespace lldb_private;
