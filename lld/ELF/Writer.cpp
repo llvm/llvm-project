@@ -2672,8 +2672,9 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *os : ctx.outputSections)
     if ((os->addr + os->size < os->addr) ||
         (!ELFT::Is64Bits && os->addr + os->size > uint64_t(UINT32_MAX) + 1))
-      Err(ctx) << "section " << os->name << " at 0x" << utohexstr(os->addr)
-               << " of size 0x" << utohexstr(os->size)
+      Err(ctx) << "section " << os->name << " at 0x"
+               << utohexstr(os->addr, true) << " of size 0x"
+               << utohexstr(os->size, true)
                << " exceeds available address space";
 
   // Check for overlapping file offsets. In this case we need to skip any
