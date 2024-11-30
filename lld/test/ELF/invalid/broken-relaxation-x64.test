@@ -37,7 +37,6 @@ Sections:
       - Offset:          4
         Symbol:          foo
         Type:            R_X86_64_GOTTPOFF
-
 Symbols:
   - Name:     foo
     Type:     STT_TLS
@@ -84,7 +83,6 @@ Sections:
       - Offset:          6
         Symbol:          foo
         Type:            R_X86_64_CODE_6_GOTTPOFF
-
 Symbols:
   - Name:     foo
     Type:     STT_TLS
@@ -98,9 +96,9 @@ Symbols:
 # RUN: not ld.lld %t3.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR3 %s
 # ERR3: R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ instructions only
 
-## YAML below contains 2 relocations of R_X86_64_CODE_4_GOTTPOFF type, and a
-## .text with fake content filled by 0xd5, 0xFF, ... It's expected to get the
-## error message as above.
+## YAML below contains R_X86_64_CODE_4_GOTTPOFF relocation type, and a .text
+## with fake content filled by 0xd5, 0xFF, ... and 0xFF. It's expected to get
+## the error message as above.
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -126,7 +124,6 @@ Sections:
       - Offset:          4
         Symbol:          foo
         Type:            R_X86_64_CODE_4_GOTTPOFF
-
 Symbols:
   - Name:     foo
     Type:     STT_TLS
@@ -140,9 +137,9 @@ Symbols:
 # RUN: not ld.lld %t4.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR4 %s
 # ERR4: R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions with NDD/NF/NDD+NF only
 
-## YAML below contains 2 relocations of R_X86_64_CODE_4_GOTTPOFF type, and a
-## .text with fake content filled by 0x62, 0xFF, ... It's expected to get the
-## error message as above.
+## YAML below contains R_X86_64_CODE_6_GOTTPOFF relocation type, and a .text
+## with fake content filled by 0x62, 0xFF, ... and 0xFF. It's expected to get
+## the error message as above.
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -168,7 +165,6 @@ Sections:
       - Offset:          6
         Symbol:          foo
         Type:            R_X86_64_CODE_6_GOTTPOFF
-
 Symbols:
   - Name:     foo
     Type:     STT_TLS
