@@ -48,8 +48,8 @@ Symbols:
 
 # RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR2 %s
-# ERR2: invalid prefix with R_X86_64_CODE_4_GOTTPOFF!
-# ERR2: invalid prefix with R_X86_64_CODE_6_GOTTPOFF!
+# ERR2: error: {{.*}}: invalid prefix with R_X86_64_CODE_4_GOTTPOFF!
+# ERR2: error: {{.*}}: invalid prefix with R_X86_64_CODE_6_GOTTPOFF!
 
 ## YAML below contains 2 relocations of
 ## R_X86_64_CODE_4_GOTTPOFF/R_X86_64_CODE_6_GOTTPOFF type, and a .text with
@@ -94,7 +94,7 @@ Symbols:
 
 # RUN: yaml2obj --docnum=3 %s -o %t3.o
 # RUN: not ld.lld %t3.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR3 %s
-# ERR3: R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ instructions only
+# ERR3: error: {{.*}}: R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ instructions only
 
 ## YAML below contains R_X86_64_CODE_4_GOTTPOFF relocation type, and a .text
 ## with fake content filled by 0xd5, 0xFF, ... and 0xFF. It's expected to get
@@ -135,7 +135,7 @@ Symbols:
 
 # RUN: yaml2obj --docnum=4 %s -o %t4.o
 # RUN: not ld.lld %t4.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR4 %s
-# ERR4: R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions with NDD/NF/NDD+NF only
+# ERR4: error: {{.*}}: R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions with NDD/NF/NDD+NF only
 
 ## YAML below contains R_X86_64_CODE_6_GOTTPOFF relocation type, and a .text
 ## with fake content filled by 0x62, 0xFF, ... and 0xFF. It's expected to get
