@@ -7,16 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeProcessAIX.h"
-#include <cerrno>
-#include <cstdint>
-#include <cstring>
-#include <unistd.h>
-#include <fstream>
-#include <mutex>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <unordered_map>
 #include "NativeThreadAIX.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/Host.h"
@@ -33,6 +23,16 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <mutex>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <unistd.h>
+#include <unordered_map>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -74,7 +74,7 @@ NativeProcessAIX::Manager::Manager(MainLoop &mainloop)
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
-                                    NativeDelegate &native_delegate) {
+                                  NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
 
   Status status;
@@ -102,13 +102,13 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-      return llvm::make_error<StringError>("Cannot get process architectrue",
-                                            llvm::inconvertibleErrorCode());
-  } 
+    return llvm::make_error<StringError>("Cannot get process architectrue",
+                                         llvm::inconvertibleErrorCode());
+  }
 
- // Set the architecture to the exe architecture.
-  LLDB_LOG(log, "pid = {0}, detected architecture {1}", pid, 
-          Info.GetArchitecture().GetArchitectureName());
+  // Set the architecture to the exe architecture.
+  LLDB_LOG(log, "pid = {0}, detected architecture {1}", pid,
+           Info.GetArchitecture().GetArchitectureName());
 
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
@@ -117,21 +117,21 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessAIX::Manager::Attach(
-    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) { 
+    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-      return llvm::make_error<StringError>("Cannot get process architectrue",
-                                            llvm::inconvertibleErrorCode());
-  } 
+    return llvm::make_error<StringError>("Cannot get process architectrue",
+                                         llvm::inconvertibleErrorCode());
+  }
   auto tids_or = NativeProcessAIX::Attach(pid);
   if (!tids_or)
     return tids_or.takeError();
 
-  return std::unique_ptr<NativeProcessAIX>(
-      new NativeProcessAIX(pid, -1, native_delegate, Info.GetArchitecture(), *this, *tids_or));
+  return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
+      pid, -1, native_delegate, Info.GetArchitecture(), *this, *tids_or));
 }
 
 NativeProcessAIX::Extension
@@ -144,18 +144,16 @@ NativeProcessAIX::Manager::GetSupportedExtensions() const {
   return supported;
 }
 
-void NativeProcessAIX::Manager::SigchldHandler() {
-}
+void NativeProcessAIX::Manager::SigchldHandler() {}
 
-void NativeProcessAIX::Manager::CollectThread(::pid_t tid) {
-}
+void NativeProcessAIX::Manager::CollectThread(::pid_t tid) {}
 
 // Public Instance Methods
 
 NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
-                                       NativeDelegate &delegate,
-                                       const ArchSpec &arch, Manager &manager,
-                                       llvm::ArrayRef<::pid_t> tids)
+                                   NativeDelegate &delegate,
+                                   const ArchSpec &arch, Manager &manager,
+                                   llvm::ArrayRef<::pid_t> tids)
     : NativeProcessProtocol(pid, terminal_fd, delegate), m_manager(manager),
       m_arch(arch) {
   manager.AddProcess(*this);
@@ -182,15 +180,11 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
 }
 
 void NativeProcessAIX::MonitorSIGTRAP(const WaitStatus status,
-                                        NativeThreadAIX &thread) {
-}
+                                      NativeThreadAIX &thread) {}
 
-void NativeProcessAIX::MonitorBreakpoint(NativeThreadAIX &thread) {
-}
+void NativeProcessAIX::MonitorBreakpoint(NativeThreadAIX &thread) {}
 
-bool NativeProcessAIX::SupportHardwareSingleStepping() const {
-  return false;
-}
+bool NativeProcessAIX::SupportHardwareSingleStepping() const { return false; }
 
 Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
   return Status();
@@ -211,9 +205,7 @@ Status NativeProcessAIX::Signal(int signo) {
   return error;
 }
 
-Status NativeProcessAIX::Interrupt() {
-  return Status();
-}
+Status NativeProcessAIX::Interrupt() { return Status(); }
 
 Status NativeProcessAIX::Kill() {
   Status error;
@@ -221,7 +213,7 @@ Status NativeProcessAIX::Kill() {
 }
 
 Status NativeProcessAIX::SetBreakpoint(lldb::addr_t addr, uint32_t size,
-                                         bool hardware) {
+                                       bool hardware) {
   if (hardware)
     return SetHardwareBreakpoint(addr, size);
   else
@@ -249,9 +241,8 @@ Status NativeProcessAIX::Detach(lldb::tid_t tid) {
 // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
 // errno on error because -1 can be a valid result (i.e. for PTRACE_PEEK*)
 Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
-                                         void *data, size_t data_size,
-                                         long *result) {
+                                       void *data, size_t data_size,
+                                       long *result) {
   Status error;
   return error;
 }
-
