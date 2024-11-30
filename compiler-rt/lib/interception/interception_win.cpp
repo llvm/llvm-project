@@ -634,6 +634,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xD284:  // 84 D2 : test dl,dl
       return 2;
 
+    case 0xC1F6:  // F6 C1 XX : test cl, XX
+      return 3;
+
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
     case 0x25FF:  // FF 25 XX YY ZZ WW : jmp dword ptr ds:[WWZZYYXX]
       return 0;
@@ -723,8 +726,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 7;
   }
 
-  switch (0x00FFFFFF & *(u32*)address) {
-    case 0x07c1f6:    // f6 c1 07 : test cl, 0x7
+  switch (0x00FFFFFF & *(u32 *)address) {
     case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
     case 0xc00b4d:    // 4d 0b c0 : or r8, r8
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d

@@ -927,6 +927,7 @@ const struct InstructionSizeData {
     { 3, {0x4d, 0x85, 0xed}, 0, "4d 85 ed : test r13, r13"},
     { 3, {0x4d, 0x85, 0xf6}, 0, "4d 85 f6 : test r14, r14"},
     { 3, {0x4d, 0x85, 0xff}, 0, "4d 85 ff : test r15, r15"},
+    { 3, {0xf6, 0xc1, 0x72}, 0, "f6 c1 XX : test cl, XX"},
     { 4, {0x44, 0x0f, 0xb6, 0x1a}, 0, "44 0f b6 1a : movzx r11d, BYTE PTR [rdx]"},
     { 4, {0x44, 0x8d, 0x42, 0x73}, 0, "44 8d 42 XX : lea r8d , [rdx + XX]"},
     { 4, {0x48, 0x83, 0xec, 0x73}, 0, "48 83 ec XX : sub rsp, XX"},
