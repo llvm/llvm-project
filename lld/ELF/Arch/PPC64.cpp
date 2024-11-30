@@ -288,10 +288,10 @@ static void writeSequence(Ctx &ctx, const char *prefix, int from,
   // The full section content has the extent of [begin, end). We drop unused
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
-      ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 4,
+      ctx.internalFile, ".text", SHT_PROGBITS, SHF_ALLOC, /*addralign=*/4,
+      /*entsize=*/0,
       ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
-               4 * (buf.size() - first)),
-      ".text");
+               4 * (buf.size() - first)));
   ctx.inputSections.push_back(sec);
   for (Defined *sym : defined) {
     sym->section = sec;
@@ -695,7 +695,7 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (pcRelInsn == UINT64_C(-1)) {
       Err(ctx)
           << "unrecognized instruction for R_PPC64_PCREL_OPT relaxation: 0x"
-          << Twine::utohexstr(accessInsn);
+          << utohexstr(accessInsn, true);
       break;
     }
 
@@ -1337,7 +1337,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       if (isInstructionUpdateForm(insn))
         Err(ctx) << getErrorLoc(ctx, loc)
                  << "can't toc-optimize an update instruction: 0x"
-                 << utohexstr(insn);
+                 << utohexstr(insn, true);
       writeFromHalf16(ctx, loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
     } else {
       write16(ctx, loc, lo(val));
@@ -1356,8 +1356,8 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       // pointer register r2, as the base register.
       if (isInstructionUpdateForm(insn))
         Err(ctx) << getErrorLoc(ctx, loc)
-                 << "Can't toc-optimize an update instruction: 0x"
-                 << Twine::utohexstr(insn);
+                 << "can't toc-optimize an update instruction: 0x"
+                 << utohexstr(insn, true);
       insn &= 0xffe00000 | mask;
       writeFromHalf16(ctx, loc, insn | 0x00020000 | lo(val));
     } else {

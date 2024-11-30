@@ -36,7 +36,6 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
-
 add_entrypoint_object(
   munmap
   SRCS
@@ -214,3 +213,14 @@ add_entrypoint_object(
     libc.src.unistd.unlink
     .shm_common
 )
+
+add_entrypoint_object(
+  process_mrelease
+  SRCS
+    process_mrelease.cpp
+  HDRS
+    ../process_mrelease.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno)

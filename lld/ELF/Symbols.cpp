@@ -543,19 +543,18 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   //   >>> defined at baz.c:563
   //   >>>            baz.o in archive libbaz.a
   auto *sec1 = cast<InputSectionBase>(d->section);
-  std::string src1 = sec1->getSrcMsg(sym, d->value);
-  std::string obj1 = sec1->getObjMsg(d->value);
-  std::string src2 = errSec->getSrcMsg(sym, errOffset);
-  std::string obj2 = errSec->getObjMsg(errOffset);
-
   auto diag = Err(ctx);
   diag << "duplicate symbol: " << &sym << "\n>>> defined at ";
-  if (!src1.empty())
-    diag << src1 << "\n>>>            ";
-  diag << obj1 << "\n>>> defined at ";
-  if (!src2.empty())
-    diag << src2 << "\n>>>            ";
-  diag << obj2;
+  auto tell = diag.tell();
+  diag << sec1->getSrcMsg(sym, d->value);
+  if (tell != diag.tell())
+    diag << "\n>>>            ";
+  diag << sec1->getObjMsg(d->value) << "\n>>> defined at ";
+  tell = diag.tell();
+  diag << errSec->getSrcMsg(sym, errOffset);
+  if (tell != diag.tell())
+    diag << "\n>>>            ";
+  diag << errSec->getObjMsg(errOffset);
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {

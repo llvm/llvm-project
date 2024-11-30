@@ -1384,8 +1384,7 @@ static void diagnoseUnsatisfiedConstraintExpr(
     return;
   }
 
-  diagnoseWellFormedUnsatisfiedConstraintExpr(S,
-      Record.template get<Expr *>(), First);
+  diagnoseWellFormedUnsatisfiedConstraintExpr(S, cast<Expr *>(Record), First);
 }
 
 void
@@ -1557,12 +1556,12 @@ NormalizedConstraint::NormalizedConstraint(ASTContext &C,
 
 NormalizedConstraint &NormalizedConstraint::getLHS() const {
   assert(isCompound() && "getLHS called on a non-compound constraint.");
-  return Constraint.get<CompoundConstraint>().getPointer()->LHS;
+  return cast<CompoundConstraint>(Constraint).getPointer()->LHS;
 }
 
 NormalizedConstraint &NormalizedConstraint::getRHS() const {
   assert(isCompound() && "getRHS called on a non-compound constraint.");
-  return Constraint.get<CompoundConstraint>().getPointer()->RHS;
+  return cast<CompoundConstraint>(Constraint).getPointer()->RHS;
 }
 
 std::optional<NormalizedConstraint>

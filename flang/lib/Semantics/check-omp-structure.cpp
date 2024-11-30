@@ -2860,7 +2860,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_reduction);
-  if (OmpVerifyModifiers(x.v, GetContext().clauseSource, context_)) {
+  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_reduction,
+          GetContext().clauseSource, context_)) {
     if (CheckReductionOperators(x)) {
       CheckReductionTypeList(x);
     }
@@ -2875,45 +2876,41 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
 
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
-  auto &modifiers{OmpGetModifiers(x.v)};
-  const auto *definedOp{
-      OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)};
-  if (!definedOp) {
-    return false;
-  }
   bool ok = false;
-  common::visit(
-      common::visitors{
-          [&](const parser::DefinedOperator &dOpr) {
-            if (const auto *intrinsicOp{
-                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
-                        &dOpr.u)}) {
-              ok = CheckIntrinsicOperator(*intrinsicOp);
-            } else {
-              context_.Say(GetContext().clauseSource,
-                  "Invalid reduction operator in REDUCTION clause."_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-          [&](const parser::ProcedureDesignator &procD) {
-            const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
-            if (name && name->symbol) {
-              const SourceName &realName{name->symbol->GetUltimate().name()};
-              if (realName == "max" || realName == "min" ||
-                  realName == "iand" || realName == "ior" ||
-                  realName == "ieor") {
-                ok = true;
-              }
-            }
-            if (!ok) {
-              context_.Say(GetContext().clauseSource,
-                  "Invalid reduction identifier in REDUCTION "
-                  "clause."_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-      },
-      definedOp->u);
+  auto &modifiers{OmpGetModifiers(x.v)};
+  if (const auto *ident{
+          OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)}) {
+
+    auto visitOperator{[&](const parser::DefinedOperator &dOpr) {
+      if (const auto *intrinsicOp{
+              std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                  &dOpr.u)}) {
+        ok = CheckIntrinsicOperator(*intrinsicOp);
+      } else {
+        context_.Say(GetContext().clauseSource,
+            "Invalid reduction operator in REDUCTION clause."_err_en_US,
+            ContextDirectiveAsFortran());
+      }
+    }};
+
+    auto visitDesignator{[&](const parser::ProcedureDesignator &procD) {
+      const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+      if (name && name->symbol) {
+        const SourceName &realName{name->symbol->GetUltimate().name()};
+        if (realName == "max" || realName == "min" || realName == "iand" ||
+            realName == "ior" || realName == "ieor") {
+          ok = true;
+        }
+      }
+      if (!ok) {
+        context_.Say(GetContext().clauseSource,
+            "Invalid reduction identifier in REDUCTION "
+            "clause."_err_en_US,
+            ContextDirectiveAsFortran());
+      }
+    }};
+    common::visit(common::visitors{visitOperator, visitDesignator}, ident->u);
+  }
 
   return ok;
 }
@@ -3405,7 +3402,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
           ThisVersion(version), TryVersion(50));
     }
   }
-  if (!OmpVerifyModifiers(x.v, GetContext().clauseSource, context_)) {
+  if (!OmpVerifyModifiers(x.v, llvm::omp::OMPC_defaultmap,
+          GetContext().clauseSource, context_)) {
     // If modifier verification fails, return early.
     return;
   }
@@ -3483,15 +3481,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 }
 
 void OmpStructureChecker::CheckAllowedMapTypes(
-    const parser::OmpMapClause::Type &type,
-    const std::list<parser::OmpMapClause::Type> &allowedMapTypeList) {
+    const parser::OmpMapType::Value &type,
+    const std::list<parser::OmpMapType::Value> &allowedMapTypeList) {
   if (!llvm::is_contained(allowedMapTypeList, type)) {
     std::string commaSeparatedMapTypes;
     llvm::interleave(
         allowedMapTypeList.begin(), allowedMapTypeList.end(),
-        [&](const parser::OmpMapClause::Type &mapType) {
+        [&](const parser::OmpMapType::Value &mapType) {
           commaSeparatedMapTypes.append(parser::ToUpperCaseLetters(
-              parser::OmpMapClause::EnumToString(mapType)));
+              parser::OmpMapType::EnumToString(mapType)));
         },
         [&] { commaSeparatedMapTypes.append(", "); });
     context_.Say(GetContext().clauseSource,
@@ -3503,40 +3501,23 @@ void OmpStructureChecker::CheckAllowedMapTypes(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_map);
-  using TypeMod = parser::OmpMapClause::TypeModifier;
-  using Type = parser::OmpMapClause::Type;
-  using IterMod = parser::OmpIterator;
+  if (!OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_map, GetContext().clauseSource, context_)) {
+    return;
+  }
 
+  auto &modifiers{OmpGetModifiers(x.v)};
   unsigned version{context_.langOptions().OpenMPVersion};
   if (auto commas{std::get<bool>(x.v.t)}; !commas && version >= 52) {
     context_.Say(GetContext().clauseSource,
         "The specification of modifiers without comma separators for the "
         "'MAP' clause has been deprecated in OpenMP 5.2"_port_en_US);
   }
-  if (auto &mapTypeMod{std::get<std::optional<std::list<TypeMod>>>(x.v.t)}) {
-    if (auto *dup{FindDuplicateEntry(*mapTypeMod)}) {
-      context_.Say(GetContext().clauseSource,
-          "Duplicate map-type-modifier entry '%s' will be ignored"_warn_en_US,
-          parser::ToUpperCaseLetters(parser::OmpMapClause::EnumToString(*dup)));
-    }
+  if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
+    CheckIteratorModifier(*iter);
   }
-  // The size of any of the optional lists is never 0, instead of the list
-  // being empty, it will be a nullopt.
-  if (auto &iterMod{std::get<std::optional<std::list<IterMod>>>(x.v.t)}) {
-    if (iterMod->size() != 1) {
-      context_.Say(GetContext().clauseSource,
-          "Only one iterator-modifier is allowed"_err_en_US);
-    }
-    CheckIteratorModifier(iterMod->front());
-  }
-  if (auto &mapType{std::get<std::optional<std::list<Type>>>(x.v.t)}) {
-    if (mapType->size() != 1) {
-      context_.Say(GetContext().clauseSource,
-          "Multiple map types are not allowed"_err_en_US);
-      return;
-    }
-    parser::OmpMapClause::Type type{mapType->front()};
-
+  if (auto *type{OmpGetUniqueModifier<parser::OmpMapType>(modifiers)}) {
+    using Value = parser::OmpMapType::Value;
     switch (GetContext().directive) {
     case llvm::omp::Directive::OMPD_target:
     case llvm::omp::Directive::OMPD_target_teams:
@@ -3546,25 +3527,43 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do_simd:
     case llvm::omp::Directive::OMPD_target_data:
       CheckAllowedMapTypes(
-          type, {Type::To, Type::From, Type::Tofrom, Type::Alloc});
+          type->v, {Value::To, Value::From, Value::Tofrom, Value::Alloc});
       break;
     case llvm::omp::Directive::OMPD_target_enter_data:
-      CheckAllowedMapTypes(type, {Type::To, Type::Alloc});
+      CheckAllowedMapTypes(type->v, {Value::To, Value::Alloc});
       break;
     case llvm::omp::Directive::OMPD_target_exit_data:
-      CheckAllowedMapTypes(type, {Type::From, Type::Release, Type::Delete});
+      CheckAllowedMapTypes(
+          type->v, {Value::From, Value::Release, Value::Delete});
       break;
     default:
       break;
     }
+  }
+
+  auto &&typeMods{
+      OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(modifiers)};
+  struct Less {
+    using Iterator = decltype(typeMods.begin());
+    bool operator()(Iterator a, Iterator b) const {
+      const parser::OmpMapTypeModifier *pa = *a;
+      const parser::OmpMapTypeModifier *pb = *b;
+      return pa->v < pb->v;
+    }
+  };
+  if (auto maybeIter{FindDuplicate<Less>(typeMods)}) {
+    context_.Say(GetContext().clauseSource,
+        "Duplicate map-type-modifier entry '%s' will be ignored"_warn_en_US,
+        parser::ToUpperCaseLetters(
+            parser::OmpMapTypeModifier::EnumToString((**maybeIter)->v)));
   }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_schedule);
   const parser::OmpScheduleClause &scheduleClause = x.v;
-  if (!OmpVerifyModifiers(
-          scheduleClause, GetContext().clauseSource, context_)) {
+  if (!OmpVerifyModifiers(scheduleClause, llvm::omp::OMPC_schedule,
+          GetContext().clauseSource, context_)) {
     return;
   }
 
@@ -3734,8 +3733,8 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
 
   // Check if the variables in the iteration vector are unique.
   struct Less {
-    bool operator()(
-        const parser::OmpIteration *a, const parser::OmpIteration *b) const {
+    using Iterator = std::list<parser::OmpIteration>::const_iterator;
+    bool operator()(Iterator a, Iterator b) const {
       auto namea{std::get<parser::Name>(a->t)};
       auto nameb{std::get<parser::Name>(b->t)};
       assert(namea.symbol && nameb.symbol && "Unresolved symbols");
@@ -3745,8 +3744,8 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
           reinterpret_cast<uintptr_t>(nameb.symbol);
     }
   };
-  if (auto *duplicate{FindDuplicateEntry<parser::OmpIteration, Less>(vec)}) {
-    auto name{std::get<parser::Name>(duplicate->t)};
+  if (auto maybeIter{FindDuplicate<Less>(vec)}) {
+    auto name{std::get<parser::Name>((*maybeIter)->t)};
     context_.Say(name.source,
         "Duplicate variable '%s' in the iteration vector"_err_en_US,
         name.ToString());
@@ -4069,35 +4068,16 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Enter &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_from);
-  unsigned version{context_.langOptions().OpenMPVersion};
-  using ExpMod = parser::OmpFromClause::Expectation;
-  using IterMod = parser::OmpIterator;
-
-  if (auto &expMod{std::get<std::optional<std::list<ExpMod>>>(x.v.t)}) {
-    unsigned allowedInVersion{51};
-    if (version < allowedInVersion) {
-      context_.Say(GetContext().clauseSource,
-          "The PRESENT modifier is not supported in %s, %s"_warn_en_US,
-          ThisVersion(version), TryVersion(allowedInVersion));
-    }
-    if (expMod->size() != 1) {
-      context_.Say(GetContext().clauseSource,
-          "Only one PRESENT modifier is allowed"_err_en_US);
-    }
+  if (!OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_from, GetContext().clauseSource, context_)) {
+    return;
   }
 
-  if (auto &iterMod{std::get<std::optional<std::list<IterMod>>>(x.v.t)}) {
-    unsigned allowedInVersion{51};
-    if (version < allowedInVersion) {
-      context_.Say(GetContext().clauseSource,
-          "Iterator modifiers are not supported in %s, %s"_warn_en_US,
-          ThisVersion(version), TryVersion(allowedInVersion));
-    }
-    if (iterMod->size() != 1) {
-      context_.Say(GetContext().clauseSource,
-          "Only one iterator-modifier is allowed"_err_en_US);
-    }
-    CheckIteratorModifier(iterMod->front());
+  auto &modifiers{OmpGetModifiers(x.v)};
+  unsigned version{context_.langOptions().OpenMPVersion};
+
+  if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
+    CheckIteratorModifier(*iter);
   }
 
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
@@ -4121,6 +4101,12 @@ void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_to);
+  if (!OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_to, GetContext().clauseSource, context_)) {
+    return;
+  }
+
+  auto &modifiers{OmpGetModifiers(x.v)};
   unsigned version{context_.langOptions().OpenMPVersion};
 
   // The "to" clause is only allowed on "declare target" (pre-5.1), and
@@ -4133,35 +4119,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   if (GetContext().directive == llvm::omp::OMPD_declare_target) {
     return;
   }
+
   assert(GetContext().directive == llvm::omp::OMPD_target_update);
-  using ExpMod = parser::OmpFromClause::Expectation;
-  using IterMod = parser::OmpIterator;
-
-  if (auto &expMod{std::get<std::optional<std::list<ExpMod>>>(x.v.t)}) {
-    unsigned allowedInVersion{51};
-    if (version < allowedInVersion) {
-      context_.Say(GetContext().clauseSource,
-          "The PRESENT modifier is not supported in %s, %s"_warn_en_US,
-          ThisVersion(version), TryVersion(allowedInVersion));
-    }
-    if (expMod->size() != 1) {
-      context_.Say(GetContext().clauseSource,
-          "Only one PRESENT modifier is allowed"_err_en_US);
-    }
-  }
-
-  if (auto &iterMod{std::get<std::optional<std::list<IterMod>>>(x.v.t)}) {
-    unsigned allowedInVersion{51};
-    if (version < allowedInVersion) {
-      context_.Say(GetContext().clauseSource,
-          "Iterator modifiers are not supported in %s, %s"_warn_en_US,
-          ThisVersion(version), TryVersion(allowedInVersion));
-    }
-    if (iterMod->size() != 1) {
-      context_.Say(GetContext().clauseSource,
-          "Only one iterator-modifier is allowed"_err_en_US);
-    }
-    CheckIteratorModifier(iterMod->front());
+  if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
+    CheckIteratorModifier(*iter);
   }
 
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};

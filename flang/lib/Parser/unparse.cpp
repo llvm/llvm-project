@@ -2084,6 +2084,11 @@ public:
     Walk(x.v);
     Put(")");
   }
+  void Unparse(const OmpMapper &x) {
+    Word("MAPPER(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpLastprivateClause &x) {
     Walk(
         std::get<std::optional<OmpLastprivateClause::LastprivateModifier>>(x.t),
@@ -2091,46 +2096,8 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpMapClause &x) {
-    auto &typeMod =
-        std::get<std::optional<std::list<OmpMapClause::TypeModifier>>>(x.t);
-    auto &iter = std::get<std::optional<std::list<OmpIterator>>>(x.t);
-    auto &type = std::get<std::optional<std::list<OmpMapClause::Type>>>(x.t);
-    auto &mapper = std::get<OmpMapperIdentifier>(x.t);
-
-    // For a given list of items, if the item has a value, then walk it.
-    // Print commas between items that have values.
-    // Return 'true' if something did get printed, otherwise 'false'.
-    bool needComma{false};
-    if (mapper.v) {
-      Word("MAPPER(");
-      Walk(*mapper.v);
-      Put(")");
-      needComma = true;
-    }
-    if (typeMod) {
-      if (needComma) {
-        Put(", ");
-      }
-      Walk(*typeMod);
-      needComma = true;
-    }
-    if (iter) {
-      if (needComma) {
-        Put(", ");
-      }
-      Walk(*iter);
-      needComma = true;
-    }
-    if (type) {
-      if (needComma) {
-        Put(", ");
-      }
-      Walk(*type);
-      needComma = true;
-    }
-    if (needComma) {
-      Put(": ");
-    }
+    using Modifier = OmpMapClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpScheduleClause &x) {
@@ -2153,24 +2120,8 @@ public:
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
   }
   void Unparse(const OmpFromClause &x) {
-    auto &expect{
-        std::get<std::optional<std::list<OmpFromClause::Expectation>>>(x.t)};
-    auto &iter{std::get<std::optional<std::list<OmpIterator>>>(x.t)};
-    bool needComma{false};
-    if (expect) {
-      Walk(*expect);
-      needComma = true;
-    }
-    if (iter) {
-      if (needComma) {
-        Put(", ");
-      }
-      Walk(*iter);
-      needComma = true;
-    }
-    if (needComma) {
-      Put(": ");
-    }
+    using Modifier = OmpFromClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpIfClause &x) {
@@ -2257,24 +2208,8 @@ public:
     Walk(":", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
   void Unparse(const OmpToClause &x) {
-    auto &expect{
-        std::get<std::optional<std::list<OmpToClause::Expectation>>>(x.t)};
-    auto &iter{std::get<std::optional<std::list<OmpIterator>>>(x.t)};
-    bool needComma{false};
-    if (expect) {
-      Walk(*expect);
-      needComma = true;
-    }
-    if (iter) {
-      if (needComma) {
-        Put(", ");
-      }
-      Walk(*iter);
-      needComma = true;
-    }
-    if (needComma) {
-      Put(": ");
-    }
+    using Modifier = OmpToClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
@@ -2899,6 +2834,7 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
+  WALK_NESTED_ENUM(OmpBindClause, Type) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, Type) // OMP PROC_BIND
   WALK_NESTED_ENUM(OmpDefaultClause, Type) // OMP DEFAULT
   WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP DEFAULTMAP
@@ -2913,7 +2849,7 @@ public:
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
-  WALK_NESTED_ENUM(OmpFromClause, Expectation) // OMP motion-expectation
+  WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
@@ -2921,8 +2857,8 @@ public:
   WALK_NESTED_ENUM(
       OmpGrainsizeClause, Prescriptiveness) // OMP grainsize-modifier
   WALK_NESTED_ENUM(OmpNumTasksClause, Prescriptiveness) // OMP numtasks-modifier
-  WALK_NESTED_ENUM(OmpMapClause, Type) // OMP map-type
-  WALK_NESTED_ENUM(OmpMapClause, TypeModifier) // OMP map-type-modifier
+  WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
+  WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM
   void Unparse(const ReductionOperator::Operator x) {
     switch (x) {

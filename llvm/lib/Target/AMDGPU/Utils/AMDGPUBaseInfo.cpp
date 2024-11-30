@@ -417,6 +417,7 @@ struct FP8DstByteSelInfo {
 #define GET_WMMAOpcode3AddrMappingTable_IMPL
 #define GET_getMFMA_F8F6F4_WithSize_DECL
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
+#define GET_isMFMA_F8F6F4Table_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -525,7 +526,7 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
-static uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
   case MFMAScaleFormats::FP6_E3M2:
@@ -591,6 +592,7 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
+         Opc == AMDGPU::V_DOT2C_F32_BF16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
          Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
          Opc == AMDGPU::V_DOT8C_I32_I4_e64_vi;
