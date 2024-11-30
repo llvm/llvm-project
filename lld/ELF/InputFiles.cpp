@@ -133,8 +133,7 @@ static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
     // Object compatible with all conventions.
     return;
   default:
-    ErrAlways(ctx) << f
-                   << ": unknown Tag_ABI_VFP_args value: " << Twine(vfpArgs);
+    ErrAlways(ctx) << f << ": unknown Tag_ABI_VFP_args value: " << vfpArgs;
     return;
   }
   // Follow ld.bfd and error if there is a mix of calling conventions.
@@ -284,7 +283,7 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
   StringRef target =
       !ctx.arg.bfdname.empty() ? ctx.arg.bfdname : ctx.arg.emulation;
   if (!target.empty()) {
-    ErrAlways(ctx) << file << " is incompatible with " << target;
+    Err(ctx) << file << " is incompatible with " << target;
     return false;
   }
 
@@ -295,10 +294,10 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
     existing = ctx.sharedFiles[0];
   else if (!ctx.bitcodeFiles.empty())
     existing = ctx.bitcodeFiles[0];
-  std::string with;
+  auto diag = Err(ctx);
+  diag << file << " is incompatible";
   if (existing)
-    with = " with " + toStr(ctx, existing);
-  ErrAlways(ctx) << file << " is incompatible" << with;
+    diag << " with " << existing;
   return false;
 }
 
@@ -368,49 +367,6 @@ void elf::parseFiles(Ctx &ctx,
 }
 
 // Concatenates arguments to construct a string representing an error location.
-static std::string createFileLineMsg(StringRef path, unsigned line) {
-  std::string filename = std::string(path::filename(path));
-  std::string lineno = ":" + std::to_string(line);
-  if (filename == path)
-    return filename + lineno;
-  return filename + lineno + " (" + path.str() + lineno + ")";
-}
-
-template <class ELFT>
-static std::string getSrcMsgAux(ObjFile<ELFT> &file, const Symbol &sym,
-                                const InputSectionBase &sec, uint64_t offset) {
-  // In DWARF, functions and variables are stored to different places.
-  // First, look up a function for a given offset.
-  if (std::optional<DILineInfo> info = file.getDILineInfo(&sec, offset))
-    return createFileLineMsg(info->FileName, info->Line);
-
-  // If it failed, look up again as a variable.
-  if (std::optional<std::pair<std::string, unsigned>> fileLine =
-          file.getVariableLoc(sym.getName()))
-    return createFileLineMsg(fileLine->first, fileLine->second);
-
-  // File.sourceFile contains STT_FILE symbol, and that is a last resort.
-  return std::string(file.sourceFile);
-}
-
-std::string InputFile::getSrcMsg(const Symbol &sym, const InputSectionBase &sec,
-                                 uint64_t offset) {
-  if (kind() != ObjKind)
-    return "";
-  switch (ekind) {
-  default:
-    llvm_unreachable("Invalid kind");
-  case ELF32LEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF32LE>>(*this), sym, sec, offset);
-  case ELF32BEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF32BE>>(*this), sym, sec, offset);
-  case ELF64LEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF64LE>>(*this), sym, sec, offset);
-  case ELF64BEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF64BE>>(*this), sym, sec, offset);
-  }
-}
-
 StringRef InputFile::getNameForScript() const {
   if (archiveName.empty())
     return getName();
@@ -481,49 +437,40 @@ static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
     prev->nextInSectionGroup = head;
 }
 
-template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
+template <class ELFT> void ObjFile<ELFT>::initDwarf() {
+  dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
+      std::make_unique<LLDDwarfObj<ELFT>>(this), "",
+      [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
+      [&](Error warning) {
+        Warn(ctx) << getName() << ": " << std::move(warning);
+      }));
+}
+
+DWARFCache *ELFFileBase::getDwarf() {
+  assert(fileKind == ObjKind);
   llvm::call_once(initDwarf, [this]() {
-    dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
-        std::make_unique<LLDDwarfObj<ELFT>>(this), "",
-        [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
-        [&](Error warning) {
-          Warn(ctx) << getName() << ": " << std::move(warning);
-        }));
-  });
-
-  return dwarf.get();
-}
-
-// Returns the pair of file name and line number describing location of data
-// object (variable, array, etc) definition.
-template <class ELFT>
-std::optional<std::pair<std::string, unsigned>>
-ObjFile<ELFT>::getVariableLoc(StringRef name) {
-  return getDwarf()->getVariableLoc(name);
-}
-
-// Returns source line information for a given offset
-// using DWARF debug info.
-template <class ELFT>
-std::optional<DILineInfo>
-ObjFile<ELFT>::getDILineInfo(const InputSectionBase *s, uint64_t offset) {
-  // Detect SectionIndex for specified section.
-  uint64_t sectionIndex = object::SectionedAddress::UndefSection;
-  ArrayRef<InputSectionBase *> sections = s->file->getSections();
-  for (uint64_t curIndex = 0; curIndex < sections.size(); ++curIndex) {
-    if (s == sections[curIndex]) {
-      sectionIndex = curIndex;
-      break;
+    switch (ekind) {
+    default:
+      llvm_unreachable("");
+    case ELF32LEKind:
+      return cast<ObjFile<ELF32LE>>(this)->initDwarf();
+    case ELF32BEKind:
+      return cast<ObjFile<ELF32BE>>(this)->initDwarf();
+    case ELF64LEKind:
+      return cast<ObjFile<ELF64LE>>(this)->initDwarf();
+    case ELF64BEKind:
+      return cast<ObjFile<ELF64BE>>(this)->initDwarf();
     }
-  }
-
-  return getDwarf()->getDILineInfo(offset, sectionIndex);
+  });
+  return dwarf.get();
 }
 
 ELFFileBase::ELFFileBase(Ctx &ctx, Kind k, ELFKind ekind, MemoryBufferRef mb)
     : InputFile(ctx, k, mb) {
   this->ekind = ekind;
 }
+
+ELFFileBase::~ELFFileBase() {}
 
 template <typename Elf_Shdr>
 static const Elf_Shdr *findSection(ArrayRef<Elf_Shdr> sections, uint32_t type) {
@@ -691,8 +638,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // Otherwise, discard group members.
     for (uint32_t secIndex : entries.slice(1)) {
       if (secIndex >= size)
-        Fatal(ctx) << this
-                   << ": invalid section index in group: " << Twine(secIndex);
+        Fatal(ctx) << this << ": invalid section index in group: " << secIndex;
       this->sections[secIndex] = &InputSection::discarded;
     }
   }
@@ -748,8 +694,8 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
     return false;
   if (sec.sh_size % entSize)
     Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
-               << Twine(sec.sh_size) << ") must be a multiple of sh_entsize ("
-               << Twine(entSize) << ")";
+               << uint64_t(sec.sh_size)
+               << ") must be a multiple of sh_entsize (" << entSize << ")";
 
   if (sec.sh_flags & SHF_WRITE)
     Fatal(ctx) << this << ":(" << name
@@ -810,7 +756,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           Warn(ctx) << this
                     << ": --icf=safe conservatively ignores "
                        "SHT_LLVM_ADDRSIG [index "
-                    << Twine(i)
+                    << i
                     << "] with sh_link=0 "
                        "(likely created using objcopy or ld -r)";
       }
@@ -939,7 +885,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
     if (!linkSec)
-      Fatal(ctx) << this << ": invalid sh_link index: " << Twine(sec.sh_link);
+      Fatal(ctx) << this
+                 << ": invalid sh_link index: " << uint32_t(sec.sh_link);
 
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
@@ -1167,7 +1114,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
         Fatal(ctx) << this << ": common symbol '" << sym->getName()
-                   << "' has invalid alignment: " << Twine(value);
+                   << "' has invalid alignment: " << value;
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
                                      type, value, size});
@@ -1214,7 +1161,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
+      Fatal(ctx) << this << ": invalid section index: " << secIdx;
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
       ErrAlways(ctx) << this << ": non-local symbol (" << i
                      << ") found at index < .symtab's sh_info (" << end << ")";
@@ -1274,7 +1221,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
+      Fatal(ctx) << this << ": invalid section index: " << secIdx;
     InputSectionBase *sec = sections[secIdx];
     if (sec == &InputSection::discarded) {
       if (sym.traced) {
@@ -1577,8 +1524,8 @@ template <class ELFT> void SharedFile::parse() {
       // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
       if (ver != VER_NDX_LOCAL && ver != VER_NDX_GLOBAL) {
         if (idx >= verneeds.size()) {
-          ErrAlways(ctx) << "corrupt input file: version need index "
-                         << Twine(idx) << " for symbol " << name
+          ErrAlways(ctx) << "corrupt input file: version need index " << idx
+                         << " for symbol " << name
                          << " is out of bounds\n>>> defined in " << this;
           continue;
         }
@@ -1602,8 +1549,8 @@ template <class ELFT> void SharedFile::parse() {
       // VER_NDX_LOCAL. Workaround this bug.
       if (ctx.arg.emachine == EM_MIPS && name == "_gp_disp")
         continue;
-      ErrAlways(ctx) << "corrupt input file: version definition index "
-                     << Twine(idx) << " for symbol " << name
+      ErrAlways(ctx) << "corrupt input file: version definition index " << idx
+                     << " for symbol " << name
                      << " is out of bounds\n>>> defined in " << this;
       continue;
     }

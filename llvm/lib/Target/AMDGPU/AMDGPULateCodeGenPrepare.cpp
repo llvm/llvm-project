@@ -484,9 +484,9 @@ AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   bool Changed = Impl.run(F);
 
-  PreservedAnalyses PA = PreservedAnalyses::none();
   if (!Changed)
-    return PA;
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = PreservedAnalyses::none();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

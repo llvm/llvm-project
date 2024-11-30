@@ -321,7 +321,7 @@ bb3:
 define void @test8(ptr, ptr, ptr) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  ret2:
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0:%.*]], align 4, !tbaa [[TBAA0]], !range [[RNG4:![0-9]+]], !noundef [[META5:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0:%.*]], align 4, !tbaa [[TBAA0]], !range [[RNG4:![0-9]+]], !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]], !noundef [[META10:![0-9]+]]
 ; CHECK-NEXT:    store i32 [[A]], ptr [[TMP1:%.*]], align 4
 ; CHECK-NEXT:    [[XXX:%.*]] = tail call i32 (...) @f1() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
@@ -698,5 +698,10 @@ right_x:
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]]}
 ; CHECK: [[META3]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[RNG4]] = !{i32 0, i32 1}
-; CHECK: [[META5]] = !{}
+; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]]}
+; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
+; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
+; CHECK: [[META10]] = !{}
 ;.
