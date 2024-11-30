@@ -3720,8 +3720,8 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
   auto *PrevDeclInScope = D->getPrevDeclInScope();
   if (PrevDeclInScope && !PrevDeclInScope->isInvalidDecl()) {
     PrevDeclInScope = cast<OMPDeclareReductionDecl>(
-        SemaRef.CurrentInstantiationScope->findInstantiationOf(PrevDeclInScope)
-            ->get<Decl *>());
+        cast<Decl *>(*SemaRef.CurrentInstantiationScope->findInstantiationOf(
+            PrevDeclInScope)));
   }
   auto DRD = SemaRef.OpenMP().ActOnOpenMPDeclareReductionDirectiveStart(
       /*S=*/nullptr, Owner, D->getDeclName(), ReductionTypes, D->getAccess(),
@@ -3807,8 +3807,8 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   auto *PrevDeclInScope = D->getPrevDeclInScope();
   if (PrevDeclInScope && !PrevDeclInScope->isInvalidDecl()) {
     PrevDeclInScope = cast<OMPDeclareMapperDecl>(
-        SemaRef.CurrentInstantiationScope->findInstantiationOf(PrevDeclInScope)
-            ->get<Decl *>());
+        cast<Decl *>(*SemaRef.CurrentInstantiationScope->findInstantiationOf(
+            PrevDeclInScope)));
   }
   bool IsCorrect = true;
   SmallVector<OMPClause *, 6> Clauses;
@@ -6186,7 +6186,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
         assert(PackIdx != -1 &&
                "found declaration pack but not pack expanding");
         typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-        return cast<NamedDecl>((*Found->get<DeclArgumentPack *>())[PackIdx]);
+        return cast<NamedDecl>((*cast<DeclArgumentPack *>(*Found))[PackIdx]);
       }
     }
 

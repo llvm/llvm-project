@@ -855,6 +855,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
                        {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
                        Custom);
+  } else {
+    // FIXME: For nnan fmaximum, emit the fmaximum3 instead of fmaxnum
+    if (Subtarget->hasMinimum3Maximum3F32())
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
+
+    if (Subtarget->hasMinimum3Maximum3PKF16())
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
@@ -9614,18 +9621,26 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = Done->isZero() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
-  case Intrinsic::amdgcn_s_barrier: {
+  case Intrinsic::amdgcn_s_barrier:
+  case Intrinsic::amdgcn_s_barrier_signal:
+  case Intrinsic::amdgcn_s_barrier_wait: {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
       unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
-      if (WGSize <= ST.getWavefrontSize())
-        return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL, MVT::Other,
-                                          Op.getOperand(0)),
-                       0);
+      if (WGSize <= ST.getWavefrontSize()) {
+        // If the workgroup fits in a wave, remove s_barrier_signal and lower
+        // s_barrier/s_barrier_wait to wave_barrier.
+        if (IntrinsicID == Intrinsic::amdgcn_s_barrier_signal)
+          return Op.getOperand(0);
+        else
+          return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL,
+                                            MVT::Other, Op.getOperand(0)),
+                         0);
+      }
     }
 
-    // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
-    if (ST.hasSplitBarriers()) {
+    if (ST.hasSplitBarriers() && IntrinsicID == Intrinsic::amdgcn_s_barrier) {
+      // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
       SDValue K =
           DAG.getSignedTargetConstant(AMDGPU::Barrier::WORKGROUP, DL, MVT::i32);
       SDValue BarSignal =
@@ -10756,7 +10771,7 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
   Tmp = DAG.getNode(ISD::BITCAST, SL, MVT::f32, TmpCast);
   Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
   SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
-                             DAG.getConstant(0, SL, MVT::i32));
+                             DAG.getTargetConstant(0, SL, MVT::i32));
   return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
                      Op->getFlags());
 }
@@ -13334,7 +13349,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
-    return (VT == MVT::f32 || VT == MVT::f16) && Subtarget.hasIEEEMinMax3();
+    return (VT == MVT::f32 && Subtarget.hasMinimum3Maximum3F32()) ||
+           (VT == MVT::f16 && Subtarget.hasMinimum3Maximum3F16());
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:

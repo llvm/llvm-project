@@ -2530,6 +2530,17 @@ private:
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
 
+  enum BuiltinCountedByRefKind {
+    AssignmentKind,
+    InitializerKind,
+    FunctionArgKind,
+    ReturnArgKind,
+    ArraySubscriptKind,
+    BinaryExprKind,
+  };
+
+  bool CheckInvalidBuiltinCountedByRef(const Expr *E,
+                                       BuiltinCountedByRefKind K);
   bool BuiltinCountedByRef(CallExpr *TheCall);
 
   // Matrix builtin handling.
