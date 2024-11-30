@@ -38,9 +38,12 @@ static cl::opt<bool>
     ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
               cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool> TimeICF("time-icf", cl::desc("time icf steps"),
-                             cl::ReallyHidden, cl::ZeroOrMore,
-                             cl::cat(BoltOptCategory));
+static cl::opt<bool>
+TimeICF("time-icf",
+  cl::desc("time icf steps"),
+  cl::ReallyHidden,
+  cl::ZeroOrMore,
+  cl::cat(BoltOptCategory));
 } // namespace opts
 
 /// Compare two jump tables in 2 functions. The function relies on consistent
