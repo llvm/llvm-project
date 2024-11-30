@@ -19,11 +19,10 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "lldb/Host/aix/Support.h"
 
 #include "NativeThreadAIX.h"
-#include "lldb/Host/common/NativeProcessProtocol.h"
 #include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
 
 namespace lldb_private {
 class Status;
@@ -38,7 +37,7 @@ namespace process_aix {
 ///
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessAIX : public NativeProcessProtocol,
-                           private NativeProcessSoftwareSingleStep {
+                         private NativeProcessSoftwareSingleStep {
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
@@ -46,16 +45,14 @@ public:
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info,
-            NativeDelegate &native_delegate) override;
+           NativeDelegate &native_delegate) override;
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
 
     Extension GetSupportedExtensions() const override;
 
-    void AddProcess(NativeProcessAIX &process) {
-      m_processes.insert(&process);
-    }
+    void AddProcess(NativeProcessAIX &process) { m_processes.insert(&process); }
 
     void RemoveProcess(NativeProcessAIX &process) {
       m_processes.erase(&process);
@@ -102,7 +99,7 @@ public:
                               void *data = nullptr, size_t data_size = 0,
                               long *result = nullptr);
 
-// Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
+  // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
 
 private:
   Manager &m_manager;
@@ -112,8 +109,8 @@ private:
 
   // Private Instance Methods
   NativeProcessAIX(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
-                     const ArchSpec &arch, Manager &manager,
-                     llvm::ArrayRef<::pid_t> tids);
+                   const ArchSpec &arch, Manager &manager,
+                   llvm::ArrayRef<::pid_t> tids);
 
   // Returns a list of process threads that we have attached to.
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
@@ -125,7 +122,6 @@ private:
   Status Detach(lldb::tid_t tid);
 
   void SigchldHandler();
-
 };
 
 } // namespace process_aix
