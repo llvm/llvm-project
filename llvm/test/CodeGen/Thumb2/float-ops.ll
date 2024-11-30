@@ -289,15 +289,15 @@ define float @select_f(float %a, float %b, i1 %c) {
 define double @select_d(double %a, double %b, i1 %c) {
 ; CHECK-LABEL: select_d:
 ; NOREGS: ldr{{(.w)?}}     [[REG:r[0-9]+]], [sp]
-; NOREGS: ands    [[REG]], [[REG]], #1
-; ONLYREGS: ands    r0, r0, #1
+; NOREGS: lsls.w    [[REG]], [[REG]], #31
+; ONLYREGS: lsls    r0, r0, #31
 ; NOREGS-DAG: moveq   r0, r2
 ; NOREGS-DAG: moveq   r1, r3
-; ONLYREGS-DAG: csel   r0, r0, r2
-; ONLYREGS-DAG: csel   r1, r1, r3
-; SP: ands r0, r0, #1
+; ONLYREGS-DAG: csel   r0, r2, r1
+; ONLYREGS-DAG: csel   r1, r12, r3
 ; SP-DAG: vmov [[ALO:r[0-9]+]], [[AHI:r[0-9]+]], d0
 ; SP-DAG: vmov [[BLO:r[0-9]+]], [[BHI:r[0-9]+]], d1
+; SP: lsls r0, r0, #31
 ; SP: itt ne
 ; SP-DAG: movne [[BLO]], [[ALO]]
 ; SP-DAG: movne [[BHI]], [[AHI]]
