@@ -156,6 +156,10 @@ Changes in existing checks
   <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
   crashes from invalid code.
 
+- Improved :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
+  branch clones by now detecting duplicate inner and outer if statements.
+
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
@@ -179,7 +183,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check to
   diagnose potential dangling references when returning a ``const &`` parameter
-  by using the conditional operator ``cond ? var1 : var2``.
+  by using the conditional operator ``cond ? var1 : var2`` and no longer giving
+  false positives for functions which contain lambda.
   
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
@@ -229,6 +234,11 @@ Changes in existing checks
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
+
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check by extending the
+  checker to detect floating point and integer literals in redundant
+  expressions.
 
 - Improved :doc:`misc-unconventional-assign-operator
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
