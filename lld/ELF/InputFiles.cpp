@@ -367,49 +367,6 @@ void elf::parseFiles(Ctx &ctx,
 }
 
 // Concatenates arguments to construct a string representing an error location.
-static std::string createFileLineMsg(StringRef path, unsigned line) {
-  std::string filename = std::string(path::filename(path));
-  std::string lineno = ":" + std::to_string(line);
-  if (filename == path)
-    return filename + lineno;
-  return filename + lineno + " (" + path.str() + lineno + ")";
-}
-
-template <class ELFT>
-static std::string getSrcMsgAux(ObjFile<ELFT> &file, const Symbol &sym,
-                                const InputSectionBase &sec, uint64_t offset) {
-  // In DWARF, functions and variables are stored to different places.
-  // First, look up a function for a given offset.
-  if (std::optional<DILineInfo> info = file.getDILineInfo(&sec, offset))
-    return createFileLineMsg(info->FileName, info->Line);
-
-  // If it failed, look up again as a variable.
-  if (std::optional<std::pair<std::string, unsigned>> fileLine =
-          file.getVariableLoc(sym.getName()))
-    return createFileLineMsg(fileLine->first, fileLine->second);
-
-  // File.sourceFile contains STT_FILE symbol, and that is a last resort.
-  return std::string(file.sourceFile);
-}
-
-std::string InputFile::getSrcMsg(const Symbol &sym, const InputSectionBase &sec,
-                                 uint64_t offset) {
-  if (kind() != ObjKind)
-    return "";
-  switch (ekind) {
-  default:
-    llvm_unreachable("Invalid kind");
-  case ELF32LEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF32LE>>(*this), sym, sec, offset);
-  case ELF32BEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF32BE>>(*this), sym, sec, offset);
-  case ELF64LEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF64LE>>(*this), sym, sec, offset);
-  case ELF64BEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF64BE>>(*this), sym, sec, offset);
-  }
-}
-
 StringRef InputFile::getNameForScript() const {
   if (archiveName.empty())
     return getName();
@@ -480,49 +437,40 @@ static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
     prev->nextInSectionGroup = head;
 }
 
-template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
+template <class ELFT> void ObjFile<ELFT>::initDwarf() {
+  dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
+      std::make_unique<LLDDwarfObj<ELFT>>(this), "",
+      [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
+      [&](Error warning) {
+        Warn(ctx) << getName() << ": " << std::move(warning);
+      }));
+}
+
+DWARFCache *ELFFileBase::getDwarf() {
+  assert(fileKind == ObjKind);
   llvm::call_once(initDwarf, [this]() {
-    dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
-        std::make_unique<LLDDwarfObj<ELFT>>(this), "",
-        [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
-        [&](Error warning) {
-          Warn(ctx) << getName() << ": " << std::move(warning);
-        }));
-  });
-
-  return dwarf.get();
-}
-
-// Returns the pair of file name and line number describing location of data
-// object (variable, array, etc) definition.
-template <class ELFT>
-std::optional<std::pair<std::string, unsigned>>
-ObjFile<ELFT>::getVariableLoc(StringRef name) {
-  return getDwarf()->getVariableLoc(name);
-}
-
-// Returns source line information for a given offset
-// using DWARF debug info.
-template <class ELFT>
-std::optional<DILineInfo>
-ObjFile<ELFT>::getDILineInfo(const InputSectionBase *s, uint64_t offset) {
-  // Detect SectionIndex for specified section.
-  uint64_t sectionIndex = object::SectionedAddress::UndefSection;
-  ArrayRef<InputSectionBase *> sections = s->file->getSections();
-  for (uint64_t curIndex = 0; curIndex < sections.size(); ++curIndex) {
-    if (s == sections[curIndex]) {
-      sectionIndex = curIndex;
-      break;
+    switch (ekind) {
+    default:
+      llvm_unreachable("");
+    case ELF32LEKind:
+      return cast<ObjFile<ELF32LE>>(this)->initDwarf();
+    case ELF32BEKind:
+      return cast<ObjFile<ELF32BE>>(this)->initDwarf();
+    case ELF64LEKind:
+      return cast<ObjFile<ELF64LE>>(this)->initDwarf();
+    case ELF64BEKind:
+      return cast<ObjFile<ELF64BE>>(this)->initDwarf();
     }
-  }
-
-  return getDwarf()->getDILineInfo(offset, sectionIndex);
+  });
+  return dwarf.get();
 }
 
 ELFFileBase::ELFFileBase(Ctx &ctx, Kind k, ELFKind ekind, MemoryBufferRef mb)
     : InputFile(ctx, k, mb) {
   this->ekind = ekind;
 }
+
+ELFFileBase::~ELFFileBase() {}
 
 template <typename Elf_Shdr>
 static const Elf_Shdr *findSection(ArrayRef<Elf_Shdr> sections, uint32_t type) {
