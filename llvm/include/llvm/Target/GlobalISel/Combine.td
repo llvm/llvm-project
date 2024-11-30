@@ -1861,7 +1861,7 @@ def anyext_undef: GICombineRule<
    (defs root:$root),
    (match (G_IMPLICIT_DEF $undef),
           (G_ANYEXT $root, $undef):$Aext,
-   [{ return Helper.isUndefLegalOrBeforeLegalizer(MRI.getType(${Aext}->getOperand(0).getReg())); }]),
+   [{ return true; }]),
    (apply [{ Helper.replaceInstWithUndef(*${Aext}); }])>;
 
 def zext_undef: GICombineRule<
