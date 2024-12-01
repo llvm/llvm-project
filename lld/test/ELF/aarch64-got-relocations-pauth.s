@@ -6,7 +6,6 @@
 # RUN: ld.lld -shared a.o -o a.so
 
 #--- ok.s
-
 # RUN: llvm-mc -filetype=obj -triple=aarch64 ok.s -o ok.o
 
 # RUN: ld.lld ok.o a.so -pie -o external
@@ -79,10 +78,9 @@ _start:
   add  x1, x1, :got_auth_lo12:zed
 
 #--- err.s
-
 # RUN: llvm-mc -filetype=obj -triple=aarch64 err.s -o err.o
 
-# RUN: not ld.lld err.o a.so -pie -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not ld.lld err.o a.so -pie -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 # ERR:      error: both AUTH and non-AUTH GOT entries for 'bar' requested, but only one type of GOT entry per symbol is supported
 # ERR-NEXT: >>> defined in a.so

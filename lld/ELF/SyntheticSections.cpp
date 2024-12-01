@@ -745,7 +745,7 @@ void GotSection::writeTo(uint8_t *buf) {
     //   If address diversity is set and the discriminator
     //   is 0 then modifier = Place
     uint8_t *dest = buf + authEntry.offset;
-    uint64_t key = authEntry.isSymbolFunc ? /*IA*/ 0b00 : /*DA*/ 0b10;
+    uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
     uint64_t addrDiversity = 1;
     write64(ctx, dest, (addrDiversity << 63) | (key << 60));
   }
