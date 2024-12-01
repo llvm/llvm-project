@@ -27,6 +27,40 @@ This check will flag:
  - All applications of binary operators with a narrowing conversions.
    For example: ``int i; i+= 0.1;``.
 
+Arithmetic with smaller integer types than ``int`` trigger implicit conversions,
+as explained under `"Integral Promotion" on cppreference.com
+<https://en.cppreference.com/w/cpp/language/implicit_conversion>`_.
+This check diagnoses more instances of narrowing than the compiler warning
+`-Wconversion` does. The example below demonstrates this behavior.
+
+.. code-block:: c++
+
+   // The following function definition demonstrates usage of arithmetic with
+   // integer types smaller than `int` and how the narrowing conversion happens
+   // implicitly.
+   void computation(short argument1, short argument2) {
+     // Arithmetic written by humans:
+     short result = argument1 + argument2;
+     // Arithmetic actually performed by C++:
+     short result = static_cast<short>(static_cast<int>(argument1) + static_cast<int>(argument2));
+   }
+
+   void recommended_resolution(short argument1, short argument2) {
+     short result = argument1 + argument2;
+     //           ^ warning: narrowing conversion from 'int' to signed type 'short' is implementation-defined
+
+     // The cppcoreguidelines recommend to resolve this issue by using the GSL
+     // in one of two ways. Either by a cast that throws if a loss of precision
+     // would occur.
+     short result = gsl::narrow<short>(argument1 + argument2);
+     // Or it can be resolved without checking the result risking invalid results.
+     short result = gsl::narrow_cast<short>(argument1 + argument2);
+
+     // A classical `static_cast` will silence the warning as well if the GSL
+     // is not available.
+     short result = static_cast<short>(argument1 + argument2);
+   }
+
 
 Options
 -------
