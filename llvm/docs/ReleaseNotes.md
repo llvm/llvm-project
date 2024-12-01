@@ -215,6 +215,8 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcisls` (Scaled Load Store)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
+  extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
