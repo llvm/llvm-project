@@ -529,7 +529,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       ThPool->wait();
 
     LLVM_DEBUG(SinglePass.stopTimer());
-  };  
+  };
   if (BC.getICFLevel() == BinaryContext::ICFLevel::Safe)
     if (Error Err = markFunctionsUnsafeToFold(BC))
       return Err;
