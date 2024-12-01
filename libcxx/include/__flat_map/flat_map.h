@@ -1190,7 +1190,7 @@ template <ranges::input_range _Range,
           class _Allocator = allocator<byte>,
           class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
 flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
-    ->flat_map<
+    -> flat_map<
         __range_key_type<_Range>,
         __range_mapped_type<_Range>,
         _Compare,
@@ -1199,7 +1199,7 @@ flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator(
 
 template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
 flat_map(from_range_t, _Range&&, _Allocator)
-    ->flat_map<
+    -> flat_map<
         __range_key_type<_Range>,
         __range_mapped_type<_Range>,
         less<__range_key_type<_Range>>,

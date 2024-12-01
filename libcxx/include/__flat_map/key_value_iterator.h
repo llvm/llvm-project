@@ -32,6 +32,12 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+/**
+ * __key_value_iterator is a proxy iterator which zips the underlying
+ * _KeyContainer::iterator and the underlying _MappedContainer::iterator.
+ * The two underlying iterators will be incremented/decremented together.
+ * And the reference is a pair of the const key reference and the value reference.
+ */
 template <class _Owner, class _KeyContainer, class _MappedContainer, bool _Const>
 struct __key_value_iterator {
 private:
@@ -54,7 +60,7 @@ private:
 
 public:
   using iterator_concept = random_access_iterator_tag;
-  // `flat_map::iterator` only satisfy "Cpp17InputIterator" named requirements, because
+  // `__key_value_iterator` only satisfy "Cpp17InputIterator" named requirements, because
   // its `reference` is not a reference type.
   // However, to avoid surprising runtime behaviour when it is used with the
   // Cpp17 algorithms or operations, iterator_category is set to random_access_iterator_tag.
