@@ -2,14 +2,12 @@
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
 //--- a.s
-
 .section .tbss,"awT",@nobits
 .global a
 a:
 .xword 0
 
 //--- ok.s
-
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth ok.s -o ok.o
 // RUN: ld.lld -shared ok.o -o ok.so
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn ok.so | \
@@ -98,9 +96,8 @@ local2:
 ///                                                            0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
 
 //--- err1.s
-
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err1.s -o err1.o
-// RUN: not ld.lld -shared err1.o -o err1.so 2>&1 | FileCheck --check-prefix=ERR1 %s
+// RUN: not ld.lld -shared err1.o -o err1.so 2>&1 | FileCheck --check-prefix=ERR1 --implicit-check-not=error: %s
 // ERR1:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
 // ERR1-NEXT: >>> defined in err1.o
 // ERR1-NEXT: >>> referenced by err1.o:(.text+0x10)
@@ -124,9 +121,8 @@ local2:
         blr     x1
 
 //--- err2.s
-
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err2.s -o err2.o
-// RUN: not ld.lld -shared err2.o -o err2.so 2>&1 | FileCheck --check-prefix=ERR2 %s
+// RUN: not ld.lld -shared err2.o -o err2.so 2>&1 | FileCheck --check-prefix=ERR2 --implicit-check-not=error: %s
 // ERR2:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
 // ERR2-NEXT: >>> defined in err2.o
 // ERR2-NEXT: >>> referenced by err2.o:(.text+0x10)
