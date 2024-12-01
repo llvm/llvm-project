@@ -2640,7 +2640,8 @@ void InnerLoopVectorizer::createInductionResumeVPValue(
       VPInstruction::ResumePhi,
       {Plan.getOrAddLiveIn(EndValue), Plan.getOrAddLiveIn(II.getStartValue())},
       OrigPhi->getDebugLoc(), "bc.resume.val");
-  assert(InductionPhiRI->getNumOperands() == 0 && "InductionPhiRI should not have any operands");
+  assert(InductionPhiRI->getNumOperands() == 0 &&
+         "InductionPhiRI should not have any operands");
   InductionPhiRI->addOperand(ResumePhiRecipe);
 
   if (AdditionalBypass.first) {
@@ -8009,22 +8010,30 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
       Phi->removeIncomingValue(EPI.MemSafetyCheck);
   }
 
-  // Try to re-use an existing resume phi if it matches the resume values for the canonical induction. Otherwise generate a resume phi for the canonical induction for the vector epilogue and put it in the vector epilogue preheader.
+  // Try to re-use an existing resume phi if it matches the resume values for
+  // the canonical induction. Otherwise generate a resume phi for the canonical
+  // induction for the vector epilogue and put it in the vector epilogue
+  // preheader.
   PHINode *EPResumeVal = nullptr;
   Type *IdxTy = Legal->getWidestInductionType();
   for (PHINode &P : LoopVectorPreHeader->phis()) {
-    if (P.getType() == IdxTy && P.getIncomingValueForBlock(VecEpilogueIterationCountCheck) == EPI.VectorTripCount && P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck) == ConstantInt::get(IdxTy, 0)) {
+    if (P.getType() == IdxTy &&
+        P.getIncomingValueForBlock(VecEpilogueIterationCountCheck) ==
+            EPI.VectorTripCount &&
+        P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck) ==
+            ConstantInt::get(IdxTy, 0)) {
       EPResumeVal = &P;
       EPResumeVal->setName("vec.epilog.resume.val");
       break;
     }
   }
   if (!EPResumeVal) {
-  EPResumeVal = PHINode::Create(IdxTy, 2, "vec.epilog.resume.val");
-  EPResumeVal->insertBefore(LoopVectorPreHeader->getFirstNonPHIIt());
-  EPResumeVal->addIncoming(EPI.VectorTripCount, VecEpilogueIterationCountCheck);
-  EPResumeVal->addIncoming(ConstantInt::get(IdxTy, 0),
-                           EPI.MainLoopIterationCountCheck);
+    EPResumeVal = PHINode::Create(IdxTy, 2, "vec.epilog.resume.val");
+    EPResumeVal->insertBefore(LoopVectorPreHeader->getFirstNonPHIIt());
+    EPResumeVal->addIncoming(EPI.VectorTripCount,
+                             VecEpilogueIterationCountCheck);
+    EPResumeVal->addIncoming(ConstantInt::get(IdxTy, 0),
+                             EPI.MainLoopIterationCountCheck);
   }
 
   // Generate induction resume values. These variables save the new starting

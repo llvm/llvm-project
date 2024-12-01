@@ -7,7 +7,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "aarch64-apple-ios"
 
 ; k * A^T
-define void @kat(ptr %Aptr, double %k, ptr %C) "enable-matrix" {
+define void @kat(ptr %Aptr, double %k, ptr %C) {
 ; CHECK-LABEL: @kat(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = load <9 x double>, ptr [[APTR:%.*]], align 128
