@@ -8,7 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ModRef.h"
+#include "llvm/Support/ModuleSplitter.h"
 #include "llvm/ADT/STLExtras.h"
+
 
 using namespace llvm;
