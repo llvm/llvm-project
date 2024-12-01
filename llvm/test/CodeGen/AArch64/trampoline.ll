@@ -12,6 +12,7 @@ define i64 @main() {
   %val = alloca i64
   %nval = bitcast ptr %val to ptr
   %tramp = alloca [36 x i8], align 8
+  ; CHECK:	mov	w1, #36
   ; CHECK:	bl	__trampoline_setup
   call void @llvm.init.trampoline(ptr %tramp, ptr @f, ptr %nval)
   %fp = call ptr @llvm.adjust.trampoline(ptr %tramp)
