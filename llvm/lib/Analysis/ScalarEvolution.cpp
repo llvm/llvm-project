@@ -4307,15 +4307,7 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   }
 
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
-    bool MayBeUB = SCEVExprContains(Ops[i], [this](const SCEV *S) {
-      auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
-      // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
-      // is a non-zero constant, we have to assume the UDiv may be UB.
-      return UDiv && (!isKnownNonZero(UDiv->getOperand(1)) ||
-                      !isGuaranteedNotToBePoison(UDiv->getOperand(1)));
-    });
-
-    if (MayBeUB)
+    if (!isGuaranteedNotToCauseUB(Ops[i]))
       continue;
     // We can replace %x umin_seq %y with %x umin %y if either:
     //  * %y being poison implies %x is also poison.
@@ -5933,18 +5925,22 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     // We can generalize this saying that i is the shifted value of BEValue
     // by one iteration:
     //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
-    const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
-    const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
-    if (Shifted != getCouldNotCompute() &&
-        Start != getCouldNotCompute()) {
-      const SCEV *StartVal = getSCEV(StartValueV);
-      if (Start == StartVal) {
-        // Okay, for the entire analysis of this edge we assumed the PHI
-        // to be symbolic.  We now need to go back and purge all of the
-        // entries for the scalars that use the symbolic expression.
-        forgetMemoizedResults(SymbolicName);
-        insertValueToMap(PN, Shifted);
-        return Shifted;
+
+    // Do not allow refinement in rewriting of BEValue.
+    if (isGuaranteedNotToCauseUB(BEValue)) {
+      const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
+      const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
+      if (Shifted != getCouldNotCompute() && Start != getCouldNotCompute() &&
+          ::impliesPoison(BEValue, Start)) {
+        const SCEV *StartVal = getSCEV(StartValueV);
+        if (Start == StartVal) {
+          // Okay, for the entire analysis of this edge we assumed the PHI
+          // to be symbolic.  We now need to go back and purge all of the
+          // entries for the scalars that use the symbolic expression.
+          forgetMemoizedResults(SymbolicName);
+          insertValueToMap(PN, Shifted);
+          return Shifted;
+        }
       }
     }
   }
@@ -7322,6 +7318,16 @@ bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
   SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(Op, PC);
   return PC.MaybePoison.empty();
+}
+
+bool ScalarEvolution::isGuaranteedNotToCauseUB(const SCEV *Op) {
+  return !SCEVExprContains(Op, [this](const SCEV *S) {
+    auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
+    // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
+    // is a non-zero constant, we have to assume the UDiv may be UB.
+    return UDiv && (!isKnownNonZero(UDiv->getOperand(1)) ||
+                    !isGuaranteedNotToBePoison(UDiv->getOperand(1)));
+  });
 }
 
 bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
