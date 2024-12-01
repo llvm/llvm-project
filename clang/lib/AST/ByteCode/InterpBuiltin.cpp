@@ -116,14 +116,14 @@ static void assignInteger(Pointer &Dest, PrimType ValueT, const APSInt &Value) {
       ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
 }
 
-static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
+static bool retPrimValue(InterpState &S, CodePtr OpPC,
                          std::optional<PrimType> &T) {
   if (!T)
-    return RetVoid(S, OpPC, Result);
+    return RetVoid(S, OpPC);
 
 #define RET_CASE(X)                                                            \
   case X:                                                                      \
-    return Ret<X>(S, OpPC, Result);
+    return Ret<X>(S, OpPC);
   switch (*T) {
     RET_CASE(PT_Ptr);
     RET_CASE(PT_FnPtr);
@@ -1687,7 +1687,6 @@ static bool interp__builtin_arithmetic_fence(InterpState &S, CodePtr OpPC,
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
-  APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
@@ -2138,7 +2137,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     return false;
   }
 
-  return retPrimValue(S, OpPC, Dummy, ReturnT);
+  return retPrimValue(S, OpPC, ReturnT);
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
