@@ -89,7 +89,7 @@ _start:
 # ERR-NEXT: >>> referenced by err.o:(.text+0x8)
 # ERR:      error: both AUTH and non-AUTH GOT entries for 'bar' requested, but only one type of GOT entry per symbol is supported
 # ERR-NEXT: >>> defined in a.so
-# ERR-NEXT: >>> referenced by err.o:(.text+0xC)
+# ERR-NEXT: >>> referenced by err.o:(.text+0xc)
 
 .globl _start
 _start:
