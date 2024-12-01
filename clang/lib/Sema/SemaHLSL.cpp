@@ -434,6 +434,7 @@ void SemaHLSL::CheckSemanticAnnotation(
   switch (AnnotationAttr->getKind()) {
   case attr::HLSLSV_DispatchThreadID:
   case attr::HLSLSV_GroupIndex:
+  case attr::HLSLSV_GroupID:
     if (ST == llvm::Triple::Compute)
       return;
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
@@ -764,24 +765,34 @@ void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
-  if (!T->hasUnsignedIntegerRepresentation())
+bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
+  const auto *VT = T->getAs<VectorType>();
+
+  if (!T->hasUnsignedIntegerRepresentation() ||
+      (VT && VT->getNumElements() > 3)) {
+    Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
+        << AL << "uint/uint2/uint3";
     return false;
-  if (const auto *VT = T->getAs<VectorType>())
-    return VT->getNumElements() <= 3;
+  }
+
   return true;
 }
 
 void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
   auto *VD = cast<ValueDecl>(D);
-  if (!isLegalTypeForHLSLSV_DispatchThreadID(VD->getType())) {
-    Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
-        << AL << "uint/uint2/uint3";
+  if (!diagnoseInputIDType(VD->getType(), AL))
     return;
-  }
 
   D->addAttr(::new (getASTContext())
                  HLSLSV_DispatchThreadIDAttr(getASTContext(), AL));
+}
+
+void SemaHLSL::handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL) {
+  auto *VD = cast<ValueDecl>(D);
+  if (!diagnoseInputIDType(VD->getType(), AL))
+    return;
+
+  D->addAttr(::new (getASTContext()) HLSLSV_GroupIDAttr(getASTContext(), AL));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {

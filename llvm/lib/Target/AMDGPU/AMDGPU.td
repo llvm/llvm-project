@@ -149,6 +149,12 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
 >;
 
+def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
+  "HasMinimum3Maximum3PKF16",
+  "true",
+  "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -414,6 +420,12 @@ def FeatureF16BF16ToFP6BF6ConversionScaleInsts : SubtargetFeature<"f16bf16-to-fp
   "Has f16bf16 to fp6bf6 conversion scale instructions"
 >;
 
+def FeatureF32ToF16BF16ConversionSRInsts : SubtargetFeature<"f32-to-f16bf16-cvt-sr-insts",
+  "HasF32ToF16BF16ConversionSRInsts",
+  "true",
+  "Has f32 to f16bf16 conversion scale instructions"
+>;
+
 def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
   "HasAshrPkInsts",
   "true",
@@ -431,7 +443,11 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
    FeatureFP6BF6ConversionScaleInsts,
-   FeatureF16BF16ToFP6BF6ConversionScaleInsts]
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureF32ToF16BF16ConversionSRInsts,
+   FeatureMinimum3Maximum3F32,
+   FeatureMinimum3Maximum3PKF16
+   ]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -1583,7 +1599,6 @@ def FeatureISAVersion9_5_Common : FeatureSet<
   [FeatureAddressableLocalMemorySize163840,
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
-   FeatureCvtFP8VOP1Bug,
    FeatureGFX950Insts,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
@@ -2144,6 +2159,10 @@ def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
 
+def HasMinimum3Maximum3PKF16 :
+  Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
+
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
@@ -2490,6 +2509,9 @@ def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionSca
 
 def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
+
+def HasF32ToF16BF16ConversionSRInsts : Predicate<"Subtarget->hasF32ToF16BF16ConversionSRInsts()">,
+  AssemblerPredicate<(all_of FeatureF32ToF16BF16ConversionSRInsts)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
