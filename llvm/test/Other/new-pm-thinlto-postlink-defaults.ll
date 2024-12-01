@@ -168,6 +168,7 @@
 ; CHECK-POST-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LowerConstantIntrinsicsPass
+; CHECK-POSTLINK-O-NEXT: Running pass: LowerMatrixIntrinsicsPass
 ; CHECK-POSTLINK-O3-NEXT: Running pass: ControlHeightReductionPass
 ; CHECK-EXT: Running pass: {{.*}}::Bye
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopSimplifyPass

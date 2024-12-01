@@ -117,6 +117,8 @@ auto m_AnyAdd(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Add(L, R), m_FAdd(L, R));
 }
 
+AnalysisKey ShouldRunExtraMatrixPasses::Key;
+
 namespace {
 
 // Given an element pointer \p BasePtr to the start of a (sub) matrix, compute
@@ -2651,6 +2653,8 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
     if (!Minimal) {
       PA.preserve<LoopAnalysis>();
       PA.preserve<DominatorTreeAnalysis>();
+      AM.getResult<ShouldRunExtraMatrixPasses>(F);
+      PA.preserve<ShouldRunExtraMatrixPasses>();
     }
     return PA;
   }
