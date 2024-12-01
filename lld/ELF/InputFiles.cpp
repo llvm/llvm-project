@@ -1219,14 +1219,17 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
 
     // Handle non-COMMON defined symbol below. !sym.file allows a symbol
     // assignment to redefine a symbol without an error.
-    if (!sym.file || !sym.isDefined() || secIdx == SHN_UNDEF ||
-        secIdx == SHN_COMMON)
+    if (!sym.file || !sym.isDefined() || secIdx == SHN_UNDEF)
       continue;
+    if (LLVM_UNLIKELY(secIdx >= SHN_LORESERVE)) {
+      if (secIdx == SHN_COMMON)
+        continue;
+      if (secIdx == SHN_XINDEX)
+        secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+      else
+        secIdx = 0;
+    }
 
-    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
-      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
-    else if (secIdx >= SHN_LORESERVE)
-      secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       Fatal(ctx) << this << ": invalid section index: " << secIdx;
     InputSectionBase *sec = sections[secIdx];
