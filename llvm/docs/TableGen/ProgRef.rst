@@ -1817,7 +1817,7 @@ and non-0 as true.
   the *else* expression is produced.
 
 ``!initialized(``\ *a*\ ``)``
-  This is produces a 1 if *a* is not the unitialized value (``?``) and 0
+  This operator produces 1 if *a* is not the uninitialized value (``?``) and 0
   otherwise.
 
 ``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
