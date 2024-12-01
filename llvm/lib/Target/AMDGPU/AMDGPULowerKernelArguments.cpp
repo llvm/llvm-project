@@ -145,19 +145,19 @@ public:
   // arguments.
   void setInitialFreeUserSGPRsCount() {
     GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
-    NumFreeUserSGPRs =
-        UserSGPRInfo.getNumFreeUserSGPRs() - 1 /* Synthetic SGPRs*/;
+    NumFreeUserSGPRs = UserSGPRInfo.getNumFreeKernargPreloadSGPRs();
   }
 
   bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
                             uint64_t LastExplicitArgOffset) {
     //  Check if this argument may be loaded into the same register as the
     //  previous argument.
-    if (ArgOffset == LastExplicitArgOffset && !isAligned(Align(4), ArgOffset) &&
-        AllocSize < 4)
+    if (ArgOffset - LastExplicitArgOffset < 4 &&
+        !isAligned(Align(4), ArgOffset))
       return true;
 
     // Pad SGPRs for kernarg alignment.
+    ArgOffset = alignDown(ArgOffset, 4);
     unsigned Padding = ArgOffset - LastExplicitArgOffset;
     unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
     unsigned NumPreloadSGPRs = alignTo(AllocSize, 4) / 4;
@@ -229,7 +229,8 @@ public:
                                     LastExplicitArgOffset))
             return true;
 
-          LastExplicitArgOffset = LoadOffset + LoadSize;
+          LastExplicitArgOffset =
+              ImplicitArgsBaseOffset + LoadOffset + LoadSize;
           return false;
         });
 

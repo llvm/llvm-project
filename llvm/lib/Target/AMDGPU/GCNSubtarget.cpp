@@ -748,6 +748,10 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
     FlatScratchInit = true;
   }
 
+  if (!AMDGPU::isGraphics(CC) && !IsKernel &&
+      !F.hasFnAttribute("amdgpu-no-lds-kernel-id"))
+    LDSKernelId = true;
+
   if (hasImplicitBufferPtr())
     NumUsedUserSGPRs += getNumUserSGPRForField(ImplicitBufferPtrID);
 
@@ -771,6 +775,9 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
 
   if (hasPrivateSegmentSize())
     NumUsedUserSGPRs += getNumUserSGPRForField(PrivateSegmentSizeID);
+
+  if (hasLDSKernelId())
+    NumSyntheticSGPRs += getNumUserSGPRForField(LDSKernelIdID);
 }
 
 void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {
@@ -779,6 +786,6 @@ void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {
   NumUsedUserSGPRs += NumSGPRs;
 }
 
-unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
-  return AMDGPU::getMaxNumUserSGPRs(ST) - NumUsedUserSGPRs;
+unsigned GCNUserSGPRUsageInfo::getNumFreeKernargPreloadSGPRs() {
+  return AMDGPU::getMaxNumUserSGPRs(ST) - (NumUsedUserSGPRs + NumSyntheticSGPRs);
 }

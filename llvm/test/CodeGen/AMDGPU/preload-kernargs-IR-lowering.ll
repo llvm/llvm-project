@@ -187,17 +187,15 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %i
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_8
 ; PRELOAD-8-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[IN2:%.*]], ptr addrspace(1) inreg [[IN3:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]], ptr addrspace(1) inreg [[OUT2:%.*]], ptr addrspace(1) inreg [[OUT3:%.*]]) #[[ATTR0]] {
 ; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; PRELOAD-8-NEXT:    [[OUT2_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 48
-; PRELOAD-8-NEXT:    [[OUT2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT2_KERNARG_OFFSET]], align 16, !invariant.load [[META0:![0-9]+]]
 ; PRELOAD-8-NEXT:    [[OUT3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 56
-; PRELOAD-8-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
+; PRELOAD-8-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load [[META0:![0-9]+]]
 ; PRELOAD-8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD2:%.*]] = load i32, ptr addrspace(1) [[IN2]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD3:%.*]] = load i32, ptr addrspace(1) [[IN3]], align 4
 ; PRELOAD-8-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-8-NEXT:    store i32 [[LOAD1]], ptr addrspace(1) [[OUT1]], align 4
-; PRELOAD-8-NEXT:    store i32 [[LOAD2]], ptr addrspace(1) [[OUT2_LOAD]], align 4
+; PRELOAD-8-NEXT:    store i32 [[LOAD2]], ptr addrspace(1) [[OUT2]], align 4
 ; PRELOAD-8-NEXT:    store i32 [[LOAD3]], ptr addrspace(1) [[OUT3_LOAD]], align 4
 ; PRELOAD-8-NEXT:    ret void
 ;
