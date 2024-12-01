@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++2c -fsyntax-only -fblocks -verify %s
 
 void a(...);
 
@@ -47,3 +47,8 @@ void q(Ts......) {} // expected-warning {{declaration of a variadic function wit
 template<class T>
 void r(T...) {} // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
 
+auto type_specifier = (void (*)(int...)) nullptr; // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
+
+auto lambda = [](int...) {}; // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
+
+auto block = ^(int...){}; // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
