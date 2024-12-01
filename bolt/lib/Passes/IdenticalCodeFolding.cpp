@@ -13,7 +13,6 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
@@ -32,7 +31,6 @@ using namespace bolt;
 namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
-extern cl::opt<unsigned> Verbosity;
 
 static cl::opt<bool>
     ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
@@ -531,12 +529,10 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       ThPool->wait();
 
     LLVM_DEBUG(SinglePass.stopTimer());
-  };
-  if (BC.getICFLevel() == BinaryContext::ICFLevel::Safe) {
-    if (Error Err = markFunctionsUnsafeToFold(BC)) {
+  };  
+  if (BC.getICFLevel() == BinaryContext::ICFLevel::Safe)
+    if (Error Err = markFunctionsUnsafeToFold(BC))
       return Err;
-    }
-  }
   hashFunctions();
   createCongruentBuckets();
 

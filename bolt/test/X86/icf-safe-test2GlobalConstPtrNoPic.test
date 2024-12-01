@@ -139,8 +139,7 @@ main:
 	movabsq	$barMulFunc, %rsi
 	callq	_Z7helper2PFKiiiES1_ii
 	retq
-.Lfunc_end6:
-	.size	main, .Lfunc_end6-main
+	.size	main, .-main
 	.cfi_endproc
 
 	.type	FooVar,@object

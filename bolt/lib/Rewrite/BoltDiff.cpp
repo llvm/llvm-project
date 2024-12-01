@@ -28,8 +28,6 @@ using namespace bolt;
 namespace opts {
 extern cl::OptionCategory BoltDiffCategory;
 extern cl::opt<bool> NeverPrint;
-extern cl::opt<bool> ICF;
-extern cl::opt<bool> SafeICF;
 
 static cl::opt<bool> IgnoreLTOSuffix(
     "ignore-lto-suffix",
