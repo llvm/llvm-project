@@ -1329,10 +1329,11 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   }
 
   auto errBothAuthAndNonAuth = [this, &sym, offset]() {
-    Err(ctx) << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
-             << "' requested, but only one type of TLSDESC entry per symbol is "
-                "supported"
-             << getLocation(ctx, *sec, sym, offset);
+    auto diag = Err(ctx);
+    diag << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
+         << "' requested, but only one type of TLSDESC entry per symbol is "
+            "supported";
+    printLocation(diag, *sec, sym, offset);
   };
 
   // Do not optimize signed TLSDESC (as described in pauthabielf64 to LE/IE).
