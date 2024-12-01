@@ -132,3 +132,10 @@ functions:
     return_type: int
     arguments:
       - type: const char *
+  - name: process_mrelease
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: int
+      - type: unsigned int

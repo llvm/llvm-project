@@ -1155,6 +1155,15 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
   }];
 }
 
+def NoSpecializationsDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates which should not be explicitly specialized by users. This is primarily
+used to diagnose user specializations of standard library type traits.
+  }];
+}
+
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
   let Heading = "pass_object_size, pass_dynamic_object_size";
@@ -3975,6 +3984,8 @@ The capturing entity ``X`` can be one of the following:
       }
       std::set<std::string_view> s;
     };
+
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
 
 - `global`, `unknown`.
 
