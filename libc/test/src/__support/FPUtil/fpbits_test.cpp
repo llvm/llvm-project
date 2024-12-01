@@ -124,6 +124,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
       UInt128(Rep::quiet_nan()));
 }
 
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
   using Rep = FPRep<FPType::X86_Binary80>;
 
@@ -269,6 +270,7 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80_IsNan) {
 #error "unhandled long double type"
 #endif
 }
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 enum class FP {
   ZERO,

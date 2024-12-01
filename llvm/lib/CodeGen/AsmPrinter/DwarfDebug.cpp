@@ -2192,14 +2192,45 @@ findPrologueEndLoc(const MachineFunction *MF) {
   // better off synthesising an early prologue_end.
   auto CurBlock = MF->begin();
   auto CurInst = CurBlock->begin();
-  while (true) {
-    // Skip empty blocks, in rare cases the entry can be empty.
-    if (CurInst == CurBlock->end()) {
-      ++CurBlock;
-      CurInst = CurBlock->begin();
-      continue;
+
+  // Find the initial instruction, we're guaranteed one by the caller, but not
+  // which block it's in.
+  while (CurBlock->empty())
+    CurInst = (++CurBlock)->begin();
+  assert(CurInst != CurBlock->end());
+
+  // Helper function for stepping through the initial sequence of
+  // unconditionally executed instructions.
+  auto getNextInst = [&CurBlock, &CurInst, MF]() -> bool {
+    // We've reached the end of the block. Did we just look at a terminator?
+    if (CurInst->isTerminator()) {
+      // Some kind of "real" control flow is occurring. At the very least
+      // we would have to start exploring the CFG, a good signal that the
+      // prologue is over.
+      return false;
     }
 
+    // If we've already fallen through into a loop, don't fall through
+    // further, use a backup-location.
+    if (CurBlock->pred_size() > 1)
+      return false;
+
+    // Fall-through from entry to the next block. This is common at -O0 when
+    // there's no initialisation in the function. Bail if we're also at the
+    // end of the function, or the remaining blocks have no instructions.
+    // Skip empty blocks, in rare cases the entry can be empty, and
+    // other optimisations may add empty blocks that the control flow falls
+    // through.
+    do {
+      ++CurBlock;
+      if (CurBlock == MF->end())
+        return false;
+    } while (CurBlock->empty());
+    CurInst = CurBlock->begin();
+    return true;
+  };
+
+  while (true) {
     // Check whether this non-meta instruction a good position for prologue_end.
     if (!CurInst->isMetaInstruction()) {
       auto FoundInst = ExamineInst(*CurInst);
@@ -2216,25 +2247,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
       continue;
     }
 
-    // We've reached the end of the block. Did we just look at a terminator?
-    if (CurInst->isTerminator()) {
-      // Some kind of "real" control flow is occurring. At the very least
-      // we would have to start exploring the CFG, a good signal that the
-      // prologue is over.
+    if (!getNextInst())
       break;
-    }
-
-    // If we've already fallen through into a loop, don't fall through
-    // further, use a backup-location.
-    if (CurBlock->pred_size() > 1)
-      break;
-
-    // Fall-through from entry to the next block. This is common at -O0 when
-    // there's no initialisation in the function. Bail if we're also at the
-    // end of the function.
-    if (++CurBlock == MF->end())
-      break;
-    CurInst = CurBlock->begin();
   }
 
   // We couldn't find any source-location, suggesting all meaningful information
@@ -2277,6 +2291,10 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
 
 const MachineInstr *
 DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
+  // Don't deal with functions that have no instructions.
+  if (llvm::all_of(MF, [](const MachineBasicBlock &MBB) { return MBB.empty(); }))
+    return nullptr;
+
   std::pair<const MachineInstr *, bool> PrologEnd = findPrologueEndLoc(&MF);
   const MachineInstr *PrologEndLoc = PrologEnd.first;
   bool IsEmptyPrologue = PrologEnd.second;
@@ -2457,6 +2475,9 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
     return;
 
   DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+  FunctionLineTableLabel = CU.emitFuncLineTableOffsets()
+                               ? Asm->OutStreamer->emitLineTableLabel()
+                               : nullptr;
 
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(
       getDwarfCompileUnitIDForLineTable(CU));
@@ -2570,11 +2591,14 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   }
 
   ProcessedSPNodes.insert(SP);
-  DIE &ScopeDIE = TheCU.constructSubprogramScopeDIE(SP, FnScope);
+  DIE &ScopeDIE =
+      TheCU.constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructSubprogramScopeDIE(SP, FnScope);
+      SkelCU->constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
+
+  FunctionLineTableLabel = nullptr;
 
   // Construct call site entries.
   constructCallSiteEntryDIEs(*SP, TheCU, ScopeDIE, *MF);

@@ -9,17 +9,12 @@
 
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
-#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
-#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -401,7 +396,7 @@ ELFNixPlatform::ELFNixPlatform(
     : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
       ObjLinkingLayer(ObjLinkingLayer),
       DSOHandleSymbol(ES.intern("__dso_handle")) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   ObjLinkingLayer.addPlugin(std::make_unique<ELFNixPlatformPlugin>(*this));
 
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));

@@ -27,11 +27,8 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstring>
-#include <memory>
-#include <vector>
 using namespace clang;
 
 // EmitUnknownDiagWarning - Emit a warning and typo hint for unknown warning

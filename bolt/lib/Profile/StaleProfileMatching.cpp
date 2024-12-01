@@ -697,6 +697,7 @@ size_t matchWeights(
                         << " to BB (index = " << MatchedBlock->Index - 1 << ")"
                         << " with hash " << Twine::utohexstr(BinHash.combine())
                         << "\n");
+      (void)BinHash;
       uint64_t ExecCount = YamlBB->ExecCount;
       // Update matching stats accounting for the matched block.
       switch (Method) {

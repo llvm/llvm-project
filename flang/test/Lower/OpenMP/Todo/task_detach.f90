@@ -6,7 +6,7 @@
 ! `detach` clause
 !===============================================================================
 
-! CHECK: not yet implemented: OpenMP Block construct clause
+! CHECK: not yet implemented: DETACH clause is not implemented yet
 subroutine omp_task_detach()
   use omp_lib
   integer (kind=omp_event_handle_kind) :: event

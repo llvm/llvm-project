@@ -1324,9 +1324,9 @@ disabling all warnings wins.
 Controlling Diagnostics via Suppression Mappings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Warning suppression mappings enable users to suppress Clang's diagnostics in a
-per-file granular manner. Enabling enforcement of diagnostics in specific parts
-of the project, even if there are violations in some headers.
+Warning suppression mappings enable users to suppress Clang's diagnostics at a
+per-file granularity. This allows enforcing diagnostics in specific parts of the
+project even if there are violations in some headers.
 
 .. code-block:: console
 
@@ -2660,7 +2660,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
    [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
    edge counters. The profile inference algorithm (profi) can be used to infer
@@ -2679,7 +2679,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
 Sample Profile Formats
 """"""""""""""""""""""

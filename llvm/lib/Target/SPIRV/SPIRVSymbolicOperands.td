@@ -456,6 +456,7 @@ defm VulkanMemoryModelDeviceScopeKHR : CapabilityOperand<5346, 0, 0, [], []>;
 defm ImageFootprintNV : CapabilityOperand<5282, 0, 0, [], []>;
 defm FragmentBarycentricNV : CapabilityOperand<5284, 0, 0, [], []>;
 defm ComputeDerivativeGroupQuadsNV : CapabilityOperand<5288, 0, 0, [], []>;
+defm DemoteToHelperInvocation : CapabilityOperand<5379, 0x10600, 0, [SPV_EXT_demote_to_helper_invocation], []>;
 defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
 defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shader]>;
