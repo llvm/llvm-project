@@ -484,6 +484,7 @@ generator limits
 generator new
 generator tuple
 generator typeinfo
+generator version
 initializer_list version
 iomanip cctype
 iomanip cerrno
