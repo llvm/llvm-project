@@ -918,7 +918,7 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
     break;
 
   case INITIALIZED:
-    if (isa_and_nonnull<UnsetInit>(LHS))
+    if (isa<UnsetInit>(LHS))
       return IntInit::get(RK, 0);
     if (LHS->isConcrete())
       return IntInit::get(RK, 1);
