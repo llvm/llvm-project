@@ -128,15 +128,9 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
 
 void InputSectionBase::decompress() const {
   Ctx &ctx = getCtx();
-  uint8_t *uncompressedBuf;
-  {
-    static std::mutex mu;
-    std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = ctx.bAlloc.Allocate<uint8_t>(size);
-  }
-
-  invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
-  content_ = uncompressedBuf;
+  uint8_t *buf = makeThreadLocalN<uint8_t>(size);
+  invokeELFT(decompressAux, ctx, *this, buf, size);
+  content_ = buf;
   compressed = false;
 }
 
