@@ -652,6 +652,16 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'xwchc' and 'zcb' extensions are incompatible");
   }
+
+  for (StringRef Input : {"rv64i_xqcisls0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqcisls' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv64i_xqcia0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqcia' is only supported for 'rv32'");
+  }
 }
 
 TEST(ParseArchString, MissingDepency) {
@@ -1104,7 +1114,9 @@ Experimental extensions
     smctr                1.0
     ssctr                1.0
     svukte               0.3
+    xqcia                0.2
     xqcicsr              0.2
+    xqcisls              0.2
 
 Supported Profiles
     rva20s64

@@ -31,7 +31,7 @@ public:
   /// symbol.
   Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
                  ExecutorSymbolDef NewDest) {
-    return redirect(JD, {{Symbol, NewDest}});
+    return redirect(JD, {{std::move(Symbol), NewDest}});
   }
 
 private:
@@ -50,7 +50,7 @@ public:
   /// desitnation symbol address.
   Error createRedirectableSymbol(ResourceTrackerSP RT, SymbolStringPtr Symbol,
                                  ExecutorSymbolDef InitialDest) {
-    return createRedirectableSymbols(RT, {{Symbol, InitialDest}});
+    return createRedirectableSymbols(RT, {{std::move(Symbol), InitialDest}});
   }
 
   /// Emit redirectable symbol
