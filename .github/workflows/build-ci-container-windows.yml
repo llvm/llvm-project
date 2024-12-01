@@ -1,0 +1,32 @@
+name: Build Windows CI Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container-windows.yml
+      - '.github/workflows/containers/github-action-ci-windows/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container-windows.yml
+      - '.github/workflows/containers/github-action-ci-windows/**'
+
+jobs:
+  build-ci-container-windows:
+    if: github.repository_owner == 'llvm'
+    runs-on: windows-2019
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci-windows
+      - name: Build Container
+        working-directory: ./.github/workflows/container/github-action-ci-windows
+        run: |
+          docker build -t ci-windows-2019 .
