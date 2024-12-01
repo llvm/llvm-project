@@ -3110,9 +3110,8 @@ private:
       SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
       unsigned NumParts, bool ForOrder = false);
 
-  /// \returns the scalarization cost for this list of values. Assuming that
-  /// this subtree gets vectorized, we may need to extract the values from the
-  /// roots. This method calculates the cost of extracting the values.
+  /// \returns the cost of gathering (inserting) the values in \p VL into a
+  /// vector.
   /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
@@ -9614,8 +9613,20 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
     Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, {}, CostKind,
                              Idx, getWidenedType(ScalarTy, Sz));
   }
-  Cost += TTI->getScalarizationOverhead(VecTy, DemandedElts, /*Insert=*/true,
-                                        /*Extract=*/false, CostKind);
+  if (auto *FTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+    assert(SLPReVec && "Only supported by REVEC.");
+    // If ScalarTy is FixedVectorType, we should use CreateInsertVector instead
+    // of CreateInsertElement.
+    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+    for (unsigned I : seq<unsigned>(TE.Scalars.size()))
+      if (DemandedElts[I])
+        Cost +=
+            TTI->getShuffleCost(TTI::SK_InsertSubvector, VecTy, std::nullopt,
+                                CostKind, I * ScalarTyNumElements, FTy);
+  } else {
+    Cost += TTI->getScalarizationOverhead(VecTy, DemandedElts, /*Insert=*/true,
+                                          /*Extract=*/false, CostKind);
+  }
   int Sz = TE.Scalars.size();
   SmallVector<int> ReorderMask(TE.ReorderIndices.begin(),
                                TE.ReorderIndices.end());
@@ -13486,9 +13497,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
               TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
               I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
     } else {
-      Cost = TTI->getScalarizationOverhead(VecTy, ~ShuffledElements,
+      Cost = TTI->getScalarizationOverhead(VecTy,
+                                           /*DemandedElts*/ ~ShuffledElements,
                                            /*Insert*/ true,
-                                           /*Extract*/ false, CostKind);
+                                           /*Extract*/ false, CostKind, VL);
     }
   }
   if (DuplicateNonConst)
@@ -17787,6 +17799,8 @@ bool BoUpSLP::collectValuesToDemote(
     // original type and the sign bit of the truncate type are similar.
     auto AShrChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
       return all_of(E.Scalars, [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
         unsigned ShiftedBits = OrigBitWidth - BitWidth;
