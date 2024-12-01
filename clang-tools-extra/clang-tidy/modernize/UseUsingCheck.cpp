@@ -9,6 +9,7 @@
 #include "UseUsingCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -88,6 +89,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const SourceManager &SM = *Result.SourceManager;
+  const LangOptions &LO = getLangOpts();
 
   // Match CXXRecordDecl only to store the range of the last non-implicit full
   // declaration, to later check whether it's within the typdef itself.
@@ -127,8 +129,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
 
   const TypeLoc TL = MatchedDecl->getTypeSourceInfo()->getTypeLoc();
 
-  auto [Type, QualifierStr] = [MatchedDecl, this, &TL,
-                               &SM]() -> std::pair<std::string, std::string> {
+  auto [Type, QualifierStr] = [MatchedDecl, this, &TL, &SM,
+                               &LO]() -> std::pair<std::string, std::string> {
     SourceRange TypeRange = TL.getSourceRange();
 
     // Function pointer case, get the left and right side of the identifier
@@ -137,12 +139,11 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       const auto RangeLeftOfIdentifier = CharSourceRange::getCharRange(
           TypeRange.getBegin(), MatchedDecl->getLocation());
       const auto RangeRightOfIdentifier = CharSourceRange::getCharRange(
-          Lexer::getLocForEndOfToken(MatchedDecl->getLocation(), 0, SM,
-                                     getLangOpts()),
-          Lexer::getLocForEndOfToken(TypeRange.getEnd(), 0, SM, getLangOpts()));
+          Lexer::getLocForEndOfToken(MatchedDecl->getLocation(), 0, SM, LO),
+          Lexer::getLocForEndOfToken(TypeRange.getEnd(), 0, SM, LO));
       const std::string VerbatimType =
-          (Lexer::getSourceText(RangeLeftOfIdentifier, SM, getLangOpts()) +
-           Lexer::getSourceText(RangeRightOfIdentifier, SM, getLangOpts()))
+          (Lexer::getSourceText(RangeLeftOfIdentifier, SM, LO) +
+           Lexer::getSourceText(RangeRightOfIdentifier, SM, LO))
               .str();
       return {VerbatimType, ""};
     }
@@ -153,23 +154,22 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       // pointer type seperately, so we need to sigure out if the new using-decl
       // needs to be to a reference or pointer as well.
       const SourceLocation Tok = utils::lexer::findPreviousAnyTokenKind(
-          MatchedDecl->getLocation(), SM, getLangOpts(), tok::TokenKind::star,
+          MatchedDecl->getLocation(), SM, LO, tok::TokenKind::star,
           tok::TokenKind::amp, tok::TokenKind::comma,
           tok::TokenKind::kw_typedef);
 
       ExtraReference = Lexer::getSourceText(
-          CharSourceRange::getCharRange(Tok, Tok.getLocWithOffset(1)), SM,
-          getLangOpts());
+          CharSourceRange::getCharRange(Tok, Tok.getLocWithOffset(1)), SM, LO);
 
       if (ExtraReference != "*" && ExtraReference != "&")
         ExtraReference = "";
 
       TypeRange.setEnd(MainTypeEndLoc);
     }
-    return {Lexer::getSourceText(CharSourceRange::getTokenRange(TypeRange), SM,
-                                 getLangOpts())
-                .str(),
-            ExtraReference.str()};
+    return {
+        Lexer::getSourceText(CharSourceRange::getTokenRange(TypeRange), SM, LO)
+            .str(),
+        ExtraReference.str()};
   }();
   StringRef Name = MatchedDecl->getName();
   SourceRange ReplaceRange = MatchedDecl->getSourceRange();
@@ -217,8 +217,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       LastTagDeclRange->second.isValid() &&
       ReplaceRange.fullyContains(LastTagDeclRange->second)) {
     Type = std::string(Lexer::getSourceText(
-        CharSourceRange::getTokenRange(LastTagDeclRange->second), SM,
-        getLangOpts()));
+        CharSourceRange::getTokenRange(LastTagDeclRange->second), SM, LO));
     if (Type.empty())
       return;
   }
