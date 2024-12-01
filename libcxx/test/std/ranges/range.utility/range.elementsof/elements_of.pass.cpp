@@ -14,24 +14,6 @@
 
 #include <concepts>
 #include <memory>
-<<<<<<< HEAD
-#include <vector>
-
-constexpr bool test() {
-  {
-    auto elements_of = std::ranges::elements_of(std::vector<int>());
-    static_assert(
-        std::same_as<decltype(elements_of), std::ranges::elements_of<std::vector<int>&&, std::allocator<std::byte>>>);
-    static_assert(std::same_as<decltype(elements_of.range), std::vector<int>&&>);
-    static_assert(std::same_as<decltype(elements_of.allocator), std::allocator<std::byte>>);
-  }
-  {
-    auto elements_of = std::ranges::elements_of(std::vector<int>(), std::allocator<int>());
-    static_assert(
-        std::same_as<decltype(elements_of), std::ranges::elements_of<std::vector<int>&&, std::allocator<int>>>);
-    static_assert(std::same_as<decltype(elements_of.range), std::vector<int>&&>);
-    static_assert(std::same_as<decltype(elements_of.allocator), std::allocator<int>>);
-=======
 #include <type_traits>
 #include <vector>
 
@@ -102,16 +84,10 @@ constexpr bool test_range() {
       assert(std::ranges::distance(elements_of_2_range) == 4);
     }
     [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_2_allocator = elements_of_2.allocator;
->>>>>>> elements_of
   }
   return true;
 }
 
-<<<<<<< HEAD
-int main() {
-  test();
-  static_assert(test());
-=======
 constexpr bool test() {
   types::for_each(types::type_list<std::allocator<std::byte>, min_allocator<std::byte>, test_allocator<std::byte>>{},
                   []<class Allocator> {
@@ -128,5 +104,4 @@ int main(int, char**) {
   static_assert(test());
 
   return 0;
->>>>>>> elements_of
 }
