@@ -78,7 +78,6 @@ _start:
   add  x1, x1, :got_auth_lo12:zed
 
 #--- ok-tiny.s
-
 # RUN: llvm-mc -filetype=obj -triple=aarch64 ok-tiny.s -o ok-tiny.o
 
 # RUN: ld.lld ok-tiny.o a.so -pie -o external-tiny
