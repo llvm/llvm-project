@@ -46,6 +46,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 
@@ -439,6 +440,60 @@ TEST_F(RtsanOpenedFileTest, DupDiesWhenRealtime) {
 TEST_F(RtsanOpenedFileTest, Dup2DiesWhenRealtime) {
   auto Func = [this]() { dup2(GetOpenFd(), 0); };
   ExpectRealtimeDeath(Func, "dup2");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, ChmodDiesWhenRealtime) {
+  auto Func = [this]() { chmod(GetTemporaryFilePath(), 0777); };
+  ExpectRealtimeDeath(Func, "chmod");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FchmodDiesWhenRealtime) {
+  auto Func = [this]() { fchmod(GetOpenFd(), 0777); };
+  ExpectRealtimeDeath(Func, "fchmod");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, UmaskDiesWhenRealtime) {
+  auto Func = []() { umask(0); };
+  ExpectRealtimeDeath(Func, "umask");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+class RtsanDirectoryTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    const ::testing::TestInfo *const test_info =
+        ::testing::UnitTest::GetInstance()->current_test_info();
+    directory_path_ = std::string("/tmp/rtsan_temp_dir_") + test_info->name();
+    RemoveTemporaryDirectory();
+  }
+
+  const char *GetTemporaryDirectoryPath() const {
+    return directory_path_.c_str();
+  }
+
+  void TearDown() override { RemoveTemporaryDirectory(); }
+
+private:
+  void RemoveTemporaryDirectory() const {
+    std::remove(GetTemporaryDirectoryPath());
+  }
+  std::string directory_path_;
+};
+
+TEST_F(RtsanDirectoryTest, MkdirDiesWhenRealtime) {
+  auto Func = [this]() { mkdir(GetTemporaryDirectoryPath(), 0777); };
+  ExpectRealtimeDeath(Func, "mkdir");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanDirectoryTest, RmdirDiesWhenRealtime) {
+  // We don't actually create this directory before we try to remove it
+  // Thats OK - we are just making sure the call gets intercepted
+  auto Func = [this]() { rmdir(GetTemporaryDirectoryPath()); };
+  ExpectRealtimeDeath(Func, "rmdir");
   ExpectNonRealtimeSurvival(Func);
 }
 
