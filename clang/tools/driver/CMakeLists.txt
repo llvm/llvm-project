@@ -79,7 +79,7 @@ endif()
 foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
 # We need to separate classic flang from the new llvm flang
 # that is in development. Until the new llvm flang replaces
-# classic, we need to have a flang -> flang-legacy symlink
+# classic, we need to have a flang -> flang-classic symlink
 # instead of flang -> clang. Flang-legacy is built later during
 # openmp-extras and is based of llvm archives from ROCm 5.5.
 # This can be removed once llvm flang is in production.
@@ -91,7 +91,7 @@ foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
       endif()
     endforeach()
     install(SCRIPT ${INSTALL_SYMLINK}
-            CODE "install_symlink(flang flang-legacy bin create_symlink)"
+            CODE "install_symlink(flang flang-classic bin create_symlink)"
             COMPONENT ${component})
   else()
     add_clang_symlink(${link} clang)
