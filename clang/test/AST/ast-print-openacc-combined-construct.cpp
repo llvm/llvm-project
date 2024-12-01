@@ -162,4 +162,12 @@ void foo() {
 #pragma acc serial loop attach(iPtr, arrayPtr[0])
   for(int i = 0;i<5;++i);
 
+// CHECK: #pragma acc parallel loop no_create(i, array[1], array, array[1:2])
+#pragma acc parallel loop no_create(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
+#pragma acc parallel loop no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
 }
