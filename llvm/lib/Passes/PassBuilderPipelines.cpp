@@ -1306,8 +1306,8 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   // Cleanup after the loop optimization passes.
   FPM.addPass(InstCombinePass());
 
+  ExtraPassManager ExtraPasses;
   if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
-    ExtraVectorPassManager ExtraPasses;
     // At higher optimization levels, try to clean up any runtime overlap and
     // alignment checks inserted by the vectorizer. We want to track correlated
     // runtime checks for two inner loops in the same outer loop, fold any
@@ -1328,8 +1328,8 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     ExtraPasses.addPass(
         SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
     ExtraPasses.addPass(InstCombinePass());
-    FPM.addPass(std::move(ExtraPasses));
   }
+  FPM.addPass(std::move(ExtraPasses));
 
   // Now that we've formed fast to execute loop structures, we do further
   // optimizations. These are run afterward as they might block doing complex

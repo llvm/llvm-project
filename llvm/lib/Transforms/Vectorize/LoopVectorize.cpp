@@ -442,8 +442,6 @@ using SCEV2ValueTy = DenseMap<const SCEV *, Value *>;
 
 namespace llvm {
 
-AnalysisKey ShouldRunExtraVectorPasses::Key;
-
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
 /// This class performs the widening of scalars into vectors, or multiple
@@ -10477,8 +10475,8 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     // extra simplification passes should be run.
     // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
     // be run if runtime checks have been added.
-    AM.getResult<ShouldRunExtraVectorPasses>(F);
-    PA.preserve<ShouldRunExtraVectorPasses>();
+    AM.getResult<ShouldRunExtraPasses>(F);
+    PA.preserve<ShouldRunExtraPasses>();
   } else {
     PA.preserveSet<CFGAnalyses>();
   }
