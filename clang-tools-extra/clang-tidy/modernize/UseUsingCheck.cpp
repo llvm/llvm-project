@@ -131,25 +131,27 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     // Function pointer case, get the left and right side of the identifier
     // without the identifier.
     if (TypeRange.fullyContains(MatchedDecl->getLocation())) {
-      return {(Lexer::getSourceText(
-                   CharSourceRange::getCharRange(TL.getBeginLoc(),
-                                                 MatchedDecl->getLocation()),
-                   *Result.SourceManager, getLangOpts()) +
-               Lexer::getSourceText(
-                   CharSourceRange::getCharRange(
-                       Lexer::getLocForEndOfToken(MatchedDecl->getLocation(), 0,
-                                                  *Result.SourceManager,
-                                                  getLangOpts()),
-                       Lexer::getLocForEndOfToken(TL.getEndLoc(), 0,
-                                                  *Result.SourceManager,
-                                                  getLangOpts())),
-                   *Result.SourceManager, getLangOpts()))
-                  .str(),
-              ""};
+      const auto RangeLeftOfIdentifier = CharSourceRange::getCharRange(
+          TypeRange.getBegin(), MatchedDecl->getLocation());
+      const auto RangeRightOfIdentifier = CharSourceRange::getCharRange(
+          Lexer::getLocForEndOfToken(MatchedDecl->getLocation(), 0,
+                                     *Result.SourceManager, getLangOpts()),
+          Lexer::getLocForEndOfToken(TypeRange.getEnd(), 0,
+                                     *Result.SourceManager, getLangOpts()));
+      const std::string VerbatimType =
+          (Lexer::getSourceText(RangeLeftOfIdentifier, *Result.SourceManager,
+                                getLangOpts()) +
+           Lexer::getSourceText(RangeRightOfIdentifier, *Result.SourceManager,
+                                getLangOpts()))
+              .str();
+      return {VerbatimType, ""};
     }
 
     StringRef ExtraReference = "";
     if (MainTypeEndLoc.isValid() && TypeRange.fullyContains(MainTypeEndLoc)) {
+      // Each type introduced in a typedef can specify being a reference or
+      // pointer type seperately, so we need to sigure out if the new using-decl
+      // needs to be to a reference or pointer as well.
       const SourceLocation Tok = utils::lexer::findPreviousAnyTokenKind(
           MatchedDecl->getLocation(), *Result.SourceManager, getLangOpts(),
           tok::TokenKind::star, tok::TokenKind::amp, tok::TokenKind::comma,
