@@ -23,14 +23,11 @@
 template <class T1, class T2>
 concept CanCompare = requires(T1 t1, T2 t2) { t1 == t2; };
 
-struct Foo{};
+struct Foo {};
 static_assert(!CanCompare<Foo, Foo>);
 
 static_assert(CanCompare<std::expected<void, int>, std::expected<void, int>>);
 static_assert(CanCompare<std::expected<void, int>, std::expected<void, short>>);
-
-// Note this is true because other overloads in expected<non-void> are unconstrained
-static_assert(CanCompare<std::expected<void, int>, std::expected<int, int>>);
 
 constexpr bool test() {
   // x.has_value() && y.has_value()
