@@ -255,8 +255,7 @@ false:
 
 define i1 @test_icmp_sgt_and_negpow2_zero(i32 %add) {
 ; CHECK-LABEL: @test_icmp_sgt_and_negpow2_zero(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD:%.*]], 7
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %add, -8
@@ -266,8 +265,7 @@ define i1 @test_icmp_sgt_and_negpow2_zero(i32 %add) {
 
 define i1 @test_icmp_slt_and_negpow2_one(i32 %add) {
 ; CHECK-LABEL: @test_icmp_slt_and_negpow2_one(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[AND]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD:%.*]], 8
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %add, -8
@@ -309,11 +307,9 @@ define i1 @test_icmp_ult_and_negpow2_one(i32 %add) {
 
 define i1 @test_imply_dom_condition(i32 %add) {
 ; CHECK-LABEL: @test_imply_dom_condition(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD:%.*]], 7
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[ADD]], 8
-; CHECK-NEXT:    ret i1 [[MIN_ITERS_CHECK]]
+; CHECK-NEXT:    ret i1 false
 ;
   %and = and i32 %add, -8
   %cmp = icmp sgt i32 %and, 0
@@ -324,8 +320,7 @@ define i1 @test_imply_dom_condition(i32 %add) {
 
 define i1 @test_icmp_slt_and_negpow2_c(i32 %add) {
 ; CHECK-LABEL: @test_icmp_slt_and_negpow2_c(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[AND]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD:%.*]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %add, -32
@@ -346,8 +341,7 @@ define i1 @test_icmp_slt_and_negpow2_invalid_c(i32 %add) {
 
 define i1 @test_icmp_sgt_and_negpow2_c(i32 %add) {
 ; CHECK-LABEL: @test_icmp_sgt_and_negpow2_c(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD:%.*]], 31
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %add, -32
