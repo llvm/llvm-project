@@ -1,0 +1,79 @@
+# RUN: llc %s -mattr=+fix-tn0010 -march=sparc -run-pass=errata-workaround -o - \
+# RUN:   | FileCheck %s
+
+---
+# CHECK:      LDrr
+# CHECK-NEXT: NOP
+# CHECK-NEXT: CASArr
+# CHECK:      LDrr
+# CHECK-NEXT: NOP
+# CHECK-NEXT: SWAPrr
+# CHECK:      LDrr
+# CHECK-NEXT: NOP
+# CHECK-NEXT: SWAPri
+name:            er-5-1
+registers:
+  - { id: 0, class: intregs }
+body:             |
+  bb.0.entry:
+    %0 = LDrr $o0, $g0
+    %0 = CASArr $o2, $o3, %0, 10
+    %0 = LDrr $g0, $o0
+    %0 = SWAPrr $o2, $o3, %0
+    %0 = LDrr $g0, $o0
+    %0 = SWAPri $o2, 10, %0
+
+---
+# CHECK:      bb.2:
+# CHECK-NEXT: NOP
+# CHECK-NEXT: CASArr
+name:            er-5-2
+registers:
+  - { id: 0, class: intregs }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    BCOND %bb.2, 10, implicit $icc {
+      %0 = LDrr $g0, $o0
+    }
+
+  bb.1.entry:
+    successors: %bb.2
+    NOP
+
+  bb.2:
+    %0 = CASArr $o1, $o2, %0, 10
+
+---
+# CHECK:      bb.0.entry:
+# CHECK-NEXT: NOP
+# CHECK-NEXT: CASArr
+name:            er-5-3
+registers:
+  - { id: 0, class: intregs }
+body:             |
+  bb.0.entry:
+    %0 = CASArr $o1, $o2, %0, 10
+
+---
+# CHECK:      bb.1.entry:
+# CHECK:      NOP
+# CHECK-NEXT: CASArr
+name:            er-5-4
+registers:
+  - { id: 0, class: intregs }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    BCOND %bb.2, 10, implicit $icc {
+      %0 = LDrr $g0, $o0
+    }
+
+  bb.1.entry:
+    successors: %bb.2
+    %0 = CASArr $o1, $o2, %0, 10
+
+  bb.2:
+    NOP
+
+...

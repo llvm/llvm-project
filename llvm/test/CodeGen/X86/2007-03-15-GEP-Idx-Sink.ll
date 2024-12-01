@@ -15,7 +15,7 @@ define void @foo(ptr %buf, i32 %size, i32 %col, ptr %p) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    addl $8, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%esi), %edi

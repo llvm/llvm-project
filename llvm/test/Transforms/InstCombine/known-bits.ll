@@ -939,10 +939,10 @@ define i1 @extract_value_uadd_fail2(<2 x i8> %xx, <2 x i8> %yy, i32 %idx) {
 
 define i1 @extract_value_uadd_fail3(<2 x i8> %xx, <2 x i8> %yy) {
 ; CHECK-LABEL: @extract_value_uadd_fail3(
-; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], splat (i8 1)
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], splat (i8 1)
 ; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
@@ -1018,7 +1018,7 @@ define i1 @extract_value_sadd_fail(i8 %xx, i8 %yy) {
 define i1 @extract_value_usub(i8 %x, i8 %zz) {
 ; CHECK-LABEL: @extract_value_usub(
 ; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[SUB_UOV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 1
@@ -1062,7 +1062,7 @@ define i1 @extract_value_usub_fail(i8 %x, i8 %z) {
 define i1 @extract_value_ssub(i8 %x, i8 %zz) {
 ; CHECK-LABEL: @extract_value_ssub(
 ; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[SUB_SOV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[Y]], i8 [[X]])
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 0
 ; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 1
@@ -1334,7 +1334,7 @@ define i8 @nonzero_reduce_xor_vscale_even(<vscale x 2 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], shufflevector (<vscale x 3 x i8> insertelement (<vscale x 3 x i8> poison, i8 1, i64 0), <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1349,7 +1349,7 @@ define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_even_fail(<vscale x 2 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_even_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 1, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1586,7 +1586,7 @@ define i32 @test_qnan_quiet_bit2(float nofpclass(sub norm inf snan) %x) {
 define i16 @test_simplify_mask(i32 %ui, float %x) {
 ; CHECK-LABEL: @test_simplify_mask(
 ; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[UI:%.*]] to float
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[CONV]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[CONV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i16 31744
@@ -1658,5 +1658,464 @@ define i32 @test_qnan_only(float nofpclass(snan sub norm zero inf) %x) {
   ret i32 %and
 }
 
+; Make sure that we don't crash when the use of x is unreachable.
+define i64 @pr92084(double %x) {
+; CHECK-LABEL: @pr92084(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN1:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    br i1 true, label [[IF_ELSE]], label [[IF_THEN2:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    ret i64 poison
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %cmp = fcmp uno double %x, 0.000000e+00
+  br i1 %cmp, label %if.then1, label %if.else
+
+if.then1:
+  br i1 %cmp, label %if.else, label %if.then2
+
+if.then2:
+  %cast = bitcast double %x to i64
+  %and = and i64 %cast, 1
+  ret i64 %and
+
+if.else:
+  ret i64 0
+}
+
+define i32 @test_none(float nofpclass(all) %x) {
+; CHECK-LABEL: @test_none(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 4194304
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 4194304
+  ret i32 %and
+}
+
+; We cannot make assumptions about the sign of result of sqrt
+; when the input is a negative value (except for -0).
+define i1 @pr92217() {
+; CHECK-LABEL: @pr92217(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
+define i1 @sqrt_negative_input(float nofpclass(nan zero pnorm psub pinf) %a) {
+; CHECK-LABEL: @sqrt_negative_input(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call float @llvm.sqrt.f32(float %a)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
+define i1 @sqrt_negative_input_nnan(float nofpclass(nan zero pnorm psub pinf) %a) {
+; CHECK-LABEL: @sqrt_negative_input_nnan(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = call nnan float @llvm.sqrt.f32(float %a)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
+define i8 @test_icmp_add(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_ADD:%.*]] = add nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_ADD]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_add = add nuw i8 %n, %n2
+  %cmp = icmp ult i8 %n_add, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_add_fail_nsw(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_add_fail_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_ADD:%.*]] = add nsw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_ADD]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_add = add nsw i8 %n, %n2
+  %cmp = icmp ult i8 %n_add, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_add2(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_add2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_ADD:%.*]] = add nuw nsw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_ADD]], 14
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %n_add = add nsw nuw i8 %n, %n2
+  %cmp = icmp uge i8 %n_add, 15
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i8 %other
+if.else:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+}
+
+define i8 @test_icmp_add_fail_bad_range(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_add_fail_bad_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_ADD:%.*]] = add nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_ADD]], 33
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_add = add nuw i8 %n, %n2
+  %cmp = icmp ule i8 %n_add, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_add_fail_bad_pred(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_add_fail_bad_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_ADD:%.*]] = add nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_ADD]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_add = add nuw i8 %n, %n2
+  %cmp = icmp ugt i8 %n_add, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_sub(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_SUB:%.*]] = sub nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_SUB]], -33
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 32
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_sub = sub nuw i8 %n, %n2
+  %cmp = icmp ugt i8 %n_sub, 223
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_sub_fail_wrong_arg(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_sub_fail_wrong_arg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_SUB:%.*]] = sub nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_SUB]], -33
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N2]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_sub = sub nuw i8 %n, %n2
+  %cmp = icmp ugt i8 %n_sub, 223
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n2, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_sub2(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_sub2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_SUB:%.*]] = sub nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_SUB]], -31
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 32
+;
+entry:
+  %n_sub = sub nuw i8 %n, %n2
+  %cmp = icmp ule i8 %n_sub, 224
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i8 %other
+if.else:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+}
+
+define i8 @test_icmp_sub2_fail_nsw(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_sub2_fail_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_SUB:%.*]] = sub nsw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_SUB]], -31
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  %n_sub = sub nsw i8 %n, %n2
+  %cmp = icmp ule i8 %n_sub, 224
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i8 %other
+if.else:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+}
+
+
+define i8 @test_icmp_sub_fail_bad_range(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_sub_fail_bad_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_SUB:%.*]] = sub nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_SUB]], -34
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_sub = sub nuw i8 %n, %n2
+  %cmp = icmp uge i8 %n_sub, 223
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_sub_fail_bad_pred(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_sub_fail_bad_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_SUB:%.*]] = sub nuw i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[N_SUB]], 31
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_sub = sub nuw i8 %n, %n2
+  %cmp = icmp sge i8 %n_sub, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @simplifydemanded_context(i8 %x, i8 %y) {
+; CHECK-LABEL: @simplifydemanded_context(
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[X_LOBITS:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp eq i8 [[X_LOBITS]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
+; CHECK-NEXT:    ret i8 0
+;
+  %and1 = and i8 %x, 1
+  call void @dummy() ; may unwind
+  %x.lobits = and i8 %x, 3
+  %precond = icmp eq i8 %x.lobits, 0
+  call void @llvm.assume(i1 %precond)
+  %and2 = and i8 %and1, %y
+  ret i8 %and2
+}
+
+define i16 @pr97330(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @pr97330(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[V]] to i16
+; CHECK-NEXT:    ret i16 [[CONV]]
+;
+entry:
+  %v = load i64, ptr %p1, align 8
+  %conv = trunc i64 %v to i16
+  br i1 %c, label %exit, label %if
+
+if:
+  %cmp = icmp ne i16 %conv, 1
+  %conv2 = zext i1 %cmp to i32
+  store i32 %conv2, ptr %p2, align 4
+  %cmp2 = icmp eq i64 %v, 1
+  call void @llvm.assume(i1 %cmp2)
+  unreachable
+
+exit:
+  ret i16 %conv
+}
+
+define i1 @mul_nuw_nsw_nonneg_const(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul nuw nsw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_const_missing_nuw(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const_missing_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_const_missing_nsw(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const_missing_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[MUL]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_can_be_one(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_can_be_one(
+; CHECK-NEXT:    [[Y_NNEG:%.*]] = and i8 [[Y:%.*]], 127
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i8 [[X:%.*]], [[Y_NNEG]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[MUL]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %y.nneg = and i8 %y, 127
+  %mul = mul nuw nsw i8 %x, %y.nneg
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_cant_be_one(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_cant_be_one(
+; CHECK-NEXT:    ret i1 true
+;
+  %y.nneg = and i8 %y, 127
+  %y.nneg.not.one = or i8 %y.nneg, 2
+  %mul = mul nuw nsw i8 %x, %y.nneg.not.one
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_cant_be_one_commuted(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_cant_be_one_commuted(
+; CHECK-NEXT:    ret i1 true
+;
+  %y.nneg = and i8 %y, 127
+  %y.nneg.not.one = or i8 %y.nneg, 2
+  %mul = mul nuw nsw i8 %y.nneg.not.one, %x
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)

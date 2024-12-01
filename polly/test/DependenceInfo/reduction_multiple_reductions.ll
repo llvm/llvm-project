@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
 ;
 ; Verify we do not have dependences between the if and the else clause
 ;

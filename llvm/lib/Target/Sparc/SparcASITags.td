@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/TableGen/SearchableTable.td"
-
 class ASITag<string name, string alt_name, bits<8> op> {
   string Name = name;
   // A maximum of one alias is supported right now.

@@ -40,31 +40,35 @@ Value computeAbs(Value real, Value imag, arith::FastMathFlags fmf,
 
   Value max = b.create<arith::MaximumFOp>(absReal, absImag, fmf);
   Value min = b.create<arith::MinimumFOp>(absReal, absImag, fmf);
-  Value ratio = b.create<arith::DivFOp>(min, max, fmf);
-  Value ratioSq = b.create<arith::MulFOp>(ratio, ratio, fmf);
-  Value ratioSqPlusOne = b.create<arith::AddFOp>(ratioSq, one, fmf);
+
+  // The lowering below requires NaNs and infinities to work correctly.
+  arith::FastMathFlags fmfWithNaNInf = arith::bitEnumClear(
+      fmf, arith::FastMathFlags::nnan | arith::FastMathFlags::ninf);
+  Value ratio = b.create<arith::DivFOp>(min, max, fmfWithNaNInf);
+  Value ratioSq = b.create<arith::MulFOp>(ratio, ratio, fmfWithNaNInf);
+  Value ratioSqPlusOne = b.create<arith::AddFOp>(ratioSq, one, fmfWithNaNInf);
   Value result;
 
   if (fn == AbsFn::rsqrt) {
-    ratioSqPlusOne = b.create<math::RsqrtOp>(ratioSqPlusOne, fmf);
-    min = b.create<math::RsqrtOp>(min, fmf);
-    max = b.create<math::RsqrtOp>(max, fmf);
+    ratioSqPlusOne = b.create<math::RsqrtOp>(ratioSqPlusOne, fmfWithNaNInf);
+    min = b.create<math::RsqrtOp>(min, fmfWithNaNInf);
+    max = b.create<math::RsqrtOp>(max, fmfWithNaNInf);
   }
 
   if (fn == AbsFn::sqrt) {
     Value quarter = b.create<arith::ConstantOp>(
         real.getType(), b.getFloatAttr(real.getType(), 0.25));
     // sqrt(sqrt(a*b)) would avoid the pow, but will overflow more easily.
-    Value sqrt = b.create<math::SqrtOp>(max, fmf);
-    Value p025 = b.create<math::PowFOp>(ratioSqPlusOne, quarter, fmf);
-    result = b.create<arith::MulFOp>(sqrt, p025, fmf);
+    Value sqrt = b.create<math::SqrtOp>(max, fmfWithNaNInf);
+    Value p025 = b.create<math::PowFOp>(ratioSqPlusOne, quarter, fmfWithNaNInf);
+    result = b.create<arith::MulFOp>(sqrt, p025, fmfWithNaNInf);
   } else {
-    Value sqrt = b.create<math::SqrtOp>(ratioSqPlusOne, fmf);
-    result = b.create<arith::MulFOp>(max, sqrt, fmf);
+    Value sqrt = b.create<math::SqrtOp>(ratioSqPlusOne, fmfWithNaNInf);
+    result = b.create<arith::MulFOp>(max, sqrt, fmfWithNaNInf);
   }
 
-  Value isNaN =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, result, result, fmf);
+  Value isNaN = b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, result,
+                                        result, fmfWithNaNInf);
   return b.create<arith::SelectOp>(isNaN, min, result);
 }
 
@@ -516,28 +520,93 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
   }
 };
 
+Value evaluatePolynomial(ImplicitLocOpBuilder &b, Value arg,
+                         ArrayRef<double> coefficients,
+                         arith::FastMathFlagsAttr fmf) {
+  auto argType = mlir::cast<FloatType>(arg.getType());
+  Value poly =
+      b.create<arith::ConstantOp>(b.getFloatAttr(argType, coefficients[0]));
+  for (unsigned i = 1; i < coefficients.size(); ++i) {
+    poly = b.create<math::FmaOp>(
+        poly, arg,
+        b.create<arith::ConstantOp>(b.getFloatAttr(argType, coefficients[i])),
+        fmf);
+  }
+  return poly;
+}
+
 struct Expm1OpConversion : public OpConversionPattern<complex::Expm1Op> {
   using OpConversionPattern<complex::Expm1Op>::OpConversionPattern;
 
+  // e^(a+bi)-1 = (e^a*cos(b)-1)+e^a*sin(b)i
+  //            [handle inaccuracies when a and/or b are small]
+  //            = ((e^a - 1) * cos(b) + cos(b) - 1) + e^a*sin(b)i
+  //            = (expm1(a) * cos(b) + cosm1(b)) + e^a*sin(b)i
   LogicalResult
   matchAndRewrite(complex::Expm1Op op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = cast<ComplexType>(adaptor.getComplex().getType());
-    auto elementType = cast<FloatType>(type.getElementType());
+    auto type = op.getType();
+    auto elemType = mlir::cast<FloatType>(type.getElementType());
+
     arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value real = b.create<complex::ReOp>(adaptor.getComplex());
+    Value imag = b.create<complex::ImOp>(adaptor.getComplex());
 
-    mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    Value exp = b.create<complex::ExpOp>(adaptor.getComplex(), fmf.getValue());
+    Value zero = b.create<arith::ConstantOp>(b.getFloatAttr(elemType, 0.0));
+    Value one = b.create<arith::ConstantOp>(b.getFloatAttr(elemType, 1.0));
 
-    Value real = b.create<complex::ReOp>(elementType, exp);
-    Value one = b.create<arith::ConstantOp>(elementType,
-                                            b.getFloatAttr(elementType, 1));
-    Value realMinusOne = b.create<arith::SubFOp>(real, one, fmf.getValue());
-    Value imag = b.create<complex::ImOp>(elementType, exp);
+    Value expm1Real = b.create<math::ExpM1Op>(real, fmf);
+    Value expReal = b.create<arith::AddFOp>(expm1Real, one, fmf);
 
-    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, realMinusOne,
-                                                   imag);
+    Value sinImag = b.create<math::SinOp>(imag, fmf);
+    Value cosm1Imag = emitCosm1(imag, fmf, b);
+    Value cosImag = b.create<arith::AddFOp>(cosm1Imag, one, fmf);
+
+    Value realResult = b.create<arith::AddFOp>(
+        b.create<arith::MulFOp>(expm1Real, cosImag, fmf), cosm1Imag, fmf);
+
+    Value imagIsZero = b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, imag,
+                                               zero, fmf.getValue());
+    Value imagResult = b.create<arith::SelectOp>(
+        imagIsZero, zero, b.create<arith::MulFOp>(expReal, sinImag, fmf));
+
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, realResult,
+                                                   imagResult);
     return success();
+  }
+
+private:
+  Value emitCosm1(Value arg, arith::FastMathFlagsAttr fmf,
+                  ImplicitLocOpBuilder &b) const {
+    auto argType = mlir::cast<FloatType>(arg.getType());
+    auto negHalf = b.create<arith::ConstantOp>(b.getFloatAttr(argType, -0.5));
+    auto negOne = b.create<arith::ConstantOp>(b.getFloatAttr(argType, -1.0));
+
+    // Algorithm copied from cephes cosm1.
+    SmallVector<double, 7> kCoeffs{
+        4.7377507964246204691685E-14, -1.1470284843425359765671E-11,
+        2.0876754287081521758361E-9,  -2.7557319214999787979814E-7,
+        2.4801587301570552304991E-5,  -1.3888888888888872993737E-3,
+        4.1666666666666666609054E-2,
+    };
+    Value cos = b.create<math::CosOp>(arg, fmf);
+    Value forLargeArg = b.create<arith::AddFOp>(cos, negOne, fmf);
+
+    Value argPow2 = b.create<arith::MulFOp>(arg, arg, fmf);
+    Value argPow4 = b.create<arith::MulFOp>(argPow2, argPow2, fmf);
+    Value poly = evaluatePolynomial(b, argPow2, kCoeffs, fmf);
+
+    auto forSmallArg =
+        b.create<arith::AddFOp>(b.create<arith::MulFOp>(argPow4, poly, fmf),
+                                b.create<arith::MulFOp>(negHalf, argPow2, fmf));
+
+    // (pi/4)^2 is approximately 0.61685
+    Value piOver4Pow2 =
+        b.create<arith::ConstantOp>(b.getFloatAttr(argType, 0.61685));
+    Value cond = b.create<arith::CmpFOp>(arith::CmpFPredicate::OGE, argPow2,
+                                         piOver4Pow2, fmf.getValue());
+    return b.create<arith::SelectOp>(cond, forLargeArg, forSmallArg);
   }
 };
 
@@ -595,17 +664,20 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
     Value maxMinusOne = b.create<arith::SubFOp>(maxAbs, one, fmf);
     Value maxAbsOfRealPlusOneAndImagMinusOne =
         b.create<arith::SelectOp>(useReal, real, maxMinusOne);
-    Value minMaxRatio = b.create<arith::DivFOp>(minAbs, maxAbs, fmf);
+    arith::FastMathFlags fmfWithNaNInf = arith::bitEnumClear(
+        fmf, arith::FastMathFlags::nnan | arith::FastMathFlags::ninf);
+    Value minMaxRatio = b.create<arith::DivFOp>(minAbs, maxAbs, fmfWithNaNInf);
     Value logOfMaxAbsOfRealPlusOneAndImag =
         b.create<math::Log1pOp>(maxAbsOfRealPlusOneAndImagMinusOne, fmf);
     Value logOfSqrtPart = b.create<math::Log1pOp>(
-        b.create<arith::MulFOp>(minMaxRatio, minMaxRatio, fmf), fmf);
+        b.create<arith::MulFOp>(minMaxRatio, minMaxRatio, fmfWithNaNInf),
+        fmfWithNaNInf);
     Value r = b.create<arith::AddFOp>(
-        b.create<arith::MulFOp>(half, logOfSqrtPart, fmf),
-        logOfMaxAbsOfRealPlusOneAndImag, fmf);
+        b.create<arith::MulFOp>(half, logOfSqrtPart, fmfWithNaNInf),
+        logOfMaxAbsOfRealPlusOneAndImag, fmfWithNaNInf);
     Value resultReal = b.create<arith::SelectOp>(
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, r, r, fmf), minAbs,
-        r);
+        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, r, r, fmfWithNaNInf),
+        minAbs, r);
     Value resultImag = b.create<math::Atan2Op>(imag, realPlusOne, fmf);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
@@ -956,27 +1028,12 @@ struct SignOpConversion : public OpConversionPattern<complex::SignOp> {
   }
 };
 
-struct TanOpConversion : public OpConversionPattern<complex::TanOp> {
-  using OpConversionPattern<complex::TanOp>::OpConversionPattern;
+template <typename Op>
+struct TanTanhOpConversion : public OpConversionPattern<Op> {
+  using OpConversionPattern<Op>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::TanOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
-    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
-
-    Value cos = rewriter.create<complex::CosOp>(loc, adaptor.getComplex(), fmf);
-    Value sin = rewriter.create<complex::SinOp>(loc, adaptor.getComplex(), fmf);
-    rewriter.replaceOpWithNewOp<complex::DivOp>(op, sin, cos, fmf);
-    return success();
-  }
-};
-
-struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
-  using OpConversionPattern<complex::TanhOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(complex::TanhOp op, OpAdaptor adaptor,
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto loc = op.getLoc();
@@ -989,14 +1046,20 @@ struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
         b.create<complex::ReOp>(loc, elementType, adaptor.getComplex());
     Value imag =
         b.create<complex::ImOp>(loc, elementType, adaptor.getComplex());
+    Value negOne = b.create<arith::ConstantOp>(
+        elementType, b.getFloatAttr(elementType, -1.0));
+
+    if constexpr (std::is_same_v<Op, complex::TanOp>) {
+      // tan(x+yi) = -i*tanh(-y + xi)
+      std::swap(real, imag);
+      real = b.create<arith::MulFOp>(real, negOne, fmf);
+    }
 
     auto cst = [&](APFloat v) {
       return b.create<arith::ConstantOp>(elementType,
                                          b.getFloatAttr(elementType, v));
     };
     Value inf = cst(APFloat::getInf(floatSemantics));
-    Value negOne = b.create<arith::ConstantOp>(
-        elementType, b.getFloatAttr(elementType, -1.0));
     Value four = b.create<arith::ConstantOp>(elementType,
                                              b.getFloatAttr(elementType, 4.0));
     Value twoReal = b.create<arith::AddFOp>(real, real, fmf);
@@ -1052,6 +1115,12 @@ struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
       resultReal = b.create<arith::SelectOp>(resultRealIsNaN, nan, resultReal);
       resultImag =
           b.create<arith::SelectOp>(resultImagIsZero, zero, resultImag);
+    }
+
+    if constexpr (std::is_same_v<Op, complex::TanOp>) {
+      // tan(x+yi) = -i*tanh(-y + xi)
+      std::swap(resultReal, resultImag);
+      resultImag = b.create<arith::MulFOp>(resultImag, negOne, fmf);
     }
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
@@ -1327,8 +1396,8 @@ void mlir::populateComplexToStandardConversionPatterns(
       SignOpConversion,
       SinOpConversion,
       SqrtOpConversion,
-      TanOpConversion,
-      TanhOpConversion,
+      TanTanhOpConversion<complex::TanOp>,
+      TanTanhOpConversion<complex::TanhOp>,
       PowOpConversion,
       RsqrtOpConversion
   >(patterns.getContext());

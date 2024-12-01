@@ -87,6 +87,9 @@ void InterfaceFile::addDocument(std::shared_ptr<InterfaceFile> &&Document) {
                                   const std::shared_ptr<InterfaceFile> &RHS) {
                                  return LHS->InstallName < RHS->InstallName;
                                });
+  assert((Pos == Documents.end() ||
+          (*Pos)->InstallName != Document->InstallName) &&
+         "Unexpected duplicate document added");
   Document->Parent = this;
   Documents.insert(Pos, Document);
 }
@@ -169,6 +172,7 @@ InterfaceFile::merge(const InterfaceFile *O) const {
 
   IF->setTwoLevelNamespace(isTwoLevelNamespace());
   IF->setApplicationExtensionSafe(isApplicationExtensionSafe());
+  IF->setOSLibNotForSharedCache(isOSLibNotForSharedCache());
 
   for (const auto &It : umbrellas()) {
     if (!It.second.empty())
@@ -235,6 +239,8 @@ InterfaceFile::remove(Architecture Arch) const {
       return make_error<TextAPIError>(TextAPIErrorCode::NoSuchArchitecture);
   }
 
+  // FIXME: Figure out how to keep these attributes in sync when new ones are
+  // added.
   std::unique_ptr<InterfaceFile> IF(new InterfaceFile());
   IF->setFileType(getFileType());
   IF->setPath(getPath());
@@ -245,6 +251,7 @@ InterfaceFile::remove(Architecture Arch) const {
   IF->setSwiftABIVersion(getSwiftABIVersion());
   IF->setTwoLevelNamespace(isTwoLevelNamespace());
   IF->setApplicationExtensionSafe(isApplicationExtensionSafe());
+  IF->setOSLibNotForSharedCache(isOSLibNotForSharedCache());
   for (const auto &It : umbrellas())
     if (It.first.Arch != Arch)
       IF->addParentUmbrella(It.first, It.second);
@@ -313,6 +320,7 @@ InterfaceFile::extract(Architecture Arch) const {
   IF->setSwiftABIVersion(getSwiftABIVersion());
   IF->setTwoLevelNamespace(isTwoLevelNamespace());
   IF->setApplicationExtensionSafe(isApplicationExtensionSafe());
+  IF->setOSLibNotForSharedCache(isOSLibNotForSharedCache());
   for (const auto &It : umbrellas())
     if (It.first.Arch == Arch)
       IF->addParentUmbrella(It.first, It.second);

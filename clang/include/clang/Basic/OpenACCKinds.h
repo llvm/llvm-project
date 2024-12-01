@@ -22,7 +22,7 @@ namespace clang {
 // Represents the Construct/Directive kind of a pragma directive. Note the
 // OpenACC standard is inconsistent between calling these Construct vs
 // Directive, but we're calling it a Directive to be consistent with OpenMP.
-enum class OpenACCDirectiveKind {
+enum class OpenACCDirectiveKind : uint8_t {
   // Compute Constructs.
   Parallel,
   Serial,
@@ -152,7 +152,13 @@ inline bool isOpenACCComputeDirectiveKind(OpenACCDirectiveKind K) {
          K == OpenACCDirectiveKind::Kernels;
 }
 
-enum class OpenACCAtomicKind {
+inline bool isOpenACCCombinedDirectiveKind(OpenACCDirectiveKind K) {
+  return K == OpenACCDirectiveKind::ParallelLoop ||
+         K == OpenACCDirectiveKind::SerialLoop ||
+         K == OpenACCDirectiveKind::KernelsLoop;
+}
+
+enum class OpenACCAtomicKind : uint8_t {
   Read,
   Write,
   Update,
@@ -161,7 +167,7 @@ enum class OpenACCAtomicKind {
 };
 
 /// Represents the kind of an OpenACC clause.
-enum class OpenACCClauseKind {
+enum class OpenACCClauseKind : uint8_t {
   /// 'finalize' clause, allowed on 'exit data' directive.
   Finalize,
   /// 'if_present' clause, allowed on 'host_data' and 'update' directives.
@@ -459,7 +465,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
   return printOpenACCClauseKind(Out, K);
 }
 
-enum class OpenACCDefaultClauseKind {
+enum class OpenACCDefaultClauseKind : uint8_t {
   /// 'none' option.
   None,
   /// 'present' option.
@@ -492,7 +498,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
   return printOpenACCDefaultClauseKind(Out, K);
 }
 
-enum class OpenACCReductionOperator {
+enum class OpenACCReductionOperator : uint8_t {
   /// '+'.
   Addition,
   /// '*'.
@@ -514,6 +520,72 @@ enum class OpenACCReductionOperator {
   /// Invalid Reduction Clause Kind.
   Invalid,
 };
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCReductionOperator(StreamTy &Out,
+                                               OpenACCReductionOperator Op) {
+  switch (Op) {
+  case OpenACCReductionOperator::Addition:
+    return Out << "+";
+  case OpenACCReductionOperator::Multiplication:
+    return Out << "*";
+  case OpenACCReductionOperator::Max:
+    return Out << "max";
+  case OpenACCReductionOperator::Min:
+    return Out << "min";
+  case OpenACCReductionOperator::BitwiseAnd:
+    return Out << "&";
+  case OpenACCReductionOperator::BitwiseOr:
+    return Out << "|";
+  case OpenACCReductionOperator::BitwiseXOr:
+    return Out << "^";
+  case OpenACCReductionOperator::And:
+    return Out << "&&";
+  case OpenACCReductionOperator::Or:
+    return Out << "||";
+  case OpenACCReductionOperator::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Unknown reduction operator kind");
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCReductionOperator Op) {
+  return printOpenACCReductionOperator(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCReductionOperator Op) {
+  return printOpenACCReductionOperator(Out, Op);
+}
+
+enum class OpenACCGangKind : uint8_t {
+  /// num:
+  Num,
+  /// dim:
+  Dim,
+  /// static:
+  Static
+};
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCGangKind(StreamTy &Out, OpenACCGangKind GK) {
+  switch (GK) {
+  case OpenACCGangKind::Num:
+    return Out << "num";
+  case OpenACCGangKind::Dim:
+    return Out << "dim";
+  case OpenACCGangKind::Static:
+    return Out << "static";
+  }
+  llvm_unreachable("unknown gang kind");
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCGangKind Op) {
+  return printOpenACCGangKind(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCGangKind Op) {
+  return printOpenACCGangKind(Out, Op);
+}
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_OPENACCKINDS_H

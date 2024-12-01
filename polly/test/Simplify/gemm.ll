@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,print<polly-simplify>' -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s
 ;
 ;    void gemm(float A[][1024], float B[][1024], float C[][1024]) {
 ;      for (long i = 0; i < 1024; i++)

@@ -14,16 +14,22 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 #define LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 
-#include "llvm/IR/Instructions.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 
 namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
+  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
+                                          IsExact | Disjoint | NonNeg |
+                                          FmNoNans | FmNoInfs | SameSign;
+
 public:
   GenericMachineInstr() = delete;
 
@@ -33,6 +39,13 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return isPreISelGenericOpcode(MI->getOpcode());
+  }
+
+  bool hasPoisonGeneratingFlags() const { return getFlags() & PoisonFlags; }
+
+  void dropPoisonGeneratingFlags() {
+    clearFlags(PoisonFlags);
+    assert(!hasPoisonGeneratingFlags());
   }
 };
 
@@ -170,6 +183,11 @@ class GAnyLoad : public GLoadStore {
 public:
   /// Get the definition register of the loaded value.
   Register getDstReg() const { return getOperand(0).getReg(); }
+
+  /// Returns the Ranges that describes the dereference.
+  const MDNode *getRanges() const {
+    return getMMO().getRanges();
+  }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
@@ -461,6 +479,23 @@ public:
     switch (MI->getOpcode()) {
     case TargetOpcode::G_UADDO:
     case TargetOpcode::G_SADDO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing sub operations.
+/// G_USUBO, G_SSUBO
+class GSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SSUBO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
       return true;
     default:
       return false;
@@ -782,6 +817,29 @@ public:
   }
 };
 
+/// Represents an extract subvector.
+class GExtractSubvector : public GenericMachineInstr {
+public:
+  Register getSrcVec() const { return getOperand(1).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(2).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR;
+  }
+};
+
+/// Represents a insert subvector.
+class GInsertSubvector : public GenericMachineInstr {
+public:
+  Register getBigVec() const { return getOperand(1).getReg(); }
+  Register getSubVec() const { return getOperand(2).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(3).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR;
+  }
+};
+
 /// Represents a freeze.
 class GFreeze : public GenericMachineInstr {
 public:
@@ -805,6 +863,8 @@ public:
     case TargetOpcode::G_FPEXT:
     case TargetOpcode::G_FPTOSI:
     case TargetOpcode::G_FPTOUI:
+    case TargetOpcode::G_FPTOSI_SAT:
+    case TargetOpcode::G_FPTOUI_SAT:
     case TargetOpcode::G_FPTRUNC:
     case TargetOpcode::G_INTTOPTR:
     case TargetOpcode::G_PTRTOINT:
@@ -837,11 +897,128 @@ public:
   };
 };
 
+/// Represents an any ext.
+class GAnyExt : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ANYEXT;
+  };
+};
+
 /// Represents a trunc.
 class GTrunc : public GCastOp {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_TRUNC;
+  };
+};
+
+/// Represents a vscale.
+class GVScale : public GenericMachineInstr {
+public:
+  APInt getSrc() const { return getOperand(1).getCImm()->getValue(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_VSCALE;
+  };
+};
+
+/// Represents a step vector.
+class GStepVector : public GenericMachineInstr {
+public:
+  uint64_t getStep() const {
+    return getOperand(1).getCImm()->getValue().getZExtValue();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
+  };
+};
+
+/// Represents an integer subtraction.
+class GSub : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SUB;
+  };
+};
+
+/// Represents an integer multiplication.
+class GMul : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_MUL;
+  };
+};
+
+/// Represents a shift left.
+class GShl : public GenericMachineInstr {
+public:
+  Register getSrcReg() const { return getOperand(1).getReg(); }
+  Register getShiftReg() const { return getOperand(2).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SHL;
+  };
+};
+
+/// Represents a threeway compare.
+class GSUCmp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getOperand(1).getReg(); }
+  Register getRHSReg() const { return getOperand(2).getReg(); }
+
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SCMP; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SCMP:
+    case TargetOpcode::G_UCMP:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending operation.
+class GExtOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending or truncating operation.
+class GExtOrTruncOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_TRUNC:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a splat vector.
+class GSplatVector : public GenericMachineInstr {
+public:
+  Register getScalarReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
   };
 };
 

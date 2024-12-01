@@ -453,7 +453,7 @@ public:
   AffineLoopConversion(mlir::MLIRContext *context, AffineFunctionAnalysis &afa)
       : OpRewritePattern(context), functionAnalysis(afa) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::DoLoopOp loop,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: rewriting loop:\n";
@@ -546,7 +546,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   AffineIfConversion(mlir::MLIRContext *context, AffineFunctionAnalysis &afa)
       : OpRewritePattern(context) {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::IfOp op,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: rewriting if:\n";

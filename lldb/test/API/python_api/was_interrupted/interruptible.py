@@ -45,7 +45,7 @@ class WelcomeCommand(object):
         For the "check" case, it doesn't wait, but just returns whether there was
         an interrupt in force or not."""
 
-        if local_data == None:
+        if local_data is None:
             result.SetError("local data was not set.")
             result.SetStatus(lldb.eReturnStatusFailed)
             return

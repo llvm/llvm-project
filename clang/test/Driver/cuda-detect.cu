@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-//
 // Check that we properly detect CUDA installation.
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA

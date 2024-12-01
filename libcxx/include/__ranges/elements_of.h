@@ -13,7 +13,7 @@
 #include <__config>
 #include <__memory/allocator.h>
 #include <__ranges/concepts.h>
-#include <__utility/move.h>
+#include <__utility/forward.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -32,16 +32,10 @@ namespace ranges {
 template <range _Range, class _Allocator = allocator<byte>>
 struct elements_of {
   _LIBCPP_NO_UNIQUE_ADDRESS _Range range;
-  _LIBCPP_NO_UNIQUE_ADDRESS _Allocator allocator;
-
-  // This explicit constructor is required because AppleClang 15 hasn't implement P0960R3
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(_Range __range, _Allocator __alloc = _Allocator())
-      : range(std::move(__range)), allocator(std::move(__alloc)) {}
+  _LIBCPP_NO_UNIQUE_ADDRESS _Allocator allocator = _Allocator();
 };
 
 template <class _Range, class _Allocator = allocator<byte>>
-// This explicit constraint is required because AppleClang 15 might not deduce the correct type for `_Range` without it
-  requires range<_Range&&>
 elements_of(_Range&&, _Allocator = _Allocator()) -> elements_of<_Range&&, _Allocator>;
 
 } // namespace ranges

@@ -33,7 +33,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -64,10 +63,10 @@ struct VectorInfo;
 struct InterleavedLoadCombineImpl {
 public:
   InterleavedLoadCombineImpl(Function &F, DominatorTree &DT, MemorySSA &MSSA,
+                             const TargetTransformInfo &TTI,
                              const TargetMachine &TM)
       : F(F), DT(DT), MSSA(MSSA),
-        TLI(*TM.getSubtargetImpl(F)->getTargetLowering()),
-        TTI(TM.getTargetTransformInfo(F)) {}
+        TLI(*TM.getSubtargetImpl(F)->getTargetLowering()), TTI(TTI) {}
 
   /// Scan the function for interleaved load candidates and execute the
   /// replacement if applicable.
@@ -87,7 +86,7 @@ private:
   const TargetLowering &TLI;
 
   /// Target Transform Information
-  const TargetTransformInfo TTI;
+  const TargetTransformInfo &TTI;
 
   /// Find the instruction in sets LIs that dominates all others, return nullptr
   /// if there is none.
@@ -1256,7 +1255,7 @@ bool InterleavedLoadCombineImpl::run() {
   bool changed = false;
   unsigned MaxFactor = TLI.getMaxSupportedInterleaveFactor();
 
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   // Start with the highest factor to avoid combining and recombining.
   for (unsigned Factor = MaxFactor; Factor >= 2; Factor--) {
@@ -1329,6 +1328,7 @@ struct InterleavedLoadCombine : public FunctionPass {
     return InterleavedLoadCombineImpl(
                F, getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
                getAnalysis<MemorySSAWrapperPass>().getMSSA(),
+               getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
                TPC->getTM<TargetMachine>())
         .run();
   }
@@ -1336,6 +1336,7 @@ struct InterleavedLoadCombine : public FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MemorySSAWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -1348,7 +1349,8 @@ InterleavedLoadCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &MemSSA = FAM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  bool Changed = InterleavedLoadCombineImpl(F, DT, MemSSA, *TM).run();
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  bool Changed = InterleavedLoadCombineImpl(F, DT, MemSSA, TTI, *TM).run();
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
@@ -1360,6 +1362,7 @@ INITIALIZE_PASS_BEGIN(
     false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(
     InterleavedLoadCombine, DEBUG_TYPE,
     "Combine interleaved loads into wide loads and shufflevector instructions",

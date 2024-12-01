@@ -1,9 +1,6 @@
 // Checks that cuda compilation does the right thing when passed -march.
 // (Specifically, we want to pass it to host compilation, but not to device
 // compilation or ptxas!)
-//
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
 
 // RUN: %clang -### --target=x86_64-linux-gnu -c \
 // RUN: -nogpulib -nogpuinc -march=haswell %s 2>&1 | FileCheck %s

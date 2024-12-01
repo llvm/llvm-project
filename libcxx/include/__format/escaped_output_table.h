@@ -63,7 +63,7 @@
 
 #include <__algorithm/ranges_upper_bound.h>
 #include <__config>
-#include <cstddef>
+#include <__cstddef/ptrdiff_t.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -833,7 +833,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[711] = {
 /// more details.
 
 ///
-/// \pre The code point is a valid Unicode code point.
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __needs_escape(const char32_t __code_point) noexcept {
 
   // The entries in the gap at the end.
@@ -856,7 +856,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[711] = {
 // clang-format on
 } // namespace __escaped_output_table
 
-#endif //_LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -19,6 +19,7 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -30,8 +31,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -71,6 +70,10 @@ FunctionPass *llvm::createX86LowerTileCopyPass() {
 }
 
 bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
+  X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+  if (FuncInfo->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+    return false;
+
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
@@ -81,16 +84,6 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    // There won't be a tile copy if no tile register live in.
-    bool HasTileCopy = false;
-    for (const auto &LI : MBB.liveins()) {
-      if (TILERegs.test(LI.PhysReg)) {
-        HasTileCopy = true;
-        break;
-      }
-    }
-    if (!HasTileCopy)
-      continue;
     LiveRegUnits UsedRegs(*TRI);
     UsedRegs.addLiveOuts(MBB);
     for (MachineInstr &MI : llvm::make_early_inc_range(reverse(MBB))) {
@@ -145,19 +138,21 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr *NewMI =
           addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc)), TileSS)
               .addReg(SrcReg, getKillRegState(SrcMO.isKill()));
-      MachineOperand &MO = NewMI->getOperand(2);
-      MO.setReg(GR64Cand);
-      MO.setIsKill(true);
+      MachineOperand *MO = &NewMI->getOperand(X86::AddrIndexReg);
+      MO->setReg(GR64Cand ? GR64Cand : X86::RAX);
       // tileloadd (%sp, %idx), %tmm
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
 #undef GET_EGPR_IF_ENABLED
       NewMI = addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc), DstReg),
                                 TileSS);
+      MO = &NewMI->getOperand(1 + X86::AddrIndexReg);
+      MO->setReg(GR64Cand ? GR64Cand : X86::RAX);
+      MO->setIsKill(true);
       if (!GR64Cand) {
         // restore %rax
         // mov (%sp) %rax
         addFrameReference(
-            BuildMI(MBB, MI, DL, TII->get(X86::MOV64rm), GR64Cand), StrideSS);
+            BuildMI(MBB, MI, DL, TII->get(X86::MOV64rm), X86::RAX), StrideSS);
       }
       MI.eraseFromParent();
       Changed = true;

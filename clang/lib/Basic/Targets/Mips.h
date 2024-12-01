@@ -28,9 +28,9 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
     if (ABI == "o32")
       Layout = "m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64";
     else if (ABI == "n32")
-      Layout = "m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128";
+      Layout = "m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
     else if (ABI == "n64")
-      Layout = "m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128";
+      Layout = "m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
     else
       llvm_unreachable("Invalid ABI");
 
@@ -70,7 +70,7 @@ public:
 
     if (Triple.isMIPS32())
       setABI("o32");
-    else if (Triple.getEnvironment() == llvm::Triple::GNUABIN32)
+    else if (Triple.isABIN32())
       setABI("n32");
     else
       setABI("n64");
@@ -85,8 +85,13 @@ public:
     return CPU == "mips32r6" || CPU == "mips64r6";
   }
 
-  bool isFP64Default() const {
-    return CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64";
+  enum FPModeEnum getDefaultFPMode() const {
+    if (CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64")
+      return FP64;
+    else if (CPU == "mips1")
+      return FP32;
+    else
+      return FPXX;
   }
 
   bool isNan2008() const override { return IsNan2008; }
@@ -315,10 +320,11 @@ public:
     IsSingleFloat = false;
     FloatABI = HardFloat;
     DspRev = NoDSP;
-    FPMode = isFP64Default() ? FP64 : FPXX;
     NoOddSpreg = false;
+    FPMode = getDefaultFPMode();
     bool OddSpregGiven = false;
     bool StrictAlign = false;
+    bool FpGiven = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -343,13 +349,16 @@ public:
         HasMSA = true;
       else if (Feature == "+nomadd4")
         DisableMadd4 = true;
-      else if (Feature == "+fp64")
+      else if (Feature == "+fp64") {
         FPMode = FP64;
-      else if (Feature == "-fp64")
+        FpGiven = true;
+      } else if (Feature == "-fp64") {
         FPMode = FP32;
-      else if (Feature == "+fpxx")
+        FpGiven = true;
+      } else if (Feature == "+fpxx") {
         FPMode = FPXX;
-      else if (Feature == "+nan2008")
+        FpGiven = true;
+      } else if (Feature == "+nan2008")
         IsNan2008 = true;
       else if (Feature == "-nan2008")
         IsNan2008 = false;
@@ -375,6 +384,11 @@ public:
 
     if (StrictAlign)
       HasUnalignedAccess = false;
+
+    if (HasMSA && !FpGiven) {
+      FPMode = FP64;
+      Features.push_back("+fp64");
+    }
 
     setDataLayout();
 

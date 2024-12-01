@@ -22,12 +22,46 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
     This is a generic pass to convert to LLVM, it uses the
     `ConvertToLLVMPatternInterface` dialect interface to delegate to dialects
     the injection of conversion patterns.
+
+    If `dynamic` is set to `true`, the pass will look for
+    `ConvertToLLVMAttrInterface` attributes and use them to further configure
+    the conversion process. This option also uses the `DataLayoutAnalysis`
+    analysis to configure the type converter. Enabling this option incurs in
+    extra overhead.
   }];
 
   let constructor = "mlir::createConvertToLLVMPass()";
   let options = [
     ListOption<"filterDialects", "filter-dialects", "std::string",
                "Test conversion patterns of only the specified dialects">,
+    Option<"useDynamic", "dynamic", "bool", "false",
+           "Use op conversion attributes to configure the conversion">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// ToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
+  let summary = "Convert to SPIR-V";
+  let description = [{
+    This is a generic pass to convert to SPIR-V.
+  }];
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+    "vector::VectorDialect",
+  ];
+  let options = [
+    Option<"runSignatureConversion", "run-signature-conversion", "bool",
+    /*default=*/"true",
+    "Run function signature conversion to convert vector types">,
+    Option<"runVectorUnrolling", "run-vector-unrolling", "bool",
+    /*default=*/"true",
+    "Run vector unrolling to convert vector types in function bodies">,
+    Option<"convertGPUModules", "convert-gpu-modules", "bool",
+    /*default=*/"false",
+    "Clone and convert GPU modules">
   ];
 }
 
@@ -127,9 +161,15 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
 
   let options = [
+    Option<"chipset", "chipset", "std::string",
+                        /*default=*/"\"gfx000\"",
+                        "Chipset that these operations will run on">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
            /*default=*/"false",
            "Use saturating truncation for 8-bit float types">,
+    Option<"allowPackedF16Rtz", "allow-packed-f16-round-to-zero", "bool",
+           /*default=*/"false",
+           "Whether we should allow f32->f16 packed round-to-zero conversion">,
   ];
 }
 
@@ -478,11 +518,7 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
-           >,
-    Option<"gpuBinaryAnnotation", "gpu-binary-annotation", "std::string",
-               /*default=*/"gpu::getDefaultGpuBinaryAnnotation()",
-               "Annotation attribute string for GPU binary"
-               >
+          >
   ];
 
   let dependentDialects = [
@@ -506,6 +542,21 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
   }];
 
   let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// GPUToLLVMSPV
+//===----------------------------------------------------------------------===//
+
+def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleOp"> {
+  let summary =
+    "Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations";
+  let dependentDialects = ["LLVM::LLVMDialect"];
+  let options = [
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -708,6 +759,23 @@ def ConvertMathToLLVMPass : Pass<"convert-math-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToLibm
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
+  let summary = "Convert Math dialect to ROCDL library calls";
+  let description = [{
+    This pass converts supported Math ops to ROCDL library calls.
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "func::FuncDialect",
+    "ROCDL::ROCDLDialect",
+    "vector::VectorDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToSPIRV
 //===----------------------------------------------------------------------===//
 
@@ -812,6 +880,29 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// MeshToMPI
+//===----------------------------------------------------------------------===//
+
+def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
+  let summary = "Convert Mesh dialect to MPI dialect.";
+  let constructor = "mlir::createConvertMeshToMPIPass()";
+  let description = [{
+    This pass converts communication operations from the Mesh dialect to the
+    MPI dialect.
+    If it finds a global named "static_mpi_rank" it will use that splat value
+    instead of calling MPI_Comm_rank. This allows optimizations like constant
+    shape propagation and fusion because shard/partition sizes depend on the
+    rank.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "mpi::MPIDialect",
+    "scf::SCFDialect",
+    "bufferization::BufferizationDialect"
   ];
 }
 
@@ -1246,7 +1337,9 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
     Option<"targetRank", "target-rank", "unsigned", /*default=*/"1",
            "Target vector rank to which transfer ops should be lowered">,
     Option<"lowerTensors", "lower-tensors", "bool", /*default=*/"false",
-           "Lower transfer ops that operate on tensors">
+           "Lower transfer ops that operate on tensors">,
+    Option<"lowerScalable", "lower-scalable", "bool", /*default=*/"false",
+           "Add scalable vector specific lowerings (that introduce loops)">
   ];
 }
 
@@ -1262,7 +1355,7 @@ def ConvertVectorToArmSME : Pass<"convert-vector-to-arm-sme"> {
     Pass that converts vector dialect operations into equivalent ArmSME dialect
     operations.
   }];
-  let dependentDialects = ["arm_sme::ArmSMEDialect"];
+  let dependentDialects = ["arm_sme::ArmSMEDialect", "arm_sve::ArmSVEDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1354,6 +1447,20 @@ def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv"> {
   let summary = "Convert Vector dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertVectorToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// VectorToXeGPU
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
+  let summary = "Lower the operations from the vector dialect into the XeGPU "
+                "dialect";
+  let constructor = "mlir::createConvertVectorToXeGPUPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect", "arith::ArithDialect",
+    "vector::VectorDialect", "xegpu::XeGPUDialect"
+  ];
 }
 
 #endif // MLIR_CONVERSION_PASSES

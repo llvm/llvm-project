@@ -15,5 +15,3 @@ set(LLVM_LINK_COMPONENTS
 add_kaleidoscope_chapter(BuildingAJIT-Ch3
   toy.cpp
   )
-
-export_executable_symbols(BuildingAJIT-Ch3)

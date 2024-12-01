@@ -78,6 +78,7 @@ if (LLVM_ENABLE_DOXYGEN)
     COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating mlir doxygen documentation." VERBATIM)
+  set_target_properties(doxygen-mlir PROPERTIES FOLDER "MLIR/Docs")
 
   if (LLVM_BUILD_DOCS)
     add_dependencies(doxygen doxygen-mlir)

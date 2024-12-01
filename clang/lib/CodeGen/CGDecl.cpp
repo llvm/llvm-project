@@ -29,10 +29,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -369,38 +369,12 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   assert(VarSize == CstSize && "Emitted constant has unexpected size");
 #endif
 
-  // The initializer may differ in type from the global. Rewrite
-  // the global to match the initializer.  (We have to do this
-  // because some types, like unions, can't be completely represented
-  // in the LLVM type system.)
-  if (GV->getValueType() != Init->getType()) {
-    llvm::GlobalVariable *OldGV = GV;
-
-    GV = new llvm::GlobalVariable(
-        CGM.getModule(), Init->getType(), OldGV->isConstant(),
-        OldGV->getLinkage(), Init, "",
-        /*InsertBefore*/ OldGV, OldGV->getThreadLocalMode(),
-        OldGV->getType()->getPointerAddressSpace());
-    GV->setVisibility(OldGV->getVisibility());
-    GV->setDSOLocal(OldGV->isDSOLocal());
-    GV->setComdat(OldGV->getComdat());
-
-    // Steal the name of the old global
-    GV->takeName(OldGV);
-
-    // Replace all uses of the old global with the new global
-    OldGV->replaceAllUsesWith(GV);
-
-    // Erase the old global, since it is no longer used.
-    OldGV->eraseFromParent();
-  }
-
   bool NeedsDtor =
       D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
   GV->setConstant(
       D.getType().isConstantStorage(getContext(), true, !NeedsDtor));
-  GV->setInitializer(Init);
+  GV->replaceInitializer(Init);
 
   emitter.finalize(GV);
 
@@ -738,18 +712,17 @@ static bool tryEmitARCCopyWeakInit(CodeGenFunction &CGF,
       LValue srcLV = CGF.EmitLValue(srcExpr);
 
       // Handle a formal type change to avoid asserting.
-      auto srcAddr = srcLV.getAddress(CGF);
+      auto srcAddr = srcLV.getAddress();
       if (needsCast) {
-        srcAddr =
-            srcAddr.withElementType(destLV.getAddress(CGF).getElementType());
+        srcAddr = srcAddr.withElementType(destLV.getAddress().getElementType());
       }
 
       // If it was an l-value, use objc_copyWeak.
       if (srcExpr->isLValue()) {
-        CGF.EmitARCCopyWeak(destLV.getAddress(CGF), srcAddr);
+        CGF.EmitARCCopyWeak(destLV.getAddress(), srcAddr);
       } else {
         assert(srcExpr->isXValue());
-        CGF.EmitARCMoveWeak(destLV.getAddress(CGF), srcAddr);
+        CGF.EmitARCMoveWeak(destLV.getAddress(), srcAddr);
       }
       return true;
     }
@@ -767,7 +740,7 @@ static bool tryEmitARCCopyWeakInit(CodeGenFunction &CGF,
 static void drillIntoBlockVariable(CodeGenFunction &CGF,
                                    LValue &lvalue,
                                    const VarDecl *var) {
-  lvalue.setAddress(CGF.emitBlockByrefAddress(lvalue.getAddress(CGF), var));
+  lvalue.setAddress(CGF.emitBlockByrefAddress(lvalue.getAddress(), var));
 }
 
 void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
@@ -826,18 +799,17 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
     if (capturedByInit) {
       // We can use a simple GEP for this because it can't have been
       // moved yet.
-      tempLV.setAddress(emitBlockByrefAddress(tempLV.getAddress(*this),
+      tempLV.setAddress(emitBlockByrefAddress(tempLV.getAddress(),
                                               cast<VarDecl>(D),
                                               /*follow*/ false));
     }
 
-    auto ty =
-        cast<llvm::PointerType>(tempLV.getAddress(*this).getElementType());
+    auto ty = cast<llvm::PointerType>(tempLV.getAddress().getElementType());
     llvm::Value *zero = CGM.getNullPointer(ty, tempLV.getType());
 
     // If __weak, we want to use a barrier under certain conditions.
     if (lifetime == Qualifiers::OCL_Weak)
-      EmitARCInitWeak(tempLV.getAddress(*this), zero);
+      EmitARCInitWeak(tempLV.getAddress(), zero);
 
     // Otherwise just do a simple store.
     else
@@ -880,9 +852,9 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
 
     if (capturedByInit) drillIntoBlockVariable(*this, lvalue, cast<VarDecl>(D));
     if (accessedByInit)
-      EmitARCStoreWeak(lvalue.getAddress(*this), value, /*ignored*/ true);
+      EmitARCStoreWeak(lvalue.getAddress(), value, /*ignored*/ true);
     else
-      EmitARCInitWeak(lvalue.getAddress(*this), value);
+      EmitARCInitWeak(lvalue.getAddress(), value);
     return;
   }
 
@@ -1620,7 +1592,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         LValue Base = MakeAddrLValue(AddrSizePair.first, D.getType(),
                                      CGM.getContext().getDeclAlign(&D),
                                      AlignmentSource::Decl);
-        address = Base.getAddress(*this);
+        address = Base.getAddress();
 
         // Push a cleanup block to emit the call to __kmpc_free_shared in the
         // appropriate location at the end of the scope of the
@@ -1927,13 +1899,16 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
+  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      (D.isConstexpr()
+      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
+        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
            ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : (D.getAttr<UninitializedAttr>()
-                  ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-                  : getContext().getLangOpts().getTrivialAutoVarInit()));
+           : getContext().getLangOpts().getTrivialAutoVarInit());
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -1971,10 +1946,34 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       constant = constWithPadding(CGM, IsPattern::No,
                                   replaceUndef(CGM, isPattern, constant));
     }
+
+    if (constant && type->isBitIntType() &&
+        CGM.getTypes().typeRequiresSplitIntoByteArray(type)) {
+      // Constants for long _BitInt types are split into individual bytes.
+      // Try to fold these back into an integer constant so it can be stored
+      // properly.
+      llvm::Type *LoadType =
+          CGM.getTypes().convertTypeForLoadStore(type, constant->getType());
+      constant = llvm::ConstantFoldLoadFromConst(
+          constant, LoadType, llvm::APInt::getZero(32), CGM.getDataLayout());
+    }
   }
 
   if (!constant) {
-    initializeWhatIsTechnicallyUninitialized(Loc);
+    if (trivialAutoVarInit !=
+        LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      // At this point, we know D has an Init expression, but isn't a constant.
+      // - If D is not a scalar, auto-var-init conservatively (members may be
+      // left uninitialized by constructor Init expressions for example).
+      // - If D is a scalar, we only need to auto-var-init if there is a
+      // self-reference. Otherwise, the Init expression should be sufficient.
+      // It may be that the Init expression uses other uninitialized memory,
+      // but auto-var-init here would not help, as auto-init would get
+      // overwritten by Init.
+      if (!type->isScalarType() || capturedByInit || isAccessedBy(D, Init)) {
+        initializeWhatIsTechnicallyUninitialized(Loc);
+      }
+    }
     LValue lv = MakeAddrLValue(Loc, type);
     lv.setNonGC(true);
     return EmitExprAsInit(Init, &D, lv, capturedByInit);
@@ -2034,10 +2033,10 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
       else if (auto *FD = dyn_cast<FieldDecl>(D))
         Overlap = getOverlapForFieldInit(FD);
       // TODO: how can we delay here if D is captured by its initializer?
-      EmitAggExpr(init, AggValueSlot::forLValue(
-                            lvalue, *this, AggValueSlot::IsDestructed,
-                            AggValueSlot::DoesNotNeedGCBarriers,
-                            AggValueSlot::IsNotAliased, Overlap));
+      EmitAggExpr(init,
+                  AggValueSlot::forLValue(lvalue, AggValueSlot::IsDestructed,
+                                          AggValueSlot::DoesNotNeedGCBarriers,
+                                          AggValueSlot::IsNotAliased, Overlap));
     }
     return;
   }
@@ -2511,8 +2510,8 @@ void CodeGenFunction::pushRegularPartialArrayCleanup(llvm::Value *arrayBegin,
 llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
   if (LifetimeStartFn)
     return LifetimeStartFn;
-  LifetimeStartFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
+  LifetimeStartFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_start, AllocaInt8PtrTy);
   return LifetimeStartFn;
 }
 
@@ -2520,8 +2519,8 @@ llvm::Function *CodeGenModule::getLLVMLifetimeStartFn() {
 llvm::Function *CodeGenModule::getLLVMLifetimeEndFn() {
   if (LifetimeEndFn)
     return LifetimeEndFn;
-  LifetimeEndFn = llvm::Intrinsic::getDeclaration(&getModule(),
-    llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
+  LifetimeEndFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::lifetime_end, AllocaInt8PtrTy);
   return LifetimeEndFn;
 }
 
@@ -2683,7 +2682,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
             // objc_storeStrong attempts to release its old value.
             llvm::Value *Null = CGM.EmitNullConstant(D.getType());
             EmitStoreOfScalar(Null, lv, /* isInitialization */ true);
-            EmitARCStoreStrongCall(lv.getAddress(*this), ArgVal, true);
+            EmitARCStoreStrongCall(lv.getAddress(), ArgVal, true);
             DoStore = false;
           }
           else
@@ -2766,7 +2765,7 @@ void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
 }
 
 void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
-  for (const Expr *E : D->varlists()) {
+  for (const Expr *E : D->varlist()) {
     const auto *DE = cast<DeclRefExpr>(E);
     const auto *VD = cast<VarDecl>(DE->getDecl());
 

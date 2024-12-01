@@ -17,8 +17,7 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_base_of.h>
 #include <__type_traits/is_core_convertible.h>
-#include <__type_traits/is_member_function_pointer.h>
-#include <__type_traits/is_member_object_pointer.h>
+#include <__type_traits/is_member_pointer.h>
 #include <__type_traits/is_reference_wrapper.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
@@ -163,8 +162,8 @@ struct __invokable_r {
   using _Result = decltype(__try_call<_Fp, _Args...>(0));
 
   using type              = __conditional_t<_IsNotSame<_Result, __nat>::value,
-                               __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
-                               false_type>;
+                                            __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
+                                            false_type>;
   static const bool value = type::value;
 };
 template <class _Fp, class... _Args>

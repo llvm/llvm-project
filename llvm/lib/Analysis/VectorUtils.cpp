@@ -66,9 +66,18 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
   case Intrinsic::sqrt: // Begin floating-point.
+  case Intrinsic::asin:
+  case Intrinsic::acos:
+  case Intrinsic::atan:
+  case Intrinsic::atan2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::tan:
+  case Intrinsic::sinh:
+  case Intrinsic::cosh:
+  case Intrinsic::tanh:
   case Intrinsic::exp:
+  case Intrinsic::exp10:
   case Intrinsic::exp2:
   case Intrinsic::log:
   case Intrinsic::log10:
@@ -96,6 +105,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::fptoui_sat:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::ucmp:
+  case Intrinsic::scmp:
     return true;
   default:
     return false;
@@ -107,9 +118,13 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                               unsigned ScalarOpdIdx) {
   switch (ID) {
   case Intrinsic::abs:
+  case Intrinsic::vp_abs:
   case Intrinsic::ctlz:
+  case Intrinsic::vp_ctlz:
   case Intrinsic::cttz:
+  case Intrinsic::vp_cttz:
   case Intrinsic::is_fpclass:
+  case Intrinsic::vp_is_fpclass:
   case Intrinsic::powi:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
@@ -122,22 +137,40 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   }
 }
 
-bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                  int OpdIdx) {
+bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
+    Intrinsic::ID ID, int OpdIdx, const TargetTransformInfo *TTI) {
   assert(ID != Intrinsic::not_intrinsic && "Not an intrinsic!");
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isVectorIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
 
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::vp_lrint:
+  case Intrinsic::vp_llrint:
+  case Intrinsic::ucmp:
+  case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::is_fpclass:
+  case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
   case Intrinsic::powi:
     return OpdIdx == -1 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
+  }
+}
+
+bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                            int RetIdx) {
+  switch (ID) {
+  case Intrinsic::frexp:
+    return RetIdx == 0 || RetIdx == 1;
+  default:
+    return RetIdx == 0;
   }
 }
 
@@ -164,11 +197,11 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
 Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
   assert(V->getType()->isVectorTy() && "Not looking at a vector?");
   VectorType *VTy = cast<VectorType>(V->getType());
-  // For fixed-length vector, return undef for out of range access.
+  // For fixed-length vector, return poison for out of range access.
   if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
     unsigned Width = FVTy->getNumElements();
     if (EltNo >= Width)
-      return UndefValue::get(FVTy->getElementType());
+      return PoisonValue::get(FVTy->getElementType());
   }
 
   if (Constant *C = dyn_cast<Constant>(V))
@@ -201,7 +234,7 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
         cast<FixedVectorType>(SVI->getOperand(0)->getType())->getNumElements();
     int InEl = SVI->getMaskValue(EltNo);
     if (InEl < 0)
-      return UndefValue::get(VTy->getElementType());
+      return PoisonValue::get(VTy->getElementType());
     if (InEl < (int)LHSWidth)
       return findScalarElement(SVI->getOperand(0), InEl);
     return findScalarElement(SVI->getOperand(1), InEl - LHSWidth);
@@ -417,6 +450,31 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                                SmallVectorImpl<int> &ScaledMask) {
+  unsigned NumSrcElts = Mask.size();
+  assert(NumSrcElts > 0 && NumDstElts > 0 && "Unexpected scaling factor");
+
+  // Fast-path: if no scaling, then it is just a copy.
+  if (NumSrcElts == NumDstElts) {
+    ScaledMask.assign(Mask.begin(), Mask.end());
+    return true;
+  }
+
+  // Ensure we can find a whole scale factor.
+  assert(((NumSrcElts % NumDstElts) == 0 || (NumDstElts % NumSrcElts) == 0) &&
+         "Unexpected scaling factor");
+
+  if (NumSrcElts > NumDstElts) {
+    int Scale = NumSrcElts / NumDstElts;
+    return widenShuffleMaskElts(Scale, Mask, ScaledMask);
+  }
+
+  int Scale = NumDstElts / NumSrcElts;
+  narrowShuffleMaskElts(Scale, Mask, ScaledMask);
+  return true;
+}
+
 void llvm::getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
                                         SmallVectorImpl<int> &ScaledMask) {
   std::array<SmallVector<int, 16>, 2> TmpMasks;
@@ -537,6 +595,34 @@ void llvm::processShuffleMasks(
       } while (SecondIdx >= 0);
       break;
     }
+    }
+  }
+}
+
+void llvm::getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
+                                               const APInt &DemandedElts,
+                                               APInt &DemandedLHS,
+                                               APInt &DemandedRHS) {
+  assert(VectorBitWidth >= 128 && "Vectors smaller than 128 bit not supported");
+  int NumLanes = VectorBitWidth / 128;
+  int NumElts = DemandedElts.getBitWidth();
+  int NumEltsPerLane = NumElts / NumLanes;
+  int HalfEltsPerLane = NumEltsPerLane / 2;
+
+  DemandedLHS = APInt::getZero(NumElts);
+  DemandedRHS = APInt::getZero(NumElts);
+
+  // Map DemandedElts to the horizontal operands.
+  for (int Idx = 0; Idx != NumElts; ++Idx) {
+    if (!DemandedElts[Idx])
+      continue;
+    int LaneIdx = (Idx / NumEltsPerLane) * NumEltsPerLane;
+    int LocalIdx = Idx % NumEltsPerLane;
+    if (LocalIdx < HalfEltsPerLane) {
+      DemandedLHS.setBit(LaneIdx + 2 * LocalIdx);
+    } else {
+      LocalIdx -= HalfEltsPerLane;
+      DemandedRHS.setBit(LaneIdx + 2 * LocalIdx);
     }
   }
 }
@@ -1069,7 +1155,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
     const DenseMap<Value*, const SCEV*> &Strides) {
-  auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
+  auto &DL = TheLoop->getHeader()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
   // "program order" for the interleaved access analysis, we have to visit the
@@ -1350,7 +1436,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
   auto InvalidateGroupIfMemberMayWrap = [&](InterleaveGroup<Instruction> *Group,
                                             int Index,
-                                            std::string FirstOrLast) -> bool {
+                                            const char *FirstOrLast) -> bool {
     Instruction *Member = Group->getMember(Index);
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
@@ -1390,12 +1476,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // that all the pointers in the group don't wrap.
     // So we check only group member 0 (which is always guaranteed to exist),
     // and group member Factor - 1; If the latter doesn't exist we rely on
-    // peeling (if it is a non-reversed accsess -- see Case 3).
-    if (InvalidateGroupIfMemberMayWrap(Group, 0, std::string("first")))
+    // peeling (if it is a non-reversed access -- see Case 3).
+    if (InvalidateGroupIfMemberMayWrap(Group, 0, "first"))
       continue;
     if (Group->getMember(Group->getFactor() - 1))
-      InvalidateGroupIfMemberMayWrap(Group, Group->getFactor() - 1,
-                                     std::string("last"));
+      InvalidateGroupIfMemberMayWrap(Group, Group->getFactor() - 1, "last");
     else {
       // Case 3: A non-reversed interleaved load group with gaps: We need
       // to execute at least one scalar epilogue iteration. This will ensure
@@ -1439,11 +1524,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // and the last group member. Case 3 (scalar epilog) is not relevant for
     // stores with gaps, which are implemented with masked-store (rather than
     // speculative access, as in loads).
-    if (InvalidateGroupIfMemberMayWrap(Group, 0, std::string("first")))
+    if (InvalidateGroupIfMemberMayWrap(Group, 0, "first"))
       continue;
     for (int Index = Group->getFactor() - 1; Index > 0; Index--)
       if (Group->getMember(Index)) {
-        InvalidateGroupIfMemberMayWrap(Group, Index, std::string("last"));
+        InvalidateGroupIfMemberMayWrap(Group, Index, "last");
         break;
       }
   }
@@ -1455,20 +1540,19 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   if (!requiresScalarEpilogue())
     return;
 
-  bool ReleasedGroup = false;
   // Release groups requiring scalar epilogues. Note that this also removes them
   // from InterleaveGroups.
-  for (auto *Group : make_early_inc_range(InterleaveGroups)) {
+  bool ReleasedGroup = InterleaveGroups.remove_if([&](auto *Group) {
     if (!Group->requiresScalarEpilogue())
-      continue;
+      return false;
     LLVM_DEBUG(
         dbgs()
         << "LV: Invalidate candidate interleaved group due to gaps that "
            "require a scalar epilogue (not allowed under optsize) and cannot "
            "be masked (not enabled). \n");
-    releaseGroup(Group);
-    ReleasedGroup = true;
-  }
+    releaseGroupWithoutRemovingFromSet(Group);
+    return true;
+  });
   assert(ReleasedGroup && "At least one group must be invalidated, as a "
                           "scalar epilogue was required");
   (void)ReleasedGroup;

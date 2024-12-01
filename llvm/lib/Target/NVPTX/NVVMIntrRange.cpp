@@ -1,4 +1,4 @@
-//===- NVVMIntrRange.cpp - Set !range metadata for NVVM intrinsics --------===//
+//===- NVVMIntrRange.cpp - Set range attributes for NVVM intrinsics -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass adds appropriate !range metadata for calls to NVVM
+// This pass adds appropriate range attributes for calls to NVVM
 // intrinsics that return a limited range of values.
 //
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "llvm/IR/Constants.h"
+#include "NVPTXUtilities.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -26,31 +27,20 @@ using namespace llvm;
 
 namespace llvm { void initializeNVVMIntrRangePass(PassRegistry &); }
 
-// Add !range metadata based on limits of given SM variant.
-static cl::opt<unsigned> NVVMIntrRangeSM("nvvm-intr-range-sm", cl::init(20),
-                                         cl::Hidden, cl::desc("SM variant"));
-
 namespace {
 class NVVMIntrRange : public FunctionPass {
- private:
-   unsigned SmVersion;
+public:
+  static char ID;
+  NVVMIntrRange() : FunctionPass(ID) {
 
- public:
-   static char ID;
-   NVVMIntrRange() : NVVMIntrRange(NVVMIntrRangeSM) {}
-   NVVMIntrRange(unsigned int SmVersion)
-       : FunctionPass(ID), SmVersion(SmVersion) {
+    initializeNVVMIntrRangePass(*PassRegistry::getPassRegistry());
+  }
 
-     initializeNVVMIntrRangePass(*PassRegistry::getPassRegistry());
-   }
-
-   bool runOnFunction(Function &) override;
+  bool runOnFunction(Function &) override;
 };
-}
+} // namespace
 
-FunctionPass *llvm::createNVVMIntrRangePass(unsigned int SmVersion) {
-  return new NVVMIntrRange(SmVersion);
-}
+FunctionPass *llvm::createNVVMIntrRangePass() { return new NVVMIntrRange(); }
 
 char NVVMIntrRange::ID = 0;
 INITIALIZE_PASS(NVVMIntrRange, "nvvm-intr-range",
@@ -58,112 +48,110 @@ INITIALIZE_PASS(NVVMIntrRange, "nvvm-intr-range",
 
 // Adds the passed-in [Low,High) range information as metadata to the
 // passed-in call instruction.
-static bool addRangeMetadata(uint64_t Low, uint64_t High, CallInst *C) {
-  // This call already has range metadata, nothing to do.
-  if (C->getMetadata(LLVMContext::MD_range))
+static bool addRangeAttr(uint64_t Low, uint64_t High, IntrinsicInst *II) {
+  if (II->getMetadata(LLVMContext::MD_range))
     return false;
 
-  LLVMContext &Context = C->getParent()->getContext();
-  IntegerType *Int32Ty = Type::getInt32Ty(Context);
-  Metadata *LowAndHigh[] = {
-      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Low)),
-      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, High))};
-  C->setMetadata(LLVMContext::MD_range, MDNode::get(Context, LowAndHigh));
+  const uint64_t BitWidth = II->getType()->getIntegerBitWidth();
+  ConstantRange Range(APInt(BitWidth, Low), APInt(BitWidth, High));
+
+  if (auto CurrentRange = II->getRange())
+    Range = Range.intersectWith(CurrentRange.value());
+
+  II->addRangeRetAttr(Range);
   return true;
 }
 
-static bool runNVVMIntrRange(Function &F, unsigned SmVersion) {
+static bool runNVVMIntrRange(Function &F) {
   struct {
     unsigned x, y, z;
   } MaxBlockSize, MaxGridSize;
-  MaxBlockSize.x = 1024;
-  MaxBlockSize.y = 1024;
-  MaxBlockSize.z = 64;
 
-  MaxGridSize.x = SmVersion >= 30 ? 0x7fffffff : 0xffff;
+  const unsigned MetadataNTID = getReqNTID(F).value_or(
+      getMaxNTID(F).value_or(std::numeric_limits<unsigned>::max()));
+
+  MaxBlockSize.x = std::min(1024u, MetadataNTID);
+  MaxBlockSize.y = std::min(1024u, MetadataNTID);
+  MaxBlockSize.z = std::min(64u, MetadataNTID);
+
+  MaxGridSize.x = 0x7fffffff;
   MaxGridSize.y = 0xffff;
   MaxGridSize.z = 0xffff;
 
   // Go through the calls in this function.
   bool Changed = false;
   for (Instruction &I : instructions(F)) {
-    CallInst *Call = dyn_cast<CallInst>(&I);
-    if (!Call)
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
       continue;
 
-    if (Function *Callee = Call->getCalledFunction()) {
-      switch (Callee->getIntrinsicID()) {
-      // Index within block
-      case Intrinsic::nvvm_read_ptx_sreg_tid_x:
-        Changed |= addRangeMetadata(0, MaxBlockSize.x, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_tid_y:
-        Changed |= addRangeMetadata(0, MaxBlockSize.y, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_tid_z:
-        Changed |= addRangeMetadata(0, MaxBlockSize.z, Call);
-        break;
+    switch (II->getIntrinsicID()) {
+    // Index within block
+    case Intrinsic::nvvm_read_ptx_sreg_tid_x:
+      Changed |= addRangeAttr(0, MaxBlockSize.x, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_tid_y:
+      Changed |= addRangeAttr(0, MaxBlockSize.y, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_tid_z:
+      Changed |= addRangeAttr(0, MaxBlockSize.z, II);
+      break;
 
-      // Block size
-      case Intrinsic::nvvm_read_ptx_sreg_ntid_x:
-        Changed |= addRangeMetadata(1, MaxBlockSize.x+1, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_ntid_y:
-        Changed |= addRangeMetadata(1, MaxBlockSize.y+1, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_ntid_z:
-        Changed |= addRangeMetadata(1, MaxBlockSize.z+1, Call);
-        break;
+    // Block size
+    case Intrinsic::nvvm_read_ptx_sreg_ntid_x:
+      Changed |= addRangeAttr(1, MaxBlockSize.x + 1, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_ntid_y:
+      Changed |= addRangeAttr(1, MaxBlockSize.y + 1, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_ntid_z:
+      Changed |= addRangeAttr(1, MaxBlockSize.z + 1, II);
+      break;
 
-      // Index within grid
-      case Intrinsic::nvvm_read_ptx_sreg_ctaid_x:
-        Changed |= addRangeMetadata(0, MaxGridSize.x, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_ctaid_y:
-        Changed |= addRangeMetadata(0, MaxGridSize.y, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_ctaid_z:
-        Changed |= addRangeMetadata(0, MaxGridSize.z, Call);
-        break;
+    // Index within grid
+    case Intrinsic::nvvm_read_ptx_sreg_ctaid_x:
+      Changed |= addRangeAttr(0, MaxGridSize.x, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_ctaid_y:
+      Changed |= addRangeAttr(0, MaxGridSize.y, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_ctaid_z:
+      Changed |= addRangeAttr(0, MaxGridSize.z, II);
+      break;
 
-      // Grid size
-      case Intrinsic::nvvm_read_ptx_sreg_nctaid_x:
-        Changed |= addRangeMetadata(1, MaxGridSize.x+1, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_nctaid_y:
-        Changed |= addRangeMetadata(1, MaxGridSize.y+1, Call);
-        break;
-      case Intrinsic::nvvm_read_ptx_sreg_nctaid_z:
-        Changed |= addRangeMetadata(1, MaxGridSize.z+1, Call);
-        break;
+    // Grid size
+    case Intrinsic::nvvm_read_ptx_sreg_nctaid_x:
+      Changed |= addRangeAttr(1, MaxGridSize.x + 1, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_nctaid_y:
+      Changed |= addRangeAttr(1, MaxGridSize.y + 1, II);
+      break;
+    case Intrinsic::nvvm_read_ptx_sreg_nctaid_z:
+      Changed |= addRangeAttr(1, MaxGridSize.z + 1, II);
+      break;
 
-      // warp size is constant 32.
-      case Intrinsic::nvvm_read_ptx_sreg_warpsize:
-        Changed |= addRangeMetadata(32, 32+1, Call);
-        break;
+    // warp size is constant 32.
+    case Intrinsic::nvvm_read_ptx_sreg_warpsize:
+      Changed |= addRangeAttr(32, 32 + 1, II);
+      break;
 
-      // Lane ID is [0..warpsize)
-      case Intrinsic::nvvm_read_ptx_sreg_laneid:
-        Changed |= addRangeMetadata(0, 32, Call);
-        break;
+    // Lane ID is [0..warpsize)
+    case Intrinsic::nvvm_read_ptx_sreg_laneid:
+      Changed |= addRangeAttr(0, 32, II);
+      break;
 
-      default:
-        break;
-      }
+    default:
+      break;
     }
   }
 
   return Changed;
 }
 
-bool NVVMIntrRange::runOnFunction(Function &F) {
-  return runNVVMIntrRange(F, SmVersion);
-}
-
-NVVMIntrRangePass::NVVMIntrRangePass() : NVVMIntrRangePass(NVVMIntrRangeSM) {}
+bool NVVMIntrRange::runOnFunction(Function &F) { return runNVVMIntrRange(F); }
 
 PreservedAnalyses NVVMIntrRangePass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  return runNVVMIntrRange(F, SmVersion) ? PreservedAnalyses::none()
-                                        : PreservedAnalyses::all();
+  return runNVVMIntrRange(F) ? PreservedAnalyses::none()
+                             : PreservedAnalyses::all();
 }

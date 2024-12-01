@@ -415,6 +415,10 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(TypedefInfo *I) {
   return &I->Description.emplace_back();
 }
 
+template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumValueInfo *I) {
+  return &I->Description.emplace_back();
+}
+
 template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
   I->Children.emplace_back(std::make_unique<CommentInfo>());
   return I->Children.back().get();

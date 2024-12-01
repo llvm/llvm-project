@@ -1,4 +1,4 @@
-# This reproduces a bug in aggressive tail duplication/copy propagation.
+## This reproduces a bug in aggressive tail duplication/copy propagation.
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o

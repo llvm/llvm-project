@@ -19,7 +19,7 @@
 #ifndef BOLT_PASSES_HFSORT_H
 #define BOLT_PASSES_HFSORT_H
 
-#include "bolt/Passes/CallGraph.h"
+#include "bolt/Core/CallGraph.h"
 
 #include <string>
 #include <vector>

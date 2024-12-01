@@ -42,8 +42,8 @@ namespace lldb_private {
 ///                                    uint64_t total,
 ///                                    void *baton);
 ///
-/// This callback will always initially be called with "completed" set to zero
-/// and "total" set to the total amount specified in the contructor. This is
+/// This callback will always initially be called with \a completed set to zero
+/// and \a total set to the total amount specified in the constructor. This is
 /// considered the progress start event. As Progress::Increment() is called,
 /// the callback will be called as long as the Progress::m_completed has not
 /// yet exceeded the Progress::m_total. When the callback is called with
@@ -52,7 +52,7 @@ namespace lldb_private {
 /// Progress::m_total, then this is considered a progress update event.
 ///
 /// This callback will be called in the destructor if Progress::m_completed is
-/// not equal to Progress::m_total with the "completed" set to
+/// not equal to Progress::m_total with the \a completed set to
 /// Progress::m_total. This ensures we always send a progress completed update
 /// even if the user does not.
 
@@ -62,7 +62,7 @@ public:
   ///
   /// The constructor will create a unique progress reporting object and
   /// immediately send out a progress update by calling the installed callback
-  /// with completed set to zero out of the specified total.
+  /// with \a completed set to zero out of the specified total.
   ///
   /// @param [in] title The title of this progress activity.
   ///
@@ -86,11 +86,11 @@ public:
   /// Destroy the progress object.
   ///
   /// If the progress has not yet sent a completion update, the destructor
-  /// will send out a notification where the completed == m_total. This ensures
-  /// that we always send out a progress complete notification.
+  /// will send out a notification where the \a completed == m_total. This
+  /// ensures that we always send out a progress complete notification.
   ~Progress();
 
-  /// Increment the progress and send a notification to the intalled callback.
+  /// Increment the progress and send a notification to the installed callback.
   ///
   /// If incrementing ends up exceeding m_total, m_completed will be updated
   /// to match m_total and no subsequent progress notifications will be sent.

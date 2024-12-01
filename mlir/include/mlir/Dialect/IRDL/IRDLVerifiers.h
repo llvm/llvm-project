@@ -21,7 +21,6 @@
 #include <optional>
 
 namespace mlir {
-struct LogicalResult;
 class InFlightDiagnostic;
 class DynamicAttrDefinition;
 class DynamicTypeDefinition;

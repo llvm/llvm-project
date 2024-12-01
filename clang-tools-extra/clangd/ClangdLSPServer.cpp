@@ -14,6 +14,7 @@
 #include "Feature.h"
 #include "GlobalCompilationDatabase.h"
 #include "LSPBinder.h"
+#include "ModulesBuilder.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -51,6 +52,7 @@
 
 namespace clang {
 namespace clangd {
+
 namespace {
 // Tracks end-to-end latency of high level lsp calls. Measurements are in
 // seconds.
@@ -563,6 +565,12 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     Mangler.ResourceDir = *Opts.ResourceDir;
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
               std::move(Mangler));
+
+  if (Opts.EnableExperimentalModulesSupport) {
+    ModulesManager.emplace(*CDB);
+    Opts.ModulesManager = &*ModulesManager;
+  }
+
   {
     // Switch caller's context with LSPServer's background context. Since we
     // rather want to propagate information from LSPServer's context into the
@@ -1411,15 +1419,12 @@ void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
   llvm::StringSet<> ModifiedFiles;
-  for (auto &Entry : Settings.compilationDatabaseChanges) {
-    PathRef File = Entry.first;
-    auto Old = CDB->getCompileCommand(File);
-    auto New =
-        tooling::CompileCommand(std::move(Entry.second.workingDirectory), File,
-                                std::move(Entry.second.compilationCommand),
+  for (auto &[File, Command] : Settings.compilationDatabaseChanges) {
+    auto Cmd =
+        tooling::CompileCommand(std::move(Command.workingDirectory), File,
+                                std::move(Command.compilationCommand),
                                 /*Output=*/"");
-    if (Old != New) {
-      CDB->setCompileCommand(File, std::move(New));
+    if (CDB->setCompileCommand(File, std::move(Cmd))) {
       ModifiedFiles.insert(File);
     }
   }

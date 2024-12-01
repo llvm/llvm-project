@@ -60,7 +60,7 @@ subroutine acc_serial
   !$acc serial async
   !$acc end serial
 
-! CHECK:      acc.serial {
+! CHECK: acc.serial {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
 
@@ -76,7 +76,7 @@ subroutine acc_serial
   !$acc end serial
 
 ! CHECK:      [[ASYNC2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.serial async([[ASYNC2]] : i32) {
+! CHECK-NEXT:      acc.serial async([[ASYNC2]] : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 

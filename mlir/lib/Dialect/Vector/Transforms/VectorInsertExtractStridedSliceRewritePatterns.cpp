@@ -18,28 +18,6 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-// Helper that picks the proper sequence for inserting.
-static Value insertOne(PatternRewriter &rewriter, Location loc, Value from,
-                       Value into, int64_t offset) {
-  auto vectorType = cast<VectorType>(into.getType());
-  if (vectorType.getRank() > 1)
-    return rewriter.create<InsertOp>(loc, from, into, offset);
-  return rewriter.create<vector::InsertElementOp>(
-      loc, vectorType, from, into,
-      rewriter.create<arith::ConstantIndexOp>(loc, offset));
-}
-
-// Helper that picks the proper sequence for extracting.
-static Value extractOne(PatternRewriter &rewriter, Location loc, Value vector,
-                        int64_t offset) {
-  auto vectorType = cast<VectorType>(vector.getType());
-  if (vectorType.getRank() > 1)
-    return rewriter.create<ExtractOp>(loc, vector, offset);
-  return rewriter.create<vector::ExtractElementOp>(
-      loc, vectorType.getElementType(), vector,
-      rewriter.create<arith::ConstantIndexOp>(loc, offset));
-}
-
 /// RewritePattern for InsertStridedSliceOp where source and destination vectors
 /// have different ranks.
 ///
@@ -173,11 +151,13 @@ public:
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {
       // 1. extract the proper subvector (or element) from source
-      Value extractedSource = extractOne(rewriter, loc, op.getSource(), idx);
+      Value extractedSource =
+          rewriter.create<ExtractOp>(loc, op.getSource(), idx);
       if (isa<VectorType>(extractedSource.getType())) {
         // 2. If we have a vector, extract the proper subvector from destination
         // Otherwise we are at the element level and no need to recurse.
-        Value extractedDest = extractOne(rewriter, loc, op.getDest(), off);
+        Value extractedDest =
+            rewriter.create<ExtractOp>(loc, op.getDest(), off);
         // 3. Reduce the problem to lowering a new InsertStridedSlice op with
         // smaller rank.
         extractedSource = rewriter.create<InsertStridedSliceOp>(
@@ -186,7 +166,7 @@ public:
             getI64SubArray(op.getStrides(), /* dropFront=*/1));
       }
       // 4. Insert the extractedSource into the res vector.
-      res = insertOne(rewriter, loc, extractedSource, res, off);
+      res = rewriter.create<InsertOp>(loc, extractedSource, res, off);
     }
 
     rewriter.replaceOp(op, res);
@@ -225,8 +205,7 @@ public:
          off += stride)
       offsets.push_back(off);
     rewriter.replaceOpWithNewOp<ShuffleOp>(op, dstType, op.getVector(),
-                                           op.getVector(),
-                                           rewriter.getI64ArrayAttr(offsets));
+                                           op.getVector(), offsets);
     return success();
   }
 };
@@ -278,8 +257,8 @@ private:
 };
 
 /// RewritePattern for ExtractStridedSliceOp where the source vector is n-D.
-/// For such cases, we can rewrite it to ExtractOp/ExtractElementOp + lower
-/// rank ExtractStridedSliceOp + InsertOp/InsertElementOp for the n-D case.
+/// For such cases, we can rewrite it to ExtractOp + lower rank
+/// ExtractStridedSliceOp + InsertOp for the n-D case.
 class DecomposeNDExtractStridedSlice
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
@@ -318,12 +297,12 @@ public:
     Value res = rewriter.create<SplatOp>(loc, dstType, zero);
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {
-      Value one = extractOne(rewriter, loc, op.getVector(), off);
+      Value one = rewriter.create<ExtractOp>(loc, op.getVector(), off);
       Value extracted = rewriter.create<ExtractStridedSliceOp>(
           loc, one, getI64SubArray(op.getOffsets(), /* dropFront=*/1),
           getI64SubArray(op.getSizes(), /* dropFront=*/1),
           getI64SubArray(op.getStrides(), /* dropFront=*/1));
-      res = insertOne(rewriter, loc, extracted, res, idx);
+      res = rewriter.create<InsertOp>(loc, extracted, res, idx);
     }
     rewriter.replaceOp(op, res);
     return success();

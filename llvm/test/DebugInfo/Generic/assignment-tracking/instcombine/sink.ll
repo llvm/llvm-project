@@ -32,7 +32,7 @@
 
 ; CHECK: f.exit:
 ; CHECK-NEXT: store ptr null, ptr %i, align 8,{{.+}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign({{.+}}, {{.+}}, {{.+}}, metadata ![[ID]], metadata ptr %i, {{.+}}), !dbg
+; CHECK-NEXT: #dbg_assign({{.+}}, {{.+}}, {{.+}}, ![[ID]], ptr %i, {{.+}}, 
 
 %struct.a = type { ptr }
 

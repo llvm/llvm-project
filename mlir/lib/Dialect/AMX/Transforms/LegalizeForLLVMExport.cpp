@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/AMX/Transforms.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
@@ -25,52 +26,50 @@ namespace {
 /// The second dimensions needs to be scaled by the number of bytes.
 std::pair<Value, Value> getTileSizes(ConversionPatternRewriter &rewriter,
                                      const LLVMTypeConverter &typeConverter,
-                                     VectorType vType, Location loc) {
+                                     amx::TileType tType, Location loc) {
   Type llvmInt16Type = IntegerType::get(&typeConverter.getContext(), 16);
-  unsigned width = vType.getElementType().getIntOrFloatBitWidth();
+  unsigned width = tType.getElementType().getIntOrFloatBitWidth();
   assert(llvm::isPowerOf2_64(width) && width >= 8);
   unsigned bytes = width >> 3;
-  auto mattr = rewriter.getI16IntegerAttr(vType.getDimSize(0));
-  auto nattr = rewriter.getI16IntegerAttr(vType.getDimSize(1) * bytes);
+  auto mattr = rewriter.getI16IntegerAttr(tType.getDimSize(0));
+  auto nattr = rewriter.getI16IntegerAttr(tType.getDimSize(1) * bytes);
   return std::make_pair(
       rewriter.create<LLVM::ConstantOp>(loc, llvmInt16Type, mattr),
       rewriter.create<LLVM::ConstantOp>(loc, llvmInt16Type, nattr));
 }
 
-/// Verifies if the stride matches proper tile access.
-LogicalResult verifyStride(MemRefType mType) {
-  if (mType.getRank() < 2)
-    return failure();
-  int64_t last = mType.getRank() - 1;
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(mType, strides, offset)) || strides[last] != 1)
-    return failure();
-  return success();
-}
-
 /// Maps the 2-dim memref shape to the 64-bit stride. Note that the buffer
 /// shape may "envelop" the actual tile shape, and may be dynamically sized.
-Value getStride(ConversionPatternRewriter &rewriter,
-                const LLVMTypeConverter &typeConverter, MemRefType mType,
-                Value base, Location loc) {
-  assert(mType.getRank() >= 2);
-  int64_t last = mType.getRank() - 1;
+/// Returns failure if proper stride couldn't be found.
+FailureOr<Value> getStride(ConversionPatternRewriter &rewriter,
+                           const LLVMTypeConverter &typeConverter,
+                           MemRefType mType, Value base, Location loc) {
+  if (mType.getRank() < 2)
+    return failure();
+  int64_t preLast = mType.getRank() - 2;
   Type llvmInt64Type = IntegerType::get(&typeConverter.getContext(), 64);
   unsigned width = mType.getElementType().getIntOrFloatBitWidth();
   assert(llvm::isPowerOf2_64(width) && width >= 8);
   unsigned bytes = width >> 3;
-  if (mType.isDynamicDim(last)) {
-    // Dynamic size needs code to compute the stride at runtime.
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  if (failed(getStridesAndOffset(mType, strides, offset)) ||
+      strides.back() != 1)
+    return failure();
+  if (strides[preLast] == ShapedType::kDynamic) {
+    // Dynamic stride needs code to compute the stride at runtime.
     MemRefDescriptor memrefDescriptor(base);
     auto attr = rewriter.getI64IntegerAttr(bytes);
     Value scale = rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr);
-    return rewriter.create<LLVM::MulOp>(
-        loc, llvmInt64Type, scale, memrefDescriptor.size(rewriter, loc, last));
+    return rewriter
+        .create<LLVM::MulOp>(loc, llvmInt64Type, scale,
+                             memrefDescriptor.stride(rewriter, loc, preLast))
+        .getResult();
   }
-  // Use direct constant for static size.
-  auto attr = rewriter.getI64IntegerAttr(mType.getDimSize(last) * bytes);
-  return rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr);
+  // Use direct constant for static stride.
+  auto attr = rewriter.getI64IntegerAttr(strides[preLast] * bytes);
+  return rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr)
+      .getResult();
 }
 
 struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
@@ -78,12 +77,12 @@ struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
   LogicalResult
   matchAndRewrite(TileZeroOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType vType = op.getVectorType();
+    amx::TileType tType = op.getTileType();
     // Determine m x n tile sizes.
     std::pair<Value, Value> tsz =
-        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
+        getTileSizes(rewriter, *getTypeConverter(), tType, op.getLoc());
     // Replace operation with intrinsic.
-    Type resType = typeConverter->convertType(vType);
+    Type resType = typeConverter->convertType(tType);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tilezero>(op, resType, tsz.first,
                                                        tsz.second);
     return success();
@@ -97,21 +96,21 @@ struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
   matchAndRewrite(TileLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType mType = op.getMemRefType();
-    VectorType vType = op.getVectorType();
+    amx::TileType tType = op.getTileType();
     // Determine m x n tile sizes.
     std::pair<Value, Value> tsz =
-        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
+        getTileSizes(rewriter, *getTypeConverter(), tType, op.getLoc());
     // Determine stride.
-    if (failed(verifyStride(mType)))
+    auto stride = getStride(rewriter, *getTypeConverter(), mType,
+                            adaptor.getBase(), op.getLoc());
+    if (failed(stride))
       return failure();
-    Value stride = getStride(rewriter, *getTypeConverter(), mType,
-                             adaptor.getBase(), op.getLoc());
     // Replace operation with intrinsic.
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
-    Type resType = typeConverter->convertType(vType);
+    Type resType = typeConverter->convertType(tType);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tileloadd64>(
-        op, resType, tsz.first, tsz.second, ptr, stride);
+        op, resType, tsz.first, tsz.second, ptr, stride.value());
     return success();
   }
 };
@@ -123,20 +122,20 @@ struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
   matchAndRewrite(TileStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType mType = op.getMemRefType();
-    VectorType vType = op.getVectorType();
+    amx::TileType tType = op.getTileType();
     // Determine m x n tile sizes.
     std::pair<Value, Value> tsz =
-        getTileSizes(rewriter, *getTypeConverter(), vType, op.getLoc());
+        getTileSizes(rewriter, *getTypeConverter(), tType, op.getLoc());
     // Determine stride.
-    if (failed(verifyStride(mType)))
+    auto stride = getStride(rewriter, *getTypeConverter(), mType,
+                            adaptor.getBase(), op.getLoc());
+    if (failed(stride))
       return failure();
-    Value stride = getStride(rewriter, *getTypeConverter(), mType,
-                             adaptor.getBase(), op.getLoc());
     // Replace operation with intrinsic.
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tilestored64>(
-        op, tsz.first, tsz.second, ptr, stride, adaptor.getVal());
+        op, tsz.first, tsz.second, ptr, stride.value(), adaptor.getVal());
     return success();
   }
 };
@@ -146,9 +145,9 @@ struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
   LogicalResult
   matchAndRewrite(TileMulFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType aType = op.getLhsVectorType();
-    VectorType bType = op.getRhsVectorType();
-    VectorType cType = op.getVectorType();
+    amx::TileType aType = op.getLhsTileType();
+    amx::TileType bType = op.getRhsTileType();
+    amx::TileType cType = op.getTileType();
     // Determine m x n x k tile sizes.
     std::pair<Value, Value> tsza =
         getTileSizes(rewriter, *getTypeConverter(), aType, op.getLoc());
@@ -156,9 +155,16 @@ struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
         getTileSizes(rewriter, *getTypeConverter(), bType, op.getLoc());
     // Replace operation with intrinsic.
     Type resType = typeConverter->convertType(cType);
-    rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbf16ps>(
-        op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
-        adaptor.getLhs(), adaptor.getRhs());
+    if (aType.getElementType().isBF16())
+      rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbf16ps>(
+          op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
+          adaptor.getLhs(), adaptor.getRhs());
+    else if (aType.getElementType().isF16())
+      rewriter.replaceOpWithNewOp<amx::x86_amx_tdpfp16ps>(
+          op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
+          adaptor.getLhs(), adaptor.getRhs());
+    else
+      llvm_unreachable("Unexpected element type for amx.mulf");
     return success();
   }
 };
@@ -168,9 +174,9 @@ struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
   LogicalResult
   matchAndRewrite(TileMulIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType aType = op.getLhsVectorType();
-    VectorType bType = op.getRhsVectorType();
-    VectorType cType = op.getVectorType();
+    amx::TileType aType = op.getLhsTileType();
+    amx::TileType bType = op.getRhsTileType();
+    amx::TileType cType = op.getTileType();
     // Determine m x n x k tile sizes.
     std::pair<Value, Value> tsza =
         getTileSizes(rewriter, *getTypeConverter(), aType, op.getLoc());
@@ -206,12 +212,34 @@ void mlir::populateAMXLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<TileZeroConversion, TileLoadConversion, TileStoreConversion,
                TileMulFConversion, TileMulIConversion>(converter);
+  converter.addConversion([&](amx::TileType type) {
+    return LLVM::LLVMX86AMXType::get(&converter.getContext());
+  });
 }
 
 void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {
   target.addLegalOp<x86_amx_tilezero, x86_amx_tileloadd64, x86_amx_tilestored64,
-                    x86_amx_tdpbf16ps, x86_amx_tdpbssd, x86_amx_tdpbsud,
-                    x86_amx_tdpbusd, x86_amx_tdpbuud>();
+                    x86_amx_tdpbf16ps, x86_amx_tdpfp16ps, x86_amx_tdpbssd,
+                    x86_amx_tdpbsud, x86_amx_tdpbusd, x86_amx_tdpbuud>();
   target.addIllegalOp<TileZeroOp, TileLoadOp, TileStoreOp, TileMulIOp,
                       TileMulFOp>();
+}
+
+namespace {
+/// Implement the interface to convert AMX to LLVM.
+struct AMXToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateAMXLegalizeForLLVMExportPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertAMXToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, amx::AMXDialect *dialect) {
+    dialect->addInterfaces<AMXToLLVMDialectInterface>();
+  });
 }

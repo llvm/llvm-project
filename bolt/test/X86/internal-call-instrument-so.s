@@ -1,4 +1,4 @@
-# This reproduces a bug with instrumentation crashes on internal call
+## This reproduces a bug with instrumentation crashes on internal call
 
 # REQUIRES: system-linux,bolt-runtime,target=x86_64{{.*}}
 

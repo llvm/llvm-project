@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/fixed_point/fx_rep.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "src/__support/uint128.h"
 #include "test/UnitTest/TestLogger.h"
@@ -27,7 +28,7 @@ extern "C" clock_t clock() noexcept { return LIBC_NAMESPACE::clock(); }
 #define LIBC_TEST_USE_CLOCK
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 namespace internal {
@@ -43,7 +44,6 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                      is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
-  static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
   const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
   return buffer.view();
 }
@@ -127,35 +127,53 @@ void Test::addTest(Test *T) {
   End = T;
 }
 
-int Test::runTests(const char *TestFilter) {
-  int TestCount = 0;
+int Test::getNumTests() {
+  int N = 0;
+  for (Test *T = Start; T; T = T->Next, ++N)
+    ;
+  return N;
+}
+
+int Test::runTests(const TestOptions &Options) {
+  const char *green = Options.PrintColor ? "\033[32m" : "";
+  const char *red = Options.PrintColor ? "\033[31m" : "";
+  const char *reset = Options.PrintColor ? "\033[0m" : "";
+
+  int TestCount = getNumTests();
+  if (TestCount) {
+    tlog << green << "[==========] " << reset << "Running " << TestCount
+         << " test";
+    if (TestCount > 1)
+      tlog << "s";
+    tlog << " from 1 test suite.\n";
+  }
+
   int FailCount = 0;
   for (Test *T = Start; T != nullptr; T = T->Next) {
     const char *TestName = T->getName();
-    cpp::string StrTestName(TestName);
-    constexpr auto GREEN = "\033[32m";
-    constexpr auto RED = "\033[31m";
-    constexpr auto RESET = "\033[0m";
-    if ((TestFilter != nullptr) && (StrTestName != TestFilter)) {
+
+    if (Options.TestFilter && cpp::string(TestName) != Options.TestFilter) {
+      --TestCount;
       continue;
     }
-    tlog << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
-    [[maybe_unused]] const auto start_time = clock();
+
+    tlog << green << "[ RUN      ] " << reset << TestName << '\n';
+    [[maybe_unused]] const uint64_t start_time = clock();
     RunContext Ctx;
     T->SetUp();
     T->setContext(&Ctx);
     T->Run();
     T->TearDown();
-    [[maybe_unused]] const auto end_time = clock();
+    [[maybe_unused]] const uint64_t end_time = clock();
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
-      tlog << RED << "[  FAILED  ] " << RESET << TestName << '\n';
+      tlog << red << "[  FAILED  ] " << reset << TestName << '\n';
       ++FailCount;
       break;
     case RunContext::RunResult::Pass:
-      tlog << GREEN << "[       OK ] " << RESET << TestName;
+      tlog << green << "[       OK ] " << reset << TestName;
 #ifdef LIBC_TEST_USE_CLOCK
-      tlog << " (took ";
+      tlog << " (";
       if (start_time > end_time) {
         tlog << "unknown - try rerunning)\n";
       } else {
@@ -164,7 +182,7 @@ int Test::runTests(const char *TestFilter) {
         const uint64_t duration_us = (duration * 1000 * 1000) / CLOCKS_PER_SEC;
         const uint64_t duration_ns =
             (duration * 1000 * 1000 * 1000) / CLOCKS_PER_SEC;
-        if (duration_ms != 0)
+        if (Options.TimeInMs || duration_ms != 0)
           tlog << duration_ms << " ms)\n";
         else if (duration_us != 0)
           tlog << duration_us << " us)\n";
@@ -176,7 +194,6 @@ int Test::runTests(const char *TestFilter) {
 #endif
       break;
     }
-    ++TestCount;
   }
 
   if (TestCount > 0) {
@@ -185,8 +202,8 @@ int Test::runTests(const char *TestFilter) {
          << '\n';
   } else {
     tlog << "No tests run.\n";
-    if (TestFilter) {
-      tlog << "No matching test for " << TestFilter << '\n';
+    if (Options.TestFilter) {
+      tlog << "No matching test for " << Options.TestFilter << '\n';
     }
   }
 
@@ -224,6 +241,7 @@ TEST_SPECIALIZATION(__uint128_t);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::Int<128>);
 
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<96>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<128>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<192>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);
@@ -279,4 +297,4 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

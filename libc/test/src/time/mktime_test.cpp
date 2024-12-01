@@ -380,22 +380,115 @@ TEST(LlvmLibcMkTime, InvalidDays) {
 TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
   // Test for maximum value of a signed 32-bit integer.
   // Test implementation can encode time for Tue 19 January 2038 03:14:07 UTC.
-  struct tm tm_data {
-    .tm_sec = 7, .tm_min = 14, .tm_hour = 3, .tm_mday = 19,
-    .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
-    .tm_yday = 0, .tm_isdst = 0
-  };
-  EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds(0x7FFFFFFF));
-  EXPECT_TM_EQ((tm{.tm_sec = 7,
-                   .tm_min = 14,
-                   .tm_hour = 3,
-                   .tm_mday = 19,
-                   .tm_mon = Month::JANUARY,
-                   .tm_year = tm_year(2038),
-                   .tm_wday = 2,
-                   .tm_yday = 7,
-                   .tm_isdst = 0}),
-               tm_data);
+  {
+    struct tm tm_data {
+      .tm_sec = 7, .tm_min = 14, .tm_hour = 3, .tm_mday = 19,
+      .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
+      .tm_yday = 0, .tm_isdst = 0
+    };
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds(0x7FFFFFFF));
+    EXPECT_TM_EQ((tm{.tm_sec = 7,
+                     .tm_min = 14,
+                     .tm_hour = 3,
+                     .tm_mday = 19,
+                     .tm_mon = Month::JANUARY,
+                     .tm_year = tm_year(2038),
+                     .tm_wday = 2,
+                     .tm_yday = 7,
+                     .tm_isdst = 0}),
+                 tm_data);
+  }
+
+  // Now test some times before that, to ensure they are not rejected.
+  {
+    // 2038-01-19 03:13:59 tests that even a large seconds field is
+    // accepted if the minutes field is smaller.
+    struct tm tm_data {
+      .tm_sec = 59, .tm_min = 13, .tm_hour = 3, .tm_mday = 19,
+      .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
+      .tm_yday = 0, .tm_isdst = 0
+    };
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds(0x7FFFFFFF - 8));
+    EXPECT_TM_EQ((tm{.tm_sec = 59,
+                     .tm_min = 13,
+                     .tm_hour = 3,
+                     .tm_mday = 19,
+                     .tm_mon = Month::JANUARY,
+                     .tm_year = tm_year(2038),
+                     .tm_wday = 2,
+                     .tm_yday = 7,
+                     .tm_isdst = 0}),
+                 tm_data);
+  }
+
+  {
+    // 2038-01-19 02:59:59 tests that large seconds and minutes are
+    // accepted if the hours field is smaller.
+    struct tm tm_data {
+      .tm_sec = 59, .tm_min = 59, .tm_hour = 2, .tm_mday = 19,
+      .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
+      .tm_yday = 0, .tm_isdst = 0
+    };
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds(0x7FFFFFFF - 8 - 14 * TimeConstants::SECONDS_PER_MIN));
+    EXPECT_TM_EQ((tm{.tm_sec = 59,
+                     .tm_min = 59,
+                     .tm_hour = 2,
+                     .tm_mday = 19,
+                     .tm_mon = Month::JANUARY,
+                     .tm_year = tm_year(2038),
+                     .tm_wday = 2,
+                     .tm_yday = 7,
+                     .tm_isdst = 0}),
+                 tm_data);
+  }
+
+  {
+    // 2038-01-18 23:59:59 tests that large seconds, minutes and hours
+    // are accepted if the days field is smaller.
+    struct tm tm_data {
+      .tm_sec = 59, .tm_min = 59, .tm_hour = 23, .tm_mday = 18,
+      .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
+      .tm_yday = 0, .tm_isdst = 0
+    };
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds(0x7FFFFFFF - 8 - 14 * TimeConstants::SECONDS_PER_MIN -
+                         3 * TimeConstants::SECONDS_PER_HOUR));
+    EXPECT_TM_EQ((tm{.tm_sec = 59,
+                     .tm_min = 59,
+                     .tm_hour = 23,
+                     .tm_mday = 18,
+                     .tm_mon = Month::JANUARY,
+                     .tm_year = tm_year(2038),
+                     .tm_wday = 2,
+                     .tm_yday = 7,
+                     .tm_isdst = 0}),
+                 tm_data);
+  }
+
+  {
+    // 2038-01-18 23:59:59 tests that the final second of 2037 is
+    // accepted.
+    struct tm tm_data {
+      .tm_sec = 59, .tm_min = 59, .tm_hour = 23, .tm_mday = 31,
+      .tm_mon = Month::DECEMBER, .tm_year = tm_year(2037), .tm_wday = 0,
+      .tm_yday = 0, .tm_isdst = 0
+    };
+    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data),
+                Succeeds(0x7FFFFFFF - 8 - 14 * TimeConstants::SECONDS_PER_MIN -
+                         3 * TimeConstants::SECONDS_PER_HOUR -
+                         18 * TimeConstants::SECONDS_PER_DAY));
+    EXPECT_TM_EQ((tm{.tm_sec = 59,
+                     .tm_min = 59,
+                     .tm_hour = 23,
+                     .tm_mday = 31,
+                     .tm_mon = Month::DECEMBER,
+                     .tm_year = tm_year(2037),
+                     .tm_wday = 2,
+                     .tm_yday = 7,
+                     .tm_isdst = 0}),
+                 tm_data);
+  }
 }
 
 TEST(LlvmLibcMkTime, Max64BitYear) {

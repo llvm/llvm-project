@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,print<polly-simplify>' -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Remove a store that is overwritten by another store in the same statement.
 ; Check that this works even if one of the writes is a scalar MemoryKind.

@@ -2,11 +2,8 @@
 ; RUN: llc < %s -mtriple=aarch64-- | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v12i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i4
+; CHECK-GI:       warning: Instruction selection used fallback path for v16i4
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v2i128
 
 declare <1 x i8> @llvm.ssub.sat.v1i8(<1 x i8>, <1 x i8>)
 declare <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8>, <2 x i8>)
@@ -150,12 +147,12 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-SD-NEXT:    shl v1.4h, v1.4h, #8
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    sqsub v0.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    ushr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    str s0, [x2]
 ; CHECK-SD-NEXT:    ret
@@ -167,18 +164,20 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    fmov s1, w9
 ; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov b3, v1.b[1]
-; CHECK-GI-NEXT:    mov b4, v0.b[2]
-; CHECK-GI-NEXT:    mov b5, v0.b[3]
-; CHECK-GI-NEXT:    mov b6, v1.b[3]
-; CHECK-GI-NEXT:    mov v0.b[1], v2.b[0]
-; CHECK-GI-NEXT:    mov b2, v1.b[2]
-; CHECK-GI-NEXT:    mov v1.b[1], v3.b[0]
-; CHECK-GI-NEXT:    mov v0.b[2], v4.b[0]
-; CHECK-GI-NEXT:    mov v1.b[2], v2.b[0]
-; CHECK-GI-NEXT:    mov v0.b[3], v5.b[0]
-; CHECK-GI-NEXT:    mov v1.b[3], v6.b[0]
-; CHECK-GI-NEXT:    sqsub v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    mov v3.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov b4, v1.b[1]
+; CHECK-GI-NEXT:    mov v5.b[0], v1.b[0]
+; CHECK-GI-NEXT:    mov v3.b[1], v2.b[0]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    mov b0, v0.b[3]
+; CHECK-GI-NEXT:    mov v5.b[1], v4.b[0]
+; CHECK-GI-NEXT:    mov b4, v1.b[2]
+; CHECK-GI-NEXT:    mov b1, v1.b[3]
+; CHECK-GI-NEXT:    mov v3.b[2], v2.b[0]
+; CHECK-GI-NEXT:    mov v5.b[2], v4.b[0]
+; CHECK-GI-NEXT:    mov v3.b[3], v0.b[0]
+; CHECK-GI-NEXT:    mov v5.b[3], v1.b[0]
+; CHECK-GI-NEXT:    sqsub v0.8b, v3.8b, v5.8b
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    str w8, [x2]
 ; CHECK-GI-NEXT:    ret
@@ -190,23 +189,39 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 }
 
 define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
-; CHECK-LABEL: v2i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    ld1 { v1.b }[0], [x1]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    add x9, x1, #1
-; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-NEXT:    ld1 { v1.b }[4], [x9]
-; CHECK-NEXT:    shl v1.2s, v1.2s, #24
-; CHECK-NEXT:    shl v0.2s, v0.2s, #24
-; CHECK-NEXT:    sqsub v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #24
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w9, [x2]
-; CHECK-NEXT:    strb w8, [x2, #1]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v2i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-SD-NEXT:    ld1 { v1.b }[0], [x1]
+; CHECK-SD-NEXT:    add x8, x0, #1
+; CHECK-SD-NEXT:    add x9, x1, #1
+; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
+; CHECK-SD-NEXT:    shl v1.2s, v1.2s, #24
+; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #24
+; CHECK-SD-NEXT:    sqsub v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ushr v0.2s, v0.2s, #24
+; CHECK-SD-NEXT:    mov w8, v0.s[1]
+; CHECK-SD-NEXT:    fmov w9, s0
+; CHECK-SD-NEXT:    strb w9, [x2]
+; CHECK-SD-NEXT:    strb w8, [x2, #1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v2i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    ldr b1, [x1]
+; CHECK-GI-NEXT:    add x8, x2, #1
+; CHECK-GI-NEXT:    ldr b2, [x0, #1]
+; CHECK-GI-NEXT:    ldr b3, [x1, #1]
+; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov v1.b[0], v1.b[0]
+; CHECK-GI-NEXT:    mov v0.b[1], v2.b[0]
+; CHECK-GI-NEXT:    mov v1.b[1], v3.b[0]
+; CHECK-GI-NEXT:    sqsub v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    st1 { v0.b }[0], [x2]
+; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
+; CHECK-GI-NEXT:    ret
   %x = load <2 x i8>, ptr %px
   %y = load <2 x i8>, ptr %py
   %z = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %x, <2 x i8> %y)
@@ -251,15 +266,15 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-LABEL: v2i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    ldr h1, [x0, #2]
-; CHECK-GI-NEXT:    ldr h2, [x1]
-; CHECK-GI-NEXT:    ldr h3, [x1, #2]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-GI-NEXT:    sqsub v0.4h, v0.4h, v2.4h
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-NEXT:    ldr h1, [x1]
+; CHECK-GI-NEXT:    add x8, x0, #2
+; CHECK-GI-NEXT:    add x9, x1, #2
+; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
+; CHECK-GI-NEXT:    ld1 { v1.h }[1], [x9]
+; CHECK-GI-NEXT:    add x8, x2, #2
+; CHECK-GI-NEXT:    sqsub v0.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    str h0, [x2]
-; CHECK-GI-NEXT:    str h1, [x2, #2]
+; CHECK-GI-NEXT:    st1 { v0.h }[1], [x8]
 ; CHECK-GI-NEXT:    ret
   %x = load <2 x i16>, ptr %px
   %y = load <2 x i16>, ptr %py
@@ -321,9 +336,9 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    ldrsb w9, [x1]
 ; CHECK-GI-NEXT:    sub w8, w8, w9
 ; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    asr w10, w9, #7
-; CHECK-GI-NEXT:    cmp w8, w9
+; CHECK-GI-NEXT:    sbfx w10, w8, #7, #1
 ; CHECK-GI-NEXT:    sub w10, w10, #128
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w8, w10, w8, ne
 ; CHECK-GI-NEXT:    strb w8, [x2]
 ; CHECK-GI-NEXT:    ret
@@ -349,9 +364,9 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    ldrsh w9, [x1]
 ; CHECK-GI-NEXT:    sub w8, w8, w9
 ; CHECK-GI-NEXT:    sxth w9, w8
-; CHECK-GI-NEXT:    asr w10, w9, #15
-; CHECK-GI-NEXT:    cmp w8, w9
+; CHECK-GI-NEXT:    sbfx w10, w8, #15, #1
 ; CHECK-GI-NEXT:    sub w10, w10, #8, lsl #12 // =32768
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w8, w10, w8, ne
 ; CHECK-GI-NEXT:    strh w8, [x2]
 ; CHECK-GI-NEXT:    ret
@@ -365,10 +380,6 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; CHECK-LABEL: v16i4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v0.16b, v0.16b, #4
-; CHECK-NEXT:    shl v1.16b, v1.16b, #4
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #4
-; CHECK-NEXT:    sshr v1.16b, v1.16b, #4
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #4
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #4
 ; CHECK-NEXT:    sqsub v0.16b, v0.16b, v1.16b
@@ -489,24 +500,45 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 }
 
 define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
-; CHECK-LABEL: v2i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x2, x6
-; CHECK-NEXT:    sbcs x9, x3, x7
-; CHECK-NEXT:    asr x10, x9, #63
-; CHECK-NEXT:    eor x11, x10, #0x8000000000000000
-; CHECK-NEXT:    csel x2, x10, x8, vs
-; CHECK-NEXT:    csel x3, x11, x9, vs
-; CHECK-NEXT:    subs x8, x0, x4
-; CHECK-NEXT:    sbcs x9, x1, x5
-; CHECK-NEXT:    asr x10, x9, #63
-; CHECK-NEXT:    csel x8, x10, x8, vs
-; CHECK-NEXT:    eor x11, x10, #0x8000000000000000
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    csel x1, x11, x9, vs
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    subs x8, x0, x4
+; CHECK-SD-NEXT:    sbcs x9, x1, x5
+; CHECK-SD-NEXT:    asr x10, x9, #63
+; CHECK-SD-NEXT:    eor x11, x10, #0x8000000000000000
+; CHECK-SD-NEXT:    csel x0, x10, x8, vs
+; CHECK-SD-NEXT:    csel x1, x11, x9, vs
+; CHECK-SD-NEXT:    subs x8, x2, x6
+; CHECK-SD-NEXT:    sbcs x9, x3, x7
+; CHECK-SD-NEXT:    asr x10, x9, #63
+; CHECK-SD-NEXT:    eor x11, x10, #0x8000000000000000
+; CHECK-SD-NEXT:    csel x2, x10, x8, vs
+; CHECK-SD-NEXT:    csel x3, x11, x9, vs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    subs x9, x0, x4
+; CHECK-GI-NEXT:    mov w8, wzr
+; CHECK-GI-NEXT:    mov x13, #-9223372036854775808 // =0x8000000000000000
+; CHECK-GI-NEXT:    sbcs x10, x1, x5
+; CHECK-GI-NEXT:    asr x11, x10, #63
+; CHECK-GI-NEXT:    cset w12, vs
+; CHECK-GI-NEXT:    cmp w8, #1
+; CHECK-GI-NEXT:    adc x14, x11, x13
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x0, x11, x9, ne
+; CHECK-GI-NEXT:    csel x1, x14, x10, ne
+; CHECK-GI-NEXT:    subs x9, x2, x6
+; CHECK-GI-NEXT:    sbcs x10, x3, x7
+; CHECK-GI-NEXT:    asr x11, x10, #63
+; CHECK-GI-NEXT:    cset w12, vs
+; CHECK-GI-NEXT:    cmp w8, #1
+; CHECK-GI-NEXT:    adc x8, x11, x13
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x2, x11, x9, ne
+; CHECK-GI-NEXT:    csel x3, x8, x10, ne
+; CHECK-GI-NEXT:    ret
   %z = call <2 x i128> @llvm.ssub.sat.v2i128(<2 x i128> %x, <2 x i128> %y)
   ret <2 x i128> %z
 }

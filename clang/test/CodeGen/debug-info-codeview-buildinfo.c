@@ -36,10 +36,10 @@ int main(void) { return 42; }
 // DISABLE-NOT: "-cc1"
 // DISABLE: 0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
 // DISABLE-NEXT:          0x{{.+}}: `{{.*}}`
-// DISABLE-NEXT:          <no type>: ``
+// DISABLE-NEXT:          0x{{.+}}: `{{.*}}`
 // DISABLE-NEXT:          0x{{.+}}: `{{.*}}`
 // DISABLE-NEXT:          0x{{.+}}: ``
-// DISABLE-NEXT:          <no type>: ``
+// DISABLE-NEXT:          0x{{.+}}: `{{.*}}`
 
 // MESSAGELEN:                       Types (.debug$T)
 // MESSAGELEN: ============================================================

@@ -9,7 +9,6 @@
 
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -101,7 +100,7 @@ parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
   return success();
 }
 
-template <typename PolynoimalAttrTy, typename Monomial>
+template <typename Monomial>
 LogicalResult
 parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
                     llvm::StringSet<> &variables,
@@ -155,7 +154,7 @@ Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type) {
   llvm::SmallVector<IntMonomial> monomials;
   llvm::StringSet<> variables;
 
-  if (failed(parsePolynomialAttr<IntPolynomialAttr, IntMonomial>(
+  if (failed(parsePolynomialAttr<IntMonomial>(
           parser, monomials, variables,
           [&](IntMonomial &monomial) -> OptionalParseResult {
             APInt parsedCoeff(apintBitWidth, 1);
@@ -175,7 +174,6 @@ Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type) {
   }
   return IntPolynomialAttr::get(parser.getContext(), result.value());
 }
-
 Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
@@ -191,8 +189,8 @@ Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
     return OptionalParseResult(result);
   };
 
-  if (failed(parsePolynomialAttr<FloatPolynomialAttr, FloatMonomial>(
-          parser, monomials, variables, parseAndStoreCoefficient))) {
+  if (failed(parsePolynomialAttr<FloatMonomial>(parser, monomials, variables,
+                                                parseAndStoreCoefficient))) {
     return {};
   }
 
@@ -203,6 +201,35 @@ Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
     return {};
   }
   return FloatPolynomialAttr::get(parser.getContext(), result.value());
+}
+
+LogicalResult
+RingAttr::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
+                 Type coefficientType, IntegerAttr coefficientModulus,
+                 IntPolynomialAttr polynomialModulus) {
+  if (coefficientModulus) {
+    auto coeffIntType = llvm::dyn_cast<IntegerType>(coefficientType);
+    if (!coeffIntType) {
+      return emitError() << "coefficientModulus specified but coefficientType "
+                            "is not integral";
+    }
+    APInt coeffModValue = coefficientModulus.getValue();
+    if (coeffModValue == 0) {
+      return emitError() << "coefficientModulus should not be 0";
+    }
+    if (coeffModValue.slt(0)) {
+      return emitError() << "coefficientModulus should be positive";
+    }
+    auto coeffModWidth = (coeffModValue - 1).getActiveBits();
+    auto coeffWidth = coeffIntType.getWidth();
+    if (coeffModWidth > coeffWidth) {
+      return emitError() << "coefficientModulus needs bit width of "
+                         << coeffModWidth
+                         << " but coefficientType can only contain "
+                         << coeffWidth << " bits";
+    }
+  }
+  return success();
 }
 
 } // namespace polynomial

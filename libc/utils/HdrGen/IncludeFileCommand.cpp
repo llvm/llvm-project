@@ -19,7 +19,7 @@ const char IncludeFileCommand::Name[] = "include_file";
 
 void IncludeFileCommand::run(llvm::raw_ostream &OS, const ArgVector &Args,
                              llvm::StringRef StdHeader,
-                             llvm::RecordKeeper &Records,
+                             const llvm::RecordKeeper &Records,
                              const Command::ErrorReporter &Reporter) const {
   if (Args.size() != 1) {
     Reporter.printFatalError(

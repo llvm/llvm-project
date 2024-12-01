@@ -74,10 +74,24 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
            "Releases (leaks) the backing pass manager (testing)")
       .def(
           "enable_ir_printing",
-          [](PyPassManager &passManager) {
-            mlirPassManagerEnableIRPrinting(passManager.get());
+          [](PyPassManager &passManager, bool printBeforeAll,
+             bool printAfterAll, bool printModuleScope, bool printAfterChange,
+             bool printAfterFailure,
+             std::optional<std::string> optionalTreePrintingPath) {
+            std::string treePrintingPath = "";
+            if (optionalTreePrintingPath.has_value())
+              treePrintingPath = optionalTreePrintingPath.value();
+            mlirPassManagerEnableIRPrinting(
+                passManager.get(), printBeforeAll, printAfterAll,
+                printModuleScope, printAfterChange, printAfterFailure,
+                mlirStringRefCreate(treePrintingPath.data(),
+                                    treePrintingPath.size()));
           },
-          "Enable mlir-print-ir-after-all.")
+          "print_before_all"_a = false, "print_after_all"_a = true,
+          "print_module_scope"_a = false, "print_after_change"_a = false,
+          "print_after_failure"_a = false,
+          "tree_printing_dir_path"_a = py::none(),
+          "Enable IR printing, default as mlir-print-ir-after-all.")
       .def(
           "enable_verifier",
           [](PyPassManager &passManager, bool enable) {

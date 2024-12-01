@@ -82,6 +82,8 @@ auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
   const Symbol &ultimate{symbol.GetUltimate()};
   return !IsNamedConstant(ultimate) &&
       (ultimate.has<semantics::ObjectEntityDetails>() ||
+          (ultimate.has<semantics::EntityDetails>() &&
+              ultimate.attrs().test(semantics::Attr::TARGET)) ||
           ultimate.has<semantics::AssocEntityDetails>());
 }
 auto IsVariableHelper::operator()(const Component &x) const -> Result {
@@ -818,10 +820,10 @@ bool IsCoarray(const Symbol &symbol) {
   return GetAssociationRoot(symbol).Corank() > 0;
 }
 
-bool IsProcedure(const Expr<SomeType> &expr) {
+bool IsProcedureDesignator(const Expr<SomeType> &expr) {
   return std::holds_alternative<ProcedureDesignator>(expr.u);
 }
-bool IsFunction(const Expr<SomeType> &expr) {
+bool IsFunctionDesignator(const Expr<SomeType> &expr) {
   const auto *designator{std::get_if<ProcedureDesignator>(&expr.u)};
   return designator && designator->GetType().has_value();
 }
@@ -845,6 +847,10 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
   } else {
     return false;
   }
+}
+
+bool IsProcedure(const Expr<SomeType> &expr) {
+  return IsProcedureDesignator(expr) || IsProcedurePointer(expr);
 }
 
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
@@ -994,6 +1000,38 @@ template semantics::UnorderedSymbolSet CollectSymbols(
 template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
+struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
+                                      semantics::UnorderedSymbolSet> {
+  using Base =
+      SetTraverse<CollectCudaSymbolsHelper, semantics::UnorderedSymbolSet>;
+  CollectCudaSymbolsHelper() : Base{*this} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
+    return {symbol};
+  }
+  // Overload some of the operator() to filter out the symbols that are not
+  // of interest for CUDA data transfer logic.
+  semantics::UnorderedSymbolSet operator()(const DescriptorInquiry &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const Subscript &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const ProcedureRef &) const {
+    return {};
+  }
+};
+template <typename A>
+semantics::UnorderedSymbolSet CollectCudaSymbols(const A &x) {
+  return CollectCudaSymbolsHelper{}(x);
+}
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SubscriptInteger> &);
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -1011,6 +1049,23 @@ struct HasVectorSubscriptHelper
 
 bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
+}
+
+// HasConstant()
+struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
+                               /*TraverseAssocEntityDetails=*/false> {
+  using Base = AnyTraverse<HasConstantHelper, bool, false>;
+  HasConstantHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename T> bool operator()(const Constant<T> &) const {
+    return true;
+  }
+  // Only look for constant not in subscript.
+  bool operator()(const Subscript &) const { return false; }
+};
+
+bool HasConstant(const Expr<SomeType> &expr) {
+  return HasConstantHelper{}(expr);
 }
 
 parser::Message *AttachDeclaration(
@@ -1265,12 +1320,12 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
     const Expr<SomeType> &expr, const DynamicType &type) {
   if (std::optional<std::string> chValue{GetScalarConstantValue<Ascii>(expr)}) {
     // Pad on the right with spaces when short, truncate the right if long.
-    // TODO: big-endian targets
     auto bytes{static_cast<std::size_t>(
         ToInt64(type.MeasureSizeInBytes(context, false)).value())};
     BOZLiteralConstant bits{0};
     for (std::size_t j{0}; j < bytes; ++j) {
-      char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
+      auto idx{isHostLittleEndian ? j : bytes - j - 1};
+      char ch{idx >= chValue->size() ? ' ' : chValue->at(idx)};
       BOZLiteralConstant chBOZ{static_cast<unsigned char>(ch)};
       bits = bits.IOR(chBOZ.SHIFTL(8 * j));
     }
@@ -1282,8 +1337,10 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
 
 // Extracts a whole symbol being used as a bound of a dummy argument,
 // possibly wrapped with parentheses or MAX(0, ...).
+// Works with any integer expression.
+template <typename T> const Symbol *GetBoundSymbol(const Expr<T> &);
 template <int KIND>
-static const Symbol *GetBoundSymbol(
+const Symbol *GetBoundSymbol(
     const Expr<Type<TypeCategory::Integer, KIND>> &expr) {
   using T = Type<TypeCategory::Integer, KIND>;
   return common::visit(
@@ -1320,9 +1377,15 @@ static const Symbol *GetBoundSymbol(
       },
       expr.u);
 }
+template <>
+const Symbol *GetBoundSymbol<SomeInteger>(const Expr<SomeInteger> &expr) {
+  return common::visit(
+      [](const auto &kindExpr) { return GetBoundSymbol(kindExpr); }, expr.u);
+}
 
+template <typename T>
 std::optional<bool> AreEquivalentInInterface(
-    const Expr<SubscriptInteger> &x, const Expr<SubscriptInteger> &y) {
+    const Expr<T> &x, const Expr<T> &y) {
   auto xVal{ToInt64(x)};
   auto yVal{ToInt64(y)};
   if (xVal && yVal) {
@@ -1356,6 +1419,10 @@ std::optional<bool> AreEquivalentInInterface(
     return std::nullopt; // not sure
   }
 }
+template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
+    const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &messages,
     const std::optional<ActualArgument> &arg, const std::string &procName,
@@ -1661,7 +1728,8 @@ bool IsSaved(const Symbol &original) {
       (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
-              symbol.size() > 32))) {
+              symbol.size() > 32)) &&
+      Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and
@@ -1750,13 +1818,34 @@ bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {
           derived->typeSymbol().get<DerivedTypeDetails>().sequence());
 }
 
+static bool IsSameModule(const Scope *x, const Scope *y) {
+  if (x == y) {
+    return true;
+  } else if (x && y) {
+    // Allow for a builtin module to be read from distinct paths
+    const Symbol *xSym{x->symbol()};
+    const Symbol *ySym{y->symbol()};
+    if (xSym && ySym && xSym->name() == ySym->name()) {
+      const auto *xMod{xSym->detailsIf<ModuleDetails>()};
+      const auto *yMod{ySym->detailsIf<ModuleDetails>()};
+      if (xMod && yMod) {
+        auto xHash{xMod->moduleFileHash()};
+        auto yHash{yMod->moduleFileHash()};
+        return xHash && yHash && *xHash == *yHash;
+      }
+    }
+  }
+  return false;
+}
+
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
-  if (!derived) {
-    return false;
-  } else {
+  if (derived) {
     const auto &symbol{derived->typeSymbol()};
-    return &symbol.owner() == symbol.owner().context().GetBuiltinsScope() &&
-        symbol.name() == "__builtin_"s + name;
+    const Scope &scope{symbol.owner()};
+    return symbol.name() == "__builtin_"s + name &&
+        IsSameModule(&scope, scope.context().GetBuiltinsScope());
+  } else {
+    return false;
   }
 }
 
@@ -1784,6 +1873,14 @@ bool IsLockType(const DerivedTypeSpec *derived) {
 
 bool IsNotifyType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "notify_type");
+}
+
+bool IsIeeeFlagType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "ieee_flag_type");
+}
+
+bool IsIeeeRoundType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "ieee_round_type");
 }
 
 bool IsTeamType(const DerivedTypeSpec *derived) {
@@ -1908,6 +2005,39 @@ std::optional<int> GetDummyArgumentNumber(const Symbol *symbol) {
     }
   }
   return std::nullopt;
+}
+
+// Given a symbol that is a SubprogramNameDetails in a submodule, try to
+// find its interface definition in its module or ancestor submodule.
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
+  if (symInSubmodule && symInSubmodule->owner().IsSubmodule()) {
+    if (const auto *nameDetails{
+            symInSubmodule->detailsIf<semantics::SubprogramNameDetails>()};
+        nameDetails &&
+        nameDetails->kind() == semantics::SubprogramKind::Module) {
+      const Symbol *next{symInSubmodule->owner().symbol()};
+      while (const Symbol * submodSym{next}) {
+        next = nullptr;
+        if (const auto *modDetails{
+                submodSym->detailsIf<semantics::ModuleDetails>()};
+            modDetails && modDetails->isSubmodule() && modDetails->scope()) {
+          if (const semantics::Scope & parent{modDetails->scope()->parent()};
+              parent.IsSubmodule() || parent.IsModule()) {
+            if (auto iter{parent.find(symInSubmodule->name())};
+                iter != parent.end()) {
+              const Symbol &proc{iter->second->GetUltimate()};
+              if (IsProcedure(proc)) {
+                return &proc;
+              }
+            } else if (parent.IsSubmodule()) {
+              next = parent.symbol();
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 } // namespace Fortran::semantics

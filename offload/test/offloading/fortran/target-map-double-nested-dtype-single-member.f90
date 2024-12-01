@@ -1,13 +1,6 @@
-! Offloading test checking interaction of an
-! explicit derived type member mapping of two
-! derived types for a single array member each
-! REQUIRES: flang, amdgcn-amd-amdhsa
-! UNSUPPORTED: nvptx64-nvidia-cuda
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! Offloading test checking interaction of an explicit derived type member
+! mapping of two derived types for a single array member each
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
@@ -25,18 +18,18 @@ program main
       integer, allocatable :: array_j(:)
       integer(4) :: k
     end type top_layer
-    
+
     type(top_layer) :: top_dtype
     type(top_layer) :: top_dtype2
 
 !$omp target map(tofrom: top_dtype%nested%array_i2, top_dtype2%nested%array_j2)
-    do i = 1, 10 
+    do i = 1, 10
       top_dtype%nested%array_i2(i) = i * 2
-    end do 
+    end do
 
-    do i = 1, 10 
+    do i = 1, 10
       top_dtype2%nested%array_j2(i) = i * 2
-    end do 
+    end do
 !$omp end target
 
   print *, top_dtype%nested%array_i2

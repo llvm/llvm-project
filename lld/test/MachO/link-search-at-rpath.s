@@ -14,6 +14,7 @@
 # RUN:     -rpath @loader_path/../foo \
 # RUN:     -rpath @loader_path/../subdir \
 # RUN:     -rpath @loader_path/../foo \
+# RUN:     --no-warn-duplicate-rpath \
 # RUN:     %t/bar.o -o %t/subdir2/libbar.dylib
 
 # RUN: %lld -lSystem %t/main.o %t/subdir2/libbar.dylib -o %t/test

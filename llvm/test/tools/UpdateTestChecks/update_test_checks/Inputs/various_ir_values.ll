@@ -1,5 +1,6 @@
 ; Just run it through opt, no passes needed.
-; RUN: opt < %s -S | FileCheck %s
+; This tests debug intrinsics, so we must explicitly disable records.
+; RUN: opt < %s -S --write-experimental-debuginfo=false | FileCheck %s
 
 ; ModuleID = 'various_ir_values.c'
 source_filename = "various_ir_values.c"

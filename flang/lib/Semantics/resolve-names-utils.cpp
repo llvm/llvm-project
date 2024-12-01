@@ -31,8 +31,6 @@ using common::NumericOperator;
 using common::RelationalOperator;
 using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
 
-static constexpr const char *operatorPrefix{"operator("};
-
 static GenericKind MapIntrinsicOperator(IntrinsicOperator);
 
 Symbol *Resolve(const parser::Name &name, Symbol *symbol) {
@@ -67,37 +65,6 @@ bool IsIntrinsicOperator(
     }
   }
   return false;
-}
-
-template <typename E>
-std::forward_list<std::string> GetOperatorNames(
-    const SemanticsContext &context, E opr) {
-  std::forward_list<std::string> result;
-  for (const char *name : context.languageFeatures().GetNames(opr)) {
-    result.emplace_front(std::string{operatorPrefix} + name + ')');
-  }
-  return result;
-}
-
-std::forward_list<std::string> GetAllNames(
-    const SemanticsContext &context, const SourceName &name) {
-  std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
-      name.ToString().rfind(std::string{operatorPrefix}, 0) == 0) {
-    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
-      auto names{GetOperatorNames(context, LogicalOperator{i})};
-      if (llvm::is_contained(names, str)) {
-        return names;
-      }
-    }
-    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
-      auto names{GetOperatorNames(context, RelationalOperator{i})};
-      if (llvm::is_contained(names, str)) {
-        return names;
-      }
-    }
-  }
-  return {str};
 }
 
 bool IsLogicalConstant(
@@ -376,25 +343,35 @@ static void PropagateSaveAttr(const EquivalenceSet &src, EquivalenceSet &dst) {
 
 void EquivalenceSets::AddToSet(const parser::Designator &designator) {
   if (CheckDesignator(designator)) {
-    Symbol &symbol{*currObject_.symbol};
-    if (!currSet_.empty()) {
-      // check this symbol against first of set for compatibility
-      Symbol &first{currSet_.front().symbol};
-      CheckCanEquivalence(designator.source, first, symbol) &&
-          CheckCanEquivalence(designator.source, symbol, first);
-    }
-    auto subscripts{currObject_.subscripts};
-    if (subscripts.empty() && symbol.IsObjectArray()) {
-      // record a whole array as its first element
-      for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
-        auto &lbound{spec.lbound().GetExplicit().value()};
-        subscripts.push_back(evaluate::ToInt64(lbound).value());
+    if (Symbol * symbol{currObject_.symbol}) {
+      if (!currSet_.empty()) {
+        // check this symbol against first of set for compatibility
+        Symbol &first{currSet_.front().symbol};
+        CheckCanEquivalence(designator.source, first, *symbol) &&
+            CheckCanEquivalence(designator.source, *symbol, first);
       }
+      auto subscripts{currObject_.subscripts};
+      if (subscripts.empty()) {
+        if (const ArraySpec * shape{symbol->GetShape()};
+            shape && shape->IsExplicitShape()) {
+          // record a whole array as its first element
+          for (const ShapeSpec &spec : *shape) {
+            if (auto lbound{spec.lbound().GetExplicit()}) {
+              if (auto lbValue{evaluate::ToInt64(*lbound)}) {
+                subscripts.push_back(*lbValue);
+                continue;
+              }
+            }
+            subscripts.clear(); // error recovery
+            break;
+          }
+        }
+      }
+      auto substringStart{currObject_.substringStart};
+      currSet_.emplace_back(
+          *symbol, subscripts, substringStart, designator.source);
+      PropagateSaveAttr(currSet_.back(), currSet_);
     }
-    auto substringStart{currObject_.substringStart};
-    currSet_.emplace_back(
-        symbol, subscripts, substringStart, designator.source);
-    PropagateSaveAttr(currSet_.back(), currSet_);
   }
   currObject_ = {};
 }
@@ -425,6 +402,7 @@ void EquivalenceSets::FinishSet(const parser::CharBlock &source) {
 // set.
 bool EquivalenceSets::CheckCanEquivalence(
     const parser::CharBlock &source, const Symbol &sym1, const Symbol &sym2) {
+  std::optional<common::LanguageFeature> feature;
   std::optional<parser::MessageFixedText> msg;
   const DeclTypeSpec *type1{sym1.GetType()};
   const DeclTypeSpec *type2{sym2.GetType()};
@@ -443,24 +421,19 @@ bool EquivalenceSets::CheckCanEquivalence(
   } else if (!(isAnyNum1 || isChar1) &&
       !(isAnyNum2 || isChar2)) { // C8110 - C8113
     if (AreTkCompatibleTypes(type1, type2)) {
-      if (context_.ShouldWarn(LanguageFeature::EquivalenceSameNonSequence)) {
-        msg =
-            "nonstandard: Equivalence set contains '%s' and '%s' with same "
-            "type that is neither numeric nor character sequence type"_port_en_US;
-      }
+      msg =
+          "nonstandard: Equivalence set contains '%s' and '%s' with same type that is neither numeric nor character sequence type"_port_en_US;
+      feature = LanguageFeature::EquivalenceSameNonSequence;
     } else {
       msg = "Equivalence set cannot contain '%s' and '%s' with distinct types "
             "that are not both numeric or character sequence types"_err_en_US;
     }
   } else if (isAnyNum1) {
     if (isChar2) {
-      if (context_.ShouldWarn(
-              LanguageFeature::EquivalenceNumericWithCharacter)) {
-        msg = "nonstandard: Equivalence set contains '%s' that is numeric "
-              "sequence type and '%s' that is character"_port_en_US;
-      }
-    } else if (isAnyNum2 &&
-        context_.ShouldWarn(LanguageFeature::EquivalenceNonDefaultNumeric)) {
+      msg =
+          "nonstandard: Equivalence set contains '%s' that is numeric sequence type and '%s' that is character"_port_en_US;
+      feature = LanguageFeature::EquivalenceNumericWithCharacter;
+    } else if (isAnyNum2) {
       if (isDefaultNum1) {
         msg =
             "nonstandard: Equivalence set contains '%s' that is a default "
@@ -469,12 +442,16 @@ bool EquivalenceSets::CheckCanEquivalence(
         msg = "nonstandard: Equivalence set contains '%s' and '%s' that are "
               "numeric sequence types with non-default kinds"_port_en_US;
       }
+      feature = LanguageFeature::EquivalenceNonDefaultNumeric;
     }
   }
-  if (msg &&
-      (!context_.IsInModuleFile(source) ||
-          msg->severity() == parser::Severity::Error)) {
-    context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
+  if (msg) {
+    if (feature) {
+      context_.Warn(
+          *feature, source, std::move(*msg), sym1.name(), sym2.name());
+    } else {
+      context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
+    }
     return false;
   }
   return true;
@@ -700,13 +677,15 @@ public:
   SymbolMapper(Scope &scope, SymbolAndTypeMappings &map)
       : Base{*this}, scope_{scope}, map_{map} {}
   using Base::operator();
-  bool operator()(const SymbolRef &ref) const {
+  bool operator()(const SymbolRef &ref) {
     if (const Symbol *mapped{MapSymbol(*ref)}) {
       const_cast<SymbolRef &>(ref) = *mapped;
+    } else if (ref->has<UseDetails>()) {
+      CopySymbol(&*ref);
     }
     return false;
   }
-  bool operator()(const Symbol &x) const {
+  bool operator()(const Symbol &x) {
     if (MapSymbol(x)) {
       DIE("SymbolMapper hit symbol outside SymbolRef");
     }
@@ -716,9 +695,9 @@ public:
   Symbol *CopySymbol(const Symbol *);
 
 private:
-  void MapParamValue(ParamValue &param) const { (*this)(param.GetExplicit()); }
-  void MapBound(Bound &bound) const { (*this)(bound.GetExplicit()); }
-  void MapShapeSpec(ShapeSpec &spec) const {
+  void MapParamValue(ParamValue &param) { (*this)(param.GetExplicit()); }
+  void MapBound(Bound &bound) { (*this)(bound.GetExplicit()); }
+  void MapShapeSpec(ShapeSpec &spec) {
     MapBound(spec.lbound());
     MapBound(spec.ubound());
   }

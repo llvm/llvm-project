@@ -53,6 +53,16 @@ static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
   });
 }
 
+/// Helper function that computes an insertion point where the given value is
+/// defined and can be used without a dominance violation.
+static OpBuilder::InsertPoint computeInsertPoint(Value value) {
+  Block *insertBlock = value.getParentBlock();
+  Block::iterator insertPt = insertBlock->begin();
+  if (OpResult inputRes = dyn_cast<OpResult>(value))
+    insertPt = ++inputRes.getOwner()->getIterator();
+  return OpBuilder::InsertPoint(insertBlock, insertPt);
+}
+
 //===----------------------------------------------------------------------===//
 // ConversionValueMapping
 //===----------------------------------------------------------------------===//
@@ -61,10 +71,20 @@ namespace {
 /// This class wraps a IRMapping to provide recursive lookup
 /// functionality, i.e. we will traverse if the mapped value also has a mapping.
 struct ConversionValueMapping {
-  /// Lookup a mapped value within the map. If a mapping for the provided value
-  /// does not exist then return the provided value. If `desiredType` is
-  /// non-null, returns the most recently mapped value with that type. If an
-  /// operand of that type does not exist, defaults to normal behavior.
+  /// Return "true" if an SSA value is mapped to the given value. May return
+  /// false positives.
+  bool isMappedTo(Value value) const { return mappedTo.contains(value); }
+
+  /// Lookup the most recently mapped value with the desired type in the
+  /// mapping.
+  ///
+  /// Special cases:
+  /// - If the desired type is "null", simply return the most recently mapped
+  ///   value.
+  /// - If there is no mapping to the desired type, also return the most
+  ///   recently mapped value.
+  /// - If there is no mapping for the given value at all, return the given
+  ///   value.
   Value lookupOrDefault(Value from, Type desiredType = nullptr) const;
 
   /// Lookup a mapped value within the map, or return null if a mapping does not
@@ -79,45 +99,28 @@ struct ConversionValueMapping {
         assert(it != oldVal && "inserting cyclic mapping");
     });
     mapping.map(oldVal, newVal);
+    mappedTo.insert(newVal);
   }
-
-  /// Try to map a value to the one provided. Returns false if a transitive
-  /// mapping from the new value to the old value already exists, true if the
-  /// map was updated.
-  bool tryMap(Value oldVal, Value newVal);
 
   /// Drop the last mapping for the given value.
   void erase(Value value) { mapping.erase(value); }
 
-  /// Returns the inverse raw value mapping (without recursive query support).
-  DenseMap<Value, SmallVector<Value>> getInverse() const {
-    DenseMap<Value, SmallVector<Value>> inverse;
-    for (auto &it : mapping.getValueMap())
-      inverse[it.second].push_back(it.first);
-    return inverse;
-  }
-
 private:
   /// Current value mappings.
   IRMapping mapping;
+
+  /// All SSA values that are mapped to. May contain false positives.
+  DenseSet<Value> mappedTo;
 };
 } // namespace
 
 Value ConversionValueMapping::lookupOrDefault(Value from,
                                               Type desiredType) const {
-  // If there was no desired type, simply find the leaf value.
-  if (!desiredType) {
-    // If this value had a valid mapping, unmap that value as well in the case
-    // that it was also replaced.
-    while (auto mappedValue = mapping.lookupOrNull(from))
-      from = mappedValue;
-    return from;
-  }
-
-  // Otherwise, try to find the deepest value that has the desired type.
+  // Try to find the deepest value that has the desired type. If there is no
+  // such value, simply return the deepest value.
   Value desiredValue;
   do {
-    if (from.getType() == desiredType)
+    if (!desiredType || from.getType() == desiredType)
       desiredValue = from;
 
     Value mappedValue = mapping.lookupOrNull(from);
@@ -135,14 +138,6 @@ Value ConversionValueMapping::lookupOrNull(Value from, Type desiredType) const {
   if (result == from || (desiredType && result.getType() != desiredType))
     return nullptr;
   return result;
-}
-
-bool ConversionValueMapping::tryMap(Value oldVal, Value newVal) {
-  for (Value it = newVal; it; it = mapping.lookupOrNull(it))
-    if (it == oldVal)
-      return false;
-  map(oldVal, newVal);
-  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -293,10 +288,9 @@ public:
 /// original location.
 class EraseBlockRewrite : public BlockRewrite {
 public:
-  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
-                    Region *region, Block *insertBeforeBlock)
-      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block), region(region),
-        insertBeforeBlock(insertBeforeBlock) {}
+  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block)
+      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block),
+        region(block->getParent()), insertBeforeBlock(block->getNextNode()) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::EraseBlock;
@@ -432,59 +426,29 @@ private:
   Block *insertBeforeBlock;
 };
 
-/// This structure contains the information pertaining to an argument that has
-/// been converted.
-struct ConvertedArgInfo {
-  ConvertedArgInfo(unsigned newArgIdx, unsigned newArgSize,
-                   Value castValue = nullptr)
-      : newArgIdx(newArgIdx), newArgSize(newArgSize), castValue(castValue) {}
-
-  /// The start index of in the new argument list that contains arguments that
-  /// replace the original.
-  unsigned newArgIdx;
-
-  /// The number of arguments that replaced the original argument.
-  unsigned newArgSize;
-
-  /// The cast value that was created to cast from the new arguments to the
-  /// old. This only used if 'newArgSize' > 1.
-  Value castValue;
-};
-
 /// Block type conversion. This rewrite is partially reflected in the IR.
 class BlockTypeConversionRewrite : public BlockRewrite {
 public:
-  BlockTypeConversionRewrite(
-      ConversionPatternRewriterImpl &rewriterImpl, Block *block,
-      Block *origBlock, SmallVector<std::optional<ConvertedArgInfo>, 1> argInfo,
-      const TypeConverter *converter)
-      : BlockRewrite(Kind::BlockTypeConversion, rewriterImpl, block),
-        origBlock(origBlock), argInfo(argInfo), converter(converter) {}
+  BlockTypeConversionRewrite(ConversionPatternRewriterImpl &rewriterImpl,
+                             Block *origBlock, Block *newBlock)
+      : BlockRewrite(Kind::BlockTypeConversion, rewriterImpl, origBlock),
+        newBlock(newBlock) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::BlockTypeConversion;
   }
 
-  /// Materialize any necessary conversions for converted arguments that have
-  /// live users, using the provided `findLiveUser` to search for a user that
-  /// survives the conversion process.
-  LogicalResult
-  materializeLiveConversions(function_ref<Operation *(Value)> findLiveUser);
+  Block *getOrigBlock() const { return block; }
+
+  Block *getNewBlock() const { return newBlock; }
 
   void commit(RewriterBase &rewriter) override;
 
   void rollback() override;
 
 private:
-  /// The original block that was requested to have its signature converted.
-  Block *origBlock;
-
-  /// The conversion information for each of the arguments. The information is
-  /// std::nullopt if the argument was dropped during conversion.
-  SmallVector<std::optional<ConvertedArgInfo>, 1> argInfo;
-
-  /// The type converter used to convert the arguments.
-  const TypeConverter *converter;
+  /// The new block that was created as part of this signature conversion.
+  Block *newBlock;
 };
 
 /// Replacing a block argument. This rewrite is not immediately reflected in the
@@ -493,8 +457,10 @@ private:
 class ReplaceBlockArgRewrite : public BlockRewrite {
 public:
   ReplaceBlockArgRewrite(ConversionPatternRewriterImpl &rewriterImpl,
-                         Block *block, BlockArgument arg)
-      : BlockRewrite(Kind::ReplaceBlockArg, rewriterImpl, block), arg(arg) {}
+                         Block *block, BlockArgument arg,
+                         const TypeConverter *converter)
+      : BlockRewrite(Kind::ReplaceBlockArg, rewriterImpl, block), arg(arg),
+        converter(converter) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::ReplaceBlockArg;
@@ -506,6 +472,9 @@ public:
 
 private:
   BlockArgument arg;
+
+  /// The current type converter when the block argument was replaced.
+  const TypeConverter *converter;
 };
 
 /// An operation rewrite.
@@ -641,10 +610,9 @@ private:
 class ReplaceOperationRewrite : public OperationRewrite {
 public:
   ReplaceOperationRewrite(ConversionPatternRewriterImpl &rewriterImpl,
-                          Operation *op, const TypeConverter *converter,
-                          bool changedResults)
+                          Operation *op, const TypeConverter *converter)
       : OperationRewrite(Kind::ReplaceOperation, rewriterImpl, op),
-        converter(converter), changedResults(changedResults) {}
+        converter(converter) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::ReplaceOperation;
@@ -656,17 +624,10 @@ public:
 
   void cleanup(RewriterBase &rewriter) override;
 
-  const TypeConverter *getConverter() const { return converter; }
-
-  bool hasChangedResults() const { return changedResults; }
-
 private:
   /// An optional type converter that can be used to materialize conversions
   /// between the new and old values if necessary.
   const TypeConverter *converter;
-
-  /// A boolean flag that indicates whether result types have changed or not.
-  bool changedResults;
 };
 
 class CreateOperationRewrite : public OperationRewrite {
@@ -691,12 +652,16 @@ public:
 /// The type of materialization.
 enum MaterializationKind {
   /// This materialization materializes a conversion for an illegal block
-  /// argument type, to a legal one.
+  /// argument type, to the original one.
   Argument,
 
   /// This materialization materializes a conversion from an illegal type to a
   /// legal one.
-  Target
+  Target,
+
+  /// This materialization materializes a conversion from a legal type back to
+  /// an illegal one.
+  Source
 };
 
 /// An unresolved materialization, i.e., a "builtin.unrealized_conversion_cast"
@@ -704,25 +669,21 @@ enum MaterializationKind {
 /// conversion.
 class UnresolvedMaterializationRewrite : public OperationRewrite {
 public:
-  UnresolvedMaterializationRewrite(
-      ConversionPatternRewriterImpl &rewriterImpl,
-      UnrealizedConversionCastOp op, const TypeConverter *converter = nullptr,
-      MaterializationKind kind = MaterializationKind::Target,
-      Type origOutputType = nullptr)
-      : OperationRewrite(Kind::UnresolvedMaterialization, rewriterImpl, op),
-        converterAndKind(converter, kind), origOutputType(origOutputType) {}
+  UnresolvedMaterializationRewrite(ConversionPatternRewriterImpl &rewriterImpl,
+                                   UnrealizedConversionCastOp op,
+                                   const TypeConverter *converter,
+                                   MaterializationKind kind, Type originalType,
+                                   Value mappedValue);
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::UnresolvedMaterialization;
   }
 
+  void rollback() override;
+
   UnrealizedConversionCastOp getOperation() const {
     return cast<UnrealizedConversionCastOp>(op);
   }
-
-  void rollback() override;
-
-  void cleanup(RewriterBase &rewriter) override;
 
   /// Return the type converter of this materialization (which may be null).
   const TypeConverter *getConverter() const {
@@ -734,22 +695,22 @@ public:
     return converterAndKind.getInt();
   }
 
-  /// Set the kind of this materialization.
-  void setMaterializationKind(MaterializationKind kind) {
-    converterAndKind.setInt(kind);
-  }
-
-  /// Return the original illegal output type of the input values.
-  Type getOrigOutputType() const { return origOutputType; }
+  /// Return the original type of the SSA value.
+  Type getOriginalType() const { return originalType; }
 
 private:
   /// The corresponding type converter to use when resolving this
   /// materialization, and the kind of this materialization.
-  llvm::PointerIntPair<const TypeConverter *, 1, MaterializationKind>
+  llvm::PointerIntPair<const TypeConverter *, 2, MaterializationKind>
       converterAndKind;
 
-  /// The original output type. This is only used for argument conversions.
-  Type origOutputType;
+  /// The original type of the SSA value. Only used for target
+  /// materializations.
+  Type originalType;
+
+  /// The value in the conversion value mapping that is being replaced by the
+  /// results of this unresolved materialization.
+  Value mappedValue;
 };
 } // namespace
 
@@ -763,25 +724,17 @@ static bool hasRewrite(R &&rewrites, Operation *op) {
   });
 }
 
-/// Find the single rewrite object of the specified type and block among the
-/// given rewrites. In debug mode, asserts that there is mo more than one such
-/// object. Return "nullptr" if no object was found.
-template <typename RewriteTy, typename R>
-static RewriteTy *findSingleRewrite(R &&rewrites, Block *block) {
-  RewriteTy *result = nullptr;
-  for (auto &rewrite : rewrites) {
-    auto *rewriteTy = dyn_cast<RewriteTy>(rewrite.get());
-    if (rewriteTy && rewriteTy->getBlock() == block) {
 #ifndef NDEBUG
-      assert(!result && "expected single matching rewrite");
-      result = rewriteTy;
-#else
-      return rewriteTy;
-#endif // NDEBUG
-    }
-  }
-  return result;
+/// Return "true" if there is a block rewrite that matches the specified
+/// rewrite type and block among the given rewrites.
+template <typename RewriteTy, typename R>
+static bool hasRewrite(R &&rewrites, Block *block) {
+  return any_of(std::forward<R>(rewrites), [&](auto &rewrite) {
+    auto *rewriteTy = dyn_cast<RewriteTy>(rewrite.get());
+    return rewriteTy && rewriteTy->getBlock() == block;
+  });
 }
+#endif // NDEBUG
 
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriterImpl
@@ -791,7 +744,7 @@ namespace detail {
 struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   explicit ConversionPatternRewriterImpl(MLIRContext *ctx,
                                          const ConversionConfig &config)
-      : context(ctx), config(config) {}
+      : context(ctx), eraseRewriter(ctx), config(config) {}
 
   //===--------------------------------------------------------------------===//
   // State Management
@@ -826,7 +779,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   LogicalResult remapValues(StringRef valueDiagTag,
                             std::optional<Location> inputLoc,
                             PatternRewriter &rewriter, ValueRange values,
-                            SmallVectorImpl<Value> &remapped);
+                            SmallVector<SmallVector<Value>> &remapped);
 
   /// Return "true" if the given operation is ignored, and does not need to be
   /// converted.
@@ -838,27 +791,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   //===--------------------------------------------------------------------===//
   // Type Conversion
   //===--------------------------------------------------------------------===//
-
-  /// Attempt to convert the signature of the given block, if successful a new
-  /// block is returned containing the new arguments. Returns `block` if it did
-  /// not require conversion.
-  FailureOr<Block *> convertBlockSignature(
-      ConversionPatternRewriter &rewriter, Block *block,
-      const TypeConverter *converter,
-      TypeConverter::SignatureConversion *conversion = nullptr);
-
-  /// Convert the types of non-entry block arguments within the given region.
-  LogicalResult convertNonEntryRegionTypes(
-      ConversionPatternRewriter &rewriter, Region *region,
-      const TypeConverter &converter,
-      ArrayRef<TypeConverter::SignatureConversion> blockConversions = {});
-
-  /// Apply a signature conversion on the given region, using `converter` for
-  /// materializations if not null.
-  Block *
-  applySignatureConversion(ConversionPatternRewriter &rewriter, Region *region,
-                           TypeConverter::SignatureConversion &conversion,
-                           const TypeConverter *converter);
 
   /// Convert the types of block arguments within the given region.
   FailureOr<Block *>
@@ -880,24 +812,66 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   //===--------------------------------------------------------------------===//
   // Materializations
   //===--------------------------------------------------------------------===//
-  /// Build an unresolved materialization operation given an output type and set
-  /// of input operands.
-  Value buildUnresolvedMaterialization(MaterializationKind kind,
-                                       Block *insertBlock,
-                                       Block::iterator insertPt, Location loc,
-                                       ValueRange inputs, Type outputType,
-                                       Type origOutputType,
-                                       const TypeConverter *converter);
 
-  Value buildUnresolvedArgumentMaterialization(Block *block, Location loc,
-                                               ValueRange inputs,
-                                               Type origOutputType,
-                                               Type outputType,
-                                               const TypeConverter *converter);
+  /// Build an unresolved materialization operation given a range of output
+  /// types and a list of input operands. Returns the inputs if they their
+  /// types match the output types.
+  ///
+  /// If a cast op was built, it can optionally be returned with the `castOp`
+  /// output argument.
+  ///
+  /// If `valueToMap` is set to a non-null Value, then that value is mapped to
+  /// the results of the unresolved materialization in the conversion value
+  /// mapping.
+  ValueRange buildUnresolvedMaterialization(
+      MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
+      Value valueToMap, ValueRange inputs, TypeRange outputTypes,
+      Type originalType, const TypeConverter *converter,
+      UnrealizedConversionCastOp *castOp = nullptr);
+  Value buildUnresolvedMaterialization(
+      MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
+      Value valueToMap, ValueRange inputs, Type outputType, Type originalType,
+      const TypeConverter *converter,
+      UnrealizedConversionCastOp *castOp = nullptr) {
+    return buildUnresolvedMaterialization(kind, ip, loc, valueToMap, inputs,
+                                          TypeRange(outputType), originalType,
+                                          converter, castOp)
+        .front();
+  }
 
-  Value buildUnresolvedTargetMaterialization(Location loc, Value input,
-                                             Type outputType,
-                                             const TypeConverter *converter);
+  /// Build an N:1 materialization for the given original value that was
+  /// replaced with the given replacement values.
+  ///
+  /// This is a workaround around incomplete 1:N support in the dialect
+  /// conversion driver. The conversion mapping can store only 1:1 replacements
+  /// and the conversion patterns only support single Value replacements in the
+  /// adaptor, so N values must be converted back to a single value. This
+  /// function will be deleted when full 1:N support has been added.
+  ///
+  /// This function inserts an argument materialization back to the original
+  /// type, followed by a target materialization to the legalized type (if
+  /// applicable).
+  void insertNTo1Materialization(OpBuilder::InsertPoint ip, Location loc,
+                                 ValueRange replacements, Value originalValue,
+                                 const TypeConverter *converter);
+
+  /// Find a replacement value for the given SSA value in the conversion value
+  /// mapping. The replacement value must have the same type as the given SSA
+  /// value. If there is no replacement value with the correct type, find the
+  /// latest replacement value (regardless of the type) and build a source
+  /// materialization.
+  Value findOrBuildReplacementValue(Value value,
+                                    const TypeConverter *converter);
+
+  /// Unpack an N:1 materialization and return the inputs of the
+  /// materialization. This function unpacks only those materializations that
+  /// were built with `insertNTo1Materialization`.
+  ///
+  /// This is a workaround around incomplete 1:N support in the dialect
+  /// conversion driver. It allows us to write 1:N conversion patterns while
+  /// 1:N support is still missing in the conversion value mapping. This
+  /// function will be deleted when full 1:N support has been added.
+  SmallVector<Value> unpackNTo1Materialization(Value value);
 
   //===--------------------------------------------------------------------===//
   // Rewriter Notification Hooks
@@ -908,7 +882,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
                                OpBuilder::InsertPoint previous) override;
 
   /// Notifies that an op is about to be replaced with the given values.
-  void notifyOpReplaced(Operation *op, ValueRange newValues);
+  void notifyOpReplaced(Operation *op, ArrayRef<ValueRange> newValues);
 
   /// Notifies that a block is about to be erased.
   void notifyBlockIsBeingErased(Block *block);
@@ -940,7 +914,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
 
     /// Erase the given op (unless it was already erased).
     void eraseOp(Operation *op) override {
-      if (erased.contains(op))
+      if (wasErased(op))
         return;
       op->dropAllUses();
       RewriterBase::eraseOp(op);
@@ -948,17 +922,20 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
 
     /// Erase the given block (unless it was already erased).
     void eraseBlock(Block *block) override {
-      if (erased.contains(block))
+      if (wasErased(block))
         return;
       assert(block->empty() && "expected empty block");
       block->dropAllDefinedValueUses();
       RewriterBase::eraseBlock(block);
     }
 
+    bool wasErased(void *ptr) const { return erased.contains(ptr); }
+
     void notifyOperationErased(Operation *op) override { erased.insert(op); }
 
     void notifyBlockErased(Block *block) override { erased.insert(block); }
 
+  private:
     /// Pointers to all erased operations and blocks.
     DenseSet<void *> erased;
   };
@@ -969,6 +946,11 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
 
   /// MLIR context.
   MLIRContext *context;
+
+  /// A rewriter that keeps track of ops/block that were already erased and
+  /// skips duplicate op/block erasures. This rewriter is used during the
+  /// "cleanup" phase.
+  SingleEraseRewriter eraseRewriter;
 
   // Mapping between replaced values that differ in type. This happens when
   // replacing a value with one of a different type.
@@ -987,6 +969,15 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// time, they should no longer be considered for legalization and any attempt
   /// to modify/access them is invalid rewriter API usage.
   SetVector<Operation *> replacedOps;
+
+  /// A mapping of all unresolved materializations (UnrealizedConversionCastOp)
+  /// to the corresponding rewrite objects.
+  DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationRewrite *>
+      unresolvedMaterializations;
+
+  /// A set of all N:1 materializations that were added to work around
+  /// incomplete 1:N support in the dialect conversion driver.
+  DenseSet<UnrealizedConversionCastOp> nTo1TempMaterializations;
 
   /// The current type converter, or nullptr if no type converter is currently
   /// active.
@@ -1022,85 +1013,16 @@ void BlockTypeConversionRewrite::commit(RewriterBase &rewriter) {
   // block.
   if (auto *listener =
           dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener()))
-    for (Operation *op : block->getUsers())
+    for (Operation *op : getNewBlock()->getUsers())
       listener->notifyOperationModified(op);
-
-  // Process the remapping for each of the original arguments.
-  for (auto [origArg, info] :
-       llvm::zip_equal(origBlock->getArguments(), argInfo)) {
-    // Handle the case of a 1->0 value mapping.
-    if (!info) {
-      if (Value newArg =
-              rewriterImpl.mapping.lookupOrNull(origArg, origArg.getType()))
-        rewriter.replaceAllUsesWith(origArg, newArg);
-      continue;
-    }
-
-    // Otherwise this is a 1->1+ value mapping.
-    Value castValue = info->castValue;
-    assert(info->newArgSize >= 1 && castValue && "expected 1->1+ mapping");
-
-    // If the argument is still used, replace it with the generated cast.
-    if (!origArg.use_empty()) {
-      rewriter.replaceAllUsesWith(origArg, rewriterImpl.mapping.lookupOrDefault(
-                                               castValue, origArg.getType()));
-    }
-  }
 }
 
 void BlockTypeConversionRewrite::rollback() {
-  block->replaceAllUsesWith(origBlock);
-}
-
-LogicalResult BlockTypeConversionRewrite::materializeLiveConversions(
-    function_ref<Operation *(Value)> findLiveUser) {
-  // Process the remapping for each of the original arguments.
-  for (auto it : llvm::enumerate(origBlock->getArguments())) {
-    BlockArgument origArg = it.value();
-    // Note: `block` may be detached, so OpBuilder::atBlockBegin cannot be used.
-    OpBuilder builder(it.value().getContext(), /*listener=*/&rewriterImpl);
-    builder.setInsertionPointToStart(block);
-
-    // If the type of this argument changed and the argument is still live, we
-    // need to materialize a conversion.
-    if (rewriterImpl.mapping.lookupOrNull(origArg, origArg.getType()))
-      continue;
-    Operation *liveUser = findLiveUser(origArg);
-    if (!liveUser)
-      continue;
-
-    Value replacementValue = rewriterImpl.mapping.lookupOrDefault(origArg);
-    bool isDroppedArg = replacementValue == origArg;
-    if (!isDroppedArg)
-      builder.setInsertionPointAfterValue(replacementValue);
-    Value newArg;
-    if (converter) {
-      newArg = converter->materializeSourceConversion(
-          builder, origArg.getLoc(), origArg.getType(),
-          isDroppedArg ? ValueRange() : ValueRange(replacementValue));
-      assert((!newArg || newArg.getType() == origArg.getType()) &&
-             "materialization hook did not provide a value of the expected "
-             "type");
-    }
-    if (!newArg) {
-      InFlightDiagnostic diag =
-          emitError(origArg.getLoc())
-          << "failed to materialize conversion for block argument #"
-          << it.index() << " that remained live after conversion, type was "
-          << origArg.getType();
-      if (!isDroppedArg)
-        diag << ", with target type " << replacementValue.getType();
-      diag.attachNote(liveUser->getLoc())
-          << "see existing live user here: " << *liveUser;
-      return failure();
-    }
-    rewriterImpl.mapping.map(origArg, newArg);
-  }
-  return success();
+  getNewBlock()->replaceAllUsesWith(getOrigBlock());
 }
 
 void ReplaceBlockArgRewrite::commit(RewriterBase &rewriter) {
-  Value repl = rewriterImpl.mapping.lookupOrNull(arg, arg.getType());
+  Value repl = rewriterImpl.findOrBuildReplacementValue(arg, converter);
   if (!repl)
     return;
 
@@ -1129,7 +1051,7 @@ void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
   // Compute replacement values.
   SmallVector<Value> replacements =
       llvm::map_to_vector(op->getResults(), [&](OpResult result) {
-        return rewriterImpl.mapping.lookupOrNull(result, result.getType());
+        return rewriterImpl.findOrBuildReplacementValue(result, converter);
       });
 
   // Notify the listener that the operation is about to be replaced.
@@ -1177,26 +1099,35 @@ void CreateOperationRewrite::rollback() {
   op->erase();
 }
 
-void UnresolvedMaterializationRewrite::rollback() {
-  if (getMaterializationKind() == MaterializationKind::Target) {
-    for (Value input : op->getOperands())
-      rewriterImpl.mapping.erase(input);
-  }
-  op->erase();
+UnresolvedMaterializationRewrite::UnresolvedMaterializationRewrite(
+    ConversionPatternRewriterImpl &rewriterImpl, UnrealizedConversionCastOp op,
+    const TypeConverter *converter, MaterializationKind kind, Type originalType,
+    Value mappedValue)
+    : OperationRewrite(Kind::UnresolvedMaterialization, rewriterImpl, op),
+      converterAndKind(converter, kind), originalType(originalType),
+      mappedValue(mappedValue) {
+  assert((!originalType || kind == MaterializationKind::Target) &&
+         "original type is valid only for target materializations");
+  rewriterImpl.unresolvedMaterializations[op] = this;
 }
 
-void UnresolvedMaterializationRewrite::cleanup(RewriterBase &rewriter) {
-  rewriter.eraseOp(op);
+void UnresolvedMaterializationRewrite::rollback() {
+  if (mappedValue)
+    rewriterImpl.mapping.erase(mappedValue);
+  rewriterImpl.unresolvedMaterializations.erase(getOperation());
+  rewriterImpl.nTo1TempMaterializations.erase(getOperation());
+  op->erase();
 }
 
 void ConversionPatternRewriterImpl::applyRewrites() {
   // Commit all rewrites.
   IRRewriter rewriter(context, config.listener);
-  for (auto &rewrite : rewrites)
-    rewrite->commit(rewriter);
+  // Note: New rewrites may be added during the "commit" phase and the
+  // `rewrites` vector may reallocate.
+  for (size_t i = 0; i < rewrites.size(); ++i)
+    rewrites[i]->commit(rewriter);
 
   // Clean up all rewrites.
-  SingleEraseRewriter eraseRewriter(context);
   for (auto &rewrite : rewrites)
     rewrite->cleanup(eraseRewriter);
 }
@@ -1230,53 +1161,83 @@ void ConversionPatternRewriterImpl::undoRewrites(unsigned numRewritesToKeep) {
 LogicalResult ConversionPatternRewriterImpl::remapValues(
     StringRef valueDiagTag, std::optional<Location> inputLoc,
     PatternRewriter &rewriter, ValueRange values,
-    SmallVectorImpl<Value> &remapped) {
+    SmallVector<SmallVector<Value>> &remapped) {
   remapped.reserve(llvm::size(values));
 
-  SmallVector<Type, 1> legalTypes;
   for (const auto &it : llvm::enumerate(values)) {
     Value operand = it.value();
     Type origType = operand.getType();
+    Location operandLoc = inputLoc ? *inputLoc : operand.getLoc();
 
-    // If a converter was provided, get the desired legal types for this
-    // operand.
-    Type desiredType;
-    if (currentTypeConverter) {
-      // If there is no legal conversion, fail to match this pattern.
-      legalTypes.clear();
-      if (failed(currentTypeConverter->convertType(origType, legalTypes))) {
-        Location operandLoc = inputLoc ? *inputLoc : operand.getLoc();
-        notifyMatchFailure(operandLoc, [=](Diagnostic &diag) {
-          diag << "unable to convert type for " << valueDiagTag << " #"
-               << it.index() << ", type was " << origType;
-        });
-        return failure();
-      }
-      // TODO: There currently isn't any mechanism to do 1->N type conversion
-      // via the PatternRewriter replacement API, so for now we just ignore it.
-      if (legalTypes.size() == 1)
-        desiredType = legalTypes.front();
-    } else {
-      // TODO: What we should do here is just set `desiredType` to `origType`
-      // and then handle the necessary type conversions after the conversion
-      // process has finished. Unfortunately a lot of patterns currently rely on
-      // receiving the new operands even if the types change, so we keep the
-      // original behavior here for now until all of the patterns relying on
-      // this get updated.
+    // Find the most recently mapped value. Unpack all temporary N:1
+    // materializations. Such conversions are a workaround around missing
+    // 1:N support in the ConversionValueMapping. (The conversion patterns
+    // already support 1:N replacements.)
+    Value repl = mapping.lookupOrDefault(operand);
+    SmallVector<Value> unpacked = unpackNTo1Materialization(repl);
+
+    if (!currentTypeConverter) {
+      // The current pattern does not have a type converter. I.e., it does not
+      // distinguish between legal and illegal types. For each operand, simply
+      // pass through the most recently mapped value.
+      remapped.push_back(std::move(unpacked));
+      continue;
     }
-    Value newOperand = mapping.lookupOrDefault(operand, desiredType);
 
-    // Handle the case where the conversion was 1->1 and the new operand type
-    // isn't legal.
-    Type newOperandType = newOperand.getType();
-    if (currentTypeConverter && desiredType && newOperandType != desiredType) {
-      Location operandLoc = inputLoc ? *inputLoc : operand.getLoc();
-      Value castValue = buildUnresolvedTargetMaterialization(
-          operandLoc, newOperand, desiredType, currentTypeConverter);
-      mapping.map(mapping.lookupOrDefault(newOperand), castValue);
+    // If there is no legal conversion, fail to match this pattern.
+    SmallVector<Type, 1> legalTypes;
+    if (failed(currentTypeConverter->convertType(origType, legalTypes))) {
+      notifyMatchFailure(operandLoc, [=](Diagnostic &diag) {
+        diag << "unable to convert type for " << valueDiagTag << " #"
+             << it.index() << ", type was " << origType;
+      });
+      return failure();
+    }
+
+    // If a type is converted to 0 types, there is nothing to do.
+    if (legalTypes.empty()) {
+      remapped.push_back({});
+      continue;
+    }
+
+    if (legalTypes.size() != 1) {
+      // TODO: This is a 1:N conversion. The conversion value mapping does not
+      // store such materializations yet. If the types of the most recently
+      // mapped values do not match, build a target materialization.
+      ValueRange unpackedRange(unpacked);
+      if (TypeRange(unpackedRange) == legalTypes) {
+        remapped.push_back(std::move(unpacked));
+        continue;
+      }
+
+      // Insert a target materialization if the current pattern expects
+      // different legalized types.
+      ValueRange targetMat = buildUnresolvedMaterialization(
+          MaterializationKind::Target, computeInsertPoint(repl), operandLoc,
+          /*valueToMap=*/Value(), /*inputs=*/unpacked,
+          /*outputType=*/legalTypes, /*originalType=*/origType,
+          currentTypeConverter);
+      remapped.push_back(targetMat);
+      continue;
+    }
+
+    // Handle 1->1 type conversions.
+    Type desiredType = legalTypes.front();
+    // Try to find a mapped value with the desired type. (Or the operand itself
+    // if the value is not mapped at all.)
+    Value newOperand = mapping.lookupOrDefault(operand, desiredType);
+    if (newOperand.getType() != desiredType) {
+      // If the looked up value's type does not have the desired type, it means
+      // that the value was replaced with a value of different type and no
+      // target materialization was created yet.
+      Value castValue = buildUnresolvedMaterialization(
+          MaterializationKind::Target, computeInsertPoint(newOperand),
+          operandLoc, /*valueToMap=*/newOperand, /*inputs=*/unpacked,
+          /*outputType=*/desiredType, /*originalType=*/origType,
+          currentTypeConverter);
       newOperand = castValue;
     }
-    remapped.push_back(newOperand);
+    remapped.push_back({newOperand});
   }
   return success();
 }
@@ -1294,34 +1255,6 @@ bool ConversionPatternRewriterImpl::wasOpReplaced(Operation *op) const {
 //===----------------------------------------------------------------------===//
 // Type Conversion
 
-FailureOr<Block *> ConversionPatternRewriterImpl::convertBlockSignature(
-    ConversionPatternRewriter &rewriter, Block *block,
-    const TypeConverter *converter,
-    TypeConverter::SignatureConversion *conversion) {
-  if (conversion)
-    return applySignatureConversion(rewriter, block, converter, *conversion);
-
-  // If a converter wasn't provided, and the block wasn't already converted,
-  // there is nothing we can do.
-  if (!converter)
-    return failure();
-
-  // Try to convert the signature for the block with the provided converter.
-  if (auto conversion = converter->convertBlockSignature(block))
-    return applySignatureConversion(rewriter, block, converter, *conversion);
-  return failure();
-}
-
-Block *ConversionPatternRewriterImpl::applySignatureConversion(
-    ConversionPatternRewriter &rewriter, Region *region,
-    TypeConverter::SignatureConversion &conversion,
-    const TypeConverter *converter) {
-  if (!region->empty())
-    return *convertBlockSignature(rewriter, &region->front(), converter,
-                                  &conversion);
-  return nullptr;
-}
-
 FailureOr<Block *> ConversionPatternRewriterImpl::convertRegionTypes(
     ConversionPatternRewriter &rewriter, Region *region,
     const TypeConverter &converter,
@@ -1330,48 +1263,38 @@ FailureOr<Block *> ConversionPatternRewriterImpl::convertRegionTypes(
   if (region->empty())
     return nullptr;
 
-  if (failed(convertNonEntryRegionTypes(rewriter, region, converter)))
-    return failure();
-
-  FailureOr<Block *> newEntry = convertBlockSignature(
-      rewriter, &region->front(), &converter, entryConversion);
-  return newEntry;
-}
-
-LogicalResult ConversionPatternRewriterImpl::convertNonEntryRegionTypes(
-    ConversionPatternRewriter &rewriter, Region *region,
-    const TypeConverter &converter,
-    ArrayRef<TypeConverter::SignatureConversion> blockConversions) {
-  regionToConverter[region] = &converter;
-  if (region->empty())
-    return success();
-
-  // Convert the arguments of each block within the region.
-  int blockIdx = 0;
-  assert((blockConversions.empty() ||
-          blockConversions.size() == region->getBlocks().size() - 1) &&
-         "expected either to provide no SignatureConversions at all or to "
-         "provide a SignatureConversion for each non-entry block");
-
+  // Convert the arguments of each non-entry block within the region.
   for (Block &block :
        llvm::make_early_inc_range(llvm::drop_begin(*region, 1))) {
-    TypeConverter::SignatureConversion *blockConversion =
-        blockConversions.empty()
-            ? nullptr
-            : const_cast<TypeConverter::SignatureConversion *>(
-                  &blockConversions[blockIdx++]);
-
-    if (failed(convertBlockSignature(rewriter, &block, &converter,
-                                     blockConversion)))
+    // Compute the signature for the block with the provided converter.
+    std::optional<TypeConverter::SignatureConversion> conversion =
+        converter.convertBlockSignature(&block);
+    if (!conversion)
       return failure();
+    // Convert the block with the computed signature.
+    applySignatureConversion(rewriter, &block, &converter, *conversion);
   }
-  return success();
+
+  // Convert the entry block. If an entry signature conversion was provided,
+  // use that one. Otherwise, compute the signature with the type converter.
+  if (entryConversion)
+    return applySignatureConversion(rewriter, &region->front(), &converter,
+                                    *entryConversion);
+  std::optional<TypeConverter::SignatureConversion> conversion =
+      converter.convertBlockSignature(&region->front());
+  if (!conversion)
+    return failure();
+  return applySignatureConversion(rewriter, &region->front(), &converter,
+                                  *conversion);
 }
 
 Block *ConversionPatternRewriterImpl::applySignatureConversion(
     ConversionPatternRewriter &rewriter, Block *block,
     const TypeConverter *converter,
     TypeConverter::SignatureConversion &signatureConversion) {
+  // A block cannot be converted multiple times.
+  assert(!hasRewrite<BlockTypeConversionRewrite>(rewrites, block) &&
+         "block was already converted");
   OpBuilder::InsertionGuard g(rewriter);
 
   // If no arguments are being changed or added, there is nothing to do.
@@ -1416,65 +1339,47 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
   // Replace all uses of the old block with the new block.
   block->replaceAllUsesWith(newBlock);
 
-  // Remap each of the original arguments as determined by the signature
-  // conversion.
-  SmallVector<std::optional<ConvertedArgInfo>, 1> argInfo;
-  argInfo.resize(origArgCount);
-
   for (unsigned i = 0; i != origArgCount; ++i) {
-    auto inputMap = signatureConversion.getInputMapping(i);
-    if (!inputMap)
-      continue;
     BlockArgument origArg = block->getArgument(i);
+    Type origArgType = origArg.getType();
 
-    // If inputMap->replacementValue is not nullptr, then the argument is
-    // dropped and a replacement value is provided to be the remappedValue.
-    if (inputMap->replacementValue) {
+    std::optional<TypeConverter::SignatureConversion::InputMapping> inputMap =
+        signatureConversion.getInputMapping(i);
+    if (!inputMap) {
+      // This block argument was dropped and no replacement value was provided.
+      // Materialize a replacement value "out of thin air".
+      buildUnresolvedMaterialization(
+          MaterializationKind::Source,
+          OpBuilder::InsertPoint(newBlock, newBlock->begin()), origArg.getLoc(),
+          /*valueToMap=*/origArg, /*inputs=*/ValueRange(),
+          /*outputType=*/origArgType, /*originalType=*/Type(), converter);
+      appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
+      continue;
+    }
+
+    if (Value repl = inputMap->replacementValue) {
+      // This block argument was dropped and a replacement value was provided.
       assert(inputMap->size == 0 &&
              "invalid to provide a replacement value when the argument isn't "
              "dropped");
-      mapping.map(origArg, inputMap->replacementValue);
-      appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
+      mapping.map(origArg, repl);
+      appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
       continue;
     }
 
-    // Otherwise, this is a 1->1+ mapping.
+    // This is a 1->1+ mapping. 1->N mappings are not fully supported in the
+    // dialect conversion. Therefore, we need an argument materialization to
+    // turn the replacement block arguments into a single SSA value that can be
+    // used as a replacement.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
-    Value newArg;
-
-    // If this is a 1->1 mapping and the types of new and replacement arguments
-    // match (i.e. it's an identity map), then the argument is mapped to its
-    // original type.
-    // FIXME: We simply pass through the replacement argument if there wasn't a
-    // converter, which isn't great as it allows implicit type conversions to
-    // appear. We should properly restructure this code to handle cases where a
-    // converter isn't provided and also to properly handle the case where an
-    // argument materialization is actually a temporary source materialization
-    // (e.g. in the case of 1->N).
-    if (replArgs.size() == 1 &&
-        (!converter || replArgs[0].getType() == origArg.getType())) {
-      newArg = replArgs.front();
-    } else {
-      Type origOutputType = origArg.getType();
-
-      // Legalize the argument output type.
-      Type outputType = origOutputType;
-      if (Type legalOutputType = converter->convertType(outputType))
-        outputType = legalOutputType;
-
-      newArg = buildUnresolvedArgumentMaterialization(
-          newBlock, origArg.getLoc(), replArgs, origOutputType, outputType,
-          converter);
-    }
-
-    mapping.map(origArg, newArg);
-    appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
-    argInfo[i] = ConvertedArgInfo(inputMap->inputNo, inputMap->size, newArg);
+    insertNTo1Materialization(
+        OpBuilder::InsertPoint(newBlock, newBlock->begin()), origArg.getLoc(),
+        /*replacements=*/replArgs, /*outputValue=*/origArg, converter);
+    appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
   }
 
-  appendRewrite<BlockTypeConversionRewrite>(newBlock, block, argInfo,
-                                            converter);
+  appendRewrite<BlockTypeConversionRewrite>(/*origBlock=*/block, newBlock);
 
   // Erase the old block. (It is just unlinked for now and will be erased during
   // cleanup.)
@@ -1489,41 +1394,134 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
 
 /// Build an unresolved materialization operation given an output type and set
 /// of input operands.
-Value ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
-    MaterializationKind kind, Block *insertBlock, Block::iterator insertPt,
-    Location loc, ValueRange inputs, Type outputType, Type origOutputType,
-    const TypeConverter *converter) {
+ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
+    MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
+    Value valueToMap, ValueRange inputs, TypeRange outputTypes,
+    Type originalType, const TypeConverter *converter,
+    UnrealizedConversionCastOp *castOp) {
+  assert((!originalType || kind == MaterializationKind::Target) &&
+         "original type is valid only for target materializations");
+
   // Avoid materializing an unnecessary cast.
-  if (inputs.size() == 1 && inputs.front().getType() == outputType)
-    return inputs.front();
+  if (TypeRange(inputs) == outputTypes) {
+    if (valueToMap) {
+      assert(inputs.size() == 1 && "1:N mapping is not supported");
+      mapping.map(valueToMap, inputs.front());
+    }
+    return inputs;
+  }
 
   // Create an unresolved materialization. We use a new OpBuilder to avoid
   // tracking the materialization like we do for other operations.
-  OpBuilder builder(insertBlock, insertPt);
+  OpBuilder builder(outputTypes.front().getContext());
+  builder.setInsertionPoint(ip.getBlock(), ip.getPoint());
   auto convertOp =
-      builder.create<UnrealizedConversionCastOp>(loc, outputType, inputs);
+      builder.create<UnrealizedConversionCastOp>(loc, outputTypes, inputs);
+  if (valueToMap) {
+    assert(outputTypes.size() == 1 && "1:N mapping is not supported");
+    mapping.map(valueToMap, convertOp.getResult(0));
+  }
+  if (castOp)
+    *castOp = convertOp;
   appendRewrite<UnresolvedMaterializationRewrite>(convertOp, converter, kind,
-                                                  origOutputType);
-  return convertOp.getResult(0);
+                                                  originalType, valueToMap);
+  return convertOp.getResults();
 }
-Value ConversionPatternRewriterImpl::buildUnresolvedArgumentMaterialization(
-    Block *block, Location loc, ValueRange inputs, Type origOutputType,
-    Type outputType, const TypeConverter *converter) {
-  return buildUnresolvedMaterialization(MaterializationKind::Argument, block,
-                                        block->begin(), loc, inputs, outputType,
-                                        origOutputType, converter);
-}
-Value ConversionPatternRewriterImpl::buildUnresolvedTargetMaterialization(
-    Location loc, Value input, Type outputType,
-    const TypeConverter *converter) {
-  Block *insertBlock = input.getParentBlock();
-  Block::iterator insertPt = insertBlock->begin();
-  if (OpResult inputRes = dyn_cast<OpResult>(input))
-    insertPt = ++inputRes.getOwner()->getIterator();
 
-  return buildUnresolvedMaterialization(MaterializationKind::Target,
-                                        insertBlock, insertPt, loc, input,
-                                        outputType, outputType, converter);
+void ConversionPatternRewriterImpl::insertNTo1Materialization(
+    OpBuilder::InsertPoint ip, Location loc, ValueRange replacements,
+    Value originalValue, const TypeConverter *converter) {
+  // Insert argument materialization back to the original type.
+  Type originalType = originalValue.getType();
+  UnrealizedConversionCastOp argCastOp;
+  Value argMat = buildUnresolvedMaterialization(
+      MaterializationKind::Argument, ip, loc, /*valueToMap=*/originalValue,
+      /*inputs=*/replacements, originalType, /*originalType=*/Type(), converter,
+      &argCastOp);
+  if (argCastOp)
+    nTo1TempMaterializations.insert(argCastOp);
+
+  // Insert target materialization to the legalized type.
+  Type legalOutputType;
+  if (converter) {
+    legalOutputType = converter->convertType(originalType);
+  } else if (replacements.size() == 1) {
+    // When there is no type converter, assume that the replacement value
+    // types are legal. This is reasonable to assume because they were
+    // specified by the user.
+    // FIXME: This won't work for 1->N conversions because multiple output
+    // types are not supported in parts of the dialect conversion. In such a
+    // case, we currently use the original value type.
+    legalOutputType = replacements[0].getType();
+  }
+  if (legalOutputType && legalOutputType != originalType) {
+    UnrealizedConversionCastOp targetCastOp;
+    buildUnresolvedMaterialization(
+        MaterializationKind::Target, computeInsertPoint(argMat), loc,
+        /*valueToMap=*/argMat, /*inputs=*/argMat,
+        /*outputType=*/legalOutputType, /*originalType=*/originalType,
+        converter, &targetCastOp);
+    if (targetCastOp)
+      nTo1TempMaterializations.insert(targetCastOp);
+  }
+}
+
+Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
+    Value value, const TypeConverter *converter) {
+  // Find a replacement value with the same type.
+  Value repl = mapping.lookupOrNull(value, value.getType());
+  if (repl)
+    return repl;
+
+  // Check if the value is dead. No replacement value is needed in that case.
+  // This is an approximate check that may have false negatives but does not
+  // require computing and traversing an inverse mapping. (We may end up
+  // building source materializations that are never used and that fold away.)
+  if (llvm::all_of(value.getUsers(),
+                   [&](Operation *op) { return replacedOps.contains(op); }) &&
+      !mapping.isMappedTo(value))
+    return Value();
+
+  // No replacement value was found. Get the latest replacement value
+  // (regardless of the type) and build a source materialization to the
+  // original type.
+  repl = mapping.lookupOrNull(value);
+  if (!repl) {
+    // No replacement value is registered in the mapping. This means that the
+    // value is dropped and no longer needed. (If the value were still needed,
+    // a source materialization producing a replacement value "out of thin air"
+    // would have already been created during `replaceOp` or
+    // `applySignatureConversion`.)
+    return Value();
+  }
+  Value castValue = buildUnresolvedMaterialization(
+      MaterializationKind::Source, computeInsertPoint(repl), value.getLoc(),
+      /*valueToMap=*/value, /*inputs=*/repl, /*outputType=*/value.getType(),
+      /*originalType=*/Type(), converter);
+  mapping.map(value, castValue);
+  return castValue;
+}
+
+SmallVector<Value>
+ConversionPatternRewriterImpl::unpackNTo1Materialization(Value value) {
+  // Unpack unrealized_conversion_cast ops that were inserted as a N:1
+  // workaround.
+  auto castOp = value.getDefiningOp<UnrealizedConversionCastOp>();
+  if (!castOp)
+    return {value};
+  if (!nTo1TempMaterializations.contains(castOp))
+    return {value};
+  assert(castOp->getNumResults() == 1 && "expected single result");
+
+  SmallVector<Value> result;
+  for (Value v : castOp.getOperands()) {
+    // Keep unpacking if possible. This is needed because during block
+    // signature conversions and 1:N op replacements, the driver may have
+    // inserted two materializations back-to-back: first an argument
+    // materialization, then a target materialization.
+    llvm::append_range(result, unpackNTo1Materialization(v));
+  }
+  return result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1549,36 +1547,68 @@ void ConversionPatternRewriterImpl::notifyOperationInserted(
   appendRewrite<MoveOperationRewrite>(op, previous.getBlock(), prevOp);
 }
 
-void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
-                                                     ValueRange newValues) {
+void ConversionPatternRewriterImpl::notifyOpReplaced(
+    Operation *op, ArrayRef<ValueRange> newValues) {
   assert(newValues.size() == op->getNumResults());
   assert(!ignoredOps.contains(op) && "operation was already replaced");
 
-  // Track if any of the results changed, e.g. erased and replaced with null.
-  bool resultChanged = false;
+  // Check if replaced op is an unresolved materialization, i.e., an
+  // unrealized_conversion_cast op that was created by the conversion driver.
+  bool isUnresolvedMaterialization = false;
+  if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
+    if (unresolvedMaterializations.contains(castOp))
+      isUnresolvedMaterialization = true;
 
   // Create mappings for each of the new result values.
-  for (auto [newValue, result] : llvm::zip(newValues, op->getResults())) {
-    if (!newValue) {
-      resultChanged = true;
+  for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults())) {
+    if (repl.empty()) {
+      // This result was dropped and no replacement value was provided.
+      if (isUnresolvedMaterialization) {
+        // Do not create another materializations if we are erasing a
+        // materialization.
+        continue;
+      }
+
+      // Materialize a replacement value "out of thin air".
+      buildUnresolvedMaterialization(
+          MaterializationKind::Source, computeInsertPoint(result),
+          result.getLoc(), /*valueToMap=*/result, /*inputs=*/ValueRange(),
+          /*outputType=*/result.getType(), /*originalType=*/Type(),
+          currentTypeConverter);
       continue;
+    } else {
+      // Make sure that the user does not mess with unresolved materializations
+      // that were inserted by the conversion driver. We keep track of these
+      // ops in internal data structures. Erasing them must be allowed because
+      // this can happen when the user is erasing an entire block (including
+      // its body). But replacing them with another value should be forbidden
+      // to avoid problems with the `mapping`.
+      assert(!isUnresolvedMaterialization &&
+             "attempting to replace an unresolved materialization");
     }
-    // Remap, and check for any result type changes.
-    mapping.map(result, newValue);
-    resultChanged |= (newValue.getType() != result.getType());
+
+    // Remap result to replacement value.
+    if (repl.empty())
+      continue;
+
+    if (repl.size() == 1) {
+      // Single replacement value: replace directly.
+      mapping.map(result, repl.front());
+    } else {
+      // Multiple replacement values: insert N:1 materialization.
+      insertNTo1Materialization(computeInsertPoint(result), result.getLoc(),
+                                /*replacements=*/repl, /*outputValue=*/result,
+                                currentTypeConverter);
+    }
   }
 
-  appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter,
-                                         resultChanged);
-
+  appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter);
   // Mark this operation and all nested ops as replaced.
   op->walk([&](Operation *op) { replacedOps.insert(op); });
 }
 
 void ConversionPatternRewriterImpl::notifyBlockIsBeingErased(Block *block) {
-  Region *region = block->getParent();
-  Block *origNextBlock = block->getNextNode();
-  appendRewrite<EraseBlockRewrite>(block, region, origNextBlock);
+  appendRewrite<EraseBlockRewrite>(block);
 }
 
 void ConversionPatternRewriterImpl::notifyBlockInserted(
@@ -1647,6 +1677,20 @@ void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
     impl->logger.startLine()
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";
   });
+  SmallVector<ValueRange> newVals;
+  for (size_t i = 0; i < newValues.size(); ++i)
+    newVals.push_back(newValues.slice(i, 1));
+  impl->notifyOpReplaced(op, newVals);
+}
+
+void ConversionPatternRewriter::replaceOpWithMultiple(
+    Operation *op, ArrayRef<ValueRange> newValues) {
+  assert(op->getNumResults() == newValues.size() &&
+         "incorrect # of replacement values");
+  LLVM_DEBUG({
+    impl->logger.startLine()
+        << "** Replace : '" << op->getName() << "'(" << op << ")\n";
+  });
   impl->notifyOpReplaced(op, newValues);
 }
 
@@ -1655,7 +1699,7 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
     impl->logger.startLine()
         << "** Erase   : '" << op->getName() << "'(" << op << ")\n";
   });
-  SmallVector<Value, 1> nullRepls(op->getNumResults(), nullptr);
+  SmallVector<ValueRange> nullRepls(op->getNumResults(), {});
   impl->notifyOpReplaced(op, nullRepls);
 }
 
@@ -1676,12 +1720,12 @@ void ConversionPatternRewriter::eraseBlock(Block *block) {
 }
 
 Block *ConversionPatternRewriter::applySignatureConversion(
-    Region *region, TypeConverter::SignatureConversion &conversion,
+    Block *block, TypeConverter::SignatureConversion &conversion,
     const TypeConverter *converter) {
-  assert(!impl->wasOpReplaced(region->getParentOp()) &&
+  assert(!impl->wasOpReplaced(block->getParentOp()) &&
          "attempting to apply a signature conversion to a block within a "
          "replaced/erased op");
-  return impl->applySignatureConversion(*this, region, conversion, converter);
+  return impl->applySignatureConversion(*this, block, converter, conversion);
 }
 
 FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
@@ -1693,16 +1737,6 @@ FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
   return impl->convertRegionTypes(*this, region, converter, entryConversion);
 }
 
-LogicalResult ConversionPatternRewriter::convertNonEntryRegionTypes(
-    Region *region, const TypeConverter &converter,
-    ArrayRef<TypeConverter::SignatureConversion> blockConversions) {
-  assert(!impl->wasOpReplaced(region->getParentOp()) &&
-         "attempting to apply a signature conversion to a block within a "
-         "replaced/erased op");
-  return impl->convertNonEntryRegionTypes(*this, region, converter,
-                                          blockConversions);
-}
-
 void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
                                                            Value to) {
   LLVM_DEBUG({
@@ -1711,16 +1745,18 @@ void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
                              << "'(in region of '" << parentOp->getName()
                              << "'(" << from.getOwner()->getParentOp() << ")\n";
   });
-  impl->appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from);
+  impl->appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from,
+                                              impl->currentTypeConverter);
   impl->mapping.map(impl->mapping.lookupOrDefault(from), to);
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
-  SmallVector<Value> remappedValues;
+  SmallVector<SmallVector<Value>> remappedValues;
   if (failed(impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, key,
                                remappedValues)))
     return nullptr;
-  return remappedValues.front();
+  assert(remappedValues.front().size() == 1 && "1:N conversion not supported");
+  return remappedValues.front().front();
 }
 
 LogicalResult
@@ -1728,8 +1764,15 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
                                              SmallVectorImpl<Value> &results) {
   if (keys.empty())
     return success();
-  return impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, keys,
-                           results);
+  SmallVector<SmallVector<Value>> remapped;
+  if (failed(impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, keys,
+                               remapped)))
+    return failure();
+  for (const auto &values : remapped) {
+    assert(values.size() == 1 && "1:N conversion not supported");
+    results.push_back(values.front());
+  }
+  return success();
 }
 
 void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
@@ -1823,6 +1866,19 @@ detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
 // ConversionPattern
 //===----------------------------------------------------------------------===//
 
+SmallVector<Value> ConversionPattern::getOneToOneAdaptorOperands(
+    ArrayRef<ValueRange> operands) const {
+  SmallVector<Value> oneToOneOperands;
+  oneToOneOperands.reserve(operands.size());
+  for (ValueRange operand : operands) {
+    if (operand.size() != 1)
+      llvm::report_fatal_error("pattern '" + getDebugName() +
+                               "' does not support 1:N conversion");
+    oneToOneOperands.push_back(operand.front());
+  }
+  return oneToOneOperands;
+}
+
 LogicalResult
 ConversionPattern::matchAndRewrite(Operation *op,
                                    PatternRewriter &rewriter) const {
@@ -1834,12 +1890,14 @@ ConversionPattern::matchAndRewrite(Operation *op,
                                              getTypeConverter());
 
   // Remap the operands of the operation.
-  SmallVector<Value, 4> operands;
+  SmallVector<SmallVector<Value>> remapped;
   if (failed(rewriterImpl.remapValues("operand", op->getLoc(), rewriter,
-                                      op->getOperands(), operands))) {
+                                      op->getOperands(), remapped))) {
     return failure();
   }
-  return matchAndRewrite(op, operands, dialectRewriter);
+  SmallVector<ValueRange> remappedAsRange =
+      llvm::to_vector_of<ValueRange>(remapped);
+  return matchAndRewrite(op, remappedAsRange, dialectRewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2231,11 +2289,14 @@ LogicalResult OperationLegalizer::legalizePatternBlockRewrites(
     // If the region of the block has a type converter, try to convert the block
     // directly.
     if (auto *converter = impl.regionToConverter.lookup(block->getParent())) {
-      if (failed(impl.convertBlockSignature(rewriter, block, converter))) {
+      std::optional<TypeConverter::SignatureConversion> conversion =
+          converter->convertBlockSignature(block);
+      if (!conversion) {
         LLVM_DEBUG(logFailure(impl.logger, "failed to convert types of moved "
                                            "block"));
         return failure();
       }
+      impl.applySignatureConversion(rewriter, block, converter, *conversion);
       continue;
     }
 
@@ -2528,34 +2589,6 @@ private:
   /// Converts an operation with the given rewriter.
   LogicalResult convert(ConversionPatternRewriter &rewriter, Operation *op);
 
-  /// This method is called after the conversion process to legalize any
-  /// remaining artifacts and complete the conversion.
-  LogicalResult finalize(ConversionPatternRewriter &rewriter);
-
-  /// Legalize the types of converted block arguments.
-  LogicalResult
-  legalizeConvertedArgumentTypes(ConversionPatternRewriter &rewriter,
-                                 ConversionPatternRewriterImpl &rewriterImpl);
-
-  /// Legalize any unresolved type materializations.
-  LogicalResult legalizeUnresolvedMaterializations(
-      ConversionPatternRewriter &rewriter,
-      ConversionPatternRewriterImpl &rewriterImpl,
-      std::optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping);
-
-  /// Legalize an operation result that was marked as "erased".
-  LogicalResult
-  legalizeErasedResult(Operation *op, OpResult result,
-                       ConversionPatternRewriterImpl &rewriterImpl);
-
-  /// Legalize an operation result that was replaced with a value of a different
-  /// type.
-  LogicalResult legalizeChangedResultType(
-      Operation *op, OpResult result, Value newValue,
-      const TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
-      ConversionPatternRewriterImpl &rewriterImpl,
-      const DenseMap<Value, SmallVector<Value>> &inverseMapping);
-
   /// Dialect conversion configuration.
   ConversionConfig config;
 
@@ -2597,6 +2630,67 @@ LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
   return success();
 }
 
+static LogicalResult
+legalizeUnresolvedMaterialization(RewriterBase &rewriter,
+                                  UnresolvedMaterializationRewrite *rewrite) {
+  UnrealizedConversionCastOp op = rewrite->getOperation();
+  assert(!op.use_empty() &&
+         "expected that dead materializations have already been DCE'd");
+  Operation::operand_range inputOperands = op.getOperands();
+
+  // Try to materialize the conversion.
+  if (const TypeConverter *converter = rewrite->getConverter()) {
+    rewriter.setInsertionPoint(op);
+    SmallVector<Value> newMaterialization;
+    switch (rewrite->getMaterializationKind()) {
+    case MaterializationKind::Argument: {
+      // Try to materialize an argument conversion.
+      assert(op->getNumResults() == 1 && "expected single result");
+      Value argMat = converter->materializeArgumentConversion(
+          rewriter, op->getLoc(), op.getResultTypes().front(), inputOperands);
+      if (argMat) {
+        newMaterialization.push_back(argMat);
+        break;
+      }
+    }
+      // If an argument materialization failed, fallback to trying a target
+      // materialization.
+      [[fallthrough]];
+    case MaterializationKind::Target:
+      newMaterialization = converter->materializeTargetConversion(
+          rewriter, op->getLoc(), op.getResultTypes(), inputOperands,
+          rewrite->getOriginalType());
+      break;
+    case MaterializationKind::Source:
+      assert(op->getNumResults() == 1 && "expected single result");
+      Value sourceMat = converter->materializeSourceConversion(
+          rewriter, op->getLoc(), op.getResultTypes().front(), inputOperands);
+      if (sourceMat)
+        newMaterialization.push_back(sourceMat);
+      break;
+    }
+    if (!newMaterialization.empty()) {
+#ifndef NDEBUG
+      ValueRange newMaterializationRange(newMaterialization);
+      assert(TypeRange(newMaterializationRange) == op.getResultTypes() &&
+             "materialization callback produced value of incorrect type");
+#endif // NDEBUG
+      rewriter.replaceOp(op, newMaterialization);
+      return success();
+    }
+  }
+
+  InFlightDiagnostic diag = op->emitError()
+                            << "failed to legalize unresolved materialization "
+                               "from ("
+                            << inputOperands.getTypes() << ") to ("
+                            << op.getResultTypes()
+                            << ") that remained live after conversion";
+  diag.attachNote(op->getUsers().begin()->getLoc())
+      << "see existing live user here: " << *op->getUsers().begin();
+  return failure();
+}
+
 LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   if (ops.empty())
     return success();
@@ -2625,457 +2719,111 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
     if (failed(convert(rewriter, op)))
       return rewriterImpl.undoRewrites(), failure();
 
-  // Now that all of the operations have been converted, finalize the conversion
-  // process to ensure any lingering conversion artifacts are cleaned up and
-  // legalized.
-  if (failed(finalize(rewriter)))
-    return rewriterImpl.undoRewrites(), failure();
+  // After a successful conversion, apply rewrites.
+  rewriterImpl.applyRewrites();
 
-  // After a successful conversion, apply rewrites if this is not an analysis
-  // conversion.
-  if (mode == OpConversionMode::Analysis) {
-    rewriterImpl.undoRewrites();
-  } else {
-    rewriterImpl.applyRewrites();
-  }
-  return success();
-}
-
-LogicalResult
-OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
-  std::optional<DenseMap<Value, SmallVector<Value>>> inverseMapping;
-  ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
-  if (failed(legalizeUnresolvedMaterializations(rewriter, rewriterImpl,
-                                                inverseMapping)) ||
-      failed(legalizeConvertedArgumentTypes(rewriter, rewriterImpl)))
-    return failure();
-
-  // Process requested operation replacements.
-  for (unsigned i = 0; i < rewriterImpl.rewrites.size(); ++i) {
-    auto *opReplacement =
-        dyn_cast<ReplaceOperationRewrite>(rewriterImpl.rewrites[i].get());
-    if (!opReplacement || !opReplacement->hasChangedResults())
+  // Gather all unresolved materializations.
+  SmallVector<UnrealizedConversionCastOp> allCastOps;
+  const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationRewrite *>
+      &materializations = rewriterImpl.unresolvedMaterializations;
+  for (auto it : materializations) {
+    if (rewriterImpl.eraseRewriter.wasErased(it.first))
       continue;
-    Operation *op = opReplacement->getOperation();
-    for (OpResult result : op->getResults()) {
-      Value newValue = rewriterImpl.mapping.lookupOrNull(result);
+    allCastOps.push_back(it.first);
+  }
 
-      // If the operation result was replaced with null, all of the uses of this
-      // value should be replaced.
-      if (!newValue) {
-        if (failed(legalizeErasedResult(op, result, rewriterImpl)))
-          return failure();
-        continue;
-      }
+  // Reconcile all UnrealizedConversionCastOps that were inserted by the
+  // dialect conversion frameworks. (Not the one that were inserted by
+  // patterns.)
+  SmallVector<UnrealizedConversionCastOp> remainingCastOps;
+  reconcileUnrealizedCasts(allCastOps, &remainingCastOps);
 
-      // Otherwise, check to see if the type of the result changed.
-      if (result.getType() == newValue.getType())
-        continue;
-
-      // Compute the inverse mapping only if it is really needed.
-      if (!inverseMapping)
-        inverseMapping = rewriterImpl.mapping.getInverse();
-
-      // Legalize this result.
-      rewriter.setInsertionPoint(op);
-      if (failed(legalizeChangedResultType(
-              op, result, newValue, opReplacement->getConverter(), rewriter,
-              rewriterImpl, *inverseMapping)))
+  // Try to legalize all unresolved materializations.
+  if (config.buildMaterializations) {
+    IRRewriter rewriter(rewriterImpl.context, config.listener);
+    for (UnrealizedConversionCastOp castOp : remainingCastOps) {
+      auto it = materializations.find(castOp);
+      assert(it != materializations.end() && "inconsistent state");
+      if (failed(legalizeUnresolvedMaterialization(rewriter, it->second)))
         return failure();
     }
   }
+
   return success();
 }
 
-LogicalResult OperationConverter::legalizeConvertedArgumentTypes(
-    ConversionPatternRewriter &rewriter,
-    ConversionPatternRewriterImpl &rewriterImpl) {
-  // Functor used to check if all users of a value will be dead after
-  // conversion.
-  auto findLiveUser = [&](Value val) {
-    auto liveUserIt = llvm::find_if_not(val.getUsers(), [&](Operation *user) {
-      return rewriterImpl.isOpIgnored(user);
-    });
-    return liveUserIt == val.user_end() ? nullptr : *liveUserIt;
-  };
-  // Note: `rewrites` may be reallocated as the loop is running.
-  for (int64_t i = 0; i < static_cast<int64_t>(rewriterImpl.rewrites.size());
-       ++i) {
-    auto &rewrite = rewriterImpl.rewrites[i];
-    if (auto *blockTypeConversionRewrite =
-            dyn_cast<BlockTypeConversionRewrite>(rewrite.get()))
-      if (failed(blockTypeConversionRewrite->materializeLiveConversions(
-              findLiveUser)))
-        return failure();
-  }
-  return success();
-}
+//===----------------------------------------------------------------------===//
+// Reconcile Unrealized Casts
+//===----------------------------------------------------------------------===//
 
-/// Replace the results of a materialization operation with the given values.
-static void
-replaceMaterialization(ConversionPatternRewriterImpl &rewriterImpl,
-                       ResultRange matResults, ValueRange values,
-                       DenseMap<Value, SmallVector<Value>> &inverseMapping) {
-  matResults.replaceAllUsesWith(values);
+void mlir::reconcileUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  SetVector<UnrealizedConversionCastOp> worklist(castOps.begin(),
+                                                 castOps.end());
+  // This set is maintained only if `remainingCastOps` is provided.
+  DenseSet<Operation *> erasedOps;
 
-  // For each of the materialization results, update the inverse mappings to
-  // point to the replacement values.
-  for (auto [matResult, newValue] : llvm::zip(matResults, values)) {
-    auto inverseMapIt = inverseMapping.find(matResult);
-    if (inverseMapIt == inverseMapping.end())
-      continue;
-
-    // Update the reverse mapping, or remove the mapping if we couldn't update
-    // it. Not being able to update signals that the mapping would have become
-    // circular (i.e. %foo -> newValue -> %foo), which may occur as values are
-    // propagated through temporary materializations. We simply drop the
-    // mapping, and let the post-conversion replacement logic handle updating
-    // uses.
-    for (Value inverseMapVal : inverseMapIt->second)
-      if (!rewriterImpl.mapping.tryMap(inverseMapVal, newValue))
-        rewriterImpl.mapping.erase(inverseMapVal);
-  }
-}
-
-/// Compute all of the unresolved materializations that will persist beyond the
-/// conversion process, and require inserting a proper user materialization for.
-static void computeNecessaryMaterializations(
-    DenseMap<Operation *, UnresolvedMaterializationRewrite *>
-        &materializationOps,
-    ConversionPatternRewriter &rewriter,
-    ConversionPatternRewriterImpl &rewriterImpl,
-    DenseMap<Value, SmallVector<Value>> &inverseMapping,
-    SetVector<UnresolvedMaterializationRewrite *> &necessaryMaterializations) {
-  auto isLive = [&](Value value) {
-    auto findFn = [&](Operation *user) {
-      auto matIt = materializationOps.find(user);
-      if (matIt != materializationOps.end())
-        return !necessaryMaterializations.count(matIt->second);
-      return rewriterImpl.isOpIgnored(user);
-    };
-    // This value may be replacing another value that has a live user.
-    for (Value inv : inverseMapping.lookup(value))
-      if (llvm::find_if_not(inv.getUsers(), findFn) != inv.user_end())
-        return true;
-    // Or have live users itself.
-    return llvm::find_if_not(value.getUsers(), findFn) != value.user_end();
+  // Helper function that adds all operands to the worklist that are an
+  // unrealized_conversion_cast op result.
+  auto enqueueOperands = [&](UnrealizedConversionCastOp castOp) {
+    for (Value v : castOp.getInputs())
+      if (auto inputCastOp = v.getDefiningOp<UnrealizedConversionCastOp>())
+        worklist.insert(inputCastOp);
   };
 
-  llvm::unique_function<Value(Value, Value, Type)> lookupRemappedValue =
-      [&](Value invalidRoot, Value value, Type type) {
-        // Check to see if the input operation was remapped to a variant of the
-        // output.
-        Value remappedValue = rewriterImpl.mapping.lookupOrDefault(value, type);
-        if (remappedValue.getType() == type && remappedValue != invalidRoot)
-          return remappedValue;
+  // Helper function that return the unrealized_conversion_cast op that
+  // defines all inputs of the given op (in the same order). Return "nullptr"
+  // if there is no such op.
+  auto getInputCast =
+      [](UnrealizedConversionCastOp castOp) -> UnrealizedConversionCastOp {
+    if (castOp.getInputs().empty())
+      return {};
+    auto inputCastOp =
+        castOp.getInputs().front().getDefiningOp<UnrealizedConversionCastOp>();
+    if (!inputCastOp)
+      return {};
+    if (inputCastOp.getOutputs() != castOp.getInputs())
+      return {};
+    return inputCastOp;
+  };
 
-        // Check to see if the input is a materialization operation that
-        // provides an inverse conversion. We just check blindly for
-        // UnrealizedConversionCastOp here, but it has no effect on correctness.
-        auto inputCastOp = value.getDefiningOp<UnrealizedConversionCastOp>();
-        if (inputCastOp && inputCastOp->getNumOperands() == 1)
-          return lookupRemappedValue(invalidRoot, inputCastOp->getOperand(0),
-                                     type);
-
-        return Value();
-      };
-
-  SetVector<UnresolvedMaterializationRewrite *> worklist;
-  for (auto &rewrite : rewriterImpl.rewrites) {
-    auto *mat = dyn_cast<UnresolvedMaterializationRewrite>(rewrite.get());
-    if (!mat)
-      continue;
-    materializationOps.try_emplace(mat->getOperation(), mat);
-    worklist.insert(mat);
-  }
+  // Process ops in the worklist bottom-to-top.
   while (!worklist.empty()) {
-    UnresolvedMaterializationRewrite *mat = worklist.pop_back_val();
-    UnrealizedConversionCastOp op = mat->getOperation();
-
-    // We currently only handle target materializations here.
-    assert(op->getNumResults() == 1 && "unexpected materialization type");
-    OpResult opResult = op->getOpResult(0);
-    Type outputType = opResult.getType();
-    Operation::operand_range inputOperands = op.getOperands();
-
-    // Try to forward propagate operands for user conversion casts that result
-    // in the input types of the current cast.
-    for (Operation *user : llvm::make_early_inc_range(opResult.getUsers())) {
-      auto castOp = dyn_cast<UnrealizedConversionCastOp>(user);
-      if (!castOp)
-        continue;
-      if (castOp->getResultTypes() == inputOperands.getTypes()) {
-        replaceMaterialization(rewriterImpl, opResult, inputOperands,
-                               inverseMapping);
-        necessaryMaterializations.remove(materializationOps.lookup(user));
-      }
-    }
-
-    // Try to avoid materializing a resolved materialization if possible.
-    // Handle the case of a 1-1 materialization.
-    if (inputOperands.size() == 1) {
-      // Check to see if the input operation was remapped to a variant of the
-      // output.
-      Value remappedValue =
-          lookupRemappedValue(opResult, inputOperands[0], outputType);
-      if (remappedValue && remappedValue != opResult) {
-        replaceMaterialization(rewriterImpl, opResult, remappedValue,
-                               inverseMapping);
-        necessaryMaterializations.remove(mat);
-        continue;
-      }
-    } else {
-      // TODO: Avoid materializing other types of conversions here.
-    }
-
-    // Check to see if this is an argument materialization.
-    if (llvm::any_of(op->getOperands(), llvm::IsaPred<BlockArgument>) ||
-        llvm::any_of(inverseMapping[op->getResult(0)],
-                     llvm::IsaPred<BlockArgument>)) {
-      mat->setMaterializationKind(MaterializationKind::Argument);
-    }
-
-    // If the materialization does not have any live users, we don't need to
-    // generate a user materialization for it.
-    // FIXME: For argument materializations, we currently need to check if any
-    // of the inverse mapped values are used because some patterns expect blind
-    // value replacement even if the types differ in some cases. When those
-    // patterns are fixed, we can drop the argument special case here.
-    bool isMaterializationLive = isLive(opResult);
-    if (mat->getMaterializationKind() == MaterializationKind::Argument)
-      isMaterializationLive |= llvm::any_of(inverseMapping[opResult], isLive);
-    if (!isMaterializationLive)
+    UnrealizedConversionCastOp castOp = worklist.pop_back_val();
+    if (castOp->use_empty()) {
+      // DCE: If the op has no users, erase it. Add the operands to the
+      // worklist to find additional DCE opportunities.
+      enqueueOperands(castOp);
+      if (remainingCastOps)
+        erasedOps.insert(castOp.getOperation());
+      castOp->erase();
       continue;
-    if (!necessaryMaterializations.insert(mat))
-      continue;
-
-    // Reprocess input materializations to see if they have an updated status.
-    for (Value input : inputOperands) {
-      if (auto parentOp = input.getDefiningOp<UnrealizedConversionCastOp>()) {
-        if (auto *mat = materializationOps.lookup(parentOp))
-          worklist.insert(mat);
-      }
     }
-  }
-}
 
-/// Legalize the given unresolved materialization. Returns success if the
-/// materialization was legalized, failure otherise.
-static LogicalResult legalizeUnresolvedMaterialization(
-    UnresolvedMaterializationRewrite &mat,
-    DenseMap<Operation *, UnresolvedMaterializationRewrite *>
-        &materializationOps,
-    ConversionPatternRewriter &rewriter,
-    ConversionPatternRewriterImpl &rewriterImpl,
-    DenseMap<Value, SmallVector<Value>> &inverseMapping) {
-  auto findLiveUser = [&](auto &&users) {
-    auto liveUserIt = llvm::find_if_not(
-        users, [&](Operation *user) { return rewriterImpl.isOpIgnored(user); });
-    return liveUserIt == users.end() ? nullptr : *liveUserIt;
-  };
-
-  llvm::unique_function<Value(Value, Type)> lookupRemappedValue =
-      [&](Value value, Type type) {
-        // Check to see if the input operation was remapped to a variant of the
-        // output.
-        Value remappedValue = rewriterImpl.mapping.lookupOrDefault(value, type);
-        if (remappedValue.getType() == type)
-          return remappedValue;
-        return Value();
-      };
-
-  UnrealizedConversionCastOp op = mat.getOperation();
-  if (!rewriterImpl.ignoredOps.insert(op))
-    return success();
-
-  // We currently only handle target materializations here.
-  OpResult opResult = op->getOpResult(0);
-  Operation::operand_range inputOperands = op.getOperands();
-  Type outputType = opResult.getType();
-
-  // If any input to this materialization is another materialization, resolve
-  // the input first.
-  for (Value value : op->getOperands()) {
-    auto valueCast = value.getDefiningOp<UnrealizedConversionCastOp>();
-    if (!valueCast)
-      continue;
-
-    auto matIt = materializationOps.find(valueCast);
-    if (matIt != materializationOps.end())
-      if (failed(legalizeUnresolvedMaterialization(
-              *matIt->second, materializationOps, rewriter, rewriterImpl,
-              inverseMapping)))
-        return failure();
-  }
-
-  // Perform a last ditch attempt to avoid materializing a resolved
-  // materialization if possible.
-  // Handle the case of a 1-1 materialization.
-  if (inputOperands.size() == 1) {
-    // Check to see if the input operation was remapped to a variant of the
-    // output.
-    Value remappedValue = lookupRemappedValue(inputOperands[0], outputType);
-    if (remappedValue && remappedValue != opResult) {
-      replaceMaterialization(rewriterImpl, opResult, remappedValue,
-                             inverseMapping);
-      return success();
-    }
-  } else {
-    // TODO: Avoid materializing other types of conversions here.
-  }
-
-  // Try to materialize the conversion.
-  if (const TypeConverter *converter = mat.getConverter()) {
-    // FIXME: Determine a suitable insertion location when there are multiple
-    // inputs.
-    if (inputOperands.size() == 1)
-      rewriter.setInsertionPointAfterValue(inputOperands.front());
-    else
-      rewriter.setInsertionPoint(op);
-
-    Value newMaterialization;
-    switch (mat.getMaterializationKind()) {
-    case MaterializationKind::Argument:
-      // Try to materialize an argument conversion.
-      // FIXME: The current argument materialization hook expects the original
-      // output type, even though it doesn't use that as the actual output type
-      // of the generated IR. The output type is just used as an indicator of
-      // the type of materialization to do. This behavior is really awkward in
-      // that it diverges from the behavior of the other hooks, and can be
-      // easily misunderstood. We should clean up the argument hooks to better
-      // represent the desired invariants we actually care about.
-      newMaterialization = converter->materializeArgumentConversion(
-          rewriter, op->getLoc(), mat.getOrigOutputType(), inputOperands);
-      if (newMaterialization)
+    // Traverse the chain of input cast ops to see if an op with the same
+    // input types can be found.
+    UnrealizedConversionCastOp nextCast = castOp;
+    while (nextCast) {
+      if (nextCast.getInputs().getTypes() == castOp.getResultTypes()) {
+        // Found a cast where the input types match the output types of the
+        // matched op. We can directly use those inputs and the matched op can
+        // be removed.
+        enqueueOperands(castOp);
+        castOp.replaceAllUsesWith(nextCast.getInputs());
+        if (remainingCastOps)
+          erasedOps.insert(castOp.getOperation());
+        castOp->erase();
         break;
-
-      // If an argument materialization failed, fallback to trying a target
-      // materialization.
-      [[fallthrough]];
-    case MaterializationKind::Target:
-      newMaterialization = converter->materializeTargetConversion(
-          rewriter, op->getLoc(), outputType, inputOperands);
-      break;
-    }
-    if (newMaterialization) {
-      replaceMaterialization(rewriterImpl, opResult, newMaterialization,
-                             inverseMapping);
-      return success();
+      }
+      nextCast = getInputCast(nextCast);
     }
   }
 
-  InFlightDiagnostic diag = op->emitError()
-                            << "failed to legalize unresolved materialization "
-                               "from "
-                            << inputOperands.getTypes() << " to " << outputType
-                            << " that remained live after conversion";
-  if (Operation *liveUser = findLiveUser(op->getUsers())) {
-    diag.attachNote(liveUser->getLoc())
-        << "see existing live user here: " << *liveUser;
-  }
-  return failure();
-}
-
-LogicalResult OperationConverter::legalizeUnresolvedMaterializations(
-    ConversionPatternRewriter &rewriter,
-    ConversionPatternRewriterImpl &rewriterImpl,
-    std::optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping) {
-  inverseMapping = rewriterImpl.mapping.getInverse();
-
-  // As an initial step, compute all of the inserted materializations that we
-  // expect to persist beyond the conversion process.
-  DenseMap<Operation *, UnresolvedMaterializationRewrite *> materializationOps;
-  SetVector<UnresolvedMaterializationRewrite *> necessaryMaterializations;
-  computeNecessaryMaterializations(materializationOps, rewriter, rewriterImpl,
-                                   *inverseMapping, necessaryMaterializations);
-
-  // Once computed, legalize any necessary materializations.
-  for (auto *mat : necessaryMaterializations) {
-    if (failed(legalizeUnresolvedMaterialization(
-            *mat, materializationOps, rewriter, rewriterImpl, *inverseMapping)))
-      return failure();
-  }
-  return success();
-}
-
-LogicalResult OperationConverter::legalizeErasedResult(
-    Operation *op, OpResult result,
-    ConversionPatternRewriterImpl &rewriterImpl) {
-  // If the operation result was replaced with null, all of the uses of this
-  // value should be replaced.
-  auto liveUserIt = llvm::find_if_not(result.getUsers(), [&](Operation *user) {
-    return rewriterImpl.isOpIgnored(user);
-  });
-  if (liveUserIt != result.user_end()) {
-    InFlightDiagnostic diag = op->emitError("failed to legalize operation '")
-                              << op->getName() << "' marked as erased";
-    diag.attachNote(liveUserIt->getLoc())
-        << "found live user of result #" << result.getResultNumber() << ": "
-        << *liveUserIt;
-    return failure();
-  }
-  return success();
-}
-
-/// Finds a user of the given value, or of any other value that the given value
-/// replaced, that was not replaced in the conversion process.
-static Operation *findLiveUserOfReplaced(
-    Value initialValue, ConversionPatternRewriterImpl &rewriterImpl,
-    const DenseMap<Value, SmallVector<Value>> &inverseMapping) {
-  SmallVector<Value> worklist(1, initialValue);
-  while (!worklist.empty()) {
-    Value value = worklist.pop_back_val();
-
-    // Walk the users of this value to see if there are any live users that
-    // weren't replaced during conversion.
-    auto liveUserIt = llvm::find_if_not(value.getUsers(), [&](Operation *user) {
-      return rewriterImpl.isOpIgnored(user);
-    });
-    if (liveUserIt != value.user_end())
-      return *liveUserIt;
-    auto mapIt = inverseMapping.find(value);
-    if (mapIt != inverseMapping.end())
-      worklist.append(mapIt->second);
-  }
-  return nullptr;
-}
-
-LogicalResult OperationConverter::legalizeChangedResultType(
-    Operation *op, OpResult result, Value newValue,
-    const TypeConverter *replConverter, ConversionPatternRewriter &rewriter,
-    ConversionPatternRewriterImpl &rewriterImpl,
-    const DenseMap<Value, SmallVector<Value>> &inverseMapping) {
-  Operation *liveUser =
-      findLiveUserOfReplaced(result, rewriterImpl, inverseMapping);
-  if (!liveUser)
-    return success();
-
-  // Functor used to emit a conversion error for a failed materialization.
-  auto emitConversionError = [&] {
-    InFlightDiagnostic diag = op->emitError()
-                              << "failed to materialize conversion for result #"
-                              << result.getResultNumber() << " of operation '"
-                              << op->getName()
-                              << "' that remained live after conversion";
-    diag.attachNote(liveUser->getLoc())
-        << "see existing live user here: " << *liveUser;
-    return failure();
-  };
-
-  // If the replacement has a type converter, attempt to materialize a
-  // conversion back to the original type.
-  if (!replConverter)
-    return emitConversionError();
-
-  // Materialize a conversion for this live result value.
-  Type resultType = result.getType();
-  Value convertedValue = replConverter->materializeSourceConversion(
-      rewriter, op->getLoc(), resultType, newValue);
-  if (!convertedValue)
-    return emitConversionError();
-
-  rewriterImpl.mapping.map(result, convertedValue);
-  return success();
+  if (remainingCastOps)
+    for (UnrealizedConversionCastOp op : castOps)
+      if (!erasedOps.contains(op.getOperation()))
+        remainingCastOps->push_back(op);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3218,13 +2966,54 @@ TypeConverter::convertSignatureArgs(TypeRange types,
   return success();
 }
 
-Value TypeConverter::materializeConversion(
-    ArrayRef<MaterializationCallbackFn> materializations, OpBuilder &builder,
-    Location loc, Type resultType, ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn : llvm::reverse(materializations))
-    if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
-      return *result;
+Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
+                                                   Location loc,
+                                                   Type resultType,
+                                                   ValueRange inputs) const {
+  for (const MaterializationCallbackFn &fn :
+       llvm::reverse(argumentMaterializations))
+    if (Value result = fn(builder, resultType, inputs, loc))
+      return result;
   return nullptr;
+}
+
+Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
+                                                 Location loc, Type resultType,
+                                                 ValueRange inputs) const {
+  for (const MaterializationCallbackFn &fn :
+       llvm::reverse(sourceMaterializations))
+    if (Value result = fn(builder, resultType, inputs, loc))
+      return result;
+  return nullptr;
+}
+
+Value TypeConverter::materializeTargetConversion(OpBuilder &builder,
+                                                 Location loc, Type resultType,
+                                                 ValueRange inputs,
+                                                 Type originalType) const {
+  SmallVector<Value> result = materializeTargetConversion(
+      builder, loc, TypeRange(resultType), inputs, originalType);
+  if (result.empty())
+    return nullptr;
+  assert(result.size() == 1 && "expected single result");
+  return result.front();
+}
+
+SmallVector<Value> TypeConverter::materializeTargetConversion(
+    OpBuilder &builder, Location loc, TypeRange resultTypes, ValueRange inputs,
+    Type originalType) const {
+  for (const TargetMaterializationCallbackFn &fn :
+       llvm::reverse(targetMaterializations)) {
+    SmallVector<Value> result =
+        fn(builder, resultTypes, inputs, loc, originalType);
+    if (result.empty())
+      continue;
+    assert(TypeRange(ValueRange(result)) == resultTypes &&
+           "callback produced incorrect number of values or values with "
+           "incorrect types");
+    return result;
+  }
+  return {};
 }
 
 std::optional<TypeConverter::SignatureConversion>
@@ -3641,13 +3430,78 @@ LogicalResult mlir::applyFullConversion(Operation *op,
 //===----------------------------------------------------------------------===//
 // Analysis Conversion
 
+/// Find a common IsolatedFromAbove ancestor of the given ops. If at least one
+/// op is a top-level module op (which is expected to be isolated from above),
+/// return that op.
+static Operation *findCommonAncestor(ArrayRef<Operation *> ops) {
+  // Check if there is a top-level operation within `ops`. If so, return that
+  // op.
+  for (Operation *op : ops) {
+    if (!op->getParentOp()) {
+#ifndef NDEBUG
+      assert(op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+             "expected top-level op to be isolated from above");
+      for (Operation *other : ops)
+        assert(op->isAncestor(other) &&
+               "expected ops to have a common ancestor");
+#endif // NDEBUG
+      return op;
+    }
+  }
+
+  // No top-level op. Find a common ancestor.
+  Operation *commonAncestor =
+      ops.front()->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
+  for (Operation *op : ops.drop_front()) {
+    while (!commonAncestor->isProperAncestor(op)) {
+      commonAncestor =
+          commonAncestor->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
+      assert(commonAncestor &&
+             "expected to find a common isolated from above ancestor");
+    }
+  }
+
+  return commonAncestor;
+}
+
 LogicalResult mlir::applyAnalysisConversion(
     ArrayRef<Operation *> ops, ConversionTarget &target,
     const FrozenRewritePatternSet &patterns, ConversionConfig config) {
+#ifndef NDEBUG
+  if (config.legalizableOps)
+    assert(config.legalizableOps->empty() && "expected empty set");
+#endif // NDEBUG
+
+  // Clone closted common ancestor that is isolated from above.
+  Operation *commonAncestor = findCommonAncestor(ops);
+  IRMapping mapping;
+  Operation *clonedAncestor = commonAncestor->clone(mapping);
+  // Compute inverse IR mapping.
+  DenseMap<Operation *, Operation *> inverseOperationMap;
+  for (auto &it : mapping.getOperationMap())
+    inverseOperationMap[it.second] = it.first;
+
+  // Convert the cloned operations. The original IR will remain unchanged.
+  SmallVector<Operation *> opsToConvert = llvm::map_to_vector(
+      ops, [&](Operation *op) { return mapping.lookup(op); });
   OperationConverter opConverter(target, patterns, config,
                                  OpConversionMode::Analysis);
-  return opConverter.convertOperations(ops);
+  LogicalResult status = opConverter.convertOperations(opsToConvert);
+
+  // Remap `legalizableOps`, so that they point to the original ops and not the
+  // cloned ops.
+  if (config.legalizableOps) {
+    DenseSet<Operation *> originalLegalizableOps;
+    for (Operation *op : *config.legalizableOps)
+      originalLegalizableOps.insert(inverseOperationMap[op]);
+    *config.legalizableOps = std::move(originalLegalizableOps);
+  }
+
+  // Erase the cloned IR.
+  clonedAncestor->erase();
+  return status;
 }
+
 LogicalResult
 mlir::applyAnalysisConversion(Operation *op, ConversionTarget &target,
                               const FrozenRewritePatternSet &patterns,

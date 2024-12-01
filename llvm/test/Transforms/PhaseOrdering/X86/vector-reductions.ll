@@ -168,7 +168,7 @@ define i32 @TestVectorsEqualFP(ptr noalias %Vec0, ptr noalias %Vec1, float %Tole
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[VEC1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <4 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = fcmp fast ole float [[TMP4]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND5:%.*]] = zext i1 [[CMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[COND5]]
@@ -225,7 +225,7 @@ define i32 @TestVectorsEqualFP_alt(ptr noalias %Vec0, ptr noalias %Vec1, float %
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[VEC0:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[VEC1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast ole float [[TMP3]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
@@ -280,11 +280,11 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], splat (double 0x3EB0C6F7A0B5ED8D)
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i1> [[TMP8]], [[SHIFT]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <2 x i1> [[TMP10]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP10]], [[SHIFT2]]
 ; CHECK-NEXT:    [[OR_COND1_NOT:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0

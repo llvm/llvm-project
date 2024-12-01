@@ -171,13 +171,15 @@ class DebugCommunication(object):
         self.output_condition.release()
         return output
 
-    def collect_output(self, category, duration, clear=True):
-        end_time = time.time() + duration
+    def collect_output(self, category, timeout_secs, pattern, clear=True):
+        end_time = time.time() + timeout_secs
         collected_output = ""
         while end_time > time.time():
             output = self.get_output(category, timeout=0.25, clear=clear)
             if output:
                 collected_output += output
+                if pattern is not None and pattern in output:
+                    break
         return collected_output if collected_output else None
 
     def enqueue_recv_packet(self, packet):
@@ -572,6 +574,8 @@ class DebugCommunication(object):
         coreFile=None,
         postRunCommands=None,
         sourceMap=None,
+        gdbRemotePort=None,
+        gdbRemoteHostname=None,
     ):
         args_dict = {}
         if pid is not None:
@@ -601,6 +605,10 @@ class DebugCommunication(object):
             args_dict["postRunCommands"] = postRunCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
+        if gdbRemotePort is not None:
+            args_dict["gdb-remote-port"] = gdbRemotePort
+        if gdbRemoteHostname is not None:
+            args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
@@ -683,6 +691,19 @@ class DebugCommunication(object):
         for inst in instructions:
             self.disassembled_instructions[inst["address"]] = inst
 
+    def request_readMemory(self, memoryReference, offset, count):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "offset": offset,
+            "count": count,
+        }
+        command_dict = {
+            "command": "readMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
@@ -694,6 +715,17 @@ class DebugCommunication(object):
         }
         command_dict = {
             "command": "evaluate",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
+    def request_exceptionInfo(self, threadId=None):
+        if threadId is None:
+            threadId = self.get_thread_id()
+        args_dict = {"threadId": threadId}
+        command_dict = {
+            "command": "exceptionInfo",
             "type": "request",
             "arguments": args_dict,
         }
@@ -746,6 +778,7 @@ class DebugCommunication(object):
         runInTerminal=False,
         postRunCommands=None,
         enableAutoVariableSummaries=False,
+        displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -760,8 +793,6 @@ class DebugCommunication(object):
             args_dict["env"] = env
         if stopOnEntry:
             args_dict["stopOnEntry"] = stopOnEntry
-        if disableASLR:
-            args_dict["disableASLR"] = disableASLR
         if disableSTDIO:
             args_dict["disableSTDIO"] = disableSTDIO
         if shellExpandArguments:
@@ -796,8 +827,10 @@ class DebugCommunication(object):
         if customThreadFormat:
             args_dict["customThreadFormat"] = customThreadFormat
 
+        args_dict["disableASLR"] = disableASLR
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
+        args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
         args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
@@ -808,17 +841,21 @@ class DebugCommunication(object):
             self.wait_for_event(filter=["process", "initialized"])
         return response
 
-    def request_next(self, threadId):
+    def request_next(self, threadId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_continue called after process exited")
-        args_dict = {"threadId": threadId}
+        args_dict = {"threadId": threadId, "granularity": granularity}
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_stepIn(self, threadId, targetId):
+    def request_stepIn(self, threadId, targetId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_stepIn called after process exited")
-        args_dict = {"threadId": threadId, "targetId": targetId}
+        args_dict = {
+            "threadId": threadId,
+            "targetId": targetId,
+            "granularity": granularity,
+        }
         command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
@@ -968,7 +1005,7 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text)}
+        args_dict = {"text": text, "column": len(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {
@@ -1071,6 +1108,17 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_locations(self, locationReference):
+        args_dict = {
+            "locationReference": locationReference,
+        }
+        command_dict = {
+            "command": "locations",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_testGetTargetBreakpoints(self):
         """A request packet used in the LLDB test suite to get all currently
         set breakpoint infos for all breakpoints currently set in the
@@ -1087,6 +1135,20 @@ class DebugCommunication(object):
         self.send.close()
         # self.recv.close()
 
+    def request_setInstructionBreakpoints(self, memory_reference=[]):
+        breakpoints = []
+        for i in memory_reference:
+            args_dict = {
+                "instructionReference": i,
+            }
+            breakpoints.append(args_dict)
+        args_dict = {"breakpoints": breakpoints}
+        command_dict = {
+            "command": "setInstructionBreakpoints",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
 
 class DebugAdaptorServer(DebugCommunication):
     def __init__(
@@ -1204,7 +1266,7 @@ def run_vscode(dbg, args, options):
 def main():
     parser = optparse.OptionParser(
         description=(
-            "A testing framework for the Visual Studio Code Debug " "Adaptor protocol"
+            "A testing framework for the Visual Studio Code Debug Adaptor protocol"
         )
     )
 

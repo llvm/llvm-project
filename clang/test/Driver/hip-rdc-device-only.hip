@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
@@ -69,7 +66,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "a.cu"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx803"
 // COMMON-SAME: "-fgpu-rdc"
@@ -82,7 +79,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "a.cu"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx900"
 // COMMON-SAME: "-fgpu-rdc"
@@ -99,7 +96,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "b.hip"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx803"
 // COMMON-SAME: "-fgpu-rdc"
@@ -112,7 +109,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "b.hip"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx900"
 // COMMON-SAME: "-fgpu-rdc"

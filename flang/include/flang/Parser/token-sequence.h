@@ -79,6 +79,7 @@ public:
   }
 
   std::size_t SkipBlanks(std::size_t) const;
+  std::optional<std::size_t> SkipBlanksBackwards(std::size_t) const;
 
   // True if anything remains in the sequence at & after the given offset
   // except blanks and line-ending C++ and Fortran free-form comments.
@@ -124,7 +125,8 @@ public:
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
   TokenSequence &ClipComment(const Prescanner &, bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(
-      Messages &, const Prescanner &) const;
+      Messages &, const Prescanner &, bool allowAmpersand) const;
+  bool BadlyNestedParentheses() const;
   const TokenSequence &CheckBadParentheses(Messages &) const;
   void Emit(CookedSource &) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;

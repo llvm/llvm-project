@@ -24,7 +24,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "structcfg"
 
-#define DEFAULT_VEC_SLOTS 8
+enum { DEFAULT_VEC_SLOTS = 8 };
 
 // TODO: move-begin.
 
@@ -113,9 +113,9 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -138,11 +138,11 @@ public:
     OrderedBlks.clear();
     Visited.clear();
     FuncRep = &MF;
-    MLI = &getAnalysis<MachineLoopInfo>();
+    MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     LLVM_DEBUG(dbgs() << "LoopInfo:\n"; PrintLoopinfo(*MLI););
-    MDT = &getAnalysis<MachineDominatorTree>();
-    LLVM_DEBUG(MDT->print(dbgs(), (const Module *)nullptr););
-    PDT = &getAnalysis<MachinePostDominatorTree>();
+    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    LLVM_DEBUG(MDT->print(dbgs()););
+    PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     LLVM_DEBUG(PDT->print(dbgs()););
     prepare();
     run();
@@ -598,7 +598,7 @@ MachineInstr *R600MachineCFGStructurizer::getLoopendBlockBranchInstr(
     if (MI) {
       if (isCondBranch(MI) || isUncondBranch(MI))
         return MI;
-      else if (!TII->isMov(MI->getOpcode()))
+      if (!TII->isMov(MI->getOpcode()))
         break;
     }
   }
@@ -669,8 +669,8 @@ void R600MachineCFGStructurizer::wrapup(MachineBasicBlock *MBB) {
    }
 
    //delete continue right before endloop
-   for (unsigned i = 0; i < ContInstr.size(); ++i)
-      ContInstr[i]->eraseFromParent();
+   for (auto *MI : ContInstr)
+     MI->eraseFromParent();
 
    // TODO to fix up jump table so later phase won't be confused.  if
    // (jumpTableInfo->isEmpty() == false) { need to clean the jump table, but
@@ -1014,8 +1014,8 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
   MBBVector ExitBlks;
   LoopRep->getExitBlocks(ExitBlks);
   SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet;
-  for (unsigned i = 0, e = ExitBlks.size(); i < e; ++i)
-    ExitBlkSet.insert(ExitBlks[i]);
+  for (MachineBasicBlock *MBB : ExitBlks)
+    ExitBlkSet.insert(MBB);
   assert(ExitBlkSet.size() == 1);
   MachineBasicBlock *ExitBlk = *ExitBlks.begin();
   assert(ExitBlk && "Loop has several exit block");
@@ -1024,10 +1024,10 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
     if (LoopRep->contains(LB))
       LatchBlks.push_back(LB);
 
-  for (unsigned i = 0, e = ExitingMBBs.size(); i < e; ++i)
-    mergeLoopbreakBlock(ExitingMBBs[i], ExitBlk);
-  for (unsigned i = 0, e = LatchBlks.size(); i < e; ++i)
-    settleLoopcontBlock(LatchBlks[i], LoopHeader);
+  for (MachineBasicBlock *MBB : ExitingMBBs)
+    mergeLoopbreakBlock(MBB, ExitBlk);
+  for (MachineBasicBlock *MBB : LatchBlks)
+    settleLoopcontBlock(MBB, LoopHeader);
   int Match = 0;
   do {
     Match = 0;
@@ -1629,9 +1629,9 @@ void R600MachineCFGStructurizer::retireBlock(MachineBasicBlock *MBB) {
 
 INITIALIZE_PASS_BEGIN(R600MachineCFGStructurizer, "amdgpustructurizer",
                       "AMDGPU CFG Structurizer", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(R600MachineCFGStructurizer, "amdgpustructurizer",
                       "AMDGPU CFG Structurizer", false, false)
 

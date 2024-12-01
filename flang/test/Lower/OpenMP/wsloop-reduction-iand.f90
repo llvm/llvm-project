@@ -24,7 +24,7 @@
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[VAL_6]] to %[[VAL_4]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_7:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFreduction_iandEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 100 : i32
@@ -41,7 +41,6 @@
 ! CHECK:                 %[[VAL_20:.*]] = arith.andi %[[VAL_18]], %[[VAL_19]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_20]] to %[[VAL_14]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 
 

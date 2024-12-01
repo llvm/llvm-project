@@ -22,6 +22,9 @@ namespace mlir {
 
 class MemRefType;
 
+/// A value with a memref type.
+using MemrefValue = TypedValue<BaseMemRefType>;
+
 namespace memref {
 
 /// Returns true, if the memref type has static shapes and represents a
@@ -29,7 +32,8 @@ namespace memref {
 bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 
 /// For a `memref` with `offset`, `sizes` and `strides`, returns the
-/// offset and size to use for the linearized `memref`.
+/// offset, size, and potentially the size padded at the front to use for the
+/// linearized `memref`.
 /// - If the linearization is done for emulating load/stores of
 ///   element type with bitwidth `srcBits` using element type with
 ///   bitwidth `dstBits`, the linearized offset and size are
@@ -39,9 +43,14 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 ///   index to use in the linearized `memref`. The linearized index
 ///   is also scaled down by `dstBits`/`srcBits`. If `indices` is not provided
 ///   0, is returned for the linearized index.
+/// - If the size of the load/store is smaller than the linearized memref
+///   load/store, the memory region emulated is larger than the actual memory
+///   region needed. `intraDataOffset` returns the element offset of the data
+///   relevant at the beginning.
 struct LinearizedMemRefInfo {
   OpFoldResult linearizedOffset;
   OpFoldResult linearizedSize;
+  OpFoldResult intraDataOffset;
 };
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
@@ -60,8 +69,8 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
                                  ArrayRef<OpFoldResult> sizes);
 
-// Track temporary allocations that are never read from. If this is the case
-// it means both the allocations and associated stores can be removed.
+/// Track temporary allocations that are never read from. If this is the case
+/// it means both the allocations and associated stores can be removed.
 void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp);
 
 /// Given a set of sizes, return the suffix product.
@@ -92,6 +101,20 @@ computeStridesIRBlock(Location loc, OpBuilder &builder,
                       ArrayRef<OpFoldResult> sizes) {
   return computeSuffixProductIRBlock(loc, builder, sizes);
 }
+
+/// Walk up the source chain until an operation that changes/defines the view of
+/// memory is found (i.e. skip operations that alias the entire view).
+MemrefValue skipFullyAliasingOperations(MemrefValue source);
+
+/// Checks if two (memref) values are the same or statically known to alias
+/// the same region of memory.
+inline bool isSameViewOrTrivialAlias(MemrefValue a, MemrefValue b) {
+  return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);
+}
+
+/// Walk up the source chain until we find an operation that is not a view of
+/// the source memref (i.e. implements ViewLikeOpInterface).
+MemrefValue skipViewLikeOps(MemrefValue source);
 
 } // namespace memref
 } // namespace mlir

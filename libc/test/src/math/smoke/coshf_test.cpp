@@ -14,7 +14,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcCoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -52,3 +51,30 @@ TEST_F(LlvmLibcCoshfTest, Overflow) {
       inf, LIBC_NAMESPACE::coshf(FPBits(0x42d00008U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcCoshfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(max_denormal));
+}
+
+TEST_F(LlvmLibcCoshfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(max_denormal));
+}
+
+TEST_F(LlvmLibcCoshfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(max_denormal));
+}
+
+#endif

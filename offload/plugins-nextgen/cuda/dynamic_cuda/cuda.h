@@ -16,6 +16,15 @@
 #include <cstddef>
 #include <cstdint>
 
+#define cuDeviceTotalMem cuDeviceTotalMem_v2
+#define cuModuleGetGlobal cuModuleGetGlobal_v2
+#define cuMemGetInfo cuMemGetInfo_v2
+#define cuMemAlloc cuMemAlloc_v2
+#define cuMemFree cuMemFree_v2
+#define cuMemAllocHost cuMemAllocHost_v2
+#define cuDevicePrimaryCtxRelease cuDevicePrimaryCtxRelease_v2
+#define cuDevicePrimaryCtxSetFlags cuDevicePrimaryCtxSetFlags_v2
+
 typedef int CUdevice;
 typedef uintptr_t CUdeviceptr;
 typedef struct CUmod_st *CUmodule;
@@ -272,6 +281,10 @@ typedef enum CUevent_flags_enum {
   CU_EVENT_DISABLE_TIMING = 0x2,
   CU_EVENT_INTERPROCESS = 0x4
 } CUevent_flags;
+
+static inline void *CU_LAUNCH_PARAM_END = (void *)0x00;
+static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
+static inline void *CU_LAUNCH_PARAM_BUFFER_SIZE = (void *)0x02;
 
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);

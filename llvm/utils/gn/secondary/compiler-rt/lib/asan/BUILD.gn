@@ -60,13 +60,15 @@ if (current_toolchain == host_toolchain) {
     "asan_thread.h",
     "asan_win.cpp",
   ]
-  if (target_os != "mac" && target_os != "win") {
+  if (current_os != "mac" && current_os != "win") {
     asan_sources += [ "asan_interceptors_vfork.S" ]
   }
   config("asan_config") {
     cflags = []
-    if (target_os != "win") {
+    if (current_os != "win") {
       cflags += [ "-ftls-model=initial-exec" ]
+    } else {
+      ldflags = [ "/OPT:NOICF" ]
     }
 
     # FIXME: link rt dl m pthread log
@@ -74,11 +76,11 @@ if (current_toolchain == host_toolchain) {
     # FIXME: add_sanitizer_rt_version_list (cf hwasan)
     # FIXME: need libclang_rt.asan*.a.syms?
 
-    if (target_os == "android") {
+    if (current_os == "android") {
       ldflags = [ "-Wl,-z,global" ]
     }
 
-    if (target_os == "mac") {
+    if (current_os == "mac") {
       # The -U flags below correspond to the add_weak_symbols() calls in CMake.
       ldflags = [
         "-lc++",
@@ -143,7 +145,7 @@ if (current_toolchain == host_toolchain) {
     configs -= [ "//llvm/utils/gn/build:llvm_code" ]
     configs += [ "//llvm/utils/gn/build:crt_code" ]
     sources = [ "asan_rtl_static.cpp" ]
-    if (target_os != "mac" && target_os != "win") {
+    if (current_os != "mac" && current_os != "win") {
       sources += [ "asan_rtl_x86_64.S" ]
     }
   }
@@ -152,13 +154,6 @@ if (current_toolchain == host_toolchain) {
     configs -= [ "//llvm/utils/gn/build:llvm_code" ]
     configs += [ "//llvm/utils/gn/build:crt_code" ]
     sources = [ "asan_preinit.cpp" ]
-  }
-
-  source_set("weak_interception") {
-    configs -= [ "//llvm/utils/gn/build:llvm_code" ]
-    configs += [ "//llvm/utils/gn/build:crt_code" ]
-    sources = [ "asan_win_weak_interception.cpp" ]
-    defines = [ "SANITIZER_DYNAMIC" ]
   }
 
   shared_library("asan_shared_library") {
@@ -182,20 +177,13 @@ if (current_toolchain == host_toolchain) {
       "//compiler-rt/lib/ubsan:cxx_sources",
       "//compiler-rt/lib/ubsan:sources",
     ]
-    if (current_os == "win") {
-      deps += [
-        ":weak_interception",
-        "//compiler-rt/lib/sanitizer_common:weak_interception",
-        "//compiler-rt/lib/ubsan:weak_interception",
-      ]
-    }
     defines = [ "ASAN_DYNAMIC" ]
     if (current_os == "win") {
       defines += [ "INTERCEPTION_DYNAMIC_CRT" ]
     }
   }
 
-  if (current_os != "mac") {
+  if (current_os != "mac" && current_os != "win") {
     static_library("asan_static_library") {
       output_dir = crt_current_out_dir
       output_name = "clang_rt.asan$crt_current_target_suffix"
@@ -242,22 +230,26 @@ if (current_toolchain == host_toolchain) {
     }
   }
   if (current_os == "win") {
-    static_library("asan_dll_thunk") {
+    static_library("asan_static_runtime_thunk") {
       output_dir = crt_current_out_dir
-      output_name = "clang_rt.asan_dll_thunk$crt_current_target_suffix"
+      output_name =
+          "clang_rt.asan_static_runtime_thunk$crt_current_target_suffix"
       configs -= [ "//llvm/utils/gn/build:llvm_code" ]
       configs += [ "//llvm/utils/gn/build:crt_code" ]
       complete_static_lib = true
       configs -= [ "//llvm/utils/gn/build:thin_archive" ]
       sources = [
         "asan_globals_win.cpp",
-        "asan_win_dll_thunk.cpp",
+        "asan_malloc_win_thunk.cpp",
+        "asan_win_common_runtime_thunk.cpp",
+        "asan_win_static_runtime_thunk.cpp",
       ]
-      defines = [ "SANITIZER_DLL_THUNK" ]
+      defines = [ "SANITIZER_STATIC_RUNTIME_THUNK" ]
       deps = [
         "//compiler-rt/lib/interception:sources",
-        "//compiler-rt/lib/sanitizer_common:dll_thunk",
-        "//compiler-rt/lib/ubsan:dll_thunk",
+        "//compiler-rt/lib/sanitizer_common:runtime_thunk",
+        "//compiler-rt/lib/sanitizer_common:sancov_runtime_thunk",
+        "//compiler-rt/lib/ubsan:runtime_thunk",
       ]
     }
     static_library("asan_dynamic_runtime_thunk") {
@@ -270,12 +262,14 @@ if (current_toolchain == host_toolchain) {
       configs -= [ "//llvm/utils/gn/build:thin_archive" ]
       sources = [
         "asan_globals_win.cpp",
+        "asan_win_common_runtime_thunk.cpp",
         "asan_win_dynamic_runtime_thunk.cpp",
       ]
       defines = [ "SANITIZER_DYNAMIC_RUNTIME_THUNK" ]
       deps = [
-        "//compiler-rt/lib/sanitizer_common:dynamic_runtime_thunk",
-        "//compiler-rt/lib/ubsan:dynamic_runtime_thunk",
+        "//compiler-rt/lib/sanitizer_common:runtime_thunk",
+        "//compiler-rt/lib/sanitizer_common:sancov_runtime_thunk",
+        "//compiler-rt/lib/ubsan:runtime_thunk",
       ]
       cflags = [ "-Zl" ]
     }
@@ -284,11 +278,11 @@ if (current_toolchain == host_toolchain) {
     deps = [ ":asan_shared_library" ]
     if (current_os == "win") {
       deps += [
-        ":asan_dll_thunk",
         ":asan_dynamic_runtime_thunk",
+        ":asan_static_runtime_thunk",
       ]
     }
-    if (current_os != "mac") {
+    if (current_os != "mac" && current_os != "win") {
       deps += [
         ":asan_cxx",
         ":asan_preinit",

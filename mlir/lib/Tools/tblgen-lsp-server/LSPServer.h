@@ -11,17 +11,19 @@
 
 #include <memory>
 
-namespace mlir {
+namespace llvm {
 struct LogicalResult;
+} // namespace llvm
 
+namespace mlir {
 namespace lsp {
 class JSONTransport;
 class TableGenServer;
 
 /// Run the main loop of the LSP server using the given TableGen server and
 /// transport.
-LogicalResult runTableGenLSPServer(TableGenServer &server,
-                                   JSONTransport &transport);
+llvm::LogicalResult runTableGenLSPServer(TableGenServer &server,
+                                         JSONTransport &transport);
 
 } // namespace lsp
 } // namespace mlir

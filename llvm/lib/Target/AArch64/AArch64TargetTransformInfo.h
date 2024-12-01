@@ -19,7 +19,6 @@
 #include "AArch64.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
@@ -66,12 +65,18 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   // 'Val' and 'Index' are forwarded from 'getVectorInstrCost'; 'HasRealUse'
   // indicates whether the vector instruction is available in the input IR or
   // just imaginary in vectorizer passes.
-  InstructionCost getVectorInstrCostHelper(const Instruction *I, Type *Val,
-                                           unsigned Index, bool HasRealUse);
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCostHelper(
+      unsigned Opcode, Type *Val, unsigned Index, bool HasRealUse,
+      const Instruction *I = nullptr, Value *Scalar = nullptr,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {});
 
 public:
   explicit AArch64TTIImpl(const AArch64TargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
@@ -185,6 +190,16 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0, Value *Op1);
+
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx);
+
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index);
@@ -203,16 +218,17 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = std::nullopt,
-      const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
                                             const SCEV *Ptr);
 
-  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                     CmpInst::Predicate VecPred,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I = nullptr);
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr);
 
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
@@ -248,7 +264,7 @@ public:
     if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
-    if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+    if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
         Ty->isIntegerTy(32) || Ty->isIntegerTy(64))
       return true;
 
@@ -276,7 +292,7 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
-    if (!ST->hasSVE() || !ST->isNeonAvailable())
+    if (!ST->isSVEAvailable())
       return false;
 
     // For fixed vectors, scalarize if not using SVE for them.
@@ -371,11 +387,19 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
+  bool preferFixedOverScalableIfEqualCost() const {
+    return ST->useFixedOverScalableIfEqualCost();
+  }
+
+  unsigned getEpilogueVectorizationMinVF() const;
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
-  bool supportsScalableVectors() const { return ST->hasSVE(); }
+  bool supportsScalableVectors() const {
+    return ST->isSVEorStreamingSVEAvailable();
+  }
 
-  bool enableScalableVectorization() const { return ST->hasSVE(); }
+  bool enableScalableVectorization() const;
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;
@@ -393,13 +417,14 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr);
 
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind);
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {});
 
   /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
@@ -409,7 +434,6 @@ public:
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
-  /// @}
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
 
@@ -425,6 +449,13 @@ public:
   }
 
   std::optional<unsigned> getMinPageSize() const { return 4096; }
+
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2);
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+  /// @}
 };
 
 } // end namespace llvm

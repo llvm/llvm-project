@@ -449,6 +449,27 @@ namespace cwg1696 { // cwg1696: 7
       //   since-cxx14-note@-2 {{default member initializer declared here}}
     };
     A a{a, a};
+
+    struct A1 {
+      A1() : v(42) {}
+      // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+      // since-cxx14-note@#cwg1696-A1 {{reference member declared here}}
+      const int &v; // #cwg1696-A1
+    };
+
+    struct A2 {
+      A2() = default;
+      // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+      // since-cxx14-note-re@#cwg1696-A2-b {{in defaulted default constructor for {{.*}} first required here}}
+      // since-cxx14-note@#cwg1696-A2-a {{initializing field 'v' with default member initializer}}
+      A2(int v) : v(v) {}
+      // since-cxx14-warning@-1 {{binding reference member 'v' to stack allocated parameter 'v'}}
+      // since-cxx14-note@#cwg1696-A2-a {{reference member declared here}}
+      const int &v = 42;  // #cwg1696-A2-a
+    };
+    A2 a1;    // #cwg1696-A2-b
+    
+    A2 a2(1); // OK, unfortunately
 #endif
   }
 

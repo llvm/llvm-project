@@ -29,9 +29,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __bind_front_op {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const
-      noexcept(noexcept(std::invoke(std::forward<_Args>(__args)...)))
-          -> decltype(std::invoke(std::forward<_Args>(__args)...)) {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const noexcept(
+      noexcept(std::invoke(std::forward<_Args>(__args)...))) -> decltype(std::invoke(std::forward<_Args>(__args)...)) {
     return std::invoke(std::forward<_Args>(__args)...);
   }
 };

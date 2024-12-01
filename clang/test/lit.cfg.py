@@ -95,6 +95,8 @@ tools = [
     "llvm-ifs",
     "yaml2obj",
     "clang-linker-wrapper",
+    "clang-nvlink-wrapper",
+    "clang-sycl-linker",
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",
@@ -208,6 +210,9 @@ config.substitutions.append(
 config.substitutions.append(("%host_cc", config.host_cc))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 
+# Determine whether the test target is compatible with execution on the host.
+if "aarch64" in config.host_arch:
+    config.available_features.add("aarch64-host")
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:

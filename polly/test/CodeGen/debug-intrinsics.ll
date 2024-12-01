@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly \
-; RUN: -polly-analyze-read-only-scalars=false -polly-codegen -S < %s | \
+; RUN: opt %loadNPMPolly \
+; RUN: -polly-analyze-read-only-scalars=false -passes=polly-codegen -S < %s | \
 ; RUN: FileCheck %s
 
-; RUN: opt %loadPolly \
-; RUN: -polly-analyze-read-only-scalars=true -polly-codegen -S < %s | \
+; RUN: opt %loadNPMPolly \
+; RUN: -polly-analyze-read-only-scalars=true -passes=polly-codegen -S < %s | \
 ; RUN: FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -42,11 +42,11 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 ; CHECK: polly.split_new_and_old:
 
-; CHECK: tail call void @llvm.dbg.value
-; CHECK: tail call void @llvm.dbg.value
-; CHECK: tail call void @llvm.dbg.value
-; CHECK: tail call void @llvm.dbg.value
-; CHECK-NOT: tail call void @llvm.dbg.value
+; CHECK: #dbg_value
+; CHECK: #dbg_value
+; CHECK: #dbg_value
+; CHECK: #dbg_value
+; CHECK-NOT: #dbg_value
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1

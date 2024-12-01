@@ -13,46 +13,44 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_PREDICATEEXPANDER_H
-#define LLVM_UTILS_TABLEGEN_PREDICATEEXPANDER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include <vector>
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
-class raw_ostream;
 class Record;
 
 class PredicateExpander {
   bool EmitCallsByRef;
   bool NegatePredicate;
   bool ExpandForMC;
-  unsigned IndentLevel;
   StringRef TargetName;
 
   PredicateExpander(const PredicateExpander &) = delete;
   PredicateExpander &operator=(const PredicateExpander &) = delete;
 
+protected:
+  indent Indent;
+
 public:
-  PredicateExpander(StringRef Target)
+  explicit PredicateExpander(StringRef Target, unsigned Indent = 1)
       : EmitCallsByRef(true), NegatePredicate(false), ExpandForMC(false),
-        IndentLevel(1U), TargetName(Target) {}
+        TargetName(Target), Indent(Indent, 2) {}
   bool isByRef() const { return EmitCallsByRef; }
   bool shouldNegate() const { return NegatePredicate; }
   bool shouldExpandForMC() const { return ExpandForMC; }
-  unsigned getIndentLevel() const { return IndentLevel; }
+  indent &getIndent() { return Indent; }
   StringRef getTargetName() const { return TargetName; }
 
   void setByRef(bool Value) { EmitCallsByRef = Value; }
   void flipNegatePredicate() { NegatePredicate = !NegatePredicate; }
   void setNegatePredicate(bool Value) { NegatePredicate = Value; }
   void setExpandForMC(bool Value) { ExpandForMC = Value; }
-  void setIndentLevel(unsigned Level) { IndentLevel = Level; }
-  void increaseIndentLevel() { ++IndentLevel; }
-  void decreaseIndentLevel() { --IndentLevel; }
 
-  using RecVec = std::vector<Record *>;
   void expandTrue(raw_ostream &OS);
   void expandFalse(raw_ostream &OS);
   void expandCheckImmOperand(raw_ostream &OS, int OpIndex, int ImmVal,
@@ -73,9 +71,10 @@ public:
   void expandCheckNumOperands(raw_ostream &OS, int NumOps);
   void expandCheckOpcode(raw_ostream &OS, const Record *Inst);
 
-  void expandCheckPseudo(raw_ostream &OS, const RecVec &Opcodes);
-  void expandCheckOpcode(raw_ostream &OS, const RecVec &Opcodes);
-  void expandPredicateSequence(raw_ostream &OS, const RecVec &Sequence,
+  void expandCheckPseudo(raw_ostream &OS, ArrayRef<const Record *> Opcodes);
+  void expandCheckOpcode(raw_ostream &OS, ArrayRef<const Record *> Opcodes);
+  void expandPredicateSequence(raw_ostream &OS,
+                               ArrayRef<const Record *> Sequence,
                                bool IsCheckAll);
   void expandTIIFunctionCall(raw_ostream &OS, StringRef MethodName);
   void expandCheckIsRegOperand(raw_ostream &OS, int OpIndex);
@@ -91,7 +90,8 @@ public:
   void expandPredicate(raw_ostream &OS, const Record *Rec);
   void expandReturnStatement(raw_ostream &OS, const Record *Rec);
   void expandOpcodeSwitchCase(raw_ostream &OS, const Record *Rec);
-  void expandOpcodeSwitchStatement(raw_ostream &OS, const RecVec &Cases,
+  void expandOpcodeSwitchStatement(raw_ostream &OS,
+                                   ArrayRef<const Record *> Cases,
                                    const Record *Default);
   void expandStatement(raw_ostream &OS, const Record *Rec);
 };
@@ -115,8 +115,8 @@ class STIPredicateExpander : public PredicateExpander {
   void expandEpilogue(raw_ostream &OS, const STIPredicateFunction &Fn);
 
 public:
-  STIPredicateExpander(StringRef Target)
-      : PredicateExpander(Target), ExpandDefinition(false) {}
+  explicit STIPredicateExpander(StringRef Target, unsigned Indent = 1)
+      : PredicateExpander(Target, Indent), ExpandDefinition(false) {}
 
   bool shouldExpandDefinition() const { return ExpandDefinition; }
   StringRef getClassPrefix() const { return ClassPrefix; }
@@ -128,4 +128,4 @@ public:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H

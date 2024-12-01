@@ -39,9 +39,9 @@ bool ABIInfo::isOHOSFamily() const {
   return getTarget().getTriple().isOHOSFamily();
 }
 
-Address ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                             QualType Ty) const {
-  return Address::invalid();
+RValue ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                            QualType Ty, AggValueSlot Slot) const {
+  return RValue::getIgnored();
 }
 
 bool ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -218,8 +218,8 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     // only have "+" prefixes here.
     assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
-    return TI.multiVersionSortPriority(LHS.substr(1)) >
-           TI.multiVersionSortPriority(RHS.substr(1));
+    return TI.getFMVPriority({LHS.substr(1)}) >
+           TI.getFMVPriority({RHS.substr(1)});
   });
 
   bool IsFirst = true;

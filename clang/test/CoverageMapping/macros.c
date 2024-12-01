@@ -80,12 +80,14 @@ void func7(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+6]]:2 = #0
   int kk,ll;       // CHECK-NEXT: File 0, [[@LINE+1]]:7 -> [[@LINE+1]]:8 = #0
   if (k)           // CHECK-NEXT: Branch,File 0, [[@LINE]]:7 -> [[@LINE]]:8 = #1
     m(k);          // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:9 -> [[@LINE]]:5 = #1
-  else             // CHECK-NEXT: Expansion,File 0, [[@LINE-1]]:5 -> [[@LINE-1]]:6 = #0
+  else             // CHECK-NEXT: Expansion,File 0, [[@LINE-1]]:5 -> [[@LINE-1]]:6 = #1
     l = m(l);      // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:7 -> [[@LINE]]:5 = (#0 - #1)
 }                  // CHECK-NEXT: File 0, [[@LINE-1]]:5 -> [[@LINE-1]]:10 = (#0 - #1)
                    // CHECK-NEXT: Expansion,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:10 = (#0 - #1)
-                   // CHECK-NEXT: File 1, [[@LINE-9]]:14 -> [[@LINE-9]]:18 = #0
-                   // CHECK-NEXT: File 2, [[@LINE-10]]:14 -> [[@LINE-10]]:15 = (#0 - #1)
+                   // CHECK-NEXT: File 1, [[@LINE-9]]:14 -> [[@LINE-9]]:17 = #1
+                   // CHECK-NEXT: File 1, [[@LINE-10]]:14 -> [[@LINE-10]]:18 = #0
+                   // CHECK-NEXT: File 2, [[@LINE-11]]:14 -> [[@LINE-11]]:17 = (#0 - #1)
+                   // CHECK-NEXT: File 2, [[@LINE-12]]:14 -> [[@LINE-12]]:15 = (#0 - #1)
 
 int main(int argc, const char *argv[]) {
   func();

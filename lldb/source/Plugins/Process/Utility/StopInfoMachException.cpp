@@ -48,10 +48,13 @@ GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
                           const Address &at_addr) {
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   AddressRange range_bounds(at_addr, 4);
   const bool prefer_file_cache = true;
-  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
+  DisassemblerSP disassembler_sp =
+      Disassembler::DisassembleRange(arch, plugin_name, flavor, cpu, features,
+                                     target, range_bounds, prefer_file_cache);
   if (!disassembler_sp)
     return std::nullopt;
 
@@ -92,9 +95,7 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
 
   Target &target = *exe_ctx.GetTargetPtr();
   Process &process = *exe_ctx.GetProcessPtr();
-  ABISP abi_sp = process.GetABI();
   const ArchSpec &arch = target.GetArchitecture();
-  assert(abi_sp && "Missing ABI info");
 
   // Check for a ptrauth-enabled target.
   const bool ptrauth_enabled_target =
@@ -109,6 +110,9 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
                 m_exc_code, at_address);
     strm.Printf("Note: Possible pointer authentication failure detected.\n");
   };
+
+  ABISP abi_sp = process.GetABI();
+  assert(abi_sp && "Missing ABI info");
 
   // Check if we have a "brk 0xc47x" trap, where the value that failed to
   // authenticate is in x16.

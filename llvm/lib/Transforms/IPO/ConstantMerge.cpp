@@ -29,6 +29,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO.h"
 #include <algorithm>
 #include <cassert>
@@ -84,7 +85,7 @@ static void copyDebugLocMetadata(const GlobalVariable *From,
 
 static Align getAlign(GlobalVariable *GV) {
   return GV->getAlign().value_or(
-      GV->getParent()->getDataLayout().getPreferredAlign(GV));
+      GV->getDataLayout().getPreferredAlign(GV));
 }
 
 static bool

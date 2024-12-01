@@ -89,9 +89,9 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
-#else
   SmallSet<AssertingVH<const BasicBlock>, 16> LoopHeaders;
+#else
+  SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #endif
 
   unsigned BBDupThreshold;
@@ -130,13 +130,13 @@ public:
   bool computeValueKnownInPredecessorsImpl(
       Value *V, BasicBlock *BB, jumpthreading::PredValueInfo &Result,
       jumpthreading::ConstantPreference Preference,
-      DenseSet<Value *> &RecursionSet, Instruction *CxtI = nullptr);
+      SmallPtrSet<Value *, 4> &RecursionSet, Instruction *CxtI = nullptr);
   bool
   computeValueKnownInPredecessors(Value *V, BasicBlock *BB,
                                   jumpthreading::PredValueInfo &Result,
                                   jumpthreading::ConstantPreference Preference,
                                   Instruction *CxtI = nullptr) {
-    DenseSet<Value *> RecursionSet;
+    SmallPtrSet<Value *, 4> RecursionSet;
     return computeValueKnownInPredecessorsImpl(V, BB, Result, Preference,
                                                RecursionSet, CxtI);
   }

@@ -116,21 +116,7 @@ public:
     return fir::isRecordWithTypeParameters(getFortranElementType());
   }
 
-  bool hasNonDefaultLowerBounds() const {
-    if (!isBoxAddressOrValue() || isScalar())
-      return false;
-    if (isMutableBox())
-      return true;
-    if (auto varIface = getIfVariableInterface()) {
-      if (auto shape = varIface.getShape()) {
-        auto shapeTy = shape.getType();
-        return mlir::isa<fir::ShiftType>(shapeTy) ||
-               mlir::isa<fir::ShapeShiftType>(shapeTy);
-      }
-      return false;
-    }
-    return true;
-  }
+  bool mayHaveNonDefaultLowerBounds() const;
 
   // Is this entity known to be contiguous at compile time?
   // Note that when this returns false, the entity may still
@@ -239,7 +225,7 @@ genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
            const fir::ExtendedValue &exv, llvm::StringRef name,
            fir::FortranVariableFlagsAttr flags,
            mlir::Value dummyScope = nullptr,
-           fir::CUDADataAttributeAttr cudaAttr = {});
+           cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
@@ -334,6 +320,9 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
 
+mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity entity, mlir::Type resultType);
+
 /// Return the fir base, shape, and type parameters for a variable. Note that
 /// type parameters are only added if the entity is not a box and the type
 /// parameters is not a constant in the base type. This matches the arguments
@@ -368,8 +357,8 @@ hlfir::ElementalOp genElementalOp(
 
 /// Structure to describe a loop nest.
 struct LoopNest {
-  fir::DoLoopOp outerLoop;
-  fir::DoLoopOp innerLoop;
+  mlir::Operation *outerOp = nullptr;
+  mlir::Block *body = nullptr;
   llvm::SmallVector<mlir::Value> oneBasedIndices;
 };
 
@@ -377,11 +366,13 @@ struct LoopNest {
 /// \p isUnordered specifies whether the loops in the loop nest
 /// are unordered.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                     mlir::ValueRange extents, bool isUnordered = false);
+                     mlir::ValueRange extents, bool isUnordered = false,
+                     bool emitWorkshareLoop = false);
 inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::Value shape, bool isUnordered = false) {
+                            mlir::Value shape, bool isUnordered = false,
+                            bool emitWorkshareLoop = false) {
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
-                     isUnordered);
+                     isUnordered, emitWorkshareLoop);
 }
 
 /// Inline the body of an hlfir.elemental at the current insertion point

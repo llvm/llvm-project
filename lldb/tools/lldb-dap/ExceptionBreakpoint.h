@@ -9,21 +9,25 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_EXCEPTIONBREAKPOINT_H
 #define LLDB_TOOLS_LLDB_DAP_EXCEPTIONBREAKPOINT_H
 
-#include <string>
-
+#include "DAPForward.h"
 #include "lldb/API/SBBreakpoint.h"
+#include "lldb/lldb-enumerations.h"
+#include <string>
+#include <utility>
 
 namespace lldb_dap {
 
 struct ExceptionBreakpoint {
+  DAP &dap;
   std::string filter;
   std::string label;
   lldb::LanguageType language;
-  bool default_value;
+  bool default_value = false;
   lldb::SBBreakpoint bp;
-  ExceptionBreakpoint(std::string f, std::string l, lldb::LanguageType lang)
-      : filter(std::move(f)), label(std::move(l)), language(lang),
-        default_value(false), bp() {}
+  ExceptionBreakpoint(DAP &d, std::string f, std::string l,
+                      lldb::LanguageType lang)
+      : dap(d), filter(std::move(f)), label(std::move(l)), language(lang),
+        bp() {}
 
   void SetBreakpoint();
   void ClearBreakpoint();

@@ -37,9 +37,9 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_floor(<vscale x 8 x i8> %x, i8 %y) {
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_floor_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 2
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>
@@ -163,14 +163,15 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_floor(<vscale x 8 x i64> %x, i64 %y
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    csrwi vxrm, 2
 ; RV32-NEXT:    vaaddu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_nxv8i64_floor:
@@ -226,12 +227,9 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_ceil(<vscale x 8 x i8> %x, i8 %y) {
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_ceil_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vadd.vi v10, v10, 1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>
@@ -385,14 +383,15 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_ceil(<vscale x 8 x i64> %x, i64 %y)
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    vaaddu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_nxv8i64_ceil:

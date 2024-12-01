@@ -22,5 +22,5 @@ void test_plus_sme(svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
 
 __attribute__((target("+sme")))
 void undefined(svbool_t pg, void *ptr) __arm_inout("za") {
-  svst1_ver_vnum_za64(0, 0, pg, ptr, 0); // expected-warning {{builtin call has undefined behaviour when called from a non-streaming function}}
+  svst1_ver_vnum_za64(0, 0, pg, ptr, 0); // expected-error {{builtin can only be called from a streaming function}}
 }

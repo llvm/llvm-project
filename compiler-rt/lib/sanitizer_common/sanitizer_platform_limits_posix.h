@@ -389,6 +389,16 @@ typedef long __sanitizer_time_t;
 
 typedef long __sanitizer_suseconds_t;
 
+struct __sanitizer_timespec {
+  __sanitizer_time_t tv_sec; /* seconds */
+  u64 tv_nsec;               /* nanoseconds */
+};
+
+struct __sanitizer_itimerspec {
+  struct __sanitizer_timespec it_interval; /* timer period */
+  struct __sanitizer_timespec it_value;    /* timer expiration */
+};
+
 struct __sanitizer_timeval {
   __sanitizer_time_t tv_sec;
   __sanitizer_suseconds_t tv_usec;
@@ -855,10 +865,11 @@ typedef void __sanitizer_FILE;
 # define SANITIZER_HAS_STRUCT_FILE 0
 #endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
-    (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
-     defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
-     defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64)
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
+      (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
+       defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
+       defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64 ||   \
+       defined(__sparc__))
 extern unsigned struct_user_regs_struct_sz;
 extern unsigned struct_user_fpregs_struct_sz;
 extern unsigned struct_user_fpxregs_struct_sz;
@@ -880,9 +891,24 @@ extern int ptrace_setsiginfo;
 extern int ptrace_getregset;
 extern int ptrace_setregset;
 extern int ptrace_geteventmsg;
-#endif
 
-#if SANITIZER_LINUX  && !SANITIZER_ANDROID
+// Helper for the ptrace interceptor.
+template <class T>
+inline T ptrace_data_arg(int request, T addr, T data) {
+#    if SANITIZER_LINUX && SANITIZER_SPARC
+  // As described in ptrace(2), the meanings of addr and data are reversed
+  // for the PTRACE_GETREGS, PTRACE_GETFPREGS, PTRACE_GETREGS, and
+  // PTRACE_GETFPREGS requests on Linux/sparc64.
+  if (request == ptrace_getregs || request == ptrace_getfpregs ||
+      request == ptrace_setregs || request == ptrace_setfpregs)
+    return addr;
+  else
+#    endif
+    return data;
+}
+#  endif
+
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
 extern unsigned struct_shminfo_sz;
 extern unsigned struct_shm_info_sz;
 extern int shmctl_ipc_stat;
@@ -1050,7 +1076,8 @@ extern unsigned struct_serial_struct_sz;
 extern unsigned struct_sockaddr_ax25_sz;
 extern unsigned struct_unimapdesc_sz;
 extern unsigned struct_unimapinit_sz;
-#endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
+extern unsigned struct_sock_fprog_sz;
+#  endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 extern const unsigned long __sanitizer_bufsiz;
 
@@ -1499,6 +1526,10 @@ extern const int si_SEGV_ACCERR;
                  offsetof(struct CLASS, MEMBER))
 
 #define SIGACTION_SYMNAME sigaction
+
+#  if SANITIZER_LINUX
+typedef void *__sanitizer_timer_t;
+#  endif
 
 #endif  // SANITIZER_LINUX || SANITIZER_APPLE
 

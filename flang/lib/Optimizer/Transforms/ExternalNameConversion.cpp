@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -45,17 +46,11 @@ namespace {
 class ExternalNameConversionPass
     : public fir::impl::ExternalNameConversionBase<ExternalNameConversionPass> {
 public:
-  ExternalNameConversionPass(bool appendUnderscoring)
-      : appendUnderscores(appendUnderscoring) {}
-
-  ExternalNameConversionPass() { usePassOpt = true; }
+  using ExternalNameConversionBase<
+      ExternalNameConversionPass>::ExternalNameConversionBase;
 
   mlir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;
-
-private:
-  bool appendUnderscores;
-  bool usePassOpt = false;
 };
 } // namespace
 
@@ -63,27 +58,37 @@ void ExternalNameConversionPass::runOnOperation() {
   auto op = getOperation();
   auto *context = &getContext();
 
-  appendUnderscores = (usePassOpt) ? appendUnderscoreOpt : appendUnderscores;
   llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr> remappings;
-  // Update names of external Fortran functions and names of Common Block
-  // globals.
-  for (auto &funcOrGlobal : op->getRegion(0).front()) {
-    if (llvm::isa<mlir::func::FuncOp>(funcOrGlobal) ||
-        llvm::isa<fir::GlobalOp>(funcOrGlobal)) {
-      auto symName = funcOrGlobal.getAttrOfType<mlir::StringAttr>(
-          mlir::SymbolTable::getSymbolAttrName());
-      auto deconstructedName = fir::NameUniquer::deconstruct(symName);
-      if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
-        auto newName = mangleExternalName(deconstructedName, appendUnderscores);
-        auto newAttr = mlir::StringAttr::get(context, newName);
-        mlir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);
-        auto newSymRef = mlir::FlatSymbolRefAttr::get(newAttr);
-        remappings.try_emplace(symName, newSymRef);
-        if (llvm::isa<mlir::func::FuncOp>(funcOrGlobal))
-          funcOrGlobal.setAttr(fir::getInternalFuncNameAttrName(), symName);
+
+  auto renameFuncOrGlobalInModule = [&](mlir::Operation *module) {
+    for (auto &funcOrGlobal : module->getRegion(0).front()) {
+      if (llvm::isa<mlir::func::FuncOp>(funcOrGlobal) ||
+          llvm::isa<fir::GlobalOp>(funcOrGlobal)) {
+        auto symName = funcOrGlobal.getAttrOfType<mlir::StringAttr>(
+            mlir::SymbolTable::getSymbolAttrName());
+        auto deconstructedName = fir::NameUniquer::deconstruct(symName);
+        if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
+          auto newName =
+              mangleExternalName(deconstructedName, appendUnderscoreOpt);
+          auto newAttr = mlir::StringAttr::get(context, newName);
+          mlir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);
+          auto newSymRef = mlir::FlatSymbolRefAttr::get(newAttr);
+          remappings.try_emplace(symName, newSymRef);
+          if (llvm::isa<mlir::func::FuncOp>(funcOrGlobal))
+            funcOrGlobal.setAttr(fir::getInternalFuncNameAttrName(), symName);
+        }
       }
     }
-  }
+  };
+
+  // Update names of external Fortran functions and names of Common Block
+  // globals.
+  renameFuncOrGlobalInModule(op);
+
+  // Do the same in GPU modules.
+  if (auto mod = mlir::dyn_cast_or_null<mlir::ModuleOp>(*op))
+    for (auto gpuMod : mod.getOps<mlir::gpu::GPUModuleOp>())
+      renameFuncOrGlobalInModule(gpuMod);
 
   if (remappings.empty())
     return;
@@ -100,13 +105,4 @@ void ExternalNameConversionPass::runOnOperation() {
     for (auto update : updates)
       nestedOp->setAttr(update.first, update.second);
   });
-}
-
-std::unique_ptr<mlir::Pass> fir::createExternalNameConversionPass() {
-  return std::make_unique<ExternalNameConversionPass>();
-}
-
-std::unique_ptr<mlir::Pass>
-fir::createExternalNameConversionPass(bool appendUnderscoring) {
-  return std::make_unique<ExternalNameConversionPass>(appendUnderscoring);
 }

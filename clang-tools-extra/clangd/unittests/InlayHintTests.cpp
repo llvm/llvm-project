@@ -15,9 +15,12 @@
 #include "support/Context.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -81,6 +84,7 @@ Config noHintsConfig() {
   C.InlayHints.DeducedTypes = false;
   C.InlayHints.Designators = false;
   C.InlayHints.BlockEnd = false;
+  C.InlayHints.DefaultArguments = false;
   return C;
 }
 
@@ -945,7 +949,7 @@ TEST(ParameterHints, ConstructorStdInitList) {
   // Do not show hints for std::initializer_list constructors.
   assertParameterHints(R"cpp(
     namespace std {
-      template <typename> class initializer_list {};
+      template <typename E> class initializer_list { const E *a, *b; };
     }
     struct S {
       S(std::initializer_list<int> param);
@@ -1465,6 +1469,75 @@ TEST(TypeHints, DefaultTemplateArgs) {
                   ExpectedHint{": A<float>", "binding"});
 }
 
+TEST(DefaultArguments, Smoke) {
+  Config Cfg;
+  Cfg.InlayHints.Parameters =
+      true; // To test interplay of parameters and default parameters
+  Cfg.InlayHints.DeducedTypes = false;
+  Cfg.InlayHints.Designators = false;
+  Cfg.InlayHints.BlockEnd = false;
+
+  Cfg.InlayHints.DefaultArguments = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  const auto *Code = R"cpp(
+    int foo(int A = 4) { return A; }
+    int bar(int A, int B = 1, bool C = foo($default1[[)]]) { return A; }
+    int A = bar($explicit[[2]]$default2[[)]];
+
+    void baz(int = 5) { if (false) baz($unnamed[[)]]; };
+  )cpp";
+
+  assertHints(InlayHintKind::DefaultArgument, Code,
+              ExpectedHint{"A: 4", "default1", Left},
+              ExpectedHint{", B: 1, C: foo()", "default2", Left},
+              ExpectedHint{"5", "unnamed", Left});
+
+  assertHints(InlayHintKind::Parameter, Code,
+              ExpectedHint{"A: ", "explicit", Left});
+}
+
+TEST(DefaultArguments, WithoutParameterNames) {
+  Config Cfg;
+  Cfg.InlayHints.Parameters = false; // To test just default args this time
+  Cfg.InlayHints.DeducedTypes = false;
+  Cfg.InlayHints.Designators = false;
+  Cfg.InlayHints.BlockEnd = false;
+
+  Cfg.InlayHints.DefaultArguments = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  const auto *Code = R"cpp(
+    struct Baz {
+      Baz(float a = 3 //
+                    + 2);
+    };
+    struct Foo {
+      Foo(int, Baz baz = //
+              Baz{$abbreviated[[}]]
+
+          //
+      ) {}
+    };
+
+    int main() {
+      Foo foo1(1$paren[[)]];
+      Foo foo2{2$brace1[[}]];
+      Foo foo3 = {3$brace2[[}]];
+      auto foo4 = Foo{4$brace3[[}]];
+    }
+  )cpp";
+
+  assertHints(InlayHintKind::DefaultArgument, Code,
+              ExpectedHint{"...", "abbreviated", Left},
+              ExpectedHint{", Baz{}", "paren", Left},
+              ExpectedHint{", Baz{}", "brace1", Left},
+              ExpectedHint{", Baz{}", "brace2", Left},
+              ExpectedHint{", Baz{}", "brace3", Left});
+
+  assertHints(InlayHintKind::Parameter, Code);
+}
+
 TEST(TypeHints, Deduplication) {
   assertTypeHints(R"cpp(
     template <typename T>
@@ -1498,6 +1571,22 @@ TEST(TypeHints, Aliased) {
   // https://github.com/clangd/clangd/issues/1140
   TestTU TU = TestTU::withCode("void foo(void){} extern typeof(foo) foo;");
   TU.ExtraArgs.push_back("-xc");
+  auto AST = TU.build();
+
+  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
+}
+
+TEST(TypeHints, CallingConvention) {
+  // Check that we don't crash for lambdas without a FunctionTypeLoc
+  // https://github.com/clangd/clangd/issues/2223
+  std::string Code = R"cpp(
+    void test() {
+      []() __cdecl {};
+    }
+  )cpp";
+  TestTU TU = TestTU::withCode(Code);
+  TU.ExtraArgs.push_back("--target=x86_64-w64-mingw32");
+  TU.PredefineMacros = true; // for the __cdecl
   auto AST = TU.build();
 
   EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());

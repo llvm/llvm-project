@@ -11,7 +11,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/HashBuilder.h"
@@ -35,9 +34,6 @@ enum IncludeDirGroup {
 
   /// Paths for '\#include <>' added by '-I'.
   Angled,
-
-  /// Like Angled, but marks header maps used when building frameworks.
-  IndexHeaderMap,
 
   /// Like Angled, but marks system directories.
   System,
@@ -259,6 +255,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesHashContent : 1;
 
+  /// Whether AST files should only contain the preprocessor information.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesSerializeOnlyPreprocessor : 1;
+
   /// Whether we should include all things that could impact the module in the
   /// hash.
   ///
@@ -270,6 +270,12 @@ public:
   /// Whether to include ivfsoverlay usage information in written AST files.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesIncludeVFSUsage : 1;
+
+  /// Whether we should look for a module in module maps only in provided
+  /// header search paths or if we are allowed to look for module maps in
+  /// subdirectories of provided paths too.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned AllowModuleMapSubdirectorySearch : 1;
 
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
@@ -286,7 +292,9 @@ public:
         ModulesSkipHeaderSearchPaths(false),
         ModulesSkipPragmaDiagnosticMappings(false),
         ModulesPruneNonAffectingModuleMaps(true), ModulesHashContent(false),
-        ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false) {}
+        ModulesSerializeOnlyPreprocessor(false),
+        ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false),
+        AllowModuleMapSubdirectorySearch(true) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,
@@ -310,19 +318,10 @@ public:
   }
 };
 
-inline llvm::hash_code hash_value(const HeaderSearchOptions::Entry &E) {
-  return llvm::hash_combine(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
-}
-
 template <typename HasherT, llvm::endianness Endianness>
 inline void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                     const HeaderSearchOptions::Entry &E) {
   HBuilder.add(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
-}
-
-inline llvm::hash_code
-hash_value(const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
-  return llvm::hash_combine(SHP.Prefix, SHP.IsSystemHeader);
 }
 
 template <typename HasherT, llvm::endianness Endianness>

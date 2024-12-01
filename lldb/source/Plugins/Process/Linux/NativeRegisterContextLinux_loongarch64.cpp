@@ -93,16 +93,16 @@ Status NativeRegisterContextLinux_loongarch64::ReadRegister(
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   uint8_t *src = nullptr;
   uint32_t offset = LLDB_INVALID_INDEX32;
@@ -125,8 +125,9 @@ Status NativeRegisterContextLinux_loongarch64::ReadRegister(
     assert(offset < GetFPRSize());
     src = (uint8_t *)GetFPRBuffer() + offset;
   } else
-    return Status("failed - register wasn't recognized to be a GPR or an FPR, "
-                  "write strategy unknown");
+    return Status::FromErrorString(
+        "failed - register wasn't recognized to be a GPR or an FPR, "
+        "write strategy unknown");
 
   reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                               eByteOrderLittle, error);
@@ -139,14 +140,14 @@ Status NativeRegisterContextLinux_loongarch64::WriteRegister(
   Status error;
 
   if (!reg_info)
-    return Status("reg_info NULL");
+    return Status::FromErrorString("reg_info NULL");
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info->name != nullptr
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info->name != nullptr ? reg_info->name : "<unknown register>");
 
   uint8_t *dst = nullptr;
   uint32_t offset = LLDB_INVALID_INDEX32;
@@ -174,7 +175,7 @@ Status NativeRegisterContextLinux_loongarch64::WriteRegister(
     return WriteFPR();
   }
 
-  return Status("Failed to write register value");
+  return Status::FromErrorString("Failed to write register value");
 }
 
 Status NativeRegisterContextLinux_loongarch64::ReadAllRegisterValues(
@@ -204,14 +205,14 @@ Status NativeRegisterContextLinux_loongarch64::WriteAllRegisterValues(
   Status error;
 
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_loongarch64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_loongarch64::%s data_sp contained "
         "mismatched data size, expected %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
@@ -220,10 +221,11 @@ Status NativeRegisterContextLinux_loongarch64::WriteAllRegisterValues(
 
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_loongarch64::%s "
-                                   "DataBuffer::GetBytes() returned a null "
-                                   "pointer",
-                                   __FUNCTION__);
+    error = Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux_loongarch64::%s "
+        "DataBuffer::GetBytes() returned a null "
+        "pointer",
+        __FUNCTION__);
     return error;
   }
   ::memcpy(GetGPRBuffer(), src, GetRegisterInfoInterface().GetGPRSize());

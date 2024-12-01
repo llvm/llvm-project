@@ -21,7 +21,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -1052,7 +1051,8 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
   CGF.Builder.CreateStore(Exn, CGF.getExceptionSlot());
   llvm::CallInst *Selector = CGF.Builder.CreateCall(GetSelectorFn, CPI);
 
-  llvm::Function *TypeIDFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+  llvm::Function *TypeIDFn =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
 
   // If there's only a single catch-all, branch directly to its handler.
   if (CatchScope.getNumHandlers() == 1 &&
@@ -1137,7 +1137,7 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
 
   // Select the right handler.
   llvm::Function *llvm_eh_typeid_for =
-    CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
   llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
   LangAS globAS = CGF.CGM.GetGlobalVarAddressSpace(nullptr);
 
@@ -1842,7 +1842,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
         std::make_pair(ParentAlloca, ParentCGF.EscapedLocals.size()));
     int FrameEscapeIdx = InsertPair.first->second;
     // call ptr @llvm.localrecover(ptr @parentFn, ptr %fp, i32 N)
-    llvm::Function *FrameRecoverFn = llvm::Intrinsic::getDeclaration(
+    llvm::Function *FrameRecoverFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::localrecover);
     RecoverCall = Builder.CreateCall(
         FrameRecoverFn, {ParentCGF.CurFn, ParentFP,
@@ -1941,7 +1941,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
       // %1 = call ptr @llvm.localrecover(@"?fin$0@0@main@@",..)
       // %2 = load ptr, ptr %1, align 8
       //   ==> %2 is the frame-pointer of outermost host function
-      llvm::Function *FrameRecoverFn = llvm::Intrinsic::getDeclaration(
+      llvm::Function *FrameRecoverFn = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), llvm::Intrinsic::localrecover);
       ParentFP = Builder.CreateCall(
           FrameRecoverFn, {ParentCGF.CurFn, ParentFP,
@@ -1988,8 +1988,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         LValue ThisFieldLValue =
             EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
-          CXXThisValue =
-              ThisFieldLValue.getAddress(*this).emitRawPointer(*this);
+          CXXThisValue = ThisFieldLValue.getAddress().emitRawPointer(*this);
         } else {
           CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
                              .getScalarVal();

@@ -13,10 +13,10 @@
 
 using namespace Fortran::runtime;
 
-mlir::Value fir::runtime::genMapException(fir::FirOpBuilder &builder,
-                                          mlir::Location loc,
-                                          mlir::Value except) {
+mlir::Value fir::runtime::genMapExcept(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       mlir::Value excepts) {
   mlir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(MapException)>(loc, builder)};
-  return builder.create<fir::CallOp>(loc, func, except).getResult(0);
+  return builder.create<fir::CallOp>(loc, func, excepts).getResult(0);
 }

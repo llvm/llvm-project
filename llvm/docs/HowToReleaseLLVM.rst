@@ -144,8 +144,17 @@ Tag release candidates:
 
   $ git tag -sa llvmorg-X.Y.Z-rcN
 
-The Release Manager must supply pre-packaged source tarballs for users.  This can
-be done with the export.sh script in utils/release.
+The pre-packaged source tarballs will be automatically generated via the
+"Release Sources" workflow on GitHub.  This workflow will create an artifact
+containing all the release tarballs and the artifact attestation.  The
+Release Manager should download the artifact, verify the tarballs, sign them,
+and then upload them to the release page.
+
+::
+
+  $ unzip artifact.zip
+  $ gh auth login
+  $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
 
 Tarballs, release binaries,  or any other release artifacts must be uploaded to
 GitHub.  This can be done using the github-upload-release.py script in utils/release.
@@ -154,12 +163,6 @@ GitHub.  This can be done using the github-upload-release.py script in utils/rel
 
   $ github-upload-release.py upload --token <github-token> --release X.Y.Z-rcN --files <release_files>
 
-::
-
-  $ ./export.sh -release X.Y.Z -rc $RC
-
-This will generate source tarballs for each LLVM project being validated, which
-can be uploaded to github for further testing.
 
 Build The Binary Distribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -325,17 +328,17 @@ Release Patch Rules
 Below are the rules regarding patching the release branch:
 
 #. Patches applied to the release branch may only be applied by the release
-   manager, the official release testers or the code owners with approval from
+   manager, the official release testers or the maintainers with approval from
    the release manager.
 
-#. Release managers are encouraged, but not required, to get approval from code
-   owners before approving patches.  If there is no code owner or the code owner
-   is unreachable then release managers can ask approval from patch reviewers or
-   other developers active in that area.
+#. Release managers are encouraged, but not required, to get approval from a
+   maintainer before approving patches.  If there are no reachable maintainers
+   then release managers can ask approval from patch reviewers or other
+   developers active in that area.
 
 #. *Before RC1* Patches should be limited to bug fixes, important optimization
    improvements, or completion of features that were started before the branch
-   was created.  As with all phases, release managers and code owners can reject
+   was created.  As with all phases, release managers and maintainers can reject
    patches that are deemed too invasive.
 
 #. *Before RC2* Patches should be limited to bug fixes or backend specific

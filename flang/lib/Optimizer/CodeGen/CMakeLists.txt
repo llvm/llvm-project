@@ -23,10 +23,13 @@ add_flang_library(FIRCodeGen
   FIRSupport
   MLIRComplexToLLVM
   MLIRComplexToStandard
+  MLIRGPUDialect
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm
+  MLIRMathToROCDL
   MLIROpenMPToLLVM
+  MLIROpenACCDialect
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport

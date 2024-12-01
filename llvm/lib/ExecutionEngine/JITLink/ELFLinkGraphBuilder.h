@@ -472,7 +472,7 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
       Symbol &GSym = G->addDefinedSymbol(
           G->createZeroFillBlock(getCommonSection(), Sym.st_size,
                                  orc::ExecutorAddr(), Sym.getValue(), 0),
-          0, *Name, Sym.st_size, Linkage::Strong, Scope::Default, false, false);
+          0, *Name, Sym.st_size, Linkage::Weak, Scope::Default, false, false);
       setGraphSymbol(SymIndex, GSym);
       continue;
     }

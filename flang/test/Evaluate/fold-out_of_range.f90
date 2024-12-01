@@ -1,5 +1,7 @@
-! RUN: %python %S/test_folding.py %s %flang_fc1 -pedantic
-! UNSUPPORTED: target=powerpc{{.*}}, target=aarch{{.*}}, target=arm{{.*}}, system-windows, system-solaris
+! RUN: %python %S/test_folding.py %s %flang_fc1 -pedantic -triple x86_64-unknown-linux-gnu
+! UNSUPPORTED: system-windows
+! REQUIRES: target=x86_64{{.*}}
+! REQUIRES: flang-supports-f128-math
 ! Tests folding of OUT_OF_RANGE().
 module m
   integer(1),  parameter :: i1v(*)  = [ -huge(1_1)  - 1_1,  huge(1_1) ]

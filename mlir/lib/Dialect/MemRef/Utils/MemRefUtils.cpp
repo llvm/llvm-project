@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
@@ -68,7 +69,6 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   AffineExpr mulMap = builder.getAffineConstantExpr(1);
 
   SmallVector<OpFoldResult> offsetValues(2 * sourceRank);
-  SmallVector<OpFoldResult> sizeValues(sourceRank);
 
   for (unsigned i = 0; i < sourceRank; ++i) {
     unsigned offsetIdx = 2 * i;
@@ -79,14 +79,12 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     mulMap = mulMap * symbols[i];
   }
 
-  // Adjust linearizedIndices, size and offset by the scale factor (dstBits /
-  // srcBits).
+  // Adjust linearizedIndices and size by the scale factor (dstBits / srcBits).
   int64_t scaler = dstBits / srcBits;
-  addMulMap = addMulMap.floorDiv(scaler);
   mulMap = mulMap.floorDiv(scaler);
 
   OpFoldResult linearizedIndices = affine::makeComposedFoldedAffineApply(
-      builder, loc, addMulMap, offsetValues);
+      builder, loc, addMulMap.floorDiv(scaler), offsetValues);
   OpFoldResult linearizedSize =
       affine::makeComposedFoldedAffineApply(builder, loc, mulMap, sizes);
 
@@ -96,7 +94,11 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   OpFoldResult adjustBaseOffset = affine::makeComposedFoldedAffineApply(
       builder, loc, s0.floorDiv(scaler), {offset});
 
-  return {{adjustBaseOffset, linearizedSize}, linearizedIndices};
+  OpFoldResult intraVectorOffset = affine::makeComposedFoldedAffineApply(
+      builder, loc, addMulMap % scaler, offsetValues);
+
+  return {{adjustBaseOffset, linearizedSize, intraVectorOffset},
+          linearizedIndices};
 }
 
 LinearizedMemRefInfo
@@ -176,6 +178,34 @@ computeSuffixProductIRBlock(Location loc, OpBuilder &builder,
                             ArrayRef<OpFoldResult> sizes) {
   OpFoldResult unit = builder.getIndexAttr(1);
   return computeSuffixProductIRBlockImpl(loc, builder, sizes, unit);
+}
+
+MemrefValue skipFullyAliasingOperations(MemrefValue source) {
+  while (auto op = source.getDefiningOp()) {
+    if (auto subViewOp = dyn_cast<memref::SubViewOp>(op);
+        subViewOp && subViewOp.hasZeroOffset() && subViewOp.hasUnitStride()) {
+      // A `memref.subview` with an all zero offset, and all unit strides, still
+      // points to the same memory.
+      source = cast<MemrefValue>(subViewOp.getSource());
+    } else if (auto castOp = dyn_cast<memref::CastOp>(op)) {
+      // A `memref.cast` still points to the same memory.
+      source = castOp.getSource();
+    } else {
+      return source;
+    }
+  }
+  return source;
+}
+
+MemrefValue skipViewLikeOps(MemrefValue source) {
+  while (auto op = source.getDefiningOp()) {
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
+      source = cast<MemrefValue>(viewLike.getViewSource());
+      continue;
+    }
+    return source;
+  }
+  return source;
 }
 
 } // namespace memref

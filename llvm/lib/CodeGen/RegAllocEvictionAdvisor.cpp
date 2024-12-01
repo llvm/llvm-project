@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -156,7 +157,7 @@ bool DefaultEvictionAdvisor::shouldEvict(const LiveInterval &A, bool IsHint,
     return true;
 
   if (A.weight() > B.weight()) {
-    LLVM_DEBUG(dbgs() << "should evict: " << B << " w= " << B.weight() << '\n');
+    LLVM_DEBUG(dbgs() << "should evict: " << B << '\n');
     return true;
   }
   return false;

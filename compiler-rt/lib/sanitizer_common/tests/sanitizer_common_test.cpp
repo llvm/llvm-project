@@ -204,30 +204,29 @@ TEST(SanitizerCommon, InternalMmapVectorSwap) {
 }
 
 void TestThreadInfo(bool main) {
-  uptr stk_addr = 0;
-  uptr stk_size = 0;
-  uptr tls_addr = 0;
-  uptr tls_size = 0;
-  GetThreadStackAndTls(main, &stk_addr, &stk_size, &tls_addr, &tls_size);
+  uptr stk_begin = 0;
+  uptr stk_end = 0;
+  uptr tls_begin = 0;
+  uptr tls_end = 0;
+  GetThreadStackAndTls(main, &stk_begin, &stk_end, &tls_begin, &tls_end);
 
   int stack_var;
-  EXPECT_NE(stk_addr, (uptr)0);
-  EXPECT_NE(stk_size, (uptr)0);
-  EXPECT_GT((uptr)&stack_var, stk_addr);
-  EXPECT_LT((uptr)&stack_var, stk_addr + stk_size);
+  EXPECT_NE(stk_begin, (uptr)0);
+  EXPECT_GT(stk_end, stk_begin);
+  EXPECT_GT((uptr)&stack_var, stk_begin);
+  EXPECT_LT((uptr)&stack_var, stk_end);
 
 #if SANITIZER_LINUX && defined(__x86_64__)
   static __thread int thread_var;
-  EXPECT_NE(tls_addr, (uptr)0);
-  EXPECT_NE(tls_size, (uptr)0);
-  EXPECT_GT((uptr)&thread_var, tls_addr);
-  EXPECT_LT((uptr)&thread_var, tls_addr + tls_size);
+  EXPECT_NE(tls_begin, (uptr)0);
+  EXPECT_GT(tls_end, tls_begin);
+  EXPECT_GT((uptr)&thread_var, tls_begin);
+  EXPECT_LT((uptr)&thread_var, tls_end);
 
   // Ensure that tls and stack do not intersect.
-  uptr tls_end = tls_addr + tls_size;
-  EXPECT_TRUE(tls_addr < stk_addr || tls_addr >= stk_addr + stk_size);
-  EXPECT_TRUE(tls_end  < stk_addr || tls_end  >=  stk_addr + stk_size);
-  EXPECT_TRUE((tls_addr < stk_addr) == (tls_end  < stk_addr));
+  EXPECT_TRUE(tls_begin < stk_begin || tls_begin >= stk_end);
+  EXPECT_TRUE(tls_end < stk_begin || tls_end >= stk_end);
+  EXPECT_TRUE((tls_begin < stk_begin) == (tls_end < stk_begin));
 #endif
 }
 
@@ -237,12 +236,12 @@ static void *WorkerThread(void *arg) {
 }
 
 TEST(SanitizerCommon, ThreadStackTlsMain) {
-  InitTlsSize();
+  InitializePlatformEarly();
   TestThreadInfo(true);
 }
 
 TEST(SanitizerCommon, ThreadStackTlsWorker) {
-  InitTlsSize();
+  InitializePlatformEarly();
   pthread_t t;
   PTHREAD_CREATE(&t, 0, WorkerThread, 0);
   PTHREAD_JOIN(t, 0);

@@ -13,8 +13,10 @@
 #include "IRModule.h"
 
 #include "PybindUtils.h"
+#include <pybind11/numpy.h>
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -72,6 +74,27 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
+static const char kDenseElementsAttrGetFromListDocstring[] =
+    R"(Gets a DenseElementsAttr from a Python list of attributes.
+
+Note that it can be expensive to construct attributes individually.
+For a large number of elements, consider using a Python buffer or array instead.
+
+Args:
+  attrs: A list of attributes.
+  type: The desired shape and type of the resulting DenseElementsAttr.
+    If not provided, the element type is determined based on the type
+    of the 0th attribute and the shape is `[len(attrs)]`.
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the attributes does not match the type
+    specified by `shaped_type`.
+)";
+
 static const char kDenseResourceElementsAttrGetFromBufferDocstring[] =
     R"(Gets a DenseResourceElementsAttr from a Python buffer or array.
 
@@ -120,6 +143,28 @@ public:
           return PyAffineMapAttribute(affineMap.getContext(), attr);
         },
         py::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
+    c.def_property_readonly("value", mlirAffineMapAttrGetValue,
+                            "Returns the value of the AffineMap attribute");
+  }
+};
+
+class PyIntegerSetAttribute
+    : public PyConcreteAttribute<PyIntegerSetAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAIntegerSet;
+  static constexpr const char *pyClassName = "IntegerSetAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirIntegerSetAttrGetTypeID;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyIntegerSet &integerSet) {
+          MlirAttribute attr = mlirIntegerSetAttrGet(integerSet.get());
+          return PyIntegerSetAttribute(integerSet.getContext(), attr);
+        },
+        py::arg("integer_set"), "Gets an attribute wrapping an IntegerSet.");
   }
 };
 
@@ -648,6 +693,57 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseElementsAttribute
+  getFromList(py::list attributes, std::optional<PyType> explicitType,
+              DefaultingPyMlirContext contextWrapper) {
+
+    const size_t numAttributes = py::len(attributes);
+    if (numAttributes == 0)
+      throw py::value_error("Attributes list must be non-empty.");
+
+    MlirType shapedType;
+    if (explicitType) {
+      if ((!mlirTypeIsAShaped(*explicitType) ||
+           !mlirShapedTypeHasStaticShape(*explicitType))) {
+
+        std::string message;
+        llvm::raw_string_ostream os(message);
+        os << "Expected a static ShapedType for the shaped_type parameter: "
+           << py::repr(py::cast(*explicitType));
+        throw py::value_error(message);
+      }
+      shapedType = *explicitType;
+    } else {
+      SmallVector<int64_t> shape{static_cast<int64_t>(numAttributes)};
+      shapedType = mlirRankedTensorTypeGet(
+          shape.size(), shape.data(),
+          mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),
+          mlirAttributeGetNull());
+    }
+
+    SmallVector<MlirAttribute> mlirAttributes;
+    mlirAttributes.reserve(numAttributes);
+    for (const py::handle &attribute : attributes) {
+      MlirAttribute mlirAttribute = pyTryCast<PyAttribute>(attribute);
+      MlirType attrType = mlirAttributeGetType(mlirAttribute);
+      mlirAttributes.push_back(mlirAttribute);
+
+      if (!mlirTypeEqual(mlirShapedTypeGetElementType(shapedType), attrType)) {
+        std::string message;
+        llvm::raw_string_ostream os(message);
+        os << "All attributes must be of the same type and match "
+           << "the type parameter: expected=" << py::repr(py::cast(shapedType))
+           << ", but got=" << py::repr(py::cast(attrType));
+        throw py::value_error(message);
+      }
+    }
+
+    MlirAttribute elements = mlirDenseElementsAttrGet(
+        shapedType, mlirAttributes.size(), mlirAttributes.data());
+
+    return PyDenseElementsAttribute(contextWrapper->getRef(), elements);
+  }
+
+  static PyDenseElementsAttribute
   getFromBuffer(py::buffer array, bool signless,
                 std::optional<PyType> explicitType,
                 std::optional<std::vector<int64_t>> explicitShape,
@@ -662,103 +758,10 @@ public:
       throw py::error_already_set();
     }
     auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
-    SmallVector<int64_t> shape;
-    if (explicitShape) {
-      shape.append(explicitShape->begin(), explicitShape->end());
-    } else {
-      shape.append(view.shape, view.shape + view.ndim);
-    }
 
-    MlirAttribute encodingAttr = mlirAttributeGetNull();
     MlirContext context = contextWrapper->get();
-
-    // Detect format codes that are suitable for bulk loading. This includes
-    // all byte aligned integer and floating point types up to 8 bytes.
-    // Notably, this excludes, bool (which needs to be bit-packed) and
-    // other exotics which do not have a direct representation in the buffer
-    // protocol (i.e. complex, etc).
-    std::optional<MlirType> bulkLoadElementType;
-    if (explicitType) {
-      bulkLoadElementType = *explicitType;
-    } else {
-      std::string_view format(view.format);
-      if (format == "f") {
-        // f32
-        assert(view.itemsize == 4 && "mismatched array itemsize");
-        bulkLoadElementType = mlirF32TypeGet(context);
-      } else if (format == "d") {
-        // f64
-        assert(view.itemsize == 8 && "mismatched array itemsize");
-        bulkLoadElementType = mlirF64TypeGet(context);
-      } else if (format == "e") {
-        // f16
-        assert(view.itemsize == 2 && "mismatched array itemsize");
-        bulkLoadElementType = mlirF16TypeGet(context);
-      } else if (isSignedIntegerFormat(format)) {
-        if (view.itemsize == 4) {
-          // i32
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 32)
-                                    : mlirIntegerTypeSignedGet(context, 32);
-        } else if (view.itemsize == 8) {
-          // i64
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 64)
-                                    : mlirIntegerTypeSignedGet(context, 64);
-        } else if (view.itemsize == 1) {
-          // i8
-          bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
-                                         : mlirIntegerTypeSignedGet(context, 8);
-        } else if (view.itemsize == 2) {
-          // i16
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 16)
-                                    : mlirIntegerTypeSignedGet(context, 16);
-        }
-      } else if (isUnsignedIntegerFormat(format)) {
-        if (view.itemsize == 4) {
-          // unsigned i32
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 32)
-                                    : mlirIntegerTypeUnsignedGet(context, 32);
-        } else if (view.itemsize == 8) {
-          // unsigned i64
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 64)
-                                    : mlirIntegerTypeUnsignedGet(context, 64);
-        } else if (view.itemsize == 1) {
-          // i8
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 8)
-                                    : mlirIntegerTypeUnsignedGet(context, 8);
-        } else if (view.itemsize == 2) {
-          // i16
-          bulkLoadElementType = signless
-                                    ? mlirIntegerTypeGet(context, 16)
-                                    : mlirIntegerTypeUnsignedGet(context, 16);
-        }
-      }
-      if (!bulkLoadElementType) {
-        throw std::invalid_argument(
-            std::string("unimplemented array format conversion from format: ") +
-            std::string(format));
-      }
-    }
-
-    MlirType shapedType;
-    if (mlirTypeIsAShaped(*bulkLoadElementType)) {
-      if (explicitShape) {
-        throw std::invalid_argument("Shape can only be specified explicitly "
-                                    "when the type is not a shaped type.");
-      }
-      shapedType = *bulkLoadElementType;
-    } else {
-      shapedType = mlirRankedTensorTypeGet(shape.size(), shape.data(),
-                                           *bulkLoadElementType, encodingAttr);
-    }
-    size_t rawBufferSize = view.len;
-    MlirAttribute attr =
-        mlirDenseElementsAttrRawBufferGet(shapedType, rawBufferSize, view.buf);
+    MlirAttribute attr = getAttributeFromBuffer(view, signless, explicitType,
+                                                explicitShape, context);
     if (mlirAttributeIsNull(attr)) {
       throw std::invalid_argument(
           "DenseElementsAttr could not be constructed from the given buffer. "
@@ -868,6 +871,13 @@ public:
         // unsigned i16
         return bufferInfo<uint16_t>(shapedType);
       }
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 1) {
+      // i1 / bool
+      // We can not send the buffer directly back to Python, because the i1
+      // values are bitpacked within MLIR. We call numpy's unpackbits function
+      // to convert the bytes.
+      return getBooleanBufferFromBitpackedAttribute();
     }
 
     // TODO: Currently crashes the program.
@@ -883,6 +893,10 @@ public:
                     py::arg("type") = py::none(), py::arg("shape") = py::none(),
                     py::arg("context") = py::none(),
                     kDenseElementsAttrGetDocstring)
+        .def_static("get", PyDenseElementsAttribute::getFromList,
+                    py::arg("attrs"), py::arg("type") = py::none(),
+                    py::arg("context") = py::none(),
+                    kDenseElementsAttrGetFromListDocstring)
         .def_static("get_splat", PyDenseElementsAttribute::getSplat,
                     py::arg("shaped_type"), py::arg("element_attr"),
                     "Gets a DenseElementsAttr where all values are the same")
@@ -915,6 +929,191 @@ private:
     char code = format[0];
     return code == 'i' || code == 'b' || code == 'h' || code == 'l' ||
            code == 'q';
+  }
+
+  static MlirType
+  getShapedType(std::optional<MlirType> bulkLoadElementType,
+                std::optional<std::vector<int64_t>> explicitShape,
+                Py_buffer &view) {
+    SmallVector<int64_t> shape;
+    if (explicitShape) {
+      shape.append(explicitShape->begin(), explicitShape->end());
+    } else {
+      shape.append(view.shape, view.shape + view.ndim);
+    }
+
+    if (mlirTypeIsAShaped(*bulkLoadElementType)) {
+      if (explicitShape) {
+        throw std::invalid_argument("Shape can only be specified explicitly "
+                                    "when the type is not a shaped type.");
+      }
+      return *bulkLoadElementType;
+    } else {
+      MlirAttribute encodingAttr = mlirAttributeGetNull();
+      return mlirRankedTensorTypeGet(shape.size(), shape.data(),
+                                     *bulkLoadElementType, encodingAttr);
+    }
+  }
+
+  static MlirAttribute getAttributeFromBuffer(
+      Py_buffer &view, bool signless, std::optional<PyType> explicitType,
+      std::optional<std::vector<int64_t>> explicitShape, MlirContext &context) {
+    // Detect format codes that are suitable for bulk loading. This includes
+    // all byte aligned integer and floating point types up to 8 bytes.
+    // Notably, this excludes exotics types which do not have a direct
+    // representation in the buffer protocol (i.e. complex, etc).
+    std::optional<MlirType> bulkLoadElementType;
+    if (explicitType) {
+      bulkLoadElementType = *explicitType;
+    } else {
+      std::string_view format(view.format);
+      if (format == "f") {
+        // f32
+        assert(view.itemsize == 4 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF32TypeGet(context);
+      } else if (format == "d") {
+        // f64
+        assert(view.itemsize == 8 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF64TypeGet(context);
+      } else if (format == "e") {
+        // f16
+        assert(view.itemsize == 2 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF16TypeGet(context);
+      } else if (format == "?") {
+        // i1
+        // The i1 type needs to be bit-packed, so we will handle it seperately
+        return getBitpackedAttributeFromBooleanBuffer(view, explicitShape,
+                                                      context);
+      } else if (isSignedIntegerFormat(format)) {
+        if (view.itemsize == 4) {
+          // i32
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 32)
+                                    : mlirIntegerTypeSignedGet(context, 32);
+        } else if (view.itemsize == 8) {
+          // i64
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 64)
+                                    : mlirIntegerTypeSignedGet(context, 64);
+        } else if (view.itemsize == 1) {
+          // i8
+          bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
+                                         : mlirIntegerTypeSignedGet(context, 8);
+        } else if (view.itemsize == 2) {
+          // i16
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 16)
+                                    : mlirIntegerTypeSignedGet(context, 16);
+        }
+      } else if (isUnsignedIntegerFormat(format)) {
+        if (view.itemsize == 4) {
+          // unsigned i32
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 32)
+                                    : mlirIntegerTypeUnsignedGet(context, 32);
+        } else if (view.itemsize == 8) {
+          // unsigned i64
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 64)
+                                    : mlirIntegerTypeUnsignedGet(context, 64);
+        } else if (view.itemsize == 1) {
+          // i8
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 8)
+                                    : mlirIntegerTypeUnsignedGet(context, 8);
+        } else if (view.itemsize == 2) {
+          // i16
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 16)
+                                    : mlirIntegerTypeUnsignedGet(context, 16);
+        }
+      }
+      if (!bulkLoadElementType) {
+        throw std::invalid_argument(
+            std::string("unimplemented array format conversion from format: ") +
+            std::string(format));
+      }
+    }
+
+    MlirType type = getShapedType(bulkLoadElementType, explicitShape, view);
+    return mlirDenseElementsAttrRawBufferGet(type, view.len, view.buf);
+  }
+
+  // There is a complication for boolean numpy arrays, as numpy represents them
+  // as 8 bits (1 byte) per boolean, whereas MLIR bitpacks them into 8 booleans
+  // per byte.
+  static MlirAttribute getBitpackedAttributeFromBooleanBuffer(
+      Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
+      MlirContext &context) {
+    if (llvm::endianness::native != llvm::endianness::little) {
+      // Given we have no good way of testing the behavior on big-endian systems
+      // we will throw
+      throw py::type_error("Constructing a bit-packed MLIR attribute is "
+                           "unsupported on big-endian systems");
+    }
+
+    py::array_t<uint8_t> unpackedArray(view.len,
+                                       static_cast<uint8_t *>(view.buf));
+
+    py::module numpy = py::module::import("numpy");
+    py::object packbitsFunc = numpy.attr("packbits");
+    py::object packedBooleans =
+        packbitsFunc(unpackedArray, "bitorder"_a = "little");
+    py::buffer_info pythonBuffer = packedBooleans.cast<py::buffer>().request();
+
+    MlirType bitpackedType =
+        getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
+    assert(pythonBuffer.itemsize == 1 && "Packbits must return uint8");
+    // Notice that `mlirDenseElementsAttrRawBufferGet` copies the memory of
+    // packedBooleans, hence the MlirAttribute will remain valid even when
+    // packedBooleans get reclaimed by the end of the function.
+    return mlirDenseElementsAttrRawBufferGet(bitpackedType, pythonBuffer.size,
+                                             pythonBuffer.ptr);
+  }
+
+  // This does the opposite transformation of
+  // `getBitpackedAttributeFromBooleanBuffer`
+  py::buffer_info getBooleanBufferFromBitpackedAttribute() {
+    if (llvm::endianness::native != llvm::endianness::little) {
+      // Given we have no good way of testing the behavior on big-endian systems
+      // we will throw
+      throw py::type_error("Constructing a numpy array from a MLIR attribute "
+                           "is unsupported on big-endian systems");
+    }
+
+    int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
+    int64_t numBitpackedBytes = llvm::divideCeil(numBooleans, 8);
+    uint8_t *bitpackedData = static_cast<uint8_t *>(
+        const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
+    py::array_t<uint8_t> packedArray(numBitpackedBytes, bitpackedData);
+
+    py::module numpy = py::module::import("numpy");
+    py::object unpackbitsFunc = numpy.attr("unpackbits");
+    py::object equalFunc = numpy.attr("equal");
+    py::object reshapeFunc = numpy.attr("reshape");
+    py::array unpackedBooleans =
+        unpackbitsFunc(packedArray, "bitorder"_a = "little");
+
+    // Unpackbits operates on bytes and gives back a flat 0 / 1 integer array.
+    // We need to:
+    //   1. Slice away the padded bits
+    //   2. Make the boolean array have the correct shape
+    //   3. Convert the array to a boolean array
+    unpackedBooleans = unpackedBooleans[py::slice(0, numBooleans, 1)];
+    unpackedBooleans = equalFunc(unpackedBooleans, 1);
+
+    MlirType shapedType = mlirAttributeGetType(*this);
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
+    std::vector<intptr_t> shape(rank);
+    for (intptr_t i = 0; i < rank; ++i) {
+      shape[i] = mlirShapedTypeGetDimSize(shapedType, i);
+    }
+    unpackedBooleans = reshapeFunc(unpackedBooleans, shape);
+
+    // Make sure the returned py::buffer_view claims ownership of the data in
+    // `pythonBuffer` so it remains valid when Python reads it
+    py::buffer pythonBuffer = unpackedBooleans.cast<py::buffer>();
+    return pythonBuffer.request();
   }
 
   template <typename Type>
@@ -1347,7 +1546,6 @@ py::object symbolRefOrFlatSymbolRefAttributeCaster(PyAttribute &pyAttribute) {
 
 void mlir::python::populateIRAttributes(py::module &m) {
   PyAffineMapAttribute::bind(m);
-
   PyDenseBoolArrayAttribute::bind(m);
   PyDenseBoolArrayAttribute::PyDenseArrayIterator::bind(m);
   PyDenseI8ArrayAttribute::bind(m);
@@ -1387,6 +1585,7 @@ void mlir::python::populateIRAttributes(py::module &m) {
   PyOpaqueAttribute::bind(m);
   PyFloatAttribute::bind(m);
   PyIntegerAttribute::bind(m);
+  PyIntegerSetAttribute::bind(m);
   PyStringAttribute::bind(m);
   PyTypeAttribute::bind(m);
   PyGlobals::get().registerTypeCaster(

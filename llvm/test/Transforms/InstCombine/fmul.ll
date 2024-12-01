@@ -281,7 +281,7 @@ define float @neg_unary_neg_multi_use(float %x, float %y) {
 define float @neg_mul(float %x, float %y) {
 ; CHECK-LABEL: @neg_mul(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = fsub float -0.0, %x
@@ -292,7 +292,7 @@ define float @neg_mul(float %x, float %y) {
 define float @unary_neg_mul(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_mul(
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %neg = fneg float %x
@@ -303,7 +303,7 @@ define float @unary_neg_mul(float %x, float %y) {
 define <2 x float> @neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @neg_mul_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -314,7 +314,7 @@ define <2 x float> @neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 define <2 x float> @unary_neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @unary_neg_mul_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fneg <2 x float> %x
@@ -325,7 +325,7 @@ define <2 x float> @unary_neg_mul_vec(<2 x float> %x, <2 x float> %y) {
 define <2 x float> @neg_mul_vec_poison(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @neg_mul_vec_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %sub = fsub <2 x float> <float poison, float -0.0>, %x
@@ -337,7 +337,7 @@ define <2 x float> @neg_mul_vec_poison(<2 x float> %x, <2 x float> %y) {
 define float @neg_sink_nsz(float %x, float %y) {
 ; CHECK-LABEL: @neg_sink_nsz(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fneg nsz float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB1]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub1 = fsub nsz float 0.0, %x
@@ -348,7 +348,7 @@ define float @neg_sink_nsz(float %x, float %y) {
 define float @neg_sink_multi_use(float %x, float %y) {
 ; CHECK-LABEL: @neg_sink_multi_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB1]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[MUL]], [[SUB1]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
@@ -361,7 +361,7 @@ define float @neg_sink_multi_use(float %x, float %y) {
 define float @unary_neg_mul_multi_use(float %x, float %y) {
 ; CHECK-LABEL: @unary_neg_mul_multi_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y:%.*]], [[SUB1]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[MUL]], [[SUB1]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
@@ -377,7 +377,7 @@ define void @test8(ptr %inout, i1 %c1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[LOCAL_VAR_7_0:%.*]] = phi <4 x float> [ <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[LOCAL_VAR_7_0:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP0]] = insertelement <4 x float> [[LOCAL_VAR_7_0]], float 0.000000e+00, i64 2
@@ -449,7 +449,7 @@ declare double @llvm.sqrt.f64(double)
 define double @sqrt_squared2(double %f) {
 ; CHECK-LABEL: @sqrt_squared2(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[F:%.*]])
-; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[SQRT]], [[F]]
+; CHECK-NEXT:    [[MUL2:%.*]] = fmul double [[F]], [[SQRT]]
 ; CHECK-NEXT:    ret double [[MUL2]]
 ;
   %sqrt = call double @llvm.sqrt.f64(double %f)
@@ -821,8 +821,8 @@ define float @fmul_fadd_distribute(float %x) {
 
 define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 6.000000e+03, float 6.000000e+03>
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <2 x float> [[TMP1]], <float 1.200000e+07, float 1.200000e+07>
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[X:%.*]], splat (float 6.000000e+03)
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <2 x float> [[TMP1]], splat (float 1.200000e+07)
 ; CHECK-NEXT:    ret <2 x float> [[T3]]
 ;
   %t1 = fadd reassoc <2 x float> <float 2.0e+3, float 2.0e+3>, %x
@@ -832,8 +832,8 @@ define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
 
 define <vscale x 2 x float> @fmul_fadd_distribute_scalablevec(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute_scalablevec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 6.000000e+03, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.200000e+07, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <vscale x 2 x float> [[X:%.*]], splat (float 6.000000e+03)
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], splat (float 1.200000e+07)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[T3]]
 ;
   %t1 = fadd reassoc <vscale x 2 x float> splat (float 2.0e+3), %x
@@ -1131,8 +1131,8 @@ for.body:
 
 define double @fmul_negated_constant_expression(double %x) {
 ; CHECK-LABEL: @fmul_negated_constant_expression(
-; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds ({ [2 x ptr] }, ptr @g, i64 1, i32 0, i64 0) to i64) to double)
-; CHECK-NEXT:    [[R:%.*]] = fmul double [[FSUB]], [[X:%.*]]
+; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @g, i64 16) to i64) to double)
+; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], [[FSUB]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %fsub = fsub double -0.000000e+00, bitcast (i64 ptrtoint (ptr getelementptr inbounds ({ [2 x ptr] }, ptr @g, i64 0, i32 0, i64 2) to i64) to double)
@@ -1164,7 +1164,7 @@ define float @negate_if_false(float %x, i1 %cond) {
 
 define <2 x double> @negate_if_true_commute(<2 x double> %px, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_commute(
-; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 4.200000e+01>, [[PX:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> splat (double 4.200000e+01), [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf <2 x double> [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = select ninf i1 [[COND:%.*]], <2 x double> [[TMP1]], <2 x double> [[X]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
@@ -1207,8 +1207,8 @@ define float @negate_if_true_extra_use(float %x, i1 %cond) {
 
 define <2 x double> @negate_if_true_wrong_constant(<2 x double> %px, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_wrong_constant(
-; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 4.200000e+01>, [[PX:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x double> <double -1.000000e+00, double 0.000000e+00>, <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> splat (double 4.200000e+01), [[PX:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x double> <double -1.000000e+00, double 0.000000e+00>, <2 x double> splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[R:%.*]] = fmul <2 x double> [[X]], [[SEL]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;

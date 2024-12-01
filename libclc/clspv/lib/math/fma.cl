@@ -24,9 +24,9 @@
 // (__clc_sw_fma), but avoids the use of ulong in favor of uint2. The logic has
 // been updated as appropriate.
 
-#include <clc/clc.h>
-#include "../../../generic/lib/clcmacro.h"
 #include "../../../generic/lib/math/math.h"
+#include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 struct fp {
   uint2 mantissa;
@@ -269,3 +269,14 @@ _CLC_DEF _CLC_OVERLOAD float fma(float a, float b, float c) {
                   ((uint)st_fma.mantissa.lo & 0x7fffff));
 }
 _CLC_TERNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, fma, float, float, float)
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_DEF _CLC_OVERLOAD half fma(half a, half b, half c) {
+  return (half)mad((float)a, (float)b, (float)c);
+}
+_CLC_TERNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, half, fma, half, half, half)
+
+#endif

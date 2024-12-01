@@ -1,6 +1,8 @@
 include(TableGen)
 
-set(LLVM_LINK_COMPONENTS Support)
+if (NOT LLVM_LINK_LLVM_DYLIB)
+  set(LLVM_LINK_COMPONENTS Support)
+endif()
 
 add_tablegen(libc-hdrgen LIBC
   Command.h

@@ -306,6 +306,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned PrintSupportedExtensions : 1;
 
+  /// Print the extensions enabled for the current target.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned PrintEnabledExtensions : 1;
+
   /// Show the -version text.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ShowVersion : 1;
@@ -520,7 +524,7 @@ public:
   std::string ProductName;
 
   // Currently this is only used as part of the `-extract-api` action.
-  // A comma seperated list of files providing a list of APIs to
+  // A comma separated list of files providing a list of APIs to
   // ignore when extracting documentation.
   std::vector<std::string> ExtractAPIIgnoresFileList;
 
@@ -576,6 +580,11 @@ public:
   /// Minimum time granularity (in microseconds) traced by time profiler.
   unsigned TimeTraceGranularity;
 
+  /// Make time trace capture verbose event details (e.g. source filenames).
+  /// This can increase the size of the output by 2-3 times.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned TimeTraceVerbose : 1;
+
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
 
@@ -597,7 +606,8 @@ public:
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(false), TimeTraceGranularity(500) {}
+        UseClangIRPipeline(false), TimeTraceGranularity(500),
+        TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

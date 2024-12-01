@@ -51,13 +51,13 @@ public:
 
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<SlotIndexes>();
+    AU.addRequired<SlotIndexesWrapperPass>();
     RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
   }
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     return std::make_unique<DefaultPriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexes>());
+        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI());
   }
   bool doInitialization(Module &M) override {
     if (NotAsRequested)

@@ -22,7 +22,7 @@ define i32 @partial_unswitch_true_successor(ptr %ptr, i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER_US:%.*]]
 ; CHECK:       loop.header.us:
 ; CHECK-NEXT:    [[IV_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ [[IV_NEXT_US:%.*]], [[LOOP_LATCH_US:%.*]] ]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 poison, metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 poison, [[META3:![0-9]+]], !DIExpression(), [[META8:![0-9]+]])
 ; CHECK-NEXT:    br label [[NOCLOBBER_US:%.*]]
 ; CHECK:       noclobber.us:
 ; CHECK-NEXT:    br label [[LOOP_LATCH_US]]
@@ -37,7 +37,7 @@ define i32 @partial_unswitch_true_successor(ptr %ptr, i32 %N) {
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[LV]], metadata [[META3]], metadata !DIExpression()), !dbg [[DBG8]]
+; CHECK-NEXT:      #dbg_value(i32 [[LV]], [[META3]], !DIExpression(), [[META8]])
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:

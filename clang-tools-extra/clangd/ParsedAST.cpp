@@ -280,6 +280,8 @@ public:
     llvm::StringRef Check;
     while (!Checks.empty()) {
       std::tie(Check, Checks) = Checks.split(',');
+      Check = Check.trim();
+
       if (Check.empty())
         continue;
 
@@ -373,7 +375,8 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
       Cfg.Diagnostics.UnusedIncludes == Config::IncludesPolicy::None;
   if (SuppressMissing && SuppressUnused)
     return {};
-  auto Findings = computeIncludeCleanerFindings(AST);
+  auto Findings = computeIncludeCleanerFindings(
+      AST, Cfg.Diagnostics.Includes.AnalyzeAngledIncludes);
   if (SuppressMissing)
     Findings.MissingIncludes.clear();
   if (SuppressUnused)
@@ -445,6 +448,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           L->sawDiagnostic(D, Diag);
       });
 
+  // Adjust header search options to load the built module files recorded
+  // in RequiredModules.
+  if (Preamble && Preamble->RequiredModules)
+    Preamble->RequiredModules->adjustHeaderSearchOptions(
+        CI->getHeaderSearchOpts());
+
   std::optional<PreamblePatch> Patch;
   // We might use an ignoring diagnostic consumer if they are going to be
   // dropped later on to not pay for extra latency by processing them.
@@ -458,6 +467,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       std::move(CI), PreamblePCH,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, Filename), VFS,
       *DiagConsumer);
+
   if (!Clang) {
     // The last diagnostic contains information about the reason of this
     // failure.
@@ -504,8 +514,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   auto Action = std::make_unique<ClangdFrontendAction>();
   const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
-    log("BeginSourceFile() failed when building AST for {0}",
-        MainInput.getFile());
+    elog("BeginSourceFile() failed when building AST for {0}",
+         MainInput.getFile());
     return std::nullopt;
   }
   // If we saw an include guard in the preamble section of the main file,
@@ -680,7 +690,9 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Marks = Patch->marks();
   }
   auto &PP = Clang->getPreprocessor();
-  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(PP, Macros));
+  auto MacroCollector = std::make_unique<CollectMainFileMacros>(PP, Macros);
+  auto *MacroCollectorPtr = MacroCollector.get(); // so we can call doneParse()
+  PP.addPPCallbacks(std::move(MacroCollector));
 
   PP.addPPCallbacks(
       collectPragmaMarksCallback(Clang->getSourceManager(), Marks));
@@ -700,6 +712,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   if (llvm::Error Err = Action->Execute())
     log("Execute() failed when building AST for {0}: {1}", MainInput.getFile(),
         toString(std::move(Err)));
+
+  // Disable the macro collector for the remainder of this function, e.g.
+  // clang-tidy checkers.
+  MacroCollectorPtr->doneParse();
 
   // We have to consume the tokens before running clang-tidy to avoid collecting
   // tokens from running the preprocessor inside the checks (only

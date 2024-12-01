@@ -40,7 +40,10 @@
 
 namespace scudo {
 
+#if !defined(SCUDO_PAGE_SIZE)
+// This function is only used when page size is not hard-coded.
 uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
+#endif
 
 void NORETURN die() { abort(); }
 

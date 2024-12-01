@@ -876,13 +876,13 @@ public:
 
   /// Best-effort check if the expression operand refers to a most derived
   /// object. This is not a strong guarantee.
-  bool isMostDerived(ASTContext &Context) const;
+  bool isMostDerived(const ASTContext &Context) const;
 
   bool isTypeOperand() const { return Operand.is<TypeSourceInfo *>(); }
 
   /// Retrieves the type operand of this typeid() expression after
   /// various required adjustments (removing reference types, cv-qualifiers).
-  QualType getTypeOperand(ASTContext &Context) const;
+  QualType getTypeOperand(const ASTContext &Context) const;
 
   /// Retrieve source information for the type operand.
   TypeSourceInfo *getTypeOperandSourceInfo() const {
@@ -919,6 +919,10 @@ public:
         reinterpret_cast<Stmt **>(&const_cast<CXXTypeidExpr *>(this)->Operand);
     return const_child_range(begin, begin + 1);
   }
+
+  /// Whether this is of a form like "typeid(*ptr)" that can throw a
+  /// std::bad_typeid if a pointer is a null pointer ([expr.typeid]p2)
+  bool hasNullCheck() const;
 };
 
 /// A member reference to an MSPropertyDecl.
@@ -2172,8 +2176,9 @@ public:
   const_child_range children() const;
 };
 
-/// An expression "T()" which creates a value-initialized rvalue of type
-/// T, which is a non-class type.  See (C++98 [5.2.3p2]).
+/// An expression "T()" which creates an rvalue of a non-class type T.
+/// For non-void T, the rvalue is value-initialized.
+/// See (C++98 [5.2.3p2]).
 class CXXScalarValueInitExpr : public Expr {
   friend class ASTStmtReader;
 
@@ -3025,9 +3030,10 @@ protected:
 
 public:
   struct FindResult {
-    OverloadExpr *Expression;
-    bool IsAddressOfOperand;
-    bool HasFormOfMemberPointer;
+    OverloadExpr *Expression = nullptr;
+    bool IsAddressOfOperand = false;
+    bool IsAddressOfOperandWithParen = false;
+    bool HasFormOfMemberPointer = false;
   };
 
   /// Finds the overloaded expression in the given expression \p E of
@@ -3039,6 +3045,7 @@ public:
     assert(E->getType()->isSpecificBuiltinType(BuiltinType::Overload));
 
     FindResult Result;
+    bool HasParen = isa<ParenExpr>(E);
 
     E = E->IgnoreParens();
     if (isa<UnaryOperator>(E)) {
@@ -3048,10 +3055,9 @@ public:
 
       Result.HasFormOfMemberPointer = (E == Ovl && Ovl->getQualifier());
       Result.IsAddressOfOperand = true;
+      Result.IsAddressOfOperandWithParen = HasParen;
       Result.Expression = Ovl;
     } else {
-      Result.HasFormOfMemberPointer = false;
-      Result.IsAddressOfOperand = false;
       Result.Expression = cast<OverloadExpr>(E);
     }
 
@@ -3224,7 +3230,7 @@ class UnresolvedLookupExpr final
                        const DeclarationNameInfo &NameInfo, bool RequiresADL,
                        const TemplateArgumentListInfo *TemplateArgs,
                        UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-                       bool KnownDependent);
+                       bool KnownDependent, bool KnownInstantiationDependent);
 
   UnresolvedLookupExpr(EmptyShell Empty, unsigned NumResults,
                        bool HasTemplateKWAndArgsInfo);
@@ -3243,7 +3249,7 @@ public:
          NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-         bool KnownDependent);
+         bool KnownDependent, bool KnownInstantiationDependent);
 
   // After canonicalization, there may be dependent template arguments in
   // CanonicalConverted But none of Args is dependent. When any of
@@ -3253,7 +3259,8 @@ public:
          NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
-         UnresolvedSetIterator End, bool KnownDependent);
+         UnresolvedSetIterator End, bool KnownDependent,
+         bool KnownInstantiationDependent);
 
   static UnresolvedLookupExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumResults,
@@ -4299,11 +4306,11 @@ class SizeOfPackExpr final
       : Expr(SizeOfPackExprClass, Empty), Length(NumPartialArgs) {}
 
 public:
-  static SizeOfPackExpr *
-  Create(ASTContext &Context, SourceLocation OperatorLoc, NamedDecl *Pack,
-         SourceLocation PackLoc, SourceLocation RParenLoc,
-         std::optional<unsigned> Length = std::nullopt,
-         ArrayRef<TemplateArgument> PartialArgs = std::nullopt);
+  static SizeOfPackExpr *Create(ASTContext &Context, SourceLocation OperatorLoc,
+                                NamedDecl *Pack, SourceLocation PackLoc,
+                                SourceLocation RParenLoc,
+                                std::optional<unsigned> Length = std::nullopt,
+                                ArrayRef<TemplateArgument> PartialArgs = {});
   static SizeOfPackExpr *CreateDeserialized(ASTContext &Context,
                                             unsigned NumPartialArgs);
 
@@ -4318,6 +4325,8 @@ public:
 
   /// Retrieve the parameter pack.
   NamedDecl *getPack() const { return Pack; }
+
+  void setPack(NamedDecl *NewPack) { Pack = NewPack; }
 
   /// Retrieve the length of the parameter pack.
   ///
@@ -4377,15 +4386,21 @@ class PackIndexingExpr final
   // The pack being indexed, followed by the index
   Stmt *SubExprs[2];
 
-  size_t TransformedExpressions;
+  // The size of the trailing expressions.
+  unsigned TransformedExpressions : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned FullySubstituted : 1;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
-                   ArrayRef<Expr *> SubstitutedExprs = {})
+                   ArrayRef<Expr *> SubstitutedExprs = {},
+                   bool FullySubstituted = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
-        TransformedExpressions(SubstitutedExprs.size()) {
+        TransformedExpressions(SubstitutedExprs.size()),
+        FullySubstituted(FullySubstituted) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4408,9 +4423,17 @@ public:
                                   SourceLocation EllipsisLoc,
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
-                                  ArrayRef<Expr *> SubstitutedExprs = {});
+                                  ArrayRef<Expr *> SubstitutedExprs = {},
+                                  bool FullySubstituted = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
+
+  bool isFullySubstituted() const { return FullySubstituted; }
+
+  /// Determine if the expression was expanded to empty.
+  bool expandsToEmptyPack() const {
+    return isFullySubstituted() && TransformedExpressions == 0;
+  }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
@@ -4445,6 +4468,7 @@ public:
     return getTrailingObjects<Expr *>()[*Index];
   }
 
+  /// Return the trailing expressions, regardless of the expansion.
   ArrayRef<Expr *> getExpressions() const {
     return {getTrailingObjects<Expr *>(), TransformedExpressions};
   }
@@ -4838,15 +4862,7 @@ public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
-              std::optional<unsigned> NumExpansions)
-      : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary),
-        LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-        NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
-    SubExprs[SubExpr::Callee] = Callee;
-    SubExprs[SubExpr::LHS] = LHS;
-    SubExprs[SubExpr::RHS] = RHS;
-    setDependence(computeDependence(this));
-  }
+              std::optional<unsigned> NumExpansions);
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}
 

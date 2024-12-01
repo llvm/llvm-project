@@ -1,0 +1,17 @@
+[
+  {
+    "directory": "$test_dir/Inputs/basic-project",
+    "command": "clang++ -o Calculator.o -I./include ./src/Calculator.cpp",
+    "file": "./src/Calculator.cpp"
+  },
+  {
+    "directory": "$test_dir/Inputs/basic-project",
+    "command": "clang++ -o Circle.o -I./include ./src/Circle.cpp",
+    "file": "./src/Circle.cpp"
+  },
+  {
+    "directory": "$test_dir/Inputs/basic-project",
+    "command": "clang++ -o Rectangle.o -I./include ./src/Rectangle.cpp",
+    "file": "./src/Rectangle.cpp"
+  }
+]

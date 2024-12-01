@@ -114,12 +114,14 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
 def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.rewrite_as_constant",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let arguments = (ins UnitAttr:$aggressive);
   let description = [{
     Indicates that tensor ops (such as tensor.generate) should be replaced with
     constants (arith.constant) when possible.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat =
+      "(`aggressive` $aggressive^)? attr-dict";
 }
 
 def Transform_TensorPadOp : Transform_ConcreteOpType<"tensor.pad">;

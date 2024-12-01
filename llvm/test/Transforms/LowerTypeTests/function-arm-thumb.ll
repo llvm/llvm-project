@@ -46,4 +46,4 @@ define void @addrtaken() {
 ; CHECK-NEXT: }
 
 ; CHECK-DAG: attributes #[[AA]] = { naked noinline "target-features"="-thumb-mode" }
-; CHECK-DAG: attributes #[[AT]] = { naked noinline "branch-target-enforcement"="false" "sign-return-address"="none" "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; CHECK-DAG: attributes #[[AT]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }

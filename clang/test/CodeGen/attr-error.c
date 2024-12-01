@@ -8,4 +8,4 @@ void bar(void) {
 // CHECK: call void @foo(), !srcloc [[SRCLOC:![0-9]+]]
 // CHECK: declare{{.*}} void @foo() [[ATTR:#[0-9]+]]
 // CHECK: attributes [[ATTR]] = {{{.*}}"dontcall-error"="oh no"
-// CHECK: [[SRCLOC]] = !{i32 {{[0-9]+}}}
+// CHECK: [[SRCLOC]] = !{i64 {{[0-9]+}}}

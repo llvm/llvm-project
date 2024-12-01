@@ -19,7 +19,12 @@
 
 namespace llvm {
 
+class DominatorTree;
 class Function;
+class TargetLibraryInfo;
+
+bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
+                             DominatorTree *DT);
 
 struct LowerConstantIntrinsicsPass :
     PassInfoMixin<LowerConstantIntrinsicsPass> {

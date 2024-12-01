@@ -12,7 +12,7 @@ config.omp_library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.omp_header_dir = "@LIBOMP_INCLUDE_DIR@"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
 config.has_libatomic = @LIBARCHER_HAVE_LIBATOMIC@
-config.has_tsan = @OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS@
+config.has_tsan = @OPENMP_TEST_ENABLE_TSAN@
 
 config.test_archer_flags = "@LIBARCHER_TEST_FLAGS@"
 config.libarcher_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"

@@ -111,12 +111,12 @@ define void @test6(ptr nocapture readonly %A, ptr nocapture %B, i64 %n) {
 ; CHECK-NEXT:    slli a4, a3, 2
 ; CHECK-NEXT:    add a5, a0, a4
 ; CHECK-NEXT:    vle32.v v8, (a5)
+; CHECK-NEXT:    add a3, a3, a2
 ; CHECK-NEXT:    vmsle.vi v9, v8, -3
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 2
 ; CHECK-NEXT:    vmor.mm v0, v9, v10
 ; CHECK-NEXT:    add a4, a4, a1
 ; CHECK-NEXT:    vse32.v v8, (a4), v0.t
-; CHECK-NEXT:    add a3, a3, a2
 ; CHECK-NEXT:    vsetvli a2, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    bnez a2, .LBB5_2
 ; CHECK-NEXT:  .LBB5_3: # %for.cond.cleanup
@@ -258,7 +258,6 @@ entry:
 define <vscale x 1 x double> @test14(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test14:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
@@ -699,3 +698,27 @@ declare <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32>, 
 declare <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1>, <vscale x 2 x i1>, i64)
 declare void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, <vscale x 2 x i1>, i64)
 declare void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)
+
+define <vscale x 2 x i32> @avl_undef1(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>) {
+; CHECK-LABEL: avl_undef1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v9, v10
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> %0,
+    <vscale x 2 x i32> %1,
+    <vscale x 2 x i32> %2,
+    i64 undef
+  )
+  ret <vscale x 2 x i32> %a
+}
+
+define i64 @avl_undef2() {
+; CHECK-LABEL: avl_undef2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.riscv.vsetvli(i64 poison, i64 2, i64 7)
+  ret i64 %1
+}

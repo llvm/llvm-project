@@ -13,12 +13,16 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <cstdint>
 
 using namespace mlir;
 using namespace test;
@@ -214,6 +218,30 @@ struct MoveBeforeParentOp : public RewritePattern {
   }
 };
 
+/// This pattern moves "test.move_after_parent_op" after the parent op.
+struct MoveAfterParentOp : public RewritePattern {
+  MoveAfterParentOp(MLIRContext *context)
+      : RewritePattern("test.move_after_parent_op", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // Do not hoist past functions.
+    if (isa<FunctionOpInterface>(op->getParentOp()))
+      return failure();
+
+    int64_t moveForwardBy = 0;
+    if (auto advanceBy = op->getAttrOfType<IntegerAttr>("advance"))
+      moveForwardBy = advanceBy.getInt();
+
+    Operation *moveAfter = op->getParentOp();
+    for (int64_t i = 0; i < moveForwardBy; ++i)
+      moveAfter = moveAfter->getNextNode();
+
+    rewriter.moveOpAfter(op, moveAfter);
+    return success();
+  }
+};
+
 /// This pattern inlines blocks that are nested in
 /// "test.inline_blocks_into_parent" into the parent block.
 struct InlineBlocksIntoParent : public RewritePattern {
@@ -286,14 +314,63 @@ struct CloneRegionBeforeOp : public RewritePattern {
   }
 };
 
-struct TestPatternDriver
-    : public PassWrapper<TestPatternDriver, OperationPass<>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
+/// Replace an operation may introduce the re-visiting of its users.
+class ReplaceWithNewOp : public RewritePattern {
+public:
+  ReplaceWithNewOp(MLIRContext *context)
+      : RewritePattern("test.replace_with_new_op", /*benefit=*/1, context) {}
 
-  TestPatternDriver() = default;
-  TestPatternDriver(const TestPatternDriver &other) : PassWrapper(other) {}
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    Operation *newOp;
+    if (op->hasAttr("create_erase_op")) {
+      newOp = rewriter.create(
+          op->getLoc(),
+          OperationName("test.erase_op", op->getContext()).getIdentifier(),
+          ValueRange(), TypeRange());
+    } else {
+      newOp = rewriter.create(
+          op->getLoc(),
+          OperationName("test.new_op", op->getContext()).getIdentifier(),
+          op->getOperands(), op->getResultTypes());
+    }
+    // "replaceOp" could be used instead of "replaceAllOpUsesWith"+"eraseOp".
+    // A "notifyOperationReplaced" callback is triggered in either case.
+    rewriter.replaceAllOpUsesWith(op, newOp->getResults());
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
 
-  StringRef getArgument() const final { return "test-patterns"; }
+/// Erases the first child block of the matched "test.erase_first_block"
+/// operation.
+class EraseFirstBlock : public RewritePattern {
+public:
+  EraseFirstBlock(MLIRContext *context)
+      : RewritePattern("test.erase_first_block", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    for (Region &r : op->getRegions()) {
+      for (Block &b : r.getBlocks()) {
+        rewriter.eraseBlock(&b);
+        return success();
+      }
+    }
+
+    return failure();
+  }
+};
+
+struct TestGreedyPatternDriver
+    : public PassWrapper<TestGreedyPatternDriver, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGreedyPatternDriver)
+
+  TestGreedyPatternDriver() = default;
+  TestGreedyPatternDriver(const TestGreedyPatternDriver &other)
+      : PassWrapper(other) {}
+
+  StringRef getArgument() const final { return "test-greedy-patterns"; }
   StringRef getDescription() const final { return "Run test dialect patterns"; }
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());
@@ -470,34 +547,6 @@ private:
     }
   };
 
-  // Replace an operation may introduce the re-visiting of its users.
-  class ReplaceWithNewOp : public RewritePattern {
-  public:
-    ReplaceWithNewOp(MLIRContext *context)
-        : RewritePattern("test.replace_with_new_op", /*benefit=*/1, context) {}
-
-    LogicalResult matchAndRewrite(Operation *op,
-                                  PatternRewriter &rewriter) const override {
-      Operation *newOp;
-      if (op->hasAttr("create_erase_op")) {
-        newOp = rewriter.create(
-            op->getLoc(),
-            OperationName("test.erase_op", op->getContext()).getIdentifier(),
-            ValueRange(), TypeRange());
-      } else {
-        newOp = rewriter.create(
-            op->getLoc(),
-            OperationName("test.new_op", op->getContext()).getIdentifier(),
-            op->getOperands(), op->getResultTypes());
-      }
-      // "replaceOp" could be used instead of "replaceAllOpUsesWith"+"eraseOp".
-      // A "notifyOperationReplaced" callback is triggered in either case.
-      rewriter.replaceAllOpUsesWith(op, newOp->getResults());
-      rewriter.eraseOp(op);
-      return success();
-    }
-  };
-
   // Remove an operation may introduce the re-visiting of its operands.
   class EraseOp : public RewritePattern {
   public:
@@ -558,6 +607,39 @@ private:
       return success();
     }
   };
+};
+
+struct TestWalkPatternDriver final
+    : PassWrapper<TestWalkPatternDriver, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestWalkPatternDriver)
+
+  TestWalkPatternDriver() = default;
+  TestWalkPatternDriver(const TestWalkPatternDriver &other)
+      : PassWrapper(other) {}
+
+  StringRef getArgument() const override {
+    return "test-walk-pattern-rewrite-driver";
+  }
+  StringRef getDescription() const override {
+    return "Run test walk pattern rewrite driver";
+  }
+  void runOnOperation() override {
+    mlir::RewritePatternSet patterns(&getContext());
+
+    // Patterns for testing the WalkPatternRewriteDriver.
+    patterns.add<IncrementIntAttribute<3>, MoveBeforeParentOp,
+                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock>(
+        &getContext());
+
+    DumpNotifications dumpListener;
+    walkAndApplyPatterns(getOperation(), std::move(patterns),
+                         dumpNotifications ? &dumpListener : nullptr);
+  }
+
+  Option<bool> dumpNotifications{
+      *this, "dump-notifications",
+      llvm::cl::desc("Print rewrite listener notifications"),
+      llvm::cl::init(false)};
 };
 
 } // namespace
@@ -684,6 +766,33 @@ void TestDerivedAttributeDriver::runOnOperation() {
 namespace {
 //===----------------------------------------------------------------------===//
 // Region-Block Rewrite Testing
+
+/// This pattern applies a signature conversion to a block inside a detached
+/// region.
+struct TestDetachedSignatureConversion : public ConversionPattern {
+  TestDetachedSignatureConversion(MLIRContext *ctx)
+      : ConversionPattern("test.detached_signature_conversion", /*benefit=*/1,
+                          ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (op->getNumRegions() != 1)
+      return failure();
+    OperationState state(op->getLoc(), "test.legal_op_with_region", operands,
+                         op->getResultTypes(), {}, BlockRange());
+    Region *newRegion = state.addRegion();
+    rewriter.inlineRegionBefore(op->getRegion(0), *newRegion,
+                                newRegion->begin());
+    TypeConverter::SignatureConversion result(newRegion->getNumArguments());
+    for (unsigned i = 0, e = newRegion->getNumArguments(); i < e; ++i)
+      result.addInputs(i, rewriter.getF64Type());
+    rewriter.applySignatureConversion(&newRegion->front(), result);
+    Operation *newOp = rewriter.create(state);
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
 
 /// This pattern is a simple pattern that inlines the first region of a given
 /// operation into the parent region.
@@ -873,9 +982,41 @@ struct TestPassthroughInvalidOp : public ConversionPattern {
   TestPassthroughInvalidOp(MLIRContext *ctx)
       : ConversionPattern("test.invalid", 1, ctx) {}
   LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    SmallVector<Value> flattened;
+    for (auto it : llvm::enumerate(operands)) {
+      ValueRange range = it.value();
+      if (range.size() == 1) {
+        flattened.push_back(range.front());
+        continue;
+      }
+
+      // This is a 1:N replacement. Insert a test.cast op. (That's what the
+      // argument materialization used to do.)
+      flattened.push_back(
+          rewriter
+              .create<TestCastOp>(op->getLoc(),
+                                  op->getOperand(it.index()).getType(), range)
+              .getResult());
+    }
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, flattened,
+                                             std::nullopt);
+    return success();
+  }
+};
+/// Replace with valid op, but simply drop the operands. This is used in a
+/// regression where we used to generate circular unrealized_conversion_cast
+/// ops.
+struct TestDropAndReplaceInvalidOp : public ConversionPattern {
+  TestDropAndReplaceInvalidOp(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter,
+                          "test.drop_operands_and_replace_with_valid", 1, ctx) {
+  }
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, operands,
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, ValueRange(),
                                              std::nullopt);
     return success();
   }
@@ -885,23 +1026,13 @@ struct TestSplitReturnType : public ConversionPattern {
   TestSplitReturnType(MLIRContext *ctx)
       : ConversionPattern("test.return", 1, ctx) {}
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // Check for a return of F32.
     if (op->getNumOperands() != 1 || !op->getOperand(0).getType().isF32())
       return failure();
-
-    // Check if the first operation is a cast operation, if it is we use the
-    // results directly.
-    auto *defOp = operands[0].getDefiningOp();
-    if (auto packerOp =
-            llvm::dyn_cast_or_null<UnrealizedConversionCastOp>(defOp)) {
-      rewriter.replaceOpWithNewOp<TestReturnOp>(op, packerOp.getOperands());
-      return success();
-    }
-
-    // Otherwise, fail to match.
-    return failure();
+    rewriter.replaceOpWithNewOp<TestReturnOp>(op, operands[0]);
+    return success();
   }
 };
 
@@ -1043,6 +1174,60 @@ struct TestCreateUnregisteredOp : public OpRewritePattern<ILLegalOpG> {
     return success();
   };
 };
+
+class TestEraseOp : public ConversionPattern {
+public:
+  TestEraseOp(MLIRContext *ctx) : ConversionPattern("test.erase_op", 1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // Erase op without replacements.
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+/// This pattern matches a test.duplicate_block_args op and duplicates all
+/// block arguments.
+class TestDuplicateBlockArgs
+    : public OpConversionPattern<DuplicateBlockArgsOp> {
+  using OpConversionPattern<DuplicateBlockArgsOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(DuplicateBlockArgsOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getIsLegal())
+      return failure();
+    rewriter.startOpModification(op);
+    Block *body = &op.getBody().front();
+    TypeConverter::SignatureConversion result(body->getNumArguments());
+    for (auto it : llvm::enumerate(body->getArgumentTypes()))
+      result.addInputs(it.index(), {it.value(), it.value()});
+    rewriter.applySignatureConversion(body, result, getTypeConverter());
+    op.setIsLegal(true);
+    rewriter.finalizeOpModification(op);
+    return success();
+  }
+};
+
+/// This pattern replaces test.repetitive_1_to_n_consumer ops with a test.valid
+/// op. The pattern supports 1:N replacements and forwards the replacement
+/// values of the single operand as test.valid operands.
+class TestRepetitive1ToNConsumer : public ConversionPattern {
+public:
+  TestRepetitive1ToNConsumer(MLIRContext *ctx)
+      : ConversionPattern("test.repetitive_1_to_n_consumer", 1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // A single operand is expected.
+    if (op->getNumOperands() != 1)
+      return failure();
+    rewriter.replaceOpWithNewOp<TestValidOp>(op, operands.front());
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -1077,6 +1262,11 @@ struct TestTypeConverter : public TypeConverter {
       return success();
     }
 
+    // Drop I24 types.
+    if (t.isInteger(24)) {
+      return success();
+    }
+
     // Otherwise, convert the type directly.
     results.push_back(t);
     return success();
@@ -1084,9 +1274,8 @@ struct TestTypeConverter : public TypeConverter {
 
   /// Hook for materializing a conversion. This is necessary because we generate
   /// 1->N type mappings.
-  static std::optional<Value> materializeCast(OpBuilder &builder,
-                                              Type resultType,
-                                              ValueRange inputs, Location loc) {
+  static Value materializeCast(OpBuilder &builder, Type resultType,
+                               ValueRange inputs, Location loc) {
     return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
   }
 };
@@ -1112,17 +1301,20 @@ struct TestLegalizePatternDriver
     TestTypeConverter converter;
     mlir::RewritePatternSet patterns(&getContext());
     populateWithGenerated(patterns);
-    patterns
-        .add<TestRegionRewriteBlockMovement, TestRegionRewriteUndo,
-             TestCreateBlock, TestCreateIllegalBlock, TestUndoBlockArgReplace,
-             TestUndoBlockErase, TestPassthroughInvalidOp, TestSplitReturnType,
-             TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
-             TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-             TestNonRootReplacement, TestBoundedRecursiveRewrite,
-             TestNestedOpCreationUndoRewrite, TestReplaceEraseOp,
-             TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-             TestUndoPropertiesModification>(&getContext());
-    patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
+    patterns.add<
+        TestRegionRewriteBlockMovement, TestDetachedSignatureConversion,
+        TestRegionRewriteUndo, TestCreateBlock, TestCreateIllegalBlock,
+        TestUndoBlockArgReplace, TestUndoBlockErase, TestPassthroughInvalidOp,
+        TestSplitReturnType, TestChangeProducerTypeI32ToF32,
+        TestChangeProducerTypeF32ToF64, TestChangeProducerTypeF32ToInvalid,
+        TestUpdateConsumerType, TestNonRootReplacement,
+        TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
+        TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
+        TestUndoPropertiesModification, TestEraseOp,
+        TestRepetitive1ToNConsumer>(&getContext());
+    patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp>(
+        &getContext(), converter);
+    patterns.add<TestDuplicateBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
     mlir::populateCallOpTypeConversionPattern(patterns, converter);
@@ -1132,6 +1324,8 @@ struct TestLegalizePatternDriver
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<LegalOpA, LegalOpB, LegalOpC, TestCastOp, TestValidOp,
                       TerminatorOp, OneRegionOp>();
+    target.addLegalOp(
+        OperationName("test.legal_op_with_region", &getContext()));
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
     target.addDynamicallyLegalOp<TestReturnOp>([](TestReturnOp op) {
@@ -1171,6 +1365,9 @@ struct TestLegalizePatternDriver
     // Create a dynamically legal rule that can only be legalized by folding it.
     target.addDynamicallyLegalOp<TestOpInPlaceSelfFold>(
         [](TestOpInPlaceSelfFold op) { return op.getFolded(); });
+
+    target.addDynamicallyLegalOp<DuplicateBlockArgsOp>(
+        [](DuplicateBlockArgsOp op) { return op.getIsLegal(); });
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
@@ -1516,8 +1713,9 @@ struct TestTestSignatureConversionNoConverter
     if (failed(
             converter.convertSignatureArgs(entry->getArgumentTypes(), result)))
       return failure();
-    rewriter.modifyOpInPlace(
-        op, [&] { rewriter.applySignatureConversion(&region, result); });
+    rewriter.modifyOpInPlace(op, [&] {
+      rewriter.applySignatureConversion(&region.front(), result);
+    });
     return success();
   }
 
@@ -1546,6 +1744,17 @@ struct TestTypeConversionAnotherProducer
   LogicalResult matchAndRewrite(TestAnotherTypeProducerOp op,
                                 PatternRewriter &rewriter) const final {
     rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, op.getType());
+    return success();
+  }
+};
+
+struct TestReplaceWithLegalOp : public ConversionPattern {
+  TestReplaceWithLegalOp(MLIRContext *ctx)
+      : ConversionPattern("test.replace_with_legal_op", /*benefit=*/1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    rewriter.replaceOpWithNewOp<LegalOpD>(op, operands[0]);
     return success();
   }
 };
@@ -1641,6 +1850,7 @@ struct TestTypeConversionDriver
 
     // Initialize the conversion target.
     mlir::ConversionTarget target(getContext());
+    target.addLegalOp<LegalOpD>();
     target.addDynamicallyLegalOp<TestTypeProducerOp>([](TestTypeProducerOp op) {
       auto recursiveType = dyn_cast<test::TestRecursiveType>(op.getType());
       return op.getType().isF64() || op.getType().isInteger(64) ||
@@ -1666,7 +1876,8 @@ struct TestTypeConversionDriver
                  TestSignatureConversionUndo,
                  TestTestSignatureConversionNoConverter>(converter,
                                                          &getContext());
-    patterns.add<TestTypeConversionAnotherProducer>(&getContext());
+    patterns.add<TestTypeConversionAnotherProducer, TestReplaceWithLegalOp>(
+        &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
 
@@ -1906,8 +2117,9 @@ void registerPatternsTestPass() {
 
   PassRegistration<TestDerivedAttributeDriver>();
 
-  PassRegistration<TestPatternDriver>();
+  PassRegistration<TestGreedyPatternDriver>();
   PassRegistration<TestStrictPatternDriver>();
+  PassRegistration<TestWalkPatternDriver>();
 
   PassRegistration<TestLegalizePatternDriver>([] {
     return std::make_unique<TestLegalizePatternDriver>(legalizerConversionMode);

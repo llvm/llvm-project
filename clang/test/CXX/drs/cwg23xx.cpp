@@ -1,10 +1,20 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+
+namespace std {
+  __extension__ typedef __SIZE_TYPE__ size_t;
+
+  template<typename E> struct initializer_list {
+    const E *p; size_t n;
+    initializer_list(const E *p, size_t n);
+    initializer_list();
+  };
+}
 
 #if __cplusplus >= 201103L
 namespace cwg2303 { // cwg2303: 12
@@ -47,8 +57,141 @@ void g() {
 } // namespace cwg2303
 #endif
 
+namespace cwg2304 { // cwg2304: 2.8
+template<typename T> void foo(T, int);
+template<typename T> void foo(T&, ...);
+struct Q; // #cwg2304-Q
+void fn1(Q &data_vectors) {
+  foo(data_vectors, 0);
+  // expected-error@-1 {{argument type 'cwg2304::Q' is incomplete}}
+  //   expected-note@#cwg2304-Q {{forward declaration of 'cwg2304::Q'}}
+}
+} // namespace cwg2304
+
+namespace cwg2310 { // cwg2310: partial
+#if __cplusplus >= 201103L
+template<typename A, typename B>
+struct check_derived_from {
+  static A a;
+  // FIXME: all 3 examples should be rejected in all language modes.
+  // FIXME: we should test this in 98 mode.
+  // FIXME: we accept this when MSVC triple is used
+  static constexpr B *p = &a;
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // cxx11-14-error@-2 {{cannot initialize a variable of type 'cwg2310::X *const' with an rvalue of type 'cwg2310::Z *'}}
+  //   cxx11-14-note@#cwg2310-X {{in instantiation of template class 'cwg2310::check_derived_from<cwg2310::Z, cwg2310::X>' requested here}}
+  // cxx11-14-error@-4 {{cannot initialize a variable of type 'cwg2310::Y *const' with an rvalue of type 'cwg2310::Z *'}}
+  //   cxx11-14-note@#cwg2310-Y {{in instantiation of template class 'cwg2310::check_derived_from<cwg2310::Z, cwg2310::Y>' requested here}}
+#endif
+};
+
+struct W {};
+struct X {};
+struct Y {};
+struct Z : W,
+  X, check_derived_from<Z, X>, // #cwg2310-X
+  check_derived_from<Z, Y>, Y  // #cwg2310-Y
+{  
+  // FIXME: It was properly rejected before, but we're crashing since Clang 11 in C++11 and C++14 modes.
+  //        See https://github.com/llvm/llvm-project/issues/59920
+#if __cplusplus >= 201703L
+  check_derived_from<Z, W> cdf;
+#endif
+};
+#endif
+} // namespace cwg2310
+
 // cwg2331: na
 // cwg2335 is in cwg2335.cxx
+
+namespace cwg2311 {  // cwg2311 is open with no proposed resolution
+#if __cplusplus >= 201707L
+template<typename T>
+void test() {
+  // Ensure none of these try to call a move constructor.
+  T a = T{T(0)};
+  T b{T(0)};
+  auto c{T(0)};
+  T d = {T(0)};
+  auto e = {T(0)};
+#if __cplusplus >= 202302L
+  auto f = auto{T(0)};
+#endif
+  void(*fn)(T);
+  fn({T(0)});
+}
+
+struct NonMovable {
+  NonMovable(int);
+  NonMovable(NonMovable&&) = delete;
+};
+struct NonMovableNonApplicableIList {
+  NonMovableNonApplicableIList(int);
+  NonMovableNonApplicableIList(NonMovableNonApplicableIList&&) = delete;
+  NonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct ExplicitMovable {
+  ExplicitMovable(int);
+  explicit ExplicitMovable(ExplicitMovable&&);
+};
+struct ExplicitNonMovable {
+  ExplicitNonMovable(int);
+  explicit ExplicitNonMovable(ExplicitNonMovable&&) = delete;
+};
+struct ExplicitNonMovableNonApplicableIList {
+  ExplicitNonMovableNonApplicableIList(int);
+  explicit ExplicitNonMovableNonApplicableIList(ExplicitNonMovableNonApplicableIList&&) = delete;
+  ExplicitNonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct CopyOnly {
+  CopyOnly(int);
+  CopyOnly(const CopyOnly&);
+  CopyOnly(CopyOnly&&) = delete;
+};
+struct ExplicitCopyOnly {
+  ExplicitCopyOnly(int);
+  explicit ExplicitCopyOnly(const ExplicitCopyOnly&);
+  explicit ExplicitCopyOnly(ExplicitCopyOnly&&) = delete;
+};
+
+template void test<NonMovable>();
+template void test<NonMovableNonApplicableIList>();
+template void test<ExplicitMovable>();
+template void test<ExplicitNonMovable>();
+template void test<ExplicitNonMovableNonApplicableIList>();
+template void test<CopyOnly>();
+template void test<ExplicitCopyOnly>();
+
+struct any {
+    template<typename T>
+    any(T&&);
+};
+
+template<typename T>
+struct X {
+    X();
+    X(T) = delete; // #cwg2311-X
+};
+
+X<std::initializer_list<any>> x{ X<std::initializer_list<any>>() };
+// since-cxx17-error@-1 {{call to deleted constructor of 'X<std::initializer_list<any>>'}}
+//   since-cxx17-note@#cwg2311-X {{'X' has been explicitly marked deleted here}}
+
+// Per the currently implemented resolution, this does not apply to std::initializer_list.
+// An initializer list initialized from `{ e }` always has exactly one element constructed
+// from `e`, where previously that could have been a copy of an init list or `e.operator std::initializer_list()`
+struct InitListCtor {
+  InitListCtor(int);
+  InitListCtor(InitListCtor&&) = delete;
+  InitListCtor(std::initializer_list<InitListCtor>) = delete; // #cwg2311-InitListCtor
+};
+
+std::initializer_list<InitListCtor> i;
+auto j = std::initializer_list<InitListCtor>{ i };
+// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const cwg2311::InitListCtor' invokes a deleted function}}
+//   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
+#endif
+}
 
 #if __cplusplus >= 201103L
 namespace cwg2338 { // cwg2338: 12
@@ -68,6 +211,43 @@ namespace cwg2346 { // cwg2346: 11
     const int i2 = 0;
     extern void h2b(int x = i2 + 0); // ok, not odr-use
   }
+}
+
+namespace cwg2351 { // cwg2351: 20
+#if __cplusplus >= 201103L
+  static_assert((void{}, true), "");
+
+  void f() {
+    return void{};
+  }
+
+  template<typename T>
+  void g() {
+    return T{};
+  }
+  template void g<void>();
+  template void g<const void>();
+
+  void h() {
+    return {};
+    // since-cxx11-error@-1 {{void function 'h' must not return a value}}
+  }
+
+  template<typename T, int... I>
+  T i() {
+    return T{I...};
+  }
+  template void i<void>();
+  template const void i<const void>();
+
+  static_assert((void({}), true), "");
+  // since-cxx11-error@-1 {{cannot initialize non-class type 'void' with a parenthesized initializer list}}
+#else
+  int I = (void{}, 0);
+  // cxx98-error@-1 {{expected ')'}}
+  //   cxx98-note@-2 {{to match this '('}}
+  // cxx98-error@-3 {{expected expression}}
+#endif
 }
 
 namespace cwg2352 { // cwg2352: 10
@@ -273,7 +453,42 @@ namespace cwg2387 { // cwg2387: 9
 #endif
 }
 
-// cwg2390 is in cwg2390.cpp
+namespace cwg2390 { // cwg2390: 14
+// Test that macro expansion of the builtin argument works.
+#define C clang
+#define F fallthrough
+#define CF clang::fallthrough
+
+#if !__has_cpp_attribute(F)
+#error "doesn't have fallthrough"
+#endif
+
+#if !__has_cpp_attribute(C::F)
+#error "doesn't have clang::fallthrough 1"
+#endif
+
+#if !__has_cpp_attribute(clang::F)
+#error "doesn't have clang::fallthrough 2"
+#endif
+
+#if !__has_cpp_attribute(C::fallthrough)
+#error "doesn't have clang::fallthrough 3"
+#endif
+
+#if !__has_cpp_attribute(CF)
+#error "doesn't have clang::fallthrough 4"
+#endif
+
+#define FUNCLIKE1(x) clang::x
+#if !__has_cpp_attribute(FUNCLIKE1(fallthrough))
+#error "doesn't have clang::fallthrough through func-like macro 1"
+#endif
+
+#define FUNCLIKE2(x) _Clang::x
+#if !__has_cpp_attribute(FUNCLIKE2(fallthrough))
+#error "doesn't have clang::fallthrough through func-like macro 2"
+#endif
+} // namespace cwg2390
 
 namespace cwg2394 { // cwg2394: 15
 

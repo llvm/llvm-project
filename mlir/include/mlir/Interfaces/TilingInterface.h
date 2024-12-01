@@ -25,12 +25,24 @@ namespace mlir {
 
 /// Container for result values of tiling.
 /// - `tiledOps` contains operations created by the tiling implementation that
-/// are returned to the caller for further transformations.
+///   are returned to the caller for further transformations.
 /// - `tiledValues` contains the tiled value corresponding to the result of the
-/// untiled operation.
+///   untiled operation.
+/// - `generatedSlices` contains the list of slices that are generated during
+///   tiling. These slices can be used for fusing producers.
 struct TilingResult {
   SmallVector<Operation *> tiledOps;
   SmallVector<Value> tiledValues;
+  SmallVector<Operation *> generatedSlices;
+};
+
+/// Container for the result of merge operation of tiling.
+/// - `mergeOps` contains operations created during the merge.
+/// - `replacements` contains the values that represents the result of the
+/// merge. These are used as replacements for the original tiled operation.
+struct MergeResult {
+  SmallVector<Operation *> mergeOps;
+  SmallVector<Value> replacements;
 };
 
 } // namespace mlir

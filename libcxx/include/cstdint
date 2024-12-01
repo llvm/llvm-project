@@ -142,14 +142,8 @@ Types:
 
 #include <__config>
 
-#include <stdint.h>
-
-#ifndef _LIBCPP_STDINT_H
-#   error <cstdint> tried including <stdint.h> but didn't find libc++'s <stdint.h> header. \
-          This usually means that your header search paths are not configured properly. \
-          The header search paths should contain the C++ Standard Library headers before \
-          any C Standard Library, and you are probably using compiler flags that make that \
-          not be the case.
+#if __has_include(<stdint.h>)
+#  include <stdint.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

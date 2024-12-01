@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -fsyntax-only -verify -std=c++2c -Wunused-parameter -Wunused -Wpre-c++26-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify -ast-dump -std=c++2c -Wunused-parameter -Wunused -Wpre-c++26-compat %s | FileCheck %s
 
 void static_var() {
     static int _; // expected-note {{previous definition is here}} \
@@ -50,14 +50,16 @@ void f() {
 
 void lambda() {
     (void)[_ = 0, _ = 1] { // expected-warning {{placeholder variables are incompatible with C++ standards before C++2c}} \
-                           // expected-note 4{{placeholder declared here}}
+                           // expected-note 2{{placeholder declared here}}
         (void)_++; // expected-error {{ambiguous reference to placeholder '_', which is defined multiple times}}
     };
 
     {
         int _ = 12;
-        (void)[_ = 0]{}; // no warning (different scope)
+        (void)[_ = 0]{ return _;}; // no warning (different scope)
     }
+
+    auto GH107024 = [_ = 42]() { return _; }();
 }
 
 namespace global_var {
@@ -251,4 +253,38 @@ namespace Bases {
                   // expected-error {{a type specifier is required for all declarations}}
         }
     };
+}
+
+namespace GH114069 {
+
+template <class T>
+struct A {
+    T _ = 1;
+    T _ = 2;
+    T : 1;
+    T a = 3;
+    T _ = 4;
+};
+
+void f() {
+    [[maybe_unused]] A<int> a;
+}
+
+// CHECK: NamespaceDecl {{.*}} GH114069
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct A definition
+// CHECK: CXXConstructorDecl {{.*}} implicit used constexpr A 'void () noexcept'
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} 'a' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 4
+// CHECK-NEXT: CompoundStmt {{.*}}
+
 }

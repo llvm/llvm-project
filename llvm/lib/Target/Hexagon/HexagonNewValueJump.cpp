@@ -78,7 +78,7 @@ namespace {
     HexagonNewValueJump() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -107,7 +107,7 @@ char HexagonNewValueJump::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonNewValueJump, "hexagon-nvj",
                       "Hexagon NewValueJump", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_END(HexagonNewValueJump, "hexagon-nvj",
                     "Hexagon NewValueJump", false, false)
 
@@ -459,7 +459,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
   QII = static_cast<const HexagonInstrInfo *>(MF.getSubtarget().getInstrInfo());
   QRI = static_cast<const HexagonRegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   if (DisableNewValueJumps ||
       !MF.getSubtarget<HexagonSubtarget>().useNewValueJumps())

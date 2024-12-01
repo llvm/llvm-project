@@ -216,6 +216,17 @@ class ClangFormatHelper(FormatHelper):
             cf_cmd.append(args.start_rev)
             cf_cmd.append(args.end_rev)
 
+        # Gather the extension of all modified files and pass them explicitly to git-clang-format.
+        # This prevents git-clang-format from applying its own filtering rules on top of ours.
+        extensions = set()
+        for file in cpp_files:
+            _, ext = os.path.splitext(file)
+            extensions.add(
+                ext.strip(".")
+            )  # Exclude periods since git-clang-format takes extensions without them
+        cf_cmd.append("--extensions")
+        cf_cmd.append(",".join(extensions))
+
         cf_cmd.append("--")
         cf_cmd += cpp_files
 
@@ -307,7 +318,7 @@ ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
 def hook_main():
     # fill out args
     args = FormatArgs()
-    args.verbose = False
+    args.verbose = os.getenv("FORMAT_HOOK_VERBOSE", False)
 
     # find the changed files
     cmd = ["git", "diff", "--cached", "--name-only", "--diff-filter=d"]
@@ -327,6 +338,9 @@ def hook_main():
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
     if len(failed_fmts) > 0:
+        print(
+            "Pre-commit format hook failed, rerun with FORMAT_HOOK_VERBOSE=1 environment for verbose output"
+        )
         sys.exit(1)
 
     sys.exit(0)

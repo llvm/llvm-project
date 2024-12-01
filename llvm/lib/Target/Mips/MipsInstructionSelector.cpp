@@ -927,9 +927,10 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
 }
 
 namespace llvm {
-InstructionSelector *createMipsInstructionSelector(const MipsTargetMachine &TM,
-                                                   MipsSubtarget &Subtarget,
-                                                   MipsRegisterBankInfo &RBI) {
+InstructionSelector *
+createMipsInstructionSelector(const MipsTargetMachine &TM,
+                              const MipsSubtarget &Subtarget,
+                              const MipsRegisterBankInfo &RBI) {
   return new MipsInstructionSelector(TM, Subtarget, RBI);
 }
 } // end namespace llvm

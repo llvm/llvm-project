@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_BUILDER_MUTABLEBOX_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
@@ -43,7 +44,8 @@ namespace fir::factory {
 mlir::Value createUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Type boxType,
                                  mlir::ValueRange nonDeferredParams,
-                                 mlir::Value typeSourceBox = {});
+                                 mlir::Value typeSourceBox = {},
+                                 unsigned allocator = kDefaultAllocator);
 
 /// Create a MutableBoxValue for a temporary allocatable.
 /// The created MutableBoxValue wraps a fir.ref<fir.box<fir.heap<type>>> and is
@@ -80,7 +82,8 @@ void associateMutableBoxWithRemap(fir::FirOpBuilder &builder,
 /// address field of the MutableBoxValue to zero.
 void disassociateMutableBox(fir::FirOpBuilder &builder, mlir::Location loc,
                             const fir::MutableBoxValue &box,
-                            bool polymorphicSetType = true);
+                            bool polymorphicSetType = true,
+                            unsigned allocator = kDefaultAllocator);
 
 /// Generate code to conditionally reallocate a MutableBoxValue with a new
 /// shape, lower bounds, and LEN parameters if it is unallocated or if its

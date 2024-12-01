@@ -457,9 +457,8 @@ SymbolFileOnDemand::GetTypeSystemForLanguage(LanguageType language) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped for language type {2}",
              GetSymbolFileName(), __FUNCTION__, language);
-    return llvm::make_error<llvm::StringError>(
-        "GetTypeSystemForLanguage is skipped by SymbolFileOnDemand",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "GetTypeSystemForLanguage is skipped by SymbolFileOnDemand");
   }
   return m_sym_file_impl->GetTypeSystemForLanguage(language);
 }
@@ -554,6 +553,12 @@ StatsDuration::Duration SymbolFileOnDemand::GetDebugInfoIndexTime() {
   LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
            __FUNCTION__);
   return m_sym_file_impl->GetDebugInfoIndexTime();
+}
+
+void SymbolFileOnDemand::ResetStatistics() {
+  LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
+           __FUNCTION__);
+  return m_sym_file_impl->ResetStatistics();
 }
 
 void SymbolFileOnDemand::SetLoadDebugInfoEnabled() {

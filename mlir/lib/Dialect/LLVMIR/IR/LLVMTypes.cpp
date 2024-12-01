@@ -154,14 +154,14 @@ bool LLVMArrayType::isValidElementType(Type type) {
       type);
 }
 
-LLVMArrayType LLVMArrayType::get(Type elementType, unsigned numElements) {
+LLVMArrayType LLVMArrayType::get(Type elementType, uint64_t numElements) {
   assert(elementType && "expected non-null subtype");
   return Base::get(elementType.getContext(), elementType, numElements);
 }
 
 LLVMArrayType
 LLVMArrayType::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                          Type elementType, unsigned numElements) {
+                          Type elementType, uint64_t numElements) {
   assert(elementType && "expected non-null subtype");
   return Base::getChecked(emitError, elementType.getContext(), elementType,
                           numElements);
@@ -169,7 +169,7 @@ LLVMArrayType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult
 LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
-                      Type elementType, unsigned numElements) {
+                      Type elementType, uint64_t numElements) {
   if (!isValidElementType(elementType))
     return emitError() << "invalid array element type: " << elementType;
   return success();
@@ -418,8 +418,7 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
 
 bool LLVMStructType::isValidElementType(Type type) {
   return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                    LLVMFunctionType, LLVMTokenType, LLVMScalableVectorType>(
-      type);
+                    LLVMFunctionType, LLVMTokenType>(type);
 }
 
 LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
@@ -481,25 +480,26 @@ LogicalResult LLVMStructType::setBody(ArrayRef<Type> types, bool isPacked) {
 
 bool LLVMStructType::isPacked() const { return getImpl()->isPacked(); }
 bool LLVMStructType::isIdentified() const { return getImpl()->isIdentified(); }
-bool LLVMStructType::isOpaque() {
+bool LLVMStructType::isOpaque() const {
   return getImpl()->isIdentified() &&
          (getImpl()->isOpaque() || !getImpl()->isInitialized());
 }
 bool LLVMStructType::isInitialized() { return getImpl()->isInitialized(); }
-StringRef LLVMStructType::getName() { return getImpl()->getIdentifier(); }
+StringRef LLVMStructType::getName() const { return getImpl()->getIdentifier(); }
 ArrayRef<Type> LLVMStructType::getBody() const {
   return isIdentified() ? getImpl()->getIdentifiedStructBody()
                         : getImpl()->getTypeList();
 }
 
-LogicalResult LLVMStructType::verify(function_ref<InFlightDiagnostic()>,
-                                     StringRef, bool) {
+LogicalResult
+LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()>, StringRef,
+                                 bool) {
   return success();
 }
 
 LogicalResult
-LLVMStructType::verify(function_ref<InFlightDiagnostic()> emitError,
-                       ArrayRef<Type> types, bool) {
+LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                 ArrayRef<Type> types, bool) {
   for (Type t : types)
     if (!isValidElementType(t))
       return emitError() << "invalid LLVM structure element type: " << t;
@@ -781,7 +781,7 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMScalableVectorType,
       LLVMTargetExtType,
       LLVMVoidType,
-      LLVMX86MMXType
+      LLVMX86AMXType
     >(type)) {
     // clang-format on
     return true;
@@ -844,7 +844,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             LLVMPPCFP128Type,
             LLVMTokenType,
             LLVMVoidType,
-            LLVMX86MMXType
+            LLVMX86AMXType
           >([](Type) { return true; })
           // clang-format on
           .Default([](Type) { return false; });
@@ -986,8 +986,7 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case<BFloat16Type, Float16Type>(
           [](Type) { return llvm::TypeSize::getFixed(16); })
       .Case<Float32Type>([](Type) { return llvm::TypeSize::getFixed(32); })
-      .Case<Float64Type, LLVMX86MMXType>(
-          [](Type) { return llvm::TypeSize::getFixed(64); })
+      .Case<Float64Type>([](Type) { return llvm::TypeSize::getFixed(64); })
       .Case<Float80Type>([](Type) { return llvm::TypeSize::getFixed(80); })
       .Case<Float128Type>([](Type) { return llvm::TypeSize::getFixed(128); })
       .Case<IntegerType>([](IntegerType intTy) {

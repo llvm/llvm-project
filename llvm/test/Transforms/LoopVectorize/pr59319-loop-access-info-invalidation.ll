@@ -16,10 +16,6 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[IND_END]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -57,7 +53,7 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF8]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY11:%.*]]
-; CHECK:       vector.body11:
+; CHECK:       vector.body10:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ 0, [[VECTOR_PH7]] ], [ [[INDEX_NEXT13:%.*]], [[VECTOR_BODY11]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4, !alias.scope !4, !noalias !7
 ; CHECK-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX12]], 4
@@ -87,7 +83,7 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[N_MOD_VF24:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC25:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF24]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY28:%.*]]
-; CHECK:       vector.body28:
+; CHECK:       vector.body27:
 ; CHECK-NEXT:    [[INDEX29:%.*]] = phi i64 [ 0, [[VECTOR_PH23]] ], [ [[INDEX_NEXT30:%.*]], [[VECTOR_BODY28]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4, !alias.scope !10, !noalias !13
 ; CHECK-NEXT:    [[INDEX_NEXT30]] = add nuw i64 [[INDEX29]], 4

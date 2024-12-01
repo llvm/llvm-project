@@ -70,7 +70,8 @@ using namespace lld::elf;
 
 class elf::Patch657417Section final : public SyntheticSection {
 public:
-  Patch657417Section(InputSection *p, uint64_t off, uint32_t instr, bool isARM);
+  Patch657417Section(Ctx &, InputSection *p, uint64_t off, uint32_t instr,
+                     bool isARM);
 
   void writeTo(uint8_t *buf) override;
 
@@ -133,16 +134,17 @@ static bool is32bitBranch(uint32_t instr) {
   return isBcc(instr) || isB(instr) || isBL(instr) || isBLX(instr);
 }
 
-Patch657417Section::Patch657417Section(InputSection *p, uint64_t off,
+Patch657417Section::Patch657417Section(Ctx &ctx, InputSection *p, uint64_t off,
                                        uint32_t instr, bool isARM)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
-                       ".text.patch"),
+    : SyntheticSection(ctx, ".text.patch", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR, 4),
       patchee(p), patcheeOffset(off), instr(instr), isARM(isARM) {
   parent = p->getParent();
   patchSym = addSyntheticLocal(
-      saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())), STT_FUNC,
-      isARM ? 0 : 1, getSize(), *this);
-  addSyntheticLocal(saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0, *this);
+      ctx, ctx.saver.save("__CortexA8657417_" + utohexstr(getBranchAddr())),
+      STT_FUNC, isARM ? 0 : 1, getSize(), *this);
+  addSyntheticLocal(ctx, ctx.saver.save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0,
+                    *this);
 }
 
 uint64_t Patch657417Section::getBranchAddr() const {
@@ -151,17 +153,18 @@ uint64_t Patch657417Section::getBranchAddr() const {
 
 // Given a branch instruction instr at sourceAddr work out its destination
 // address. This is only used when the branch instruction has no relocation.
-static uint64_t getThumbDestAddr(uint64_t sourceAddr, uint32_t instr) {
+static uint64_t getThumbDestAddr(Ctx &ctx, uint64_t sourceAddr,
+                                 uint32_t instr) {
   uint8_t buf[4];
   write16le(buf, instr >> 16);
   write16le(buf + 2, instr & 0x0000ffff);
   int64_t offset;
   if (isBcc(instr))
-    offset = target->getImplicitAddend(buf, R_ARM_THM_JUMP19);
+    offset = ctx.target->getImplicitAddend(buf, R_ARM_THM_JUMP19);
   else if (isB(instr))
-    offset = target->getImplicitAddend(buf, R_ARM_THM_JUMP24);
+    offset = ctx.target->getImplicitAddend(buf, R_ARM_THM_JUMP24);
   else
-    offset = target->getImplicitAddend(buf, R_ARM_THM_CALL);
+    offset = ctx.target->getImplicitAddend(buf, R_ARM_THM_CALL);
   // A BLX instruction from Thumb to Arm may have an address that is
   // not 4-byte aligned. As Arm instructions are always 4-byte aligned
   // the instruction is calculated (from Arm ARM):
@@ -182,7 +185,7 @@ void Patch657417Section::writeTo(uint8_t *buf) {
     write32le(buf, 0x9000f000);
   // If we have a relocation then apply it.
   if (!relocs().empty()) {
-    target->relocateAlloc(*this, buf);
+    ctx.target->relocateAlloc(*this, buf);
     return;
   }
 
@@ -191,20 +194,22 @@ void Patch657417Section::writeTo(uint8_t *buf) {
   // Get the destination offset from the addend in the branch instruction.
   // We cannot use the instruction in the patchee section as this will have
   // been altered to point to us!
-  uint64_t s = getThumbDestAddr(getBranchAddr(), instr);
+  uint64_t s = getThumbDestAddr(ctx, getBranchAddr(), instr);
   // A BLX changes the state of the branch in the patch to Arm state, which
   // has a PC Bias of 8, whereas in all other cases the branch is in Thumb
   // state with a PC Bias of 4.
   uint64_t pcBias = isBLX(instr) ? 8 : 4;
   uint64_t p = getVA(pcBias);
-  target->relocateNoSym(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24, s - p);
+  ctx.target->relocateNoSym(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24,
+                            s - p);
 }
 
 // Given a branch instruction spanning two 4KiB regions, at offset off from the
 // start of isec, return true if the destination of the branch is within the
 // first of the two 4Kib regions.
-static bool branchDestInFirstRegion(const InputSection *isec, uint64_t off,
-                                    uint32_t instr, const Relocation *r) {
+static bool branchDestInFirstRegion(Ctx &ctx, const InputSection *isec,
+                                    uint64_t off, uint32_t instr,
+                                    const Relocation *r) {
   uint64_t sourceAddr = isec->getVA(0) + off;
   assert((sourceAddr & 0xfff) == 0xffe);
   uint64_t destAddr;
@@ -212,13 +217,14 @@ static bool branchDestInFirstRegion(const InputSection *isec, uint64_t off,
   // find the destination address as the branch could be indirected via a thunk
   // or the PLT.
   if (r) {
-    uint64_t dst = (r->expr == R_PLT_PC) ? r->sym->getPltVA() : r->sym->getVA();
+    uint64_t dst =
+        r->expr == R_PLT_PC ? r->sym->getPltVA(ctx) : r->sym->getVA(ctx);
     // Account for Thumb PC bias, usually cancelled to 0 by addend of -4.
     destAddr = dst + r->addend + 4;
   } else {
     // If there is no relocation, we must have an intra-section branch
     // We must extract the offset from the addend manually.
-    destAddr = getThumbDestAddr(sourceAddr, instr);
+    destAddr = getThumbDestAddr(ctx, sourceAddr, instr);
   }
 
   return (destAddr & 0xfffff000) == (sourceAddr & 0xfffff000);
@@ -226,14 +232,14 @@ static bool branchDestInFirstRegion(const InputSection *isec, uint64_t off,
 
 // Return true if a branch can reach a patch section placed after isec.
 // The Bcc.w instruction has a range of 1 MiB, all others have 16 MiB.
-static bool patchInRange(const InputSection *isec, uint64_t off,
+static bool patchInRange(Ctx &ctx, const InputSection *isec, uint64_t off,
                          uint32_t instr) {
 
   // We need the branch at source to reach a patch section placed immediately
   // after isec. As there can be more than one patch in the patch section we
   // add 0x100 as contingency to account for worst case of 1 branch every 4KiB
   // for a 1 MiB range.
-  return target->inBranchRange(
+  return ctx.target->inBranchRange(
       isBcc(instr) ? R_ARM_THM_JUMP19 : R_ARM_THM_JUMP24, isec->getVA(off),
       isec->getVA() + isec->getSize() + 0x100);
 }
@@ -254,6 +260,7 @@ struct ScanResult {
 // branch so the minimum offset for a patch is 4.
 static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
                                            uint64_t limit) {
+  Ctx &ctx = isec->getCtx();
   uint64_t isecAddr = isec->getVA(0);
   // Advance Off so that (isecAddr + off) modulo 0x1000 is at least 0xffa. We
   // need to check for a 32-bit instruction immediately before a 32-bit branch
@@ -288,14 +295,14 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
       });
       if (relIt != isec->relocs().end())
         scanRes.rel = &(*relIt);
-      if (branchDestInFirstRegion(isec, branchOff, instr2, scanRes.rel)) {
-        if (patchInRange(isec, branchOff, instr2)) {
+      if (branchDestInFirstRegion(ctx, isec, branchOff, instr2, scanRes.rel)) {
+        if (patchInRange(ctx, isec, branchOff, instr2)) {
           scanRes.off = branchOff;
           scanRes.instr = instr2;
         } else {
-          warn(toString(isec->file) +
-               ": skipping cortex-a8 657417 erratum sequence, section " +
-               isec->name + " is too large to patch");
+          Warn(ctx) << isec->file
+                    << ": skipping cortex-a8 657417 erratum sequence, section "
+                    << isec->name << " is too large to patch";
         }
       }
     }
@@ -412,9 +419,9 @@ void ARMErr657417Patcher::insertPatches(
 // isec so the branch we are patching always goes forwards.
 static void implementPatch(ScanResult sr, InputSection *isec,
                            std::vector<Patch657417Section *> &patches) {
-
-  log("detected cortex-a8-657419 erratum sequence starting at " +
-      utohexstr(isec->getVA(sr.off)) + " in unpatched output.");
+  Ctx &ctx = isec->getCtx();
+  Log(ctx) << "detected cortex-a8-657419 erratum sequence starting at " <<
+      utohexstr(isec->getVA(sr.off)) << " in unpatched output";
   Patch657417Section *psec;
   // We have two cases to deal with.
   // Case 1. There is a relocation at patcheeOffset to a symbol. The
@@ -440,11 +447,12 @@ static void implementPatch(ScanResult sr, InputSection *isec,
       // The final target of the branch may be ARM or Thumb, if the target
       // is ARM then we write the patch in ARM state to avoid a state change
       // Thunk from the patch to the target.
-      uint64_t dstSymAddr = (sr.rel->expr == R_PLT_PC) ? sr.rel->sym->getPltVA()
-                                                       : sr.rel->sym->getVA();
+      uint64_t dstSymAddr = (sr.rel->expr == R_PLT_PC)
+                                ? sr.rel->sym->getPltVA(ctx)
+                                : sr.rel->sym->getVA(ctx);
       destIsARM = (dstSymAddr & 1) == 0;
     }
-    psec = make<Patch657417Section>(isec, sr.off, sr.instr, destIsARM);
+    psec = make<Patch657417Section>(ctx, isec, sr.off, sr.instr, destIsARM);
     if (destIsARM) {
       // The patch will be in ARM state. Use an ARM relocation and account for
       // the larger ARM PC-bias of 8 rather than Thumb's 4.
@@ -462,7 +470,8 @@ static void implementPatch(ScanResult sr, InputSection *isec,
     // appropriate type to the patch at patcheeOffset.
 
     // The destination is ARM if we have a BLX.
-    psec = make<Patch657417Section>(isec, sr.off, sr.instr, isBLX(sr.instr));
+    psec =
+        make<Patch657417Section>(ctx, isec, sr.off, sr.instr, isBLX(sr.instr));
     RelType type;
     if (isBcc(sr.instr))
       type = R_ARM_THM_JUMP19;
@@ -518,7 +527,7 @@ bool ARMErr657417Patcher::createFixes() {
     init();
 
   bool addressesChanged = false;
-  for (OutputSection *os : outputSections) {
+  for (OutputSection *os : ctx.outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
     for (SectionCommand *cmd : os->commands)

@@ -176,9 +176,9 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4(ptr addrspace(1) %ptr, i1
   ret i16 %res
 }
 
-; Preserve unknown metadata
-define i16 @test_atomicrmw_and_i16_global_agent_preserve_md(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_preserve_md(
+; Drop unknown metadata and noundef
+define i16 @test_atomicrmw_and_i16_global_agent_drop_md(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_drop_md(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -198,9 +198,9 @@ define i16 @test_atomicrmw_and_i16_global_agent_preserve_md(ptr addrspace(1) %pt
   ret i16 %res
 }
 
-; Preserve unknown metadata
-define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_md(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_md(
+; Drop unknown metadata
+define i16 @test_atomicrmw_and_i16_global_agent_align4_drop_md(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_drop_md(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
 ; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
@@ -208,6 +208,89 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_md(ptr addrspace
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !noundef !0, !some.unknown.md !0
+  ret i16 %res
+}
+
+; Drop noundef, preserve mmra
+define i16 @test_atomicrmw_and_i16_global_agent_preserve_mmra(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_preserve_mmra(
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, !noundef !0, !mmra !1
+  ret i16 %res
+}
+
+; Drop noundef, preserve mmra
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !noundef !0, !mmra !1
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !alias.scope [[META1:![0-9]+]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !alias.scope !2
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !noalias [[META1]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !noalias !2
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !tbaa.struct !5
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !tbaa !6
   ret i16 %res
 }
 
@@ -223,7 +306,7 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_remote_memory(ptr add
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META8:![0-9]+]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -236,7 +319,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META8]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -256,7 +339,7 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_fine_grained_memory(p
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META8]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -269,7 +352,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_m
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_memory(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META8]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -1179,7 +1262,120 @@ define bfloat @test_atomicrmw_xchg_bf16_global_agent_align4(ptr addrspace(1) %pt
   ret bfloat %res
 }
 
+define i16 @test_atomicrmw_xchg_i16_buffer_fat_agent(ptr addrspace(7) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_i16_buffer_fat_agent(
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) [[PTR:%.*]], i32 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(7) [[PTR]] to i32
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP5]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg ptr addrspace(7) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP6]] syncscope("agent") seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP7]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw xchg ptr addrspace(7) %ptr, i16 %value syncscope("agent") seq_cst
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_xchg_i16_buffer_fat_agent_align4(ptr addrspace(7) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_i16_buffer_fat_agent_align4(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(7) [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[LOADED]], -65536
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[LOADED]], i32 [[TMP4]] syncscope("agent") seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw xchg ptr addrspace(7) %ptr, i16 %value syncscope("agent") seq_cst, align 4
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_add_i16_buffer_fat_agent(ptr addrspace(7) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_add_i16_buffer_fat_agent(
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) [[PTR:%.*]], i32 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(7) [[PTR]] to i32
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(7) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw add ptr addrspace(7) %ptr, i16 %value syncscope("agent") seq_cst
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_add_i16_buffer_fat_agent_align4(ptr addrspace(7) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_add_i16_buffer_fat_agent_align4(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(7) [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[NEW]], 65535
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[LOADED]], -65536
+; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(7) [[PTR]], i32 [[LOADED]], i32 [[TMP5]] syncscope("agent") seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw add ptr addrspace(7) %ptr, i16 %value syncscope("agent") seq_cst, align 4
+  ret i16 %res
+}
+
 !0 = !{}
+!1 = !{!"foo", !"bar"}
+!2 = !{!3}
+!3 = distinct !{!3, !4}
+!4 = distinct !{!4}
+!5 = !{i64 0, i64 4, !1, i64 8, i64 4}
+!6 = !{!7, !7, i64 0}
+!7 = !{!"omnipotent char", !8, i64 0}
+!8 = !{!"Simple C/C++ TBAA"}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; BASE: {{.*}}
 ; GCN: {{.*}}

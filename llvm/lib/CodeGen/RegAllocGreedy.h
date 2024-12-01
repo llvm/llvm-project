@@ -16,7 +16,6 @@
 #include "RegAllocBase.h"
 #include "RegAllocEvictionAdvisor.h"
 #include "RegAllocPriorityAdvisor.h"
-#include "SpillPlacement.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -30,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include <algorithm>
@@ -281,7 +281,7 @@ private:
   bool ReverseLocalAssignment = false;
 
 public:
-  RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
+  RAGreedy(const RegAllocFilterFunc F = nullptr);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
@@ -425,7 +425,7 @@ private:
                ZeroCostFoldedReloads || Copies);
     }
 
-    void add(RAGreedyStats other) {
+    void add(const RAGreedyStats &other) {
       Reloads += other.Reloads;
       FoldedReloads += other.FoldedReloads;
       ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;

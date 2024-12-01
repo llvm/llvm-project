@@ -12,7 +12,7 @@ endif()
 if(flang_vc AND LLVM_APPEND_VC_REV)
   set(flang_source_dir ${FLANG_SOURCE_DIR})
 endif()
- 
+
 # Create custom target to generate the VC revision include.
 add_custom_command(OUTPUT "${version_inc}"
   DEPENDS "${llvm_vc}" "${flang_vc}" "${generate_vcs_version_script}"
@@ -34,15 +34,19 @@ if(FLANG_VENDOR)
     PROPERTIES COMPILE_DEFINITIONS "FLANG_VENDOR=\"${FLANG_VENDOR} \"")
 endif()
 
-
 add_flang_library(FortranCommon
   Fortran.cpp
   Fortran-features.cpp
   default-kinds.cpp
   idioms.cpp
+  LangOptions.cpp
+  OpenMP-utils.cpp
   Version.cpp
   ${version_inc}
 
   LINK_COMPONENTS
   Support
+
+  LINK_LIBS
+  MLIRIR
 )

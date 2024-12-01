@@ -379,15 +379,24 @@ builtin.module {
 
 // -----
 
-// expected-remark @below {{applyPartialConversion failed}}
 module {
-  func.func private @callee(%0 : f32) -> f32
+// CHECK-LABEL: func.func private @callee() -> (f16, f16)
+func.func private @callee() -> (f32, i24)
 
-  func.func @caller( %arg: f32) {
-    // expected-error @below {{failed to legalize}}
-    %1 = func.call @callee(%arg) : (f32) -> f32
-    return
-  }
+// CHECK: func.func @caller()
+func.func @caller() {
+  // f32 is converted to (f16, f16).
+  // i24 is converted to ().
+  // CHECK: %[[call:.*]]:2 = call @callee() : () -> (f16, f16)
+  %0:2 = func.call @callee() : () -> (f32, i24)
+
+  // CHECK: %[[cast1:.*]] = "test.cast"() : () -> i24
+  // CHECK: %[[cast0:.*]] = "test.cast"(%[[call]]#0, %[[call]]#1) : (f16, f16) -> f32
+  // CHECK: "test.some_user"(%[[cast0]], %[[cast1]]) : (f32, i24) -> ()
+  // expected-remark @below{{'test.some_user' is not legalizable}}
+  "test.some_user"(%0#0, %0#1) : (f32, i24) -> ()
+  "test.return"() : () -> ()
+}
 }
 
 // -----
@@ -408,10 +417,10 @@ func.func @test_move_op_before_rollback() {
 
 // CHECK-LABEL: func @test_properties_rollback()
 func.func @test_properties_rollback() {
-  // CHECK: test.with_properties <{a = 32 : i64,
+  // CHECK: test.with_properties a = 32,
   // expected-remark @below{{op 'test.with_properties' is not legalizable}}
   test.with_properties
-      <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, b = "foo"}>
+      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]
       {modify_inplace}
   "test.return"() : () -> ()
 }
@@ -437,3 +446,40 @@ func.func @fold_legalization() -> i32 {
   %1 = "test.op_in_place_self_fold"() : () -> (i32)
   "test.return"(%1) : (i32) -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @convert_detached_signature()
+//       CHECK:   "test.legal_op_with_region"() ({
+//       CHECK:   ^bb0(%arg0: f64):
+//       CHECK:     "test.return"() : () -> ()
+//       CHECK:   }) : () -> ()
+func.func @convert_detached_signature() {
+  "test.detached_signature_conversion"() ({
+  ^bb0(%arg0: i64):
+    "test.return"() : () -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: func @circular_mapping()
+//  CHECK-NEXT:   "test.valid"() : () -> ()
+func.func @circular_mapping() {
+  // Regression test that used to crash due to circular
+  // unrealized_conversion_cast ops.
+  %0 = "test.erase_op"() : () -> (i64)
+  "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
+}
+
+// -----
+
+func.func @test_1_to_n_block_signature_conversion() {
+  "test.duplicate_block_args"() ({
+  ^bb0(%arg0: i64):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
+  }) {} : () -> ()
+  "test.return"() : () -> ()
+}
+

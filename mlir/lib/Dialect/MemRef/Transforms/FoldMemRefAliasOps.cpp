@@ -518,9 +518,24 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
           loadOp.getLoc(), rewriter, expandShapeOp, indices, sourceIndices)))
     return failure();
   llvm::TypeSwitch<Operation *, void>(loadOp)
-      .Case<affine::AffineLoadOp, memref::LoadOp>([&](auto op) {
-        rewriter.replaceOpWithNewOp<decltype(op)>(
+      .Case([&](affine::AffineLoadOp op) {
+        rewriter.replaceOpWithNewOp<affine::AffineLoadOp>(
             loadOp, expandShapeOp.getViewSource(), sourceIndices);
+      })
+      .Case([&](memref::LoadOp op) {
+        rewriter.replaceOpWithNewOp<memref::LoadOp>(
+            loadOp, expandShapeOp.getViewSource(), sourceIndices,
+            op.getNontemporal());
+      })
+      .Case([&](vector::LoadOp op) {
+        rewriter.replaceOpWithNewOp<vector::LoadOp>(
+            op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
+            op.getNontemporal());
+      })
+      .Case([&](vector::MaskedLoadOp op) {
+        rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
+            op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
+            op.getMask(), op.getPassThru());
       })
       .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
@@ -551,9 +566,24 @@ LogicalResult LoadOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
           loadOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices)))
     return failure();
   llvm::TypeSwitch<Operation *, void>(loadOp)
-      .Case<affine::AffineLoadOp, memref::LoadOp>([&](auto op) {
-        rewriter.replaceOpWithNewOp<decltype(op)>(
+      .Case([&](affine::AffineLoadOp op) {
+        rewriter.replaceOpWithNewOp<affine::AffineLoadOp>(
             loadOp, collapseShapeOp.getViewSource(), sourceIndices);
+      })
+      .Case([&](memref::LoadOp op) {
+        rewriter.replaceOpWithNewOp<memref::LoadOp>(
+            loadOp, collapseShapeOp.getViewSource(), sourceIndices,
+            op.getNontemporal());
+      })
+      .Case([&](vector::LoadOp op) {
+        rewriter.replaceOpWithNewOp<vector::LoadOp>(
+            op, op.getType(), collapseShapeOp.getViewSource(), sourceIndices,
+            op.getNontemporal());
+      })
+      .Case([&](vector::MaskedLoadOp op) {
+        rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
+            op, op.getType(), collapseShapeOp.getViewSource(), sourceIndices,
+            op.getMask(), op.getPassThru());
       })
       .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
@@ -651,10 +681,25 @@ LogicalResult StoreOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
           storeOp.getLoc(), rewriter, expandShapeOp, indices, sourceIndices)))
     return failure();
   llvm::TypeSwitch<Operation *, void>(storeOp)
-      .Case<affine::AffineStoreOp, memref::StoreOp>([&](auto op) {
-        rewriter.replaceOpWithNewOp<decltype(op)>(storeOp, storeOp.getValue(),
-                                                  expandShapeOp.getViewSource(),
-                                                  sourceIndices);
+      .Case([&](affine::AffineStoreOp op) {
+        rewriter.replaceOpWithNewOp<affine::AffineStoreOp>(
+            storeOp, op.getValueToStore(), expandShapeOp.getViewSource(),
+            sourceIndices);
+      })
+      .Case([&](memref::StoreOp op) {
+        rewriter.replaceOpWithNewOp<memref::StoreOp>(
+            storeOp, op.getValueToStore(), expandShapeOp.getViewSource(),
+            sourceIndices, op.getNontemporal());
+      })
+      .Case([&](vector::StoreOp op) {
+        rewriter.replaceOpWithNewOp<vector::StoreOp>(
+            op, op.getValueToStore(), expandShapeOp.getViewSource(),
+            sourceIndices, op.getNontemporal());
+      })
+      .Case([&](vector::MaskedStoreOp op) {
+        rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
+            op, expandShapeOp.getViewSource(), sourceIndices, op.getMask(),
+            op.getValueToStore());
       })
       .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
@@ -685,10 +730,25 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
           storeOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices)))
     return failure();
   llvm::TypeSwitch<Operation *, void>(storeOp)
-      .Case<affine::AffineStoreOp, memref::StoreOp>([&](auto op) {
-        rewriter.replaceOpWithNewOp<decltype(op)>(
-            storeOp, storeOp.getValue(), collapseShapeOp.getViewSource(),
+      .Case([&](affine::AffineStoreOp op) {
+        rewriter.replaceOpWithNewOp<affine::AffineStoreOp>(
+            storeOp, op.getValueToStore(), collapseShapeOp.getViewSource(),
             sourceIndices);
+      })
+      .Case([&](memref::StoreOp op) {
+        rewriter.replaceOpWithNewOp<memref::StoreOp>(
+            storeOp, op.getValueToStore(), collapseShapeOp.getViewSource(),
+            sourceIndices, op.getNontemporal());
+      })
+      .Case([&](vector::StoreOp op) {
+        rewriter.replaceOpWithNewOp<vector::StoreOp>(
+            op, op.getValueToStore(), collapseShapeOp.getViewSource(),
+            sourceIndices, op.getNontemporal());
+      })
+      .Case([&](vector::MaskedStoreOp op) {
+        rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
+            op, collapseShapeOp.getViewSource(), sourceIndices, op.getMask(),
+            op.getValueToStore());
       })
       .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
@@ -763,12 +823,20 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                StoreOpOfSubViewOpFolder<gpu::SubgroupMmaStoreMatrixOp>,
                LoadOpOfExpandShapeOpFolder<affine::AffineLoadOp>,
                LoadOpOfExpandShapeOpFolder<memref::LoadOp>,
+               LoadOpOfExpandShapeOpFolder<vector::LoadOp>,
+               LoadOpOfExpandShapeOpFolder<vector::MaskedLoadOp>,
                StoreOpOfExpandShapeOpFolder<affine::AffineStoreOp>,
                StoreOpOfExpandShapeOpFolder<memref::StoreOp>,
+               StoreOpOfExpandShapeOpFolder<vector::StoreOp>,
+               StoreOpOfExpandShapeOpFolder<vector::MaskedStoreOp>,
                LoadOpOfCollapseShapeOpFolder<affine::AffineLoadOp>,
                LoadOpOfCollapseShapeOpFolder<memref::LoadOp>,
+               LoadOpOfCollapseShapeOpFolder<vector::LoadOp>,
+               LoadOpOfCollapseShapeOpFolder<vector::MaskedLoadOp>,
                StoreOpOfCollapseShapeOpFolder<affine::AffineStoreOp>,
                StoreOpOfCollapseShapeOpFolder<memref::StoreOp>,
+               StoreOpOfCollapseShapeOpFolder<vector::StoreOp>,
+               StoreOpOfCollapseShapeOpFolder<vector::MaskedStoreOp>,
                SubViewOfSubViewFolder, NVGPUAsyncCopyOpSubViewOpFolder>(
       patterns.getContext());
 }

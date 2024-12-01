@@ -45,7 +45,7 @@ static void printRemarkOption(llvm::raw_ostream &os,
     // warning could be printed i.e. [-Wunknown-warning-option]
     os << " [" << (level == clang::DiagnosticsEngine::Remark ? "-R" : "-W")
        << opt;
-    llvm::StringRef optValue = info.getDiags()->getFlagValue();
+    llvm::StringRef optValue = info.getFlagValue();
     if (!optValue.empty())
       os << "=" << optValue;
     os << ']';

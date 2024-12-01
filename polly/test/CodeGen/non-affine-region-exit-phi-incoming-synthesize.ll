@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; This caused the code generation to generate invalid code as the same BBMap was
 ; used for the whole non-affine region. When %add is synthesized for the

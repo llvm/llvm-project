@@ -1,3 +1,13 @@
+if(LIBC_TARGET_OS_IS_GPU)
+  add_subdirectory(gpu)
+  return()
+endif()
+
+# The CPU build depends on Google benchmark.
+if(NOT LIBC_INCLUDE_BENCHMARKS)
+  return()
+endif()
+
 find_package(Threads)
 
 set(LLVM_LINK_COMPONENTS
@@ -116,6 +126,7 @@ add_library(libc-memory-benchmark
 target_include_directories(libc-memory-benchmark
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${LIBC_SOURCE_DIR}
 )
 target_link_libraries(libc-memory-benchmark
     PUBLIC

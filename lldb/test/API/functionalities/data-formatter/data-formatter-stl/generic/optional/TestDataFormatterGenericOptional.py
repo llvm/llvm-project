@@ -79,6 +79,18 @@ class GenericOptionalDataFormatterTestCase(TestBase):
             ],
         )
 
+        self.expect_var_path("*number_engaged", value="42")
+        self.expect_var_path("*x", children=[ValueCheck(name="x", value="42")])
+        self.expect_var_path("x->x", value="42")
+
+        # The error message could use some improvement, but at least we can
+        # check we don't crash.
+        self.expect(
+            "frame variable *number_not_engaged",
+            error=True,
+            substrs=["not a pointer or reference type"],
+        )
+
     @add_test_categories(["libc++"])
     ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
     ## with -std=c++17.

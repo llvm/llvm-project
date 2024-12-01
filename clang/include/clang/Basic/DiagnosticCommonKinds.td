@@ -45,11 +45,6 @@ def note_using : Note<"using">;
 def note_possibility : Note<"one possibility">;
 def note_also_found : Note<"also found">;
 
-def warn_next_larger_fp_type_same_size_than_fp : Warning<
-  "higher precision floating-point type size has the same size than "
-  "floating-point type size">,
-  InGroup<DiagGroup<"higher-precision-fp">>;
-
 // Parse && Lex
 
 let CategoryName = "Lexical or Preprocessor Issue" in {
@@ -275,6 +270,9 @@ def err_too_large_for_fixed_point : Error<
 def err_unimplemented_conversion_with_fixed_point_type : Error<
   "conversion between fixed point and %0 is not yet supported">;
 
+def err_requires_positive_value : Error<
+  "%select{invalid value '%0'; must be positive|value '%0' is too large}1">;
+
 // SEH
 def err_seh_expected_handler : Error<
   "expected '__except' or '__finally' block">;
@@ -361,11 +359,17 @@ def warn_invalid_feature_combination : Warning<
 def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
-def warn_knl_knm_isa_support_removed : Warning<
-  "KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.">,
-  InGroup<DiagGroup<"knl-knm-isa-support-removed">>;
 def err_target_unsupported_abi_with_fpu : Error<
   "'%0' ABI is not supported with FPU">;
+
+def err_ppc_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "long calls cannot be tail called on PPC|"
+  "indirect calls cannot be tail called on PPC|"
+  "external calls cannot be tail called on PPC}0"
+  >;
+def err_aix_musttail_unsupported: Error<
+  "'musttail' attribute is not supported on AIX">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
@@ -385,13 +389,14 @@ def remark_sloc_usage : Remark<
   "source manager location address space usage:">,
   InGroup<DiagGroup<"sloc-usage">>, DefaultRemark, ShowInSystemHeader;
 def note_total_sloc_usage : Note<
-  "%0B in local locations, %1B in locations loaded from AST files, for a total "
-  "of %2B (%3%% of available space)">;
+  "%0B (%human0B) in local locations, %1B (%human1B) "
+  "in locations loaded from AST files, for a total of %2B (%human2B) "
+  "(%3%% of available space)">;
 def note_file_sloc_usage : Note<
-  "file entered %0 time%s0 using %1B of space"
-  "%plural{0:|: plus %2B for macro expansions}2">;
+  "file entered %0 time%s0 using %1B (%human1B) of space"
+  "%plural{0:|: plus %2B (%human2B) for macro expansions}2">;
 def note_file_misc_sloc_usage : Note<
-  "%0 additional files entered using a total of %1B of space">;
+  "%0 additional files entered using a total of %1B (%human1B) of space">;
 
 // Modules
 def err_module_format_unhandled : Error<

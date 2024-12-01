@@ -80,10 +80,10 @@ void emitEncodingMacrosUndef(raw_ostream &OS) {
      << "#undef " << EncodeMacroName << "8\n";
 }
 
-std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
+std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
                                     int HwModeIdx) {
   std::string Name = "GIFBS";
-  for (const auto &Feature : FeatureBitset)
+  for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   if (HwModeIdx >= 0)
     Name += ("_HwMode" + std::to_string(HwModeIdx));
@@ -687,10 +687,6 @@ StringRef RuleMatcher::getOpcode() const {
   return Matchers.front()->getOpcode();
 }
 
-unsigned RuleMatcher::getNumOperands() const {
-  return Matchers.front()->getNumOperands();
-}
-
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
   InstructionMatcher &InsnMatcher = *Matchers.front();
   if (!InsnMatcher.predicates_empty())
@@ -826,7 +822,7 @@ SaveAndRestore<GISelFlags> RuleMatcher::setGISelFlags(const Record *R) {
 }
 
 Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
-                                           Record *ComplexPattern,
+                                           const Record *ComplexPattern,
                                            unsigned RendererID,
                                            unsigned SubOperandID,
                                            StringRef ParentSymbolicName) {
@@ -846,7 +842,7 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
 
   ComplexSubOperands[SymbolicName] =
       std::tuple(ComplexPattern, RendererID, SubOperandID);
-  ComplexSubOperandsParentName[SymbolicName] = ParentName;
+  ComplexSubOperandsParentName[SymbolicName] = std::move(ParentName);
 
   return Error::success();
 }
@@ -863,14 +859,6 @@ void RuleMatcher::addRequiredSimplePredicate(StringRef PredName) {
 
 const std::vector<std::string> &RuleMatcher::getRequiredSimplePredicates() {
   return RequiredSimplePredicates;
-}
-
-void RuleMatcher::addRequiredFeature(Record *Feature) {
-  RequiredFeatures.push_back(Feature);
-}
-
-const std::vector<Record *> &RuleMatcher::getRequiredFeatures() const {
-  return RequiredFeatures;
 }
 
 unsigned RuleMatcher::implicitlyDefineInsnVar(InstructionMatcher &Matcher) {
@@ -900,11 +888,9 @@ void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
       RM.getGISelFlags());
 }
 
-void RuleMatcher::definePhysRegOperand(Record *Reg, OperandMatcher &OM) {
-  if (!PhysRegOperands.contains(Reg)) {
+void RuleMatcher::definePhysRegOperand(const Record *Reg, OperandMatcher &OM) {
+  if (!PhysRegOperands.contains(Reg))
     PhysRegOperands[Reg] = &OM;
-    return;
-  }
 }
 
 InstructionMatcher &
@@ -916,7 +902,8 @@ RuleMatcher::getInstructionMatcher(StringRef SymbolicName) const {
       ("Failed to lookup instruction " + SymbolicName).str().c_str());
 }
 
-const OperandMatcher &RuleMatcher::getPhysRegOperandMatcher(Record *Reg) const {
+const OperandMatcher &
+RuleMatcher::getPhysRegOperandMatcher(const Record *Reg) const {
   const auto &I = PhysRegOperands.find(Reg);
 
   if (I == PhysRegOperands.end()) {
@@ -1034,32 +1021,47 @@ void RuleMatcher::emit(MatchTable &Table) {
   for (const auto &PM : EpilogueMatchers)
     PM->emitPredicateOpcodes(Table, *this);
 
-  // Emit all actions except the last one, then emit coverage and emit the
-  // final action.
-  //
-  // This is because some actions, such as GIR_EraseRootFromParent_Done, also
-  // double as a GIR_Done and terminate execution of the rule.
-  if (!Actions.empty()) {
-    for (const auto &MA : drop_end(Actions))
+  if (!CustomCXXAction.empty()) {
+    /// Handle combiners relying on custom C++ code instead of actions.
+    assert(Table.isCombiner() && "CustomCXXAction is only for combiners!");
+    // We cannot have actions other than debug comments.
+    assert(none_of(Actions, [](auto &A) {
+      return A->getKind() != MatchAction::AK_DebugComment;
+    }));
+    for (const auto &MA : Actions)
       MA->emitActionOpcodes(Table, *this);
-  }
-
-  assert((Table.isWithCoverage() ? !Table.isCombiner() : true) &&
-         "Combiner tables don't support coverage!");
-  if (Table.isWithCoverage())
-    Table << MatchTable::Opcode("GIR_Coverage")
-          << MatchTable::IntValue(4, RuleID) << MatchTable::LineBreak;
-  else if (!Table.isCombiner())
-    Table << MatchTable::Comment(("GIR_Coverage, " + Twine(RuleID) + ",").str())
+    Table << MatchTable::Opcode("GIR_DoneWithCustomAction", -1)
+          << MatchTable::Comment("Fn")
+          << MatchTable::NamedValue(2, CustomCXXAction)
           << MatchTable::LineBreak;
+  } else {
+    // Emit all actions except the last one, then emit coverage and emit the
+    // final action.
+    //
+    // This is because some actions, such as GIR_EraseRootFromParent_Done, also
+    // double as a GIR_Done and terminate execution of the rule.
+    if (!Actions.empty()) {
+      for (const auto &MA : drop_end(Actions))
+        MA->emitActionOpcodes(Table, *this);
+    }
 
-  if (Actions.empty() ||
-      !Actions.back()->emitActionOpcodesAndDone(Table, *this)) {
-    Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak;
+    assert((Table.isWithCoverage() ? !Table.isCombiner() : true) &&
+           "Combiner tables don't support coverage!");
+    if (Table.isWithCoverage())
+      Table << MatchTable::Opcode("GIR_Coverage")
+            << MatchTable::IntValue(4, RuleID) << MatchTable::LineBreak;
+    else if (!Table.isCombiner())
+      Table << MatchTable::Comment(
+                   ("GIR_Coverage, " + Twine(RuleID) + ",").str())
+            << MatchTable::LineBreak;
+
+    if (Actions.empty() ||
+        !Actions.back()->emitActionOpcodesAndDone(Table, *this)) {
+      Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak;
+    }
   }
 
   Table << MatchTable::Label(LabelID);
-
   ++NumPatternEmitted;
 }
 
@@ -1303,7 +1305,7 @@ void IntrinsicIDOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
   Table << MatchTable::Opcode("GIM_CheckIntrinsicID")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
@@ -1329,6 +1331,7 @@ std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
 unsigned OperandMatcher::getInsnVarID() const { return Insn.getInsnVarID(); }
 
 TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
+  assert(!IsVariadic && "Cannot use this on variadic operands!");
   if (TTIdx >= 0) {
     // Temp type index not assigned yet, so assign one and add the necessary
     // predicate.
@@ -1491,8 +1494,20 @@ StringRef InstructionOpcodeMatcher::getOperandType(unsigned OpIdx) const {
 
 void InstructionNumOperandsMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckNumOperands")
-        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+  StringRef Opc;
+  switch (CK) {
+  case CheckKind::Eq:
+    Opc = "GIM_CheckNumOperands";
+    break;
+  case CheckKind::GE:
+    Opc = "GIM_CheckNumOperandsGE";
+    break;
+  case CheckKind::LE:
+    Opc = "GIM_CheckNumOperandsLE";
+    break;
+  }
+  Table << MatchTable::Opcode(Opc) << MatchTable::Comment("MI")
+        << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Expected")
         << MatchTable::ULEB128Value(NumOperands) << MatchTable::LineBreak;
 }
@@ -1680,12 +1695,14 @@ void MIFlagsInstructionPredicateMatcher::emitPredicateOpcodes(
 
 OperandMatcher &
 InstructionMatcher::addOperand(unsigned OpIdx, const std::string &SymbolicName,
-                               unsigned AllocatedTemporariesBaseID) {
-  Operands.emplace_back(new OperandMatcher(*this, OpIdx, SymbolicName,
-                                           AllocatedTemporariesBaseID));
+                               unsigned AllocatedTemporariesBaseID,
+                               bool IsVariadic) {
+  assert((Operands.empty() || !Operands.back()->isVariadic()) &&
+         "Cannot add more operands after a variadic operand");
+  Operands.emplace_back(new OperandMatcher(
+      *this, OpIdx, SymbolicName, AllocatedTemporariesBaseID, IsVariadic));
   if (!SymbolicName.empty())
     Rule.defineOperand(SymbolicName, *Operands.back());
-
   return *Operands.back();
 }
 
@@ -1699,7 +1716,8 @@ OperandMatcher &InstructionMatcher::getOperand(unsigned OpIdx) {
   llvm_unreachable("Failed to lookup operand");
 }
 
-OperandMatcher &InstructionMatcher::addPhysRegInput(Record *Reg, unsigned OpIdx,
+OperandMatcher &InstructionMatcher::addPhysRegInput(const Record *Reg,
+                                                    unsigned OpIdx,
                                                     unsigned TempOpIdx) {
   assert(SymbolicName.empty());
   OperandMatcher *OM = new OperandMatcher(*this, OpIdx, "", TempOpIdx);
@@ -1711,9 +1729,10 @@ OperandMatcher &InstructionMatcher::addPhysRegInput(Record *Reg, unsigned OpIdx,
 
 void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,
                                               RuleMatcher &Rule) {
-  if (NumOperandsCheck)
-    InstructionNumOperandsMatcher(InsnVarID, getNumOperands())
+  if (canAddNumOperandsCheck()) {
+    InstructionNumOperandsMatcher(InsnVarID, getNumOperandMatchers())
         .emitPredicateOpcodes(Table, Rule);
+  }
 
   // First emit all instruction level predicates need to be verified before we
   // can verify operands.
@@ -1778,11 +1797,13 @@ void InstructionMatcher::optimize() {
 
   Stash.push_back(predicates_pop_front());
   if (Stash.back().get() == &OpcMatcher) {
-    if (NumOperandsCheck && OpcMatcher.isVariadicNumOperands() &&
-        getNumOperands() != 0)
-      Stash.emplace_back(
-          new InstructionNumOperandsMatcher(InsnVarID, getNumOperands()));
-    NumOperandsCheck = false;
+    // FIXME: Is this even needed still? Why the isVariadicNumOperands check?
+    if (canAddNumOperandsCheck() && OpcMatcher.isVariadicNumOperands() &&
+        getNumOperandMatchers() != 0) {
+      Stash.emplace_back(new InstructionNumOperandsMatcher(
+          InsnVarID, getNumOperandMatchers()));
+    }
+    AllowNumOpsCheck = false;
 
     for (auto &OM : Operands)
       for (auto &OP : OM->predicates())
@@ -1847,11 +1868,13 @@ OperandRenderer::~OperandRenderer() {}
 
 void CopyRenderer::emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
                                      unsigned NewInsnID, unsigned OldInsnID,
-                                     unsigned OpIdx, StringRef Name) {
-  if (NewInsnID == 0 && OldInsnID == 0) {
+                                     unsigned OpIdx, StringRef Name,
+                                     bool ForVariadic) {
+  if (!ForVariadic && NewInsnID == 0 && OldInsnID == 0) {
     Table << MatchTable::Opcode("GIR_RootToRootCopy");
   } else {
-    Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
+    Table << MatchTable::Opcode(ForVariadic ? "GIR_CopyRemaining" : "GIR_Copy")
+          << MatchTable::Comment("NewInsnID")
           << MatchTable::ULEB128Value(NewInsnID)
           << MatchTable::Comment("OldInsnID")
           << MatchTable::ULEB128Value(OldInsnID);
@@ -1865,8 +1888,9 @@ void CopyRenderer::emitRenderOpcodes(MatchTable &Table,
                                      RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
   unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+
   emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID, Operand.getOpIdx(),
-                    SymbolicName);
+                    SymbolicName, Operand.isVariadic());
 }
 
 //===- CopyPhysRegRenderer ------------------------------------------------===//
@@ -2071,7 +2095,7 @@ void IntrinsicIDRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIR_AddIntrinsicID") << MatchTable::Comment("MI")
         << MatchTable::ULEB128Value(InsnID)
-        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName)
+        << MatchTable::NamedValue(2, "Intrinsic::" + II->EnumName.str())
         << MatchTable::LineBreak;
 }
 
@@ -2108,22 +2132,14 @@ void CustomOperandRenderer::emitRenderOpcodes(MatchTable &Table,
         << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
 }
 
-//===- CustomCXXAction ----------------------------------------------------===//
-
-void CustomCXXAction::emitActionOpcodes(MatchTable &Table,
-                                        RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIR_CustomAction")
-        << MatchTable::NamedValue(2, FnEnumName) << MatchTable::LineBreak;
-}
-
 //===- BuildMIAction ------------------------------------------------------===//
 
 bool BuildMIAction::canMutate(RuleMatcher &Rule,
                               const InstructionMatcher *Insn) const {
-  if (!Insn)
+  if (!Insn || Insn->hasVariadicMatcher())
     return false;
 
-  if (OperandRenderers.size() != Insn->getNumOperands())
+  if (OperandRenderers.size() != Insn->getNumOperandMatchers())
     return false;
 
   for (const auto &Renderer : enumerate(OperandRenderers)) {

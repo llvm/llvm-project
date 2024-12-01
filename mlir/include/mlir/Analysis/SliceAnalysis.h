@@ -47,6 +47,11 @@ struct BackwardSliceOptions : public SliceOptions {
   /// backward slice computation traverses block arguments and asserts that the
   /// parent op has a single region with a single block.
   bool omitBlockArguments = false;
+
+  /// When omitUsesFromAbove is true, the backward slice computation omits
+  /// traversing values that are captured from above.
+  /// TODO: this should default to `false` after users have been updated.
+  bool omitUsesFromAbove = true;
 };
 
 using ForwardSliceOptions = SliceOptions;
@@ -222,11 +227,6 @@ void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
 SetVector<Operation *>
 getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions = {},
          const ForwardSliceOptions &forwardSliceOptions = {});
-
-/// Multi-root DAG topological sort.
-/// Performs a topological sort of the Operation in the `toSort` SetVector.
-/// Returns a topologically sorted SetVector.
-SetVector<Operation *> topologicalSort(const SetVector<Operation *> &toSort);
 
 /// Utility to match a generic reduction given a list of iteration-carried
 /// arguments, `iterCarriedArgs` and the position of the potential reduction

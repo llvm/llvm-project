@@ -90,10 +90,7 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   %25 = getelementptr inbounds { ptr, ptr }, ptr %5, i64 0, i32 1
   store ptr %24, ptr %25, align 8
   %26 = call token @llvm.coro.save(ptr null)
-  %27 = call ptr @await_transform_await_suspend(ptr noundef nonnull align 8 dereferenceable(16) %5, ptr %14)
-  %28 = call ptr @llvm.coro.subfn.addr(ptr %27, i8 0)
-  %29 = ptrtoint ptr %28 to i64
-  call fastcc void %28(ptr %27) #9
+  call void @llvm.coro.await.suspend.handle(ptr null, ptr null, ptr @await_transform_await_suspend)
   %30 = call i8 @llvm.coro.suspend(token %26, i1 false)
   switch i8 %30, label %60 [
     i8 0, label %31
@@ -123,9 +120,7 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   br i1 %42, label %43, label %46
 
 43:                                               ; preds = %36
-  %44 = call ptr @llvm.coro.subfn.addr(ptr nonnull %14, i8 1)
-  %45 = ptrtoint ptr %44 to i64
-  call fastcc void %44(ptr nonnull %14) #9
+  call void @llvm.coro.await.suspend.handle(ptr null, ptr null, ptr @await_transform_await_suspend)
   br label %47
 
 46:                                               ; preds = %36

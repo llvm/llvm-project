@@ -114,11 +114,13 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     ShiftAmount = llvm::countr_zero((uint64_t)Val);
     Val >>= ShiftAmount;
 
-    // If the remaining bits don't fit in 12 bits, we might be able to reduce the
-    // shift amount in order to use LUI which will zero the lower 12 bits.
+    // If the remaining bits don't fit in 12 bits, we might be able to reduce
+    // the // shift amount in order to use LUI which will zero the lower 12
+    // bits.
     if (ShiftAmount > 12 && !isInt<12>(Val)) {
       if (isInt<32>((uint64_t)Val << 12)) {
-        // Reduce the shift amount and add zeros to the LSBs so it will match LUI.
+        // Reduce the shift amount and add zeros to the LSBs so it will match
+        // LUI.
         ShiftAmount -= 12;
         Val = (uint64_t)Val << 12;
       } else if (isUInt<32>((uint64_t)Val << 12) &&
@@ -497,7 +499,7 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 }
 
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
-                  bool CompressionCost) {
+                  bool CompressionCost, bool FreeZeroes) {
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   bool HasRVC = CompressionCost && (STI.hasFeature(RISCV::FeatureStdExtC) ||
                                     STI.hasFeature(RISCV::FeatureStdExtZca));
@@ -508,10 +510,12 @@ int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
   int Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
     APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
+    if (FreeZeroes && Chunk.getSExtValue() == 0)
+      continue;
     InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), STI);
     Cost += getInstSeqCost(MatSeq, HasRVC);
   }
-  return std::max(1, Cost);
+  return std::max(FreeZeroes ? 0 : 1, Cost);
 }
 
 OpndKind Inst::getOpndKind() const {

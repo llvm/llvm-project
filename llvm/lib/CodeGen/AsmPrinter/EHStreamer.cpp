@@ -253,8 +253,8 @@ void EHStreamer::computeCallSiteTable(
       // We start a call-site range upon function entry and at the beginning of
       // every basic block section.
       CallSiteRanges.push_back(
-          {Asm->MBBSectionRanges[MBB.getSectionIDNum()].BeginLabel,
-           Asm->MBBSectionRanges[MBB.getSectionIDNum()].EndLabel,
+          {Asm->MBBSectionRanges[MBB.getSectionID()].BeginLabel,
+           Asm->MBBSectionRanges[MBB.getSectionID()].EndLabel,
            Asm->getMBBExceptionSym(MBB), CallSites.size()});
       PreviousIsInvoke = false;
       SawPotentiallyThrowing = false;

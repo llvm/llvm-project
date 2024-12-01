@@ -270,8 +270,10 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   if (std::optional<DWARFFormValue> Val = find(DieEntry, dwarf::DW_AT_name)) {
     Expected<const char *> Name = Val->getAsCString();
@@ -379,38 +381,36 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
 std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
     const DWARFFormValue &RefValue,
     ResolveInterCUReferencesMode CanResolveInterCUReferences) {
-  if (std::optional<DWARFFormValue::UnitOffset> Ref =
-          *RefValue.getAsRelativeReference()) {
-    if (Ref->Unit == OrigUnit) {
-      // Referenced DIE is in current compile unit.
-      if (std::optional<uint32_t> RefDieIdx =
-              getDIEIndexForOffset(OrigUnit->getOffset() + Ref->Offset))
-        return UnitEntryPairTy{this, OrigUnit->getDebugInfoEntry(*RefDieIdx)};
-    }
-    uint64_t RefDIEOffset =
-        Ref->Unit ? Ref->Unit->getOffset() + Ref->Offset : Ref->Offset;
-    if (CompileUnit *RefCU = getUnitFromOffset(RefDIEOffset)) {
-      if (RefCU == this) {
-        // Referenced DIE is in current compile unit.
-        if (std::optional<uint32_t> RefDieIdx =
-                getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
-      } else if (CanResolveInterCUReferences) {
-        // Referenced DIE is in other compile unit.
-
-        // Check whether DIEs are loaded for that compile unit.
-        enum Stage ReferredCUStage = RefCU->getStage();
-        if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
-          return UnitEntryPairTy{RefCU, nullptr};
-
-        if (std::optional<uint32_t> RefDieIdx =
-                RefCU->getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
-      } else
-        return UnitEntryPairTy{RefCU, nullptr};
-    }
+  CompileUnit *RefCU;
+  uint64_t RefDIEOffset;
+  if (std::optional<uint64_t> Offset = RefValue.getAsRelativeReference()) {
+    RefCU = this;
+    RefDIEOffset = RefValue.getUnit()->getOffset() + *Offset;
+  } else if (Offset = RefValue.getAsDebugInfoReference(); Offset) {
+    RefCU = getUnitFromOffset(*Offset);
+    RefDIEOffset = *Offset;
+  } else {
+    return std::nullopt;
   }
 
+  if (RefCU == this) {
+    // Referenced DIE is in current compile unit.
+    if (std::optional<uint32_t> RefDieIdx = getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
+  } else if (RefCU && CanResolveInterCUReferences) {
+    // Referenced DIE is in other compile unit.
+
+    // Check whether DIEs are loaded for that compile unit.
+    enum Stage ReferredCUStage = RefCU->getStage();
+    if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
+      return UnitEntryPairTy{RefCU, nullptr};
+
+    if (std::optional<uint32_t> RefDieIdx =
+            RefCU->getDIEIndexForOffset(RefDIEOffset))
+      return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
+  } else {
+    return UnitEntryPairTy{RefCU, nullptr};
+  }
   return std::nullopt;
 }
 
@@ -1171,8 +1171,7 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress =
-            SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1209,7 +1208,7 @@ void CompileUnit::cloneDieAttrExpression(
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
-              SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+              SA->Address + VarAddressAdjustment.value_or(0);
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
@@ -1831,7 +1830,7 @@ TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(
     bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
-  if (!Dependencies.get())
+  if (!Dependencies)
     Dependencies.reset(new DependencyTracker(*this));
 
   return Dependencies->resolveDependenciesAndMarkLiveness(
@@ -1841,13 +1840,13 @@ bool CompileUnit::resolveDependenciesAndMarkLiveness(
 bool CompileUnit::updateDependenciesCompleteness() {
   assert(Dependencies.get());
 
-  return Dependencies.get()->updateDependenciesCompleteness();
+  return Dependencies->updateDependenciesCompleteness();
 }
 
 void CompileUnit::verifyDependencies() {
   assert(Dependencies.get());
 
-  Dependencies.get()->verifyKeepChain();
+  Dependencies->verifyKeepChain();
 }
 
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {

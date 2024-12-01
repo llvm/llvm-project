@@ -20,7 +20,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -33,7 +32,7 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "X86GenAsmWriter1.inc"
 
-void X86IntelInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void X86IntelInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg);
 }
 
@@ -146,6 +145,15 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   case X86::VCMPPHZrmbi:     case X86::VCMPPHZrmbik:
   case X86::VCMPPHZrrib:     case X86::VCMPPHZrribk:
   case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
+  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
+  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
+  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
+  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
+  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
+  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
+  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
+  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
+  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
     if (Imm >= 0 && Imm <= 31) {
       OS << '\t';
       printCMPMnemonic(MI, /*IsVCMP*/true, OS);
@@ -195,9 +203,8 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
               printwordmem(MI, CurOp++, OS);
             else
               printdwordmem(MI, CurOp++, OS);
-          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD) {
-            assert((Desc.TSFlags & X86II::OpMapMask) != X86II::TA &&
-                   "Unexpected op map!");
+          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD &&
+                     (Desc.TSFlags & X86II::OpMapMask) != X86II::TA) {
             printqwordmem(MI, CurOp++, OS);
           } else if (Desc.TSFlags & X86II::EVEX_L2) {
             printzmmwordmem(MI, CurOp++, OS);
@@ -288,18 +295,18 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   case X86::VPCMPWZ128rmik:  case X86::VPCMPWZ128rrik:
   case X86::VPCMPWZ256rmik:  case X86::VPCMPWZ256rrik:
   case X86::VPCMPWZrmik:     case X86::VPCMPWZrrik:
-  case X86::VPCMPDZ128rmib:  case X86::VPCMPDZ128rmibk:
-  case X86::VPCMPDZ256rmib:  case X86::VPCMPDZ256rmibk:
-  case X86::VPCMPDZrmib:     case X86::VPCMPDZrmibk:
-  case X86::VPCMPQZ128rmib:  case X86::VPCMPQZ128rmibk:
-  case X86::VPCMPQZ256rmib:  case X86::VPCMPQZ256rmibk:
-  case X86::VPCMPQZrmib:     case X86::VPCMPQZrmibk:
-  case X86::VPCMPUDZ128rmib: case X86::VPCMPUDZ128rmibk:
-  case X86::VPCMPUDZ256rmib: case X86::VPCMPUDZ256rmibk:
-  case X86::VPCMPUDZrmib:    case X86::VPCMPUDZrmibk:
-  case X86::VPCMPUQZ128rmib: case X86::VPCMPUQZ128rmibk:
-  case X86::VPCMPUQZ256rmib: case X86::VPCMPUQZ256rmibk:
-  case X86::VPCMPUQZrmib:    case X86::VPCMPUQZrmibk:
+  case X86::VPCMPDZ128rmbi:  case X86::VPCMPDZ128rmbik:
+  case X86::VPCMPDZ256rmbi:  case X86::VPCMPDZ256rmbik:
+  case X86::VPCMPDZrmbi:     case X86::VPCMPDZrmbik:
+  case X86::VPCMPQZ128rmbi:  case X86::VPCMPQZ128rmbik:
+  case X86::VPCMPQZ256rmbi:  case X86::VPCMPQZ256rmbik:
+  case X86::VPCMPQZrmbi:     case X86::VPCMPQZrmbik:
+  case X86::VPCMPUDZ128rmbi: case X86::VPCMPUDZ128rmbik:
+  case X86::VPCMPUDZ256rmbi: case X86::VPCMPUDZ256rmbik:
+  case X86::VPCMPUDZrmbi:    case X86::VPCMPUDZrmbik:
+  case X86::VPCMPUQZ128rmbi: case X86::VPCMPUQZ128rmbik:
+  case X86::VPCMPUQZ256rmbi: case X86::VPCMPUQZ256rmbik:
+  case X86::VPCMPUQZrmbi:    case X86::VPCMPUQZrmbik:
     if ((Imm >= 0 && Imm <= 2) || (Imm >= 4 && Imm <= 6)) {
       OS << '\t';
       printVPCMPMnemonic(MI, OS);
@@ -479,8 +486,7 @@ void X86IntelInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
 
 void X86IntelInstPrinter::printSTiRegOperand(const MCInst *MI, unsigned OpNo,
                                             raw_ostream &OS) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  unsigned Reg = Op.getReg();
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
   // Override the default printing to print st(0) instead st.
   if (Reg == X86::ST0)
     OS << "st(0)";

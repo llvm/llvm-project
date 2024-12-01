@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -43,6 +42,97 @@
 #define DEBUG_TYPE "memprof"
 
 namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<memprof::Frame> {
+  static void mapping(IO &Io, memprof::Frame &F) {
+    Io.mapRequired("Function", F.Function);
+    Io.mapRequired("LineOffset", F.LineOffset);
+    Io.mapRequired("Column", F.Column);
+    Io.mapRequired("Inline", F.IsInlineFrame);
+
+    // Assert that the definition of Frame matches what we expect.  The
+    // structured bindings below detect changes to the number of fields.
+    // static_assert checks the type of each field.
+    const auto &[Function, SymbolName, LineOffset, Column, IsInlineFrame] = F;
+    static_assert(
+        std::is_same_v<remove_cvref_t<decltype(Function)>, GlobalValue::GUID>);
+    static_assert(std::is_same_v<remove_cvref_t<decltype(SymbolName)>,
+                                 std::unique_ptr<std::string>>);
+    static_assert(
+        std::is_same_v<remove_cvref_t<decltype(LineOffset)>, uint32_t>);
+    static_assert(std::is_same_v<remove_cvref_t<decltype(Column)>, uint32_t>);
+    static_assert(
+        std::is_same_v<remove_cvref_t<decltype(IsInlineFrame)>, bool>);
+
+    // MSVC issues unused variable warnings despite the uses in static_assert
+    // above.
+    (void)Function;
+    (void)SymbolName;
+    (void)LineOffset;
+    (void)Column;
+    (void)IsInlineFrame;
+  }
+};
+
+template <> struct CustomMappingTraits<memprof::PortableMemInfoBlock> {
+  static void inputOne(IO &Io, StringRef KeyStr,
+                       memprof::PortableMemInfoBlock &MIB) {
+    // PortableMemInfoBlock keeps track of the set of fields that actually have
+    // values.  We update the set here as we receive a key-value pair from the
+    // YAML document.
+    //
+    // We set MIB.Name via a temporary variable because ScalarTraits<uintptr_t>
+    // isn't available on macOS.
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  if (KeyStr == #Name) {                                                       \
+    uint64_t Value;                                                            \
+    Io.mapRequired(KeyStr.str().c_str(), Value);                               \
+    MIB.Name = static_cast<Type>(Value);                                       \
+    MIB.Schema.set(llvm::to_underlying(memprof::Meta::Name));                  \
+    return;                                                                    \
+  }
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+    Io.setError("Key is not a valid validation event");
+  }
+
+  static void output(IO &Io, memprof::PortableMemInfoBlock &VI) {
+    llvm_unreachable("To be implemented");
+  }
+};
+
+template <> struct MappingTraits<memprof::AllocationInfo> {
+  static void mapping(IO &Io, memprof::AllocationInfo &AI) {
+    Io.mapRequired("Callstack", AI.CallStack);
+    Io.mapRequired("MemInfoBlock", AI.Info);
+  }
+};
+
+// In YAML, we use GUIDMemProfRecordPair instead of MemProfRecord so that we can
+// treat the GUID and the fields within MemProfRecord at the same level as if
+// the GUID were part of MemProfRecord.
+template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
+  static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
+    Io.mapRequired("GUID", Pair.GUID);
+    Io.mapRequired("AllocSites", Pair.Record.AllocSites);
+    Io.mapRequired("CallSites", Pair.Record.CallSites);
+  }
+};
+
+template <> struct MappingTraits<memprof::AllMemProfData> {
+  static void mapping(IO &Io, memprof::AllMemProfData &Data) {
+    Io.mapRequired("HeapProfileRecords", Data.HeapProfileRecords);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::Frame)
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<memprof::Frame>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::AllocationInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDMemProfRecordPair)
+
+namespace llvm {
 namespace memprof {
 namespace {
 template <class T = uint64_t> inline T alignedRead(const char *Ptr) {
@@ -67,8 +157,15 @@ Error checkBuffer(const MemoryBuffer &Buffer) {
   uint64_t TotalSize = 0;
   const char *Next = Buffer.getBufferStart();
   while (Next < Buffer.getBufferEnd()) {
-    auto *H = reinterpret_cast<const Header *>(Next);
-    if (H->Version != MEMPROF_RAW_VERSION) {
+    const auto *H = reinterpret_cast<const Header *>(Next);
+
+    // Check if the version in header is among the supported versions.
+    bool IsSupported = false;
+    for (auto SupportedVersion : MEMPROF_RAW_SUPPORTED_VERSIONS) {
+      if (H->Version == SupportedVersion)
+        IsSupported = true;
+    }
+    if (!IsSupported) {
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
 
@@ -96,19 +193,63 @@ llvm::SmallVector<SegmentEntry> readSegmentEntries(const char *Ptr) {
 }
 
 llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
-readMemInfoBlocks(const char *Ptr) {
+readMemInfoBlocksV3(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
   llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     const uint64_t Id =
-        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-    const MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+    // We cheat a bit here and remove the const from cast to set the
+    // Histogram Pointer to newly allocated buffer. We also cheat, since V3 and
+    // V4 do not have the same fields. V3 is missing AccessHistogramSize and
+    // AccessHistogram. This means we read "dirty" data in here, but it should
+    // not segfault, since there will be callstack data placed after this in the
+    // binary format.
+    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+    // Overwrite dirty data.
+    MIB.AccessHistogramSize = 0;
+    MIB.AccessHistogram = 0;
+
     Items.push_back({Id, MIB});
+    // Only increment by the size of MIB in V3.
+    Ptr += MEMPROF_V3_MIB_SIZE;
+  }
+  return Items;
+}
+
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV4(const char *Ptr) {
+  using namespace support;
+
+  const uint64_t NumItemsToRead =
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
+  for (uint64_t I = 0; I < NumItemsToRead; I++) {
+    const uint64_t Id =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    // We cheat a bit here and remove the const from cast to set the
+    // Histogram Pointer to newly allocated buffer.
+    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+
     // Only increment by size of MIB since readNext implicitly increments.
     Ptr += sizeof(MemInfoBlock);
+
+    if (MIB.AccessHistogramSize > 0) {
+      MIB.AccessHistogram =
+          (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
+    }
+
+    for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
+      ((uint64_t *)MIB.AccessHistogram)[J] =
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    }
+    Items.push_back({Id, MIB});
   }
   return Items;
 }
@@ -143,14 +284,10 @@ CallStackMap readStackInfo(const char *Ptr) {
 // addresses.
 bool mergeStackMap(const CallStackMap &From, CallStackMap &To) {
   for (const auto &[Id, Stack] : From) {
-    auto I = To.find(Id);
-    if (I == To.end()) {
-      To[Id] = Stack;
-    } else {
-      // Check that the PCs are the same (in order).
-      if (Stack != I->second)
-        return true;
-    }
+    auto [It, Inserted] = To.try_emplace(Id, Stack);
+    // Check that the PCs are the same (in order).
+    if (!Inserted && Stack != It->second)
+      return true;
   }
   return false;
 }
@@ -182,28 +319,6 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
   return OS.str();
 }
 } // namespace
-
-MemProfReader::MemProfReader(
-    llvm::DenseMap<FrameId, Frame> FrameIdMap,
-    llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-    : IdToFrame(std::move(FrameIdMap)),
-      FunctionProfileData(std::move(ProfData)) {
-  // Populate CSId in each IndexedAllocationInfo and IndexedMemProfRecord
-  // while storing CallStack in CSIdToCallStack.
-  for (auto &KV : FunctionProfileData) {
-    IndexedMemProfRecord &Record = KV.second;
-    for (auto &AS : Record.AllocSites) {
-      CallStackId CSId = hashCallStack(AS.CallStack);
-      AS.CSId = CSId;
-      CSIdToCallStack.insert({CSId, AS.CallStack});
-    }
-    for (auto &CS : Record.CallSites) {
-      CallStackId CSId = hashCallStack(CS);
-      Record.CallSiteIds.push_back(CSId);
-      CSIdToCallStack.insert({CSId, CS});
-    }
-  }
-}
 
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
@@ -251,6 +366,16 @@ RawMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   return std::move(Reader);
 }
 
+// We need to make sure that all leftover MIB histograms that have not been
+// freed by merge are freed here.
+RawMemProfReader::~RawMemProfReader() {
+  for (auto &[_, MIB] : CallstackProfileData) {
+    if (MemprofRawVersion >= 4ULL && MIB.AccessHistogramSize > 0) {
+      free((void *)MIB.AccessHistogram);
+    }
+  }
+}
+
 bool RawMemProfReader::hasFormat(const StringRef Path) {
   auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
   if (!BufferOr)
@@ -271,7 +396,7 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
   uint64_t NumAllocFunctions = 0, NumMibInfo = 0;
-  for (const auto &KV : FunctionProfileData) {
+  for (const auto &KV : MemProfData.Records) {
     const size_t NumAllocSites = KV.second.AllocSites.size();
     if (NumAllocSites > 0) {
       NumAllocFunctions++;
@@ -281,7 +406,7 @@ void RawMemProfReader::printYAML(raw_ostream &OS) {
 
   OS << "MemprofProfile:\n";
   OS << "  Summary:\n";
-  OS << "    Version: " << MEMPROF_RAW_VERSION << "\n";
+  OS << "    Version: " << MemprofRawVersion << "\n";
   OS << "    NumSegments: " << SegmentInfo.size() << "\n";
   OS << "    NumMibInfo: " << NumMibInfo << "\n";
   OS << "    NumAllocFunctions: " << NumAllocFunctions << "\n";
@@ -467,16 +592,14 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     }
 
     CallStackId CSId = hashCallStack(Callstack);
-    CSIdToCallStack.insert({CSId, Callstack});
+    MemProfData.CallStacks.insert({CSId, Callstack});
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
       const Frame &F = idToFrame(Callstack[I]);
-      auto Result =
-          FunctionProfileData.insert({F.Function, IndexedMemProfRecord()});
-      IndexedMemProfRecord &Record = Result.first->second;
-      Record.AllocSites.emplace_back(Callstack, CSId, MIB);
+      IndexedMemProfRecord &Record = MemProfData.Records[F.Function];
+      Record.AllocSites.emplace_back(CSId, MIB);
 
       if (!F.IsInlineFrame)
         break;
@@ -487,17 +610,13 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   for (const auto &[Id, Locs] : PerFunctionCallSites) {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
-    auto Result = FunctionProfileData.insert({Id, IndexedMemProfRecord()});
-    IndexedMemProfRecord &Record = Result.first->second;
+    IndexedMemProfRecord &Record = MemProfData.Records[Id];
     for (LocationPtr Loc : Locs) {
       CallStackId CSId = hashCallStack(*Loc);
-      CSIdToCallStack.insert({CSId, *Loc});
-      Record.CallSites.push_back(*Loc);
+      MemProfData.CallStacks.insert({CSId, *Loc});
       Record.CallSiteIds.push_back(CSId);
     }
   }
-
-  verifyFunctionProfileData(FunctionProfileData);
 
   return Error::success();
 }
@@ -557,7 +676,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
         }
 
         const FrameId Hash = F.hash();
-        IdToFrame.insert({Hash, F});
+        MemProfData.Frames.insert({Hash, F});
         SymbolizedFrame[VAddr].push_back(Hash);
       }
     }
@@ -573,6 +692,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
+    if(CallstackProfileData[Id].AccessHistogramSize > 0)
+      free((void*) CallstackProfileData[Id].AccessHistogram);
     CallstackProfileData.erase(Id);
   }
 
@@ -587,31 +708,40 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
 std::vector<std::string>
 RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
   const char *Next = DataBuffer->getBufferStart();
-  // Use a set + vector since a profile file may contain multiple raw profile
+  // Use a SetVector since a profile file may contain multiple raw profile
   // dumps, each with segment information. We want them unique and in order they
   // were stored in the profile; the profiled binary should be the first entry.
   // The runtime uses dl_iterate_phdr and the "... first object visited by
   // callback is the main program."
   // https://man7.org/linux/man-pages/man3/dl_iterate_phdr.3.html
-  std::vector<std::string> BuildIds;
-  llvm::SmallSet<std::string, 10> BuildIdsSet;
+  llvm::SetVector<std::string, std::vector<std::string>,
+                  llvm::SmallSet<std::string, 10>>
+      BuildIds;
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
     const llvm::SmallVector<SegmentEntry> Entries =
         readSegmentEntries(Next + Header->SegmentOffset);
 
-    for (const auto &Entry : Entries) {
-      const std::string Id = getBuildIdString(Entry);
-      if (BuildIdsSet.contains(Id))
-        continue;
-      BuildIds.push_back(Id);
-      BuildIdsSet.insert(Id);
-    }
+    for (const auto &Entry : Entries)
+      BuildIds.insert(getBuildIdString(Entry));
 
     Next += Header->TotalSize;
   }
-  return BuildIds;
+  return BuildIds.takeVector();
+}
+
+// FIXME: Add a schema for serializing similiar to IndexedMemprofReader. This
+// will help being able to deserialize different versions raw memprof versions
+// more easily.
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
+  if (MemprofRawVersion == 3ULL)
+    return readMemInfoBlocksV3(Ptr);
+  if (MemprofRawVersion == 4ULL)
+    return readMemInfoBlocksV4(Ptr);
+  llvm_unreachable(
+      "Panic: Unsupported version number when reading MemInfoBlocks");
 }
 
 Error RawMemProfReader::readRawProfile(
@@ -619,7 +749,11 @@ Error RawMemProfReader::readRawProfile(
   const char *Next = DataBuffer->getBufferStart();
 
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+
+    // Set Reader version to memprof raw version of profile. Checking if version
+    // is supported is checked before creating the reader.
+    MemprofRawVersion = Header->Version;
 
     // Read in the segment information, check whether its the same across all
     // profiles in this binary file.
@@ -640,7 +774,21 @@ Error RawMemProfReader::readRawProfile(
     // stackdepot ids are the same.
     for (const auto &[Id, MIB] : readMemInfoBlocks(Next + Header->MIBOffset)) {
       if (CallstackProfileData.count(Id)) {
-        CallstackProfileData[Id].Merge(MIB);
+
+        if (MemprofRawVersion >= 4ULL &&
+            (CallstackProfileData[Id].AccessHistogramSize > 0 ||
+             MIB.AccessHistogramSize > 0)) {
+          uintptr_t ShorterHistogram;
+          if (CallstackProfileData[Id].AccessHistogramSize >
+              MIB.AccessHistogramSize)
+            ShorterHistogram = MIB.AccessHistogram;
+          else
+            ShorterHistogram = CallstackProfileData[Id].AccessHistogram;
+          CallstackProfileData[Id].Merge(MIB);
+          free((void *)ShorterHistogram);
+        } else {
+          CallstackProfileData[Id].Merge(MIB);
+        }
       } else {
         CallstackProfileData[Id] = MIB;
       }
@@ -694,10 +842,51 @@ Error RawMemProfReader::readNextRecord(
       return F;
     auto Iter = this->GuidToSymbolName.find(F.Function);
     assert(Iter != this->GuidToSymbolName.end());
-    F.SymbolName = Iter->getSecond();
+    F.SymbolName = std::make_unique<std::string>(Iter->getSecond());
     return F;
   };
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);
+}
+
+void YAMLMemProfReader::parse(StringRef YAMLData) {
+  memprof::AllMemProfData Doc;
+  yaml::Input Yin(YAMLData);
+
+  Yin >> Doc;
+  if (Yin.error())
+    return;
+
+  // Add a call stack to MemProfData.CallStacks and return its CallStackId.
+  auto AddCallStack = [&](ArrayRef<Frame> CallStack) -> CallStackId {
+    SmallVector<FrameId> IndexedCallStack;
+    IndexedCallStack.reserve(CallStack.size());
+    for (const Frame &F : CallStack) {
+      FrameId Id = F.hash();
+      MemProfData.Frames.try_emplace(Id, F);
+      IndexedCallStack.push_back(Id);
+    }
+    CallStackId CSId = hashCallStack(IndexedCallStack);
+    MemProfData.CallStacks.try_emplace(CSId, std::move(IndexedCallStack));
+    return CSId;
+  };
+
+  for (const auto &[GUID, Record] : Doc.HeapProfileRecords) {
+    IndexedMemProfRecord IndexedRecord;
+
+    // Convert AllocationInfo to IndexedAllocationInfo.
+    for (const AllocationInfo &AI : Record.AllocSites) {
+      CallStackId CSId = AddCallStack(AI.CallStack);
+      IndexedRecord.AllocSites.emplace_back(CSId, AI.Info);
+    }
+
+    // Populate CallSiteIds.
+    for (const auto &CallSite : Record.CallSites) {
+      CallStackId CSId = AddCallStack(CallSite);
+      IndexedRecord.CallSiteIds.push_back(CSId);
+    }
+
+    MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));
+  }
 }
 } // namespace memprof
 } // namespace llvm

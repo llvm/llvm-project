@@ -38,19 +38,6 @@ extern cl::opt<bool> PreserveBlocksAlignment;
 cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
                           cl::cat(BoltOptCategory));
 
-cl::opt<MacroFusionType>
-AlignMacroOpFusion("align-macro-fusion",
-  cl::desc("fix instruction alignment for macro-fusion (x86 relocation mode)"),
-  cl::init(MFT_HOT),
-  cl::values(clEnumValN(MFT_NONE, "none",
-               "do not insert alignment no-ops for macro-fusion"),
-             clEnumValN(MFT_HOT, "hot",
-               "only insert alignment no-ops on hot execution paths (default)"),
-             clEnumValN(MFT_ALL, "all",
-               "always align instructions to allow macro-fusion")),
-  cl::ZeroOrMore,
-  cl::cat(BoltRelocCategory));
-
 static cl::list<std::string>
 BreakFunctionNames("break-funcs",
   cl::CommaSeparated,
@@ -153,7 +140,7 @@ private:
 
   void emitCFIInstruction(const MCCFIInstruction &Inst) const;
 
-  /// Emit exception handling ranges for the function.
+  /// Emit exception handling ranges for the function fragment.
   void emitLSDA(BinaryFunction &BF, const FunctionFragment &FF);
 
   /// Emit line number information corresponding to \p NewLoc. \p PrevLoc
@@ -194,6 +181,7 @@ private:
 
 void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   Streamer.initSections(false, *BC.STI);
+  Streamer.setUseAssemblerInfoForParsing(false);
 
   if (opts::UpdateDebugSections && BC.isELF()) {
     // Force the emission of debug line info into allocatable section to ensure
@@ -226,6 +214,7 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   // TODO Enable for Mach-O once BinaryContext::getDataSection supports it.
   if (BC.isELF())
     AddressMap::emit(Streamer, BC);
+  Streamer.setUseAssemblerInfoForParsing(true);
 }
 
 void BinaryEmitter::emitFunctions() {
@@ -427,17 +416,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
     BF.duplicateConstantIslands();
   }
 
-  if (!FF.empty() && FF.front()->isLandingPad()) {
-    assert(!FF.front()->isEntryPoint() &&
-           "Landing pad cannot be entry point of function");
-    // If the first block of the fragment is a landing pad, it's offset from the
-    // start of the area that the corresponding LSDA describes is zero. In this
-    // case, the call site entries in that LSDA have 0 as offset to the landing
-    // pad, which the runtime interprets as "no handler". To prevent this,
-    // insert some padding.
-    Streamer.emitBytes(BC.MIB->getTrapFillValue());
-  }
-
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
   for (BinaryBasicBlock *const BB : FF) {
@@ -451,20 +429,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         Streamer.emitLabel(EntrySymbol);
     }
 
-    // Check if special alignment for macro-fusion is needed.
-    bool MayNeedMacroFusionAlignment =
-        (opts::AlignMacroOpFusion == MFT_ALL) ||
-        (opts::AlignMacroOpFusion == MFT_HOT && BB->getKnownExecutionCount());
-    BinaryBasicBlock::const_iterator MacroFusionPair;
-    if (MayNeedMacroFusionAlignment) {
-      MacroFusionPair = BB->getMacroOpFusionPair();
-      if (MacroFusionPair == BB->end())
-        MayNeedMacroFusionAlignment = false;
-    }
-
     SMLoc LastLocSeen;
-    // Remember if the last instruction emitted was a prefix.
-    bool LastIsPrefix = false;
     for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
       MCInst &Instr = *I;
 
@@ -475,16 +440,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       if (BC.MIB->isCFI(Instr)) {
         emitCFIInstruction(*BF.getCFIFor(Instr));
         continue;
-      }
-
-      // Handle macro-fusion alignment. If we emitted a prefix as
-      // the last instruction, we should've already emitted the associated
-      // alignment hint, so don't emit it twice.
-      if (MayNeedMacroFusionAlignment && !LastIsPrefix &&
-          I == MacroFusionPair) {
-        // This assumes the second instruction in the macro-op pair will get
-        // assigned to its own MCRelaxableFragment. Since all JCC instructions
-        // are relaxable, we should be safe.
       }
 
       if (!EmitCodeOnly) {
@@ -523,7 +478,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       }
 
       Streamer.emitInstruction(Instr, *BC.STI);
-      LastIsPrefix = BC.MIB->isPrefix(Instr);
     }
   }
 
@@ -813,7 +767,9 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
   // determining its destination.
   std::map<MCSymbol *, uint64_t> LabelCounts;
   if (opts::JumpTables > JTS_SPLIT && !JT.Counts.empty()) {
-    MCSymbol *CurrentLabel = JT.Labels.at(0);
+    auto It = JT.Labels.find(0);
+    assert(It != JT.Labels.end());
+    MCSymbol *CurrentLabel = It->second;
     uint64_t CurrentLabelCount = 0;
     for (unsigned Index = 0; Index < JT.Entries.size(); ++Index) {
       auto LI = JT.Labels.find(Index * JT.EntrySize);
@@ -939,17 +895,6 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   if (Sites.empty())
     return;
 
-  // Calculate callsite table size. Size of each callsite entry is:
-  //
-  //  sizeof(start) + sizeof(length) + sizeof(LP) + sizeof(uleb128(action))
-  //
-  // or
-  //
-  //  sizeof(dwarf::DW_EH_PE_data4) * 3 + sizeof(uleb128(action))
-  uint64_t CallSiteTableLength = llvm::size(Sites) * 4 * 3;
-  for (const auto &FragmentCallSite : Sites)
-    CallSiteTableLength += getULEB128Size(FragmentCallSite.second.Action);
-
   Streamer.switchSection(BC.MOFI->getLSDASection());
 
   const unsigned TTypeEncoding = BF.getLSDATypeEncoding();
@@ -970,74 +915,97 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // Emit the LSDA header.
 
   // If LPStart is omitted, then the start of the FDE is used as a base for
-  // landing pad displacements. Then if a cold fragment starts with
+  // landing pad displacements. Then, if a cold fragment starts with
   // a landing pad, this means that the first landing pad offset will be 0.
-  // As a result, the exception handling runtime will ignore this landing pad
-  // because zero offset denotes the absence of a landing pad.
-  // For this reason, when the binary has fixed starting address we emit LPStart
-  // as 0 and output the absolute value of the landing pad in the table.
+  // However, C++ runtime will treat 0 as if there is no landing pad, thus we
+  // cannot emit LP offset as 0.
   //
-  // If the base address can change, we cannot use absolute addresses for
-  // landing pads (at least not without runtime relocations). Hence, we fall
-  // back to emitting landing pads relative to the FDE start.
-  // As we are emitting label differences, we have to guarantee both labels are
-  // defined in the same section and hence cannot place the landing pad into a
-  // cold fragment when the corresponding call site is in the hot fragment.
-  // Because of this issue and the previously described issue of possible
-  // zero-offset landing pad we have to place landing pads in the same section
-  // as the corresponding invokes for shared objects.
+  // As a solution, for fixed-address binaries we set LPStart to 0, and for
+  // position-independent binaries we offset LP start by one byte.
+  bool NeedsLPAdjustment = false;
   std::function<void(const MCSymbol *)> emitLandingPad;
-  if (BC.HasFixedLoadAddress) {
+
+  // Check if there's a symbol associated with a landing pad fragment.
+  const MCSymbol *LPStartSymbol = BF.getLPStartSymbol(FF.getFragmentNum());
+  if (!LPStartSymbol) {
+    // Since landing pads are not in the same fragment, we fall back to emitting
+    // absolute addresses for this FDE.
+    if (opts::Verbosity >= 2) {
+      BC.outs() << "BOLT-INFO: falling back to generating absolute-address "
+                << "exception ranges for " << BF << '\n';
+    }
+
+    assert(BC.HasFixedLoadAddress &&
+           "Cannot emit absolute-address landing pads for PIE/DSO");
+
     Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1); // LPStart format
     Streamer.emitIntValue(0, 4);                      // LPStart
     emitLandingPad = [&](const MCSymbol *LPSymbol) {
-      if (!LPSymbol)
-        Streamer.emitIntValue(0, 4);
-      else
+      if (LPSymbol)
         Streamer.emitSymbolValue(LPSymbol, 4);
+      else
+        Streamer.emitIntValue(0, 4);
     };
   } else {
-    Streamer.emitIntValue(dwarf::DW_EH_PE_omit, 1); // LPStart format
+    std::optional<FragmentNum> LPFN = BF.getLPFragment(FF.getFragmentNum());
+    const FunctionFragment &LPFragment = BF.getLayout().getFragment(*LPFN);
+    NeedsLPAdjustment =
+        (!LPFragment.empty() && LPFragment.front()->isLandingPad());
+
+    // Emit LPStart encoding and optionally LPStart.
+    if (NeedsLPAdjustment || LPStartSymbol != StartSymbol) {
+      Streamer.emitIntValue(dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4, 1);
+      MCSymbol *DotSymbol = BC.Ctx->createTempSymbol("LPBase");
+      Streamer.emitLabel(DotSymbol);
+
+      const MCExpr *LPStartExpr = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(LPStartSymbol, *BC.Ctx),
+          MCSymbolRefExpr::create(DotSymbol, *BC.Ctx), *BC.Ctx);
+      if (NeedsLPAdjustment)
+        LPStartExpr = MCBinaryExpr::createSub(
+            LPStartExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
+      Streamer.emitValue(LPStartExpr, 4);
+    } else {
+      // DW_EH_PE_omit means FDE start (StartSymbol) will be used as LPStart.
+      Streamer.emitIntValue(dwarf::DW_EH_PE_omit, 1);
+    }
     emitLandingPad = [&](const MCSymbol *LPSymbol) {
-      if (!LPSymbol)
-        Streamer.emitIntValue(0, 4);
-      else
-        Streamer.emitAbsoluteSymbolDiff(LPSymbol, StartSymbol, 4);
+      if (LPSymbol) {
+        const MCExpr *LPOffsetExpr = MCBinaryExpr::createSub(
+            MCSymbolRefExpr::create(LPSymbol, *BC.Ctx),
+            MCSymbolRefExpr::create(LPStartSymbol, *BC.Ctx), *BC.Ctx);
+        if (NeedsLPAdjustment)
+          LPOffsetExpr = MCBinaryExpr::createAdd(
+              LPOffsetExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
+        Streamer.emitULEB128Value(LPOffsetExpr);
+      } else {
+        Streamer.emitULEB128IntValue(0);
+      }
     };
   }
 
   Streamer.emitIntValue(TTypeEncoding, 1); // TType format
 
-  // See the comment in EHStreamer::emitExceptionTable() on to use
-  // uleb128 encoding (which can use variable number of bytes to encode the same
-  // value) to ensure type info table is properly aligned at 4 bytes without
-  // iteratively fixing sizes of the tables.
-  unsigned CallSiteTableLengthSize = getULEB128Size(CallSiteTableLength);
-  unsigned TTypeBaseOffset =
-      sizeof(int8_t) +                 // Call site format
-      CallSiteTableLengthSize +        // Call site table length size
-      CallSiteTableLength +            // Call site table length
-      BF.getLSDAActionTable().size() + // Actions table size
-      BF.getLSDATypeTable().size() * TTypeEncodingSize; // Types table size
-  unsigned TTypeBaseOffsetSize = getULEB128Size(TTypeBaseOffset);
-  unsigned TotalSize = sizeof(int8_t) +      // LPStart format
-                       sizeof(int8_t) +      // TType format
-                       TTypeBaseOffsetSize + // TType base offset size
-                       TTypeBaseOffset;      // TType base offset
-  unsigned SizeAlign = (4 - TotalSize) & 3;
+  MCSymbol *TTBaseLabel = nullptr;
+  if (TTypeEncoding != dwarf::DW_EH_PE_omit) {
+    TTBaseLabel = BC.Ctx->createTempSymbol("TTBase");
+    MCSymbol *TTBaseRefLabel = BC.Ctx->createTempSymbol("TTBaseRef");
+    Streamer.emitAbsoluteSymbolDiffAsULEB128(TTBaseLabel, TTBaseRefLabel);
+    Streamer.emitLabel(TTBaseRefLabel);
+  }
 
-  if (TTypeEncoding != dwarf::DW_EH_PE_omit)
-    // Account for any extra padding that will be added to the call site table
-    // length.
-    Streamer.emitULEB128IntValue(TTypeBaseOffset,
-                                 /*PadTo=*/TTypeBaseOffsetSize + SizeAlign);
+  // Emit encoding of entries in the call site table. The format is used for the
+  // call site start, length, and corresponding landing pad.
+  if (!LPStartSymbol)
+    Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
+  else
+    Streamer.emitIntValue(dwarf::DW_EH_PE_uleb128, 1);
 
-  // Emit the landing pad call site table. We use signed data4 since we can emit
-  // a landing pad in a different part of the split function that could appear
-  // earlier in the address space than LPStart.
-  Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
-  Streamer.emitULEB128IntValue(CallSiteTableLength);
+  MCSymbol *CSTStartLabel = BC.Ctx->createTempSymbol("CSTStart");
+  MCSymbol *CSTEndLabel = BC.Ctx->createTempSymbol("CSTEnd");
+  Streamer.emitAbsoluteSymbolDiffAsULEB128(CSTEndLabel, CSTStartLabel);
 
+  Streamer.emitLabel(CSTStartLabel);
   for (const auto &FragmentCallSite : Sites) {
     const BinaryFunction::CallSite &CallSite = FragmentCallSite.second;
     const MCSymbol *BeginLabel = CallSite.Start;
@@ -1048,11 +1016,17 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
     // Start of the range is emitted relative to the start of current
     // function split part.
-    Streamer.emitAbsoluteSymbolDiff(BeginLabel, StartSymbol, 4);
-    Streamer.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
+    if (!LPStartSymbol) {
+      Streamer.emitAbsoluteSymbolDiff(BeginLabel, StartSymbol, 4);
+      Streamer.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
+    } else {
+      Streamer.emitAbsoluteSymbolDiffAsULEB128(BeginLabel, StartSymbol);
+      Streamer.emitAbsoluteSymbolDiffAsULEB128(EndLabel, BeginLabel);
+    }
     emitLandingPad(CallSite.LP);
     Streamer.emitULEB128IntValue(CallSite.Action);
   }
+  Streamer.emitLabel(CSTEndLabel);
 
   // Write out action, type, and type index tables at the end.
   //
@@ -1070,6 +1044,8 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
                                                  : BF.getLSDATypeTable();
   assert(TypeTable.size() == BF.getLSDATypeTable().size() &&
          "indirect type table size mismatch");
+
+  Streamer.emitValueToAlignment(Align(TTypeAlignment));
 
   for (int Index = TypeTable.size() - 1; Index >= 0; --Index) {
     const uint64_t TypeAddress = TypeTable[Index];
@@ -1096,6 +1072,10 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     }
     }
   }
+
+  if (TTypeEncoding != dwarf::DW_EH_PE_omit)
+    Streamer.emitLabel(TTBaseLabel);
+
   for (uint8_t const &Byte : BF.getLSDATypeIndexTable())
     Streamer.emitIntValue(Byte, 1);
 }

@@ -27,7 +27,7 @@ using namespace llvm;
 
 #include "XCoreGenAsmWriter.inc"
 
-void XCoreInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void XCoreInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << StringRef(getRegisterName(Reg)).lower();
 }
 

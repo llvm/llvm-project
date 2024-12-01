@@ -49,8 +49,7 @@ suspend.cond:
 ; CHECK-NEXT:   musttail call {{.*}} void %[[CONT]](ptr %[[NEXT_HDL]])
 step2:
   %save2 = call token @llvm.coro.save(ptr null)
-  %resume.handle = call ptr @llvm.coro.await.suspend.handle(ptr %awaiter, ptr %hdl, ptr @await_suspend_wrapper_handle)
-  call void @llvm.coro.resume(ptr %resume.handle)
+  call void @llvm.coro.await.suspend.handle(ptr %awaiter, ptr %hdl, ptr @await_suspend_wrapper_handle)
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
   switch i8 %suspend2, label %ret [
     i8 0, label %step3
@@ -89,7 +88,7 @@ declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
 declare void @llvm.coro.await.suspend.void(ptr, ptr, ptr)
 declare i1 @llvm.coro.await.suspend.bool(ptr, ptr, ptr)
-declare ptr @llvm.coro.await.suspend.handle(ptr, ptr, ptr)
+declare void @llvm.coro.await.suspend.handle(ptr, ptr, ptr)
 declare i1 @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)

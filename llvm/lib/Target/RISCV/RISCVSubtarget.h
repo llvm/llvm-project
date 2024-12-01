@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVSUBTARGET_H
 #define LLVM_LIB_TARGET_RISCV_RISCVSUBTARGET_H
 
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVISelLowering.h"
@@ -20,7 +21,6 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -50,6 +50,9 @@ struct RISCVTuneInfo {
   unsigned MaxPrefetchIterationsAhead;
 
   unsigned MinimumJumpTableEntries;
+
+  // Tail duplication threshold at -O3.
+  unsigned TailDupAggressiveThreshold;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -121,9 +124,7 @@ public:
   }
   bool enableMachineScheduler() const override { return true; }
 
-  bool enablePostRAScheduler() const override {
-    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
-  }
+  bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);
@@ -227,7 +228,7 @@ public:
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
   bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
-  bool hasVInstructionsBF16() const { return HasStdExtZvfbfmin; }
+  bool hasVInstructionsBF16Minimal() const { return HasStdExtZvfbfmin; }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
   bool hasVInstructionsF64() const { return HasStdExtZve64d; }
   // F16 and F64 both require F32.
@@ -235,6 +236,27 @@ public:
   bool hasVInstructionsFullMultiply() const { return HasStdExtV; }
   unsigned getMaxInterleaveFactor() const {
     return hasVInstructions() ? MaxInterleaveFactor : 1;
+  }
+
+  bool hasOptimizedSegmentLoadStore(unsigned NF) const {
+    switch (NF) {
+    case 2:
+      return hasOptimizedNF2SegmentLoadStore();
+    case 3:
+      return hasOptimizedNF3SegmentLoadStore();
+    case 4:
+      return hasOptimizedNF4SegmentLoadStore();
+    case 5:
+      return hasOptimizedNF5SegmentLoadStore();
+    case 6:
+      return hasOptimizedNF6SegmentLoadStore();
+    case 7:
+      return hasOptimizedNF7SegmentLoadStore();
+    case 8:
+      return hasOptimizedNF8SegmentLoadStore();
+    default:
+      llvm_unreachable("Unexpected NF");
+    }
   }
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
@@ -247,10 +269,10 @@ public:
 
 protected:
   // GlobalISel related APIs.
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  mutable std::unique_ptr<CallLowering> CallLoweringInfo;
+  mutable std::unique_ptr<InstructionSelector> InstSelector;
+  mutable std::unique_ptr<LegalizerInfo> Legalizer;
+  mutable std::unique_ptr<RISCVRegisterBankInfo> RegBankInfo;
 
   // Return the known range for the bit length of RVV data registers as set
   // at the command line. A value of 0 means nothing is known about that particular
@@ -263,7 +285,7 @@ public:
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
-  const RegisterBankInfo *getRegBankInfo() const override;
+  const RISCVRegisterBankInfo *getRegBankInfo() const override;
 
   bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
@@ -278,9 +300,6 @@ public:
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
-
-  void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
-                              &Mutations) const override;
 
   bool useAA() const override;
 
@@ -302,7 +321,12 @@ public:
 
   unsigned getMinimumJumpTableEntries() const;
 
-  bool supportsInitUndef() const override { return hasVInstructions(); }
+  unsigned getTailDupAggressiveThreshold() const {
+    return TuneInfo->TailDupAggressiveThreshold;
+  }
+
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           unsigned NumRegionInstrs) const override;
 };
 } // End llvm namespace
 

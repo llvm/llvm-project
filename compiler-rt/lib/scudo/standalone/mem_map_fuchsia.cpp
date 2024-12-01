@@ -91,12 +91,15 @@ static bool IsNoMemError(zx_status_t Status) {
   return Status == ZX_ERR_NO_MEMORY || Status == ZX_ERR_NO_RESOURCES;
 }
 
+// Note: this constructor is only called by ReservedMemoryFuchsia::dispatch.
 MemMapFuchsia::MemMapFuchsia(uptr Base, uptr Capacity)
     : MapAddr(Base), WindowBase(Base), WindowSize(Capacity) {
   // Create the VMO.
   zx_status_t Status = _zx_vmo_create(Capacity, 0, &Vmo);
   if (UNLIKELY(Status != ZX_OK))
     dieOnError(Status, "zx_vmo_create", Capacity);
+
+  setVmoName(Vmo, "scudo:dispatched");
 }
 
 bool MemMapFuchsia::mapImpl(UNUSED uptr Addr, uptr Size, const char *Name,

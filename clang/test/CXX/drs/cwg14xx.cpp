@@ -86,6 +86,23 @@ struct A {
 };
 }
 
+namespace cwg1458 { // cwg1458: 3.1
+#if __cplusplus >= 201103L
+struct A;
+
+void f() {
+  constexpr A* a = nullptr;
+  constexpr int p = &*a;
+  // expected-error@-1 {{cannot initialize a variable of type 'const int' with an rvalue of type 'A *'}}
+  constexpr A *p2 = &*a;
+}
+
+struct A {
+  int operator&();
+};
+#endif
+} // namespace cwg1458
+
 namespace cwg1460 { // cwg1460: 3.5
 #if __cplusplus >= 201103L
   namespace DRExample {
@@ -488,16 +505,6 @@ namespace cwg1467 {  // cwg1467: 3.7 c++11
     }
   } // nonaggregate
 
-  namespace SelfInitIsNotListInit {
-    struct S {
-      S();
-      explicit S(S &);
-      S(const S &);
-    };
-    S s1;
-    S s2 = {s1}; // ok, not list-initialization so we pick the non-explicit constructor
-  }
-
   struct NestedInit { int a, b, c; };
   NestedInit ni[1] = {{NestedInit{1, 2, 3}}};
 
@@ -596,9 +603,31 @@ namespace cwg1467 {  // cwg1467: 3.7 c++11
 #endif
 } // cwg1467
 
+namespace cwg1477 { // cwg1477: 2.7
+namespace N {
+struct A {
+  // Name "f" is not bound in N,
+  // so single searches of 'f' in N won't find it,
+  // but the targets scope of this declaration is N,
+  // making it nominable in N.
+  // (_N4988_.[dcl.meaning]/2.1, [basic.scope.scope]/7,
+  //  [basic.lookup.general]/3)
+  friend int f();
+};
+}
+// Corresponds to the friend declaration,
+// because it's nominable in N,
+// and binds name 'f' in N.
+// (_N4988_.[dcl.meaning]/3.4, [basic.scope.scope]/2.5)
+int N::f() { return 0; }
+// Name 'f' is bound in N,
+// so the search performed by qualified lookup finds it.
+int i = N::f();
+} // namespace cwg1477
+
 namespace cwg1479 { // cwg1479: 3.1
 #if __cplusplus >= 201103L
-  int operator"" _a(const char*, std::size_t = 0);
+  int operator""_a(const char*, std::size_t = 0);
   // since-cxx11-error@-1 {{literal operator cannot have a default argument}}
 #endif
 }

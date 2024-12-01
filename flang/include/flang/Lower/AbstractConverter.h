@@ -17,6 +17,7 @@
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -60,6 +61,7 @@ class SymMap;
 struct SymbolBox;
 namespace pft {
 struct Variable;
+struct FunctionLikeUnit;
 }
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
@@ -126,12 +128,13 @@ public:
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
 
-  virtual void copyVar(mlir::Location loc, mlir::Value dst,
-                       mlir::Value src) = 0;
+  virtual void copyVar(mlir::Location loc, mlir::Value dst, mlir::Value src,
+                       fir::FortranVariableFlagsEnum attrs) = 0;
 
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.
-  virtual bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) = 0;
+  virtual bool
+  isPresentShallowLookup(const Fortran::semantics::Symbol &sym) = 0;
 
   /// Collect the set of symbols with \p flag in \p eval
   /// region if \p collectSymbols is true. Otherwise, collect the
@@ -230,6 +233,10 @@ public:
   /// during the instatiation of the variables.
   virtual bool
   isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
+
+  /// Returns the FunctionLikeUnit being lowered, if any.
+  virtual const Fortran::lower::pft::FunctionLikeUnit *
+  getCurrentFunctionUnit() const = 0;
 
   //===--------------------------------------------------------------------===//
   // Types

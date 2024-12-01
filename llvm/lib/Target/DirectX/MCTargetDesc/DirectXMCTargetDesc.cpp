@@ -53,7 +53,8 @@ public:
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override {}
 
-  std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override {
+  std::pair<const char *, uint64_t>
+  getMnemonic(const MCInst &MI) const override {
     return std::make_pair<const char *, uint64_t>("", 0ull);
   }
 
@@ -90,12 +91,6 @@ public:
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {
-    return true;
-  }
-
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
     return true;
   }
 };

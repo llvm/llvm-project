@@ -31,6 +31,6 @@ DiagnosedSilenceableFailure transform::HoistLoopInvariantSubsetsOp::applyToOne(
 
 void transform::HoistLoopInvariantSubsetsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }

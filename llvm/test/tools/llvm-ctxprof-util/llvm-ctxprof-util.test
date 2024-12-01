@@ -1,0 +1,48 @@
+; REQUIRES: x86_64-linux
+
+; RUN: mkdir -p %t
+; RUN: llvm-ctxprof-util fromJSON --input %S/Inputs/empty.json -output %t/empty.bitstream
+; RUN: llvm-bcanalyzer --dump %t/empty.bitstream | FileCheck %s --check-prefix=EMPTY
+
+; RUN: llvm-ctxprof-util fromJSON --input %S/Inputs/valid.json -output %t/valid.bitstream
+
+; For the valid case, check against a reference output.
+; Note that uint64_t are printed as signed values by llvm-bcanalyzer:
+;  * 18446744073709551613 in json is -3 in the output
+;  * 18446744073709551612 in json is -4 in the output
+; Also we have no callee/context at index 0, 2 callsites for index 1, and one for
+; index 2.
+; RUN: llvm-bcanalyzer --dump %t/valid.bitstream | FileCheck %s --check-prefix=VALID
+
+; EMPTY: <BLOCKINFO_BLOCK/>
+; EMPTY-NEXT: <Metadata NumWords=1 BlockCodeSize=2>
+; EMPTY-NEXT:   <Version op0=1/>
+; EMPTY-NEXT: </Metadata>
+
+; VALID:      <BLOCKINFO_BLOCK/>
+; VALID-NEXT: <Metadata NumWords=30 BlockCodeSize=2>
+; VALID-NEXT:   <Version op0=1/>
+; VALID-NEXT:   <Context NumWords=20 BlockCodeSize=2>
+; VALID-NEXT:     <GUID op0=1000/>
+; VALID-NEXT:     <Counters op0=1 op1=2 op2=3/>
+; VALID-NEXT:     <Context NumWords=5 BlockCodeSize=2>
+; VALID-NEXT:       <GUID op0=-3/>
+; VALID-NEXT:       <CalleeIndex op0=1/>
+; VALID-NEXT:       <Counters op0=6 op1=7 op2=8/>
+; VALID-NEXT:     </Context>
+; VALID-NEXT:     <Context NumWords=3 BlockCodeSize=2>
+; VALID-NEXT:       <GUID op0=2000/>
+; VALID-NEXT:       <CalleeIndex op0=1/>
+; VALID-NEXT:       <Counters op0=4 op1=5/>
+; VALID-NEXT:     </Context>
+; VALID-NEXT:     <Context NumWords=3 BlockCodeSize=2>
+; VALID-NEXT:       <GUID op0=3000/>
+; VALID-NEXT:       <CalleeIndex op0=2/>
+; VALID-NEXT:       <Counters op0=40 op1=50/>
+; VALID-NEXT:     </Context>
+; VALID-NEXT:   </Context>
+; VALID-NEXT:   <Context NumWords=4 BlockCodeSize=2>
+; VALID-NEXT:     <GUID op0=-4/>
+; VALID-NEXT:     <Counters op0=5 op1=9 op2=10/>
+; VALID-NEXT:   </Context>
+; VALID-NEXT: </Metadata>

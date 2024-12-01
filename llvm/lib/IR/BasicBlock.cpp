@@ -175,13 +175,13 @@ template <> void llvm::invalidateParentIListOrdering(BasicBlock *BB) {
 
 // Explicit instantiation of SymbolTableListTraits since some of the methods
 // are not in the public header file...
-template class llvm::SymbolTableListTraits<Instruction,
-                                           ilist_iterator_bits<true>>;
+template class llvm::SymbolTableListTraits<
+    Instruction, ilist_iterator_bits<true>, ilist_parent<BasicBlock>>;
 
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
     : Value(Type::getLabelTy(C), Value::BasicBlockVal),
-      IsNewDbgInfoFormat(false), Parent(nullptr) {
+      IsNewDbgInfoFormat(UseNewDbgInfoFormat), Parent(nullptr) {
 
   if (NewParent)
     insertInto(NewParent, InsertBefore);
@@ -189,6 +189,7 @@ BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
     assert(!InsertBefore &&
            "Cannot insert block before another block with no function!");
 
+  end().getNodePtr()->setParent(this);
   setName(Name);
   if (NewParent)
     setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
@@ -239,6 +240,8 @@ BasicBlock::~BasicBlock() {
 
 void BasicBlock::setParent(Function *parent) {
   // Set Parent=parent, updating instruction symtab entries as appropriate.
+  if (Parent != parent)
+    Number = parent ? parent->NextBlockNum++ : -1u;
   InstList.setSymTabObject(&Parent, parent);
 }
 
@@ -288,6 +291,10 @@ void BasicBlock::moveAfter(BasicBlock *MovePos) {
 
 const Module *BasicBlock::getModule() const {
   return getParent()->getParent();
+}
+
+const DataLayout &BasicBlock::getDataLayout() const {
+  return getModule()->getDataLayout();
 }
 
 const CallInst *BasicBlock::getTerminatingMustTailCall() const {
@@ -621,9 +628,7 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   // to reflect that the incoming branches will be from the New block and not
   // from predecessors of the 'this' block.
   // Save predecessors to separate vector before modifying them.
-  SmallVector<BasicBlock *, 4> Predecessors;
-  for (BasicBlock *Pred : predecessors(this))
-    Predecessors.push_back(Pred);
+  SmallVector<BasicBlock *, 4> Predecessors(predecessors(this));
   for (BasicBlock *Pred : Predecessors) {
     Instruction *TI = Pred->getTerminator();
     TI->replaceSuccessorWith(this, New);
@@ -793,8 +798,6 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
     return;
 
   createMarker(Dest)->absorbDebugValues(*First->DebugMarker, InsertAtHead);
-
-  return;
 }
 
 void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
@@ -956,9 +959,13 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
   // Detach the marker at Dest -- this lets us move the "====" DbgRecords
   // around.
   DbgMarker *DestMarker = nullptr;
-  if (Dest != end()) {
-    if ((DestMarker = getMarker(Dest)))
+  if ((DestMarker = getMarker(Dest))) {
+    if (Dest == end()) {
+      assert(DestMarker == getTrailingDbgRecords());
+      deleteTrailingDbgRecords();
+    } else {
       DestMarker->removeFromParent();
+    }
   }
 
   // If we're moving the tail range of DbgRecords (":::"), absorb them into the
@@ -966,8 +973,16 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
   if (ReadFromTail && Src->getMarker(Last)) {
     DbgMarker *FromLast = Src->getMarker(Last);
     if (LastIsEnd) {
-      Dest->adoptDbgRecords(Src, Last, true);
-      // adoptDbgRecords will release any trailers.
+      if (Dest == end()) {
+        // Abosrb the trailing markers from Src.
+        assert(FromLast == Src->getTrailingDbgRecords());
+        createMarker(Dest)->absorbDebugValues(*FromLast, true);
+        FromLast->eraseFromParent();
+        Src->deleteTrailingDbgRecords();
+      } else {
+        // adoptDbgRecords will release any trailers.
+        Dest->adoptDbgRecords(Src, Last, true);
+      }
       assert(!Src->getTrailingDbgRecords());
     } else {
       // FIXME: can we use adoptDbgRecords here to reduce allocations?
@@ -1000,22 +1015,14 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     } else {
       // Insert them right at the start of the range we moved, ahead of First
       // and the "++++" DbgRecords.
+      // This also covers the rare circumstance where we insert at end(), and we
+      // did not generate the iterator with begin() / getFirstInsertionPt(),
+      // meaning any trailing debug-info at the end of the block would
+      // "normally" have been pushed in front of "First". We move it there now.
       DbgMarker *FirstMarker = createMarker(First);
       FirstMarker->absorbDebugValues(*DestMarker, true);
     }
     DestMarker->eraseFromParent();
-  } else if (Dest == end() && !InsertAtHead) {
-    // In the rare circumstance where we insert at end(), and we did not
-    // generate the iterator with begin() / getFirstInsertionPt(), it means
-    // any trailing debug-info at the end of the block would "normally" have
-    // been pushed in front of "First". Move it there now.
-    DbgMarker *TrailingDbgRecords = getTrailingDbgRecords();
-    if (TrailingDbgRecords) {
-      DbgMarker *FirstMarker = createMarker(First);
-      FirstMarker->absorbDebugValues(*TrailingDbgRecords, true);
-      TrailingDbgRecords->eraseFromParent();
-      deleteTrailingDbgRecords();
-    }
   }
 }
 

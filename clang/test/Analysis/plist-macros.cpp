@@ -13,7 +13,7 @@ void noteOnMacro(int y) {
   mallocmemory
   y++; 
   y++;
-  delete x; // expected-warning {{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
+  delete x; // expected-warning {{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void macroIsFirstInFunction(int y) {

@@ -114,8 +114,9 @@ void DynoStats::print(raw_ostream &OS, const DynoStats *Other,
     for (auto &Stat : llvm::reverse(SortedHistogram)) {
       OS << format("%20s,%'18lld", Printer->getOpcodeName(Stat.second).data(),
                    Stat.first * opts::DynoStatsScale);
-
-      MaxOpcodeHistogramTy MaxMultiMap = OpcodeHistogram.at(Stat.second).second;
+      auto It = OpcodeHistogram.find(Stat.second);
+      assert(It != OpcodeHistogram.end());
+      MaxOpcodeHistogramTy MaxMultiMap = It->second.second;
       // Start with function name:BB offset with highest execution count.
       for (auto &Max : llvm::reverse(MaxMultiMap)) {
         OS << format(", %'18lld, ", Max.first * opts::DynoStatsScale)

@@ -145,6 +145,7 @@ struct MCAsmMacro {
   MCAsmMacroParameters Parameters;
   std::vector<std::string> Locals;
   bool IsFunction = false;
+  unsigned Count = 0;
 
 public:
   MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P)

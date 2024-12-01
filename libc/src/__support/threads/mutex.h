@@ -43,18 +43,4 @@
 #include "src/__support/threads/gpu/mutex.h"
 #endif // __linux__
 
-namespace LIBC_NAMESPACE {
-
-// An RAII class for easy locking and unlocking of mutexes.
-class MutexLock {
-  Mutex *mutex;
-
-public:
-  explicit MutexLock(Mutex *m) : mutex(m) { mutex->lock(); }
-
-  ~MutexLock() { mutex->unlock(); }
-};
-
-} // namespace LIBC_NAMESPACE
-
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H

@@ -209,6 +209,7 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
+  static bool SupportsLanguageStatic(lldb::LanguageType language);
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
@@ -235,6 +236,10 @@ public:
                                   bool BaseOnly) = 0;
 
   virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
+
+  /// Defaults to GetTypeName(type).  Override if your language desires
+  /// specialized behavior.
+  virtual ConstString GetMangledTypeName(lldb::opaque_compiler_type_t type);
 
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
@@ -359,7 +364,7 @@ public:
     return CompilerDecl();
   }
 
-  virtual CompilerType GetChildCompilerTypeAtIndex(
+  virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,

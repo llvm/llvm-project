@@ -238,7 +238,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   // We also need to make sure it is safe to move the load.
   // Assume there are stores between DefMI and UseMI.
   bool SawStore = true;
-  if (!DefMI->isSafeToMove(nullptr, SawStore))
+  if (!DefMI->isSafeToMove(SawStore))
     return false;
 
   LLVM_DEBUG(dbgs() << "Try to fold single def: " << *DefMI
@@ -300,7 +300,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
 
   // Use the same criteria as DeadMachineInstructionElim.
   bool SawStore = false;
-  if (!MI->isSafeToMove(nullptr, SawStore)) {
+  if (!MI->isSafeToMove(SawStore)) {
     LLVM_DEBUG(dbgs() << "Can't delete: " << Idx << '\t' << *MI);
     return;
   }
@@ -385,6 +385,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
         continue;
       MI->removeOperand(i-1);
     }
+    MI->dropMemRefs(*MI->getMF());
     LLVM_DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
   } else {
     // If the dest of MI is an original reg and MI is reMaterializable,
@@ -414,7 +415,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
       DeadRemats->insert(MI);
       const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
       MI->substituteRegister(Dest, NewLI.reg(), 0, TRI);
-      MI->getOperand(0).setIsDead(true);
+      assert(MI->registerDefIsDead(NewLI.reg(), &TRI));
     } else {
       if (TheDelegate)
         TheDelegate->LRE_WillEraseInstruction(MI);
