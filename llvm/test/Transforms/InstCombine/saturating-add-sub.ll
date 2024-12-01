@@ -2316,3 +2316,39 @@ define i32 @uadd_sat_via_add_swapped_cmp_select_nonstrict(i32 %x, i32 %y) {
   %r = select i1 %c, i32 %a, i32 -1
   ret i32 %r
 }
+
+define i8 @fold_add_umax_to_usub(i8 %a) {
+; CHECK-LABEL: @fold_add_umax_to_usub(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %umax = call i8 @llvm.umax.i8(i8 %a, i8 10)
+  %sel = add i8 %umax, -10
+  ret i8 %sel
+}
+
+define i8 @fold_add_umax_to_usub_incorrect_rhs(i8 %a) {
+; CHECK-LABEL: @fold_add_umax_to_usub_incorrect_rhs(
+; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    [[SEL:%.*]] = add i8 [[UMAX]], -11
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %umax = call i8 @llvm.umax.i8(i8 %a, i8 10)
+  %sel = add i8 %umax, -11
+  ret i8 %sel
+}
+
+define i8 @fold_add_umax_to_usub_multiuse(i8 %a) {
+; CHECK-LABEL: @fold_add_umax_to_usub_multiuse(
+; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    call void @usei8(i8 [[UMAX]])
+; CHECK-NEXT:    [[SEL:%.*]] = add i8 [[UMAX]], -10
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %umax = call i8 @llvm.umax.i8(i8 %a, i8 10)
+  call void @usei8(i8 %umax)
+  %sel = add i8 %umax, -10
+  ret i8 %sel
+}
+
+declare void @usei8(i8)
