@@ -1,5 +1,4 @@
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   struct A {
     struct {
       int x = 1;

@@ -59,5 +59,8 @@ class TestFrameVarAnonStruct(TestBase):
         interp = self.dbg.GetCommandInterpreter()
 
         # Verify that we don't crash in this case.
-        self.expect("frame variable 'b.x'", error=True,
-                    substrs=['"x" is not a member of "(B) b"'])
+        self.expect(
+            "frame variable 'b.x'",
+            error=True,
+            substrs=['"x" is not a member of "(B) b"'],
+        )
