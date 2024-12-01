@@ -2319,8 +2319,7 @@ define i32 @uadd_sat_via_add_swapped_cmp_select_nonstrict(i32 %x, i32 %y) {
 
 define i8 @fold_add_umax_to_usub(i8 %a) {
 ; CHECK-LABEL: @fold_add_umax_to_usub(
-; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[SEL:%.*]] = add i8 [[UMAX]], -10
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 10)
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %umax = call i8 @llvm.umax.i8(i8 %a, i8 10)
