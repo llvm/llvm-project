@@ -800,6 +800,13 @@ public:
       Visit(A);
   }
 
+  void VisitLabelStmt(const LabelStmt *Node) {
+    if (Node->getDecl()->hasAttrs()) {
+      for (const auto *A : Node->getDecl()->getAttrs())
+        Visit(A);
+    }
+  }
+
   void VisitCXXCatchStmt(const CXXCatchStmt *Node) {
     Visit(Node->getExceptionDecl());
   }

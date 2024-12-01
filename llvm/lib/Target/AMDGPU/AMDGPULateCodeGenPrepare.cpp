@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -485,9 +484,9 @@ AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   bool Changed = Impl.run(F);
 
-  PreservedAnalyses PA = PreservedAnalyses::none();
   if (!Changed)
-    return PA;
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = PreservedAnalyses::none();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

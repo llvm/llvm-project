@@ -146,7 +146,7 @@ class TestCase(TestBase):
     @skipIfWindows
     # On linux this passes due to the manual index
     @expectedFailureDarwin(debug_info=no_match(["dsym"]))
-    @expectedFailureAll(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
+    @skipIf(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
     def test_inline_static_members_dwarf5(self):
         self.check_inline_static_members("-gdwarf-5")
 
@@ -200,7 +200,7 @@ class TestCase(TestBase):
     @skipIfWindows
     # On linux this passes due to the manual index
     @expectedFailureDarwin(debug_info=no_match(["dsym"]))
-    @expectedFailureAll(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
+    @skipIf(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
     def test_shadowed_static_inline_members_dwarf5(self):
         self.check_shadowed_static_inline_members("-gdwarf-5")
 

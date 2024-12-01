@@ -426,13 +426,4 @@ namespace std {
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <array>
-#  include <cinttypes>
-#  include <concepts>
-#  include <cstddef>
-#  include <limits>
-#  include <span>
-#endif
-
 #endif // _LIBCPP_MDSPAN

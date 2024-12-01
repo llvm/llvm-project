@@ -130,8 +130,9 @@ private:
 */
 
 #include <__config>
+#include <__ostream/basic_ostream.h>
 #include <istream>
-#include <ostream>
+#include <streambuf>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

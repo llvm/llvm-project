@@ -149,6 +149,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic min and max instruction on floating-point numbers.
    * - ``SPV_EXT_arithmetic_fence``
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
+   * - ``SPV_EXT_demote_to_helper_invocation``
+     - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
@@ -392,6 +394,19 @@ SPIR-V backend, along with their descriptions and argument details.
        If `arraySize > 1`, then the binding represents an array of resources\
        of the given size, and the handle for the resource at the given index is returned.\
        If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
+   * - `int_spv_typeBufferLoad`
+     - Scalar or vector
+     - `[spirv.Image ImageBuffer, 32-bit Integer coordinate]`
+     - Loads a value from a Vulkan image buffer at the given coordinate. The \
+       image buffer data is assumed to be stored as a 4-element vector. If the \
+       return type is a scalar, then the first element of the vector is \
+       returned. If the return type is an n-element vector, then the first \
+       n-elements of the 4-element vector are returned.
+   * - `int_spv_typedBufferStore`
+     - void
+     - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
+     - Stores the data to the image buffer at the given coordinate. The \
+       data must be a 4-element vector.
 
 .. _spirv-builtin-functions:
 

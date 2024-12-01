@@ -276,47 +276,6 @@ void AsynchronousSymbolQuery::detach() {
   QueryRegistrations.clear();
 }
 
-AbsoluteSymbolsMaterializationUnit::AbsoluteSymbolsMaterializationUnit(
-    SymbolMap Symbols)
-    : MaterializationUnit(extractFlags(Symbols)), Symbols(std::move(Symbols)) {}
-
-StringRef AbsoluteSymbolsMaterializationUnit::getName() const {
-  return "<Absolute Symbols>";
-}
-
-void AbsoluteSymbolsMaterializationUnit::materialize(
-    std::unique_ptr<MaterializationResponsibility> R) {
-  // Even though these are just absolute symbols we need to check for failure
-  // to resolve/emit: the tracker for these symbols may have been removed while
-  // the materialization was in flight (e.g. due to a failure in some action
-  // triggered by the queries attached to the resolution/emission of these
-  // symbols).
-  if (auto Err = R->notifyResolved(Symbols)) {
-    R->getExecutionSession().reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
-  if (auto Err = R->notifyEmitted({})) {
-    R->getExecutionSession().reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
-}
-
-void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
-                                                 const SymbolStringPtr &Name) {
-  assert(Symbols.count(Name) && "Symbol is not part of this MU");
-  Symbols.erase(Name);
-}
-
-MaterializationUnit::Interface
-AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
-  SymbolFlagsMap Flags;
-  for (const auto &[Name, Def] : Symbols)
-    Flags[Name] = Def.getFlags();
-  return MaterializationUnit::Interface(std::move(Flags), nullptr);
-}
-
 ReExportsMaterializationUnit::ReExportsMaterializationUnit(
     JITDylib *SourceJD, JITDylibLookupFlags SourceJDLookupFlags,
     SymbolAliasMap Aliases)
@@ -1850,7 +1809,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
     if (R)
       PromisedResult.set_value(std::move(*R));
     else {
-      ErrorAsOutParameter _(&ResolutionError);
+      ErrorAsOutParameter _(ResolutionError);
       ResolutionError = R.takeError();
       PromisedResult.set_value(SymbolMap());
     }
@@ -1861,7 +1820,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
   Error ResolutionError = Error::success();
 
   auto NotifyComplete = [&](Expected<SymbolMap> R) {
-    ErrorAsOutParameter _(&ResolutionError);
+    ErrorAsOutParameter _(ResolutionError);
     if (R)
       Result = std::move(*R);
     else
@@ -1919,31 +1878,39 @@ ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Name,
 Error ExecutionSession::registerJITDispatchHandlers(
     JITDylib &JD, JITDispatchHandlerAssociationMap WFs) {
 
-  auto TagAddrs = lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
-                         SymbolLookupSet::fromMapKeys(
-                             WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
-  if (!TagAddrs)
-    return TagAddrs.takeError();
+  auto TagSyms = lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
+                        SymbolLookupSet::fromMapKeys(
+                            WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
+  if (!TagSyms)
+    return TagSyms.takeError();
 
   // Associate tag addresses with implementations.
   std::lock_guard<std::mutex> Lock(JITDispatchHandlersMutex);
-  for (auto &KV : *TagAddrs) {
-    auto TagAddr = KV.second.getAddress();
+
+  // Check that no tags are being overwritten.
+  for (auto &[TagName, TagSym] : *TagSyms) {
+    auto TagAddr = TagSym.getAddress();
     if (JITDispatchHandlers.count(TagAddr))
-      return make_error<StringError>("Tag " + formatv("{0:x16}", TagAddr) +
-                                         " (for " + *KV.first +
+      return make_error<StringError>("Tag " + formatv("{0:x}", TagAddr) +
+                                         " (for " + *TagName +
                                          ") already registered",
                                      inconvertibleErrorCode());
-    auto I = WFs.find(KV.first);
+  }
+
+  // At this point we're guaranteed to succeed. Install the handlers.
+  for (auto &[TagName, TagSym] : *TagSyms) {
+    auto TagAddr = TagSym.getAddress();
+    auto I = WFs.find(TagName);
     assert(I != WFs.end() && I->second &&
            "JITDispatchHandler implementation missing");
-    JITDispatchHandlers[KV.second.getAddress()] =
+    JITDispatchHandlers[TagAddr] =
         std::make_shared<JITDispatchHandlerFunction>(std::move(I->second));
     LLVM_DEBUG({
-      dbgs() << "Associated function tag \"" << *KV.first << "\" ("
-             << formatv("{0:x}", KV.second.getAddress()) << ") with handler\n";
+      dbgs() << "Associated function tag \"" << *TagName << "\" ("
+             << formatv("{0:x}", TagAddr) << ") with handler\n";
     });
   }
+
   return Error::success();
 }
 

@@ -255,12 +255,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseV2:
-    // Specialize cost for Neoverse-V2.
+  case NeoverseV3:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
-  case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -389,8 +390,6 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   // X29 is named FP, so we can't use TRI->getName to check X29.
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
-
-  AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
 
   EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }

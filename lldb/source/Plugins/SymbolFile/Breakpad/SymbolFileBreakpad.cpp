@@ -255,7 +255,7 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
           section_sp, address - section_sp->GetFileAddress(), record->Size);
       // Use the CU's id because every CU has only one function inside.
       func_sp = std::make_shared<Function>(&comp_unit, id, 0, func_name,
-                                           nullptr, func_range);
+                                           nullptr, AddressRanges{func_range});
       comp_unit.AddFunction(func_sp);
     }
   }
@@ -315,7 +315,8 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
       if (record->InlineNestLevel == 0 ||
           record->InlineNestLevel <= last_added_nest_level + 1) {
         last_added_nest_level = record->InlineNestLevel;
-        BlockSP block_sp = std::make_shared<Block>(It.GetBookmark().offset);
+        BlockSP block_sp = blocks[record->InlineNestLevel]->CreateChild(
+            It.GetBookmark().offset);
         FileSpec callsite_file;
         if (record->CallSiteFileNum < m_files->size())
           callsite_file = (*m_files)[record->CallSiteFileNum];
@@ -333,7 +334,6 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
         }
         block_sp->FinalizeRanges();
 
-        blocks[record->InlineNestLevel]->AddChild(block_sp);
         if (record->InlineNestLevel + 1 >= blocks.size()) {
           blocks.resize(blocks.size() + 1);
         }
