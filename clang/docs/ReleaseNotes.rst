@@ -763,6 +763,7 @@ Bug Fixes to C++ Support
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
+- Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
