@@ -1,5 +1,5 @@
 """
-Make sure the frame variable -g, -a, and -l flags work.
+Test handling of Anonymous Structs, especially that they don't crash lldb.
 """
 
 
