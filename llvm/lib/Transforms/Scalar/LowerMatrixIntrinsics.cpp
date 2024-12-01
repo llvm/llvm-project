@@ -259,7 +259,7 @@ static bool isUniformShape(Value *V) {
 /// Return the ShapeInfo for the result of \p I, it it can be determined.
 static std::optional<ShapeInfo>
 computeShapeInfoForInst(Instruction *I,
-                        const ValueMap<Value *, ShapeInfo> &ShapeMap) {
+                        const DenseMap<Value *, ShapeInfo> &ShapeMap) {
   Value *M;
   Value *N;
   Value *K;
@@ -493,10 +493,8 @@ class LowerMatrixIntrinsics {
   /// the result value of the instruction, with the only exceptions being store
   /// instructions and the matrix_column_major_store intrinsics. For those, the
   /// shape information indicates that those instructions should be lowered
-  /// using shape information as well.  A ValueMap is used so that when
-  /// sub-passes like optimizeTransposes performs RAUW the map stays
-  /// up-to-date.
-  ValueMap<Value *, ShapeInfo> ShapeMap;
+  /// using shape information as well.
+  DenseMap<Value *, ShapeInfo> ShapeMap;
 
   /// List of instructions to remove. While lowering, we are not replacing all
   /// users of a lowered instruction, if shape information is available and
