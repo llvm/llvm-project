@@ -30,8 +30,8 @@ class LLVMModuleAndContext {
 public:
   /// Expose the underlying LLVM context to create the module. This is the only
   /// way to access the LLVM context to prevent accidental sharing.
-  Error create(
-      function_ref<ErrorOr<std::unique_ptr<llvm::Module>>(llvm::LLVMContext &)>
+  Expected<bool> create(
+      function_ref<Expected<std::unique_ptr<llvm::Module>>(llvm::LLVMContext &)>
           CreateModule);
 
   llvm::Module &operator*() { return *Module; }
@@ -41,7 +41,7 @@ public:
 
 private:
   /// LLVM context stored in a unique pointer so that we can move this type.
-  std::unique_ptr<llvm::LLVMContext> CTX =
+  std::unique_ptr<llvm::LLVMContext> Ctx =
       std::make_unique<llvm::LLVMContext>();
   /// The paired LLVM module.
   std::unique_ptr<llvm::Module> Module;
