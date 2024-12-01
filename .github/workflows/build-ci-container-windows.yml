@@ -27,6 +27,6 @@ jobs:
         with:
           sparse-checkout: .github/workflows/containers/github-action-ci-windows
       - name: Build Container
-        working-directory: ./.github/workflows/container/github-action-ci-windows
+        working-directory: .github/workflows/container/github-action-ci-windows
         run: |
           docker build -t ci-windows-2019 .
