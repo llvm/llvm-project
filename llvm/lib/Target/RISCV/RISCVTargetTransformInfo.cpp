@@ -1038,7 +1038,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::fabs:
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    // TODO: add f16/bf16, bf16 with zvfhbmin && f16 with zvfhmin
+    // TODO: add f16/bf16, bf16 with zvfbfmin && f16 with zvfhmin
     if (ST->hasVInstructions() && LT.second.isVector()) {
       unsigned Op;
       switch (ICA.getID()) {
