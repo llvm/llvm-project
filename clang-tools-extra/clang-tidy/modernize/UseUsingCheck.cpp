@@ -164,8 +164,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       if (ExtraReference != "*" && ExtraReference != "&")
         ExtraReference = "";
 
-      if (MainTypeEndLoc.isValid())
-        TypeRange.setEnd(MainTypeEndLoc);
+      TypeRange.setEnd(MainTypeEndLoc);
     }
     return {Lexer::getSourceText(CharSourceRange::getTokenRange(TypeRange),
                                  *Result.SourceManager, getLangOpts())
