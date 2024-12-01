@@ -5,13 +5,9 @@ a C compiler.
 
 UNSUPPORTED: system-windows
 
-FIXME: This currently fails with CUDA-enabled flang-rt because it needs
-       to link libcudart.
-
 RUN: %if system-aix %{ export OBJECT_MODE=64 %}
-RUN: %cc -std=c99 %s -I%include %libruntime -lm \
+RUN: %cc -std=c99 %s -I%include %libruntime -lm %deplibs \
 RUN: %if system-aix %{-lpthread %}
-RUN: rm a.out
 */
 
 #include "flang/Runtime/entry-names.h"
