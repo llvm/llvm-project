@@ -443,4 +443,4 @@ declare void @end_struct_large_nonchar()
 declare signext i16 @get_struct_small_nonchar()
 declare void @end_struct_small_nonchar()
 
-declare void @takes_all(i64, i16, ptr byval(%struct.struct_large_nonchar) align 8, i32, ptr, ptr, ptr, ptr, ptr, i32, i32, i32)
+declare void @takes_all(i64, i16, ptr byval(%struct.struct_large_nonchar) align 4, i32, ptr, ptr, ptr, ptr, ptr, i32, i32, i32)
