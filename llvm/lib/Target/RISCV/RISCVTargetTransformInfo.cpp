@@ -1462,7 +1462,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     return ExtraCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
   }
 
-  // IR Reduction is composed by two vmv and one rvv reduction instruction.
+  // IR Reduction is composed by one rvv reduction instruction and vmv
   unsigned SplitOp;
   SmallVector<unsigned, 3> Opcodes;
   switch (IID) {
@@ -1554,7 +1554,9 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     }
   }
 
-  // IR Reduction is composed by two vmv and one rvv reduction instruction.
+  // IR Reduction of or/and is composed by one vmv and one rvv reduction
+  // instruction, and others is composed by two vmv and one rvv reduction
+  // instruction
   unsigned SplitOp;
   switch (ISD) {
   case ISD::ADD:
