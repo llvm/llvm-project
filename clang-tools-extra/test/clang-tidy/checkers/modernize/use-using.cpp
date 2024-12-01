@@ -405,7 +405,35 @@ typedef void(SomeMacro(GH33760)::* FunctionType)(float, int);
 
 #define CDECL __attribute((cdecl))
 
+// GH37846 & GH41685
 typedef void (CDECL *GH37846)(int);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
 // CHECK-FIXES: using GH37846 = void (CDECL *)(int);
 
+typedef void (__attribute((cdecl)) *GH41685)(int);
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using GH41685 = void (__attribute((cdecl)) *)(int);
+
+namespace GH83568 {
+  typedef int(*name)(int arg1, int arg2);
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using name = int(*)(int arg1, int arg2);
+}
+
+#ifdef FOO
+#define GH95716 float
+#else
+#define GH95716 double
+#endif
+
+typedef GH95716 foo;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using foo = GH95716;
+
+namespace GH97009 {
+  typedef double PointType[3];
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  typedef bool (*Function)(PointType, PointType);
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using Function = bool (*)(PointType, PointType);
+}
