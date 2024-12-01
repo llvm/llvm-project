@@ -9,8 +9,7 @@ define i1 @test_decompose_sub_nsw_sgt_nonneg(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SUB]], 10
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[RET:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -35,8 +34,7 @@ define i1 @test_decompose_sub_nsw_sgt_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[RET:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -61,8 +59,7 @@ define i1 @test_decompose_sub_nsw_sgt_zero_inv(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SUB]], 10
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 true
 ;
