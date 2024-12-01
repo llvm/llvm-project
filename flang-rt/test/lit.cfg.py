@@ -58,7 +58,7 @@ config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
 # lit writes a '.lit_test_times.txt' file into this directory.
-config.test_exec_root = config.flangrt_binary_test_dir
+config.test_exec_root = config.flang_rt_binary_test_dir
 
 # On MacOS, -isysroot is needed to build binaries.
 isysroot_flag = []
@@ -90,17 +90,17 @@ llvm_config.add_tool_substitutions(tools)
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
 # Library path of libflang_rt.a
-config.substitutions.append(("%libdir", config.flangrt_build_lib_dir))
+config.substitutions.append(("%libdir", config.flang_rt_build_lib_dir))
 
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler.
-libruntime = os.path.join(config.flangrt_build_lib_dir, "libflang_rt.a")
+libruntime = os.path.join(config.flang_rt_build_lib_dir, "libflang_rt.a")
 include = os.path.join(config.flang_source_dir, "include")
 config.substitutions.append(("%libruntime", libruntime))
 config.substitutions.append(("%include", include))
 
 # Additional library depedendencies the that flang driver does not add itself.
 deplibs = []
-if config.flangrt_experimental_offload_support == "CUDA":
+if config.flang_rt_experimental_offload_support == "CUDA":
     deplibs.append('-lcudart')
 config.substitutions.append(("%deplibs", shjoin(deplibs)))
