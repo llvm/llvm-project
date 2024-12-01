@@ -3153,9 +3153,8 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     // If the use of the pointer will be a scalar use, and all users of the
     // pointer are memory accesses, place the pointer in ScalarPtrs. Otherwise,
     // place the pointer in PossibleNonScalarPtrs.
-    if (IsScalarUse(MemAccess, Ptr) && llvm::all_of(I->users(), [&](User *U) {
-          return isa<LoadInst>(U) || isa<StoreInst>(U);
-        }))
+    if (IsScalarUse(MemAccess, Ptr) &&
+        all_of(I->users(), IsaPred<LoadInst, StoreInst>))
       ScalarPtrs.insert(I);
     else
       PossibleNonScalarPtrs.insert(I);

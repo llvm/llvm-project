@@ -1157,9 +1157,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
             continue;
           auto *UV = dyn_cast_or_null<Instruction>(Op->getUnderlyingValue());
           if (UV && MinBWs.contains(UV) && !ProcessedTruncs.contains(Op) &&
-              all_of(Op->users(), [](VPUser *U) {
-                return !isa<VPWidenRecipe, VPWidenSelectRecipe>(U);
-              })) {
+              none_of(Op->users(),
+                      IsaPred<VPWidenRecipe, VPWidenSelectRecipe>)) {
             // Add an entry to ProcessedTruncs to avoid counting the same
             // operand multiple times.
             ProcessedTruncs[Op] = nullptr;
@@ -1593,10 +1592,9 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
   // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(Header->phis(), [](VPRecipeBase &Phi) {
-    return isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
-        &Phi);
-  });
+  bool ContainsWidenInductions = any_of(
+      Header->phis(),
+      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
   if (ContainsWidenInductions)
     return false;
 
