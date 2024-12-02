@@ -99,7 +99,7 @@ define <2 x i1> @test9vec(<2 x i1> %C, <2 x i1> %X) {
 
 define <vscale x 2 x i1> @test9vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) {
 ; CHECK-LABEL: @test9vvec(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor <vscale x 2 x i1> [[C:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <vscale x 2 x i1> [[C:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <vscale x 2 x i1> [[NOT_C]], <vscale x 2 x i1> [[X:%.*]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
@@ -2989,10 +2989,9 @@ define i8 @select_replacement_loop3(i32 noundef %x) {
 
 define i16 @select_replacement_loop4(i16 noundef %p_12) {
 ; CHECK-LABEL: @select_replacement_loop4(
-; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12:%.*]], 1
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ult i16 [[P_12]], 2
-; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP21]], i16 [[AND1]], i16 0
-; CHECK-NEXT:    ret i16 [[AND3]]
+; CHECK-NEXT:    [[P_12:%.*]] = call i16 @llvm.umin.i16(i16 [[P_13:%.*]], i16 2)
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12]], 1
+; CHECK-NEXT:    ret i16 [[AND1]]
 ;
   %cmp1 = icmp ult i16 %p_12, 2
   %and1 = and i16 %p_12, 1
@@ -3499,7 +3498,7 @@ define i32 @select_cond_not_cond_cond2(i1 %cond) {
 ; scalable vector splat ConstantExprs.
 define <vscale x 2 x i32> @and_constant_select_svec(<vscale x 2 x i32> %x, <vscale x 2 x i1> %cond) {
 ; CHECK-LABEL: @and_constant_select_svec(
-; CHECK-NEXT:    [[A:%.*]] = and <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[A:%.*]] = and <vscale x 2 x i32> [[X:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[B:%.*]] = select <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x i32> [[A]], <vscale x 2 x i32> [[X]]
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
 ;
@@ -3511,7 +3510,7 @@ define <vscale x 2 x i32> @and_constant_select_svec(<vscale x 2 x i32> %x, <vsca
 define <vscale x 2 x i32> @scalable_sign_bits(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @scalable_sign_bits(
 ; CHECK-NEXT:    [[A:%.*]] = sext <vscale x 2 x i8> [[X:%.*]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[B:%.*]] = shl nsw <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 16, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[B:%.*]] = shl nsw <vscale x 2 x i32> [[A]], splat (i32 16)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
 ;
   %a = sext <vscale x 2 x i8> %x to <vscale x 2 x i32>
@@ -3521,8 +3520,8 @@ define <vscale x 2 x i32> @scalable_sign_bits(<vscale x 2 x i8> %x) {
 
 define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @scalable_non_zero(
-; CHECK-NEXT:    [[A:%.*]] = or <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 57, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[A:%.*]] = or <vscale x 2 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 2 x i32> [[A]], splat (i32 57)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   %a = or <vscale x 2 x i32> %x, splat (i32 1)

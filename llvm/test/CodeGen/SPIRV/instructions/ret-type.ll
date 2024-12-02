@@ -2,10 +2,6 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --translator-compatibility-mode %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; Modifying the block ordering prevents the pointer types to correctly be deduced. Not sure why, but looks
-; orthogonal to the block sorting.
-; XFAIL: *
-
 ; CHECK-DAG: OpName %[[Test1:.*]] "test1"
 ; CHECK-DAG: OpName %[[Foo:.*]] "foo"
 ; CHECK-DAG: OpName %[[Bar:.*]] "bar"
@@ -17,16 +13,16 @@
 ; CHECK-DAG: %[[Struct2:.*]] = OpTypeStruct %[[Struct1]]
 ; CHECK-DAG: %[[StructPtr:.*]] = OpTypePointer Function %[[Struct2]]
 ; CHECK-DAG: %[[Bool:.*]] = OpTypeBool
-; CHECK-DAG: %[[FooType:.*]] = OpTypeFunction %[[StructPtr:.*]] %[[StructPtr]] %[[StructPtr]] %[[Bool]]
+; CHECK-DAG: %[[FooType:.*]] = OpTypeFunction %[[StructPtr]] %[[StructPtr]] %[[StructPtr]] %[[Bool]]
 ; CHECK-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[CharPtr:.*]] = OpTypePointer Function %[[Char]]
 
 ; CHECK: %[[Test1]] = OpFunction
-; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Foo]]
-; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Bar]]
+; CHECK: OpFunctionCall %[[StructPtr]] %[[Foo]]
+; CHECK: OpFunctionCall %[[CharPtr]] %[[Bar]]
 ; CHECK: OpFunctionEnd
 
-; CHECK: %[[Foo]] = OpFunction %[[StructPtr:.*]] None %[[FooType]]
+; CHECK: %[[Foo]] = OpFunction %[[StructPtr]] None %[[FooType]]
 ; CHECK: %[[Arg1:.*]] = OpFunctionParameter %[[StructPtr]]
 ; CHECK: %[[Arg2:.*]] = OpFunctionParameter
 ; CHECK: %[[Sw:.*]] = OpFunctionParameter
@@ -34,17 +30,18 @@
 ; CHECK: OpReturnValue %[[Res]]
 ; CHECK: OpReturnValue %[[Arg2]]
 
-; CHECK: %[[Bar]] = OpFunction %[[StructPtr:.*]] None %[[#]]
-; CHECK: %[[BarArg:.*]] = OpFunctionParameter
-; CHECK: %[[BarRes:.*]] = OpInBoundsPtrAccessChain %[[CharPtr]] %[[BarArg]] %[[#]]
-; CHECK: %[[BarResCasted:.*]] = OpBitcast %[[StructPtr]] %[[BarRes]]
+; CHECK: %[[Bar]] = OpFunction %[[CharPtr]] None %[[#]]
+; CHECK: %[[BarArg:.*]] = OpFunctionParameter %[[StructPtr]]
+; CHECK: %[[BarArgCasted:.*]] = OpBitcast %[[CharPtr]] %[[BarArg]]
+; CHECK: %[[BarRes:.*]] = OpInBoundsPtrAccessChain %[[CharPtr]] %[[BarArgCasted]] %[[#]]
 ; CHECK: %[[BarResStruct:.*]] = OpInBoundsPtrAccessChain %[[StructPtr]] %[[#]] %[[#]]
-; CHECK: OpReturnValue %[[BarResStruct]]
-; CHECK: OpReturnValue %[[BarResCasted]]
+; CHECK: %[[BarResStructCasted:.*]] = OpBitcast %[[CharPtr]] %[[BarResStruct]]
+; CHECK: OpReturnValue %[[BarResStructCasted]]
+; CHECK: OpReturnValue %[[BarRes]]
 
 ; CHECK: %[[Test2]] = OpFunction
-; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Foo]]
-; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Bar]]
+; CHECK: OpFunctionCall %[[StructPtr]] %[[Foo]]
+; CHECK: OpFunctionCall %[[CharPtr]] %[[Bar]]
 ; CHECK: OpFunctionEnd
 
 %struct = type { %array }

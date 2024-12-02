@@ -123,5 +123,7 @@ end program
 ! ALL-NEXT: ExternalNameConversion
 ! ALL-NEXT: TargetRewrite
 ! ALL-NEXT: CompilerGeneratedNamesConversion
+! ALL-NEXT:  'func.func' Pipeline
+! ALL-NEXT:   FunctionAttr
 ! ALL-NEXT: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

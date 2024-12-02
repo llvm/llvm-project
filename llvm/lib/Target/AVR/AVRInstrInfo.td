@@ -69,9 +69,9 @@ def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;
 def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;
 def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;
 def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;
-def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftDOp>;
-def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftDOp>;
-def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftDOp>;
+def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftPairOp>;
+def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftPairOp>;
+def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftPairOp>;
 
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;

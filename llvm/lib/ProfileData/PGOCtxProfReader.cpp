@@ -12,12 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/PGOCtxProfReader.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
