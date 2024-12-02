@@ -842,10 +842,8 @@ public:
               // Convert a CHARACTER argument type. This can involve separating
               // the pointer and the LEN into two arguments and moving the LEN
               // argument to the end of the arg list.
-              for (auto e : llvm::enumerate(
-                       specifics->boxcharArgumentType(boxTy.getEleTy()))) {
-                auto &tup = e.value();
-                auto index = e.index();
+              for (auto &tup :
+                   specifics->boxcharArgumentType(boxTy.getEleTy())) {
                 auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
                 auto argTy = std::get<mlir::Type>(tup);
                 if (attr.isAppend()) {
