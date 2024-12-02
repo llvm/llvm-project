@@ -14,7 +14,7 @@ namespace std {
   using nullptr_t = decltype(nullptr);
 }
 
-void f(std::nullptr_t...);
+void f(std::nullptr_t, ...);
 std::nullptr_t g();
 void h() {
   std::nullptr_t np;
