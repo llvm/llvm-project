@@ -845,7 +845,6 @@ public:
               for (auto e : llvm::enumerate(
                        specifics->boxcharArgumentType(boxTy.getEleTy()))) {
                 auto &tup = e.value();
-                auto index = e.index();
                 auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
                 auto argTy = std::get<mlir::Type>(tup);
                 if (attr.isAppend()) {
