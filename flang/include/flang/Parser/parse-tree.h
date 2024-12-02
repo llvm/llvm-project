@@ -1024,10 +1024,18 @@ struct Initialization {
 
 // R739 component-decl ->
 //        component-name [( component-array-spec )]
-//        [lbracket coarray-spec rbracket] [* char-length]
-//        [component-initialization]
+//          [lbracket coarray-spec rbracket] [* char-length]
+//          [component-initialization] |
+//        component-name *char-length [( component-array-spec )]
+//          [lbracket coarray-spec rbracket] [component-initialization]
 struct ComponentDecl {
   TUPLE_CLASS_BOILERPLATE(ComponentDecl);
+  ComponentDecl(Name &&name, CharLength &&length,
+      std::optional<ComponentArraySpec> &&aSpec,
+      std::optional<CoarraySpec> &&coaSpec,
+      std::optional<Initialization> &&init)
+      : t{std::move(name), std::move(aSpec), std::move(coaSpec),
+            std::move(length), std::move(init)} {}
   std::tuple<Name, std::optional<ComponentArraySpec>,
       std::optional<CoarraySpec>, std::optional<CharLength>,
       std::optional<Initialization>>
@@ -1381,9 +1389,16 @@ struct AttrSpec {
 // R803 entity-decl ->
 //        object-name [( array-spec )] [lbracket coarray-spec rbracket]
 //          [* char-length] [initialization] |
-//        function-name [* char-length]
+//        function-name [* char-length] |
+// (ext.) object-name *char-length [( array-spec )]
+//          [lbracket coarray-spec rbracket] [initialization]
 struct EntityDecl {
   TUPLE_CLASS_BOILERPLATE(EntityDecl);
+  EntityDecl(ObjectName &&name, CharLength &&length,
+      std::optional<ArraySpec> &&aSpec, std::optional<CoarraySpec> &&coaSpec,
+      std::optional<Initialization> &&init)
+      : t{std::move(name), std::move(aSpec), std::move(coaSpec),
+            std::move(length), std::move(init)} {}
   std::tuple<ObjectName, std::optional<ArraySpec>, std::optional<CoarraySpec>,
       std::optional<CharLength>, std::optional<Initialization>>
       t;
@@ -4356,6 +4371,20 @@ struct OmpAtomicCapture {
       t;
 };
 
+struct OmpAtomicCompareIfStmt {
+  UNION_CLASS_BOILERPLATE(OmpAtomicCompareIfStmt);
+  std::variant<common::Indirection<IfStmt>, common::Indirection<IfConstruct>> u;
+};
+
+// ATOMIC COMPARE (OpenMP 5.1, OPenMP 5.2 spec: 15.8.4)
+struct OmpAtomicCompare {
+  TUPLE_CLASS_BOILERPLATE(OmpAtomicCompare);
+  CharBlock source;
+  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
+      OmpAtomicCompareIfStmt, std::optional<OmpEndAtomic>>
+      t;
+};
+
 // ATOMIC
 struct OmpAtomic {
   TUPLE_CLASS_BOILERPLATE(OmpAtomic);
@@ -4368,11 +4397,11 @@ struct OmpAtomic {
 // 2.17.7 atomic ->
 //        ATOMIC [atomic-clause-list] atomic-construct [atomic-clause-list] |
 //        ATOMIC [atomic-clause-list]
-//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE
+//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE | COMPARE
 struct OpenMPAtomicConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
   std::variant<OmpAtomicRead, OmpAtomicWrite, OmpAtomicCapture, OmpAtomicUpdate,
-      OmpAtomic>
+      OmpAtomicCompare, OmpAtomic>
       u;
 };
 

@@ -489,8 +489,10 @@ static Value *getTrueOrFalseValue(
   }
 
   auto *BO = cast<BinaryOperator>(SI.getI());
-  assert(BO->getOpcode() == Instruction::Or &&
-         "Only currently handling Or instructions.");
+  assert((BO->getOpcode() == Instruction::Add ||
+          BO->getOpcode() == Instruction::Or ||
+          BO->getOpcode() == Instruction::Sub) &&
+         "Only currently handling Add, Or and Sub binary operators.");
 
   auto *CBO = BO->clone();
   auto CondIdx = SI.getConditionOpIndex();
@@ -760,7 +762,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
     unsigned ConditionIdx;
   };
 
-  std::map<Value *, SelectLikeInfo> SelectInfo;
+  DenseMap<Value *, SelectLikeInfo> SelectInfo;
 
   // Check if the instruction is SelectLike or might be part of SelectLike
   // expression, put information into SelectInfo and return the iterator to the
@@ -786,16 +788,32 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
     // An Or(zext(i1 X), Y) can also be treated like a select, with condition X
     // and values Y|1 and Y.
     if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-      if (BO->getType()->isIntegerTy(1) || BO->getOpcode() != Instruction::Or)
-        return SelectInfo.end();
+      switch (I->getOpcode()) {
+      case Instruction::Add:
+      case Instruction::Sub: {
+        Value *X;
+        if (!((PatternMatch::match(I->getOperand(0),
+                                   m_OneUse(m_ZExt(m_Value(X)))) ||
+               PatternMatch::match(I->getOperand(1),
+                                   m_OneUse(m_ZExt(m_Value(X))))) &&
+              X->getType()->isIntegerTy(1)))
+          return SelectInfo.end();
+        break;
+      }
+      case Instruction::Or:
+        if (BO->getType()->isIntegerTy(1) || BO->getOpcode() != Instruction::Or)
+          return SelectInfo.end();
+        break;
+      }
 
       for (unsigned Idx = 0; Idx < 2; Idx++) {
         auto *Op = BO->getOperand(Idx);
         auto It = SelectInfo.find(Op);
-        if (It != SelectInfo.end() && It->second.IsAuxiliary)
-          return SelectInfo
-              .insert({I, {It->second.Cond, false, It->second.IsInverted, Idx}})
-              .first;
+        if (It != SelectInfo.end() && It->second.IsAuxiliary) {
+          Cond = It->second.Cond;
+          bool Inverted = It->second.IsInverted;
+          return SelectInfo.insert({I, {Cond, false, Inverted, Idx}}).first;
+        }
       }
     }
     return SelectInfo.end();
@@ -803,7 +821,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
   bool AlreadyProcessed = false;
   BasicBlock::iterator BBIt = BB.begin();
-  std::map<Value *, SelectLikeInfo>::iterator It;
+  DenseMap<Value *, SelectLikeInfo>::iterator It;
   while (BBIt != BB.end()) {
     Instruction *I = &*BBIt++;
     if (I->isDebugOrPseudoInst())
@@ -825,7 +843,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
     if (!Cond->getType()->isIntegerTy(1))
       continue;
 
-    SelectGroup SIGroup{Cond};
+    SelectGroup SIGroup = {Cond, {}};
     SIGroup.Selects.emplace_back(I, It->second.IsInverted,
                                  It->second.ConditionIdx);
 

@@ -78,6 +78,10 @@ public:
     return StackId != TargetStackID::ScalableVector;
   }
 
+  void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineFunction &MF, StackOffset Offset,
+                     uint64_t RealStackSize, bool EmitCFI) const;
+
 protected:
   const RISCVSubtarget &STI;
 
@@ -85,9 +89,6 @@ protected:
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
-  void adjustStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                         int64_t Amount, MachineInstr::MIFlag Flag) const;
   void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,
                                    bool HasFP) const;

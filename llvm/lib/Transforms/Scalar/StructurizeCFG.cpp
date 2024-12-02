@@ -618,28 +618,25 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
-    PhiInserter.Initialize(Boolean, "");
-    PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
-
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
 
-    NearestCommonDominator Dominator(DT);
-    Dominator.addBlock(Parent);
-
-    PredInfo ParentInfo{nullptr, std::nullopt};
-    for (auto [BB, PI] : Preds) {
-      if (BB == Parent) {
-        ParentInfo = PI;
-        break;
-      }
-      PhiInserter.AddAvailableValue(BB, PI.Pred);
-      Dominator.addAndRememberBlock(BB);
-    }
-
-    if (ParentInfo.Pred) {
-      Term->setCondition(ParentInfo.Pred);
-      CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
+    if (Preds.size() == 1 && Preds.begin()->first == Parent) {
+      auto &PI = Preds.begin()->second;
+      Term->setCondition(PI.Pred);
+      CondBranchWeights::setMetadata(*Term, PI.Weights);
     } else {
+      PhiInserter.Initialize(Boolean, "");
+      PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+
+      NearestCommonDominator Dominator(DT);
+      Dominator.addBlock(Parent);
+
+      for (auto [BB, PI] : Preds) {
+        assert(BB != Parent);
+        PhiInserter.AddAvailableValue(BB, PI.Pred);
+        Dominator.addAndRememberBlock(BB);
+      }
+
       if (!Dominator.resultIsRememberedBlock())
         PhiInserter.AddAvailableValue(Dominator.result(), Default);
 
