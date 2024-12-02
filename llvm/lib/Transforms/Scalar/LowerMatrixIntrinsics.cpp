@@ -97,19 +97,6 @@ static DISubprogram *getSubprogram(DIScope *Scope) {
   return cast<DILocalScope>(Scope)->getSubprogram();
 }
 
-/// Erase \p V from \p BB and move \II forward to avoid invalidating
-/// iterators.
-static void eraseFromParentAndMove(Value *V, BasicBlock::reverse_iterator &II,
-                                   BasicBlock &BB) {
-  auto *Inst = cast<Instruction>(V);
-  // Still used, don't erase.
-  if (!Inst->use_empty())
-    return;
-  if (II != BB.rend() && Inst == &*II)
-    ++II;
-  Inst->eraseFromParent();
-}
-
 /// Return true if V is a splat of a value (which is used when multiplying a
 /// matrix with a scalar).
 static bool isSplat(Value *V) {
@@ -756,6 +743,26 @@ public:
     return Operation(T0, Shape0.t(), T1, Shape1.t());
   }
 
+  void eraseFromParentAndRemoveFromShapeMap(Instruction *Inst) {
+    auto Iter = ShapeMap.find(Inst);
+    if (Iter != ShapeMap.end())
+      ShapeMap.erase(Iter);
+    Inst->eraseFromParent();
+  }
+
+  /// Erase \p V from \p BB and move \II forward to avoid invalidating
+  /// iterators.
+  void eraseFromParentAndMove(Value *V, BasicBlock::reverse_iterator &II,
+                              BasicBlock &BB) {
+    auto *Inst = cast<Instruction>(V);
+    // Still used, don't erase.
+    if (!Inst->use_empty())
+      return;
+    if (II != BB.rend() && Inst == &*II)
+      ++II;
+    eraseFromParentAndRemoveFromShapeMap(Inst);
+  }
+
   void updateShapeAndReplaceAllUsesWith(Instruction &Old, Value *New) {
     // We need to remove Old from the ShapeMap otherwise RAUW will replace it
     // with New. We should only add New it it supportsShapeInfo so we insert
@@ -869,13 +876,13 @@ public:
 
   void liftTranspose(Instruction &I) {
     // Erase dead Instructions after lifting transposes from binops.
-    auto CleanupBinOp = [](Instruction &T, Value *A, Value *B) {
+    auto CleanupBinOp = [this](Instruction &T, Value *A, Value *B) {
       if (T.use_empty())
-        T.eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(&T);
       if (A->use_empty())
-        cast<Instruction>(A)->eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(A));
       if (A != B && B->use_empty())
-        cast<Instruction>(B)->eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(B));
     };
 
     Value *A, *B, *AT, *BT;
@@ -1482,7 +1489,7 @@ public:
                         m_Value(Arg)))) {
         auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
         Op->replaceAllUsesWith(NewLoad);
-        cast<Instruction>(Op)->eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(Op));
         return;
       } else if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>(
                                m_Value(Arg)))) {
@@ -1851,15 +1858,15 @@ public:
     // Mark eliminated instructions as fused and remove them.
     FusedInsts.insert(Store);
     FusedInsts.insert(MatMul);
-    Store->eraseFromParent();
-    MatMul->eraseFromParent();
+    eraseFromParentAndRemoveFromShapeMap(Store);
+    eraseFromParentAndRemoveFromShapeMap(MatMul);
     if (LoadOp0->hasNUses(0)) {
       FusedInsts.insert(LoadOp0);
-      LoadOp0->eraseFromParent();
+      eraseFromParentAndRemoveFromShapeMap(LoadOp0);
     }
     if (LoadOp1 != LoadOp0 && LoadOp1->hasNUses(0)) {
       FusedInsts.insert(LoadOp1);
-      LoadOp1->eraseFromParent();
+      eraseFromParentAndRemoveFromShapeMap(LoadOp1);
     }
   }
 
