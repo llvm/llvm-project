@@ -10612,10 +10612,9 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
             TSI ? TSI->getTypeLoc().getSourceRange() : SourceRange();
         S.Diag(Bitfield->getTypeSpecStartLoc(), diag::note_change_bitfield_sign)
             << SignedEnum << TypeRange;
-        if (PTAttr) {
+        if (PTAttr)
           S.Diag(PTAttr->getLocation(), diag::note_bitfield_preferred_type)
               << ED;
-        }
       }
 
       // Compute the required bitwidth. If the enum has negative values, we need
@@ -10632,10 +10631,9 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
             << Bitfield << PreferredTypeDiagIndex << ED;
         S.Diag(WidthExpr->getExprLoc(), diag::note_widen_bitfield)
             << BitsNeeded << ED << WidthExpr->getSourceRange();
-        if (PTAttr) {
+        if (PTAttr)
           S.Diag(PTAttr->getLocation(), diag::note_bitfield_preferred_type)
               << ED;
-        }
       }
     }
 
