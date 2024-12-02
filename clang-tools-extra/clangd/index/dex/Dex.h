@@ -58,6 +58,7 @@ public:
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
     this->BackingDataSize = BackingDataSize;
+    this->IdxContents = IndexContents::All;
   }
 
   template <typename SymbolRange, typename RefsRange, typename RelationsRange,
