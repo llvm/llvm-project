@@ -6083,9 +6083,9 @@ void BoUpSLP::reorderTopToBottom() {
                   return isa<ShuffleVectorInst>(EI.UserTE->getMainOp());
                 }))
               continue;
-            assert(all_of(TE->UserTreeIndices,
+            assert(none_of(TE->UserTreeIndices,
                           [&](const EdgeInfo &EI) {
-                            return !isa<ShuffleVectorInst>(
+                            return isa<ShuffleVectorInst>(
                                 EI.UserTE->getMainOp());
                           }) &&
                    "Does not know how to reorder.");
