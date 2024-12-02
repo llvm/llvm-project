@@ -434,16 +434,13 @@ Others only have a lead maintainer listed here.
 
 [Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
 
+[libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
+
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
 [LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
 
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
-
-#### libc++
-
-Louis Dionne \
-ldionne.2@gmail.com (email), [ldionne](https://github.com/ldionne) (GitHub)
 
 #### libclc
 
