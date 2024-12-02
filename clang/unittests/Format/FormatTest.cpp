@@ -22365,6 +22365,19 @@ TEST_F(FormatTest, BreakPenaltyAfterForLoopLParen) {
                Style);
 }
 
+TEST_F(FormatTest, BreakPenaltyBeforeMemberAccess) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 8;
+  Style.PenaltyExcessCharacter = 15;
+  verifyFormat("foo->bar\n"
+               "    .b(a);",
+               Style);
+  Style.PenaltyBreakBeforeMemberAccess = 200;
+  verifyFormat("foo->bar.b(\n"
+               "    a);",
+               Style);
+}
+
 TEST_F(FormatTest, BreakPenaltyScopeResolution) {
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 20;
