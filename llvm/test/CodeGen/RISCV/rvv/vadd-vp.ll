@@ -565,7 +565,7 @@ declare <vscale x 128 x i8> @llvm.vp.add.nxv128i8(<vscale x 128 x i8>, <vscale x
 define <vscale x 128 x i8> @vadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vi_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
@@ -1344,7 +1344,7 @@ declare <vscale x 32 x i32> @llvm.vp.add.nxv32i32(<vscale x 32 x i32>, <vscale x
 define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vi_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
@@ -1401,7 +1401,7 @@ declare i32 @llvm.vscale.i32()
 define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) {
 ; CHECK-LABEL: vadd_vi_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a2, a0, 2

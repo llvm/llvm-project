@@ -1092,7 +1092,7 @@ define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -1144,7 +1144,7 @@ define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 define <vscale x 128 x i1> @icmp_eq_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
@@ -1175,7 +1175,7 @@ define <vscale x 128 x i1> @icmp_eq_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, 
 define <vscale x 128 x i1> @icmp_eq_vx_swap_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_swap_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
@@ -2247,7 +2247,7 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -2303,7 +2303,7 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 define <vscale x 32 x i1> @icmp_eq_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    srli a2, a3, 2
@@ -2337,7 +2337,7 @@ define <vscale x 32 x i1> @icmp_eq_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, 
 define <vscale x 32 x i1> @icmp_eq_vx_swap_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_swap_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    srli a2, a3, 2

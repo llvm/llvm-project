@@ -1235,7 +1235,7 @@ declare <vscale x 16 x i64> @llvm.vp.ctlz.nxv16i64(<vscale x 16 x i64>, i1 immar
 define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    fsrmi a4, 1
@@ -1271,7 +1271,7 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv16i64:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-ZVBB-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-ZVBB-NEXT:    vmv1r.v v24, v0
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    srli a2, a1, 3
@@ -2467,7 +2467,7 @@ define <vscale x 8 x i64> @vp_ctlz_zero_undef_nxv8i64_unmasked(<vscale x 8 x i64
 define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    fsrmi a3, 1
@@ -2500,7 +2500,7 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv16i64:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-ZVBB-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-ZVBB-NEXT:    vmv1r.v v24, v0
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    srli a2, a1, 3

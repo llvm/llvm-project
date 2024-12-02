@@ -500,7 +500,7 @@ declare <vscale x 32 x half> @llvm.vp.uitofp.nxv32f16.nxv32i32(<vscale x 32 x i3
 define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vuitofp_nxv32f16_nxv32i32:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; ZVFH-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; ZVFH-NEXT:    vmv1r.v v24, v0
 ; ZVFH-NEXT:    csrr a1, vlenb
 ; ZVFH-NEXT:    srli a2, a1, 2
@@ -525,7 +525,7 @@ define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ;
 ; ZVFHMIN-LABEL: vuitofp_nxv32f16_nxv32i32:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; ZVFHMIN-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; ZVFHMIN-NEXT:    vmv1r.v v7, v0
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    srli a2, a1, 2
@@ -560,7 +560,7 @@ declare <vscale x 32 x float> @llvm.vp.uitofp.nxv32f32.nxv32i32(<vscale x 32 x i
 define <vscale x 32 x float> @vuitofp_nxv32f32_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_nxv32f32_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2

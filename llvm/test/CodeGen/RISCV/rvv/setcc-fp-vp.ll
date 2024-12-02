@@ -1473,7 +1473,7 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64bf16(<vscale x 64 x bfloat> %va, <vs
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x29, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 41 * vlenb
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    mv a3, a1
@@ -3721,7 +3721,7 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
 ; ZVFH-NEXT:    slli a1, a1, 4
 ; ZVFH-NEXT:    sub sp, sp, a1
 ; ZVFH-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; ZVFH-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; ZVFH-NEXT:    vmv1r.v v24, v0
 ; ZVFH-NEXT:    csrr a1, vlenb
 ; ZVFH-NEXT:    slli a1, a1, 3
@@ -3783,7 +3783,7 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    add a1, a1, a3
 ; ZVFHMIN-NEXT:    sub sp, sp, a1
 ; ZVFHMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x29, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 41 * vlenb
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; ZVFHMIN-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; ZVFHMIN-NEXT:    vmv1r.v v24, v0
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    mv a3, a1
