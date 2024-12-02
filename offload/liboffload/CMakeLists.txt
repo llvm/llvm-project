@@ -33,5 +33,5 @@ set_target_properties(LLVMOffload PROPERTIES
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS LLVMOffload LIBRARY COMPONENT LLVMOffload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/OffloadPrint.hpp DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/generated/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/generated/OffloadPrint.hpp DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
