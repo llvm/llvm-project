@@ -10780,7 +10780,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDValue EvenMask =
       DAG.getSetCC(DL, MaskVT, ZeroOnes, DAG.getConstant(0, DL, IdxVT),
                    ISD::CondCode::SETEQ);
-  // Have the later be the not of the former to minimize the live range of
+  // Have the latter be the not of the former to minimize the live range of
   // the index vector since that might be large.
   SDValue OddMask = DAG.getLogicalNOT(DL, EvenMask, MaskVT);
 
