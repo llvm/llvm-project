@@ -3686,21 +3686,51 @@ struct OmpAllocateClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
-// OMP 5.0 2.4 atomic-default-mem-order-clause ->
-//                 ATOMIC_DEFAULT_MEM_ORDER (SEQ_CST | ACQ_REL |
-//                                           RELAXED)
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:210-213]
+//
+// atomic-default-mem-order-clause ->
+//    ATOMIC_DEFAULT_MEM_ORDER(memory-order)        // since 5.0
+// memory-order ->
+//    SEQ_CST | ACQ_REL | RELAXED |                 // since 5.0
+//    ACQUIRE | RELEASE                             // since 5.2
 struct OmpAtomicDefaultMemOrderClause {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpAtomicDefaultMemOrderClause, common::OmpAtomicDefaultMemOrderType);
+  using MemoryOrder = common::OmpAtomicDefaultMemOrderType;
+  WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, MemoryOrder);
 };
 
-// 2.15.3.1 default-clause -> DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
+// Ref: [5.0:128-131], [5.1:151-154], [5.2:258-259]
+//
+// bind-clause ->
+//    BIND(binding)                                 // since 5.0
+// binding ->
+//    TEAMS | PARALLEL | THREAD                     // since 5.0
+struct OmpBindClause {
+  ENUM_CLASS(Binding, Parallel, Teams, Thread)
+  WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Binding);
+};
+
+// Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]
+//
+// default-clause ->
+//    DEFAULT(data-sharing-attribute)               // since 4.5
+// data-sharing-attribute ->
+//    SHARED | NONE |                               // since 4.5
+//    PRIVATE | FIRSTPRIVATE                        // since 5.0
 struct OmpDefaultClause {
-  ENUM_CLASS(Type, Private, Firstprivate, Shared, None)
-  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, Type);
+  ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
+  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
 };
 
-// 2.15.5.2 defaultmap -> DEFAULTMAP (implicit-behavior[:variable-category])
+// Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]
+//
+// defaultmap-clause ->
+//    DEFAULTMAP(implicit-behavior
+//        [: variable-category])                    // since 5.0
+// implicit-behavior ->
+//    TOFROM |                                      // since 4.5
+//    ALLOC | TO | FROM | FIRSTPRIVATE | NONE |
+//    DEFAULT |                                     // since 5.0
+//    PRESENT                                       // since 5.1
 struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
   ENUM_CLASS(
@@ -3709,23 +3739,35 @@ struct OmpDefaultmapClause {
   std::tuple<ImplicitBehavior, MODIFIERS()> t;
 };
 
-// 2.13.9 iteration-offset -> +/- non-negative-constant
+// Ref: [4.5:169-172], [5.0:255-259], [5.1:288-292], [5.2:91-93]
+//
+// iteration-offset ->
+//    +|- non-negative-constant                     // since 4.5
 struct OmpIterationOffset {
   TUPLE_CLASS_BOILERPLATE(OmpIterationOffset);
   std::tuple<DefinedOperator, ScalarIntConstantExpr> t;
 };
 
-// 2.13.9 iteration -> induction-variable [iteration-offset]
+// Ref: [4.5:169-172], [5.0:255-259], [5.1:288-292], [5.2:91-93]
+//
+// iteration ->
+//    induction-variable [iteration-offset]         // since 4.5
 struct OmpIteration {
   TUPLE_CLASS_BOILERPLATE(OmpIteration);
   std::tuple<Name, std::optional<OmpIterationOffset>> t;
 };
 
+// Ref: [4.5:169-172], [5.0:255-259], [5.1:288-292], [5.2:91-93]
+//
+// iteration-vector ->
+//    [iteration...]                                // since 4.5
 WRAPPER_CLASS(OmpIterationVector, std::list<OmpIteration>);
 
 // Extract this into a separate structure (instead of having it directly in
 // OmpDoacrossClause), so that the context in TYPE_CONTEXT_PARSER can be set
 // separately for OmpDependClause and OmpDoacrossClause.
+//
+// See: depend-clause, doacross-clause
 struct OmpDoacross {
   OmpDependenceType::Value GetDepType() const;
 
@@ -3735,15 +3777,15 @@ struct OmpDoacross {
   std::variant<Sink, Source> u;
 };
 
-// Ref: [4.5:169-170], [5.0:255-256], [5.1:288-289], [5.2:323-324]
+// Ref: [4.5:169-172], [5.0:255-259], [5.1:288-292], [5.2:323-326]
 //
 // depend-clause ->
-//    DEPEND(SOURCE) |                               // since 4.5, until 5.1
-//    DEPEND(SINK: iteration-vector) |               // since 4.5, until 5.1
+//    DEPEND(SOURCE) |                              // since 4.5, until 5.1
+//    DEPEND(SINK: iteration-vector) |              // since 4.5, until 5.1
 //    DEPEND([depend-modifier,]
-//           task-dependence-type: locator-list)     // since 4.5
+//           task-dependence-type: locator-list)    // since 4.5
 //
-// depend-modifier -> iterator-modifier              // since 5.0
+// depend-modifier -> iterator-modifier             // since 5.0
 struct OmpDependClause {
   UNION_CLASS_BOILERPLATE(OmpDependClause);
   struct TaskDep {
@@ -3755,6 +3797,10 @@ struct OmpDependClause {
   std::variant<TaskDep, OmpDoacross> u;
 };
 
+// Ref: [5.2:326-328]
+//
+// doacross-clause ->
+//    DOACROSS(dependence-type: iteration-vector)   // since 5.2
 WRAPPER_CLASS(OmpDoacrossClause, OmpDoacross);
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:73]
@@ -3764,25 +3810,41 @@ WRAPPER_CLASS(OmpDoacrossClause, OmpDoacross);
 //    DESTROY(variable)     // since 5.2
 WRAPPER_CLASS(OmpDestroyClause, OmpObject);
 
-// device([ device-modifier :] scalar-integer-expression)
+// Ref: [5.0:135-140], [5.1:161-166], [5.2:265-266]
+//
+// detach-clause ->
+//    DETACH(event-handle)                          // since 5.0
+struct OmpDetachClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDetachClause, OmpObject);
+};
+
+// Ref: [4.5:103-107], [5.0:170-176], [5.1:197-205], [5.2:276-277]
+//
+// device-clause ->
+//    DEVICE(scalar-integer-expression) |           // since 4.5
+//    DEVICE([device-modifier:]
+//        scalar-integer-expression)                // since 5.0
 struct OmpDeviceClause {
   TUPLE_CLASS_BOILERPLATE(OmpDeviceClause);
   ENUM_CLASS(DeviceModifier, Ancestor, Device_Num)
   std::tuple<std::optional<DeviceModifier>, ScalarIntExpr> t;
 };
 
-// device_type(any | host | nohost)
+// Ref: [5.0:180-185], [5.1:210-216], [5.2:275]
+//
+// device-type-clause ->
+//    DEVICE_TYPE(ANY | HOST | NOHOST)              // since 5.0
 struct OmpDeviceTypeClause {
-  ENUM_CLASS(Type, Any, Host, Nohost)
-  WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
+  ENUM_CLASS(DeviceTypeDescription, Any, Host, Nohost)
+  WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
 //
 // from-clause ->
 //    FROM(locator-list) |
-//    FROM(mapper-modifier: locator-list) |             // since 5.0
-//    FROM(motion-modifier[,] ...: locator-list)        // since 5.1
+//    FROM(mapper-modifier: locator-list) |         // since 5.0
+//    FROM(motion-modifier[,] ...: locator-list)    // since 5.1
 //  motion-modifier ->
 //    PRESENT | mapper-modifier | iterator-modifier
 struct OmpFromClause {
@@ -3804,11 +3866,6 @@ struct OmpIfClause {
   ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
       TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
   std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
-};
-
-// OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
-struct OmpDetachClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpDetachClause, OmpObject);
 };
 
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
@@ -3878,10 +3935,16 @@ struct OmpOrderClause {
   std::tuple<MODIFIERS(), Ordering> t;
 };
 
-// 2.5 proc-bind-clause -> PROC_BIND (MASTER | CLOSE | SPREAD)
+// Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:229-230]
+//
+// proc-bind-clause ->
+//    PROC_BIND(affinity-policy)                    // since 4.5
+// affinity-policy ->
+//    CLOSE | PRIMARY | SPREAD |                    // since 4.5
+//    MASTER                                        // since 4.5, until 5.2
 struct OmpProcBindClause {
-  ENUM_CLASS(Type, Close, Master, Spread, Primary)
-  WRAPPER_CLASS_BOILERPLATE(OmpProcBindClause, Type);
+  ENUM_CLASS(AffinityPolicy, Close, Master, Spread, Primary)
+  WRAPPER_CLASS_BOILERPLATE(OmpProcBindClause, AffinityPolicy);
 };
 
 // Ref: [4.5:201-207], [5.0:300-302], [5.1:332-334], [5.2:134-137]
@@ -3943,13 +4006,6 @@ struct OmpNumTasksClause {
 struct OmpUpdateClause {
   UNION_CLASS_BOILERPLATE(OmpUpdateClause);
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
-};
-
-// OMP 5.2 11.7.1 bind-clause ->
-//                  BIND( PARALLEL | TEAMS | THREAD )
-struct OmpBindClause {
-  ENUM_CLASS(Type, Parallel, Teams, Thread)
-  WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Type);
 };
 
 // OpenMP Clauses
