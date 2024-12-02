@@ -1193,19 +1193,30 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
 
   CIRGenCXXABI::AddedStructorArgCounts AddedArgs =
       TheCXXABI.buildStructorSignature(GD, argTypes);
-  (void)AddedArgs;
-  assert(paramInfos.empty() && "NYI");
+  if (!paramInfos.empty()) {
+    // Note: prefix implies after the first param.
+    if (AddedArgs.Prefix)
+      paramInfos.insert(paramInfos.begin() + 1, AddedArgs.Prefix,
+                        FunctionProtoType::ExtParameterInfo{});
+    if (AddedArgs.Suffix)
+      paramInfos.append(AddedArgs.Suffix,
+                        FunctionProtoType::ExtParameterInfo{});
 
-  assert(!MD->isVariadic() && "Variadic fns NYI");
-  RequiredArgs required = RequiredArgs::All;
-  (void)required;
+    assert(false && "Please sent PR with a test and remove this");
+  }
+
+  RequiredArgs required =
+      (PassParams && MD->isVariadic() ? RequiredArgs(argTypes.size())
+                                      : RequiredArgs::All);
 
   FunctionType::ExtInfo extInfo = FTP->getExtInfo();
+  CanQualType resultType = TheCXXABI.HasThisReturn(GD) ? argTypes.front()
+                           : TheCXXABI.hasMostDerivedReturn(GD)
+                               ? Context.VoidPtrTy
+                               : Context.VoidTy;
 
-  assert(!TheCXXABI.HasThisReturn(GD) && "NYI");
-
-  CanQualType resultType = Context.VoidTy;
-  (void)resultType;
+  assert(!TheCXXABI.HasThisReturn(GD) &&
+         "Please sent PR with a test and remove this");
 
   return arrangeCIRFunctionInfo(resultType, cir::FnInfoOpts::IsInstanceMethod,
                                 argTypes, extInfo, paramInfos, required);
