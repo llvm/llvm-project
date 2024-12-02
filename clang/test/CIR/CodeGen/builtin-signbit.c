@@ -5,31 +5,28 @@
 
 void test_signbit_float(float val) {
     // CIR-LABEL: test_signbit_float
-    // CIR: %{{.+}} = cir.signbit %{{.+}} : !cir.float -> !s32i
+    // CIR: %{{.+}} = cir.signbit %{{.+}} : !cir.float -> !cir.bool
     // LLVM-LABEL: test_signbit_float
     // LLVM: [[TMP1:%.*]] = bitcast float %{{.+}} to i32
     // LLVM: [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
-    // LLVM: %{{.+}} = zext i1 [[TMP2]] to i32
-    __builtin_signbit(val);
+    if (__builtin_signbit(val)) {};
 }
 
 void test_signbit_double(double val) {
     // CIR-LABEL: test_signbit_double
-    // CIR: %{{.+}} = cir.signbit %{{.+}} : !cir.float -> !s32i
+    // CIR: %{{.+}} = cir.signbit %{{.+}} : !cir.float -> !cir.bool
     // LLVM-LABEL: test_signbit_double
     // LLVM: [[CONV:%.*]] = fptrunc double %{{.+}} to float
     // LLVM: [[TMP1:%.*]] = bitcast float [[CONV]] to i32
     // LLVM: [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
-    // LLVM: %{{.+}} = zext i1 [[TMP2]] to i32
-    __builtin_signbitf(val);
+    if (__builtin_signbitf(val)) {}
 }
 
 void test_signbit_long_double(long double val) {
     // CIR: test_signbit_long_double
     // LLVM: test_signbit_long_double
-    __builtin_signbitl(val);
-    // CIR: %{{.+}} = cir.signbit %{{.+}} : !cir.long_double<!cir.f80> -> !s32i
+    if (__builtin_signbitl(val)) {}
+    // CIR: %{{.+}} = cir.signbit %{{.+}} : !cir.long_double<!cir.f80> -> !cir.bool
     // LLVM: [[TMP1:%.*]] = bitcast x86_fp80 %{{.+}} to i80
     // LLVM: [[TMP2:%.*]] = icmp slt i80 [[TMP1]], 0
-    // LLVM: %{{.+}} = zext i1 [[TMP2]] to i32
 }
