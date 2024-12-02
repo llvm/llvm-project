@@ -50,7 +50,7 @@
 ; RUN: llvm-lto -thinlto-action=thinlink -import-declaration -import-instr-limit=7 -import-instr-evolution-factor=1.0 -o combined.index.bc main.bc lib.bc
 ; RUN: llvm-lto -thinlto-action=distributedindexes -debug-only=function-import -import-declaration -import-instr-limit=7 -import-instr-evolution-factor=1.0 -thinlto-index combined.index.bc main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
 
-; DUMP: - 2 function definitions and 3 function declarations imported from lib.bc
+; DUMP: - 2 function definitions and 4 function declarations imported from lib.bc
 
 ; First disassemble per-module summary and find out the GUID for {large_func, large_indirect_callee}.
 ;
@@ -71,11 +71,11 @@
 ; MAIN-DIS: gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
 ; When alias is imported as a copy of the aliasee, but the aliasee is not being
 ; imported by itself, the aliasee should be null.
-; MAIN-DIS-NOT: gv: (guid: 13590951773474913315, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: null)))
+; MAIN-DIS: gv: (guid: 13590951773474913315, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: null)))
 ; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
 ; MAIN-DIS: gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
 
-; RUN: opt -passes=function-import -summary-file=main.bc.thinlto.bc main.bc -o main-after-import.bc
+; RUN: opt -passes=function-import -import-all-index -summary-file=main.bc.thinlto.bc main.bc -o main-after-import.bc
 ; RUN: llvm-dis -o - main-after-import.bc | FileCheck %s --check-prefix=MAIN-IMPORT
 
 ; Tests that dso_local attribute is applied on a global var from its summary.
@@ -122,7 +122,7 @@ MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 ; IMPORTDUMP-DAG: Is importing function declaration 2418497564662708935 large_func from lib.cc
 ; IMPORTDUMP-DAG: Is importing global declaration 7680325410415171624 calleeAddrs from lib.cc
 ; IMPORTDUMP-DAG: Is importing alias declaration 16730173943625350469 large_indirect_callee_alias from lib.cc
-; IMPORTDUMP-DAG: Not importing alias 13590951773474913315 large_indirect_bar_alias from lib.cc
+; IMPORTDUMP-DAG: Is importing alias declaration 13590951773474913315 large_indirect_bar_alias from lib.cc
 ; IMPORTDUMP-DAG: Not importing function 13770917885399536773 large_indirect_bar
 
 ; RUN: llvm-dis in-process.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
@@ -208,11 +208,7 @@ define void @large_indirect_bar()#2 {
 define internal void @small_indirect_callee() #0 {
 entry:
   %0 = load ptr, ptr @calleeAddrs
-  ; The function-import pass crash (see pr/117584) when alias is imported but
-  ; aliasee isn't.
-  ; TODO: Update !prof to !3 (for @large_indirect_bar_alias) after alias/aliasee
-  ; import issue is handled.
-  call void %0(), !prof !0
+  call void %0(), !prof !3
   ret void
 }
 
