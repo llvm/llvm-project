@@ -635,7 +635,7 @@ def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
 def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-compatibility"> {
   code Documentation = [{
-    Under the MSVC ABI adjacemt bit-fields are not packed if the underlying type
+    Under the MSVC ABI adjacent bit-fields are not packed if the underlying type
     has a different storage size. This warning indicates that a pair of adjacent
     bit-fields may not pack in the same way due to this behavioural difference.
 
@@ -673,8 +673,9 @@ def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-compatibility"> {
     where you cannot specify the underlying type, the options are to either switch
     to int sized storage for all specifiers or to resort to declaring the
     bit-fields with explicit integer storage types and cast in and out of the field.
-    If such a solution is required the `preferred_type` attribute can be used to
-    convey the actual field type to debuggers and other tooling.
+    If such a solution is required the
+    :ref:`preferred_type <langext-preferred_type_documentation>` attribute can be
+    used to convey the actual field type to debuggers and other tooling.
   }];
 }
 

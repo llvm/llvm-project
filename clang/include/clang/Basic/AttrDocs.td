@@ -8236,6 +8236,8 @@ its underlying representation to be a WebAssembly ``funcref``.
 def PreferredTypeDocumentation : Documentation {
   let Category = DocCatField;
   let Content = [{
+.. _langext-preferred_type_documentation:
+
 This attribute allows adjusting the type of a bit-field in debug information.
 This can be helpful when a bit-field is intended to store an enumeration value,
 but has to be specified as having the enumeration's underlying type in order to
