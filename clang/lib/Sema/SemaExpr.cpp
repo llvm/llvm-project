@@ -4897,6 +4897,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return ExprError();
   }
 
+  CheckInvalidBuiltinCountedByRef(base, ArraySubscriptKind);
+
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
   // operand might be an overloadable type, in which case the overload
@@ -6488,6 +6490,12 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   if (CheckArgsForPlaceholders(ArgExprs))
     return ExprError();
+
+  // The result of __builtin_counted_by_ref cannot be used as a function
+  // argument. It allows leaking and modification of bounds safety information.
+  for (const Expr *Arg : ArgExprs)
+    if (CheckInvalidBuiltinCountedByRef(Arg, FunctionArgKind))
+      return ExprError();
 
   if (getLangOpts().CPlusPlus) {
     // If this is a pseudo-destructor expression, build the call immediately.
@@ -9198,38 +9206,6 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   // them.
   LHSType = Context.getCanonicalType(LHSType).getUnqualifiedType();
   RHSType = Context.getCanonicalType(RHSType).getUnqualifiedType();
-
-  // __builtin_counted_by_ref cannot be assigned to a variable, used in
-  // function call, or in a return.
-  auto FindBuiltinCountedByRefExpr = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
-      CallExpr *TheCall = nullptr;
-      bool VisitCallExpr(CallExpr *CE) override {
-        if (CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
-          TheCall = CE;
-          return false;
-        }
-        return true;
-      }
-      bool
-      VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE) override {
-        // A UnaryExprOrTypeTraitExpr---e.g. sizeof, __alignof, etc.---isn't
-        // the same as a CallExpr, so if we find a __builtin_counted_by_ref()
-        // call in one, ignore it.
-        return false;
-      }
-    } V;
-    V.TraverseStmt(E);
-    return V.TheCall;
-  };
-  static llvm::SmallPtrSet<CallExpr *, 4> Diagnosed;
-  if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get());
-      CE && !Diagnosed.count(CE)) {
-    Diagnosed.insert(CE);
-    Diag(CE->getExprLoc(),
-         diag::err_builtin_counted_by_ref_cannot_leak_reference)
-        << CE->getSourceRange();
-  }
 
   // Common case: no conversion required.
   if (LHSType == RHSType) {
@@ -13781,42 +13757,6 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
 
-  // __builtin_counted_by_ref can't be used in a binary expression or array
-  // subscript on the LHS.
-  int DiagOption = -1;
-  auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
-      CallExpr *CE = nullptr;
-      bool InvalidUse = false;
-      int Option = -1;
-
-      bool VisitCallExpr(CallExpr *E) override {
-        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
-          CE = E;
-          return false;
-        }
-        return true;
-      }
-
-      bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) override {
-        InvalidUse = true;
-        Option = 0; // report 'array expression' in diagnostic.
-        return true;
-      }
-      bool VisitBinaryOperator(BinaryOperator *E) override {
-        InvalidUse = true;
-        Option = 1; // report 'binary expression' in diagnostic.
-        return true;
-      }
-    } V;
-    V.TraverseStmt(E);
-    DiagOption = V.Option;
-    return V.InvalidUse ? V.CE : nullptr;
-  };
-  if (auto *CE = FindInvalidUseOfBoundsSafetyCounter(LHSExpr))
-    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
-        << DiagOption << CE->getSourceRange();
-
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
                                AssignmentAction::Assigning))
     return QualType();
@@ -15276,6 +15216,12 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // type precision.
   if (Kind == tok::TokenKind::slash)
     DetectPrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
+
+  BuiltinCountedByRefKind K =
+      BinaryOperator::isAssignmentOp(Opc) ? AssignmentKind : BinaryExprKind;
+
+  CheckInvalidBuiltinCountedByRef(LHSExpr, K);
+  CheckInvalidBuiltinCountedByRef(RHSExpr, K);
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }

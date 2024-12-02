@@ -1119,28 +1119,6 @@ public:
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-static bool mayReadOrWrite(mlir::Region &region, mlir::Value var) {
-  fir::AliasAnalysis aliasAnalysis;
-  for (mlir::Operation &op : region.getOps()) {
-    if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
-      for (mlir::Region &subRegion : op.getRegions())
-        if (mayReadOrWrite(subRegion, var))
-          return true;
-      // In MLIR, RecursiveMemoryEffects can be combined with
-      // MemoryEffectOpInterface to describe extra effects on top of the
-      // effects of the nested operations.  However, the presence of
-      // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
-      // implies the operation has no other memory effects than the one of its
-      // nested operations.
-      if (!mlir::isa<mlir::MemoryEffectOpInterface>(op))
-        continue;
-    }
-    if (!aliasAnalysis.getModRef(&op, var).isNoModRef())
-      return true;
-  }
-  return false;
-}
-
 static llvm::LogicalResult
 tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
                           mlir::PatternRewriter &rewriter) {
@@ -1168,9 +1146,17 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   // RHS lengths are the same.
   if (lhs.isCharacter())
     return mlir::failure();
-
+  fir::AliasAnalysis aliasAnalysis;
   // The region must not read or write the LHS.
-  if (mayReadOrWrite(evalInMem.getBody(), lhs))
+  // Note that getModRef is used instead of mlir::MemoryEffects because
+  // EvaluateInMemoryOp is typically expected to hold fir.calls and that
+  // Fortran calls cannot be modeled in a useful way with mlir::MemoryEffects:
+  // it is hard/impossible to list all the read/written SSA values in a call,
+  // but it is often possible to tell that an SSA value cannot be accessed,
+  // hence getModRef is needed here and below. Also note that getModRef uses
+  // mlir::MemoryEffects for operations that do not have special handling in
+  // getModRef.
+  if (aliasAnalysis.getModRef(evalInMem.getBody(), lhs).isModOrRef())
     return mlir::failure();
   // Any variables affected between the hlfir.evalInMem and assignment must not
   // be read or written inside the region since it will be moved at the
@@ -1184,7 +1170,8 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   }
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
     mlir::Value affected = effect.getValue();
-    if (!affected || mayReadOrWrite(evalInMem.getBody(), affected))
+    if (!affected ||
+        aliasAnalysis.getModRef(evalInMem.getBody(), affected).isModOrRef())
       return mlir::failure();
   }
 

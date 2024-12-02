@@ -69,6 +69,10 @@ Improvements and New Features
 - The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` ABI configuration was added, which allows storing valid bounds
   in ``std::array::iterator`` and detecting OOB accesses when the appropriate hardening mode is enabled.
 
+- The input iterator overload of `assign(_InputIterator, _InputIterator)` in `std::vector<_Tp, _Allocator>` has been
+  optimized, resulting in a performance improvement of up to 2x for trivial element types (e.g., `std::vector<int>`),
+  and up to 3.4x for non-trivial element types (e.g., `std::vector<std::vector<int>>`).
+
 Deprecations and Removals
 -------------------------
 
@@ -104,6 +108,10 @@ Deprecations and Removals
 
 - The ``_LIBCPP_DISABLE_AVAILABILITY`` macro that was used to force-disable availability markup has now been removed.
   Whether availability markup is used by the library is now solely controlled at configuration-time.
+
+- The pointer safety functions ``declare_reachable``, ``declare_no_pointers``, ``undeclare_no_pointers`` and
+  ``__undeclare_reachable`` have been removed from the library. These functions were never implemented in a non-trivial
+  way, making it very unlikely that any binary depends on them.
 
 Upcoming Deprecations and Removals
 ----------------------------------
