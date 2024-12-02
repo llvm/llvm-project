@@ -248,7 +248,8 @@ Changes in existing checks
   <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static``
   keyword before type qualifiers such as ``const`` and ``volatile`` and fix
   false positives for function declaration without body and fix false positives
-  for global scoped overloaded ``operator new`` and ``operator delete``.
+  for C++20 export declarations and fix false positives for global scoped
+  overloaded ``operator new`` and ``operator delete``.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
