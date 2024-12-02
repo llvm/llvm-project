@@ -447,3 +447,22 @@ for.end.loopexit:
   store <4 x i32> %4, ptr %out2, align 4
   ret void
 }
+
+define void @test14(<8 x i1> %0) {
+entry:
+  %sext0 = sext <8 x i1> %0 to <8 x i16>
+  %sext1 = sext <8 x i1> %0 to <8 x i16>
+  %1 = shufflevector <8 x i16> %sext0, <8 x i16> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = shufflevector <8 x i16> %sext0, <8 x i16> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = shufflevector <8 x i16> %sext1, <8 x i16> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %4 = shufflevector <8 x i16> %sext1, <8 x i16> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  br label %for.end.loopexit
+
+for.end.loopexit:
+  %phi0 = phi <4 x i16> [ %1, %entry ]
+  %phi1 = phi <4 x i16> [ %2, %entry ]
+  %phi2 = phi <4 x i16> [ %3, %entry ]
+  %phi3 = phi <4 x i16> [ %4, %entry ]
+  %or0 = or <4 x i16> %phi1, zeroinitializer
+  ret void
+}
