@@ -2010,11 +2010,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     StrAttr:$operator_name,
     StrAttr:$domain_name,
     StrAttr:$implementation_attrs,
-    Variadic<Tosa_Tensor>:$inputs
+    Variadic<Tosa_Tensor>:$input_list
   );
 
   let results = (outs
-    Variadic<Tosa_Tensor>:$outputs
+    Variadic<Tosa_Tensor>:$output_list
   );
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
