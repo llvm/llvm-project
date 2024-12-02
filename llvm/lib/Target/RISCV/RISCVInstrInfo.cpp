@@ -440,7 +440,7 @@ void RISCVInstrInfo::copyPhysRegVector(
           NeedVSETIVLI = false;
         else if (CurrMI.isInlineAsm())
           NeedVSETIVLI = true;
-        else if (NeedVSETIVLI && CurrMI.isIdenticalTo(*MIB)) {
+        else if (NeedVSETIVLI && &CurrMI == &*MIB) {
           BuildMI(MBB, &*MIB, MIB->getDebugLoc(), get(RISCV::PseudoVSETIVLI))
               .addReg(RISCV::X0, RegState::Define | RegState::Dead)
               .addImm(0)
