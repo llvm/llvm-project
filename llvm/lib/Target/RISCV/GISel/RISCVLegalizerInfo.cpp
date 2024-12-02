@@ -579,7 +579,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
                                G_FTANH})
       .libcallFor({s32, s64});
-  getActionDefinitionsBuilder(G_FPOWI).libcallFor({{s32, s32}, {s64, s32}});
+  getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
+      .libcallFor({{s32, s32}, {s64, s32}});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
