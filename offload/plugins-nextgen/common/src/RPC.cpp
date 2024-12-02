@@ -13,11 +13,8 @@
 
 #include "PluginInterface.h"
 
-// TODO: This should be included unconditionally and cleaned up.
-#if defined(LIBOMPTARGET_RPC_SUPPORT)
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
-#endif
 
 using namespace llvm;
 using namespace omp;
@@ -63,7 +60,7 @@ rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
     return rpc::UNHANDLED_OPCODE;
     break;
   }
-  return rpc::UNHANDLED_OPCODE;
+  return rpc::SUCCESS;
 }
 
 static rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
@@ -86,17 +83,12 @@ llvm::Expected<bool>
 RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
   return Handler.isSymbolInImage(Device, Image, "__llvm_rpc_client");
-#else
-  return false;
-#endif
 }
 
 Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   void *RPCBuffer = Device.allocate(
@@ -119,13 +111,9 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   Buffers[Device.getDeviceId()] = RPCBuffer;
 
   return Error::success();
-
-#endif
-  return Error::success();
 }
 
 Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   rpc::Server Server(NumPorts, Buffers[Device.getDeviceId()]);
@@ -135,23 +123,21 @@ Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
     return Error::success();
 
   int Status = handle_offload_opcodes(Device, *Port, Device.getWarpSize());
+
   // Let the `libc` library handle any other unhandled opcodes.
+#ifdef LIBOMPTARGET_RPC_SUPPORT
   if (Status == rpc::UNHANDLED_OPCODE)
     Status = handle_libc_opcodes(*Port, Device.getWarpSize());
-  Port->close();
+#endif
 
+  Port->close();
   if (Status != rpc::SUCCESS)
     return createStringError("RPC server given invalid opcode!");
 
   return Error::success();
-#endif
-  return Error::success();
 }
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
   Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST);
-  return Error::success();
-#endif
   return Error::success();
 }
