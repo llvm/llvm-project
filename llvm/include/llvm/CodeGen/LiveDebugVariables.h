@@ -53,19 +53,26 @@ public:
   /// @param VRM Rename virtual registers according to map.
   void emitDebugValues(VirtRegMap *VRM);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// dump - Print data structures to dbgs().
   void dump() const;
+#endif
+
+  void print(raw_ostream &OS) const;
 
   void releaseMemory();
+
+  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &Inv);
 };
 
-class LiveDebugVariablesWrapperPass : public MachineFunctionPass {
+class LiveDebugVariablesWrapperLegacy : public MachineFunctionPass {
   std::unique_ptr<LiveDebugVariables> Impl;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  LiveDebugVariablesWrapperPass();
+  LiveDebugVariablesWrapperLegacy();
 
   bool runOnMachineFunction(MachineFunction &) override;
 
@@ -91,6 +98,12 @@ public:
   Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
+class LiveDebugVariablesPrinterPass
+    : public PassInfoMixin<LiveDebugVariablesPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_LIVEDEBUGVARIABLES_H

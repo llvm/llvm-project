@@ -74,25 +74,27 @@ EnableLDV("live-debug-variables", cl::init(true),
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
 
-char LiveDebugVariablesWrapperPass::ID = 0;
+char LiveDebugVariablesWrapperLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperPass, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
                       "Debug Variable Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(LiveDebugVariablesWrapperPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
                     "Debug Variable Analysis", false, false)
 
-void LiveDebugVariablesWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void LiveDebugVariablesWrapperLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveDebugVariablesWrapperPass::LiveDebugVariablesWrapperPass()
+LiveDebugVariablesWrapperLegacy::LiveDebugVariablesWrapperLegacy()
     : MachineFunctionPass(ID) {
-  initializeLiveDebugVariablesWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeLiveDebugVariablesWrapperLegacyPass(
+      *PassRegistry::getPassRegistry());
 }
 
 enum : unsigned { UndefLocNo = ~0U };
@@ -673,7 +675,6 @@ public:
 
 } // end anonymous namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
@@ -761,7 +762,6 @@ void LDVImpl::print(raw_ostream &OS) {
   for (auto &userLabel : userLabels)
     userLabel->print(OS, TRI);
 }
-#endif
 
 void UserValue::mapVirtRegs(LDVImpl *LDV) {
   for (const MachineOperand &MO : locations)
@@ -1297,7 +1297,8 @@ static void removeDebugInstrs(MachineFunction &mf) {
   }
 }
 
-bool LiveDebugVariablesWrapperPass::runOnMachineFunction(MachineFunction &mf) {
+bool LiveDebugVariablesWrapperLegacy::runOnMachineFunction(
+    MachineFunction &mf) {
   auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   Impl = std::make_unique<LiveDebugVariables>();
@@ -1316,6 +1317,14 @@ LiveDebugVariablesAnalysis::run(MachineFunction &MF,
   return LDV;
 }
 
+PreservedAnalyses
+LiveDebugVariablesPrinterPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  auto &LDV = MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
+  LDV.print(dbgs());
+  return PreservedAnalyses::all();
+}
+
 void LiveDebugVariables::Deleter::operator()(void *Ptr) const {
   delete static_cast<LDVImpl *>(Ptr);
 }
@@ -1323,6 +1332,16 @@ void LiveDebugVariables::Deleter::operator()(void *Ptr) const {
 void LiveDebugVariables::releaseMemory() {
   if (PImpl)
     static_cast<LDVImpl *>(PImpl.get())->clear();
+}
+
+bool LiveDebugVariables::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<LiveDebugVariablesAnalysis>();
+  // Some architectures split the register allocation into multiple phases based
+  // on register classes. This requires preserving analyses between the phases
+  // by default.
+  return PAC.preservedWhenStateless();
 }
 
 void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
@@ -1977,8 +1996,10 @@ void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void LiveDebugVariables::dump() const {
-  if (PImpl)
-    static_cast<LDVImpl *>(PImpl.get())->print(dbgs());
-}
+LLVM_DUMP_METHOD void LiveDebugVariables::dump() const { print(dbgs()); }
 #endif
+
+void LiveDebugVariables::print(raw_ostream &OS) const {
+  if (PImpl)
+    static_cast<LDVImpl *>(PImpl.get())->print(OS);
+}

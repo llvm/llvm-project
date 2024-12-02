@@ -43,7 +43,7 @@ namespace llvm {
 class AllocationOrder;
 class AnalysisUsage;
 class EdgeBundles;
-class LiveDebugVariablesWrapperPass;
+class LiveDebugVariablesWrapperLegacy;
 class LiveIntervals;
 class LiveRegMatrix;
 class MachineBasicBlock;

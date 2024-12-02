@@ -151,7 +151,7 @@ char &llvm::RAGreedyID = RAGreedy::ID;
 
 INITIALIZE_PASS_BEGIN(RAGreedy, "greedy",
                 "Greedy Register Allocator", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegisterCoalescer)
@@ -204,8 +204,8 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
-  AU.addRequired<LiveDebugVariablesWrapperPass>();
-  AU.addPreserved<LiveDebugVariablesWrapperPass>();
+  AU.addRequired<LiveDebugVariablesWrapperLegacy>();
+  AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
@@ -2732,7 +2732,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   SpillPlacer = &getAnalysis<SpillPlacementWrapperLegacy>().getResult();
-  DebugVars = &getAnalysis<LiveDebugVariablesWrapperPass>().getLDV();
+  DebugVars = &getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
 
   initializeCSRCost();
 

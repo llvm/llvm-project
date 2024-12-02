@@ -159,7 +159,7 @@ namespace {
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
       AU.addPreserved<LiveIntervalsWrapperPass>();
-      AU.addPreserved<LiveDebugVariablesWrapperPass>();
+      AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
     }
