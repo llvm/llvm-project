@@ -462,6 +462,7 @@ declare <vscale x 16 x double> @llvm.vp.fabs.nxv16f64(<vscale x 16 x double>, <v
 define <vscale x 16 x double> @vfabs_vv_nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfabs_vv_nxv16f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 3
@@ -477,6 +478,7 @@ define <vscale x 16 x double> @vfabs_vv_nxv16f64(<vscale x 16 x double> %va, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB32_2:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v8, v8, v0.t

@@ -131,6 +131,7 @@ ret {<vscale x 64 x i1>, <vscale x 64 x i1>} %retval
 define {<vscale x 64 x i8>, <vscale x 64 x i8>} @vector_deinterleave_nxv64i8_nxv128i8(<vscale x 128 x i8> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv64i8_nxv128i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
@@ -146,6 +147,7 @@ ret {<vscale x 64 x i8>, <vscale x 64 x i8>} %retval
 define {<vscale x 32 x i16>, <vscale x 32 x i16>} @vector_deinterleave_nxv32i16_nxv64i16(<vscale x 64 x i16> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv32i16_nxv64i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
@@ -161,6 +163,7 @@ ret {<vscale x 32 x i16>, <vscale x 32 x i16>} %retval
 define {<vscale x 16 x i32>, <vscale x 16 x i32>} @vector_deinterleave_nxv16i32_nxvv32i32(<vscale x 32 x i32> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv16i32_nxvv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
@@ -189,6 +192,7 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_nxv8i64_nxv
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
@@ -387,6 +391,7 @@ declare {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave
 define {<vscale x 32 x bfloat>, <vscale x 32 x bfloat>} @vector_deinterleave_nxv32bf16_nxv64bf16(<vscale x 64 x bfloat> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv32bf16_nxv64bf16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
@@ -402,6 +407,7 @@ ret {<vscale x 32 x bfloat>, <vscale x 32 x bfloat>} %retval
 define {<vscale x 32 x half>, <vscale x 32 x half>} @vector_deinterleave_nxv32f16_nxv64f16(<vscale x 64 x half> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv32f16_nxv64f16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v24, 0
@@ -417,6 +423,7 @@ ret {<vscale x 32 x half>, <vscale x 32 x half>} %retval
 define {<vscale x 16 x float>, <vscale x 16 x float>} @vector_deinterleave_nxv16f32_nxv32f32(<vscale x 32 x float> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv16f32_nxv32f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
@@ -445,6 +452,7 @@ define {<vscale x 8 x double>, <vscale x 8 x double>} @vector_deinterleave_nxv8f
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8

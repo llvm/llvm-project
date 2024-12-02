@@ -966,6 +966,7 @@ define <16 x i8> @reverse_v16i8_2(<8 x i8> %a, <8 x i8> %b) {
 define <32 x i8> @reverse_v32i8_2(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: reverse_v32i8_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
@@ -1035,6 +1036,7 @@ define <8 x i16> @reverse_v8i16_2(<4 x i16> %a, <4 x i16> %b) {
 define <16 x i16> @reverse_v16i16_2(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: reverse_v16i16_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1060,6 +1062,7 @@ define <16 x i16> @reverse_v16i16_2(<8 x i16> %a, <8 x i16> %b) {
 define <32 x i16> @reverse_v32i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: reverse_v32i16_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv2r.v v12, v10
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1116,6 +1119,7 @@ define <4 x i32> @reverse_v4i32_2(<2 x i32> %a, < 2 x i32> %b) {
 define <8 x i32> @reverse_v8i32_2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: reverse_v8i32_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1142,6 +1146,7 @@ define <8 x i32> @reverse_v8i32_2(<4 x i32> %a, <4 x i32> %b) {
 define <16 x i32> @reverse_v16i32_2(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: reverse_v16i32_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv2r.v v12, v10
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1170,6 +1175,7 @@ define <16 x i32> @reverse_v16i32_2(<8 x i32> %a, <8 x i32> %b) {
 define <32 x i32> @reverse_v32i32_2(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: reverse_v32i32_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv4r.v v16, v12
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1219,6 +1225,7 @@ define <4 x i64> @reverse_v4i64_2(<2 x i64> %a, < 2 x i64> %b) {
 define <8 x i64> @reverse_v8i64_2(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: reverse_v8i64_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv2r.v v12, v10
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
@@ -1289,6 +1296,7 @@ define <8 x half> @reverse_v8f16_2(<4 x half> %a, <4 x half> %b) {
 define <16 x half> @reverse_v16f16_2(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: reverse_v16f16_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1361,6 +1369,7 @@ define <4 x float> @reverse_v4f32_2(<2 x float> %a, <2 x float> %b) {
 define <8 x float> @reverse_v8f32_2(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: reverse_v8f32_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1387,6 +1396,7 @@ define <8 x float> @reverse_v8f32_2(<4 x float> %a, <4 x float> %b) {
 define <16 x float> @reverse_v16f32_2(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: reverse_v16f32_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv2r.v v12, v10
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1430,6 +1440,7 @@ define <4 x double> @reverse_v4f64_2(<2 x double> %a, < 2 x double> %b) {
 define <8 x double> @reverse_v8f64_2(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: reverse_v8f64_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv2r.v v12, v10
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma

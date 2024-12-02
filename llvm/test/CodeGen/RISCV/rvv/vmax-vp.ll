@@ -412,6 +412,7 @@ declare <vscale x 128 x i8> @llvm.vp.smax.nxv128i8(<vscale x 128 x i8>, <vscale 
 define <vscale x 128 x i8> @vmax_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmax_vx_nxv128i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
@@ -427,6 +428,7 @@ define <vscale x 128 x i8> @vmax_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB34_2:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
@@ -974,6 +976,7 @@ declare <vscale x 32 x i32> @llvm.vp.smax.nxv32i32(<vscale x 32 x i32>, <vscale 
 define <vscale x 32 x i32> @vmax_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmax_vx_nxv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    srli a3, a2, 2
@@ -990,6 +993,7 @@ define <vscale x 32 x i32> @vmax_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB80_2:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
@@ -1034,6 +1038,7 @@ declare i32 @llvm.vscale.i32()
 define <vscale x 32 x i32> @vmax_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m) {
 ; CHECK-LABEL: vmax_vx_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a3, a1, 2
@@ -1050,6 +1055,7 @@ define <vscale x 32 x i32> @vmax_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i3
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB82_2:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t

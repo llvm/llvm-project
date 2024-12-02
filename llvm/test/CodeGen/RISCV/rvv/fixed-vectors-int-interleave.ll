@@ -51,6 +51,7 @@ define <4 x i32> @interleave_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-LABEL: interleave_v2i64:
 ; V128:       # %bb.0:
+; V128-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; V128-NEXT:    vid.v v9
@@ -411,6 +412,7 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V128-NEXT:    slli a0, a0, 3
 ; V128-NEXT:    sub sp, sp, a0
 ; V128-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; V128-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; V128-NEXT:    vmv8r.v v24, v16
 ; V128-NEXT:    vmv8r.v v16, v8
 ; V128-NEXT:    vmv8r.v v8, v24

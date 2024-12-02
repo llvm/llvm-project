@@ -8,6 +8,7 @@
 define <8 x i32> @concat_2xv4i32(<4 x i32> %a, <4 x i32> %b) {
 ; VLA-LABEL: concat_2xv4i32:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLA-NEXT:    vmv1r.v v10, v9
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v10, 4
@@ -32,6 +33,7 @@ define <8 x i32> @concat_4xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x 
 ;
 ; VLS-LABEL: concat_4xv2i32:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLS-NEXT:    vmv1r.v v13, v10
 ; VLS-NEXT:    vmv1r.v v12, v8
 ; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -62,6 +64,7 @@ define <8 x i32> @concat_8xv1i32(<1 x i32> %a, <1 x i32> %b, <1 x i32> %c, <1 x 
 ;
 ; VLS-LABEL: concat_8xv1i32:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLS-NEXT:    vmv1r.v v17, v12
 ; VLS-NEXT:    vmv1r.v v16, v8
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -89,6 +92,7 @@ define <8 x i32> @concat_8xv1i32(<1 x i32> %a, <1 x i32> %b, <1 x i32> %c, <1 x 
 define <16 x i32> @concat_2xv8i32(<8 x i32> %a, <8 x i32> %b) {
 ; VLA-LABEL: concat_2xv8i32:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLA-NEXT:    vmv2r.v v12, v10
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; VLA-NEXT:    vslideup.vi v8, v12, 8
@@ -104,6 +108,7 @@ define <16 x i32> @concat_2xv8i32(<8 x i32> %a, <8 x i32> %b) {
 define <16 x i32> @concat_4xv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; VLA-LABEL: concat_4xv4i32:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLA-NEXT:    vmv1r.v v14, v11
 ; VLA-NEXT:    vmv1r.v v12, v10
 ; VLA-NEXT:    vmv1r.v v10, v9
@@ -140,6 +145,7 @@ define <16 x i32> @concat_8xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 ;
 ; VLS-LABEL: concat_8xv2i32:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLS-NEXT:    vmv1r.v v19, v14
 ; VLS-NEXT:    vmv1r.v v18, v12
 ; VLS-NEXT:    vmv1r.v v17, v10
@@ -164,6 +170,7 @@ define <16 x i32> @concat_8xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 define <32 x i32> @concat_2xv16i32(<16 x i32> %a, <16 x i32> %b) {
 ; VLA-LABEL: concat_2xv16i32:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLA-NEXT:    vmv4r.v v16, v12
 ; VLA-NEXT:    li a0, 32
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
@@ -180,6 +187,7 @@ define <32 x i32> @concat_2xv16i32(<16 x i32> %a, <16 x i32> %b) {
 define <32 x i32> @concat_4xv8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; VLA-LABEL: concat_4xv8i32:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLA-NEXT:    vmv2r.v v20, v14
 ; VLA-NEXT:    vmv2r.v v16, v12
 ; VLA-NEXT:    vmv2r.v v12, v10
@@ -203,6 +211,7 @@ define <32 x i32> @concat_4xv8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x
 define <32 x i32> @concat_8xv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, <4 x i32> %g, <4 x i32> %h) {
 ; VLA-LABEL: concat_8xv4i32:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; VLA-NEXT:    vmv1r.v v18, v15
 ; VLA-NEXT:    vmv1r.v v20, v14
 ; VLA-NEXT:    vmv1r.v v14, v13

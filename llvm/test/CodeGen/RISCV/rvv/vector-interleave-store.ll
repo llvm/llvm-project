@@ -9,6 +9,7 @@
 define void @vector_interleave_store_nxv32i1_nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_nxv32i1_nxv16i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma

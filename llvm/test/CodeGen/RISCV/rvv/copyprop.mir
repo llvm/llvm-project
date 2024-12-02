@@ -22,6 +22,7 @@
   ; CHECK-NEXT:    li a2, 128
   ; CHECK-NEXT:    bgeu a0, a2, .LBB0_2
   ; CHECK-NEXT:  .LBB0_4: # %entry
+  ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
   ; CHECK-NEXT:    vse64.v v8, (a1)
   ; CHECK-NEXT:    ret
   entry:

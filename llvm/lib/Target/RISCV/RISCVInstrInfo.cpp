@@ -421,6 +421,36 @@ void RISCVInstrInfo::copyPhysRegVector(
     auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), ActualDstReg);
     bool UseVMV_V_I = RISCV::getRVVMCOpcode(Opc) == RISCV::VMV_V_I;
     bool UseVMV = UseVMV_V_I || RISCV::getRVVMCOpcode(Opc) == RISCV::VMV_V_V;
+
+    // Address https://github.com/llvm/llvm-project/issues/114518
+    // Make sure each whole RVVReg move has valid vtype.
+    unsigned Opcode = MIB->getOpcode();
+    if (UseVMV || Opcode == RISCV::VMV1R_V || Opcode == RISCV::VMV2R_V ||
+        Opcode == RISCV::VMV4R_V || Opcode == RISCV::VMV8R_V) {
+
+      // TODO: Data-flow analysis for vtype status could help avoid the
+      // redundant one.
+      bool NeedVSETIVLI = true;
+
+      for (auto &CurrMI : MBB) {
+        unsigned CurrMIOpcode = CurrMI.getOpcode();
+        if (CurrMIOpcode == RISCV::PseudoVSETIVLI ||
+            CurrMIOpcode == RISCV::PseudoVSETVLI ||
+            CurrMIOpcode == RISCV::PseudoVSETVLIX0)
+          NeedVSETIVLI = false;
+        else if (CurrMI.isInlineAsm())
+          NeedVSETIVLI = true;
+        else if (NeedVSETIVLI && CurrMI.isIdenticalTo(*MIB)) {
+          BuildMI(MBB, &*MIB, MIB->getDebugLoc(), get(RISCV::PseudoVSETIVLI))
+              .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+              .addImm(0)
+              .addImm(RISCVVType::encodeVTYPE(RISCVII::VLMUL::LMUL_1, 32, false,
+                                              false));
+          break;
+        }
+      }
+    }
+
     if (UseVMV)
       MIB.addReg(ActualDstReg, RegState::Undef);
     if (UseVMV_V_I)

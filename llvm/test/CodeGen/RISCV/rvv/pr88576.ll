@@ -23,6 +23,7 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    addi a2, sp, 64
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -53,6 +54,7 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 define i8 @bar(<vscale x 128 x i1> %x, i64 %y) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0

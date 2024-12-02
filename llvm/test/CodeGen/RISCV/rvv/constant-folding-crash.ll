@@ -18,6 +18,7 @@
 define void @constant_folding_crash(ptr %v54, <4 x ptr> %lanes.a, <4 x ptr> %lanes.b, <4 x i1> %sel) {
 ; RV32-LABEL: constant_folding_crash:
 ; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; RV32-NEXT:    vmv1r.v v10, v0
 ; RV32-NEXT:    lw a0, 8(a0)
 ; RV32-NEXT:    andi a0, a0, 1
@@ -43,6 +44,7 @@ define void @constant_folding_crash(ptr %v54, <4 x ptr> %lanes.a, <4 x ptr> %lan
 ;
 ; RV64-LABEL: constant_folding_crash:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; RV64-NEXT:    vmv1r.v v12, v0
 ; RV64-NEXT:    ld a0, 8(a0)
 ; RV64-NEXT:    andi a0, a0, 1

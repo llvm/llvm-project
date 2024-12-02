@@ -22,6 +22,7 @@ define internal void @foo(<vscale x 1 x i16> %v15, <vscale x 1 x i16> %0, <vscal
 ; NOSUBREG-NEXT:  .LBB0_1: # %loopIR3.i.i
 ; NOSUBREG-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOSUBREG-NEXT:    vl1r.v v9, (zero)
+; NOSUBREG-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; NOSUBREG-NEXT:    vmv1r.v v13, v12
 ; NOSUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
 ; NOSUBREG-NEXT:    vrgatherei16.vv v13, v9, v10
@@ -42,6 +43,7 @@ define internal void @foo(<vscale x 1 x i16> %v15, <vscale x 1 x i16> %0, <vscal
 ; SUBREG-NEXT:  .LBB0_1: # %loopIR3.i.i
 ; SUBREG-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SUBREG-NEXT:    vl1r.v v9, (zero)
+; SUBREG-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; SUBREG-NEXT:    vmv1r.v v13, v12
 ; SUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
 ; SUBREG-NEXT:    vrgatherei16.vv v13, v9, v10

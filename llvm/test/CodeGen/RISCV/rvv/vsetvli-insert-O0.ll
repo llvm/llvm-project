@@ -18,6 +18,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
 define <2 x double> @fixed_length(<2 x double> %a, <2 x double> %b) nounwind {
 ; CHECK-LABEL: fixed_length:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    # kill: def $v11 killed $v10
 ; CHECK-NEXT:    # kill: def $v9 killed $v8
@@ -36,6 +37,7 @@ entry:
 define <vscale x 1 x double> @scalable(<vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: scalable:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
@@ -53,6 +55,7 @@ entry:
 define <vscale x 1 x double> @intrinsic_same_vlmax(<vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: intrinsic_same_vlmax:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    # implicit-def: $v9
@@ -81,6 +84,7 @@ entry:
 define <vscale x 1 x double> @intrinsic_same_avl_imm(<vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: intrinsic_same_avl_imm:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vsetivli a0, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    # implicit-def: $v9
@@ -108,6 +112,7 @@ entry:
 define <vscale x 1 x double> @intrinsic_same_avl_reg(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: intrinsic_same_avl_reg:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    # implicit-def: $v9
@@ -135,6 +140,7 @@ entry:
 define <vscale x 1 x double> @intrinsic_diff_avl_reg(i64 %avl, i64 %avl2, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: intrinsic_diff_avl_reg:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    # implicit-def: $v9

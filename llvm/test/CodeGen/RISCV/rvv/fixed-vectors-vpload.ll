@@ -394,6 +394,7 @@ declare <33 x double> @llvm.vp.load.v33f64.p0(ptr, <33 x i1>, i32)
 define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v33f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    mv a3, a2
@@ -428,6 +429,7 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:  .LBB32_6:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a1), v0.t

@@ -97,6 +97,7 @@ declare <32 x float> @llvm.vp.fptrunc.v32f64.v32f32(<32 x double>, <32 x i1>, i3
 define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v32f32_v32f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma

@@ -379,6 +379,7 @@ declare <256 x i8> @llvm.vp.usub.sat.v258i8(<256 x i8>, <256 x i8>, <256 x i1>, 
 define <256 x i8> @vssubu_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vssubu_vi_v258i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    addi a3, a1, -128
@@ -394,6 +395,7 @@ define <256 x i8> @vssubu_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:  .LBB32_2:
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0, v0.t
