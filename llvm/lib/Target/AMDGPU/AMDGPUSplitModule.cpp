@@ -1101,10 +1101,10 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       if (Entry.CostExcludingGraphEntryPoints > LargeClusterThreshold) {
         // Check if the amount of code in common makes it worth it.
         assert(SimilarDepsCost && Entry.CostExcludingGraphEntryPoints);
-        const double Ratio =
-            SimilarDepsCost / Entry.CostExcludingGraphEntryPoints;
+        const double Ratio = static_cast<double>(SimilarDepsCost) /
+                             Entry.CostExcludingGraphEntryPoints;
         assert(Ratio >= 0.0 && Ratio <= 1.0);
-        if (LargeFnOverlapForMerge > Ratio) {
+        if (Ratio > LargeFnOverlapForMerge) {
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.
