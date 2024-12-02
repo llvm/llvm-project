@@ -114,32 +114,31 @@ entry:
   ret <vscale x 4 x float> %0
 }
 
-define <vscale x 4 x float> @test_svcvtx_f32_f64_x_2(<vscale x 2 x i1> %pg, <vscale x 2 x double> %x) {
+define <vscale x 4 x float> @test_svcvtx_f32_f64_x_2(<vscale x 2 x i1> %pg, double %z0, <vscale x 2 x double> %x) {
 ; CHECK-LABEL: test_svcvtx_f32_f64_x_2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtx z0.s, p0/m, z0.d
+; CHECK-NEXT:    fcvtx z0.s, p0/m, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svcvtx_f32_f64_x_2:
 ; CHECK-2p2:       // %bb.0: // %entry
-; CHECK-2p2-NEXT:    fcvtx z0.s, p0/z, z0.d
+; CHECK-2p2-NEXT:    fcvtx z0.s, p0/z, z1.d
 ; CHECK-2p2-NEXT:    ret
 entry:
   %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float> undef, <vscale x 2 x i1> %pg, <vscale x 2 x double> %x)
   ret <vscale x 4 x float> %0
 }
 
-define <vscale x 4 x float> @test_svcvtx_f32_f64_z(<vscale x 2 x i1> %pg, <vscale x 2 x double> %x) {
+define <vscale x 4 x float> @test_svcvtx_f32_f64_z(<vscale x 2 x i1> %pg, double %z0, <vscale x 2 x double> %x) {
 ; CHECK-LABEL: test_svcvtx_f32_f64_z:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
-; CHECK-NEXT:    fcvtx z1.s, p0/m, z0.d
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    fcvtx z0.s, p0/m, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svcvtx_f32_f64_z:
 ; CHECK-2p2:       // %bb.0: // %entry
-; CHECK-2p2-NEXT:    fcvtx z0.s, p0/z, z0.d
+; CHECK-2p2-NEXT:    fcvtx z0.s, p0/z, z1.d
 ; CHECK-2p2-NEXT:    ret
 entry:
   %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float> zeroinitializer, <vscale x 2 x i1> %pg, <vscale x 2 x double> %x)
