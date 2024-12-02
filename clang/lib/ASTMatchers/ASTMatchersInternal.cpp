@@ -799,6 +799,7 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, ExportDecl> exportDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConstructorDecl>
     cxxConstructorDecl;
