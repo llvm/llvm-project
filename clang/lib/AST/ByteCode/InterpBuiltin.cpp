@@ -104,6 +104,8 @@ template <typename T>
 static void pushInteger(InterpState &S, T Val, QualType QT) {
   if constexpr (std::is_same_v<T, APInt>)
     pushInteger(S, APSInt(Val, !std::is_signed_v<T>), QT);
+  else if constexpr (std::is_same_v<T, APSInt>)
+    pushInteger(S, Val, QT);
   else
     pushInteger(S,
                 APSInt(APInt(sizeof(T) * 8, static_cast<uint64_t>(Val),
@@ -1726,11 +1728,13 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
 
       } else if (ID == Builtin::BI__builtin_reduce_and) {
         (void)T::bitAnd(Result, Elem, BitWidth, &Result);
+      } else if (ID == Builtin::BI__builtin_reduce_or) {
+        (void)T::bitOr(Result, Elem, BitWidth, &Result);
       } else {
         llvm_unreachable("Unhandled vector reduce builtin");
       }
     }
-    pushInteger(S, Result, Call->getType());
+    pushInteger(S, Result.toAPSInt(), Call->getType());
   });
 
   return true;
@@ -2210,6 +2214,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
   case Builtin::BI__builtin_reduce_and:
+  case Builtin::BI__builtin_reduce_or:
     if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
       return false;
     break;
