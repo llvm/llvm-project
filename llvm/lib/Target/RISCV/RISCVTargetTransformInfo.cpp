@@ -2375,6 +2375,7 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   case Intrinsic::vp_ssub_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::vp_usub_sat:
+  case Intrinsic::vp_select:
     return Operand == 1;
     // These intrinsics are commutative.
   case Intrinsic::vp_add:
