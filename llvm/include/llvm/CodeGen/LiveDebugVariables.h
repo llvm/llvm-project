@@ -30,13 +30,11 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class LiveIntervals;
 class VirtRegMap;
+class LDVImpl;
 
 class LiveDebugVariables {
 private:
-  struct Deleter {
-    void operator()(void *Ptr) const;
-  };
-  std::unique_ptr<void, Deleter> PImpl;
+  std::unique_ptr<LDVImpl> PImpl;
 
 public:
   LiveDebugVariables() = default;

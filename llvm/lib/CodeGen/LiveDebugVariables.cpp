@@ -277,8 +277,6 @@ using BlockSkipInstsMap =
 
 namespace {
 
-class LDVImpl;
-
 /// A user value is a part of a debug info user variable.
 ///
 /// A DBG_VALUE instruction notes that (a sub-register of) a virtual register
@@ -531,6 +529,10 @@ public:
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
 
+} // end anonymous namespace
+
+namespace llvm {
+
 /// Implementation of the LiveDebugVariables pass.
 class LDVImpl {
   LocMap::Allocator allocator;
@@ -673,7 +675,7 @@ public:
   void print(raw_ostream&);
 };
 
-} // end anonymous namespace
+} // namespace llvm
 
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
@@ -1325,13 +1327,9 @@ LiveDebugVariablesPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-void LiveDebugVariables::Deleter::operator()(void *Ptr) const {
-  delete static_cast<LDVImpl *>(Ptr);
-}
-
 void LiveDebugVariables::releaseMemory() {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl.get())->clear();
+    PImpl->clear();
 }
 
 bool LiveDebugVariables::invalidate(
@@ -1341,7 +1339,7 @@ bool LiveDebugVariables::invalidate(
   // Some architectures split the register allocation into multiple phases based
   // on register classes. This requires preserving analyses between the phases
   // by default.
-  return PAC.preservedWhenStateless();
+  return !PAC.preservedWhenStateless();
 }
 
 void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
@@ -1357,7 +1355,7 @@ void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
   // Have we been asked to track variable locations using instruction
   // referencing?
   bool InstrRef = MF.useDebugInstrRef();
-  static_cast<LDVImpl *>(PImpl.get())->runOnMachineFunction(MF, InstrRef);
+  PImpl->runOnMachineFunction(MF, InstrRef);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1540,7 +1538,7 @@ void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
 void LiveDebugVariables::
 splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl.get())->splitRegister(OldReg, NewRegs);
+    PImpl->splitRegister(OldReg, NewRegs);
 }
 
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
@@ -1992,7 +1990,7 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl.get())->emitDebugValues(VRM);
+    PImpl->emitDebugValues(VRM);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2001,5 +1999,5 @@ LLVM_DUMP_METHOD void LiveDebugVariables::dump() const { print(dbgs()); }
 
 void LiveDebugVariables::print(raw_ostream &OS) const {
   if (PImpl)
-    static_cast<LDVImpl *>(PImpl.get())->print(OS);
+    PImpl->print(OS);
 }
