@@ -706,6 +706,11 @@ bool ManualDWARFIndex::Encode(DataEncoder &encoder) const {
   return true;
 }
 
+bool ManualDWARFIndex::IsPartial() const {
+  // If we have units or type units to skip, then this index is partial.
+  return !m_units_to_avoid.empty() || !m_type_sigs_to_avoid.empty();
+}
+
 std::string ManualDWARFIndex::GetCacheKey() {
   std::string key;
   llvm::raw_string_ostream strm(key);
@@ -713,9 +718,26 @@ std::string ManualDWARFIndex::GetCacheKey() {
   // module can have one object file as the main executable and might have
   // another object file in a separate symbol file, or we might have a .dwo file
   // that claims its module is the main executable.
+
+  // This class can be used to index all of the DWARF, or part of the DWARF
+  // when there is a .debug_names index where some compile or type units were
+  // built without .debug_names. So we need to know when we have a full manual
+  // DWARF index or a partial manual DWARF index and save them to different
+  // cache files. Before this fix we might end up debugging a binary with
+  // .debug_names where some of the compile or type units weren't indexed, and
+  // find an issue with the .debug_names tables (bugs or being incomplete), and
+  // then we disable loading the .debug_names by setting a setting in LLDB by
+  // running "settings set plugin.symbol-file.dwarf.ignore-file-indexes 0" in
+  // another LLDB instance. The problem arose when there was an index cache from
+  // a previous run where .debug_names was enabled and it had saved a cache file
+  // that only covered the missing compile and type units from the .debug_names,
+  // and with the setting that disables the loading of the cache files we would
+  // load partial cache index cache. So we need to pick a unique cache suffix
+  // name that indicates if the cache is partial or full to avoid this problem.
+  llvm::StringRef dwarf_index_suffix(IsPartial() ? "partial-" : "full-");
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   strm << objfile->GetModule()->GetCacheKey() << "-dwarf-index-"
-      << llvm::format_hex(objfile->GetCacheHash(), 10);
+       << dwarf_index_suffix << llvm::format_hex(objfile->GetCacheHash(), 10);
   return key;
 }
 
