@@ -24,7 +24,6 @@ template <uint32_t NumLanes>
 rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
                                    rpc::Server::Port &Port) {
 
-  int Status = rpc::SUCCESS;
   switch (Port.get_opcode()) {
   case RPC_MALLOC: {
     Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
