@@ -8646,6 +8646,55 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   return ZExtBool;
 }
 
+bool shouldUseFormStridedPseudo(MachineInstr &MI) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  bool UseFormStrided = false;
+  unsigned NumOperands =
+      MI.getOpcode() == AArch64::FORM_STRIDED_TUPLE_X2_PSEUDO ? 2 : 4;
+
+  // The FORM_STRIDED_TUPLE pseudo should only be used if the input operands
+  // are copy nodes where the source register is in a StridedOrContiguous
+  // class. For example:
+  //   %3:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO ..
+  //   %4:zpr = COPY %3.zsub1:zpr2stridedorcontiguous
+  //   %5:zpr = COPY %3.zsub0:zpr2stridedorcontiguous
+  //   %6:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO ..
+  //   %7:zpr = COPY %6.zsub1:zpr2stridedorcontiguous
+  //   %8:zpr = COPY %6.zsub0:zpr2stridedorcontiguous
+  //   %9:zpr2mul2 = FORM_STRIDED_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
+
+  MCRegister SubReg = MCRegister::NoRegister;
+  for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
+    MachineOperand &MO = MI.getOperand(I);
+    assert(MO.isReg() && "Unexpected operand to FORM_STRIDED_TUPLE");
+
+    MachineOperand *Def = MRI.getOneDef(MO.getReg());
+    if (!Def || !Def->isReg() || !Def->getParent()->isCopy()) {
+      UseFormStrided = false;
+      break;
+    }
+
+    MachineOperand CpyOp = Def->getParent()->getOperand(1);
+    MachineOperand *Ld = MRI.getOneDef(CpyOp.getReg());
+    unsigned OpSubReg = CpyOp.getSubReg();
+    if (SubReg == MCRegister::NoRegister)
+      SubReg = OpSubReg;
+    if (!Ld || !Ld->isReg() || OpSubReg != SubReg) {
+      UseFormStrided = false;
+      break;
+    }
+
+    const TargetRegisterClass *RegClass =
+        NumOperands == 2 ? &AArch64::ZPR2StridedOrContiguousRegClass
+                         : &AArch64::ZPR4StridedOrContiguousRegClass;
+
+    if (MRI.getRegClass(Ld->getReg()) == RegClass)
+      UseFormStrided = true;
+  }
+
+  return UseFormStrided;
+}
+
 void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                           SDNode *Node) const {
   // Live-in physreg copies that are glued to SMSTART are applied as
@@ -8673,57 +8722,9 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
   if (MI.getOpcode() == AArch64::FORM_STRIDED_TUPLE_X2_PSEUDO ||
       MI.getOpcode() == AArch64::FORM_STRIDED_TUPLE_X4_PSEUDO) {
-    MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    bool UseFormStrided = false;
-    unsigned Size =
-        MI.getOpcode() == AArch64::FORM_STRIDED_TUPLE_X2_PSEUDO ? 2 : 4;
-
-    // The FORM_STRIDED_TUPLE pseudo should only be used if the input operands
-    // are copy nodes where the source register is in a StridedOrContiguous
-    // class. For example:
-    //   %3:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO ..
-    //   %4:zpr = COPY %3.zsub1:zpr2stridedorcontiguous
-    //   %5:zpr = COPY %3.zsub0:zpr2stridedorcontiguous
-    //   %6:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO ..
-    //   %7:zpr = COPY %6.zsub1:zpr2stridedorcontiguous
-    //   %8:zpr = COPY %6.zsub0:zpr2stridedorcontiguous
-    //   %9:zpr2mul2 = FORM_STRIDED_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
-
-    SmallVector<unsigned, 4> OpSubRegs;
-    for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
-      MachineOperand &MO = MI.getOperand(I);
-      if (!MO.isReg())
-        continue;
-
-      MachineOperand *Def = MRI.getOneDef(MO.getReg());
-      if (!Def || !Def->isReg() || !Def->getParent()->isCopy())
-        continue;
-
-      MachineInstr *Cpy = Def->getParent();
-      MachineOperand CpyOp = Cpy->getOperand(1);
-      if (!CpyOp.isReg())
-        continue;
-
-      MachineOperand *Ld = MRI.getOneDef(CpyOp.getReg());
-      OpSubRegs.push_back(CpyOp.getSubReg());
-      if (!Ld || !Ld->isReg())
-        continue;
-
-      const TargetRegisterClass *RegClass =
-          Size == 2 ? &AArch64::ZPR2StridedOrContiguousRegClass
-                    : &AArch64::ZPR4StridedOrContiguousRegClass;
-
-      if (MRI.getRegClass(Ld->getReg()) == RegClass)
-        UseFormStrided = true;
-    }
-
-    // Ensure the operands all use the same subreg index.
-    if (!std::equal(OpSubRegs.begin(), OpSubRegs.end(), OpSubRegs.begin()))
-      UseFormStrided = false;
-
     // If input values to the FORM_STRIDED_TUPLE pseudo aren't copies from a
     // StridedOrContiguous class, fall back on REG_SEQUENCE node.
-    if (!UseFormStrided) {
+    if (!shouldUseFormStridedPseudo(MI)) {
       static const unsigned SubRegs[] = {AArch64::zsub0, AArch64::zsub1,
                                          AArch64::zsub2, AArch64::zsub3};
 
