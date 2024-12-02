@@ -21,6 +21,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -36,7 +37,6 @@
 #include <cstddef>
 #include <optional>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -698,31 +698,14 @@ static bool isTokenAtLoc(const SourceManager &SM, const LangOptions &LangOpts,
   return !Invalid && Text == TokenText;
 }
 
-namespace {
-struct SourceLocationHash {
-  std::size_t operator()(const SourceLocation &Loc) const {
-    return Loc.getHashValue();
-  }
-};
-
-struct SourceLocationEqual {
-  bool operator()(const SourceLocation &LHS, const SourceLocation &RHS) const {
-    return LHS == RHS;
-  }
-};
-
-} // namespace
-
 static std::optional<SourceLocation> getExpansionLocOfMacroRecursive(
     StringRef MacroName, SourceLocation Loc, const ASTContext &Context,
-    std::unordered_set<SourceLocation, SourceLocationHash, SourceLocationEqual>
-        &CheckedLocations) {
+    llvm::DenseSet<SourceLocation> &CheckedLocations) {
   auto &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
   while (Loc.isMacroID()) {
-    if (CheckedLocations.count(Loc)) {
+    if (CheckedLocations.count(Loc))
       return std::nullopt;
-    }
     CheckedLocations.insert(Loc);
     SrcMgr::ExpansionInfo Expansion =
         SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
@@ -737,9 +720,8 @@ static std::optional<SourceLocation> getExpansionLocOfMacroRecursive(
       }
     }
     Loc = Expansion.getExpansionLocStart();
-    if (isTokenAtLoc(SM, LangOpts, MacroName, Loc)) {
+    if (isTokenAtLoc(SM, LangOpts, MacroName, Loc))
       return Loc;
-    }
   }
   return std::nullopt;
 }
@@ -747,8 +729,7 @@ static std::optional<SourceLocation> getExpansionLocOfMacroRecursive(
 std::optional<SourceLocation>
 getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
                        const ASTContext &Context) {
-  std::unordered_set<SourceLocation, SourceLocationHash, SourceLocationEqual>
-      CheckedLocations;
+  llvm::DenseSet<SourceLocation> CheckedLocations;
   return getExpansionLocOfMacroRecursive(MacroName, Loc, Context,
                                          CheckedLocations);
 }

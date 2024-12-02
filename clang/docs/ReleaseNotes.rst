@@ -890,6 +890,8 @@ AST Matchers
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
 
+- Improved the performance of the ``getExpansionLocOfMacro`` by tracking already processed macros during recursion.
+
 clang-format
 ------------
 
