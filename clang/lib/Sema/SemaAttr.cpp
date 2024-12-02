@@ -302,10 +302,9 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
     // Infer for the map's operator []:
     //    std::map<string_view, ...> m;
     //    m[ReturnString(..)] = ...; // !dangling references in m.
-    if (MD->getOverloadedOperator() != OO_Subscript ||
-        !MapLikeContainer.contains(MD->getParent()->getName()))
-      return;
-    Annotate(MD);
+    if (MD->getOverloadedOperator() == OO_Subscript &&
+        MapLikeContainer.contains(MD->getParent()->getName()))
+      Annotate(MD);
     return;
   }
   static const llvm::StringSet<> CapturingMethods{"insert", "push",
