@@ -1625,7 +1625,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
     if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
       VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
       VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
-      if (!VNI || !PrevVNI || VNI->id != PrevVNI->id)
+      if (!VNI || !PrevVNI || VNI != PrevVNI)
         return false;
     }
   }
