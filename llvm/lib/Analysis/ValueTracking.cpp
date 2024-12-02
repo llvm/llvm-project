@@ -4882,9 +4882,19 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 }
 
 static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
-                                        bool CondIsTrue,
+                                        unsigned Depth, bool CondIsTrue,
                                         const Instruction *CxtI,
                                         KnownFPClass &KnownFromContext) {
+  Value *A, *B;
+  if (Depth < MaxAnalysisRecursionDepth &&
+      (CondIsTrue ? match(Cond, m_LogicalAnd(m_Value(A), m_Value(B)))
+                  : match(Cond, m_LogicalOr(m_Value(A), m_Value(B))))) {
+    computeKnownFPClassFromCond(V, A, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    computeKnownFPClassFromCond(V, B, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    return;
+  }
   CmpInst::Predicate Pred;
   Value *LHS;
   uint64_t ClassVal = 0;
@@ -4925,13 +4935,13 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
-        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/true, Q.CxtI,
-                                    KnownFromContext);
+        computeKnownFPClassFromCond(V, Cond, /*Depth=*/0, /*CondIsTrue=*/true,
+                                    Q.CxtI, KnownFromContext);
 
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
       if (Q.DT->dominates(Edge1, Q.CxtI->getParent()))
-        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/false, Q.CxtI,
-                                    KnownFromContext);
+        computeKnownFPClassFromCond(V, Cond, /*Depth=*/0, /*CondIsTrue=*/false,
+                                    Q.CxtI, KnownFromContext);
     }
   }
 
@@ -4953,8 +4963,8 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
       continue;
 
-    computeKnownFPClassFromCond(V, I->getArgOperand(0), /*CondIsTrue=*/true,
-                                Q.CxtI, KnownFromContext);
+    computeKnownFPClassFromCond(V, I->getArgOperand(0), /*Depth=*/0,
+                                /*CondIsTrue=*/true, Q.CxtI, KnownFromContext);
   }
 
   return KnownFromContext;
@@ -10117,7 +10127,7 @@ void llvm::findValuesAffectedByCondition(
 
       if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
         AddAffected(X);
-    } else if (match(Cond, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
+    } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
 
       // fcmp fneg(x), y
