@@ -1534,13 +1534,6 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
              getRISCVInstructionCost(Opcodes, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_EQ, CostKind);
-    } else if (ISD == ISD::XOR) {
-      // Example sequences:
-      //   vsetvli a0, zero, e8, mf8, ta, ma
-      //   vcpop.m a0, v0
-      //   andi a0, a0, 1
-      Opcodes = {RISCV::VCPOP_M};
-      return LT.first + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
     } else {
       // Example sequences:
       //   vsetvli a0, zero, e8, mf8, ta, ma
