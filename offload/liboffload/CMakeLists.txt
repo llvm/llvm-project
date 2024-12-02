@@ -22,6 +22,11 @@ target_include_directories(LLVMOffload PUBLIC
 target_compile_options(LLVMOffload PRIVATE ${offload_compile_flags})
 target_link_options(LLVMOffload PRIVATE ${offload_link_flags})
 
+target_compile_definitions(LLVMOffload PRIVATE
+  TARGET_NAME="Liboffload"
+  DEBUG_PREFIX="Liboffload"
+)
+
 set_target_properties(LLVMOffload PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
                       INSTALL_RPATH "$ORIGIN"
