@@ -831,7 +831,7 @@ def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "CPSDR(d|s)(d|s)$")>;
 // FP: Load instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat2LSU, VecXsPm, LSU, NormalGr], (instregex "LE(Y)?$")>;
+def : InstRW<[WLat2LSU, VecXsPm, LSU, NormalGr], (instregex "L(E16|E)(Y)?$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LD(Y|E32)?$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LX$")>;
 
@@ -839,7 +839,7 @@ def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LX$")>;
 // FP: Store instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "ST(E|D)(Y)?$")>;
+def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "ST(E16|E|D)(Y)?$")>;
 def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "STX$")>;
 
 //===----------------------------------------------------------------------===//

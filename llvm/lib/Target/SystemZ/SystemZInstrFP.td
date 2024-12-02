@@ -134,6 +134,9 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCImm, 15>;
 //===----------------------------------------------------------------------===//
 
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+  let isCodeGenOnly = 1 in
+      // Reload f16 from 4-byte spill slot.
+      defm LE16 : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP16, 4>;
   defm LE : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP32, 4>;
   defm LD : UnaryRXPair<"ld", 0x68, 0xED65, z_load, FP64, 8>;
 
@@ -154,6 +157,9 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
 //===----------------------------------------------------------------------===//
 
 let SimpleBDXStore = 1, mayStore = 1 in {
+  let isCodeGenOnly = 1 in
+      // Spill f16 to 4-byte spill slot.
+      defm STE16 : StoreRXPair<"ste", 0x70, 0xED66, store, FP16, 4>;
   defm STE : StoreRXPair<"ste", 0x70, 0xED66, store, FP32, 4>;
   defm STD : StoreRXPair<"std", 0x60, 0xED67, store, FP64, 8>;
 
