@@ -10265,7 +10265,7 @@ def warn_depr_array_comparison : Warning<
   InGroup<DeprecatedArrayCompare>;
 
 def warn_array_comparison : Warning<
-  "comparison between two arrays; "
+  "comparison between two arrays compare their addresses and will be deprecated in c++20; "
   "to compare array addresses, use unary '+' to decay operands to pointers">;
 
 def warn_stringcompare : Warning<
