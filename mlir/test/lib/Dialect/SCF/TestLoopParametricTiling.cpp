@@ -40,6 +40,9 @@ public:
   }
 
   void runOnOperation() override {
+    // If no outer loop iteration is given, ignore the pass.
+    if (sizes.empty())
+      return;
     getOperation()->walk([this](scf::ForOp op) {
       // Ignore nested loops.
       if (op->getParentRegion()->getParentOfType<scf::ForOp>())
