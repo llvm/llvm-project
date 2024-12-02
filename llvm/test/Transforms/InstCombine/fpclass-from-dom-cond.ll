@@ -46,6 +46,32 @@ if.end:
   ret i1 %cmp.i
 }
 
+define i1 @test2_or(double %x, i1 %cond) {
+; CHECK-LABEL: define i1 @test2_or(
+; CHECK-SAME: double [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[X]], 0x3EB0C6F7A0000000
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[COND]]
+; CHECK-NEXT:    br i1 [[OR]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.end:
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP_I]]
+;
+entry:
+  %cmp = fcmp olt double %x, 0x3EB0C6F7A0000000
+  %or = or i1 %cmp, %cond
+  br i1 %or, label %if.then, label %if.end
+
+if.then:
+  ret i1 false
+
+if.end:
+  %cmp.i = fcmp oeq double %x, 0.000000e+00
+  ret i1 %cmp.i
+}
+
 define i1 @test3(float %x) {
 ; CHECK-LABEL: define i1 @test3(
 ; CHECK-SAME: float [[X:%.*]]) {
