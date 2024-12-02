@@ -629,6 +629,9 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
 
+- A new off-by-default warning ``-Wms-bitfield-compatibility`` has been added to alert to cases where bit-field
+  packing may differ under the MS struct ABI (#GH117428).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
