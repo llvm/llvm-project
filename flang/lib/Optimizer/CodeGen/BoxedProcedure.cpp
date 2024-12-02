@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -374,6 +375,15 @@ public:
               op->getResult(i.index()).setType(toTy);
             }
           rewriter.finalizeOpModification(op);
+        } else if (auto privateOp =
+                       mlir::dyn_cast<mlir::omp::PrivateClauseOp>(op)) {
+          mlir::Type dataTy = privateOp.getType();
+          if (typeConverter.needsConversion(dataTy)) {
+            auto toTy = typeConverter.convertType(dataTy);
+            rewriter.startOpModification(privateOp);
+            privateOp.setType(toTy);
+            rewriter.finalizeOpModification(privateOp);
+          }
         }
         // Ensure block arguments are updated if needed.
         if (opIsValid && op->getNumRegions() != 0) {
