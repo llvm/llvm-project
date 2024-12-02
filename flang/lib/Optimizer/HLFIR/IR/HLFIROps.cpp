@@ -333,6 +333,25 @@ static void printDesignatorComplexPart(mlir::OpAsmPrinter &p,
       p << "real";
   }
 }
+template <typename Op>
+static llvm::LogicalResult verifyTypeparams(Op &op, mlir::Type elementType,
+                                            unsigned numLenParam) {
+  if (mlir::isa<fir::CharacterType>(elementType)) {
+    if (numLenParam != 1)
+      return op.emitOpError("must be provided one length parameter when the "
+                            "result is a character");
+  } else if (fir::isRecordWithTypeParameters(elementType)) {
+    if (numLenParam !=
+        mlir::cast<fir::RecordType>(elementType).getNumLenParams())
+      return op.emitOpError("must be provided the same number of length "
+                            "parameters as in the result derived type");
+  } else if (numLenParam != 0) {
+    return op.emitOpError(
+        "must not be provided length parameters if the result "
+        "type does not have length parameters");
+  }
+  return mlir::success();
+}
 
 llvm::LogicalResult hlfir::DesignateOp::verify() {
   mlir::Type memrefType = getMemref().getType();
@@ -462,20 +481,10 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
         return emitOpError("shape must be a fir.shape or fir.shapeshift with "
                            "the rank of the result");
     }
-    auto numLenParam = getTypeparams().size();
-    if (mlir::isa<fir::CharacterType>(outputElementType)) {
-      if (numLenParam != 1)
-        return emitOpError("must be provided one length parameter when the "
-                           "result is a character");
-    } else if (fir::isRecordWithTypeParameters(outputElementType)) {
-      if (numLenParam !=
-          mlir::cast<fir::RecordType>(outputElementType).getNumLenParams())
-        return emitOpError("must be provided the same number of length "
-                           "parameters as in the result derived type");
-    } else if (numLenParam != 0) {
-      return emitOpError("must not be provided length parameters if the result "
-                         "type does not have length parameters");
-    }
+    if (auto res =
+            verifyTypeparams(*this, outputElementType, getTypeparams().size());
+        failed(res))
+      return res;
   }
   return mlir::success();
 }
@@ -1986,6 +1995,45 @@ hlfir::GetLengthOp::canonicalize(GetLengthOp getLength,
   auto cstLen = rewriter.create<mlir::arith::ConstantOp>(
       loc, indexTy, mlir::IntegerAttr::get(indexTy, charTy.getLen()));
   rewriter.replaceOp(getLength, cstLen);
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// EvaluateInMemoryOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::EvaluateInMemoryOp::build(mlir::OpBuilder &builder,
+                                      mlir::OperationState &odsState,
+                                      mlir::Type resultType, mlir::Value shape,
+                                      mlir::ValueRange typeparams) {
+  odsState.addTypes(resultType);
+  if (shape)
+    odsState.addOperands(shape);
+  odsState.addOperands(typeparams);
+  odsState.addAttribute(
+      getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr(
+          {shape ? 1 : 0, static_cast<int32_t>(typeparams.size())}));
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  mlir::Type memType = fir::ReferenceType::get(
+      hlfir::getFortranElementOrSequenceType(resultType));
+  bodyRegion->front().addArgument(memType, odsState.location);
+  EvaluateInMemoryOp::ensureTerminator(*bodyRegion, builder, odsState.location);
+}
+
+llvm::LogicalResult hlfir::EvaluateInMemoryOp::verify() {
+  unsigned shapeRank = 0;
+  if (mlir::Value shape = getShape())
+    if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(shape.getType()))
+      shapeRank = shapeTy.getRank();
+  auto exprType = mlir::cast<hlfir::ExprType>(getResult().getType());
+  if (shapeRank != exprType.getRank())
+    return emitOpError("`shape` rank must match the result rank");
+  mlir::Type elementType = exprType.getElementType();
+  if (auto res = verifyTypeparams(*this, elementType, getTypeparams().size());
+      failed(res))
+    return res;
   return mlir::success();
 }
 
