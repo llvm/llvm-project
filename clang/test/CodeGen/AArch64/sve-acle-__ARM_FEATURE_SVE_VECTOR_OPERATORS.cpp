@@ -52,7 +52,7 @@ void test02() {
 // CHECK-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS, 32)]] x i32> @llvm.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
 // CHECK-NEXT:   [[Y:%.*]] = tail call <[[#div(VBITS, 32)]] x i32> @llvm.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE1:%.*]], i64 0)
 // CHECK-NEXT:   [[ADD:%.*]] = add <[[#div(VBITS, 32)]] x i32> [[Y]], [[X]]
-// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v[[#div(VBITS, 32)]]i32(<vscale x 4 x i32> undef, <[[#div(VBITS, 32)]] x i32> [[ADD]], i64 0)
+// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v[[#div(VBITS, 32)]]i32(<vscale x 4 x i32> poison, <[[#div(VBITS, 32)]] x i32> [[ADD]], i64 0)
 // CHECK-NEXT:   ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 typedef svint32_t vec __attribute__((arm_sve_vector_bits(N)));
 auto f(vec x, vec y) { return x + y; } // Returns a vec.

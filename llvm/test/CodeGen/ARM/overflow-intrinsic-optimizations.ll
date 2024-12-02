@@ -164,9 +164,9 @@ cont2:
 
 define void @extern_loop(i32 %n) local_unnamed_addr #0 {
 ; Do not replace the compare around the clobbering call.
-; CHECK: bl external_fn
-; CHECK-NEXT: adds
-; CHECK-NEXT: bvs
+; CHECK: add {{r[0-9]+}}, {{r[0-9]+}}, #1
+; CHECK-NEXT: bl external_fn
+; CHECK: cmp
 entry:
   %0 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %n, i32 1)
   %1 = extractvalue { i32, i1 } %0, 1
