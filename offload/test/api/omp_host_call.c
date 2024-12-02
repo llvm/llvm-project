@@ -45,7 +45,7 @@ int main() {
 #pragma omp target update to(fn_ptr)
 
   int failed = 0;
-#pragma omp target teams num_teams(4) map(from : failed)
+#pragma omp target teams num_teams(4) map(tofrom : failed)
 #pragma omp parallel num_threads(2)
   {
     args_t args = {omp_get_thread_num(), omp_get_team_num()};
