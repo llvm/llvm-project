@@ -721,24 +721,12 @@ define <8 x i32> @shuffle_v8i32_2(<8 x i32> %x, <8 x i32> %y) {
 define <8 x i8> @shuffle_v64i8_v8i8(<64 x i8> %wide.vec) {
 ; CHECK-LABEL: shuffle_v64i8_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 4112
-; CHECK-NEXT:    li a1, 240
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    addi a0, a0, 257
-; CHECK-NEXT:    vmv.s.x v14, a0
-; CHECK-NEXT:    lui a0, 98561
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vcompress.vm v12, v8, v14
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a1
-; CHECK-NEXT:    addi a0, a0, -2048
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
-; CHECK-NEXT:    vrgather.vv v12, v8, v10, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v12
+; CHECK-NEXT:    vnsrl.wi v12, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %s = shufflevector <64 x i8> %wide.vec, <64 x i8> poison, <8 x i32> <i32 0, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56>
   ret <8 x i8> %s
