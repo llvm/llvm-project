@@ -47,6 +47,7 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -358,6 +359,31 @@ INTERCEPTOR(int, dup2, int oldfd, int newfd) {
   return REAL(dup2)(oldfd, newfd);
 }
 
+INTERCEPTOR(int, chmod, const char *path, mode_t mode) {
+  __rtsan_notify_intercepted_call("chmod");
+  return REAL(chmod)(path, mode);
+}
+
+INTERCEPTOR(int, fchmod, int fd, mode_t mode) {
+  __rtsan_notify_intercepted_call("fchmod");
+  return REAL(fchmod)(fd, mode);
+}
+
+INTERCEPTOR(int, mkdir, const char *path, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkdir");
+  return REAL(mkdir)(path, mode);
+}
+
+INTERCEPTOR(int, rmdir, const char *path) {
+  __rtsan_notify_intercepted_call("rmdir");
+  return REAL(rmdir)(path);
+}
+
+INTERCEPTOR(mode_t, umask, mode_t cmask) {
+  __rtsan_notify_intercepted_call("umask");
+  return REAL(umask)(cmask);
+}
+
 // Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
@@ -368,17 +394,32 @@ INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
   return REAL(OSSpinLockLock)(lock);
 }
 #pragma clang diagnostic pop
+#define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK INTERCEPT_FUNCTION(OSSpinLockLock)
+#else
+#define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK
+#endif // SANITIZER_APPLE
 
+#if SANITIZER_APPLE
 INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   __rtsan_notify_intercepted_call("os_unfair_lock_lock");
   return REAL(os_unfair_lock_lock)(lock);
 }
-#elif SANITIZER_LINUX
+#define RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK                              \
+  INTERCEPT_FUNCTION(os_unfair_lock_lock)
+#else
+#define RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK
+#endif // SANITIZER_APPLE
+
+#if SANITIZER_LINUX
 INTERCEPTOR(int, pthread_spin_lock, pthread_spinlock_t *spinlock) {
   __rtsan_notify_intercepted_call("pthread_spin_lock");
   return REAL(pthread_spin_lock)(spinlock);
 }
-#endif
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_SPIN_LOCK                                \
+  INTERCEPT_FUNCTION(pthread_spin_lock)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_SPIN_LOCK
+#endif // SANITIZER_LINUX
 
 INTERCEPTOR(int, pthread_create, pthread_t *thread, const pthread_attr_t *attr,
             void *(*start_routine)(void *), void *arg) {
@@ -539,6 +580,9 @@ INTERCEPTOR(void *, memalign, size_t alignment, size_t size) {
   __rtsan_notify_intercepted_call("memalign");
   return REAL(memalign)(alignment, size);
 }
+#define RTSAN_MAYBE_INTERCEPT_MEMALIGN INTERCEPT_FUNCTION(memalign)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MEMALIGN
 #endif
 
 #if SANITIZER_INTERCEPT_PVALLOC
@@ -546,6 +590,9 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
   __rtsan_notify_intercepted_call("pvalloc");
   return REAL(pvalloc)(size);
 }
+#define RTSAN_MAYBE_INTERCEPT_PVALLOC INTERCEPT_FUNCTION(pvalloc)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PVALLOC
 #endif
 
 INTERCEPTOR(void *, mmap, void *addr, size_t length, int prot, int flags,
@@ -783,12 +830,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(munmap);
   INTERCEPT_FUNCTION(shm_open);
   INTERCEPT_FUNCTION(shm_unlink);
-#if SANITIZER_INTERCEPT_MEMALIGN
-  INTERCEPT_FUNCTION(memalign);
-#endif
-#if SANITIZER_INTERCEPT_PVALLOC
-  INTERCEPT_FUNCTION(pvalloc);
-#endif
+  RTSAN_MAYBE_INTERCEPT_MEMALIGN;
+  RTSAN_MAYBE_INTERCEPT_PVALLOC;
 
   INTERCEPT_FUNCTION(open);
   RTSAN_MAYBE_INTERCEPT_OPEN64;
@@ -818,14 +861,16 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
   INTERCEPT_FUNCTION(dup2);
+  INTERCEPT_FUNCTION(chmod);
+  INTERCEPT_FUNCTION(fchmod);
+  INTERCEPT_FUNCTION(mkdir);
+  INTERCEPT_FUNCTION(rmdir);
+  INTERCEPT_FUNCTION(umask);
   INTERCEPT_FUNCTION(ioctl);
 
-#if SANITIZER_APPLE
-  INTERCEPT_FUNCTION(OSSpinLockLock);
-  INTERCEPT_FUNCTION(os_unfair_lock_lock);
-#elif SANITIZER_LINUX
-  INTERCEPT_FUNCTION(pthread_spin_lock);
-#endif
+  RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK;
+  RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK;
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_SPIN_LOCK;
 
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_mutex_lock);

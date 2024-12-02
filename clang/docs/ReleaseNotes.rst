@@ -436,10 +436,10 @@ Modified Compiler Flags
   to utilize these vector libraries. The behavior for all other vector function
   libraries remains unchanged.
 
-- The ``-Wnontrivial-memaccess`` warning has been updated to also warn about
+- The ``-Wnontrivial-memcall`` warning has been added to warn about
   passing non-trivially-copyable destrination parameter to ``memcpy``,
   ``memset`` and similar functions for which it is a documented undefined
-  behavior.
+  behavior. It is implied by ``-Wnontrivial-memaccess``
 
 Removed Compiler Flags
 -------------------------
@@ -472,6 +472,11 @@ Attribute Changes in Clang
 
 - The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
   that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
+- The attribute ``[[clang::no_specializations]]`` has been added to warn
+  users that a specific template shouldn't be specialized. This is useful for
+  e.g. standard library type traits, where adding a specialization results in
+  undefined behaviour.
 
 - ``[[clang::lifetimebound]]`` is now explicitly disallowed on explicit object member functions
   where they were previously silently ignored.
@@ -622,6 +627,8 @@ Improvements to Clang's diagnostics
 - Clang now supports using alias templates in deduction guides, aligning with the C++ standard,
   which treats alias templates as synonyms for their underlying types (#GH54909).
 
+- Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -755,6 +762,7 @@ Bug Fixes to C++ Support
   missing placeholder return type. (#GH78694)
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
+- Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -766,6 +774,7 @@ Bug Fixes to AST Handling
   and ``relatedalso`` comment commands.
 - Clang now uses the location of the begin of the member expression for ``CallExpr``
   involving deduced ``this``. (#GH116928)
+- Fixed printout of AST that uses pack indexing expression. (#GH116486)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -956,6 +965,8 @@ AST Matchers
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
 
+- Add ``exportDecl`` matcher to match export declaration.
+
 clang-format
 ------------
 
@@ -1007,6 +1018,10 @@ Improvements
 Moved checkers
 ^^^^^^^^^^^^^^
 
+- The checker ``alpha.core.IdenticalExpr`` was deleted because it was
+  duplicated in the clang-tidy checkers ``misc-redundant-expression`` and
+  ``bugprone-branch-clone``.
+
 - The checker ``alpha.security.MallocOverflow`` was deleted because it was
   badly implemented and its agressive logic produced too many false positives.
   To detect too large arguments passed to malloc, consider using the checker
@@ -1017,6 +1032,16 @@ Moved checkers
   checker named ``bugprone-nondeterministic-pointer-iteration-order``. The
   original checkers were implemented only using AST matching and make more
   sense as a single clang-tidy check.
+
+- The checker ``alpha.unix.Chroot`` was modernized, improved and moved to
+  ``unix.Chroot``. Testing was done on open source projects that use chroot(),
+  and false issues addressed in the improvements based on real use cases. Open
+  source projects used for testing include nsjail, lxroot, dive and ruri.
+  This checker conforms to SEI Cert C recommendation `POS05-C. Limit access to
+  files by creating a jail
+  <https://wiki.sei.cmu.edu/confluence/display/c/POS05-C.+Limit+access+to+files+by+creating+a+jail>`_.
+  Fixes (#GH34697).
+  (#GH117791) [Documentation](https://clang.llvm.org/docs/analyzer/checkers.html#unix-chroot-c).
 
 .. _release-notes-sanitizers:
 
