@@ -225,8 +225,6 @@ entry:
   ret void
 }
 
-;declare void @external_func()
-
 define void @large_func() #0 {
 entry:
   call void @callee()
