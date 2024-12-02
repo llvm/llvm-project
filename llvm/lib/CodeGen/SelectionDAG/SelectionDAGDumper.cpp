@@ -570,8 +570,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
 
-  case ISD::PARTIAL_REDUCE_ADD:
-    return "partial_reduce_add";
+  case ISD::PARTIAL_REDUCE_UADD:
+    return "partial_reduce_uadd";
+  case ISD::PARTIAL_REDUCE_SADD:
+    return "partial_reduce_sadd";
+
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
   case ISD::SDID:                                                              \

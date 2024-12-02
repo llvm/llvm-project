@@ -1451,11 +1451,12 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
-  // This corresponds to the `llvm.experimental.vector.partial.reduce.add`
+  // These correspond to the `llvm.experimental.vector.partial.reduce.add`
   // intrinsic
   // Operands: Accumulator, Input
   // Outputs: Output
-  PARTIAL_REDUCE_ADD,
+  PARTIAL_REDUCE_SADD,
+  PARTIAL_REDUCE_UADD,
 
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
