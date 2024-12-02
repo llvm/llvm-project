@@ -6514,6 +6514,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
       return false;
     if (!this->emitGetPtrLocal(TempOffset, E))
       return false;
+  } else {
+    return false;
   }
 
   if (!ToT || ToT == PT_Ptr) {
