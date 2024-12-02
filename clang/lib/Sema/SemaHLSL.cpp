@@ -1933,9 +1933,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                             SemaRef.getASTContext().UnsignedIntTy))
       return true;
 
-    auto *ResourceTy = TheCall->getArg(0)
-                           ->getType()
-                           ->castAs<HLSLAttributedResourceType>();
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ContainedTy = ResourceTy->getContainedType();
     // TODO: Map to an hlsl_device address space.
     TheCall->setType(getASTContext().getPointerType(ContainedTy));
