@@ -59,7 +59,6 @@ static_library("Checkers") {
     "GCDAntipatternChecker.cpp",
     "GTestChecker.cpp",
     "GenericTaintChecker.cpp",
-    "IdenticalExprChecker.cpp",
     "InnerPointerChecker.cpp",
     "InvalidatedIteratorChecker.cpp",
     "Iterator.cpp",
@@ -140,11 +139,11 @@ static_library("Checkers") {
     "VirtualCallChecker.cpp",
     "WebKit/ASTUtils.cpp",
     "WebKit/PtrTypesSemantics.cpp",
+    "WebKit/RawPtrRefCallArgsChecker.cpp",
+    "WebKit/RawPtrRefLocalVarsChecker.cpp",
     "WebKit/RawPtrRefMemberChecker.cpp",
     "WebKit/RefCntblBaseVirtualDtorChecker.cpp",
-    "WebKit/RawPtrRefCallArgsChecker.cpp",
     "WebKit/UncountedLambdaCapturesChecker.cpp",
-    "WebKit/RawPtrRefLocalVarsChecker.cpp",
     "cert/InvalidPtrChecker.cpp",
   ]
 }

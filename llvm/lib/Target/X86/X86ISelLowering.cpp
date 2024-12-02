@@ -26265,6 +26265,9 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       }
       if (!NewOp)
         NewOp = DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2, Src3);
+      if (IntrData->Opc0 == X86ISD::VFMADDCSH ||
+          IntrData->Opc0 == X86ISD::VFCMADDCSH)
+        return getScalarMaskingNode(NewOp, Mask, PassThru, Subtarget, DAG);
       return getVectorMaskingNode(NewOp, Mask, PassThru, Subtarget, DAG);
     }
     case IFMA_OP:
@@ -28412,6 +28415,43 @@ SDValue X86TargetLowering::LowerRESET_FPENV(SDValue Op,
   return createSetFPEnvNodes(Env, Chain, DL, MVT::i32, MMO, DAG, Subtarget);
 }
 
+// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
+uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
+  assert((Amt < 8) && "Shift/Rotation amount out of range");
+  switch (Opcode) {
+  case ISD::BITREVERSE:
+    return 0x8040201008040201ULL;
+  case ISD::SHL:
+    return ((0x0102040810204080ULL >> (Amt)) &
+            (0x0101010101010101ULL * (0xFF >> (Amt))));
+  case ISD::SRL:
+    return ((0x0102040810204080ULL << (Amt)) &
+            (0x0101010101010101ULL * ((0xFF << (Amt)) & 0xFF)));
+  case ISD::SRA:
+    return (getGFNICtrlImm(ISD::SRL, Amt) |
+            (0x8080808080808080ULL >> (64 - (8 * Amt))));
+  case ISD::ROTL:
+    return getGFNICtrlImm(ISD::SRL, 8 - Amt) | getGFNICtrlImm(ISD::SHL, Amt);
+  case ISD::ROTR:
+    return getGFNICtrlImm(ISD::SHL, 8 - Amt) | getGFNICtrlImm(ISD::SRL, Amt);
+  }
+  llvm_unreachable("Unsupported GFNI opcode");
+}
+
+// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
+SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
+                        MVT VT, unsigned Amt = 0) {
+  assert(VT.getVectorElementType() == MVT::i8 &&
+         (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
+  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
+  SmallVector<SDValue> MaskBits;
+  for (unsigned I = 0, E = VT.getSizeInBits(); I != E; I += 8) {
+    uint64_t Bits = (Imm >> (I % 64)) & 255;
+    MaskBits.push_back(DAG.getConstant(Bits, DL, MVT::i8));
+  }
+  return DAG.getBuildVector(VT, DL, MaskBits);
+}
+
 /// Lower a vector CTLZ using native supported vector CTLZ instruction.
 //
 // i8/i16 vector implemented using dword LZCNT vector instruction
@@ -29595,43 +29635,6 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
   std::tie(Result, Chain) =
       makeLibCall(DAG, LC, VT, StackPtr, CallOptions, dl, Chain);
   return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
-}
-
-// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
-uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
-  assert((Amt < 8) && "Shift/Rotation amount out of range");
-  switch (Opcode) {
-  case ISD::BITREVERSE:
-    return 0x8040201008040201ULL;
-  case ISD::SHL:
-    return ((0x0102040810204080ULL >> (Amt)) &
-            (0x0101010101010101ULL * (0xFF >> (Amt))));
-  case ISD::SRL:
-    return ((0x0102040810204080ULL << (Amt)) &
-            (0x0101010101010101ULL * ((0xFF << (Amt)) & 0xFF)));
-  case ISD::SRA:
-    return (getGFNICtrlImm(ISD::SRL, Amt) |
-            (0x8080808080808080ULL >> (64 - (8 * Amt))));
-  case ISD::ROTL:
-    return getGFNICtrlImm(ISD::SRL, 8 - Amt) | getGFNICtrlImm(ISD::SHL, Amt);
-  case ISD::ROTR:
-    return getGFNICtrlImm(ISD::SHL, 8 - Amt) | getGFNICtrlImm(ISD::SRL, Amt);
-  }
-  llvm_unreachable("Unsupported GFNI opcode");
-}
-
-// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
-SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL, MVT VT,
-                        unsigned Amt = 0) {
-  assert(VT.getVectorElementType() == MVT::i8 &&
-         (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
-  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
-  SmallVector<SDValue> MaskBits;
-  for (unsigned I = 0, E = VT.getSizeInBits(); I != E; I += 8) {
-    uint64_t Bits = (Imm >> (I % 64)) & 255;
-    MaskBits.push_back(DAG.getConstant(Bits, DL, MVT::i8));
-  }
-  return DAG.getBuildVector(VT, DL, MaskBits);
 }
 
 // Return true if the required (according to Opcode) shift-imm form is natively
@@ -41401,6 +41404,7 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         N->isOnlyUserOf(N.getOperand(0).getNode())) {
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       unsigned SrcOpcode = N0.getOpcode();
+      EVT OpVT = N0.getValueType();
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
@@ -41418,12 +41422,22 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00);
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01);
           }
-          EVT OpVT = N0.getValueType();
           return DAG.getBitcast(ShuffleVT,
                                 DAG.getNode(SrcOpcode, DL, OpVT,
                                             DAG.getBitcast(OpVT, LHS),
                                             DAG.getBitcast(OpVT, RHS)));
         }
+      }
+      if (SrcOpcode == ISD::SINT_TO_FP && IsSafeToMoveShuffle(N0, SrcOpcode) &&
+          OpVT.getScalarSizeInBits() ==
+              N0.getOperand(0).getScalarValueSizeInBits()) {
+        SDValue Op00 = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+        SDValue Res =
+            N.getNumOperands() == 2
+                ? DAG.getNode(Opc, DL, ShuffleVT, Op00, N.getOperand(1))
+                : DAG.getNode(Opc, DL, ShuffleVT, Op00);
+        Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
+        return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res));
       }
     }
     break;
@@ -41499,6 +41513,21 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         return DAG.getBitcast(
             ShuffleVT,
             DAG.getNode(SrcOpcode, DL, OpVT, DAG.getBitcast(OpVT, Res)));
+      }
+      // TODO: We can generalize this for other shuffles/conversions.
+      if (Opc == X86ISD::UNPCKL && SrcOpcode == X86ISD::CVTPH2PS &&
+          N1.getOpcode() == SrcOpcode &&
+          N0.getValueType() == N1.getValueType() &&
+          N0.getOperand(0).getValueType() == N1.getOperand(0).getValueType() &&
+          ShuffleVT.getScalarSizeInBits() == N0.getScalarValueSizeInBits() &&
+          IsSafeToMoveShuffle(N0, SrcOpcode) &&
+          IsSafeToMoveShuffle(N1, SrcOpcode)) {
+        EVT OpSrcVT = N0.getOperand(0).getValueType();
+        EVT OpDstVT = N0.getValueType();
+        SDValue Res =
+            DAG.getNode(Opc, DL, OpSrcVT, N0.getOperand(0), N1.getOperand(0));
+        return DAG.getBitcast(ShuffleVT,
+                              DAG.getNode(SrcOpcode, DL, OpDstVT, Res));
       }
     }
     break;
@@ -45842,7 +45871,8 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
 /// Extracting a scalar FP value from vector element 0 is free, so extract each
 /// operand first, then perform the math as a scalar op.
 static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
-                                 const X86Subtarget &Subtarget) {
+                                 const X86Subtarget &Subtarget,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
   assert(ExtElt->getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Expected extract");
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
@@ -45877,13 +45907,13 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
   // Vector FP selects don't fit the pattern of FP math ops (because the
   // condition has a different type and we have to change the opcode), so deal
   // with those here.
-  // FIXME: This is restricted to pre type legalization by ensuring the setcc
-  // has i1 elements. If we loosen this we need to convert vector bool to a
-  // scalar bool.
-  if (Vec.getOpcode() == ISD::VSELECT &&
+  // FIXME: This is restricted to pre type legalization. If we loosen this we
+  // need to convert vector bool to a scalar bool.
+  if (DCI.isBeforeLegalize() && Vec.getOpcode() == ISD::VSELECT &&
       Vec.getOperand(0).getOpcode() == ISD::SETCC &&
-      Vec.getOperand(0).getValueType().getScalarType() == MVT::i1 &&
       Vec.getOperand(0).getOperand(0).getValueType() == VecVT) {
+    assert(Vec.getOperand(0).getValueType().getScalarType() == MVT::i1 &&
+           "Unexpected cond type for combine");
     // ext (sel Cond, X, Y), 0 --> sel (ext Cond, 0), (ext X, 0), (ext Y, 0)
     SDLoc DL(ExtElt);
     SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
@@ -46242,7 +46272,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineArithReduction(N, DAG, Subtarget))
     return V;
 
-  if (SDValue V = scalarizeExtEltFP(N, DAG, Subtarget))
+  if (SDValue V = scalarizeExtEltFP(N, DAG, Subtarget, DCI))
     return V;
 
   if (CIdx)
@@ -58343,10 +58373,16 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG,
                                   DAG.getZExtOrTrunc(ZeroExt, DL, MVT::i32))));
   }
 
-  // Combine (v2i64 (scalar_to_vector (i64 (bitconvert (mmx))))) to MOVQ2DQ.
-  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST &&
-      Src.getOperand(0).getValueType() == MVT::x86mmx)
-    return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, Src.getOperand(0));
+  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST) {
+    SDValue SrcOp = Src.getOperand(0);
+    // Combine (v2i64 (scalar_to_vector (i64 (bitcast (double))))) to MOVQ.
+    if (SrcOp.getValueType() == MVT::f64)
+      return DAG.getBitcast(
+          VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, SrcOp));
+    // Combine (v2i64 (scalar_to_vector (i64 (bitcast (mmx))))) to MOVQ2DQ.
+    if (SrcOp.getValueType() == MVT::x86mmx)
+      return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, SrcOp);
+  }
 
   // See if we're broadcasting the scalar value, in which case just reuse that.
   // Ensure the same SDValue from the SDNode use is being used.

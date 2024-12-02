@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SHARED_RPC_OPCODES_H
 #define LLVM_LIBC_SHARED_RPC_OPCODES_H
 
+#include "rpc.h"
+
 #define LLVM_LIBC_RPC_BASE 'c'
 #define LLVM_LIBC_OPCODE(n) (LLVM_LIBC_RPC_BASE << 24 | n)
 
@@ -45,5 +47,13 @@ typedef enum {
   RPC_SYSTEM = LLVM_LIBC_OPCODE(29),
   RPC_LAST = 0xFFFFFFFF,
 } rpc_opcode_t;
+
+#undef LLVM_LIBC_OPCODE
+
+namespace rpc {
+// The implementation of this function currently lives in the utility directory
+// at 'utils/gpu/server/rpc_server.cpp'.
+rpc::Status handle_libc_opcodes(rpc::Server::Port &port, uint32_t num_lanes);
+} // namespace rpc
 
 #endif // LLVM_LIBC_SHARED_RPC_OPCODES_H

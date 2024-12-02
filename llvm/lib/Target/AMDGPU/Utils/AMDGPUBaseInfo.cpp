@@ -378,6 +378,14 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
+#define GET_FP8DstByteSelTable_DECL
+#define GET_FP8DstByteSelTable_IMPL
+
+struct DPMACCInstructionInfo {
+  uint16_t Opcode;
+  bool IsDPMACCInstruction;
+};
+
 struct FP8DstByteSelInfo {
   uint16_t Opcode;
   bool HasFP8DstByteSel;
@@ -417,6 +425,9 @@ struct FP8DstByteSelInfo {
 #define GET_WMMAOpcode3AddrMappingTable_IMPL
 #define GET_getMFMA_F8F6F4_WithSize_DECL
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
+#define GET_isMFMA_F8F6F4Table_IMPL
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -525,7 +536,7 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
-static uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
   case MFMAScaleFormats::FP6_E3M2:
