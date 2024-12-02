@@ -4619,7 +4619,6 @@ static int isElementRotate(int &LoSrc, int &HiSrc, ArrayRef<int> Mask) {
 // Src is the vector to deinterleave of type <[vscale x ]n*2 x ty>
 static SDValue getDeinterleaveViaVNSRL(const SDLoc &DL, MVT VT, SDValue Src,
                                        bool EvenElts, SelectionDAG &DAG) {
-  // FLAGIT
   // The result is a vector of type <m x n x ty>.  The source is a vector of
   // type <m x n*2 x ty> (For the single source case, the high half is undef)
   if (Src.getValueType() == VT) {
