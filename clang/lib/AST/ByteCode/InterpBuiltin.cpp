@@ -1730,6 +1730,8 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
         (void)T::bitAnd(Result, Elem, BitWidth, &Result);
       } else if (ID == Builtin::BI__builtin_reduce_or) {
         (void)T::bitOr(Result, Elem, BitWidth, &Result);
+      } else if (ID == Builtin::BI__builtin_reduce_xor) {
+        (void)T::bitXor(Result, Elem, BitWidth, &Result);
       } else {
         llvm_unreachable("Unhandled vector reduce builtin");
       }
@@ -2215,6 +2217,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_reduce_mul:
   case Builtin::BI__builtin_reduce_and:
   case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_xor:
     if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
       return false;
     break;
