@@ -1481,34 +1481,26 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocator &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_allocate);
-  if (const auto &modifier{
-          std::get<std::optional<parser::OmpAllocateClause::AllocateModifier>>(
-              x.v.t)}) {
-    common::visit(
-        common::visitors{
-            [&](const parser::OmpAllocateClause::AllocateModifier::Allocator
-                    &y) {
-              RequiresPositiveParameter(llvm::omp::Clause::OMPC_allocate, y.v);
-              isPredefinedAllocator = GetIntValue(y.v).has_value();
-            },
-            [&](const parser::OmpAllocateClause::AllocateModifier::
-                    ComplexModifier &y) {
-              const auto &alloc = std::get<
-                  parser::OmpAllocateClause::AllocateModifier::Allocator>(y.t);
-              const auto &align =
-                  std::get<parser::OmpAllocateClause::AllocateModifier::Align>(
-                      y.t);
-              RequiresPositiveParameter(
-                  llvm::omp::Clause::OMPC_allocate, alloc.v);
-              RequiresPositiveParameter(
-                  llvm::omp::Clause::OMPC_allocate, align.v);
-              isPredefinedAllocator = GetIntValue(alloc.v).has_value();
-            },
-            [&](const parser::OmpAllocateClause::AllocateModifier::Align &y) {
-              RequiresPositiveParameter(llvm::omp::Clause::OMPC_allocate, y.v);
-            },
-        },
-        modifier->u);
+  if (OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_allocate, GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *align{
+            OmpGetUniqueModifier<parser::OmpAlignModifier>(modifiers)}) {
+      if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
+        context_.Say(OmpGetModifierSource(modifiers, align),
+            "The alignment value should be a constant positive integer"_err_en_US);
+      }
+    }
+    // The simple and complex modifiers have the same structure. They only
+    // differ in their syntax.
+    if (auto *alloc{OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(
+            modifiers)}) {
+      isPredefinedAllocator = GetIntValue(alloc->v).has_value();
+    }
+    if (auto *alloc{OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(
+            modifiers)}) {
+      isPredefinedAllocator = GetIntValue(alloc->v).has_value();
+    }
   }
 }
 

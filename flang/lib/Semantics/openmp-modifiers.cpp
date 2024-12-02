@@ -75,6 +75,56 @@ unsigned OmpModifierDescriptor::since(llvm::omp::Clause id) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"align-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_allocate}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpAllocatorComplexModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"allocator-complex-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_allocate}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpAllocatorSimpleModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"allocator-simple-modifier",
+      /*props=*/
+      {
+          {50, {OmpProperty::Exclusive, OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {50, {Clause::OMPC_allocate}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"chunk-modifier",
