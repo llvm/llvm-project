@@ -4882,14 +4882,17 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 }
 
 static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
-                                        bool CondIsTrue,
+                                        unsigned Depth, bool CondIsTrue,
                                         const Instruction *CxtI,
                                         KnownFPClass &KnownFromContext) {
   Value *A, *B;
-  if (CondIsTrue ? match(Cond, m_LogicalAnd(m_Value(A), m_Value(B)))
-                 : match(Cond, m_LogicalOr(m_Value(A), m_Value(B)))) {
-    computeKnownFPClassFromCond(V, A, CondIsTrue, CxtI, KnownFromContext);
-    computeKnownFPClassFromCond(V, B, CondIsTrue, CxtI, KnownFromContext);
+  if (Depth < MaxAnalysisRecursionDepth &&
+      (CondIsTrue ? match(Cond, m_LogicalAnd(m_Value(A), m_Value(B)))
+                  : match(Cond, m_LogicalOr(m_Value(A), m_Value(B))))) {
+    computeKnownFPClassFromCond(V, A, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    computeKnownFPClassFromCond(V, B, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
     return;
   }
   CmpInst::Predicate Pred;
@@ -4932,13 +4935,13 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
-        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/true, Q.CxtI,
-                                    KnownFromContext);
+        computeKnownFPClassFromCond(V, Cond, /*Depth=*/0, /*CondIsTrue=*/true,
+                                    Q.CxtI, KnownFromContext);
 
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
       if (Q.DT->dominates(Edge1, Q.CxtI->getParent()))
-        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/false, Q.CxtI,
-                                    KnownFromContext);
+        computeKnownFPClassFromCond(V, Cond, /*Depth=*/0, /*CondIsTrue=*/false,
+                                    Q.CxtI, KnownFromContext);
     }
   }
 
@@ -4960,8 +4963,8 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
       continue;
 
-    computeKnownFPClassFromCond(V, I->getArgOperand(0), /*CondIsTrue=*/true,
-                                Q.CxtI, KnownFromContext);
+    computeKnownFPClassFromCond(V, I->getArgOperand(0), /*Depth=*/0,
+                                /*CondIsTrue=*/true, Q.CxtI, KnownFromContext);
   }
 
   return KnownFromContext;
