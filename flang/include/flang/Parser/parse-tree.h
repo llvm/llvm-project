@@ -3558,6 +3558,23 @@ struct OmpDeviceModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceModifier, Value);
 };
 
+// Ref: [5.2:72-73,230-323], in 4.5-5.1 it's scattered over individual
+// directives that allow the IF clause.
+//
+// directive-name-modifier ->
+//    PARALLEL | TARGET | TARGET DATA |
+//    TARGET ENTER DATA | TARGET EXIT DATA |
+//    TARGET UPDATE | TASK | TASKLOOP |             // since 4.5
+//    CANCEL[*] | SIMD |                            // since 5.0
+//    TEAMS                                         // since 5.2
+//
+// [*] The IF clause is allowed on CANCEL in OpenMP 4.5, but only without
+// the directive-name-modifier. For the sake of uniformity CANCEL can be
+// considered a valid value in 4.5 as well.
+struct OmpDirectiveNameModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpDirectiveNameModifier, llvm::omp::Directive);
+};
+
 // Ref: [5.1:205-209], [5.2:166-168]
 //
 // motion-modifier ->
@@ -3579,6 +3596,15 @@ struct OmpExpectation {
 //    ITERATOR(iterator-specifier [, ...])          // since 5.0
 struct OmpIterator {
   WRAPPER_CLASS_BOILERPLATE(OmpIterator, std::list<OmpIteratorSpecifier>);
+};
+
+// Ref: [5.0:288-290], [5.1:321-322], [5.2:115-117]
+//
+// lastprivate-modifier ->
+//    CONDITIONAL                                   // since 5.0
+struct OmpLastprivateModifier {
+  ENUM_CLASS(Value, Conditional)
+  WRAPPER_CLASS_BOILERPLATE(OmpLastprivateModifier, Value);
 };
 
 // Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
@@ -3913,12 +3939,16 @@ struct OmpGrainsizeClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
-// 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
+// Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives
+// that allow the IF clause.
+//
+// if-clause ->
+//    IF([directive-name-modifier:]
+//        scalar-logical-expression)                // since 4.5
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
-  ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
-      TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
-  std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
+  MODIFIER_BOILERPLATE(OmpDirectiveNameModifier);
+  std::tuple<MODIFIERS(), ScalarLogicalExpr> t;
 };
 
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
@@ -3928,13 +3958,15 @@ struct OmpInReductionClause {
   std::tuple<OmpReductionIdentifier, OmpObjectList> t;
 };
 
-// OMP 5.0 2.19.4.5 lastprivate-clause ->
-//                    LASTPRIVATE ([lastprivate-modifier :] list)
-//                  lastprivate-modifier -> CONDITIONAL
+// Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
+//
+// lastprivate-clause ->
+//    LASTPRIVATE(list) |                           // since 4.5
+//    LASTPRIVATE([lastprivate-modifier:] list)     // since 5.0
 struct OmpLastprivateClause {
   TUPLE_CLASS_BOILERPLATE(OmpLastprivateClause);
-  ENUM_CLASS(LastprivateModifier, Conditional);
-  std::tuple<std::optional<LastprivateModifier>, OmpObjectList> t;
+  MODIFIER_BOILERPLATE(OmpLastprivateModifier);
+  std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
 // 2.15.3.7 linear-clause -> LINEAR (linear-list[ : linear-step])

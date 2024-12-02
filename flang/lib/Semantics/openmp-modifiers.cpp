@@ -191,6 +191,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDeviceModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpDirectiveNameModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"directive-name-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_if}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpExpectation>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"expectation",
@@ -220,6 +237,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpIterator>() {
           {51,
               {Clause::OMPC_affinity, Clause::OMPC_depend, Clause::OMPC_from,
                   Clause::OMPC_map, Clause::OMPC_to}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpLastprivateModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"lastprivate-modifier",
+      /*props=*/
+      {
+          {50, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {50, {Clause::OMPC_lastprivate}},
       },
   };
   return desc;
