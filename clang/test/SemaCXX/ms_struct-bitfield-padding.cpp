@@ -1,5 +1,5 @@
 
-// RUN: %clang_cc1 -fsyntax-only -Wms-bitfield-packing-compatibility -verify -triple armv8 -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -Wms-bitfield-compatibility -verify -triple armv8 -std=c++23 %s
 // RUN: %clang_cc1 -fsyntax-only -DMS_BITFIELDS -mms-bitfields -verify=msbitfields -triple armv8-apple-macos10.15 -std=c++23 %s
 
 // msbitfields-no-diagnostics
