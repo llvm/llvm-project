@@ -27,6 +27,8 @@ public:
 
   std::string GetRemoteConnectionURI() const override;
 
+  std::string GetListeningConnectionURI() const override;
+
 protected:
   DomainSocket(SocketProtocol protocol);
 

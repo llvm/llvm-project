@@ -81,6 +81,12 @@ std::string TCPSocket::GetLocalIPAddress() const {
     socklen_t sock_addr_len = sock_addr.GetMaxLength();
     if (::getsockname(m_socket, sock_addr, &sock_addr_len) == 0)
       return sock_addr.GetIPAddress();
+  } else if (!m_listen_sockets.empty()) {
+    SocketAddress sock_addr;
+    socklen_t sock_addr_len = sock_addr.GetMaxLength();
+    if (::getsockname(m_listen_sockets.begin()->first, sock_addr,
+                      &sock_addr_len) == 0)
+      return sock_addr.GetIPAddress();
   }
   return "";
 }
@@ -112,6 +118,15 @@ std::string TCPSocket::GetRemoteConnectionURI() const {
     return std::string(llvm::formatv(
         "connect://[{0}]:{1}", GetRemoteIPAddress(), GetRemotePortNumber()));
   }
+  return "";
+}
+
+std::string TCPSocket::GetListeningConnectionURI() const {
+  if (!m_listen_sockets.empty()) {
+    return std::string(llvm::formatv(
+        "connection://[{0}]:{1}", GetLocalIPAddress(), GetLocalPortNumber()));
+  }
+
   return "";
 }
 
@@ -176,8 +191,9 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
 
   if (host_port->hostname == "*")
     host_port->hostname = "0.0.0.0";
-  std::vector<SocketAddress> addresses = SocketAddress::GetAddressInfo(
-      host_port->hostname.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+  std::vector<SocketAddress> addresses =
+      SocketAddress::GetAddressInfo(host_port->hostname.c_str(), nullptr,
+                                    AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (SocketAddress &address : addresses) {
     int fd =
         Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP, error);
@@ -191,7 +207,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     }
 
     SocketAddress listen_address = address;
-    if(!listen_address.IsLocalhost())
+    if (!listen_address.IsLocalhost())
       listen_address.SetToAnyAddress(address.GetFamily(), host_port->port);
     else
       listen_address.SetPort(host_port->port);

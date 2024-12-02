@@ -52,6 +52,8 @@ public:
 
   std::string GetRemoteConnectionURI() const override;
 
+  std::string GetListeningConnectionURI() const override;
+
 private:
   TCPSocket(NativeSocket socket, const TCPSocket &listen_socket);
 
