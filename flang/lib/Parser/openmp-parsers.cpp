@@ -255,17 +255,18 @@ TYPE_PARSER(construct<OmpAffinityClause>(
 
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(
-    "PRIVATE" >> pure(OmpDefaultClause::Type::Private) ||
-    "FIRSTPRIVATE" >> pure(OmpDefaultClause::Type::Firstprivate) ||
-    "SHARED" >> pure(OmpDefaultClause::Type::Shared) ||
-    "NONE" >> pure(OmpDefaultClause::Type::None)))
+    "PRIVATE" >> pure(OmpDefaultClause::DataSharingAttribute::Private) ||
+    "FIRSTPRIVATE" >>
+        pure(OmpDefaultClause::DataSharingAttribute::Firstprivate) ||
+    "SHARED" >> pure(OmpDefaultClause::DataSharingAttribute::Shared) ||
+    "NONE" >> pure(OmpDefaultClause::DataSharingAttribute::None)))
 
 // 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD)
 TYPE_PARSER(construct<OmpProcBindClause>(
-    "CLOSE" >> pure(OmpProcBindClause::Type::Close) ||
-    "MASTER" >> pure(OmpProcBindClause::Type::Master) ||
-    "PRIMARY" >> pure(OmpProcBindClause::Type::Primary) ||
-    "SPREAD" >> pure(OmpProcBindClause::Type::Spread)))
+    "CLOSE" >> pure(OmpProcBindClause::AffinityPolicy::Close) ||
+    "MASTER" >> pure(OmpProcBindClause::AffinityPolicy::Master) ||
+    "PRIMARY" >> pure(OmpProcBindClause::AffinityPolicy::Primary) ||
+    "SPREAD" >> pure(OmpProcBindClause::AffinityPolicy::Spread)))
 
 TYPE_PARSER(construct<OmpMapClause>(
     applyFunction<OmpMapClause>(makeMobClause<true>,
@@ -311,9 +312,9 @@ TYPE_PARSER(construct<OmpDeviceClause>(
 
 // device_type(any | host | nohost)
 TYPE_PARSER(construct<OmpDeviceTypeClause>(
-    "ANY" >> pure(OmpDeviceTypeClause::Type::Any) ||
-    "HOST" >> pure(OmpDeviceTypeClause::Type::Host) ||
-    "NOHOST" >> pure(OmpDeviceTypeClause::Type::Nohost)))
+    "ANY" >> pure(OmpDeviceTypeClause::DeviceTypeDescription::Any) ||
+    "HOST" >> pure(OmpDeviceTypeClause::DeviceTypeDescription::Host) ||
+    "NOHOST" >> pure(OmpDeviceTypeClause::DeviceTypeDescription::Nohost)))
 
 // 2.12 IF (directive-name-modifier: scalar-logical-expr)
 TYPE_PARSER(construct<OmpIfClause>(
@@ -432,9 +433,9 @@ TYPE_PARSER(construct<OmpLastprivateClause>(
 
 // OMP 5.2 11.7.1 BIND ( PARALLEL | TEAMS | THREAD )
 TYPE_PARSER(construct<OmpBindClause>(
-    "PARALLEL" >> pure(OmpBindClause::Type::Parallel) ||
-    "TEAMS" >> pure(OmpBindClause::Type::Teams) ||
-    "THREAD" >> pure(OmpBindClause::Type::Thread)))
+    "PARALLEL" >> pure(OmpBindClause::Binding::Parallel) ||
+    "TEAMS" >> pure(OmpBindClause::Binding::Teams) ||
+    "THREAD" >> pure(OmpBindClause::Binding::Thread)))
 
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
