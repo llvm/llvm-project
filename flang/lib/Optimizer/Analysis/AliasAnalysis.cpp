@@ -464,6 +464,33 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   return result;
 }
 
+ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
+                                      mlir::Value location) {
+  ModRefResult result = ModRefResult::getNoModRef();
+  for (mlir::Operation &op : region.getOps()) {
+    if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
+      for (mlir::Region &subRegion : op.getRegions()) {
+        result = result.merge(getModRef(subRegion, location));
+        // Fast return is already mod and ref.
+        if (result.isModAndRef())
+          return result;
+      }
+      // In MLIR, RecursiveMemoryEffects can be combined with
+      // MemoryEffectOpInterface to describe extra effects on top of the
+      // effects of the nested operations.  However, the presence of
+      // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
+      // implies the operation has no other memory effects than the one of its
+      // nested operations.
+      if (!mlir::isa<mlir::MemoryEffectOpInterface>(op))
+        continue;
+    }
+    result = result.merge(getModRef(&op, location));
+    if (result.isModAndRef())
+      return result;
+  }
+  return result;
+}
+
 AliasAnalysis::Source::Attributes
 getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   AliasAnalysis::Source::Attributes attrs;
