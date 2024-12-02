@@ -1742,6 +1742,41 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// Can be called with an integer or vector as the first and only parameter.
+static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
+                                                 const InterpFrame *Frame,
+                                                 const Function *Func,
+                                                 const CallExpr *Call) {
+  assert(Call->getNumArgs() == 1);
+  if (Call->getArg(0)->getType()->isIntegerType()) {
+    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+    APSInt Val = peekToAPSInt(S.Stk, ArgT);
+    pushInteger(S, Val.popcount(), Call->getType());
+    return true;
+  }
+  // Otherwise, the argument must be a vector.
+  assert(Call->getArg(0)->getType()->isVectorType());
+  const Pointer &Arg = S.Stk.peek<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  const Pointer &Dst = S.Stk.peek<Pointer>(primSize(PT_Ptr) * 2);
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
+
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+
+  // FIXME: Reading from uninitialized vector elements?
+  for (unsigned I = 0; I != NumElems; ++I) {
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Dst.atIndex(I).deref<T>() =
+          T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+    });
+  }
+
+  return true;
+}
 static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call) {
@@ -2219,6 +2254,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_reduce_or:
   case Builtin::BI__builtin_reduce_xor:
     if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_elementwise_popcount:
+    if (!interp__builtin_elementwise_popcount(S, OpPC, Frame, F, Call))
       return false;
     break;
 

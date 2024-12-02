@@ -1108,6 +1108,28 @@ namespace ReduceXor {
 #endif
 }
 
+namespace ElementwisePopcount {
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4int){1, 2, 3, 4})) == 5);
+#if __INT_WIDTH__ == 32
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4int){0, 0xF0F0, ~0, ~0xF0F0})) == 16 * sizeof(int));
+#endif
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4long){1L, 2L, 3L, 4L})) == 5L);
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4long){0L, 0xF0F0L, ~0L, ~0xF0F0L})) == 16 * sizeof(long long));
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4uint){1U, 2U, 3U, 4U})) == 5U);
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4uint){0U, 0xF0F0U, ~0U, ~0xF0F0U})) == 16 * sizeof(int));
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4ulong){1UL, 2UL, 3UL, 4UL})) == 5UL);
+  static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4ulong){0ULL, 0xF0F0ULL, ~0ULL, ~0xF0F0ULL})) == 16 * sizeof(unsigned long long));
+  static_assert(__builtin_elementwise_popcount(0) == 0);
+  static_assert(__builtin_elementwise_popcount(0xF0F0) == 8);
+  static_assert(__builtin_elementwise_popcount(~0) == 8 * sizeof(int));
+  static_assert(__builtin_elementwise_popcount(0U) == 0);
+  static_assert(__builtin_elementwise_popcount(0xF0F0U) == 8);
+  static_assert(__builtin_elementwise_popcount(~0U) == 8 * sizeof(int));
+  static_assert(__builtin_elementwise_popcount(0L) == 0);
+  static_assert(__builtin_elementwise_popcount(0xF0F0L) == 8);
+  static_assert(__builtin_elementwise_popcount(~0LL) == 8 * sizeof(long long));
+}
+
 namespace BuiltinMemcpy {
   constexpr int simple() {
     int a = 12;
