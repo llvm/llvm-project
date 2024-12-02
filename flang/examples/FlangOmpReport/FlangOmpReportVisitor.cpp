@@ -190,15 +190,17 @@ void OpenMPCounterVisitor::PostConstructsCommon() {
   delete curConstruct;
 }
 
-void OpenMPCounterVisitor::Post(const OmpProcBindClause::Type &c) {
+void OpenMPCounterVisitor::Post(const OmpProcBindClause::AffinityPolicy &c) {
   clauseDetails +=
       "type=" + std::string{OmpProcBindClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDefaultClause::Type &c) {
+void OpenMPCounterVisitor::Post(
+    const OmpDefaultClause::DataSharingAttribute &c) {
   clauseDetails +=
       "type=" + std::string{OmpDefaultClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDeviceTypeClause::Type &c) {
+void OpenMPCounterVisitor::Post(
+    const OmpDeviceTypeClause::DeviceTypeDescription &c) {
   clauseDetails +=
       "type=" + std::string{OmpDeviceTypeClause::EnumToString(c)} + ";";
 }
