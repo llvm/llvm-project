@@ -922,7 +922,7 @@ private:
   VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) const;
   VSETVLIInfo computeInfoForInstr(const MachineInstr &MI) const;
   void forwardVSETVLIAVL(VSETVLIInfo &Info) const;
-  void enableVTYPEBeforeMove(MachineBasicBlock &MBB);
+  void insertVSETVLIBeforeCopy(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
@@ -1790,7 +1790,7 @@ static bool isRVVCopy(const MachineInstr &MI) {
   return false;
 }
 
-void RISCVInsertVSETVLI::enableVTYPEBeforeMove(MachineBasicBlock &MBB) {
+void RISCVInsertVSETVLI::insertVSETVLIBeforeCopy(MachineBasicBlock &MBB) {
   bool NeedVSETVL = true;
 
   if (!BlockInfo[MBB.getNumber()].Pred.isUnknown() &&
@@ -1888,7 +1888,7 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
     insertReadVL(MBB);
 
   for (MachineBasicBlock &MBB : MF)
-    enableVTYPEBeforeMove(MBB);
+    insertVSETVLIBeforeCopy(MBB);
 
   BlockInfo.clear();
   return HaveVectorOp;
