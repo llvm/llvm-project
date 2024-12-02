@@ -835,7 +835,7 @@ define <vscale x 2 x i1> @select_cond_x_cond(<vscale x 2 x i1> %x, <vscale x 2 x
 define <vscale x 2 x i1> @select_undef_T_F(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
 ; CHECK-LABEL: select_undef_T_F:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> poison, <vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 %evl)
@@ -853,7 +853,7 @@ define <vscale x 2 x i1> @select_undef_undef_F(<vscale x 2 x i1> %x, i32 zeroext
 define <vscale x 2 x i1> @select_unknown_undef_F(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
 ; CHECK-LABEL: select_unknown_undef_F:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> undef, <vscale x 2 x i1> %y, i32 %evl)
@@ -863,7 +863,7 @@ define <vscale x 2 x i1> @select_unknown_undef_F(<vscale x 2 x i1> %x, <vscale x
 define <vscale x 2 x i1> @select_unknown_T_undef(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
 ; CHECK-LABEL: select_unknown_T_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> poison, i32 %evl)
@@ -873,7 +873,7 @@ define <vscale x 2 x i1> @select_unknown_T_undef(<vscale x 2 x i1> %x, <vscale x
 define <vscale x 2 x i1> @select_false_T_F(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> %z, i32 zeroext %evl) {
 ; CHECK-LABEL: select_false_T_F:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> %y, <vscale x 2 x i1> %z, i32 %evl)
@@ -883,7 +883,7 @@ define <vscale x 2 x i1> @select_false_T_F(<vscale x 2 x i1> %x, <vscale x 2 x i
 define <vscale x 2 x i1> @select_unknown_T_T(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, i32 zeroext %evl) {
 ; CHECK-LABEL: select_unknown_T_T:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %x, <vscale x 2 x i1> %y, <vscale x 2 x i1> %y, i32 %evl)

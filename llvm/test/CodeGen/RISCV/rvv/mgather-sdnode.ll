@@ -221,13 +221,13 @@ define <vscale x 4 x i8> @mgather_truemask_nxv4i8(<vscale x 4 x ptr> %ptrs, <vsc
 define <vscale x 4 x i8> @mgather_falsemask_nxv4i8(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i8> %passthru) {
 ; RV32-LABEL: mgather_falsemask_nxv4i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv1r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_falsemask_nxv4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv1r.v v8, v12
 ; RV64-NEXT:    ret
   %v = call <vscale x 4 x i8> @llvm.masked.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 1, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i8> %passthru)
@@ -444,13 +444,13 @@ define <vscale x 4 x i16> @mgather_truemask_nxv4i16(<vscale x 4 x ptr> %ptrs, <v
 define <vscale x 4 x i16> @mgather_falsemask_nxv4i16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i16> %passthru) {
 ; RV32-LABEL: mgather_falsemask_nxv4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv1r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_falsemask_nxv4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv1r.v v8, v12
 ; RV64-NEXT:    ret
   %v = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i16> %passthru)
@@ -690,13 +690,13 @@ define <vscale x 4 x i32> @mgather_truemask_nxv4i32(<vscale x 4 x ptr> %ptrs, <v
 define <vscale x 4 x i32> @mgather_falsemask_nxv4i32(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i32> %passthru) {
 ; RV32-LABEL: mgather_falsemask_nxv4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_falsemask_nxv4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv2r.v v8, v12
 ; RV64-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 4, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %passthru)
@@ -955,7 +955,7 @@ define <vscale x 4 x i64> @mgather_truemask_nxv4i64(<vscale x 4 x ptr> %ptrs, <v
 define <vscale x 4 x i64> @mgather_falsemask_nxv4i64(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i64> %passthru) {
 ; CHECK-LABEL: mgather_falsemask_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 8, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i64> %passthru)
@@ -1355,13 +1355,13 @@ define <vscale x 4 x bfloat> @mgather_truemask_nxv4bf16(<vscale x 4 x ptr> %ptrs
 define <vscale x 4 x bfloat> @mgather_falsemask_nxv4bf16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x bfloat> %passthru) {
 ; RV32-LABEL: mgather_falsemask_nxv4bf16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv1r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_falsemask_nxv4bf16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv1r.v v8, v12
 ; RV64-NEXT:    ret
   %v = call <vscale x 4 x bfloat> @llvm.masked.gather.nxv4bf16.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x bfloat> %passthru)
@@ -1558,13 +1558,13 @@ define <vscale x 4 x half> @mgather_truemask_nxv4f16(<vscale x 4 x ptr> %ptrs, <
 define <vscale x 4 x half> @mgather_falsemask_nxv4f16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x half> %passthru) {
 ; RV32-LABEL: mgather_falsemask_nxv4f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv1r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_falsemask_nxv4f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv1r.v v8, v12
 ; RV64-NEXT:    ret
   %v = call <vscale x 4 x half> @llvm.masked.gather.nxv4f16.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x half> %passthru)
@@ -1760,13 +1760,13 @@ define <vscale x 4 x float> @mgather_truemask_nxv4f32(<vscale x 4 x ptr> %ptrs, 
 define <vscale x 4 x float> @mgather_falsemask_nxv4f32(<vscale x 4 x ptr> %ptrs, <vscale x 4 x float> %passthru) {
 ; RV32-LABEL: mgather_falsemask_nxv4f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_falsemask_nxv4f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv2r.v v8, v12
 ; RV64-NEXT:    ret
   %v = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 4, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %passthru)
@@ -2025,7 +2025,7 @@ define <vscale x 4 x double> @mgather_truemask_nxv4f64(<vscale x 4 x ptr> %ptrs,
 define <vscale x 4 x double> @mgather_falsemask_nxv4f64(<vscale x 4 x ptr> %ptrs, <vscale x 4 x double> %passthru) {
 ; CHECK-LABEL: mgather_falsemask_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 8, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x double> %passthru)

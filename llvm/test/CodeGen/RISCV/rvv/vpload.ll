@@ -561,7 +561,7 @@ declare <vscale x 16 x double> @llvm.vector.extract.nxv16f64(<vscale x 17 x doub
 define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_nxv17f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a5, a3, 1

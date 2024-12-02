@@ -7796,7 +7796,7 @@ define <vscale x 16 x half> @vfnmadd_vv_nxv16f16(<vscale x 16 x half> %va, <vsca
 ;
 ; ZVFHMIN-LABEL: vfnmadd_vv_nxv16f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; ZVFHMIN-NEXT:    vmv4r.v v4, v8
 ; ZVFHMIN-NEXT:    lui a1, 8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
@@ -8254,7 +8254,7 @@ define <vscale x 16 x half> @vfnmsub_vv_nxv16f16(<vscale x 16 x half> %va, <vsca
 ;
 ; ZVFHMIN-LABEL: vfnmsub_vv_nxv16f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; ZVFHMIN-NEXT:    vmv4r.v v4, v8
 ; ZVFHMIN-NEXT:    lui a1, 8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
@@ -8714,7 +8714,7 @@ define <vscale x 32 x half> @vfmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    add a2, sp, a2
 ; ZVFHMIN-NEXT:    addi a2, a2, 16
 ; ZVFHMIN-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
-; ZVFHMIN-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; ZVFHMIN-NEXT:    vmv8r.v v24, v8
 ; ZVFHMIN-NEXT:    vl8re16.v v8, (a0)
 ; ZVFHMIN-NEXT:    lui a2, 8

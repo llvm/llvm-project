@@ -941,7 +941,7 @@ declare <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv2i32(
 define <vscale x 2 x i32> @vredsum(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: vredsum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vredsum.vs v11, v9, v10
@@ -966,7 +966,7 @@ define <vscale x 2 x float> @vfredusum(<vscale x 2 x float> %passthru, <vscale x
 ; CHECK-LABEL: vfredusum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fsrmi a1, 0
-; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vfredusum.vs v11, v9, v10

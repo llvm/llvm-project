@@ -164,7 +164,7 @@ define <16 x i32> @concat_8xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 define <32 x i32> @concat_2xv16i32(<16 x i32> %a, <16 x i32> %b) {
 ; VLA-LABEL: concat_2xv16i32:
 ; VLA:       # %bb.0:
-; VLA-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; VLA-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; VLA-NEXT:    vmv4r.v v16, v12
 ; VLA-NEXT:    li a0, 32
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma

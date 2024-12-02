@@ -105,7 +105,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV32-SLOW-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV32-SLOW-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-SLOW-NEXT:  .LBB4_4: # %else2
-; RV32-SLOW-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-SLOW-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-SLOW-NEXT:    vmv1r.v v8, v9
 ; RV32-SLOW-NEXT:    ret
 ;
@@ -139,7 +139,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV64-SLOW-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-SLOW-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-SLOW-NEXT:  .LBB4_4: # %else2
-; RV64-SLOW-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-SLOW-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-SLOW-NEXT:    vmv1r.v v8, v9
 ; RV64-SLOW-NEXT:    ret
 ;
@@ -191,7 +191,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV32-SLOW-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-SLOW-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-SLOW-NEXT:  .LBB5_4: # %else2
-; RV32-SLOW-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV32-SLOW-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-SLOW-NEXT:    vmv1r.v v8, v9
 ; RV32-SLOW-NEXT:    ret
 ;
@@ -223,7 +223,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:    vmv.s.x v8, a0
 ; RV64-SLOW-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-SLOW-NEXT:  .LBB5_4: # %else2
-; RV64-SLOW-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; RV64-SLOW-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-SLOW-NEXT:    vmv1r.v v8, v9
 ; RV64-SLOW-NEXT:    ret
 ;

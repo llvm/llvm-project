@@ -1237,7 +1237,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
     // be coalesced into another vsetvli since we won't demand any fields.
     VSETVLIInfo NewInfo; // Need a new VSETVLIInfo to clear SEWLMULRatioOnly
-    NewInfo.setAVLImm(0);
+    NewInfo.setAVLImm(1);
     NewInfo.setVTYPE(RISCVII::VLMUL::LMUL_1, 8, true, true);
     Info = NewInfo;
     return;
