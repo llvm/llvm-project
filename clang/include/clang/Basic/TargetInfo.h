@@ -1525,13 +1525,9 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual unsigned multiVersionSortPriority(StringRef Name) const {
+  virtual unsigned getFMVPriority(ArrayRef<StringRef> Features) const {
     return 0;
   }
-
-  // Return the target-specific cost for feature
-  // that taken into account in priority sorting.
-  virtual unsigned multiVersionFeatureCost() const { return 0; }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
   // argument.
