@@ -388,7 +388,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         # We're using a random port algorithm to try not to collide with other ports,
         # and retry a max # times.
         attempts = 0
-        MAX_ATTEMPTS = 16
+        MAX_ATTEMPTS = 10
         attempt_wait = 3
 
         while attempts < MAX_ATTEMPTS:
