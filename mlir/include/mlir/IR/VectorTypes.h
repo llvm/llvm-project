@@ -5,12 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Convenience wrappers for `VectorType` to allow idiomatic code like
+//  * isa<vector::ScalableVectorType>(type)
+//
+//===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_VECTOR_IR_VECTORTYPES_H_
-#define MLIR_DIALECT_VECTOR_IR_VECTORTYPES_H_
+#ifndef MLIR_IR_VECTORTYPES_H
+#define MLIR_IR_VECTORTYPES_H
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Types.h"
 
 namespace mlir {
@@ -44,4 +48,4 @@ public:
 } // namespace vector
 } // namespace mlir
 
-#endif // MLIR_DIALECT_VECTOR_IR_VECTORTYPES_H_
+#endif // MLIR_IR_VECTORTYPES_H
