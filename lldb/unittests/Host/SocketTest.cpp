@@ -253,6 +253,9 @@ TEST_P(SocketTest, TCPListen0GetPort) {
 }
 
 TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
+  if (!HostSupportsProtocol())
+    return;
+
   std::string addr = llvm::formatv("[{0}]:0", GetParam().localhost_ip).str();
   llvm::Expected<std::unique_ptr<TCPSocket>> sock = Socket::TcpListen(addr);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
