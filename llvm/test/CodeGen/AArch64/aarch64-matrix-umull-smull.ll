@@ -1291,10 +1291,10 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_signed_and_double(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %val) {
 ; CHECK-SD-LABEL: matrix_mul_signed_and_double:
 ; CHECK-SD:       // %bb.0: // %vector.header
-; CHECK-SD-NEXT:    and w8, w3, #0xffff
+; CHECK-SD-NEXT:    and w9, w3, #0xffff
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    dup v0.4s, w8
 ; CHECK-SD-NEXT:    and x8, x0, #0xfffffff0
+; CHECK-SD-NEXT:    fmov s0, w9
 ; CHECK-SD-NEXT:  .LBB13_1: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    add x9, x2, w0, uxtw #1
@@ -1307,10 +1307,10 @@ define void @matrix_mul_signed_and_double(i32 %N, ptr nocapture %C, ptr nocaptur
 ; CHECK-SD-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    sshll2 v4.4s, v2.8h, #0
 ; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-SD-NEXT:    mul v3.4s, v0.4s, v3.4s
-; CHECK-SD-NEXT:    mul v1.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    mul v4.4s, v0.4s, v4.4s
-; CHECK-SD-NEXT:    mul v2.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    mul v3.4s, v3.4s, v0.s[0]
+; CHECK-SD-NEXT:    mul v1.4s, v1.4s, v0.s[0]
+; CHECK-SD-NEXT:    mul v4.4s, v4.4s, v0.s[0]
+; CHECK-SD-NEXT:    mul v2.4s, v2.4s, v0.s[0]
 ; CHECK-SD-NEXT:    stp q1, q3, [x9]
 ; CHECK-SD-NEXT:    stp q2, q4, [x9, #32]
 ; CHECK-SD-NEXT:    b.ne .LBB13_1
