@@ -43,7 +43,7 @@ void neg() {
 
 template <long int I>
 void tooBig() {
-  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388586)}}
+  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388585)}}
 }
 
 template <long int I>
@@ -102,7 +102,7 @@ int main() {
   HasASTemplateFields<1> HASTF;
   neg<-1>(); // expected-note {{in instantiation of function template specialization 'neg<-1>' requested here}}
   correct<0x7FFFE9>();
-  tooBig<8388650>(); // expected-note {{in instantiation of function template specialization 'tooBig<8388650L>' requested here}}
+  tooBig<8388651>(); // expected-note {{in instantiation of function template specialization 'tooBig<8388651L>' requested here}}
 
   __attribute__((address_space(1))) char *x;
   __attribute__((address_space(2))) char *y;
