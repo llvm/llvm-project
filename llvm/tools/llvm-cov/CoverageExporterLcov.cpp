@@ -43,25 +43,8 @@
 #include "CoverageReport.h"
 
 using namespace llvm;
-using namespace coverage;
 
 namespace {
-
-struct NestedCountedRegion : public coverage::CountedRegion {
-  // Contains the path to default and expanded branches.
-  // Size is 1 for default branches and greater 1 for expanded branches.
-  std::vector<LineColPair> NestedPath;
-  // Indicates whether this item should be ignored at rendering.
-  bool Ignore = false;
-
-  NestedCountedRegion(llvm::coverage::CountedRegion Region,
-                      std::vector<LineColPair> NestedPath)
-      : llvm::coverage::CountedRegion(std::move(Region)),
-        NestedPath(std::move(NestedPath)) {}
-
-  // Returns the root line of the branch.
-  unsigned getEffectiveLine() const { return NestedPath.front().first; }
-};
 
 void renderFunctionSummary(raw_ostream &OS,
                            const FileCoverageSummary &Summary) {
@@ -92,107 +75,58 @@ void renderLineExecutionCounts(raw_ostream &OS,
   }
 }
 
-std::vector<NestedCountedRegion>
+std::vector<llvm::coverage::CountedRegion>
 collectNestedBranches(const coverage::CoverageMapping &Coverage,
                       ArrayRef<llvm::coverage::ExpansionRecord> Expansions,
-                      std::vector<LineColPair> &NestedPath) {
-  std::vector<NestedCountedRegion> Branches;
+                      int ViewDepth = 0, int SrcLine = 0) {
+  std::vector<llvm::coverage::CountedRegion> Branches;
   for (const auto &Expansion : Expansions) {
     auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
 
-    // Track the path to the nested expansions.
-    NestedPath.push_back(Expansion.Region.startLoc());
+    // If we're at the top level, set the corresponding source line.
+    if (ViewDepth == 0)
+      SrcLine = Expansion.Region.LineStart;
 
     // Recursively collect branches from nested expansions.
     auto NestedExpansions = ExpansionCoverage.getExpansions();
-    auto NestedExBranches =
-        collectNestedBranches(Coverage, NestedExpansions, NestedPath);
+    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions,
+                                                  ViewDepth + 1, SrcLine);
     append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
     auto ExBranches = ExpansionCoverage.getBranches();
-    for (auto &B : ExBranches)
+    for (auto B : ExBranches)
       if (B.FileID == Expansion.FileID) {
-        Branches.push_back(NestedCountedRegion(B, NestedPath));
+        B.LineStart = SrcLine;
+        Branches.push_back(B);
       }
-
-    NestedPath.pop_back();
   }
 
   return Branches;
 }
 
-void appendNestedCountedRegions(const std::vector<CountedRegion> &Src,
-                                std::vector<NestedCountedRegion> &Dst) {
-  auto Unfolded = make_filter_range(Src, [](auto &Region) {
-    return !Region.TrueFolded || !Region.FalseFolded;
-  });
-  Dst.reserve(Dst.size() + Src.size());
-  std::transform(Unfolded.begin(), Unfolded.end(), std::back_inserter(Dst),
-                 [=](auto &Region) {
-                   return NestedCountedRegion(Region, {Region.startLoc()});
-                 });
-}
-
-void appendNestedCountedRegions(const std::vector<NestedCountedRegion> &Src,
-                                std::vector<NestedCountedRegion> &Dst) {
-  auto Unfolded = make_filter_range(Src, [](auto &NestedRegion) {
-    return !NestedRegion.TrueFolded || !NestedRegion.FalseFolded;
-  });
-  Dst.reserve(Dst.size() + Src.size());
-  std::copy(Unfolded.begin(), Unfolded.end(), std::back_inserter(Dst));
-}
-
-bool sortNested(const NestedCountedRegion &I, const NestedCountedRegion &J) {
-  // This sorts each element by line and column.
-  // Implies that all elements are first sorted by getEffectiveLine().
-  return I.NestedPath < J.NestedPath;
-}
-
-void combineInstanceCounts(std::vector<NestedCountedRegion> &Branches) {
-  auto NextBranch = Branches.begin();
-  auto EndBranch = Branches.end();
-
-  while (NextBranch != EndBranch) {
-    auto SumBranch = NextBranch++;
-
-    // Ensure that only branches with the same NestedPath are summed up.
-    while (NextBranch != EndBranch &&
-           SumBranch->NestedPath == NextBranch->NestedPath) {
-      SumBranch->ExecutionCount += NextBranch->ExecutionCount;
-      SumBranch->FalseExecutionCount += NextBranch->FalseExecutionCount;
-      // Mark this branch as ignored.
-      NextBranch->Ignore = true;
-
-      NextBranch++;
-    }
-  }
+bool sortLine(llvm::coverage::CountedRegion I,
+              llvm::coverage::CountedRegion J) {
+  return (I.LineStart < J.LineStart) ||
+         ((I.LineStart == J.LineStart) && (I.ColumnStart < J.ColumnStart));
 }
 
 void renderBranchExecutionCounts(raw_ostream &OS,
                                  const coverage::CoverageMapping &Coverage,
-                                 const coverage::CoverageData &FileCoverage,
-                                 bool UnifyInstances) {
-
-  std::vector<NestedCountedRegion> Branches;
-
-  appendNestedCountedRegions(FileCoverage.getBranches(), Branches);
+                                 const coverage::CoverageData &FileCoverage) {
+  std::vector<llvm::coverage::CountedRegion> Branches =
+      FileCoverage.getBranches();
 
   // Recursively collect branches for all file expansions.
-  std::vector<LineColPair> NestedPath;
-  std::vector<NestedCountedRegion> ExBranches =
-      collectNestedBranches(Coverage, FileCoverage.getExpansions(), NestedPath);
+  std::vector<llvm::coverage::CountedRegion> ExBranches =
+      collectNestedBranches(Coverage, FileCoverage.getExpansions());
 
   // Append Expansion Branches to Source Branches.
-  appendNestedCountedRegions(ExBranches, Branches);
+  append_range(Branches, ExBranches);
 
   // Sort branches based on line number to ensure branches corresponding to the
   // same source line are counted together.
-  llvm::sort(Branches, sortNested);
-
-  if (UnifyInstances) {
-    combineInstanceCounts(Branches);
-  }
+  llvm::sort(Branches, sortLine);
 
   auto NextBranch = Branches.begin();
   auto EndBranch = Branches.end();
@@ -200,13 +134,12 @@ void renderBranchExecutionCounts(raw_ostream &OS,
   // Branches with the same source line are enumerated individually
   // (BranchIndex) as well as based on True/False pairs (PairIndex).
   while (NextBranch != EndBranch) {
-    unsigned CurrentLine = NextBranch->getEffectiveLine();
+    unsigned CurrentLine = NextBranch->LineStart;
     unsigned PairIndex = 0;
     unsigned BranchIndex = 0;
 
-    while (NextBranch != EndBranch &&
-           CurrentLine == NextBranch->getEffectiveLine()) {
-      if (!NextBranch->Ignore) {
+    while (NextBranch != EndBranch && CurrentLine == NextBranch->LineStart) {
+      if (!NextBranch->TrueFolded || !NextBranch->FalseFolded) {
         unsigned BC1 = NextBranch->ExecutionCount;
         unsigned BC2 = NextBranch->FalseExecutionCount;
         bool BranchNotExecuted = (BC1 == 0 && BC2 == 0);
@@ -240,7 +173,7 @@ void renderBranchSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
 void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                 const std::string &Filename,
                 const FileCoverageSummary &FileReport, bool ExportSummaryOnly,
-                bool SkipFunctions, bool SkipBranches, bool UnifyInstances) {
+                bool SkipFunctions, bool SkipBranches) {
   OS << "SF:" << Filename << '\n';
 
   if (!ExportSummaryOnly && !SkipFunctions) {
@@ -253,7 +186,7 @@ void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
     auto FileCoverage = Coverage.getCoverageForFile(Filename);
     renderLineExecutionCounts(OS, FileCoverage);
     if (!SkipBranches)
-      renderBranchExecutionCounts(OS, Coverage, FileCoverage, UnifyInstances);
+      renderBranchExecutionCounts(OS, Coverage, FileCoverage);
   }
   if (!SkipBranches)
     renderBranchSummary(OS, FileReport);
@@ -265,11 +198,11 @@ void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
 void renderFiles(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                  ArrayRef<std::string> SourceFiles,
                  ArrayRef<FileCoverageSummary> FileReports,
-                 bool ExportSummaryOnly, bool SkipFunctions, bool SkipBranches,
-                 bool UnifyInstances) {
+                 bool ExportSummaryOnly, bool SkipFunctions,
+                 bool SkipBranches) {
   for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I)
     renderFile(OS, Coverage, SourceFiles[I], FileReports[I], ExportSummaryOnly,
-               SkipFunctions, SkipBranches, UnifyInstances);
+               SkipFunctions, SkipBranches);
 }
 
 } // end anonymous namespace
@@ -288,6 +221,5 @@ void CoverageExporterLcov::renderRoot(ArrayRef<std::string> SourceFiles) {
   auto FileReports = CoverageReport::prepareFileReports(Coverage, Totals,
                                                         SourceFiles, Options);
   renderFiles(OS, Coverage, SourceFiles, FileReports, Options.ExportSummaryOnly,
-              Options.SkipFunctions, Options.SkipBranches,
-              Options.UnifyFunctionInstantiations);
+              Options.SkipFunctions, Options.SkipBranches);
 }
