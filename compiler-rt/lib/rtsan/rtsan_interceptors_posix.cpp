@@ -47,6 +47,7 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -356,6 +357,31 @@ INTERCEPTOR(int, dup, int oldfd) {
 INTERCEPTOR(int, dup2, int oldfd, int newfd) {
   __rtsan_notify_intercepted_call("dup2");
   return REAL(dup2)(oldfd, newfd);
+}
+
+INTERCEPTOR(int, chmod, const char *path, mode_t mode) {
+  __rtsan_notify_intercepted_call("chmod");
+  return REAL(chmod)(path, mode);
+}
+
+INTERCEPTOR(int, fchmod, int fd, mode_t mode) {
+  __rtsan_notify_intercepted_call("fchmod");
+  return REAL(fchmod)(fd, mode);
+}
+
+INTERCEPTOR(int, mkdir, const char *path, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkdir");
+  return REAL(mkdir)(path, mode);
+}
+
+INTERCEPTOR(int, rmdir, const char *path) {
+  __rtsan_notify_intercepted_call("rmdir");
+  return REAL(rmdir)(path);
+}
+
+INTERCEPTOR(mode_t, umask, mode_t cmask) {
+  __rtsan_notify_intercepted_call("umask");
+  return REAL(umask)(cmask);
 }
 
 // Concurrency
@@ -835,6 +861,11 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
   INTERCEPT_FUNCTION(dup2);
+  INTERCEPT_FUNCTION(chmod);
+  INTERCEPT_FUNCTION(fchmod);
+  INTERCEPT_FUNCTION(mkdir);
+  INTERCEPT_FUNCTION(rmdir);
+  INTERCEPT_FUNCTION(umask);
   INTERCEPT_FUNCTION(ioctl);
 
   RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK;
