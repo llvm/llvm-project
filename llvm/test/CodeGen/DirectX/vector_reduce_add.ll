@@ -17,6 +17,21 @@ entry:
   ret half %rdx.fadd
 }
 
+define noundef half @test_length_half2_start1(<2 x half> noundef %p0) {
+; CHECK-LABEL: define noundef half @test_length_half2_start1(
+; CHECK-SAME: <2 x half> noundef [[P0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x half> [[P0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 0xH0001
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x half> [[P0]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd half [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret half [[TMP3]]
+;
+entry:
+  %rdx.fadd = call half @llvm.vector.reduce.fadd.v2f16(half 0xH0001, <2 x half> %p0)
+  ret half %rdx.fadd
+}
+
 define noundef half @test_length_half3(<3 x half> noundef %p0) {
 ; CHECK-LABEL: define noundef half @test_length_half3(
 ; CHECK-SAME: <3 x half> noundef [[P0:%.*]]) {
@@ -78,6 +93,23 @@ define noundef float @test_length_float3(<3 x float> noundef %p0) {
 ;
 entry:
   %rdx.fadd = call float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> %p0)
+  ret float %rdx.fadd
+}
+
+define noundef float @test_length_float3_start1(<3 x float> noundef %p0) {
+; CHECK-LABEL: define noundef float @test_length_float3_start1(
+; CHECK-SAME: <3 x float> noundef [[P0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x float> [[P0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x float> [[P0]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x float> [[P0]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd float [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+entry:
+  %rdx.fadd = call float @llvm.vector.reduce.fadd.v3f32(float 1.000000e+00, <3 x float> %p0)
   ret float %rdx.fadd
 }
 
@@ -144,6 +176,25 @@ define noundef double @test_length_double4(<4 x double> noundef %p0) {
 ;
 entry:
   %rdx.fadd = call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> %p0)
+  ret double %rdx.fadd
+}
+
+define noundef double @test_length_double4_start1(<4 x double> noundef %p0) {
+; CHECK-LABEL: define noundef double @test_length_double4_start1(
+; CHECK-SAME: <4 x double> noundef [[P0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x double> [[P0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 1.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[P0]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[P0]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[P0]], i64 3
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    ret double [[TMP7]]
+;
+entry:
+  %rdx.fadd = call double @llvm.vector.reduce.fadd.v4f64(double 1.000000e+00, <4 x double> %p0)
   ret double %rdx.fadd
 }
 

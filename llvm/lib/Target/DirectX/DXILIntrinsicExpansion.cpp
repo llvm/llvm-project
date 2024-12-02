@@ -73,35 +73,38 @@ static bool isIntrinsicExpansion(Function &F) {
   }
   return false;
 }
+static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
+  assert(IntrinsicId == Intrinsic::vector_reduce_add ||
+         IntrinsicId == Intrinsic::vector_reduce_fadd);
 
-static Value *expandVecReduceFAdd(CallInst *Orig) {
-  // Note: vector_reduce_fadd first argument is a starting value
-  // Our use doesn't need it, so ignoring argument zero.
-  Value *X = Orig->getOperand(1);
   IRBuilder<> Builder(Orig);
+  bool IsFAdd = (IntrinsicId == Intrinsic::vector_reduce_fadd);
+
+  // Define the addition operation based on the intrinsic ID.
+  auto AddOp = [&Builder, IsFAdd](Value *Sum, Value *Elt) {
+    return IsFAdd ? Builder.CreateFAdd(Sum, Elt) : Builder.CreateAdd(Sum, Elt);
+  };
+
+  Value *X = Orig->getOperand(IsFAdd ? 1 : 0);
   Type *Ty = X->getType();
   auto *XVec = dyn_cast<FixedVectorType>(Ty);
   unsigned XVecSize = XVec->getNumElements();
   Value *Sum = Builder.CreateExtractElement(X, static_cast<uint64_t>(0));
+
+  // Handle the initial start value for floating-point addition.
+  if (IsFAdd) {
+    llvm::Constant *StartValue =
+        llvm::dyn_cast<llvm::Constant>(Orig->getOperand(0));
+    if (StartValue && !StartValue->isZeroValue())
+      Sum = Builder.CreateFAdd(Sum, StartValue);
+  }
+
+  // Accumulate the remaining vector elements.
   for (unsigned I = 1; I < XVecSize; I++) {
     Value *Elt = Builder.CreateExtractElement(X, I);
-    Sum = Builder.CreateFAdd(Sum, Elt);
+    Sum = AddOp(Sum, Elt);
   }
-  return Sum;
-}
 
-static Value *expandVecReduceAdd(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig);
-  Type *Ty = X->getType();
-  auto *XVec = dyn_cast<FixedVectorType>(Ty);
-  unsigned XVecSize = XVec->getNumElements();
-
-  Value *Sum = Builder.CreateExtractElement(X, static_cast<uint64_t>(0));
-  for (unsigned I = 1; I < XVecSize; I++) {
-    Value *Elt = Builder.CreateExtractElement(X, I);
-    Sum = Builder.CreateAdd(Sum, Elt);
-  }
   return Sum;
 }
 
@@ -614,10 +617,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandRadiansIntrinsic(Orig);
     break;
   case Intrinsic::vector_reduce_add:
-    Result = expandVecReduceAdd(Orig);
-    break;
   case Intrinsic::vector_reduce_fadd:
-    Result = expandVecReduceFAdd(Orig);
+    Result = expandVecReduceAdd(Orig, IntrinsicId);
     break;
   }
   if (Result) {
