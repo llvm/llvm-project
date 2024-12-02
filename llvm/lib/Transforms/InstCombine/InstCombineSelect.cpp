@@ -1332,7 +1332,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // If we will be able to evaluate f(Y) to a constant, we can allow undef,
     // otherwise Y cannot be undef as we might pick different values for undef
     // in the cmp and in f(Y).
-    if (TrueVal == OldOp)
+    if (TrueVal == OldOp && (isa<Constant>(OldOp) || !isa<Constant>(NewOp)))
       return nullptr;
 
     if (Value *V = simplifyWithOpReplaced(TrueVal, OldOp, NewOp, SQ,
@@ -1966,17 +1966,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *CmpLHS = ICI->getOperand(0);
   Value *CmpRHS = ICI->getOperand(1);
-  if (CmpRHS != CmpLHS && isa<Constant>(CmpRHS) && !isa<Constant>(CmpLHS)) {
-    if (CmpLHS == TrueVal && Pred == ICmpInst::ICMP_EQ) {
-      // Transform (X == C) ? X : Y -> (X == C) ? C : Y
-      replaceOperand(SI, 1, CmpRHS);
-      Changed = true;
-    } else if (CmpLHS == FalseVal && Pred == ICmpInst::ICMP_NE) {
-      // Transform (X != C) ? Y : X -> (X != C) ? Y : C
-      replaceOperand(SI, 2, CmpRHS);
-      Changed = true;
-    }
-  }
 
   if (Instruction *NewSel = foldSelectICmpEq(SI, ICI, *this))
     return NewSel;
