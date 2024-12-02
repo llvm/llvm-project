@@ -456,7 +456,7 @@ static bool isTriviallyUniform(const Use &U) {
 bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
                                              IntrinsicInst &II,
                                              unsigned LaneArgIdx) const {
-  unsigned MaskBits = ST->isWaveSizeKnown() && ST->isWave32() ? 5 : 6;
+  unsigned MaskBits = ST->getWavefrontSizeLog2();
   APInt DemandedMask(32, maskTrailingOnes<unsigned>(MaskBits));
 
   KnownBits Known(32);
