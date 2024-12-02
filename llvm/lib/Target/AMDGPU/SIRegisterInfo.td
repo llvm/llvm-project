@@ -1436,6 +1436,13 @@ def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v
 def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
 #ifdef LLPC_BUILD_NPI
                           (add VGPR_32_STAGING_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+}
+
+def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
+                                  (add VGPR_32_STAGING_Lo256, SReg_32, LDS_DIRECT_CLASS)> {
 #else /* LLPC_BUILD_NPI */
                           (add VGPR_32_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
 #endif /* LLPC_BUILD_NPI */
@@ -1445,13 +1452,6 @@ def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
 }
 
 #ifdef LLPC_BUILD_NPI
-def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                                  (add VGPR_32_STAGING_Lo256, SReg_32, LDS_DIRECT_CLASS)> {
-  let isAllocatable = 0;
-  let HasVGPR = 1;
-  let HasSGPR = 1;
-}
-
 def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_STAGING, SReg_64)> {
 #else /* LLPC_BUILD_NPI */
 def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_64)> {
@@ -1475,7 +1475,12 @@ def AV_32_STAGING : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32
 } // End GeneratePressureSet = 0
 
 #ifdef LLPC_BUILD_NPI
-def RsrcReg : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32, SReg_32, SReg_256, SReg_128)> {
+def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32, SReg_32, SReg_128)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+}
+
+def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32, SReg_32, SReg_256)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }
@@ -1601,12 +1606,12 @@ def OperandSemantics {
 }
 
 #ifdef LLPC_BUILD_NPI
-def RsrcReg256Op : RegisterOperand<RsrcReg> {
+def RsrcReg256Op : RegisterOperand<RsrcReg256> {
   let DecoderMethod = "decodeRsrcReg256";
   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }
 
-def RsrcReg128Op : RegisterOperand<RsrcReg> {
+def RsrcReg128Op : RegisterOperand<RsrcReg128> {
   let DecoderMethod = "decodeRsrcReg128";
   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }
@@ -1615,7 +1620,9 @@ def RsrcReg128Op : RegisterOperand<RsrcReg> {
 def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 }
 
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
+#ifdef LLPC_BUILD_NPI
 //  GVGPR Operands
 //===----------------------------------------------------------------------===//
 
@@ -1662,9 +1669,7 @@ def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
   let PrintMethod = "printGSrcSimple";
 }
 
-#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
-#ifdef LLPC_BUILD_NPI
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.
 #else /* LLPC_BUILD_NPI */

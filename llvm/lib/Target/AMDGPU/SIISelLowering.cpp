@@ -11890,7 +11890,11 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
 
 SDValue SITargetLowering::bufferRsrcPtrToVector(SDValue MaybePointer,
                                                 SelectionDAG &DAG) const {
+#if LLPC_BUILD_NPI
+  if (MaybePointer.getValueType() != MVT::i128)
+#else /* LLPC_BUILD_NPI */
   if (!MaybePointer.getValueType().isScalarInteger())
+#endif /* LLPC_BUILD_NPI */
     return MaybePointer;
 
   SDValue Rsrc = DAG.getBitcast(MVT::v4i32, MaybePointer);

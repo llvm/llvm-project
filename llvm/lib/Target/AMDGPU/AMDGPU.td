@@ -1238,6 +1238,12 @@ def FeatureSWC : SubtargetFeature<"swc",
   "Streaming wave coalescer"
 >;
 
+def FeatureIndexedResources : SubtargetFeature<"indexed-resources",
+  "HasIndexedResources",
+  "true",
+  "Has indexed resources."
+>;
+
 #endif /* LLPC_BUILD_NPI */
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
@@ -2196,7 +2202,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFmaMixBF16Insts,
    FeatureVNBREncoding,
-   FeatureGloballyAddressableScratch
+   FeatureGloballyAddressableScratch,
+   FeatureIndexedResources
 ]>;
 
 #endif /* LLPC_BUILD_NPI */
@@ -3047,6 +3054,9 @@ def HasVNBREncoding : Predicate<"Subtarget->hasVNBREncoding()">,
 
 def HasSWC : Predicate<"Subtarget->hasSWC()">,
   AssemblerPredicate<(all_of FeatureSWC)>;
+
+def HasIndexedResources : Predicate<"Subtarget->hasIndexedResources()">,
+  AssemblerPredicate<(all_of FeatureIndexedResources)>;
 #endif /* LLPC_BUILD_NPI */
 
 // Include AMDGPU TD files

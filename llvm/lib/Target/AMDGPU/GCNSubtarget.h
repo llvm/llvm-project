@@ -293,6 +293,7 @@ protected:
 #if LLPC_BUILD_NPI
   bool HasVNBREncoding = false;
   bool HasSWC = false;
+  bool HasIndexedResources = false;
 #endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
@@ -1531,6 +1532,10 @@ public:
     return HasMinimum3Maximum3PKF16;
   }
 
+#if LLPC_BUILD_NPI
+  bool hasIndexedResources() const { return HasIndexedResources; }
+
+#endif /* LLPC_BUILD_NPI */
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }

@@ -63,6 +63,12 @@ public:
   bool executeInWaterfallLoop(MachineIRBuilder &B, MachineInstr &MI,
                               ArrayRef<unsigned> OpIndices) const;
 
+#if LLPC_BUILD_NPI
+  void executeBufferInWaterfallLoop(MachineRegisterInfo &MRI, MachineInstr &MI,
+                                    const GCNSubtarget &Subtarget,
+                                    MachineIRBuilder B, unsigned Idx) const;
+
+#endif /* LLPC_BUILD_NPI */
   void constrainOpWithReadfirstlane(MachineIRBuilder &B, MachineInstr &MI,
                                     unsigned OpIdx) const;
   bool applyMappingDynStackAlloc(MachineIRBuilder &B,

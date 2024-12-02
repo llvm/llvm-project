@@ -463,6 +463,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFEN_exact:
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFSET:
       case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFSET_exact:
+#if LLPC_BUILD_NPI
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_BOTHEN:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_BOTHEN_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_IDXEN:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_IDXEN_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_OFFEN:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_OFFEN_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_OFFSET:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_indexed_OFFSET_exact:
+#endif /* LLPC_BUILD_NPI */
         return BUFFER_LOAD;
       case AMDGPU::BUFFER_STORE_DWORD_BOTHEN:
       case AMDGPU::BUFFER_STORE_DWORD_BOTHEN_exact:
@@ -480,6 +490,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_OFFEN_exact:
       case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_OFFSET:
       case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_OFFSET_exact:
+#if LLPC_BUILD_NPI
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_BOTHEN:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_BOTHEN_exact:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_IDXEN:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_IDXEN_exact:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_OFFEN:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_OFFEN_exact:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_OFFSET:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_indexed_OFFSET_exact:
+#endif /* LLPC_BUILD_NPI */
         return BUFFER_STORE;
       }
     }
@@ -517,6 +537,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_OFFEN_exact:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_OFFSET:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_OFFSET_exact:
+#if LLPC_BUILD_NPI
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_BOTHEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_BOTHEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_IDXEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_IDXEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_OFFEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_OFFEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_OFFSET:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_indexed_OFFSET_exact:
+#endif /* LLPC_BUILD_NPI */
         return TBUFFER_LOAD;
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN_exact:
@@ -526,6 +556,12 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_OFFSET:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_OFFSET_exact:
+#if LLPC_BUILD_NPI
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_indexed_OFFEN:
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_indexed_OFFEN_exact:
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_indexed_OFFSET:
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_indexed_OFFSET_exact:
+#endif /* LLPC_BUILD_NPI */
         return TBUFFER_STORE;
       }
     }
