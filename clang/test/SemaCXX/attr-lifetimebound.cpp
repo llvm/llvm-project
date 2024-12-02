@@ -23,6 +23,11 @@ namespace usage_invalid {
   int* attr_on_unnamed_arg(const int& [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
   template <typename T>
   int* attr_on_template_ptr_arg(T * [[clang::lifetimebound]] ptr); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+
+  int (*func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int (*(*func_ptr_ptr)(int) [[clang::lifetimebound]])(int); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  struct X {};
+  int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
 }
 
 namespace usage_ok {
