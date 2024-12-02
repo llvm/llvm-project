@@ -87,6 +87,10 @@ private:
     /// which allows us to diagnose if the value of 'N' is too large for the
     /// current number of 'for' loops.
     bool CollapseDepthSatisfied = true;
+
+    /// Records the kind of the directive that this clause is attached to, which
+    /// allows us to use it in diagnostics.
+    OpenACCDirectiveKind DirectiveKind = OpenACCDirectiveKind::Invalid;
   } CollapseInfo;
 
   /// The 'tile' clause requires a bit of additional checking as well, so like
