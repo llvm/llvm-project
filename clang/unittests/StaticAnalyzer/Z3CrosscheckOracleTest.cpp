@@ -38,8 +38,8 @@ static const AnalyzerOptions DefaultOpts = [] {
 
   // Remember to update the tests in this file when these values change.
   // Also update the doc comment of `interpretQueryResult`.
-  assert(Config.Z3CrosscheckRLimitThreshold == 400'000);
-  assert(Config.Z3CrosscheckTimeoutThreshold == 300_ms);
+  assert(Config.Z3CrosscheckRLimitThreshold == 0);
+  assert(Config.Z3CrosscheckTimeoutThreshold == 15'000_ms);
   // Usually, when the timeout/rlimit threshold is reached, Z3 only slightly
   // overshoots until it realizes that it overshoot and needs to back off.
   // Consequently, the measured timeout should be fairly close to the threshold.
@@ -74,13 +74,13 @@ TEST_F(Z3CrosscheckOracleTest, SATWhenItGoesOverTime) {
 }
 
 TEST_F(Z3CrosscheckOracleTest, UNSATWhenItGoesOverTime) {
-  ASSERT_EQ(RejectEQClass, interpretQueryResult({UNSAT, 310_ms, 1000_step}));
+  ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 310_ms, 1000_step}));
 }
 
 TEST_F(Z3CrosscheckOracleTest, RejectsTimeout) {
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
-  ASSERT_EQ(RejectEQClass, interpretQueryResult({UNDEF, 310_ms, 1000_step}));
+  ASSERT_EQ(RejectReport, interpretQueryResult({UNDEF, 310_ms, 1000_step}));
 }
 
 TEST_F(Z3CrosscheckOracleTest, RejectsUNSATs) {
@@ -97,7 +97,7 @@ TEST_F(Z3CrosscheckOracleTest, RejectEQClassIfSpendsTooMuchTotalTime) {
   // Simulate long queries, that barely doesn't trigger the timeout.
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 290_ms, 1000_step}));
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 290_ms, 1000_step}));
-  ASSERT_EQ(RejectEQClass, interpretQueryResult({UNSAT, 290_ms, 1000_step}));
+  ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 290_ms, 1000_step}));
 }
 
 TEST_F(Z3CrosscheckOracleTest, SATWhenItSpendsTooMuchTotalTime) {
@@ -114,7 +114,7 @@ TEST_F(Z3CrosscheckOracleTest, RejectEQClassIfAttemptsManySmallQueries) {
     ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 20_ms, 1000_step}));
   }
   // Do one more to trigger the heuristic.
-  ASSERT_EQ(RejectEQClass, interpretQueryResult({UNSAT, 1_ms, 1000_step}));
+  ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 1_ms, 1000_step}));
 }
 
 TEST_F(Z3CrosscheckOracleTest, SATWhenIfAttemptsManySmallQueries) {
@@ -131,7 +131,7 @@ TEST_F(Z3CrosscheckOracleTest, SATWhenIfAttemptsManySmallQueries) {
 TEST_F(Z3CrosscheckOracleTest, RejectEQClassIfExhaustsRLimit) {
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
-  ASSERT_EQ(RejectEQClass, interpretQueryResult({UNDEF, 25_ms, 405'000_step}));
+  ASSERT_EQ(RejectReport, interpretQueryResult({UNDEF, 25_ms, 405'000_step}));
 }
 
 TEST_F(Z3CrosscheckOracleTest, SATWhenItExhaustsRLimit) {
