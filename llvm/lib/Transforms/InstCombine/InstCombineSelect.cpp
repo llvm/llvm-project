@@ -1257,23 +1257,7 @@ static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
   }
 
   if (SelectPatternResult::isMinOrMax(SPF)) {
-    Intrinsic::ID IntrinsicID;
-    switch (SPF) {
-    case SelectPatternFlavor::SPF_UMIN:
-      IntrinsicID = Intrinsic::umin;
-      break;
-    case SelectPatternFlavor::SPF_UMAX:
-      IntrinsicID = Intrinsic::umax;
-      break;
-    case SelectPatternFlavor::SPF_SMIN:
-      IntrinsicID = Intrinsic::smin;
-      break;
-    case SelectPatternFlavor::SPF_SMAX:
-      IntrinsicID = Intrinsic::smax;
-      break;
-    default:
-      llvm_unreachable("Unexpected SPF");
-    }
+    Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
     return IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS);
   }
 
@@ -1898,6 +1882,63 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
+/// Fold `X Pred C1 ? X BOp C2 : C1 BOp C2` to `min/max(X, C1) BOp C2`.
+/// This allows for better canonicalization.
+static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
+                                           Value *FalseVal,
+                                           IRBuilderBase &Builder) {
+  BinaryOperator *BOp;
+  Constant *C1, *C2, *C3;
+  Value *X;
+  ICmpInst::Predicate Predicate;
+
+  if (!match(Cmp, m_ICmp(Predicate, m_Value(X), m_Constant(C1))))
+    return nullptr;
+
+  if (!ICmpInst::isRelational(Predicate))
+    return nullptr;
+
+  if (match(TrueVal, m_Constant())) {
+    std::swap(FalseVal, TrueVal);
+    Predicate = ICmpInst::getInversePredicate(Predicate);
+  }
+
+  if (!match(TrueVal, m_BinOp(BOp)) || !match(FalseVal, m_Constant(C3)))
+    return nullptr;
+
+  unsigned Opcode = BOp->getOpcode();
+
+  // This fold causes some regressions and is primarily intended for
+  // add and sub. So we early exit for div and rem to minimize the
+  // regressions.
+  if (Instruction::isIntDivRem(Opcode))
+    return nullptr;
+
+  if (!match(BOp, m_OneUse(m_BinOp(m_Specific(X), m_Constant(C2)))))
+    return nullptr;
+
+  Value *RHS;
+  SelectPatternFlavor SPF;
+  const DataLayout &DL = BOp->getDataLayout();
+  auto Flipped =
+      InstCombiner::getFlippedStrictnessPredicateAndConstant(Predicate, C1);
+
+  if (C3 == ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL)) {
+    SPF = getSelectPattern(Predicate).Flavor;
+    RHS = C1;
+  } else if (Flipped && C3 == ConstantFoldBinaryOpOperands(
+                                  Opcode, Flipped->second, C2, DL)) {
+    SPF = getSelectPattern(Flipped->first).Flavor;
+    RHS = Flipped->second;
+  } else {
+    return nullptr;
+  }
+
+  Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
+  Value *Intrinsic = Builder.CreateBinaryIntrinsic(IntrinsicID, X, RHS);
+  return Builder.CreateBinOp(BOp->getOpcode(), Intrinsic, C2);
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
@@ -1985,6 +2026,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
