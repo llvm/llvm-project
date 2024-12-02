@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/SMLoc.h"
@@ -32,7 +33,7 @@ private:
   // Map of aliases created by .symver directives, saved so we can update
   // their symbol binding after parsing complete. This maps from each
   // aliasee to its list of aliases.
-  DenseMap<const MCSymbol *, std::vector<StringRef>> SymverAliasMap;
+  MapVector<const MCSymbol *, std::vector<StringRef>> SymverAliasMap;
 
   /// Get the state recorded for the given symbol.
   State getSymbolState(const MCSymbol *Sym);
