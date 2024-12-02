@@ -11331,9 +11331,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         break;
       case Builtin::BI__builtin_elementwise_bitreverse:
         ResultElements.push_back(
-            APValue(APSInt(Elt.reverseBits(),
-                           DestEltTy->isUnsignedIntegerOrEnumerationType())
-                        .extOrTrunc(Info.Ctx.getIntWidth(DestEltTy))));
+            APValue(APSInt(Elt.reverseBits(), DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       }
     }
