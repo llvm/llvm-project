@@ -1,4 +1,4 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compile-run-and-check-generic
 
 // Assuming the stack is allocated on the host starting at high addresses, the
 // host memory layout for the following program looks like this:
