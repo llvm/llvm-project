@@ -4,7 +4,9 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefix=GFX11 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefix=GFX13 %s
 ;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
+;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefix=GFX13 %s
 
 define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 ; PREGFX10-LABEL: tbuffer_store:
@@ -40,6 +42,15 @@ define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, 
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[8:11], off, s[0:3], null format:78 th:TH_STORE_HT
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[8:11], off, s[0:3], null format:78 th:TH_STORE_RT_NT
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: tbuffer_store:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_8_8_8_8_USCALED]
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[4:7], off, s[0:3], null format:[BUF_FMT_32_32_32_32_UINT] th:TH_STORE_NT
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[8:11], off, s[0:3], null format:78 th:TH_STORE_HT
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[8:11], off, s[0:3], null format:78 th:TH_STORE_RT_NT
+; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
   %in2 = bitcast <4 x float> %2 to <4 x i32>
@@ -71,6 +82,11 @@ define amdgpu_ps void @tbuffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:117 offset:42
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: tbuffer_store_immoffs:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:117 offset:42
+; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
   call void @llvm.amdgcn.raw.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 42, i32 0, i32 117, i32 0)
@@ -97,6 +113,11 @@ define amdgpu_ps void @tbuffer_store_scalar_and_imm_offs(<4 x i32> inreg, <4 x f
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], s4 format:117 offset:42
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: tbuffer_store_scalar_and_imm_offs:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], s4 format:117 offset:42
+; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.raw.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 42, i32 %soffset, i32 117, i32 0)
@@ -123,6 +144,11 @@ define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float> %vdata, i32
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:115 offen
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_ofs:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:115 offen
+; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.raw.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 %voffset, i32 0, i32 115, i32 0)
@@ -149,6 +175,11 @@ define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data) {
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_x v0, off, s[0:3], null format:125
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_x1:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_x v0, off, s[0:3], null format:125
+; GFX13-NEXT:    s_endpgm
 main_body:
   %data.i = bitcast float %data to i32
   call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %data.i, <4 x i32> %rsrc, i32 0, i32 0, i32 125, i32 0)
@@ -175,6 +206,11 @@ define amdgpu_ps void @buffer_store_x2(<4 x i32> inreg %rsrc, <2 x float> %data)
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xy v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_x2:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xy v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX13-NEXT:    s_endpgm
 main_body:
   %data.i = bitcast <2 x float> %data to <2 x i32>
   call void @llvm.amdgcn.raw.tbuffer.store.v2i32(<2 x i32> %data.i, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
@@ -201,6 +237,11 @@ define amdgpu_ps void @buffer_store_voffset_large_12bit(<4 x i32> inreg %rsrc, <
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:4092
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_voffset_large_12bit:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:4092
+; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 4092, i32 0, i32 63, i32 0)
   ret void
@@ -229,6 +270,11 @@ define amdgpu_ps void @buffer_store_voffset_large_13bit(<4 x i32> inreg %rsrc, <
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:8188
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_voffset_large_13bit:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:8188
+; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 8188, i32 0, i32 63, i32 0)
   ret void
@@ -257,6 +303,11 @@ define amdgpu_ps void @buffer_store_voffset_large_16bit(<4 x i32> inreg %rsrc, <
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:65532
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_voffset_large_16bit:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:65532
+; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 65532, i32 0, i32 63, i32 0)
   ret void
@@ -285,6 +336,11 @@ define amdgpu_ps void @buffer_store_voffset_large_23bit(<4 x i32> inreg %rsrc, <
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:8388604
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_voffset_large_23bit:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offset:8388604
+; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 8388604, i32 0, i32 63, i32 0)
   ret void
@@ -314,6 +370,12 @@ define amdgpu_ps void @buffer_store_voffset_large_24bit(<4 x i32> inreg %rsrc, <
 ; GFX12-NEXT:    v_mov_b32_e32 v4, 0x800000
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:8388604
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: buffer_store_voffset_large_24bit:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0x800000
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:8388604
+; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 16777212, i32 0, i32 63, i32 0)
   ret void

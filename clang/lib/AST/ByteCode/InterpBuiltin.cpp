@@ -89,13 +89,14 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   std::optional<PrimType> T = S.getContext().classify(QT);
   assert(T);
 
+  unsigned BitWidth = S.getASTContext().getTypeSize(QT);
   if (QT->isSignedIntegerOrEnumerationType()) {
     int64_t V = Val.getSExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
   } else {
     assert(QT->isUnsignedIntegerOrEnumerationType());
     uint64_t V = Val.getZExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
   }
 }
 
@@ -116,14 +117,14 @@ static void assignInteger(Pointer &Dest, PrimType ValueT, const APSInt &Value) {
       ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
 }
 
-static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
+static bool retPrimValue(InterpState &S, CodePtr OpPC,
                          std::optional<PrimType> &T) {
   if (!T)
-    return RetVoid(S, OpPC, Result);
+    return RetVoid(S, OpPC);
 
 #define RET_CASE(X)                                                            \
   case X:                                                                      \
-    return Ret<X>(S, OpPC, Result);
+    return Ret<X>(S, OpPC);
   switch (*T) {
     RET_CASE(PT_Ptr);
     RET_CASE(PT_FnPtr);
@@ -137,6 +138,8 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
     RET_CASE(PT_Uint32);
     RET_CASE(PT_Sint64);
     RET_CASE(PT_Uint64);
+    RET_CASE(PT_IntAP);
+    RET_CASE(PT_IntAPS);
   default:
     llvm_unreachable("Unsupported return type for builtin function");
   }
@@ -1684,10 +1687,45 @@ static bool interp__builtin_arithmetic_fence(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
+                                          const InterpFrame *Frame,
+                                          const Function *Func,
+                                          const CallExpr *Call) {
+  const Pointer &Arg = S.Stk.peek<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+
+  unsigned ID = Func->getBuiltinID();
+  if (ID == Builtin::BI__builtin_reduce_add) {
+    QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+    assert(Call->getType() == ElemType);
+    PrimType ElemT = *S.getContext().classify(ElemType);
+    unsigned NumElems = Arg.getNumElems();
+
+    INT_TYPE_SWITCH(ElemT, {
+      T Sum = Arg.atIndex(0).deref<T>();
+      unsigned BitWidth = Sum.bitWidth();
+      for (unsigned I = 1; I != NumElems; ++I) {
+        T Elem = Arg.atIndex(I).deref<T>();
+        if (T::add(Sum, Elem, BitWidth, &Sum)) {
+          unsigned OverflowBits = BitWidth + 1;
+          (void)handleOverflow(
+              S, OpPC,
+              (Sum.toAPSInt(OverflowBits) + Elem.toAPSInt(OverflowBits)));
+          return false;
+        }
+      }
+      pushInteger(S, Sum, Call->getType());
+    });
+
+    return true;
+  }
+
+  llvm_unreachable("Unsupported vector reduce builtin");
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
-  APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
@@ -2130,6 +2168,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
+  case Builtin::BI__builtin_reduce_add:
+    if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -2138,7 +2181,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     return false;
   }
 
-  return retPrimValue(S, OpPC, Dummy, ReturnT);
+  return retPrimValue(S, OpPC, ReturnT);
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,

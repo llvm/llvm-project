@@ -49,7 +49,7 @@ entry:
   ret void
 }
 
-; CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
+; CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32.v4i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
 define float @test_raw_buffer_atomic_cond_sub_u32(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {
 entry:
   %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
@@ -57,7 +57,7 @@ entry:
   ret float %r
 }
 
-; CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+; CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32.v4i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
 define float @test_struct_buffer_atomic_cond_sub_u32(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {
 entry:
   %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)

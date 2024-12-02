@@ -1426,7 +1426,7 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
 // operation is volatile.
 class AMDGPURawBufferLoad : DefaultAttrsIntrinsic <
   [llvm_any_ty],
-  [llvm_v4i32_ty,    // rsrc(SGPR)
+  [llvm_any_ty,      // rsrc
    llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
@@ -1443,7 +1443,7 @@ def int_amdgcn_raw_buffer_load : AMDGPURawBufferLoad;
 
 class AMDGPURawAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [data_ty],
-  [llvm_v4i32_ty,     // rsrc(SGPR)
+  [llvm_any_ty,       // rsrc
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty],      // auxiliary data (imm, cachepolicy     (bit 0 = glc,
@@ -1487,7 +1487,7 @@ def int_amdgcn_raw_ptr_atomic_buffer_load : AMDGPURawPtrAtomicBufferLoad;
 
 class AMDGPUStructBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [data_ty],
-  [llvm_v4i32_ty,    // rsrc(SGPR)
+  [llvm_any_ty,      // rsrc
    llvm_i32_ty,      // vindex(VGPR)
    llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1505,7 +1505,7 @@ def int_amdgcn_struct_buffer_load : AMDGPUStructBufferLoad;
 
 class AMDGPUStructAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [data_ty],
-  [llvm_v4i32_ty,    // rsrc(SGPR)
+  [llvm_any_ty,      // rsrc
    llvm_i32_ty,      // vindex(VGPR)
    llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1560,7 +1560,7 @@ def int_amdgcn_struct_ptr_atomic_buffer_load : AMDGPUStructPtrAtomicBufferLoad;
 class AMDGPURawBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [],
   [data_ty,          // vdata(VGPR)
-   llvm_v4i32_ty,    // rsrc(SGPR)
+   llvm_any_ty,      // rsrc
    llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
@@ -1597,7 +1597,7 @@ def int_amdgcn_raw_ptr_buffer_store : AMDGPURawPtrBufferStore;
 class AMDGPUStructBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [],
   [data_ty,          // vdata(VGPR)
-   llvm_v4i32_ty,    // rsrc(SGPR)
+   llvm_any_ty,      // rsrc
    llvm_i32_ty,      // vindex(VGPR)
    llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1636,7 +1636,7 @@ def int_amdgcn_struct_ptr_buffer_store : AMDGPUStructPtrBufferStore;
 class AMDGPURawBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [data_ty],
   [LLVMMatchType<0>,  // vdata(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_any_ty,       // rsrc
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty],      // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
@@ -1661,7 +1661,7 @@ def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
    LLVMMatchType<0>,  // cmp(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_any_ty,       // rsrc
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
    llvm_i32_ty],      // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
@@ -1715,7 +1715,7 @@ def int_amdgcn_raw_ptr_buffer_atomic_fadd : AMDGPURawPtrBufferAtomic<llvm_anyflo
 class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [data_ty],
   [LLVMMatchType<0>,  // vdata(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_any_ty,       // rsrc
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1739,7 +1739,7 @@ def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
    LLVMMatchType<0>,  // cmp(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_any_ty,       // rsrc
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1801,7 +1801,7 @@ def int_amdgcn_struct_ptr_buffer_atomic_fmax : AMDGPUStructPtrBufferAtomic<llvm_
 // - joint cachepolicy field
 def int_amdgcn_raw_tbuffer_load : DefaultAttrsIntrinsic <
     [llvm_any_ty],    // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
-    [llvm_v4i32_ty,   // rsrc(SGPR)
+    [llvm_any_ty,     // rsrc
      llvm_i32_ty,     // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,     // soffset(SGPR/imm, excluded from bounds checking and swizzling)
      llvm_i32_ty,     // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
@@ -1835,7 +1835,7 @@ def int_amdgcn_raw_ptr_tbuffer_load : DefaultAttrsIntrinsic <
 def int_amdgcn_raw_tbuffer_store : DefaultAttrsIntrinsic <
     [],
     [llvm_any_ty,    // vdata(VGPR), overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
-     llvm_v4i32_ty,  // rsrc(SGPR)
+     llvm_any_ty,    // rsrc
      llvm_i32_ty,    // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,    // soffset(SGPR/imm, excluded from bounds checking and swizzling)
      llvm_i32_ty,    // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
@@ -1870,7 +1870,7 @@ def int_amdgcn_raw_ptr_tbuffer_store : DefaultAttrsIntrinsic <
 
 def int_amdgcn_struct_tbuffer_load : DefaultAttrsIntrinsic <
     [llvm_any_ty],    // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
-    [llvm_v4i32_ty,   // rsrc(SGPR)
+    [llvm_any_ty,     // rsrc
      llvm_i32_ty,     // vindex(VGPR)
      llvm_i32_ty,     // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,     // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1926,7 +1926,7 @@ def int_amdgcn_struct_ptr_tbuffer_store : DefaultAttrsIntrinsic <
 def int_amdgcn_struct_tbuffer_store : DefaultAttrsIntrinsic <
     [],
     [llvm_any_ty,    // vdata(VGPR), overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
-     llvm_v4i32_ty,  // rsrc(SGPR)
+     llvm_any_ty,    // rsrc
      llvm_i32_ty,    // vindex(VGPR)
      llvm_i32_ty,    // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,    // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1944,7 +1944,7 @@ def int_amdgcn_struct_tbuffer_store : DefaultAttrsIntrinsic <
 
 class AMDGPURawBufferLoadLDS : Intrinsic <
   [],
-  [llvm_v4i32_ty,             // rsrc(SGPR)
+  [llvm_any_ty,               // rsrc
    LLVMQualPointerType<3>,    // LDS base offset
    llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
@@ -1985,7 +1985,7 @@ def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS;
 
 class AMDGPUStructBufferLoadLDS : Intrinsic <
   [],
-  [llvm_v4i32_ty,             // rsrc(SGPR)
+  [llvm_any_ty,               // rsrc
    LLVMQualPointerType<3>,    // LDS base offset
    llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,               // vindex(VGPR)
@@ -3418,7 +3418,7 @@ def int_amdgcn_raw_ptr_buffer_discard_b1024 : AMDGPURawPtrBufferDiscard;
 
 class AMDGPURawBufferDiscard : DefaultAttrsIntrinsic <
   [],
-  [llvm_v4i32_ty,   // rsrc(SGPR)
+  [llvm_any_ty,     // rsrc
    llvm_i32_ty,     // offset(VGPR/imm)
    llvm_i32_ty,     // soffset(SGPR/imm)
    llvm_i32_ty],    // cachepolicy(imm)  bits [0-2] = th, bits[3-4] = scope
@@ -3445,7 +3445,7 @@ def int_amdgcn_struct_ptr_buffer_discard_b1024 : AMDGPUStructPtrBufferDiscard;
 
 class AMDGPUStructBufferDiscard : DefaultAttrsIntrinsic <
   [],
-  [llvm_v4i32_ty,   // rsrc(SGPR)
+  [llvm_any_ty,     // rsrc
    llvm_i32_ty,     // vindex(VGPR)
    llvm_i32_ty,     // offset(VGPR/imm)
    llvm_i32_ty,     // soffset(SGPR/imm)
