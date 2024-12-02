@@ -19238,8 +19238,7 @@ class HorizontalReduction {
     case RecurKind::Or:
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
         return Builder.CreateSelect(
-            LHS,
-            ConstantInt::getAllOnesValue(CmpInst::makeCmpResultType(OpTy)),
+            LHS, ConstantInt::getAllOnesValue(CmpInst::makeCmpResultType(OpTy)),
             RHS, Name);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
@@ -20150,7 +20149,8 @@ public:
                                Lane->getType()->getScalarType() !=
                                        VL.front()->getType()->getScalarType()
                                    ? V.isSignedMinBitwidthRootNode()
-                                   : true, RdxRootInst->getType());
+                                   : true,
+                               RdxRootInst->getType());
             ReducedSubTree =
                 Builder.CreateInsertElement(ReducedSubTree, Val, I);
           }
