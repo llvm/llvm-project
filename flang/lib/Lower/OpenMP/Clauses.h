@@ -153,10 +153,11 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
   return func(*arg);
 }
 
-template <
+template <           //
     typename FuncTy, //
     typename ArgTy,  //
-    typename ResultTy = std::invoke_result_t<FuncTy, typename ArgTy::Value>>
+    typename ResultTy =
+        std::invoke_result_t<FuncTy, decltype(std::declval<ArgTy>().v)>>
 std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
   if (!arg)
     return std::nullopt;
