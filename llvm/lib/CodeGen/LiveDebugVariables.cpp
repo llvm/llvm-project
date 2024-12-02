@@ -286,6 +286,8 @@ namespace {
 /// user values are related if they are held by the same virtual register. The
 /// equivalence class is the transitive closure of that relation.
 class UserValue {
+  using LDVImpl = LiveDebugVariables::LDVImpl;
+
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
   /// The part of the variable we describe.
   const std::optional<DIExpression::FragmentInfo> Fragment;
@@ -534,7 +536,12 @@ public:
 namespace llvm {
 
 /// Implementation of the LiveDebugVariables pass.
-class LDVImpl {
+
+LiveDebugVariables::LiveDebugVariables() = default;
+LiveDebugVariables::~LiveDebugVariables() = default;
+LiveDebugVariables::LiveDebugVariables(LiveDebugVariables &&) = default;
+
+class LiveDebugVariables::LDVImpl {
   LocMap::Allocator allocator;
   MachineFunction *MF = nullptr;
   LiveIntervals *LIS;
@@ -756,7 +763,7 @@ void UserLabel::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
   OS << '\n';
 }
 
-void LDVImpl::print(raw_ostream &OS) {
+void LiveDebugVariables::LDVImpl::print(raw_ostream &OS) {
   OS << "********** DEBUG VARIABLES **********\n";
   for (auto &userValue : userValues)
     userValue->print(OS, TRI);
@@ -765,16 +772,15 @@ void LDVImpl::print(raw_ostream &OS) {
     userLabel->print(OS, TRI);
 }
 
-void UserValue::mapVirtRegs(LDVImpl *LDV) {
+void UserValue::mapVirtRegs(LiveDebugVariables::LDVImpl *LDV) {
   for (const MachineOperand &MO : locations)
     if (MO.isReg() && MO.getReg().isVirtual())
       LDV->mapVirtReg(MO.getReg(), this);
 }
 
-UserValue *
-LDVImpl::getUserValue(const DILocalVariable *Var,
-                      std::optional<DIExpression::FragmentInfo> Fragment,
-                      const DebugLoc &DL) {
+UserValue *LiveDebugVariables::LDVImpl::getUserValue(
+    const DILocalVariable *Var,
+    std::optional<DIExpression::FragmentInfo> Fragment, const DebugLoc &DL) {
   // FIXME: Handle partially overlapping fragments. See
   // https://reviews.llvm.org/D70121#1849741.
   DebugVariable ID(Var, Fragment, DL->getInlinedAt());
@@ -787,19 +793,20 @@ LDVImpl::getUserValue(const DILocalVariable *Var,
   return UV;
 }
 
-void LDVImpl::mapVirtReg(Register VirtReg, UserValue *EC) {
+void LiveDebugVariables::LDVImpl::mapVirtReg(Register VirtReg, UserValue *EC) {
   assert(VirtReg.isVirtual() && "Only map VirtRegs");
   UserValue *&Leader = virtRegToEqClass[VirtReg];
   Leader = UserValue::merge(Leader, EC);
 }
 
-UserValue *LDVImpl::lookupVirtReg(Register VirtReg) {
+UserValue *LiveDebugVariables::LDVImpl::lookupVirtReg(Register VirtReg) {
   if (UserValue *UV = virtRegToEqClass.lookup(VirtReg))
     return UV->getLeader();
   return nullptr;
 }
 
-bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
+bool LiveDebugVariables::LDVImpl::handleDebugValue(MachineInstr &MI,
+                                                   SlotIndex Idx) {
   // DBG_VALUE loc, offset, variable, expr
   // DBG_VALUE_LIST variable, expr, locs...
   if (!MI.isDebugValue()) {
@@ -875,8 +882,8 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   return true;
 }
 
-MachineBasicBlock::iterator LDVImpl::handleDebugInstr(MachineInstr &MI,
-                                                      SlotIndex Idx) {
+MachineBasicBlock::iterator
+LiveDebugVariables::LDVImpl::handleDebugInstr(MachineInstr &MI, SlotIndex Idx) {
   assert(MI.isDebugValueLike() || MI.isDebugPHI());
 
   // In instruction referencing mode, there should be no DBG_VALUE instructions
@@ -896,7 +903,8 @@ MachineBasicBlock::iterator LDVImpl::handleDebugInstr(MachineInstr &MI,
   return NextInst;
 }
 
-bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
+bool LiveDebugVariables::LDVImpl::handleDebugLabel(MachineInstr &MI,
+                                                   SlotIndex Idx) {
   // DBG_LABEL label
   if (MI.getNumOperands() != 1 || !MI.getOperand(0).isMetadata()) {
     LLVM_DEBUG(dbgs() << "Can't handle " << MI);
@@ -919,7 +927,8 @@ bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
   return true;
 }
 
-bool LDVImpl::collectDebugValues(MachineFunction &mf, bool InstrRef) {
+bool LiveDebugVariables::LDVImpl::collectDebugValues(MachineFunction &mf,
+                                                     bool InstrRef) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : mf) {
     for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
@@ -1252,7 +1261,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     I.setStopUnchecked(PrevEnd);
 }
 
-void LDVImpl::computeIntervals() {
+void LiveDebugVariables::LDVImpl::computeIntervals() {
   LexicalScopes LS;
   LS.initialize(*MF);
 
@@ -1262,7 +1271,8 @@ void LDVImpl::computeIntervals() {
   }
 }
 
-bool LDVImpl::runOnMachineFunction(MachineFunction &mf, bool InstrRef) {
+bool LiveDebugVariables::LDVImpl::runOnMachineFunction(MachineFunction &mf,
+                                                       bool InstrRef) {
   clear();
   MF = &mf;
   TRI = mf.getSubtarget().getRegisterInfo();
@@ -1323,7 +1333,7 @@ PreservedAnalyses
 LiveDebugVariablesPrinterPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
   auto &LDV = MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
-  LDV.print(dbgs());
+  LDV.print(OS);
   return PreservedAnalyses::all();
 }
 
@@ -1478,7 +1488,8 @@ UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
   return DidChange;
 }
 
-void LDVImpl::splitPHIRegister(Register OldReg, ArrayRef<Register> NewRegs) {
+void LiveDebugVariables::LDVImpl::splitPHIRegister(Register OldReg,
+                                                   ArrayRef<Register> NewRegs) {
   auto RegIt = RegToPHIIdx.find(OldReg);
   if (RegIt == RegToPHIIdx.end())
     return;
@@ -1516,7 +1527,8 @@ void LDVImpl::splitPHIRegister(Register OldReg, ArrayRef<Register> NewRegs) {
     RegToPHIIdx[RegAndInstr.first].push_back(RegAndInstr.second);
 }
 
-void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
+void LiveDebugVariables::LDVImpl::splitRegister(Register OldReg,
+                                                ArrayRef<Register> NewRegs) {
   // Consider whether this split range affects any PHI locations.
   splitPHIRegister(OldReg, NewRegs);
 
@@ -1840,7 +1852,7 @@ void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
   LLVM_DEBUG(dbgs() << '\n');
 }
 
-void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
+void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
     return;

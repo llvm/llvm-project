@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 namespace llvm {
@@ -30,14 +31,14 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class LiveIntervals;
 class VirtRegMap;
-class LDVImpl;
 
 class LiveDebugVariables {
-private:
-  std::unique_ptr<LDVImpl> PImpl;
 
 public:
-  LiveDebugVariables() = default;
+  class LDVImpl;
+  LiveDebugVariables();
+  ~LiveDebugVariables();
+  LiveDebugVariables(LiveDebugVariables &&);
 
   void analyze(MachineFunction &MF, LiveIntervals *LIS);
   /// splitRegister - Move any user variables in OldReg to the live ranges in
@@ -62,6 +63,9 @@ public:
 
   bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &Inv);
+
+private:
+  std::unique_ptr<LDVImpl> PImpl;
 };
 
 class LiveDebugVariablesWrapperLegacy : public MachineFunctionPass {
@@ -98,7 +102,11 @@ public:
 
 class LiveDebugVariablesPrinterPass
     : public PassInfoMixin<LiveDebugVariablesPrinterPass> {
+  raw_ostream &OS;
+
 public:
+  LiveDebugVariablesPrinterPass(raw_ostream &OS) : OS(OS) {}
+
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
