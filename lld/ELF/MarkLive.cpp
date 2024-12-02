@@ -42,9 +42,13 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-struct LiveParent {
+struct LiveOffset {
   InputSectionBase *sec;
   std::optional<uint64_t> offset;
+
+  LiveOffset(InputSectionBase *sec,
+             std::optional<uint64_t> offset = std::nullopt)
+      : sec(sec), offset(offset) {}
 };
 
 template <class ELFT> class MarkLive {
@@ -55,7 +59,8 @@ public:
   void moveToMain();
 
 private:
-  void enqueue(InputSectionBase *sec, uint64_t offset, std::optional<LiveParent> parent);
+  void enqueue(InputSectionBase *sec, uint64_t offset,
+               std::optional<LiveOffset> parent);
   void markSymbol(Symbol *sym);
   void mark();
 
@@ -76,7 +81,7 @@ private:
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 
-  DenseMap<InputSectionBase*, LiveParent> parents;
+  DenseMap<LiveOffset, LiveOffset> whyLive;
 };
 } // namespace
 
@@ -108,7 +113,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
   Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
-  LiveParent parent = {&sec, rel.r_offset};
+  LiveOffset parent = {&sec, rel.r_offset};
 
   if (auto *d = dyn_cast<Defined>(&sym)) {
     auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section);
@@ -197,7 +202,7 @@ static bool isReserved(InputSectionBase *sec) {
 
 template <class ELFT>
 void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
-                             std::optional<LiveParent> parent) {
+                             std::optional<LiveOffset> parent) {
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
@@ -212,7 +217,7 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
   sec->partition = sec->partition ? 1 : partition;
 
   if (parent)
-    parents.try_emplace(sec, *parent);
+    whyLive.try_emplace(LiveOffset{sec, offset}, *parent);
 
   // Add input section to the queue.
   if (InputSection *s = dyn_cast<InputSection>(sec))
@@ -336,11 +341,11 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, 0, LiveParent{&sec, std::nullopt});
+      enqueue(isec, 0, &sec);
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, 0, LiveParent{&sec, std::nullopt});
+      enqueue(sec.nextInSectionGroup, 0, &sec);
   }
 }
 
