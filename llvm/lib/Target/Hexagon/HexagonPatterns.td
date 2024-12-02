@@ -2675,7 +2675,7 @@ def s30_2ProperPred  : PatLeaf<(i32 imm), [{
 }]>;
 def RoundTo8 : SDNodeXForm<imm, [{
   int32_t Imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(Imm & -8, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(Imm & -8, SDLoc(N), MVT::i32);
 }]>;
 
 let AddedComplexity = 150 in
