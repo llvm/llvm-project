@@ -58,7 +58,6 @@ public:
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
     this->BackingDataSize = BackingDataSize;
-    this->IdxContents = IndexContents::All;
   }
 
   template <typename SymbolRange, typename RefsRange, typename RelationsRange,
@@ -124,7 +123,7 @@ private:
   // Set of files which were used during this index build.
   llvm::StringSet<> Files;
   // Contents of the index (symbols, references, etc.)
-  IndexContents IdxContents;
+  IndexContents IdxContents = IndexContents::None;
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;
 };
