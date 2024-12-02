@@ -209,7 +209,6 @@ void uses() {
 #pragma acc parallel loop device_type(*) async
   for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc serial loop device_type(*) tile(*, 1)
   for(int j = 0; j < 5; ++j)
     for(int i = 0; i < 5; ++i);
