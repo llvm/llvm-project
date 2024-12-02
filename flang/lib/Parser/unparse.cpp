@@ -2171,13 +2171,13 @@ public:
     Walk(std::get<OmpOrderClause::Ordering>(x.t));
   }
   void Unparse(const OmpGrainsizeClause &x) {
-    Walk(std::get<std::optional<OmpGrainsizeClause::Prescriptiveness>>(x.t),
-        ":");
+    using Modifier = OmpGrainsizeClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpNumTasksClause &x) {
-    Walk(
-        std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
+    using Modifier = OmpNumTasksClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpDoacross::Sink &x) {
@@ -2186,8 +2186,8 @@ public:
   }
   void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
   void Unparse(const OmpDependClause::TaskDep &x) {
-    Walk(std::get<OmpTaskDependenceType>(x.t));
-    Put(":");
+    using Modifier = OmpDependClause::TaskDep::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpDefaultmapClause &x) {
@@ -2853,9 +2853,7 @@ public:
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
-  WALK_NESTED_ENUM(
-      OmpGrainsizeClause, Prescriptiveness) // OMP grainsize-modifier
-  WALK_NESTED_ENUM(OmpNumTasksClause, Prescriptiveness) // OMP numtasks-modifier
+  WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM
