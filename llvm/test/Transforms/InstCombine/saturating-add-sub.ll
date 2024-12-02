@@ -1793,10 +1793,9 @@ define i32 @not_uadd_sat(i32 %x, i32 %y) {
 
 define i32 @not_uadd_sat2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_uadd_sat2(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -2
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 -1
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.umax.i32(i32 [[X1:%.*]], i32 1)
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], -2
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %a = add i32 %x, -2
   %c = icmp ugt i32 %x, 1

@@ -1178,9 +1178,19 @@ SelectPatternResult matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
     Instruction::CastOps *CastOp = nullptr, unsigned Depth = 0);
 
+/// Determine the pattern for predicate `X Pred Y ? X : Y`.
+SelectPatternResult
+getSelectPattern(CmpInst::Predicate Pred,
+                 SelectPatternNaNBehavior NaNBehavior = SPNB_NA,
+                 bool Ordered = false);
+
 /// Return the canonical comparison predicate for the specified
 /// minimum/maximum flavor.
 CmpInst::Predicate getMinMaxPred(SelectPatternFlavor SPF, bool Ordered = false);
+
+/// Convert given `SPF` to equivalent min/max intrinsic.
+/// Caller must ensure `SPF` is an integer min or max pattern.
+Intrinsic::ID getMinMaxIntrinsic(SelectPatternFlavor SPF);
 
 /// Return the inverse minimum/maximum flavor of the specified flavor.
 /// For example, signed minimum is the inverse of signed maximum.
