@@ -702,7 +702,6 @@ def GNUStatementExpressionFromMacroExpansion :
 def GNUStatementExpression : DiagGroup<"gnu-statement-expression",
                                        [GNUStatementExpressionFromMacroExpansion]>;
 def StringConcatation : DiagGroup<"string-concatenation">;
-def ArrayCompare : DiagGroup<"array-compare">;
 def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
