@@ -1669,16 +1669,19 @@ SDValue LoongArchTargetLowering::lowerFP_TO_SINT(SDValue Op,
                                                  SelectionDAG &DAG) const {
 
   SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+
+  if (Op0.getValueType() == MVT::f16)
+    Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
   if (Op.getValueSizeInBits() > 32 && Subtarget.hasBasicF() &&
       !Subtarget.hasBasicD()) {
-    SDValue Dst =
-        DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Op.getOperand(0));
+    SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Op0);
     return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Dst);
   }
 
   EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
-  SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op.getOperand(0));
+  SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op0);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
 }
 
@@ -2872,6 +2875,8 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     EVT FVT = EVT::getFloatingPointVT(N->getValueSizeInBits(0));
     if (getTypeAction(*DAG.getContext(), Src.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
+      if (Src.getValueType() == MVT::f16)
+        Src = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
       SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, FVT, Src);
       Results.push_back(DAG.getNode(ISD::BITCAST, DL, VT, Dst));
       return;
