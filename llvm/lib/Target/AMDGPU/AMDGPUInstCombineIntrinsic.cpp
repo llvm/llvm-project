@@ -466,9 +466,9 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   if (!Known.isConstant())
     return false;
 
-  // Unlike the DAG version, SimplifyDemandedBits does not change
-  // constants. Make sure we clamp these down. Out of bounds indexes may appear
-  // in wave64 code compiled for wave32.
+  // Out of bounds indexes may appear in wave64 code compiled for wave32.
+  // Unlike the DAG version, SimplifyDemandedBits does not change constants, so
+  // manually fix it up.
 
   Value *LaneArg = II.getArgOperand(LaneArgIdx);
   Constant *MaskedConst =
