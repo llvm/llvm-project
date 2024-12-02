@@ -3457,6 +3457,30 @@ inline namespace modifier {
 //   ENUM_CLASS(Value, Keyword1, Keyword2);
 // };
 
+// Ref: [5.1:184-185], [5.2:178-179]
+//
+// align-modifier ->
+//    ALIGN(alignment)                              // since 5.1
+struct OmpAlignModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpAlignModifier, ScalarIntExpr);
+};
+
+// Ref: [5.0:158-159], [5.1:184-185], [5.2:178-179]
+//
+// allocator-simple-modifier ->
+//    allocator                                     // since 5.0
+struct OmpAllocatorSimpleModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpAllocatorSimpleModifier, ScalarIntExpr);
+};
+
+// Ref: [5.1:184-185], [5.2:178-179]
+//
+// allocator-complex-modifier ->
+//    ALLOCATOR(allocator)                          // since 5.1
+struct OmpAllocatorComplexModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpAllocatorComplexModifier, ScalarIntExpr);
+};
+
 // Ref: [5.2:252-254]
 //
 // chunk-modifier ->
@@ -3646,24 +3670,20 @@ struct OmpAlignedClause {
   std::tuple<OmpObjectList, std::optional<ScalarIntConstantExpr>> t;
 };
 
-// OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
-// OMP 5.2 2.13.4 allocate-clause -> ALLOCATE ([allocate-modifier [,
-//  	                               allocate-modifier] :]
-//                                   variable-name-list)
-//                allocate-modifier -> allocator | align
+// Ref: [5.0:158-159], [5.1:184-185], [5.2:178-179]
+//
+// allocate-clause ->
+//    ALLOCATE(
+//        [allocator-simple-modifier:] list) |      // since 5.0
+//    ALLOCATE([modifier...:] list)                 // since 5.1
+// modifier ->
+//    allocator-simple-modifier |
+//    allocator-complex-modifier | align-modifier   // since 5.1
 struct OmpAllocateClause {
-  struct AllocateModifier {
-    WRAPPER_CLASS(Allocator, ScalarIntExpr);
-    WRAPPER_CLASS(Align, ScalarIntExpr);
-    struct ComplexModifier {
-      TUPLE_CLASS_BOILERPLATE(ComplexModifier);
-      std::tuple<Allocator, Align> t;
-    };
-    UNION_CLASS_BOILERPLATE(AllocateModifier);
-    std::variant<Allocator, ComplexModifier, Align> u;
-  };
+  MODIFIER_BOILERPLATE(OmpAlignModifier, OmpAllocatorSimpleModifier,
+      OmpAllocatorComplexModifier);
   TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
-  std::tuple<std::optional<AllocateModifier>, OmpObjectList> t;
+  std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
 // OMP 5.0 2.4 atomic-default-mem-order-clause ->
@@ -4205,6 +4225,20 @@ struct OmpAtomicCapture {
       t;
 };
 
+struct OmpAtomicCompareIfStmt {
+  UNION_CLASS_BOILERPLATE(OmpAtomicCompareIfStmt);
+  std::variant<common::Indirection<IfStmt>, common::Indirection<IfConstruct>> u;
+};
+
+// ATOMIC COMPARE (OpenMP 5.1, OPenMP 5.2 spec: 15.8.4)
+struct OmpAtomicCompare {
+  TUPLE_CLASS_BOILERPLATE(OmpAtomicCompare);
+  CharBlock source;
+  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
+      OmpAtomicCompareIfStmt, std::optional<OmpEndAtomic>>
+      t;
+};
+
 // ATOMIC
 struct OmpAtomic {
   TUPLE_CLASS_BOILERPLATE(OmpAtomic);
@@ -4217,11 +4251,11 @@ struct OmpAtomic {
 // 2.17.7 atomic ->
 //        ATOMIC [atomic-clause-list] atomic-construct [atomic-clause-list] |
 //        ATOMIC [atomic-clause-list]
-//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE
+//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE | COMPARE
 struct OpenMPAtomicConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
   std::variant<OmpAtomicRead, OmpAtomicWrite, OmpAtomicCapture, OmpAtomicUpdate,
-      OmpAtomic>
+      OmpAtomicCompare, OmpAtomic>
       u;
 };
 
