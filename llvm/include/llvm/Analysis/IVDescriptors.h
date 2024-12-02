@@ -263,7 +263,8 @@ public:
   /// actual type of the Phi if the recurrence has been type-promoted.
   Type *getRecurrenceType() const { return RecurrenceType; }
 
-  /// Returns the sentinel value used to replace the start value.
+  /// Returns the sentinel value for FindLastIV recurrences to replace the start
+  /// value.
   Value *getSentinelValue() const {
     if (isFindLastIVRecurrenceKind(Kind)) {
       Type *Ty = StartValue->getType();
