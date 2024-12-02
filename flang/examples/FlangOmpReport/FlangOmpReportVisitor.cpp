@@ -190,15 +190,17 @@ void OpenMPCounterVisitor::PostConstructsCommon() {
   delete curConstruct;
 }
 
-void OpenMPCounterVisitor::Post(const OmpProcBindClause::Type &c) {
+void OpenMPCounterVisitor::Post(const OmpProcBindClause::AffinityPolicy &c) {
   clauseDetails +=
       "type=" + std::string{OmpProcBindClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDefaultClause::Type &c) {
+void OpenMPCounterVisitor::Post(
+    const OmpDefaultClause::DataSharingAttribute &c) {
   clauseDetails +=
       "type=" + std::string{OmpDefaultClause::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpDeviceTypeClause::Type &c) {
+void OpenMPCounterVisitor::Post(
+    const OmpDeviceTypeClause::DeviceTypeDescription &c) {
   clauseDetails +=
       "type=" + std::string{OmpDeviceTypeClause::EnumToString(c)} + ";";
 }
@@ -229,8 +231,8 @@ void OpenMPCounterVisitor::Post(const OmpTaskDependenceType::Value &c) {
   clauseDetails +=
       "type=" + std::string{OmpTaskDependenceType::EnumToString(c)} + ";";
 }
-void OpenMPCounterVisitor::Post(const OmpMapClause::Type &c) {
-  clauseDetails += "type=" + std::string{OmpMapClause::EnumToString(c)} + ";";
+void OpenMPCounterVisitor::Post(const OmpMapType::Value &c) {
+  clauseDetails += "type=" + std::string{OmpMapType::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpScheduleClause::Kind &c) {
   clauseDetails +=

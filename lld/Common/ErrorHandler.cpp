@@ -219,6 +219,8 @@ void ErrorHandler::reportDiagnostic(StringRef location, Colors c,
   }
   os << msg << '\n';
   errs() << buf;
+  // If msg contains a newline, ensure that the next diagnostic is preceded by
+  // a blank line separator.
   sep = getSeparator(msg);
 }
 

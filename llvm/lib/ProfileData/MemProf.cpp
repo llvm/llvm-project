@@ -335,8 +335,7 @@ template <typename FrameIdTy>
 LinearCallStackId CallStackRadixTreeBuilder<FrameIdTy>::encodeCallStack(
     const llvm::SmallVector<FrameIdTy> *CallStack,
     const llvm::SmallVector<FrameIdTy> *Prev,
-    std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
-        MemProfFrameIndexes) {
+    const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes) {
   // Compute the length of the common root prefix between Prev and CallStack.
   uint32_t CommonLen = 0;
   if (Prev) {
@@ -381,8 +380,7 @@ template <typename FrameIdTy>
 void CallStackRadixTreeBuilder<FrameIdTy>::build(
     llvm::MapVector<CallStackId, llvm::SmallVector<FrameIdTy>>
         &&MemProfCallStackData,
-    std::optional<const llvm::DenseMap<FrameIdTy, LinearFrameId>>
-        MemProfFrameIndexes,
+    const llvm::DenseMap<FrameIdTy, LinearFrameId> *MemProfFrameIndexes,
     llvm::DenseMap<FrameIdTy, FrameStat> &FrameHistogram) {
   // Take the vector portion of MemProfCallStackData.  The vector is exactly
   // what we need to sort.  Also, we no longer need its lookup capability.

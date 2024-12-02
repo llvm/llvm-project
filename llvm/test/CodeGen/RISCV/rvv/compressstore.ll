@@ -652,15 +652,14 @@ define void @test_compresstore_v64i32(ptr %p, <64 x i1> %mask, <64 x i32> %data)
 ; RV64-NEXT:    vse32.v v24, (a0)
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v0, 4
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.x.s a2, v0
 ; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    vmv.x.s a1, v0
 ; RV64-NEXT:    vcompress.vm v24, v16, v8
-; RV64-NEXT:    vcpop.m a1, v8
-; RV64-NEXT:    cpopw a2, a2
-; RV64-NEXT:    slli a2, a2, 2
-; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    vcpop.m a2, v8
+; RV64-NEXT:    cpopw a1, a1
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV64-NEXT:    vse32.v v24, (a0)
 ; RV64-NEXT:    ret
 ;
