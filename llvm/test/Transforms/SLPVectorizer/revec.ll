@@ -449,6 +449,21 @@ for.end.loopexit:
 }
 
 define void @test14(<8 x i1> %0) {
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v8i1(<16 x i1> poison, <8 x i1> [[TMP0:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i1> [[TMP1]], <16 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i1> [[TMP2]] to <16 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <16 x i16> [ [[TMP6]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.extract.v4i16.v16i16(<16 x i16> [[TMP7]], i64 12)
+; CHECK-NEXT:    [[OR0:%.*]] = or <4 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    ret void
+;
 entry:
   %sext0 = sext <8 x i1> %0 to <8 x i16>
   %sext1 = sext <8 x i1> %0 to <8 x i16>
