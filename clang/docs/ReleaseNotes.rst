@@ -415,6 +415,9 @@ New Compiler Flags
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
 
+- The ``-Warray-compare`` warning has been added to warn about array comparison
+ on versions older than C++20
+
 Deprecated Compiler Flags
 -------------------------
 
