@@ -163,6 +163,16 @@ add_libc_unittest(
 )
 
 add_libc_test(
+  timespec_get_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    timespec_get_test.cpp
+  DEPENDS
+    libc.src.time.timespec_get
+)
+
+add_libc_test(
   clock_test
   SUITE
     libc_time_unittests
