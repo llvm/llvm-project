@@ -5109,6 +5109,11 @@ struct CancelLinearizeOfDelinearizePortion final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
 
+private:
+  // Struct representing a case where the cancellation pattern
+  // applies. A `Match` means that `length` inputs to the linearize operation
+  // starting at `linStart` can be cancelled with `length` outputs of
+  // `delinearize`, starting from `delinStart`.
   struct Match {
     AffineDelinearizeIndexOp delinearize;
     unsigned linStart = 0;
@@ -5116,6 +5121,7 @@ struct CancelLinearizeOfDelinearizePortion final
     unsigned length = 0;
   };
 
+public:
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp linearizeOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Match> matches;
@@ -5128,7 +5134,7 @@ struct CancelLinearizeOfDelinearizePortion final
     unsigned linArgIdx = 0;
     // We only want to replace one run from the same delinearize op per
     // pattern invocation lest we run into invalidation issues.
-    llvm::SmallPtrSet<Operation *, 2> seen;
+    llvm::SmallPtrSet<Operation *, 2> alreadyMatchedDelinearize;
     while (linArgIdx < numLinArgs) {
       auto asResult = dyn_cast<OpResult>(multiIndex[linArgIdx]);
       if (!asResult) {
@@ -5155,14 +5161,14 @@ struct CancelLinearizeOfDelinearizePortion final
       /// - The delinearization doesn't specify a bound, but the linearization
       ///  is `disjoint`, which asserts that the bound on the linearization is
       ///  correct.
-      unsigned firstDelinArg = asResult.getResultNumber();
+      unsigned delinArgIdx = asResult.getResultNumber();
       SmallVector<OpFoldResult> delinBasis = delinearizeOp.getPaddedBasis();
-      OpFoldResult firstDelinBound = delinBasis[firstDelinArg];
+      OpFoldResult firstDelinBound = delinBasis[delinArgIdx];
       OpFoldResult firstLinBound = linBasis[linArgIdx];
       bool boundsMatch = firstDelinBound == firstLinBound;
-      bool bothAtFront = linArgIdx == 0 && firstDelinArg == 0;
+      bool bothAtFront = linArgIdx == 0 && delinArgIdx == 0;
       bool knownByDisjoint =
-          linearizeOp.getDisjoint() && firstDelinArg == 0 && !firstDelinBound;
+          linearizeOp.getDisjoint() && delinArgIdx == 0 && !firstDelinBound;
       if (!boundsMatch && !bothAtFront && !knownByDisjoint) {
         linArgIdx++;
         continue;
@@ -5170,22 +5176,22 @@ struct CancelLinearizeOfDelinearizePortion final
 
       unsigned j = 1;
       unsigned numDelinOuts = delinearizeOp.getNumResults();
-      for (; j + linArgIdx < numLinArgs && j + firstDelinArg < numDelinOuts;
+      for (; j + linArgIdx < numLinArgs && j + delinArgIdx < numDelinOuts;
            ++j) {
         if (multiIndex[linArgIdx + j] !=
-            delinearizeOp.getResult(firstDelinArg + j))
+            delinearizeOp.getResult(delinArgIdx + j))
           break;
-        if (linBasis[linArgIdx + j] != delinBasis[firstDelinArg + j])
+        if (linBasis[linArgIdx + j] != delinBasis[delinArgIdx + j])
           break;
       }
       // If there're multiple matches against the same delinearize_index,
       // only rewrite the first one we find to prevent invalidations. The next
-      // ones will be taken caer of by subsequent pattern invocations.
-      if (j <= 1 || !seen.insert(delinearizeOp).second) {
+      // ones will be taken care of by subsequent pattern invocations.
+      if (j <= 1 || !alreadyMatchedDelinearize.insert(delinearizeOp).second) {
         linArgIdx++;
         continue;
       }
-      matches.push_back(Match{delinearizeOp, linArgIdx, firstDelinArg, j});
+      matches.push_back(Match{delinearizeOp, linArgIdx, delinArgIdx, j});
       linArgIdx += j;
     }
 
