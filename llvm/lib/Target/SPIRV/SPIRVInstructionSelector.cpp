@@ -1460,16 +1460,6 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
         .addUse(SrcPtr)
         .constrainAllUses(TII, TRI, RBI);
 
-  if ((SrcSC == SPIRV::StorageClass::Function &&
-       DstSC == SPIRV::StorageClass::Private) ||
-      (DstSC == SPIRV::StorageClass::Function &&
-       SrcSC == SPIRV::StorageClass::Private)) {
-    return BuildMI(BB, I, DL, TII.get(TargetOpcode::COPY))
-        .addDef(ResVReg)
-        .addUse(SrcPtr)
-        .constrainAllUses(TII, TRI, RBI);
-  }
-
   // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
@@ -3471,7 +3461,11 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   if (HasInit && !Init)
     return true;
 
-  bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage;
+  unsigned AddrSpace = GV->getAddressSpace();
+  SPIRV::StorageClass::StorageClass Storage =
+      addressSpaceToStorageClass(AddrSpace, STI);
+  bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage &&
+                  Storage != SPIRV::StorageClass::Function;
   SPIRV::LinkageType::LinkageType LnkType =
       (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
           ? SPIRV::LinkageType::Import
@@ -3480,14 +3474,12 @@ bool SPIRVInstructionSelector::selectGlobalValue(
                  ? SPIRV::LinkageType::LinkOnceODR
                  : SPIRV::LinkageType::Export);
 
-  const unsigned AddrSpace = GV->getAddressSpace();
-  SPIRV::StorageClass::StorageClass StorageClass =
-      addressSpaceToStorageClass(AddrSpace, STI);
-  SPIRVType *ResType =
-      GR.getOrCreateSPIRVPointerType(PointerBaseType, I, TII, StorageClass);
-  Register Reg = GR.buildGlobalVariable(
-      ResVReg, ResType, GlobalIdent, GV, StorageClass, Init,
-      GlobalVar->isConstant(), HasLnkTy, LnkType, MIRBuilder, true);
+  SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
+      PointerBaseType, I, TII,
+      addressSpaceToStorageClass(GV->getAddressSpace(), STI));
+  Register Reg = GR.buildGlobalVariable(ResVReg, ResType, GlobalIdent, GV,
+                                        Storage, Init, GlobalVar->isConstant(),
+                                        HasLnkTy, LnkType, MIRBuilder, true);
   return Reg.isValid();
 }
 
