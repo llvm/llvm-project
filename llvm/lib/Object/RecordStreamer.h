@@ -10,8 +10,8 @@
 #define LLVM_LIB_OBJECT_RECORDSTREAMER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/SMLoc.h"
