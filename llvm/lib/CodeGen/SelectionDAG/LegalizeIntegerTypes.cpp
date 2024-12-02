@@ -2577,6 +2577,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
 
   bool IsPowI =
       N->getOpcode() == ISD::FPOWI || N->getOpcode() == ISD::STRICT_FPOWI;
+  unsigned OpOffset = IsStrict ? 1 : 0;
 
   // The integer operand is the last operand in FPOWI (or FLDEXP) (so the result
   // and floating point operand is already type legalized).
@@ -2584,8 +2585,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
                              : RTLIB::getLDEXP(N->getValueType(0));
 
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
-    SDValue Op = SExtPromotedInteger(N->getOperand(1));
-    return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op), 0);
+    SmallVector<SDValue, 3> NewOps(N->ops());
+    NewOps[1 + OpOffset] = SExtPromotedInteger(N->getOperand(1 + OpOffset));
+    return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
   }
 
   // We can't just promote the exponent type in FPOWI, since we want to lower
@@ -2594,7 +2596,6 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
   // we rewrite to a libcall here directly, letting makeLibCall handle promotion
   // if the target accepts it according to shouldSignExtendTypeInLibCall.
 
-  unsigned OpOffset = IsStrict ? 1 : 0;
   // The exponent should fit in a sizeof(int) type for the libcall to be valid.
   assert(DAG.getLibInfo().getIntSize() ==
              N->getOperand(1 + OpOffset).getValueType().getSizeInBits() &&

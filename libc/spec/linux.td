@@ -112,6 +112,12 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<IntType>,
             ArgSpec<SizeTType>,
             ArgSpec<IntType>,
+        FunctionSpec<
+          "process_mrelease",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<UnsignedIntType>
           ]
         >,
         FunctionSpec<

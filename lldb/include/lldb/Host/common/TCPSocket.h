@@ -17,9 +17,8 @@
 namespace lldb_private {
 class TCPSocket : public Socket {
 public:
-  TCPSocket(bool should_close, bool child_processes_inherit);
-  TCPSocket(NativeSocket socket, bool should_close,
-            bool child_processes_inherit);
+  explicit TCPSocket(bool should_close);
+  TCPSocket(NativeSocket socket, bool should_close);
   ~TCPSocket() override;
 
   // returns port number or 0 if error

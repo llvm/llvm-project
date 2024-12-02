@@ -97,17 +97,12 @@ TEST(AffineMapTest, getInversePermutation) {
   auto resultsInv1 = inverseMap1.getResults();
   EXPECT_EQ(resultsInv1.size(), 3UL);
 
-  // 1.1 Expect d2
-  AffineDimExpr expr = llvm::dyn_cast<AffineDimExpr>(resultsInv1[0]);
-  EXPECT_TRUE(expr && expr.getPosition() == 2);
-
-  // 1.2 Expect d0
-  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv1[1]);
-  EXPECT_TRUE(expr && expr.getPosition() == 0);
-
-  // 1.3 Expect d3
-  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv1[2]);
-  EXPECT_TRUE(expr && expr.getPosition() == 3);
+  // Expect (d2, d0, d3)
+  SmallVector<unsigned> expected = {2, 0, 3};
+  for (auto [idx, res] : llvm::enumerate(resultsInv1)) {
+    AffineDimExpr expr = llvm::dyn_cast<AffineDimExpr>(res);
+    EXPECT_TRUE(expr && expr.getPosition() == expected[idx]);
+  }
 
   // 2.   (d0, d1, d2) -> (d1, d0 + d1, d0, d2, d1, d2, d1, d0)
   auto sum = d0 + d1;
@@ -118,15 +113,10 @@ TEST(AffineMapTest, getInversePermutation) {
   auto resultsInv2 = inverseMap2.getResults();
   EXPECT_EQ(resultsInv2.size(), 3UL);
 
-  // 2.1 Expect d2
-  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv2[0]);
-  EXPECT_TRUE(expr && expr.getPosition() == 2);
-
-  // 2.2 Expect d0
-  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv2[1]);
-  EXPECT_TRUE(expr && expr.getPosition() == 0);
-
-  // 2.3 Expect d3
-  expr = llvm::dyn_cast<AffineDimExpr>(resultsInv2[2]);
-  EXPECT_TRUE(expr && expr.getPosition() == 3);
+  // Expect (d2, d0, d3)
+  expected = {2, 0, 3};
+  for (auto [idx, res] : llvm::enumerate(resultsInv2)) {
+    AffineDimExpr expr = llvm::dyn_cast<AffineDimExpr>(res);
+    EXPECT_TRUE(expr && expr.getPosition() == expected[idx]);
+  }
 }
