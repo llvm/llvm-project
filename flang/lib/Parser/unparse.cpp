@@ -2437,6 +2437,16 @@ public:
     Word("!$OMP END ATOMIC\n");
     EndOpenMP();
   }
+  void Unparse(const OmpAtomicCompare &x) {
+    BeginOpenMP();
+    Word("!$OMP ATOMIC");
+    Walk(std::get<0>(x.t));
+    Word(" COMPARE");
+    Walk(std::get<2>(x.t));
+    Put("\n");
+    EndOpenMP();
+    Walk(std::get<OmpAtomicCompareIfStmt>(x.t));
+  }
   void Unparse(const OmpAtomicRead &x) {
     BeginOpenMP();
     Word("!$OMP ATOMIC");
