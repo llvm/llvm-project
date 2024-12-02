@@ -6318,8 +6318,9 @@ QualType ASTContext::getAutoTypeInternal(
   llvm::FoldingSetNodeID ID;
   bool IsDeducedDependent =
       !DeducedType.isNull() && DeducedType->isDependentType();
-  AutoType::Profile(ID, *this, DeducedType, Keyword, IsDependent || IsDeducedDependent,
-                    TypeConstraintConcept, TypeConstraintArgs);
+  AutoType::Profile(ID, *this, DeducedType, Keyword,
+                    IsDependent || IsDeducedDependent, TypeConstraintConcept,
+                    TypeConstraintArgs);
   if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
     return QualType(AT_iter->getSecond(), 0);
 
