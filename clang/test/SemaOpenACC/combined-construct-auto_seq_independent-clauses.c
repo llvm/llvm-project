@@ -129,7 +129,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop auto reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -258,7 +257,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -388,7 +386,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop independent reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -517,7 +514,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -653,7 +649,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop seq reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -788,7 +783,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
