@@ -42,7 +42,6 @@
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
 ; RUN:   -r=lib.bc,read_write_global_vars,px \
-; RUN:   -r=lib.bc,external_func, \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
 ; RUN:   -r=lib.bc,large_indirect_bar_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -r=lib.bc,calleeAddrs2,px -o summary main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
@@ -108,7 +107,6 @@ MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
 ; RUN:   -r=lib.bc,read_write_global_vars,px \
-; RUN:   -r=lib.bc,external_func, \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
 ; RUN:   -r=lib.bc,large_indirect_bar_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -r=lib.bc,calleeAddrs2,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
@@ -207,7 +205,7 @@ define void @large_indirect_bar()#2 {
 
 define internal void @small_indirect_callee() #0 {
 entry:
-  %0 = load ptr, ptr @calleeAddrs
+  %0 = load ptr, ptr @calleeAddrs2
   call void %0(), !prof !3
   ret void
 }
@@ -227,7 +225,7 @@ entry:
   ret void
 }
 
-declare void @external_func()
+;declare void @external_func()
 
 define void @large_func() #0 {
 entry:
