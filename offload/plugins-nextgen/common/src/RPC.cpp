@@ -25,14 +25,14 @@ rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
                                    rpc::Server::Port &Port) {
 
   switch (Port.get_opcode()) {
-  case RPC_MALLOC: {
+  case LIBC_MALLOC: {
     Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
       Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
           Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
     });
     break;
   }
-  case RPC_FREE: {
+  case LIBC_FREE: {
     Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
       Device.free(reinterpret_cast<void *>(Buffer->data[0]),
                   TARGET_ALLOC_DEVICE_NON_BLOCKING);
