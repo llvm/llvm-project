@@ -2003,6 +2003,23 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     // TODO: should we count these special vsetvlis?
     BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
   }
+
+  // When the vector need to split into multiple register groups and the index
+  // exceed single vector resgister group, we need to extract the element via
+  // stack.
+  if (Opcode == Instruction::ExtractElement && LT.first > 1 &&
+      ((Index == -1U) || (Index > LT.second.getVectorMinNumElements() &&
+                          LT.second.isScalableVector()))) {
+    Type *ScalarType = Val->getScalarType();
+    Align VecAlign = DL.getPrefTypeAlign(Val);
+    Align SclAlign = DL.getPrefTypeAlign(ScalarType);
+    // Store all split vectors into stack and load the target element.
+    return LT.first *
+               getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
+                           CostKind);
+  }
+
   return BaseCost + SlideCost;
 }
 
