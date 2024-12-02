@@ -112,9 +112,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT p5 =
       LLT::pointer(5, PSize); // Input, SPV_INTEL_usm_storage_classes (Device)
   const LLT p6 = LLT::pointer(6, PSize); // SPV_INTEL_usm_storage_classes (Host)
-  const LLT p7 = LLT::pointer(7, PSize); // Input
-  const LLT p8 = LLT::pointer(8, PSize); // Output
-  const LLT p10 = LLT::pointer(10, PSize); // Private
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
@@ -151,7 +148,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,
                                        p2, p3,  p4,  p5,  p6};
 
-  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p10};
+  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6};
 
   bool IsExtendedInts =
       ST.canUseExtension(
