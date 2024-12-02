@@ -1224,7 +1224,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         assert(Success && "cannot get intrinsic signature");
 
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), NewID,
-                                              OverloadTys);
+                                                  OverloadTys);
       }
       return true;
     }
@@ -4953,44 +4953,43 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
     break;
   }
-#define LEGACY_FUNCTION(NAME, A, R, I, D)                                      \
-  case Intrinsic::NAME:
+#define LEGACY_FUNCTION(NAME, A, R, I, D) case Intrinsic::NAME:
 #include "llvm/IR/ConstrainedOps.def"
-  {
-    SmallVector<OperandBundleDef, 2> Bundles;
-    unsigned NumMetadataArgs = 0;
+    {
+      SmallVector<OperandBundleDef, 2> Bundles;
+      unsigned NumMetadataArgs = 0;
 
-    if (auto RM = getRoundingModeArg(*CI)) {
-      auto CurrentRM = CI->getRoundingMode();
-      assert(!CurrentRM && "unexpected rounding bundle");
-      Builder.createFPRoundingBundle(Bundles, RM);
-      ++NumMetadataArgs;
+      if (auto RM = getRoundingModeArg(*CI)) {
+        auto CurrentRM = CI->getRoundingMode();
+        assert(!CurrentRM && "unexpected rounding bundle");
+        Builder.createFPRoundingBundle(Bundles, RM);
+        ++NumMetadataArgs;
+      }
+
+      if (auto EB = getExceptionBehaviorArg(*CI)) {
+        auto CurrentEB = CI->getExceptionBehavior();
+        assert(!CurrentEB && "unexpected exception bundle");
+        Builder.createFPExceptionBundle(Bundles, EB);
+        ++NumMetadataArgs;
+      }
+
+      SmallVector<Value *, 4> Args(CI->args());
+      Args.pop_back_n(NumMetadataArgs);
+      NewCall = Builder.CreateCall(NewFn, Args, Bundles, CI->getName());
+      NewCall->copyMetadata(*CI);
+      AttributeList Attrs = CI->getAttributes();
+      NewCall->setAttributes(Attrs);
+      if (isa<FPMathOperator>(CI)) {
+        FastMathFlags FMF = CI->getFastMathFlags();
+        NewCall->setFastMathFlags(FMF);
+      }
+
+      MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+      auto A = Attribute::getWithMemoryEffects(CI->getContext(), ME);
+      NewCall->addFnAttr(A);
+      NewCall->addFnAttr(Attribute::StrictFP);
+      break;
     }
-
-    if (auto EB = getExceptionBehaviorArg(*CI)) {
-      auto CurrentEB = CI->getExceptionBehavior();
-      assert(!CurrentEB && "unexpected exception bundle");
-      Builder.createFPExceptionBundle(Bundles, EB);
-      ++NumMetadataArgs;
-    }
-
-    SmallVector<Value *, 4> Args(CI->args());
-    Args.pop_back_n(NumMetadataArgs);
-    NewCall = Builder.CreateCall(NewFn, Args, Bundles, CI->getName());
-    NewCall->copyMetadata(*CI);
-    AttributeList Attrs = CI->getAttributes();
-    NewCall->setAttributes(Attrs);
-    if (isa<FPMathOperator>(CI)) {
-      FastMathFlags FMF = CI->getFastMathFlags();
-      NewCall->setFastMathFlags(FMF);
-    }
-
-    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
-    auto A = Attribute::getWithMemoryEffects(CI->getContext(), ME);
-    NewCall->addFnAttr(A);
-    NewCall->addFnAttr(Attribute::StrictFP);
-    break;
-  }
   }
   assert(NewCall && "Should have either set this variable or returned through "
                     "the default case");
