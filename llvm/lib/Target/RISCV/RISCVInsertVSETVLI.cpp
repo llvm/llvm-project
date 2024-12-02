@@ -523,9 +523,14 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   //
   // However it does need valid SEW, i.e. vill must be cleared. The entry to a
   // function, calls and inline assembly may all set it, so make sure we clear
-  // it for whole register copies.
-  if (isVectorCopy(ST->getRegisterInfo(), MI))
-    Res.VILL = true;
+  // it for whole register copies. Do this by leaving VILL demanded.
+  if (isVectorCopy(ST->getRegisterInfo(), MI)) {
+    Res.LMUL = DemandedFields::LMULNone;
+    Res.SEW = DemandedFields::SEWNone;
+    Res.SEWLMULRatio = false;
+    Res.TailPolicy = false;
+    Res.MaskPolicy = false;
+  }
 
   return Res;
 }
@@ -1463,10 +1468,13 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       PrefixTransparent = false;
     }
 
-    if (isVectorCopy(ST->getRegisterInfo(), MI) &&
-        !PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
-      insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
-      PrefixTransparent = false;
+    if (isVectorCopy(ST->getRegisterInfo(), MI)) {
+      if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
+        insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
+        PrefixTransparent = false;
+      }
+      MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ false,
+                                              /*isImp*/ true));
     }
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
