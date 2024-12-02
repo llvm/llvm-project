@@ -416,7 +416,7 @@ New Compiler Flags
   destructors registration.
 
 - The ``-Warray-compare`` warning has been added to warn about array comparison
- on versions older than C++20
+  on versions older than C++20.
 
 Deprecated Compiler Flags
 -------------------------
