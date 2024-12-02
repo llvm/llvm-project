@@ -10,7 +10,6 @@
 #define _LIBCPP___ATOMIC_ATOMIC_SYNC_H
 
 #include <__atomic/contention_t.h>
-#include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
 #include <__chrono/duration.h>
