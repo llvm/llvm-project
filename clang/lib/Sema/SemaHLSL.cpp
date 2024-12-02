@@ -2239,6 +2239,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
           << 1;
       return true;
     }
+    break;
   }
   }
   return false;
