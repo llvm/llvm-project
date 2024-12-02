@@ -998,7 +998,7 @@ llvm.func @vector_splat_nonzero() -> vector<4xf32> {
 
 // CHECK-LABEL: @vector_splat_nonzero_scalable
 llvm.func @vector_splat_nonzero_scalable() -> vector<[4]xf32> {
-  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  // CHECK: ret <vscale x 4 x float> splat (float 1.000000e+00)
   %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
   llvm.return %0 : vector<[4]xf32>
 }
@@ -1967,6 +1967,20 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 
 // -----
 
+// Check that invariant group attribute is exported as metadata node.
+llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
+  %val = llvm.mlir.constant(42 : i32) : i32
+  // CHECK: store i32 42, ptr %{{.*}} !invariant.group ![[NODE:[0-9]+]]
+  llvm.store %val, %ptr invariant_group : i32, !llvm.ptr
+  // CHECK: %{{.*}} = load i32, ptr %{{.*}} !invariant.group ![[NODE]]
+  %1 = llvm.load %ptr invariant_group : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
@@ -2311,6 +2325,16 @@ llvm.func @vararg_function(%arg0: i32, ...) -> i32 {
   // CHECK: ret i32 %[[RET]]
   llvm.return %ret : i32
 }
+
+// -----
+
+// CHECK: declare void @range_arg_function(i64 range(i64 0, 4097))
+llvm.func @range_arg_function(%arg0: i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
+
+// -----
+
+// CHECK: declare range(i64 0, 4097) i64 @range_res_function()
+llvm.func @range_res_function() -> (i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
 
 // -----
 

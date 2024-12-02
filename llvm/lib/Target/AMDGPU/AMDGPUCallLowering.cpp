@@ -15,7 +15,6 @@
 #include "AMDGPUCallLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
-#include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/Analysis.h"

@@ -384,15 +384,13 @@ struct AllocatorT;
 // V5.2: [6.6] `allocate` clause
 template <typename T, typename I, typename E> //
 struct AllocateT {
-  using AllocatorSimpleModifier = E;
+  // AllocatorSimpleModifier is same as AllocatorComplexModifier.
   using AllocatorComplexModifier = AllocatorT<T, I, E>;
   using AlignModifier = AlignT<T, I, E>;
   using List = ObjectListT<I, E>;
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(AllocatorSimpleModifier), OPT(AllocatorComplexModifier),
-             OPT(AlignModifier), List>
-      t;
+  std::tuple<OPT(AllocatorComplexModifier), OPT(AlignModifier), List> t;
 };
 
 // V5.2: [6.4] `allocator` clause
@@ -490,7 +488,7 @@ template <typename T, typename I, typename E> //
 struct DefaultmapT {
   ENUM(ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default,
        Present);
-  ENUM(VariableCategory, Scalar, Aggregate, Pointer, Allocatable);
+  ENUM(VariableCategory, All, Scalar, Aggregate, Pointer, Allocatable);
   using TupleTrait = std::true_type;
   std::tuple<ImplicitBehavior, OPT(VariableCategory)> t;
 };

@@ -851,8 +851,7 @@ void CommandInterpreter::LoadCommandDictionary() {
     // now "bt 3" is the preferred form, in line with gdb.
     if (bt_regex_cmd_up->AddRegexCommand("^([[:digit:]]+)[[:space:]]*$",
                                          "thread backtrace -c %1") &&
-        bt_regex_cmd_up->AddRegexCommand("^-c ([[:digit:]]+)[[:space:]]*$",
-                                         "thread backtrace -c %1") &&
+        bt_regex_cmd_up->AddRegexCommand("^(-[^[:space:]].*)$", "thread backtrace %1") &&
         bt_regex_cmd_up->AddRegexCommand("^all[[:space:]]*$", "thread backtrace all") &&
         bt_regex_cmd_up->AddRegexCommand("^[[:space:]]*$", "thread backtrace")) {
       CommandObjectSP command_sp(bt_regex_cmd_up.release());

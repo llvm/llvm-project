@@ -61,10 +61,10 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
   // the return. Ignore following attributes because they don't affect the
   // call sequence.
   AttrBuilder CallerAttrs(F.getContext(), F.getAttributes().getRetAttrs());
-  for (const auto &Attr :
-       {Attribute::Alignment, Attribute::Dereferenceable,
-        Attribute::DereferenceableOrNull, Attribute::NoAlias,
-        Attribute::NonNull, Attribute::NoUndef, Attribute::Range})
+  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
+                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
+                           Attribute::NonNull, Attribute::NoUndef,
+                           Attribute::Range, Attribute::NoFPClass})
     CallerAttrs.removeAttribute(Attr);
 
   if (CallerAttrs.hasAttributes())
@@ -3724,6 +3724,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    KnownZero, TLO, Depth + 1))
       return true;
 
+    if (!DemandedElts.isAllOnes())
+      if (SDValue NewOp = SimplifyMultipleUseDemandedVectorElts(
+              Op.getOperand(0), DemandedElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp));
+
     if (Op.getOpcode() == ISD::ZERO_EXTEND) {
       // zext(undef) upper bits are guaranteed to be zero.
       if (DemandedElts.isSubsetOf(KnownUndef))
@@ -4975,7 +4980,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         APInt C = C1 - 1;
         ISD::CondCode NewCC = (Cond == ISD::SETGE) ? ISD::SETGT : ISD::SETUGT;
         if ((DCI.isBeforeLegalizeOps() ||
-             isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
+             isCondCodeLegal(NewCC, OpVT.getSimpleVT())) &&
             (!N1C->isOpaque() || (C.getBitWidth() <= 64 &&
                                   isLegalICmpImmediate(C.getSExtValue())))) {
           return DAG.getSetCC(dl, VT, N0,
@@ -4995,7 +5000,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         APInt C = C1 + 1;
         ISD::CondCode NewCC = (Cond == ISD::SETLE) ? ISD::SETLT : ISD::SETULT;
         if ((DCI.isBeforeLegalizeOps() ||
-             isCondCodeLegal(NewCC, VT.getSimpleVT())) &&
+             isCondCodeLegal(NewCC, OpVT.getSimpleVT())) &&
             (!N1C->isOpaque() || (C.getBitWidth() <= 64 &&
                                   isLegalICmpImmediate(C.getSExtValue())))) {
           return DAG.getSetCC(dl, VT, N0,
@@ -5753,7 +5758,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
       if (auto *STy = dyn_cast<StructType>(Call.getType())) {
         OpInfo.ConstraintVT =
-            getSimpleValueType(DL, STy->getElementType(ResNo));
+            getAsmOperandValueType(DL, STy->getElementType(ResNo))
+                .getSimpleVT();
       } else {
         assert(ResNo == 0 && "Asm only has one result!");
         OpInfo.ConstraintVT =

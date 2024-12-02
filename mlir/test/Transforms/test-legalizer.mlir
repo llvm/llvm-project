@@ -379,15 +379,24 @@ builtin.module {
 
 // -----
 
-// expected-remark @below {{applyPartialConversion failed}}
 module {
-  func.func private @callee(%0 : f32) -> f32
+// CHECK-LABEL: func.func private @callee() -> (f16, f16)
+func.func private @callee() -> (f32, i24)
 
-  func.func @caller( %arg: f32) {
-    // expected-error @below {{failed to legalize}}
-    %1 = func.call @callee(%arg) : (f32) -> f32
-    return
-  }
+// CHECK: func.func @caller()
+func.func @caller() {
+  // f32 is converted to (f16, f16).
+  // i24 is converted to ().
+  // CHECK: %[[call:.*]]:2 = call @callee() : () -> (f16, f16)
+  %0:2 = func.call @callee() : () -> (f32, i24)
+
+  // CHECK: %[[cast1:.*]] = "test.cast"() : () -> i24
+  // CHECK: %[[cast0:.*]] = "test.cast"(%[[call]]#0, %[[call]]#1) : (f16, f16) -> f32
+  // CHECK: "test.some_user"(%[[cast0]], %[[cast1]]) : (f32, i24) -> ()
+  // expected-remark @below{{'test.some_user' is not legalizable}}
+  "test.some_user"(%0#0, %0#1) : (f32, i24) -> ()
+  "test.return"() : () -> ()
+}
 }
 
 // -----
@@ -463,3 +472,14 @@ func.func @circular_mapping() {
   %0 = "test.erase_op"() : () -> (i64)
   "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
 }
+
+// -----
+
+func.func @test_1_to_n_block_signature_conversion() {
+  "test.duplicate_block_args"() ({
+  ^bb0(%arg0: i64):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
+  }) {} : () -> ()
+  "test.return"() : () -> ()
+}
+

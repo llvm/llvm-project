@@ -2431,6 +2431,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::invariant_end:
     return true;
   case Intrinsic::expect:
+  case Intrinsic::expect_with_probability:
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
@@ -2597,6 +2598,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateExtractVector(CI, MIRBuilder);
   case Intrinsic::vector_insert:
     return translateInsertVector(CI, MIRBuilder);
+  case Intrinsic::stepvector: {
+    MIRBuilder.buildStepVector(getOrCreateVReg(CI), 1);
+    return true;
+  }
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
     unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
@@ -3547,7 +3552,6 @@ void IRTranslator::translateDbgValueRecord(Value *V, bool HasArgList,
     // pretty baked in right now.
     MIRBuilder.buildDirectDbgValue(Reg, Variable, Expression);
   }
-  return;
 }
 
 void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,

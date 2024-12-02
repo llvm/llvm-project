@@ -9,9 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -238,7 +236,7 @@ public:
 
     SymbolMap InternedResult;
     for (auto *Sym : G.defined_symbols())
-      if (Sym->hasName() && Sym->getScope() != Scope::Local) {
+      if (Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
@@ -251,7 +249,7 @@ public:
       }
 
     for (auto *Sym : G.absolute_symbols())
-      if (Sym->hasName() && Sym->getScope() != Scope::Local) {
+      if (Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);

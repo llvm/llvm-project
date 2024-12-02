@@ -1102,9 +1102,11 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
 
+// Predicate: does an expression contain constant?
+bool HasConstant(const Expr<SomeType> &);
+
 // Utilities for attaching the location of the declaration of a symbol
-// of interest to a message, if both pointers are non-null.  Handles
-// the case of USE association gracefully.
+// of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
 parser::Message *AttachDeclaration(parser::Message *, const Symbol &);
 template <typename MESSAGES, typename... A>
@@ -1320,7 +1322,8 @@ inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
       ++hostSymbols;
     }
   }
-  return hostSymbols > 0 && deviceSymbols > 0;
+  bool hasConstant{HasConstant(expr)};
+  return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
 }
 
 } // namespace Fortran::evaluate
@@ -1416,6 +1419,8 @@ bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
 common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
+
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
 
 } // namespace Fortran::semantics
 

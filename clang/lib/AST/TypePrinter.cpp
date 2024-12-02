@@ -22,7 +22,6 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/AST/TextNodeDumper.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/AttrKinds.h"
@@ -38,7 +37,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1912,14 +1910,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   if (T->getAttrKind() == attr::LifetimeCaptureBy) {
     OS << " [[clang::lifetime_capture_by(";
-    if (auto *attr = dyn_cast_or_null<LifetimeCaptureByAttr>(T->getAttr())) {
-      auto Idents = attr->getArgIdents();
-      for (unsigned I = 0; I < Idents.size(); ++I) {
-        OS << Idents[I]->getName();
-        if (I != Idents.size() - 1)
-          OS << ", ";
-      }
-    }
+    if (auto *attr = dyn_cast_or_null<LifetimeCaptureByAttr>(T->getAttr()))
+      llvm::interleaveComma(attr->getArgIdents(), OS,
+                            [&](auto it) { OS << it->getName(); });
     OS << ")]]";
     return;
   }

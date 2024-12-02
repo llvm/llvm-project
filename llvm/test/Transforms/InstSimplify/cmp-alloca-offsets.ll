@@ -233,12 +233,13 @@ define i1 @mixed_alloca_size4() {
 define i1 @zst_alloca_start() {
 ; CHECK-LABEL: @zst_alloca_start(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[A2:%.*]] = alloca {}, align 8
+; CHECK-NEXT:    [[A2:%.*]] = alloca {}, align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[A]], [[A2]]
 ; CHECK-NEXT:    call void @escape(ptr [[A]], ptr [[A2]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = alloca i64
-  %a2 = alloca {}
+  %a2 = alloca {}, align 1
   %gep = getelementptr i8, ptr %a, i64 0
   %cmp = icmp eq ptr %gep, %a2
   call void @escape(ptr %a, ptr %a2)
@@ -248,12 +249,14 @@ define i1 @zst_alloca_start() {
 define i1 @zst_alloca_middle() {
 ; CHECK-LABEL: @zst_alloca_middle(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[A2:%.*]] = alloca {}, align 8
+; CHECK-NEXT:    [[A2:%.*]] = alloca {}, align 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[A2]]
 ; CHECK-NEXT:    call void @escape(ptr [[A]], ptr [[A2]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = alloca i64
-  %a2 = alloca {}
+  %a2 = alloca {}, align 1
   %gep = getelementptr i8, ptr %a, i64 4
   %cmp = icmp eq ptr %gep, %a2
   call void @escape(ptr %a, ptr %a2)
@@ -263,27 +266,28 @@ define i1 @zst_alloca_middle() {
 define i1 @zst_alloca_end() {
 ; CHECK-LABEL: @zst_alloca_end(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[A2:%.*]] = alloca {}, align 8
+; CHECK-NEXT:    [[A2:%.*]] = alloca {}, align 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[A2]]
 ; CHECK-NEXT:    call void @escape(ptr [[A]], ptr [[A2]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = alloca i64
-  %a2 = alloca {}
+  %a2 = alloca {}, align 1
   %gep = getelementptr i8, ptr %a, i64 8
   %cmp = icmp eq ptr %gep, %a2
   call void @escape(ptr %a, ptr %a2)
   ret i1 %cmp
 }
 
-@gz = external global {}
+@gz = external global {}, align 1
 
 define i1 @zst_global_start() {
 ; CHECK-LABEL: @zst_global_start(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[A]], @gz
 ; CHECK-NEXT:    call void @escape(ptr [[A]], ptr @gz)
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = alloca i64
   %gep = getelementptr i8, ptr %a, i64 0
@@ -295,8 +299,10 @@ define i1 @zst_global_start() {
 define i1 @zst_global_middle() {
 ; CHECK-LABEL: @zst_global_middle(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], @gz
 ; CHECK-NEXT:    call void @escape(ptr [[A]], ptr @gz)
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = alloca i64
   %gep = getelementptr i8, ptr %a, i64 4

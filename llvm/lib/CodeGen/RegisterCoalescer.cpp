@@ -1375,6 +1375,27 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   NewMI.setDebugLoc(DL);
 
   // In a situation like the following:
+  //
+  //    undef %2.subreg:reg = INST %1:reg         ; DefMI (rematerializable),
+  //                                              ; DefSubIdx = subreg
+  //    %3:reg = COPY %2                          ; SrcIdx = DstIdx = 0
+  //    .... = SOMEINSTR %3:reg
+  //
+  // there are no subranges for %3 so after rematerialization we need
+  // to explicitly create them. Undefined subranges are removed later on.
+  if (DstReg.isVirtual() && DefSubIdx && !CP.getSrcIdx() && !CP.getDstIdx() &&
+      MRI->shouldTrackSubRegLiveness(DstReg)) {
+    LiveInterval &DstInt = LIS->getInterval(DstReg);
+    if (!DstInt.hasSubRanges()) {
+      LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(DstReg);
+      LaneBitmask UsedLanes = TRI->getSubRegIndexLaneMask(DefSubIdx);
+      LaneBitmask UnusedLanes = FullMask & ~UsedLanes;
+      DstInt.createSubRangeFrom(LIS->getVNInfoAllocator(), UsedLanes, DstInt);
+      DstInt.createSubRangeFrom(LIS->getVNInfoAllocator(), UnusedLanes, DstInt);
+    }
+  }
+
+  // In a situation like the following:
   //     %0:subreg = instr              ; DefMI, subreg = DstIdx
   //     %1        = copy %0:subreg ; CopyMI, SrcIdx = 0
   // instead of widening %1 to the register class of %0 simply do:
@@ -1486,6 +1507,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         NewRC = TRI->getCommonSubClass(NewRC, DefRC);
       assert(NewRC && "subreg chosen for remat incompatible with instruction");
     }
+
     // Remap subranges to new lanemask and change register class.
     LiveInterval &DstInt = LIS->getInterval(DstReg);
     for (LiveInterval::SubRange &SR : DstInt.subranges()) {
@@ -1866,7 +1888,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
 
       // A subreg use of a partially undef (super) register may be a complete
       // undef use now and then has to be marked that way.
-      if (MO.isUse() && !DstIsPhys) {
+      if (MO.isUse() && !MO.isUndef() && !DstIsPhys) {
         unsigned SubUseIdx = TRI->composeSubRegIndices(SubIdx, MO.getSubReg());
         if (SubUseIdx != 0 && MRI->shouldTrackSubRegLiveness(DstReg)) {
           if (!DstInt->hasSubRanges()) {

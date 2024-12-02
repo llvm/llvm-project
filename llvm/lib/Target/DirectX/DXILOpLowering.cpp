@@ -106,17 +106,43 @@ public:
     return false;
   }
 
-  [[nodiscard]]
-  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  struct IntrinArgSelect {
+    enum class Type {
+#define DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(name) name,
+#include "DXILOperation.inc"
+    };
+    Type Type;
+    int Value;
+  };
+
+  [[nodiscard]] bool
+  replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
+                        ArrayRef<IntrinArgSelect> ArgSelects) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
+           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
       OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
-      } else
+      SmallVector<Value *> Args;
+      if (ArgSelects.size()) {
+        for (const IntrinArgSelect &A : ArgSelects) {
+          switch (A.Type) {
+          case IntrinArgSelect::Type::Index:
+            Args.push_back(CI->getArgOperand(A.Value));
+            break;
+          case IntrinArgSelect::Type::I8:
+            Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
+            break;
+          case IntrinArgSelect::Type::I32:
+            Args.push_back(OpBuilder.getIRB().getInt32(A.Value));
+            break;
+          }
+        }
+      } else if (IsVectorArgExpansion) {
+        Args = argVectorFlatten(CI, OpBuilder.getIRB());
+      } else {
         Args.append(CI->arg_begin(), CI->arg_end());
+      }
 
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
@@ -204,6 +230,25 @@ public:
     CleanupCasts.clear();
   }
 
+  // Remove the resource global associated with the handleFromBinding call
+  // instruction and their uses as they aren't needed anymore.
+  // TODO: We should verify that all the globals get removed.
+  // It's expected we'll need a custom pass in the future that will eliminate
+  // the need for this here.
+  void removeResourceGlobals(CallInst *CI) {
+    for (User *User : make_early_inc_range(CI->users())) {
+      if (StoreInst *Store = dyn_cast<StoreInst>(User)) {
+        Value *V = Store->getOperand(1);
+        Store->eraseFromParent();
+        if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+          if (GV->use_empty()) {
+            GV->removeDeadConstantUsers();
+            GV->eraseFromParent();
+          }
+      }
+    }
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -217,9 +262,14 @@ public:
       dxil::ResourceInfo &RI = *It;
       const auto &Binding = RI.getBinding();
 
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
-          ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
+          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -227,6 +277,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -236,6 +288,7 @@ public:
 
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -245,6 +298,12 @@ public:
       dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
+
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
@@ -255,8 +314,7 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(
           Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
-      std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
-                                      CI->getArgOperand(4)};
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -271,6 +329,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -465,6 +525,7 @@ public:
 
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -474,12 +535,13 @@ public:
 
       std::array<Value *, 2> Args{Handle, Op1};
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::UpdateCounter, Args, CI->getName());
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
 
       if (Error E = OpCall.takeError())
         return E;
 
+      CI->replaceAllUsesWith(*OpCall);
       CI->eraseFromParent();
       return Error::success();
     });
@@ -605,9 +667,10 @@ public:
       switch (ID) {
       default:
         continue;
-#define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
+#define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
-    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
+    HasErrors |= replaceFunctionWithOp(                                        \
+        F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
@@ -622,7 +685,7 @@ public:
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
         break;
-      case Intrinsic::dx_updateCounter:
+      case Intrinsic::dx_bufferUpdateCounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when

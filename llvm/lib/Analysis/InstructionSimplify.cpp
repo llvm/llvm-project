@@ -1857,27 +1857,31 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
     return nullptr;
 
   FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
+  auto AbsOrSelfLHS0 = m_CombineOr(m_Specific(LHS0), m_FAbs(m_Specific(LHS0)));
   if ((PredL == FCmpInst::FCMP_ORD || PredL == FCmpInst::FCMP_UNO) &&
       ((FCmpInst::isOrdered(PredR) && IsAnd) ||
        (FCmpInst::isUnordered(PredR) && !IsAnd))) {
-    // (fcmp ord X, 0) & (fcmp o** X, Y) --> fcmp o** X, Y
-    // (fcmp uno X, 0) & (fcmp o** X, Y) --> false
-    // (fcmp uno X, 0) | (fcmp u** X, Y) --> fcmp u** X, Y
-    // (fcmp ord X, 0) | (fcmp u** X, Y) --> true
-    if ((LHS0 == RHS0 || LHS0 == RHS1) && match(LHS1, m_PosZeroFP()))
+    // (fcmp ord X, 0) & (fcmp o** X/abs(X), Y) --> fcmp o** X/abs(X), Y
+    // (fcmp uno X, 0) & (fcmp o** X/abs(X), Y) --> false
+    // (fcmp uno X, 0) | (fcmp u** X/abs(X), Y) --> fcmp u** X/abs(X), Y
+    // (fcmp ord X, 0) | (fcmp u** X/abs(X), Y) --> true
+    if ((match(RHS0, AbsOrSelfLHS0) || match(RHS1, AbsOrSelfLHS0)) &&
+        match(LHS1, m_PosZeroFP()))
       return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
                  ? static_cast<Value *>(RHS)
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
   }
 
+  auto AbsOrSelfRHS0 = m_CombineOr(m_Specific(RHS0), m_FAbs(m_Specific(RHS0)));
   if ((PredR == FCmpInst::FCMP_ORD || PredR == FCmpInst::FCMP_UNO) &&
       ((FCmpInst::isOrdered(PredL) && IsAnd) ||
        (FCmpInst::isUnordered(PredL) && !IsAnd))) {
-    // (fcmp o** X, Y) & (fcmp ord X, 0) --> fcmp o** X, Y
-    // (fcmp o** X, Y) & (fcmp uno X, 0) --> false
-    // (fcmp u** X, Y) | (fcmp uno X, 0) --> fcmp u** X, Y
-    // (fcmp u** X, Y) | (fcmp ord X, 0) --> true
-    if ((RHS0 == LHS0 || RHS0 == LHS1) && match(RHS1, m_PosZeroFP()))
+    // (fcmp o** X/abs(X), Y) & (fcmp ord X, 0) --> fcmp o** X/abs(X), Y
+    // (fcmp o** X/abs(X), Y) & (fcmp uno X, 0) --> false
+    // (fcmp u** X/abs(X), Y) | (fcmp uno X, 0) --> fcmp u** X/abs(X), Y
+    // (fcmp u** X/abs(X), Y) | (fcmp ord X, 0) --> true
+    if ((match(LHS0, AbsOrSelfRHS0) || match(LHS1, AbsOrSelfRHS0)) &&
+        match(RHS1, m_PosZeroFP()))
       return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
                  ? static_cast<Value *>(LHS)
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
@@ -2774,8 +2778,8 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
         return nullptr;
       }(LHS);
       Opts.NullIsUnknownSize = F ? NullPointerIsDefined(F) : true;
-      if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) &&
-          getObjectSize(RHS, RHSSize, DL, TLI, Opts)) {
+      if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) && LHSSize != 0 &&
+          getObjectSize(RHS, RHSSize, DL, TLI, Opts) && RHSSize != 0) {
         APInt Dist = LHSOffset - RHSOffset;
         if (Dist.isNonNegative() ? Dist.ult(LHSSize) : (-Dist).ult(RHSSize))
           return ConstantInt::get(getCompareTy(LHS),
@@ -3066,6 +3070,69 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
+enum class MonotonicType { GreaterEq, LowerEq };
+
+/// Get values V_i such that V uge V_i (GreaterEq) or V ule V_i (LowerEq).
+static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
+                                       MonotonicType Type, unsigned Depth = 0) {
+  if (!Res.insert(V).second)
+    return;
+
+  // Can be increased if useful.
+  if (++Depth > 1)
+    return;
+
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return;
+
+  Value *X, *Y;
+  if (Type == MonotonicType::GreaterEq) {
+    if (match(I, m_Or(m_Value(X), m_Value(Y))) ||
+        match(I, m_Intrinsic<Intrinsic::uadd_sat>(m_Value(X), m_Value(Y)))) {
+      getUnsignedMonotonicValues(Res, X, Type, Depth);
+      getUnsignedMonotonicValues(Res, Y, Type, Depth);
+    }
+  } else {
+    assert(Type == MonotonicType::LowerEq);
+    switch (I->getOpcode()) {
+    case Instruction::And:
+      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Depth);
+      getUnsignedMonotonicValues(Res, I->getOperand(1), Type, Depth);
+      break;
+    case Instruction::URem:
+    case Instruction::UDiv:
+    case Instruction::LShr:
+      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Depth);
+      break;
+    case Instruction::Call:
+      if (match(I, m_Intrinsic<Intrinsic::usub_sat>(m_Value(X))))
+        getUnsignedMonotonicValues(Res, X, Type, Depth);
+      break;
+    default:
+      break;
+    }
+  }
+}
+
+static Value *simplifyICmpUsingMonotonicValues(ICmpInst::Predicate Pred,
+                                               Value *LHS, Value *RHS) {
+  if (Pred != ICmpInst::ICMP_UGE && Pred != ICmpInst::ICMP_ULT)
+    return nullptr;
+
+  // We have LHS uge GreaterValues and LowerValues uge RHS. If any of the
+  // GreaterValues and LowerValues are the same, it follows that LHS uge RHS.
+  SmallPtrSet<Value *, 4> GreaterValues;
+  SmallPtrSet<Value *, 4> LowerValues;
+  getUnsignedMonotonicValues(GreaterValues, LHS, MonotonicType::GreaterEq);
+  getUnsignedMonotonicValues(LowerValues, RHS, MonotonicType::LowerEq);
+  for (Value *GV : GreaterValues)
+    if (LowerValues.contains(GV))
+      return ConstantInt::getBool(getCompareTy(LHS),
+                                  Pred == ICmpInst::ICMP_UGE);
+  return nullptr;
+}
+
 static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
                                          BinaryOperator *LBO, Value *RHS,
                                          const SimplifyQuery &Q,
@@ -3075,11 +3142,6 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
   Value *Y = nullptr;
   // icmp pred (or X, Y), X
   if (match(LBO, m_c_Or(m_Value(Y), m_Specific(RHS)))) {
-    if (Pred == ICmpInst::ICMP_ULT)
-      return getFalse(ITy);
-    if (Pred == ICmpInst::ICMP_UGE)
-      return getTrue(ITy);
-
     if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE) {
       KnownBits RHSKnown = computeKnownBits(RHS, /* Depth */ 0, Q);
       KnownBits YKnown = computeKnownBits(Y, /* Depth */ 0, Q);
@@ -3088,14 +3150,6 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
       if (RHSKnown.isNegative() || YKnown.isNonNegative())
         return Pred == ICmpInst::ICMP_SLT ? getFalse(ITy) : getTrue(ITy);
     }
-  }
-
-  // icmp pred (and X, Y), X
-  if (match(LBO, m_c_And(m_Value(), m_Specific(RHS)))) {
-    if (Pred == ICmpInst::ICMP_UGT)
-      return getFalse(ITy);
-    if (Pred == ICmpInst::ICMP_ULE)
-      return getTrue(ITy);
   }
 
   // icmp pred (urem X, Y), Y
@@ -3128,27 +3182,6 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
     }
   }
 
-  // icmp pred (urem X, Y), X
-  if (match(LBO, m_URem(m_Specific(RHS), m_Value()))) {
-    if (Pred == ICmpInst::ICMP_ULE)
-      return getTrue(ITy);
-    if (Pred == ICmpInst::ICMP_UGT)
-      return getFalse(ITy);
-  }
-
-  // x >>u y <=u x --> true.
-  // x >>u y >u  x --> false.
-  // x udiv y <=u x --> true.
-  // x udiv y >u  x --> false.
-  if (match(LBO, m_LShr(m_Specific(RHS), m_Value())) ||
-      match(LBO, m_UDiv(m_Specific(RHS), m_Value()))) {
-    // icmp pred (X op Y), X
-    if (Pred == ICmpInst::ICMP_UGT)
-      return getFalse(ITy);
-    if (Pred == ICmpInst::ICMP_ULE)
-      return getTrue(ITy);
-  }
-
   // If x is nonzero:
   // x >>u C <u  x --> true  for C != 0.
   // x >>u C !=  x --> true  for C != 0.
@@ -3168,14 +3201,12 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
         break;
       case ICmpInst::ICMP_EQ:
       case ICmpInst::ICMP_UGE:
+      case ICmpInst::ICMP_UGT:
         return getFalse(ITy);
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_ULT:
-        return getTrue(ITy);
-      case ICmpInst::ICMP_UGT:
       case ICmpInst::ICMP_ULE:
-        // UGT/ULE are handled by the more general case just above
-        llvm_unreachable("Unexpected UGT/ULE, should have been handled");
+        return getTrue(ITy);
       }
     }
   }
@@ -3698,13 +3729,6 @@ static Value *simplifyICmpWithIntrinsicOnLHS(CmpInst::Predicate Pred,
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::uadd_sat:
-    // uadd.sat(X, Y) uge X, uadd.sat(X, Y) uge Y
-    if (II->getArgOperand(0) == RHS || II->getArgOperand(1) == RHS) {
-      if (Pred == ICmpInst::ICMP_UGE)
-        return ConstantInt::getTrue(getCompareTy(II));
-      if (Pred == ICmpInst::ICMP_ULT)
-        return ConstantInt::getFalse(getCompareTy(II));
-    }
     // uadd.sat(X, Y) uge X + Y
     if (match(RHS, m_c_Add(m_Specific(II->getArgOperand(0)),
                            m_Specific(II->getArgOperand(1))))) {
@@ -3715,13 +3739,6 @@ static Value *simplifyICmpWithIntrinsicOnLHS(CmpInst::Predicate Pred,
     }
     return nullptr;
   case Intrinsic::usub_sat:
-    // usub.sat(X, Y) ule X
-    if (II->getArgOperand(0) == RHS) {
-      if (Pred == ICmpInst::ICMP_ULE)
-        return ConstantInt::getTrue(getCompareTy(II));
-      if (Pred == ICmpInst::ICMP_UGT)
-        return ConstantInt::getFalse(getCompareTy(II));
-    }
     // usub.sat(X, Y) ule X - Y
     if (match(RHS, m_Sub(m_Specific(II->getArgOperand(0)),
                          m_Specific(II->getArgOperand(1))))) {
@@ -4023,6 +4040,12 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (Value *V = simplifyICmpWithIntrinsicOnLHS(Pred, LHS, RHS))
     return V;
   if (Value *V = simplifyICmpWithIntrinsicOnLHS(
+          ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
+    return V;
+
+  if (Value *V = simplifyICmpUsingMonotonicValues(Pred, LHS, RHS))
+    return V;
+  if (Value *V = simplifyICmpUsingMonotonicValues(
           ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
     return V;
 
@@ -4466,13 +4489,15 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       } else
         return nullptr;
     }
-    Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
+    Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI,
+                                             /*AllowNonDeterministic=*/false);
     if (DropFlags && Res && I->hasPoisonGeneratingAnnotations())
       DropFlags->push_back(I);
     return Res;
   }
 
-  return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
+  return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI,
+                                  /*AllowNonDeterministic=*/false);
 }
 
 Value *llvm::simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
@@ -4616,11 +4641,11 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
 }
 
 /// Try to simplify a select instruction when its condition operand is an
-/// integer equality comparison.
-static Value *simplifySelectWithICmpEq(Value *CmpLHS, Value *CmpRHS,
-                                       Value *TrueVal, Value *FalseVal,
-                                       const SimplifyQuery &Q,
-                                       unsigned MaxRecurse) {
+/// integer equality or floating-point equivalence comparison.
+static Value *simplifySelectWithEquivalence(Value *CmpLHS, Value *CmpRHS,
+                                            Value *TrueVal, Value *FalseVal,
+                                            const SimplifyQuery &Q,
+                                            unsigned MaxRecurse) {
   if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
                              /* AllowRefinement */ false,
                              /* DropFlags */ nullptr, MaxRecurse) == TrueVal)
@@ -4721,11 +4746,11 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (Value *V = simplifySelectWithICmpEq(CmpLHS, CmpRHS, TrueVal, FalseVal,
-                                            Q, MaxRecurse))
+    if (Value *V = simplifySelectWithEquivalence(CmpLHS, CmpRHS, TrueVal,
+                                                 FalseVal, Q, MaxRecurse))
       return V;
-    if (Value *V = simplifySelectWithICmpEq(CmpRHS, CmpLHS, TrueVal, FalseVal,
-                                            Q, MaxRecurse))
+    if (Value *V = simplifySelectWithEquivalence(CmpRHS, CmpLHS, TrueVal,
+                                                 FalseVal, Q, MaxRecurse))
       return V;
 
     Value *X;
@@ -4734,11 +4759,11 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y))) &&
         match(CmpRHS, m_Zero())) {
       // (X | Y) == 0 implies X == 0 and Y == 0.
-      if (Value *V = simplifySelectWithICmpEq(X, CmpRHS, TrueVal, FalseVal, Q,
-                                              MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(X, CmpRHS, TrueVal, FalseVal,
+                                                   Q, MaxRecurse))
         return V;
-      if (Value *V = simplifySelectWithICmpEq(Y, CmpRHS, TrueVal, FalseVal, Q,
-                                              MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(Y, CmpRHS, TrueVal, FalseVal,
+                                                   Q, MaxRecurse))
         return V;
     }
 
@@ -4746,11 +4771,11 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(CmpLHS, m_And(m_Value(X), m_Value(Y))) &&
         match(CmpRHS, m_AllOnes())) {
       // (X & Y) == -1 implies X == -1 and Y == -1.
-      if (Value *V = simplifySelectWithICmpEq(X, CmpRHS, TrueVal, FalseVal, Q,
-                                              MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(X, CmpRHS, TrueVal, FalseVal,
+                                                   Q, MaxRecurse))
         return V;
-      if (Value *V = simplifySelectWithICmpEq(Y, CmpRHS, TrueVal, FalseVal, Q,
-                                              MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(Y, CmpRHS, TrueVal, FalseVal,
+                                                   Q, MaxRecurse))
         return V;
     }
   }
@@ -4761,27 +4786,46 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
 /// Try to simplify a select instruction when its condition operand is a
 /// floating-point comparison.
 static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
-                                     const SimplifyQuery &Q) {
+                                     const SimplifyQuery &Q,
+                                     unsigned MaxRecurse) {
   FCmpInst::Predicate Pred;
-  if (!match(Cond, m_FCmp(Pred, m_Specific(T), m_Specific(F))) &&
-      !match(Cond, m_FCmp(Pred, m_Specific(F), m_Specific(T))))
+  Value *CmpLHS, *CmpRHS;
+  if (!match(Cond, m_FCmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
+    return nullptr;
+  FCmpInst *I = cast<FCmpInst>(Cond);
+
+  bool IsEquiv = I->isEquivalence();
+  if (I->isEquivalence(/*Invert=*/true)) {
+    std::swap(T, F);
+    Pred = FCmpInst::getInversePredicate(Pred);
+    IsEquiv = true;
+  }
+
+  // This transforms is safe if at least one operand is known to not be zero.
+  // Otherwise, the select can change the sign of a zero operand.
+  if (IsEquiv) {
+    if (Value *V =
+            simplifySelectWithEquivalence(CmpLHS, CmpRHS, T, F, Q, MaxRecurse))
+      return V;
+    if (Value *V =
+            simplifySelectWithEquivalence(CmpRHS, CmpLHS, T, F, Q, MaxRecurse))
+      return V;
+  }
+
+  // Canonicalize CmpLHS to be T, and CmpRHS to be F, if they're swapped.
+  if (CmpLHS == F && CmpRHS == T)
+    std::swap(CmpLHS, CmpRHS);
+
+  if (CmpLHS != T || CmpRHS != F)
     return nullptr;
 
-  // This transform is safe if we do not have (do not care about) -0.0 or if
-  // at least one operand is known to not be -0.0. Otherwise, the select can
-  // change the sign of a zero operand.
-  bool HasNoSignedZeros =
-      Q.CxtI && isa<FPMathOperator>(Q.CxtI) && Q.CxtI->hasNoSignedZeros();
-  const APFloat *C;
-  if (HasNoSignedZeros || (match(T, m_APFloat(C)) && C->isNonZero()) ||
-      (match(F, m_APFloat(C)) && C->isNonZero())) {
+  // This transform is also safe if we do not have (do not care about) -0.0.
+  if (Q.CxtI && isa<FPMathOperator>(Q.CxtI) && Q.CxtI->hasNoSignedZeros()) {
     // (T == F) ? T : F --> F
-    // (F == T) ? T : F --> F
     if (Pred == FCmpInst::FCMP_OEQ)
       return F;
 
     // (T != F) ? T : F --> T
-    // (F != T) ? T : F --> T
     if (Pred == FCmpInst::FCMP_UNE)
       return T;
   }
@@ -4955,7 +4999,7 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
           simplifySelectWithICmpCond(Cond, TrueVal, FalseVal, Q, MaxRecurse))
     return V;
 
-  if (Value *V = simplifySelectWithFCmp(Cond, TrueVal, FalseVal, Q))
+  if (Value *V = simplifySelectWithFCmp(Cond, TrueVal, FalseVal, Q, MaxRecurse))
     return V;
 
   if (Value *V = foldSelectWithBinaryOp(Cond, TrueVal, FalseVal))

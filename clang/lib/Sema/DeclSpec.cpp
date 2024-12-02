@@ -22,9 +22,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include <cstring>
 using namespace clang;
 

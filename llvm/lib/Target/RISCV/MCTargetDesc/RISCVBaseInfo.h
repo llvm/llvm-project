@@ -208,6 +208,12 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - Offset;
 }
 
+static inline unsigned getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
+  // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
+  // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
+  return FeatureBits[RISCV::FeatureStdExtZicfilp] ? RISCV::X7 : RISCV::X6;
+}
+
 static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   assert(hasSEWOp(TSFlags));
@@ -306,6 +312,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM10_LSB00_NONZERO,
+  OPERAND_UIMM11,
   OPERAND_UIMM12,
   OPERAND_UIMM16,
   OPERAND_UIMM32,

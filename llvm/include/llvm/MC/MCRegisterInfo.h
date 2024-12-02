@@ -129,6 +129,9 @@ struct MCRegisterDesc {
 
   // Is true for constant registers.
   bool IsConstant;
+
+  // Is true for artificial registers.
+  bool IsArtificial;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -395,6 +398,11 @@ public:
 
   /// Returns true if the given register is constant.
   bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
+
+  /// Returns true if the given register is artificial, which means it
+  /// represents a regunit that is not separately addressable but still needs to
+  /// be modelled, such as the top 16-bits of a 32-bit GPR.
+  bool isArtificial(MCRegister RegNo) const { return get(RegNo).IsArtificial; }
 
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)

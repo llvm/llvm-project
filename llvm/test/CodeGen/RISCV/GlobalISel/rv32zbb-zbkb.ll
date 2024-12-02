@@ -302,8 +302,8 @@ define i64 @rori_i64(i64 %a) nounwind {
 ; CHECK-NEXT:    slli a2, a0, 31
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    slli a3, a1, 31
-; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 63)

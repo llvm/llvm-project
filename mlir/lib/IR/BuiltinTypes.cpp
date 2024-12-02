@@ -91,11 +91,6 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  // The actual width of TF32 is 19 bits. However, since it is a truncated
-  // version of Float32, we treat it as 32 bits in MLIR FloatType::getWidth
-  // for compatibility.
-  if (llvm::isa<FloatTF32Type>(*this))
-    return 32;
   return APFloat::semanticsSizeInBits(getFloatSemantics());
 }
 
@@ -802,20 +797,6 @@ static LogicalResult getStridesAndOffset(MemRefType t,
   offset = simplifyAffineExpr(offset, numDims, numSymbols);
   for (auto &stride : strides)
     stride = simplifyAffineExpr(stride, numDims, numSymbols);
-
-  // In practice, a strided memref must be internally non-aliasing. Test
-  // against 0 as a proxy.
-  // TODO: static cases can have more advanced checks.
-  // TODO: dynamic cases would require a way to compare symbolic
-  // expressions and would probably need an affine set context propagated
-  // everywhere.
-  if (llvm::any_of(strides, [](AffineExpr e) {
-        return e == getAffineConstantExpr(0, e.getContext());
-      })) {
-    offset = AffineExpr();
-    strides.clear();
-    return failure();
-  }
 
   return success();
 }
