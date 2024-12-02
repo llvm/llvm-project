@@ -8628,7 +8628,10 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
     CurType = State.getAttributedType(
         createSimpleAttr<LifetimeBoundAttr>(State.getSema().Context, Attr),
         CurType, CurType);
+    return;
   }
+  State.getSema().Diag(Attr.getLoc(), diag::err_attribute_not_type_attr)
+      << Attr << Attr.isRegularKeywordAttribute();
 }
 
 static void HandleLifetimeCaptureByAttr(TypeProcessingState &State,
