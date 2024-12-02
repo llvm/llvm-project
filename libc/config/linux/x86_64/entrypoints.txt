@@ -1083,6 +1083,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.time
+    libc.src.time.timespec_get
 
     # locale.h entrypoints
     libc.src.locale.localeconv
