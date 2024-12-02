@@ -4045,6 +4045,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // So it should be safe to assume that this node has been selected
       unsigned index = MatcherTable[MatcherIndex++];
       index |= (MatcherTable[MatcherIndex++] << 8);
+      index |= (MatcherTable[MatcherIndex++] << 16);
+      index |= (MatcherTable[MatcherIndex++] << 24);
       dbgs() << "COVERED: " << getPatternForIndex(index) << "\n";
       dbgs() << "INCLUDED: " << getIncludePathForIndex(index) << "\n";
       continue;

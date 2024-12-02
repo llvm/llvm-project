@@ -381,8 +381,8 @@ static void EndEmitFunction(raw_ostream &OS) {
 
 void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
-  assert(isUInt<16>(VecPatterns.size()) &&
-         "Using only 16 bits to encode offset into Pattern Table");
+  assert(isUInt<32>(VecPatterns.size()) &&
+         "Using only 32 bits to encode offset into Pattern Table");
   assert(VecPatterns.size() == VecIncludeStrings.size() &&
          "The sizes of Pattern and include vectors should be the same");
 
@@ -947,7 +947,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         std::string include_src = getIncludePath(PatRecord);
         unsigned Offset =
             getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
-        OS << "TARGET_VAL(" << Offset << "),\n";
+        OS << "COVERAGE_IDX_VAL(" << Offset << "),\n";
         OS.indent(FullIndexWidth + Indent);
       }
     }
@@ -1060,7 +1060,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       std::string include_src = getIncludePath(PatRecord);
       unsigned Offset =
           getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
-      OS << "TARGET_VAL(" << Offset << "),\n";
+      OS << "COVERAGE_IDX_VAL(" << Offset << "),\n";
       OS.indent(FullIndexWidth + Indent);
     }
     OS << "OPC_CompleteMatch, " << CM->getNumResults() << ", ";
@@ -1393,8 +1393,11 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   // final stream.
   OS << "{\n";
   OS << "  // Some target values are emitted as 2 bytes, TARGET_VAL handles\n";
-  OS << "  // this.\n";
+  OS << "  // this. Coverage indexes are emitted as 4 bytes,\n";
+  OS << "  // COVERAGE_IDX_VAL handles this.\n";
   OS << "  #define TARGET_VAL(X) X & 255, unsigned(X) >> 8\n";
+  OS << "  #define COVERAGE_IDX_VAL(X) X & 255, (unsigned(X) >> 8) & 255, ";
+  OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
   OS << "  static const unsigned char MatcherTable[] = {\n";
   TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 1, 0, OS);
   OS << "    0\n  }; // Total Array size is " << (TotalSize + 1)
@@ -1402,6 +1405,7 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
 
   MatcherEmitter.EmitHistogram(TheMatcher, OS);
 
+  OS << "  #undef COVERAGE_IDX_VAL\n";
   OS << "  #undef TARGET_VAL\n";
   OS << "  SelectCodeCommon(N, MatcherTable, sizeof(MatcherTable));\n";
   OS << "}\n";
