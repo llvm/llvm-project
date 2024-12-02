@@ -453,27 +453,6 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Value *expandMemoryBarrier(CallInst *Orig, Intrinsic::ID IntrinsicId) {
-  assert(IntrinsicId == Intrinsic::dx_group_memory_barrier_with_group_sync);
-  unsigned BarrierMode = 0;
-  switch (IntrinsicId) {
-  case Intrinsic::dx_group_memory_barrier_with_group_sync:
-    BarrierMode = (unsigned)dxil::BarrierMode::TGSMFence |
-                  (unsigned)dxil::BarrierMode::SyncThreadGroup;
-    break;
-  default:
-    report_fatal_error(Twine("Unexpected memory barrier intrinsic."),
-                       /* gen_crash_diag=*/false);
-    break;
-  }
-
-  IRBuilder<> Builder(Orig);
-  return Builder.CreateIntrinsic(
-      Builder.getVoidTy(), Intrinsic::dx_memory_barrier,
-      ArrayRef<Value *>{Builder.getInt32(BarrierMode)}, nullptr,
-      Orig->getName());
-}
-
 static Intrinsic::ID getMaxForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;

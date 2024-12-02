@@ -621,7 +621,7 @@ def CountBits :  DXILOp<31, unaryBits> {
 def FirstbitHi :  DXILOp<33, unaryBits> {
   let Doc = "Returns the location of the first set bit starting from "
             "the highest order bit and working downward.";
-  let LLVMIntrinsic = int_dx_firstbituhigh;
+  let intrinsics = [ IntrinSelect<int_dx_firstbituhigh> ];
   let arguments = [OverloadTy];
   let result = Int32Ty;
   let overloads =
@@ -633,7 +633,7 @@ def FirstbitHi :  DXILOp<33, unaryBits> {
 def FirstbitSHi :  DXILOp<34, unaryBits> {
   let Doc = "Returns the location of the first set bit from "
             "the highest order bit based on the sign.";
-  let LLVMIntrinsic = int_dx_firstbitshigh;
+  let intrinsics = [ IntrinSelect<int_dx_firstbitshigh> ];
   let arguments = [OverloadTy];
   let result = Int32Ty;
   let overloads =
@@ -826,7 +826,7 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
 
 def Discard : DXILOp<82, discard> {
   let Doc = "discard the current pixel";
-  let LLVMIntrinsic = int_dx_discard;
+  let intrinsics = [ IntrinSelect<int_dx_discard> ];
   let arguments = [Int1Ty];
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [pixel]>];
@@ -874,7 +874,7 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
 
 def MakeDouble :  DXILOp<101, makeDouble> {
   let Doc = "creates a double value";
-  let LLVMIntrinsic = int_dx_asdouble;
+  let intrinsics = [ IntrinSelect<int_dx_asdouble> ];
   let arguments = [Int32Ty, Int32Ty];
   let result = DoubleTy;
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -893,7 +893,7 @@ def SplitDouble :  DXILOp<102, splitDouble> {
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
   let Doc = "signed dot product of 4 x i8 vectors packed into i32, with "
             "accumulate to i32";
-  let LLVMIntrinsic = int_dx_dot4add_i8packed;
+  let intrinsics = [ IntrinSelect<int_dx_dot4add_i8packed> ];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
   let result = Int32Ty;
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
@@ -903,7 +903,7 @@ def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
 def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
   let Doc = "unsigned dot product of 4 x i8 vectors packed into i32, with "
             "accumulate to i32";
-  let LLVMIntrinsic = int_dx_dot4add_u8packed;
+  let intrinsics = [ IntrinSelect<int_dx_dot4add_u8packed> ];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
   let result = Int32Ty;
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
@@ -926,7 +926,7 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
 
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let Doc = "returns true if the expression is true in any of the active lanes in the current wave";
-  let LLVMIntrinsic = int_dx_wave_any;
+  let intrinsics = [ IntrinSelect<int_dx_wave_any> ];
   let arguments = [Int1Ty];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -962,11 +962,12 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let Doc = "returns the count of bits set to 1 across the wave";
-  let LLVMIntrinsic = int_dx_wave_active_countbits;
+  let intrinsics = [ IntrinSelect<int_dx_wave_active_countbits> ];
   let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
 
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
