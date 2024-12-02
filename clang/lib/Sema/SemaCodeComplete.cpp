@@ -1822,10 +1822,6 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
     Results.AddResult(Result("_Coroutine", CCP_Type));
     Results.AddResult(Result("wchar_t", CCP_Type));
 
-    Builder.AddTypedTextChunk("_Coroutine");
-    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-    Builder.AddInformativeChunk("A Coroutine, as defined by concurrency course.");
-
     // typename name
     Builder.AddTypedTextChunk("typename");
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
