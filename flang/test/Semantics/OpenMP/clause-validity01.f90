@@ -241,7 +241,7 @@ use omp_lib
   enddo
   !$omp end parallel do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL DO directive
   !$omp parallel do if(target:a>1.)
   do i = 1, N
   enddo
@@ -532,7 +532,7 @@ use omp_lib
   a = 1.
   !$omp end task
 
-  !ERROR: Unmatched directive name modifier TASKLOOP on the IF clause
+  !ERROR: TASKLOOP is not a constituent of the TASK directive
   !$omp task private(a) if(taskloop:a.eq.1)
   a = 1.
   !$omp end task
