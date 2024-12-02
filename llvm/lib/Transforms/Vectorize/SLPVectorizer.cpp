@@ -6084,10 +6084,10 @@ void BoUpSLP::reorderTopToBottom() {
                 }))
               continue;
             assert(none_of(TE->UserTreeIndices,
-                          [&](const EdgeInfo &EI) {
-                            return isa<ShuffleVectorInst>(
-                                EI.UserTE->getMainOp());
-                          }) &&
+                           [&](const EdgeInfo &EI) {
+                             return isa<ShuffleVectorInst>(
+                                 EI.UserTE->getMainOp());
+                           }) &&
                    "Does not know how to reorder.");
           }
           // Update ordering of the operands with the smaller VF than the given
