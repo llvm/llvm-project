@@ -11864,11 +11864,9 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
       RHSStripped->getType()->isArrayType()) {
     auto IsDeprArrayComparionIgnored =
         S.getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
-    auto IsDeprArrayComparion =
-        !S.getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored;
-
-    auto DiagID = IsDeprArrayComparion ? diag::warn_array_comparison
-                                       : diag::warn_depr_array_comparison;
+    auto DiagID = !S.getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
+                      ? diag::warn_array_comparison
+                      : diag::warn_depr_array_comparison;
     S.Diag(Loc, DiagID) << LHS->getSourceRange() << RHS->getSourceRange()
                         << LHSStripped->getType() << RHSStripped->getType();
     // Carry on to produce the tautological comparison warning, if this

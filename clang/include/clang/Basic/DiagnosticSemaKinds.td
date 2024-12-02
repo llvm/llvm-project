@@ -10266,8 +10266,7 @@ def warn_depr_array_comparison : Warning<
 
 def warn_array_comparison : Warning<
   "comparison between two arrays; "
-  "to compare array addresses, use unary '+' to decay operands to pointers">,
-  InGroup<ArrayCompare>;
+  "to compare array addresses, use unary '+' to decay operands to pointers">;
 
 def warn_stringcompare : Warning<
   "result of comparison against %select{a string literal|@encode}0 is "
