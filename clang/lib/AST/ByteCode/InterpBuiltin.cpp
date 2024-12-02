@@ -1695,32 +1695,68 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   assert(Arg.getFieldDesc()->isPrimitiveArray());
 
   unsigned ID = Func->getBuiltinID();
-  if (ID == Builtin::BI__builtin_reduce_add) {
-    QualType ElemType = Arg.getFieldDesc()->getElemQualType();
-    assert(Call->getType() == ElemType);
-    PrimType ElemT = *S.getContext().classify(ElemType);
-    unsigned NumElems = Arg.getNumElems();
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  assert(Call->getType() == ElemType);
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
 
-    INT_TYPE_SWITCH(ElemT, {
-      T Sum = Arg.atIndex(0).deref<T>();
-      unsigned BitWidth = Sum.bitWidth();
-      for (unsigned I = 1; I != NumElems; ++I) {
-        T Elem = Arg.atIndex(I).deref<T>();
-        if (T::add(Sum, Elem, BitWidth, &Sum)) {
+  INT_TYPE_SWITCH(ElemT, {
+    T Result = Arg.atIndex(0).deref<T>();
+    unsigned BitWidth = Result.bitWidth();
+    for (unsigned I = 1; I != NumElems; ++I) {
+      T Elem = Arg.atIndex(I).deref<T>();
+      T PrevResult = Result;
+
+      if (ID == Builtin::BI__builtin_reduce_add) {
+        if (T::add(Result, Elem, BitWidth, &Result)) {
           unsigned OverflowBits = BitWidth + 1;
-          (void)handleOverflow(
-              S, OpPC,
-              (Sum.toAPSInt(OverflowBits) + Elem.toAPSInt(OverflowBits)));
+          (void)handleOverflow(S, OpPC,
+                               (PrevResult.toAPSInt(OverflowBits) +
+                                Elem.toAPSInt(OverflowBits)));
           return false;
         }
+      } else if (ID == Builtin::BI__builtin_reduce_mul) {
+        if (T::mul(Result, Elem, BitWidth, &Result)) {
+          unsigned OverflowBits = BitWidth * 2;
+          (void)handleOverflow(S, OpPC,
+                               (PrevResult.toAPSInt(OverflowBits) *
+                                Elem.toAPSInt(OverflowBits)));
+          return false;
+        }
+      } else {
+        llvm_unreachable("Unhandled vector reduce builtin");
       }
-      pushInteger(S, Sum, Call->getType());
-    });
+    }
+    pushInteger(S, Result, Call->getType());
+  });
 
+  return true;
+}
+
+static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  Pointer DestPtr = getParam<Pointer>(Frame, 0);
+  const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
+  const APSInt &Size =
+      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
+
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
+  // If the size is zero, we treat this as always being a valid no-op.
+  if (Size.isZero()) {
+    S.Stk.push<Pointer>(DestPtr);
     return true;
   }
 
-  llvm_unreachable("Unsupported vector reduce builtin");
+  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+    return false;
+
+  S.Stk.push<Pointer>(DestPtr);
+  return true;
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -2169,7 +2205,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_reduce_add:
+  case Builtin::BI__builtin_reduce_mul:
     if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_memcpy:
+    if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
       return false;
     break;
 
