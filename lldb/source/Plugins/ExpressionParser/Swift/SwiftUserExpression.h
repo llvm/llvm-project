@@ -190,7 +190,7 @@ private:
   };
 
   TypeSystemSwiftTypeRefForExpressionsSP m_swift_scratch_ctx;
-  SwiftASTContextForExpressions *m_swift_ast_ctx;
+  SwiftASTContextForExpressionsSP m_swift_ast_ctx;
   PersistentVariableDelegate m_persistent_variable_delegate;
   std::unique_ptr<SwiftExpressionParser> m_parser;
   std::optional<SwiftLanguageRuntime::GenericSignature> m_generic_signature;

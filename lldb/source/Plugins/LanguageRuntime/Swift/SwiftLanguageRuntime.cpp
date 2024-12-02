@@ -1200,7 +1200,7 @@ SwiftLanguageRuntime::GetLanguageSpecificData(SymbolContext sc) {
 
   if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
           type_system_or_err->get()))
-    if (auto *swift_ast_ctx = ts->GetSwiftASTContextOrNull(sc))
+    if (auto swift_ast_ctx = ts->GetSwiftASTContextOrNull(sc))
       dict_sp->AddBooleanItem("SwiftExplicitModules",
                               swift_ast_ctx->HasExplicitModules());
 
@@ -1229,7 +1229,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
   auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
   if (!scratch_ctx)
     return;
-  SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext(sc);
+  SwiftASTContextSP swift_ast = scratch_ctx->GetSwiftASTContext(sc);
   if (!swift_ast)
     return;
 

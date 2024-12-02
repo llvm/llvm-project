@@ -1375,7 +1375,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
               auto &sc =
                   frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
               if (scratch_ctx)
-                if (SwiftASTContext *ast_ctx =
+                if (SwiftASTContextSP ast_ctx =
                         scratch_ctx->GetSwiftASTContext(sc)) {
                   ConstString cs_input{input};
                   Mangled mangled(cs_input);
@@ -1444,7 +1444,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
               const SymbolContext &sc =
                   frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
               if (scratch_ctx)
-                if (SwiftASTContext *ast_ctx =
+                if (SwiftASTContextSP ast_ctx =
                         scratch_ctx->GetSwiftASTContext(sc)) {
                   auto iter = ast_ctx->GetModuleCache().begin(),
                        end = ast_ctx->GetModuleCache().end();
