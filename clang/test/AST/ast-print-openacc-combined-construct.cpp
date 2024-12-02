@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-deprecated-clause-alias -ast-print %s -o - | FileCheck %s
 
+constexpr int get_value() { return 1; }
 void foo() {
   int *iPtr;
 // CHECK: #pragma acc parallel loop
@@ -210,4 +211,17 @@ void foo() {
 #pragma acc parallel loop collapse(force:2)
   for(int i = 0;i<5;++i)
     for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc serial loop tile(1, 3, *, get_value())
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop tile(1, 3, *, get_value())
+  for(int i = 0;i<5;++i)
+    for(int i = 0;i<5;++i)
+      for(int i = 0;i<5;++i)
+        for(int i = 0;i<5;++i);
+
 }
