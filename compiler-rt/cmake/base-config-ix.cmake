@@ -78,7 +78,7 @@ else()
 endif()
 
 get_filename_component(_test_compiler_name "${COMPILER_RT_TEST_COMPILER}" NAME)
-if ("${COMPILER_RT_TEST_COMPILER}" STREQUAL "${CMAKE_C_COMPILER}")
+if("${COMPILER_RT_TEST_COMPILER}" STREQUAL "${CMAKE_C_COMPILER}")
   set(COMPILER_RT_TEST_COMPILER_ID "${CMAKE_C_COMPILER_ID}")
 elseif("${_test_compiler_name}" MATCHES "clang.*")
   set(COMPILER_RT_TEST_COMPILER_ID Clang)
