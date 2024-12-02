@@ -41404,6 +41404,7 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         N->isOnlyUserOf(N.getOperand(0).getNode())) {
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       unsigned SrcOpcode = N0.getOpcode();
+      EVT OpVT = N0.getValueType();
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
@@ -41421,12 +41422,22 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00);
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01);
           }
-          EVT OpVT = N0.getValueType();
           return DAG.getBitcast(ShuffleVT,
                                 DAG.getNode(SrcOpcode, DL, OpVT,
                                             DAG.getBitcast(OpVT, LHS),
                                             DAG.getBitcast(OpVT, RHS)));
         }
+      }
+      if (SrcOpcode == ISD::SINT_TO_FP && IsSafeToMoveShuffle(N0, SrcOpcode) &&
+          OpVT.getScalarSizeInBits() ==
+              N0.getOperand(0).getScalarValueSizeInBits()) {
+        SDValue Op00 = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+        SDValue Res =
+            N.getNumOperands() == 2
+                ? DAG.getNode(Opc, DL, ShuffleVT, Op00, N.getOperand(1))
+                : DAG.getNode(Opc, DL, ShuffleVT, Op00);
+        Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
+        return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res));
       }
     }
     break;
