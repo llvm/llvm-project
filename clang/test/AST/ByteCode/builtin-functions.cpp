@@ -991,7 +991,6 @@ namespace BuiltinInImplicitCtor {
   static_assert(Foo.a == 0, "");
 }
 
-
 typedef double vector4double __attribute__((__vector_size__(32)));
 typedef float vector4float __attribute__((__vector_size__(16)));
 typedef long long vector4long __attribute__((__vector_size__(32)));
@@ -1034,4 +1033,14 @@ namespace RecuceAdd {
   constexpr __int128 reduceAddInt3 = __builtin_reduce_add((v4i128){});
   static_assert(reduceAddInt3 == 0);
 #endif
+}
+
+namespace BuiltinMemcpy {
+  constexpr int simple() {
+    int a = 12;
+    int b = 0;
+    __builtin_memcpy(&b, &a, sizeof(a));
+    return b;
+  }
+  static_assert(simple() == 12);
 }

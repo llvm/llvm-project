@@ -1723,6 +1723,32 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   llvm_unreachable("Unsupported vector reduce builtin");
 }
 
+static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  Pointer DestPtr = getParam<Pointer>(Frame, 0);
+  const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
+  const APSInt &Size =
+      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
+
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
+  // If the size is zero, we treat this as always being a valid no-op.
+  if (Size.isZero()) {
+    S.Stk.push<Pointer>(DestPtr);
+    return true;
+  }
+
+  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+    return false;
+
+  S.Stk.push<Pointer>(DestPtr);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
@@ -2170,6 +2196,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_reduce_add:
     if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_memcpy:
+    if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
       return false;
     break;
 
