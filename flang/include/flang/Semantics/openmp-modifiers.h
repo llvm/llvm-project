@@ -67,6 +67,9 @@ template <typename SpecificTy> const OmpModifierDescriptor &OmpGetDescriptor();
 #define DECLARE_DESCRIPTOR(name) \
   template <> const OmpModifierDescriptor &OmpGetDescriptor<name>()
 
+DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
+DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
+DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
 DECLARE_DESCRIPTOR(parser::OmpDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpExpectation);
@@ -216,9 +219,25 @@ OmpGetRepeatableModifier(const std::optional<std::list<UnionTy>> &modifiers) {
       OmpSpecificModifierIterator(items, items->end()));
 }
 
+// Attempt to prevent creating a range based on an expiring modifier list.
 template <typename SpecificTy, typename UnionTy>
 llvm::iterator_range<OmpSpecificModifierIterator<SpecificTy>>
 OmpGetRepeatableModifier(std::optional<std::list<UnionTy>> &&) = delete;
+
+template <typename SpecificTy, typename UnionTy>
+Fortran::parser::CharBlock OmpGetModifierSource(
+    const std::optional<std::list<UnionTy>> &modifiers,
+    const SpecificTy *specific) {
+  if (!modifiers || !specific) {
+    return Fortran::parser::CharBlock{};
+  }
+  for (auto &m : *modifiers) {
+    if (std::get_if<SpecificTy>(&m.u) == specific) {
+      return m.source;
+    }
+  }
+  llvm_unreachable("`specific` must be a member of `modifiers`");
+}
 
 namespace detail {
 template <typename T> constexpr const T *make_nullptr() {

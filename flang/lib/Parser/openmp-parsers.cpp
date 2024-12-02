@@ -91,6 +91,14 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
 
 // --- Parsers for clause modifiers -----------------------------------
 
+TYPE_PARSER(construct<OmpAlignModifier>( //
+    "ALIGN" >> parenthesized(scalarIntExpr)))
+
+TYPE_PARSER(construct<OmpAllocatorComplexModifier>(
+    "ALLOCATOR" >> parenthesized(scalarIntExpr)))
+
+TYPE_PARSER(construct<OmpAllocatorSimpleModifier>(scalarIntExpr))
+
 TYPE_PARSER(construct<OmpChunkModifier>( //
     "SIMD" >> pure(OmpChunkModifier::Value::Simd)))
 
@@ -183,6 +191,16 @@ TYPE_PARSER(construct<OmpVariableCategory>(
     "SCALAR" >> pure(OmpVariableCategory::Value::Scalar)))
 
 // This could be auto-generated.
+TYPE_PARSER(sourced(construct<OmpAllocateClause::Modifier>(sourced(
+    construct<OmpAllocateClause::Modifier>(Parser<OmpAlignModifier>{}) ||
+    construct<OmpAllocateClause::Modifier>(
+        Parser<OmpAllocatorComplexModifier>{}) ||
+    construct<OmpAllocateClause::Modifier>(
+        Parser<OmpAllocatorSimpleModifier>{})))))
+
+TYPE_PARSER(sourced(
+    construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
+
 TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
     sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
         construct<OmpFromClause::Modifier>(Parser<OmpMapper>{}) ||
@@ -210,9 +228,6 @@ TYPE_PARSER(sourced(construct<OmpToClause::Modifier>(
     sourced(construct<OmpToClause::Modifier>(Parser<OmpExpectation>{}) ||
         construct<OmpToClause::Modifier>(Parser<OmpMapper>{}) ||
         construct<OmpToClause::Modifier>(Parser<OmpIterator>{})))))
-
-TYPE_PARSER(sourced(
-    construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
 
 // --- Parsers for clauses --------------------------------------------
 
@@ -334,29 +349,7 @@ TYPE_PARSER(construct<OmpInReductionClause>(
 //                                   variable-name-list)
 //                allocate-modifier -> allocator | align
 TYPE_PARSER(construct<OmpAllocateClause>(
-    maybe(
-        first(
-            construct<OmpAllocateClause::AllocateModifier>("ALLOCATOR" >>
-                construct<OmpAllocateClause::AllocateModifier::ComplexModifier>(
-                    parenthesized(construct<
-                        OmpAllocateClause::AllocateModifier::Allocator>(
-                        scalarIntExpr)) /
-                        ",",
-                    "ALIGN" >> parenthesized(construct<
-                                   OmpAllocateClause::AllocateModifier::Align>(
-                                   scalarIntExpr)))),
-            construct<OmpAllocateClause::AllocateModifier>("ALLOCATOR" >>
-                parenthesized(
-                    construct<OmpAllocateClause::AllocateModifier::Allocator>(
-                        scalarIntExpr))),
-            construct<OmpAllocateClause::AllocateModifier>("ALIGN" >>
-                parenthesized(
-                    construct<OmpAllocateClause::AllocateModifier::Align>(
-                        scalarIntExpr))),
-            construct<OmpAllocateClause::AllocateModifier>(
-                construct<OmpAllocateClause::AllocateModifier::Allocator>(
-                    scalarIntExpr))) /
-        ":"),
+    maybe(nonemptyList(Parser<OmpAllocateClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
 // iteration-offset -> +/- non-negative-constant-expr
