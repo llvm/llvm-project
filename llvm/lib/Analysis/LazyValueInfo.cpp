@@ -1005,6 +1005,13 @@ LazyValueInfoImpl::solveBlockValueInsertElement(InsertElementInst *IEI,
   if (!OptVecVal)
     return std::nullopt;
 
+  // Bail out if the inserted element is a constant expression. Unlike other
+  // ValueLattice types, these are not considered an implicit splat when a
+  // vector type is used.
+  // We could call ConstantFoldInsertElementInstruction here to handle these.
+  if (OptEltVal->isConstant())
+    return ValueLatticeElement::getOverdefined();
+
   Res.mergeIn(*OptVecVal);
   return Res;
 }

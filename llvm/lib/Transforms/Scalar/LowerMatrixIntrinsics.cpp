@@ -323,10 +323,11 @@ class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
-  AliasAnalysis *AA;
-  DominatorTree *DT;
-  LoopInfo *LI;
-  OptimizationRemarkEmitter *ORE;
+  FunctionAnalysisManager *AM;
+  AliasAnalysis *AA = nullptr;
+  DominatorTree *DT = nullptr;
+  LoopInfo *LI = nullptr;
+  OptimizationRemarkEmitter *ORE = nullptr;
 
   /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
   struct OpInfoTy {
@@ -519,10 +520,8 @@ private:
 
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
-                        AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI,
-                        OptimizationRemarkEmitter *ORE)
-      : Func(F), DL(F.getDataLayout()), TTI(TTI), AA(AA), DT(DT),
-        LI(LI), ORE(ORE) {}
+                        FunctionAnalysisManager *AM)
+      : Func(F), DL(F.getDataLayout()), TTI(TTI), AM(AM) {}
 
   unsigned getNumOps(Type *VT) {
     assert(isa<VectorType>(VT) && "Expected vector type");
@@ -973,6 +972,13 @@ public:
     // Avoid unnecessary work if there are no matrix intrinsics in the function.
     if (WorkList.empty())
       return false;
+
+    if (AM) {
+      ORE = &AM->getResult<OptimizationRemarkEmitterAnalysis>(Func);
+      AA = &AM->getResult<AAManager>(Func);
+      DT = &AM->getResult<DominatorTreeAnalysis>(Func);
+      LI = &AM->getResult<LoopAnalysis>(Func);
+    }
 
     // Propagate shapes until nothing changes any longer.
     while (!WorkList.empty()) {
@@ -2618,19 +2624,8 @@ public:
 PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  OptimizationRemarkEmitter *ORE = nullptr;
-  AAResults *AA = nullptr;
-  DominatorTree *DT = nullptr;
-  LoopInfo *LI = nullptr;
 
-  if (!Minimal) {
-    ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    AA = &AM.getResult<AAManager>(F);
-    DT = &AM.getResult<DominatorTreeAnalysis>(F);
-    LI = &AM.getResult<LoopAnalysis>(F);
-  }
-
-  LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
+  LowerMatrixIntrinsics LMT(F, TTI, Minimal ? nullptr : &AM);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
     if (!Minimal) {
