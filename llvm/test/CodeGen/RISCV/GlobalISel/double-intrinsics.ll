@@ -39,6 +39,48 @@ define double @sqrt_f64(double %a) nounwind {
   ret double %1
 }
 
+define double @powi_f64(double %a, i32 %b) nounwind {
+; RV32IFD-LABEL: powi_f64:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    call __powidf2
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: powi_f64:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addi sp, sp, -16
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sext.w a0, a0
+; RV64IFD-NEXT:    call __powidf2
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: powi_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call __powidf2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: powi_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    call __powidf2
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.powi.f64.i32(double %a, i32 %b)
+  ret double %1
+}
+
 declare double @llvm.sin.f64(double)
 
 define double @sin_f64(double %a) nounwind {
@@ -1001,11 +1043,11 @@ define i1 @isnan_d_fpclass(double %x) {
 ; RV32I-NEXT:    addi a3, a2, -1
 ; RV32I-NEXT:    lui a2, 524032
 ; RV32I-NEXT:    and a1, a1, a3
-; RV32I-NEXT:    beq a1, a2, .LBB24_2
+; RV32I-NEXT:    beq a1, a2, .LBB25_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu a0, a2, a1
 ; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB24_2:
+; RV32I-NEXT:  .LBB25_2:
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
