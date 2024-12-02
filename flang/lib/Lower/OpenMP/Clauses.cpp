@@ -384,11 +384,12 @@ Absent make(const parser::OmpClause::Absent &inp,
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAffinityClause
-  auto &t0 = std::get<std::optional<parser::OmpIterator>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
   auto &&maybeIter =
-      maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+      m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
 
   return Affinity{{/*Iterator=*/std::move(maybeIter),
                    /*LocatorList=*/makeObjects(t1, semaCtx)}};
@@ -403,11 +404,12 @@ Align make(const parser::OmpClause::Align &inp,
 Aligned make(const parser::OmpClause::Aligned &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAlignedClause
+  auto &mods = semantics::OmpGetModifiers(inp.v);
   auto &t0 = std::get<parser::OmpObjectList>(inp.v.t);
-  auto &t1 = std::get<std::optional<parser::ScalarIntConstantExpr>>(inp.v.t);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpAlignment>(mods);
 
   return Aligned{{
-      /*Alignment=*/maybeApply(makeExprFn(semaCtx), t1),
+      /*Alignment=*/maybeApplyToV(makeExprFn(semaCtx), m1),
       /*List=*/makeObjects(t0, semaCtx),
   }};
 }
@@ -478,7 +480,7 @@ Bind make(const parser::OmpClause::Bind &inp,
   using wrapped = parser::OmpBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Bind::Binding,
+      convert, wrapped::Binding, Bind::Binding,
       // clang-format off
       MS(Teams, Teams)
       MS(Parallel, Parallel)
@@ -523,7 +525,7 @@ Default make(const parser::OmpClause::Default &inp,
   using wrapped = parser::OmpDefaultClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Default::DataSharingAttribute,
+      convert, wrapped::DataSharingAttribute, Default::DataSharingAttribute,
       // clang-format off
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
@@ -659,18 +661,18 @@ Detach make(const parser::OmpClause::Detach &inp,
 Device make(const parser::OmpClause::Device &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDeviceClause
-  using wrapped = parser::OmpDeviceClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpDeviceClause::DeviceModifier, Device::DeviceModifier,
+      convert, parser::OmpDeviceModifier::Value, Device::DeviceModifier,
       // clang-format off
       MS(Ancestor,   Ancestor)
       MS(Device_Num, DeviceNum)
       // clang-format on
   );
-  auto &t0 = std::get<std::optional<wrapped::DeviceModifier>>(inp.v.t);
+
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpDeviceModifier>(mods);
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
-  return Device{{/*DeviceModifier=*/maybeApply(convert, t0),
+  return Device{{/*DeviceModifier=*/maybeApplyToV(convert, m0),
                  /*DeviceDescription=*/makeExpr(t1, semaCtx)}};
 }
 
@@ -680,7 +682,8 @@ DeviceType make(const parser::OmpClause::DeviceType &inp,
   using wrapped = parser::OmpDeviceTypeClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, DeviceType::DeviceTypeDescription,
+      convert, wrapped::DeviceTypeDescription,
+      DeviceType::DeviceTypeDescription,
       // clang-format off
       MS(Any,    Any)
       MS(Host,   Host)
@@ -1142,7 +1145,7 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
   using wrapped = parser::OmpProcBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, ProcBind::AffinityPolicy,
+      convert, wrapped::AffinityPolicy, ProcBind::AffinityPolicy,
       // clang-format off
       MS(Close,    Close)
       MS(Master,   Master)

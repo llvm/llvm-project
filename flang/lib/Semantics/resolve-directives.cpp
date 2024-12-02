@@ -2023,16 +2023,16 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   if (!dirContext_.empty()) {
     switch (x.v) {
-    case parser::OmpDefaultClause::Type::Private:
+    case parser::OmpDefaultClause::DataSharingAttribute::Private:
       SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
       break;
-    case parser::OmpDefaultClause::Type::Firstprivate:
+    case parser::OmpDefaultClause::DataSharingAttribute::Firstprivate:
       SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
       break;
-    case parser::OmpDefaultClause::Type::Shared:
+    case parser::OmpDefaultClause::DataSharingAttribute::Shared:
       SetContextDefaultDSA(Symbol::Flag::OmpShared);
       break;
-    case parser::OmpDefaultClause::Type::None:
+    case parser::OmpDefaultClause::DataSharingAttribute::None:
       SetContextDefaultDSA(Symbol::Flag::OmpNone);
       break;
     }
