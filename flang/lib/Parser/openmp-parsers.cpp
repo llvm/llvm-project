@@ -91,6 +91,8 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
 
 // --- Parsers for clause modifiers -----------------------------------
 
+TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
+
 TYPE_PARSER(construct<OmpAlignModifier>( //
     "ALIGN" >> parenthesized(scalarIntExpr)))
 
@@ -105,6 +107,10 @@ TYPE_PARSER(construct<OmpChunkModifier>( //
 TYPE_PARSER(construct<OmpDependenceType>(
     "SINK" >> pure(OmpDependenceType::Value::Sink) ||
     "SOURCE" >> pure(OmpDependenceType::Value::Source)))
+
+TYPE_PARSER(construct<OmpDeviceModifier>(
+    "ANCESTOR" >> pure(OmpDeviceModifier::Value::Ancestor) ||
+    "DEVICE_NUM" >> pure(OmpDeviceModifier::Value::Device_Num)))
 
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
@@ -191,6 +197,12 @@ TYPE_PARSER(construct<OmpVariableCategory>(
     "SCALAR" >> pure(OmpVariableCategory::Value::Scalar)))
 
 // This could be auto-generated.
+TYPE_PARSER(
+    sourced(construct<OmpAffinityClause::Modifier>(Parser<OmpIterator>{})))
+
+TYPE_PARSER(
+    sourced(construct<OmpAlignedClause::Modifier>(Parser<OmpAlignment>{})))
+
 TYPE_PARSER(sourced(construct<OmpAllocateClause::Modifier>(sourced(
     construct<OmpAllocateClause::Modifier>(Parser<OmpAlignModifier>{}) ||
     construct<OmpAllocateClause::Modifier>(
@@ -200,6 +212,9 @@ TYPE_PARSER(sourced(construct<OmpAllocateClause::Modifier>(sourced(
 
 TYPE_PARSER(sourced(
     construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
+
+TYPE_PARSER(
+    sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
     sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
@@ -251,7 +266,8 @@ static inline MOBClause makeMobClause(
 // [5.0] 2.10.1 affinity([aff-modifier:] locator-list)
 //              aff-modifier: interator-modifier
 TYPE_PARSER(construct<OmpAffinityClause>(
-    maybe(Parser<OmpIterator>{} / ":"), Parser<OmpObjectList>{}))
+    maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
 
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(
@@ -304,10 +320,7 @@ TYPE_PARSER(construct<OmpScheduleClause>(
 
 // device([ device-modifier :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpDeviceClause>(
-    maybe(
-        ("ANCESTOR" >> pure(OmpDeviceClause::DeviceModifier::Ancestor) ||
-            "DEVICE_NUM" >> pure(OmpDeviceClause::DeviceModifier::Device_Num)) /
-        ":"),
+    maybe(nonemptyList(Parser<OmpDeviceClause::Modifier>{}) / ":"),
     scalarIntExpr))
 
 // device_type(any | host | nohost)
@@ -401,8 +414,8 @@ TYPE_CONTEXT_PARSER("Omp LINEAR clause"_en_US,
 TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
 // 2.8.1 ALIGNED (list: alignment)
-TYPE_PARSER(construct<OmpAlignedClause>(
-    Parser<OmpObjectList>{}, maybe(":" >> scalarIntConstantExpr)))
+TYPE_PARSER(construct<OmpAlignedClause>(Parser<OmpObjectList>{},
+    maybe(":" >> nonemptyList(Parser<OmpAlignedClause::Modifier>{}))))
 
 TYPE_PARSER(construct<OmpUpdateClause>(
     construct<OmpUpdateClause>(Parser<OmpDependenceType>{}) ||

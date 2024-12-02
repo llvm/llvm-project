@@ -2107,17 +2107,19 @@ public:
     Walk(",", std::get<std::optional<ScalarIntExpr>>(x.t));
   }
   void Unparse(const OmpDeviceClause &x) {
-    Walk(std::get<std::optional<OmpDeviceClause::DeviceModifier>>(x.t), ":");
+    using Modifier = OmpDeviceClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpAffinityClause &x) {
-    Walk(std::get<std::optional<OmpIterator>>(x.t), ":");
+    using Modifier = OmpAffinityClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAlignedClause &x) {
+    using Modifier = OmpAlignedClause::Modifier;
     Walk(std::get<OmpObjectList>(x.t));
-    Put(",");
-    Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
+    Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
   void Unparse(const OmpFromClause &x) {
     using Modifier = OmpFromClause::Modifier;
@@ -2842,7 +2844,7 @@ public:
   WALK_NESTED_ENUM(OmpOrderingModifier, Value) // OMP ordering-modifier
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
-  WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
+  WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
   WALK_NESTED_ENUM(
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier

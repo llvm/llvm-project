@@ -3399,10 +3399,15 @@ void OmpStructureChecker::Leave(const parser::OmpAtomic &) {
 // generalized restrictions.
 void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_aligned);
-
-  if (const auto &expr{
-          std::get<std::optional<parser::ScalarIntConstantExpr>>(x.v.t)}) {
-    RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_aligned, *expr);
+  if (OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_aligned, GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *align{OmpGetUniqueModifier<parser::OmpAlignment>(modifiers)}) {
+      if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
+        context_.Say(OmpGetModifierSource(modifiers, align),
+            "The alignment value should be a constant positive integer"_err_en_US);
+      }
+    }
   }
   // 2.8.1 TODO: list-item attribute check
 }
@@ -3624,19 +3629,25 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_device);
-  const parser::OmpDeviceClause &deviceClause = x.v;
-  const auto &device{std::get<1>(deviceClause.t)};
+  const parser::OmpDeviceClause &deviceClause{x.v};
+  const auto &device{std::get<parser::ScalarIntExpr>(deviceClause.t)};
   RequiresPositiveParameter(
       llvm::omp::Clause::OMPC_device, device, "device expression");
-  std::optional<parser::OmpDeviceClause::DeviceModifier> modifier =
-      std::get<0>(deviceClause.t);
-  if (modifier &&
-      *modifier == parser::OmpDeviceClause::DeviceModifier::Ancestor) {
-    if (GetContext().directive != llvm::omp::OMPD_target) {
-      context_.Say(GetContext().clauseSource,
-          "The ANCESTOR device-modifier must not appear on the DEVICE clause on"
-          " any directive other than the TARGET construct. Found on %s construct."_err_en_US,
-          parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
+  llvm::omp::Directive dir{GetContext().directive};
+
+  if (OmpVerifyModifiers(deviceClause, llvm::omp::OMPC_device,
+          GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(deviceClause)};
+
+    if (auto *deviceMod{
+            OmpGetUniqueModifier<parser::OmpDeviceModifier>(modifiers)}) {
+      using Value = parser::OmpDeviceModifier::Value;
+      if (dir != llvm::omp::OMPD_target && deviceMod->v == Value::Ancestor) {
+        auto name{OmpGetDescriptor<parser::OmpDeviceModifier>().name};
+        context_.Say(OmpGetModifierSource(modifiers, deviceMod),
+            "The ANCESTOR %s must not appear on the DEVICE clause on any directive other than the TARGET construct. Found on %s construct."_err_en_US,
+            name.str(), parser::ToUpperCaseLetters(getDirectiveName(dir)));
+      }
     }
   }
 }

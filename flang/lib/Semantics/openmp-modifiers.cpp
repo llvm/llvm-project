@@ -75,6 +75,22 @@ unsigned OmpModifierDescriptor::since(llvm::omp::Clause id) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignment>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"alignment",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique, OmpProperty::Ultimate, OmpProperty::Post}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_aligned}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"align-modifier",
@@ -153,6 +169,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
           {45, {Clause::OMPC_depend}},
           {51, {Clause::OMPC_depend, Clause::OMPC_update}},
           {52, {Clause::OMPC_doacross}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDeviceModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"device-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_device}},
       },
   };
   return desc;
