@@ -3642,6 +3642,15 @@ struct OmpOrderModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Value);
 };
 
+// Ref: [5.1:166-171], [5.2:269-270]
+//
+// prescriptiveness ->
+//    STRICT                                        // since 5.1
+struct OmpPrescriptiveness {
+  ENUM_CLASS(Value, Strict)
+  WRAPPER_CLASS_BOILERPLATE(OmpPrescriptiveness, Value);
+};
+
 // Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
 //
 // reduction-identifier ->
@@ -3831,8 +3840,8 @@ struct OmpDependClause {
   struct TaskDep {
     OmpTaskDependenceType::Value GetTaskDepType() const;
     TUPLE_CLASS_BOILERPLATE(TaskDep);
-    std::tuple<std::optional<OmpIterator>, OmpTaskDependenceType, OmpObjectList>
-        t;
+    MODIFIER_BOILERPLATE(OmpIterator, OmpTaskDependenceType);
+    std::tuple<MODIFIERS(), OmpObjectList> t;
   };
   std::variant<TaskDep, OmpDoacross> u;
 };
@@ -3893,11 +3902,15 @@ struct OmpFromClause {
   std::tuple<MODIFIERS(), OmpObjectList, bool> t;
 };
 
-// OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
+// Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:269]
+//
+// grainsize-clause ->
+//    GRAINSIZE(grain-size) |                       // since 4.5
+//    GRAINSIZE([prescriptiveness:] grain-size)     // since 5.1
 struct OmpGrainsizeClause {
   TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
-  ENUM_CLASS(Prescriptiveness, Strict);
-  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
+  MODIFIER_BOILERPLATE(OmpPrescriptiveness);
+  std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
@@ -3961,6 +3974,17 @@ struct OmpMapClause {
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
   MODIFIER_BOILERPLATE(OmpMapTypeModifier, OmpMapper, OmpIterator, OmpMapType);
   std::tuple<MODIFIERS(), OmpObjectList, bool> t;
+};
+
+// Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]
+//
+// num-tasks-clause ->
+//    NUM_TASKS(num-tasks) |                        // since 4.5
+//    NUM_TASKS([prescriptiveness:] num-tasks)      // since 5.1
+struct OmpNumTasksClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
+  MODIFIER_BOILERPLATE(OmpPrescriptiveness);
+  std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
 // Ref: [5.0:101-109], [5.1:126-134], [5.2:233-234]
@@ -4030,13 +4054,6 @@ struct OmpToClause {
   std::tuple<MODIFIERS(), OmpObjectList, bool> t;
 };
 
-// OMP 5.2 12.6.2 num_tasks-clause -> num_tasks ([prescriptiveness :] value)
-struct OmpNumTasksClause {
-  TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
-  ENUM_CLASS(Prescriptiveness, Strict);
-  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
-};
-
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
 //
 // update-clause ->
@@ -4045,6 +4062,7 @@ struct OmpNumTasksClause {
 //    UPDATE(task-dependence-type)                  // since 5.2
 struct OmpUpdateClause {
   UNION_CLASS_BOILERPLATE(OmpUpdateClause);
+  // The dependence type is an argument here, not a modifier.
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };
 

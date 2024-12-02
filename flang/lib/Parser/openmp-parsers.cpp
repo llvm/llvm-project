@@ -176,6 +176,9 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
     "NONMONOTONIC" >> pure(OmpOrderingModifier::Value::Nonmonotonic) ||
     "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
 
+TYPE_PARSER(construct<OmpPrescriptiveness>(
+    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
+
 TYPE_PARSER(construct<OmpReductionModifier>(
     "INSCAN" >> pure(OmpReductionModifier::Value::Inscan) ||
     "TASK" >> pure(OmpReductionModifier::Value::Task) ||
@@ -213,6 +216,11 @@ TYPE_PARSER(sourced(construct<OmpAllocateClause::Modifier>(sourced(
 TYPE_PARSER(sourced(
     construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
 
+TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
+    construct<OmpDependClause::TaskDep::Modifier>(Parser<OmpIterator>{}) ||
+    construct<OmpDependClause::TaskDep::Modifier>(
+        Parser<OmpTaskDependenceType>{})))))
+
 TYPE_PARSER(
     sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))
 
@@ -220,6 +228,9 @@ TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
     sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
         construct<OmpFromClause::Modifier>(Parser<OmpMapper>{}) ||
         construct<OmpFromClause::Modifier>(Parser<OmpIterator>{})))))
+
+TYPE_PARSER(sourced(
+    construct<OmpGrainsizeClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
     sourced(construct<OmpMapClause::Modifier>(Parser<OmpMapTypeModifier>{}) ||
@@ -229,6 +240,9 @@ TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
 
 TYPE_PARSER(
     sourced(construct<OmpOrderClause::Modifier>(Parser<OmpOrderModifier>{})))
+
+TYPE_PARSER(sourced(
+    construct<OmpNumTasksClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
 TYPE_PARSER(sourced(construct<OmpReductionClause::Modifier>(sourced(
     construct<OmpReductionClause::Modifier>(Parser<OmpReductionModifier>{}) ||
@@ -382,10 +396,16 @@ TYPE_PARSER(construct<OmpDoacross>(
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(
+        // Try to parse OmpDoacross first, because TaskDep will succeed on
+        // "sink: xxx", interpreting it to not have any modifiers, and "sink"
+        // being an OmpObject. Parsing of the TaskDep variant will stop right
+        // after the "sink", leaving the ": xxx" unvisited.
+        construct<OmpDependClause>(Parser<OmpDoacross>{}) ||
+        // Parse TaskDep after Doacross.
         construct<OmpDependClause>(construct<OmpDependClause::TaskDep>(
-            maybe(Parser<OmpIterator>{} / ","_tok),
-            Parser<OmpTaskDependenceType>{} / ":", Parser<OmpObjectList>{})) ||
-        construct<OmpDependClause>(Parser<OmpDoacross>{})))
+            maybe(nonemptyList(Parser<OmpDependClause::TaskDep::Modifier>{}) /
+                ": "),
+            Parser<OmpObjectList>{}))))
 
 TYPE_CONTEXT_PARSER("Omp Doacross clause"_en_US,
     construct<OmpDoacrossClause>(Parser<OmpDoacross>{}))
@@ -427,12 +447,12 @@ TYPE_PARSER(construct<OmpOrderClause>(
 
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpGrainsizeClause>(
-    maybe("STRICT" >> pure(OmpGrainsizeClause::Prescriptiveness::Strict) / ":"),
+    maybe(nonemptyList(Parser<OmpGrainsizeClause::Modifier>{}) / ":"),
     scalarIntExpr))
 
 // OMP 5.2 12.6.2 num_tasks([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpNumTasksClause>(
-    maybe("STRICT" >> pure(OmpNumTasksClause::Prescriptiveness::Strict) / ":"),
+    maybe(nonemptyList(Parser<OmpNumTasksClause::Modifier>{}) / ":"),
     scalarIntExpr))
 
 TYPE_PARSER(

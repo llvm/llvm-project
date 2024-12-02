@@ -3725,18 +3725,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         }
       }
     }
-    if (std::get<std::optional<parser::OmpIterator>>(taskDep->t)) {
-      unsigned allowedInVersion{50};
-      if (version < allowedInVersion) {
-        context_.Say(GetContext().clauseSource,
-            "Iterator modifiers are not supported in %s, %s"_warn_en_US,
-            ThisVersion(version), TryVersion(allowedInVersion));
-      } else {
+    if (OmpVerifyModifiers(*taskDep, llvm::omp::OMPC_depend,
+            GetContext().clauseSource, context_)) {
+      auto &modifiers{OmpGetModifiers(*taskDep)};
+      if (OmpGetUniqueModifier<parser::OmpIterator>(modifiers)) {
         if (dir == llvm::omp::OMPD_depobj) {
           context_.Say(GetContext().clauseSource,
-              "An iterator-modifier may specify multiple locators, "
-              "a DEPEND clause on a DEPOBJ construct must only specify "
-              "one locator"_warn_en_US);
+              "An iterator-modifier may specify multiple locators, a DEPEND clause on a DEPOBJ construct must only specify one locator"_warn_en_US);
         }
       }
     }
