@@ -399,13 +399,13 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 /// the ops to get converted properly.
 void populateVectorLinearizeTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target, unsigned targetBitWidth);
+    ConversionTarget &target, unsigned indexBitWidth, unsigned targetBitWidth);
 
 /// Populates patterns for linearizing ND (N >= 2) vector operations to 1D
 /// vector shuffle operations.
 void populateVectorLinearizeShuffleLikeOpsPatterns(
     const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target, unsigned targetBitWidth);
+    ConversionTarget &target, unsigned indexBitWidth, unsigned targetBitWidth);
 
 } // namespace vector
 } // namespace mlir

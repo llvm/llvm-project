@@ -853,6 +853,10 @@ struct TestVectorLinearize final
     registry.insert<vector::VectorDialect>();
   }
 
+  Option<unsigned> indexBitwidth{*this, "index-bitwidth",
+                                 llvm::cl::desc("Bitwidth of the index type"),
+                                 llvm::cl::init(0)};
+
   Option<unsigned> targetVectorBitwidth{
       *this, "target-vector-bitwidth",
       llvm::cl::desc(
@@ -866,9 +870,9 @@ struct TestVectorLinearize final
     ConversionTarget target(*context);
 
     vector::populateVectorLinearizeTypeConversionsAndLegality(
-        typeConverter, patterns, target, targetVectorBitwidth);
+        typeConverter, patterns, target, indexBitwidth, targetVectorBitwidth);
     vector::populateVectorLinearizeShuffleLikeOpsPatterns(
-        typeConverter, patterns, target, targetVectorBitwidth);
+        typeConverter, patterns, target, indexBitwidth, targetVectorBitwidth);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       return signalPassFailure();
