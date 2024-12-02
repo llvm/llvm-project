@@ -1035,6 +1035,35 @@ namespace RecuceAdd {
 #endif
 }
 
+namespace ReduceMul {
+  static_assert(__builtin_reduce_mul((vector4char){}) == 0);
+  static_assert(__builtin_reduce_mul((vector4char){1, 2, 3, 4}) == 24);
+  static_assert(__builtin_reduce_mul((vector4short){1, 2, 30, 40}) == 2400);
+#ifndef __AVR__
+  static_assert(__builtin_reduce_mul((vector4int){10, 20, 300, 400}) == 24'000'000);
+#endif
+  static_assert(__builtin_reduce_mul((vector4long){1000L, 2000L, 3000L, 4000L}) == 24'000'000'000'000L);
+  constexpr int reduceMulInt1 = __builtin_reduce_mul((vector4int){~(1 << (sizeof(int) * 8 - 1)), 1, 1, 2});
+  // both-error@-1 {{must be initialized by a constant expression}} \
+  // both-note@-1 {{outside the range of representable values of type 'int'}}
+  constexpr long long reduceMulLong1 = __builtin_reduce_mul((vector4long){~(1LL << (sizeof(long long) * 8 - 1)), 1, 1, 2});
+  // both-error@-1 {{must be initialized by a constant expression}} \
+  // both-note@-1 {{outside the range of representable values of type 'long long'}}
+  constexpr int reduceMulInt2 = __builtin_reduce_mul((vector4int){(1 << (sizeof(int) * 8 - 1)), 1, 1, 2});
+  // both-error@-1 {{must be initialized by a constant expression}} \
+  // both-note@-1 {{outside the range of representable values of type 'int'}}
+  constexpr long long reduceMulLong2 = __builtin_reduce_mul((vector4long){(1LL << (sizeof(long long) * 8 - 1)), 1, 1, 2});
+  // both-error@-1 {{must be initialized by a constant expression}} \
+  // both-note@-1 {{outside the range of representable values of type 'long long'}}
+  static_assert(__builtin_reduce_mul((vector4uint){~0U, 1, 1, 2}) ==
+#ifdef __AVR__
+      0);
+#else
+      (~0U - 1));
+#endif
+  static_assert(__builtin_reduce_mul((vector4ulong){~0ULL, 1, 1, 2}) == ~0ULL - 1);
+}
+
 namespace BuiltinMemcpy {
   constexpr int simple() {
     int a = 12;
