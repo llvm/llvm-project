@@ -236,7 +236,7 @@ public:
 
     SymbolMap InternedResult;
     for (auto *Sym : G.defined_symbols())
-      if (Sym->hasName() && Sym->getScope() != Scope::Local) {
+      if (Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
@@ -249,7 +249,7 @@ public:
       }
 
     for (auto *Sym : G.absolute_symbols())
-      if (Sym->hasName() && Sym->getScope() != Scope::Local) {
+      if (Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
