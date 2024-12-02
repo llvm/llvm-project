@@ -47,6 +47,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 
@@ -1089,5 +1090,21 @@ TEST(TestRtsanInterceptors, PipeDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "pipe");
   ExpectNonRealtimeSurvival(Func);
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+TEST(TestRtsanInterceptors, SyscallDiesWhenRealtime) {
+  auto Func = []() { syscall(SYS_getpid); };
+  ExpectRealtimeDeath(Func, "syscall");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, GetPidReturnsSame) {
+  int pid = syscall(SYS_getpid);
+  EXPECT_THAT(pid, Ne(-1));
+
+  EXPECT_THAT(getpid(), Eq(pid));
+}
+#pragma clang diagnostic pop
 
 #endif // SANITIZER_POSIX
