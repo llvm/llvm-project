@@ -13,6 +13,7 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
@@ -21,6 +22,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <queue>
 #include <vector>
@@ -405,8 +407,10 @@ bool hasBuiltinTypePrefix(StringRef Name) {
 }
 
 bool isSpecialOpaqueType(const Type *Ty) {
-  if (const TargetExtType *EType = dyn_cast<TargetExtType>(Ty))
-    return hasBuiltinTypePrefix(EType->getName());
+  if (const TargetExtType *ExtTy = dyn_cast<TargetExtType>(Ty))
+    return isTypedPointerWrapper(ExtTy)
+               ? false
+               : hasBuiltinTypePrefix(ExtTy->getName());
 
   return false;
 }
@@ -519,8 +523,11 @@ bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
 }
 
 size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
-  size_t result = 0;
+  auto It = BlockToOrder.find(BB);
+  if (It != BlockToOrder.end())
+    return It->second.Rank;
 
+  size_t result = 0;
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore back-edges.
     if (DT.dominates(BB, P))
@@ -552,15 +559,20 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
   ToVisit.push(BB);
   Queued.insert(BB);
 
+  size_t QueueIndex = 0;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
 
     if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
+      assert(QueueIndex < ToVisit.size() &&
+             "No valid candidate in the queue. Is the graph reducible?");
+      QueueIndex++;
       continue;
     }
 
+    QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
     BlockToOrder.emplace(BB, Info);
@@ -635,15 +647,12 @@ bool sortBlocks(Function &F) {
     return false;
 
   bool Modified = false;
-
   std::vector<BasicBlock *> Order;
   Order.reserve(F.size());
 
-  PartialOrderingVisitor Visitor(F);
-  Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
-    Order.push_back(Block);
-    return true;
-  });
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT)
+    Order.push_back(BB);
 
   assert(&*F.begin() == Order[0]);
   BasicBlock *LastBlock = &*F.begin();
@@ -676,6 +685,79 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
       return true;
     }
   }
+  return false;
+}
+
+// Assign SPIR-V type to the register. If the register has no valid assigned
+// class, set register LLT type and class according to the SPIR-V type.
+void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                     MachineRegisterInfo *MRI, const MachineFunction &MF,
+                     bool Force) {
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  if (!MRI->getRegClassOrNull(Reg) || Force) {
+    MRI->setRegClass(Reg, GR->getRegClass(SpvType));
+    MRI->setType(Reg, GR->getRegType(SpvType));
+  }
+}
+
+// Create a SPIR-V type, assign SPIR-V type to the register. If the register has
+// no valid assigned class, set register LLT type and class according to the
+// SPIR-V type.
+void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder &MIRBuilder, bool Force) {
+  setRegClassType(Reg, GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
+                  MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo *MRI,
+                               const MachineFunction &MF) {
+  Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
+  MRI->setType(Reg, GR->getRegType(SpvType));
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  return Reg;
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder) {
+  return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
+                               MIRBuilder.getMF());
+}
+
+// Create a SPIR-V type, virtual register and assign SPIR-V type to the
+// register. Set register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder) {
+  return createVirtualRegister(GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
+                               MIRBuilder);
+}
+
+// Return true if there is an opaque pointer type nested in the argument.
+bool isNestedPointer(const Type *Ty) {
+  if (Ty->isPtrOrPtrVectorTy())
+    return true;
+  if (const FunctionType *RefTy = dyn_cast<FunctionType>(Ty)) {
+    if (isNestedPointer(RefTy->getReturnType()))
+      return true;
+    for (const Type *ArgTy : RefTy->params())
+      if (isNestedPointer(ArgTy))
+        return true;
+    return false;
+  }
+  if (const ArrayType *RefTy = dyn_cast<ArrayType>(Ty))
+    return isNestedPointer(RefTy->getElementType());
+  return false;
+}
+
+bool isSpvIntrinsic(const Value *Arg) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
+    if (Function *F = II->getCalledFunction())
+      if (F->getName().starts_with("llvm.spv."))
+        return true;
   return false;
 }
 

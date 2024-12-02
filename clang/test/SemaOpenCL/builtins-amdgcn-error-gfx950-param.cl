@@ -10,7 +10,12 @@ typedef __bf16 bfloat16 __attribute__((ext_vector_type(16)));
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef int int8 __attribute__((ext_vector_type(8)));
 typedef int int16 __attribute__((ext_vector_type(16)));
-
+typedef unsigned int uint;
+typedef half half2 __attribute__((ext_vector_type(2)));
+typedef short short2 __attribute__((ext_vector_type(2)));
+typedef float float2 __attribute__((ext_vector_type(2)));
+typedef __bf16 bfloat2 __attribute__((ext_vector_type(2)));
+typedef unsigned short ushort;
 
 void test_mfma_f32_16x16x32_f16(__global float4* out, half8 a, half8 b, float4 c, int X) {
 
@@ -147,4 +152,57 @@ void test_smfmac_f32_32x32x64_fp8_fp8(global float16* out, int4 a, int8 b, float
 {
   *out = __builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8(a, b, c, idx, d, 0); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8' must be a constant integer}}
   *out = __builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8(a, b, c, idx, 0, d); // expected-error{{argument to '__builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8' must be a constant integer}}
+}
+
+void test_permlane16_swap(__global int* out, int old, int src, bool X) {
+  *out = __builtin_amdgcn_permlane16_swap(old, src, X, false); // expected-error{{argument to '__builtin_amdgcn_permlane16_swap' must be a constant integer}}
+  *out = __builtin_amdgcn_permlane16_swap(old, src, false, X); // expected-error{{argument to '__builtin_amdgcn_permlane16_swap' must be a constant integer}}
+}
+
+void test_permlane32_swap(__global int* out, int old, int src, bool X) {
+  *out = __builtin_amdgcn_permlane32_swap(old, src, X, false); // expected-error{{argument to '__builtin_amdgcn_permlane32_swap' must be a constant integer}}
+  *out = __builtin_amdgcn_permlane32_swap(old, src, false, X); // expected-error{{argument to '__builtin_amdgcn_permlane32_swap' must be a constant integer}}
+}
+
+void test_cvt_scalef32(global half2* out_v2f16, global float* out_f32, uint src, float scale, int index, bool X,
+                       global short2* out_v2i16, float src0, float src1, global float2* out_v2f32,
+                       half2 src0_v2f16, bfloat2 src0_v2bf16, float2 src0_v2f32, global uint* out, global bfloat2* out_v2bf16) {
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_f16_fp8(*out_v2f16, src, scale, index, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f16_fp8' must be a constant integer}}
+  *out_f32 = __builtin_amdgcn_cvt_scalef32_f32_fp8(src, scale, index); // // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f32_fp8' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_f16_bf8(*out_v2f16, src, scale, index, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f16_bf8' must be a constant integer}}
+  *out_f32 = __builtin_amdgcn_cvt_scalef32_f32_bf8(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f32_bf8' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_fp8_f32(*out_v2i16, src0, src1, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp8_f32' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_bf8_f32(*out_v2i16, src0, src1, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf8_f32' must be a constant integer}}
+  *out_v2f32 = __builtin_amdgcn_cvt_scalef32_pk_f32_fp8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f32_fp8' must be a constant integer}}
+  *out_v2f32 = __builtin_amdgcn_cvt_scalef32_pk_f32_bf8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f32_bf8' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_fp8_f16(*out_v2i16, src0_v2f16, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp8_f16' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_fp8_bf16(*out_v2i16, src0_v2bf16, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp8_bf16' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_bf8_f16(*out_v2i16, src0_v2f16, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf8_f16' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_bf8_bf16(*out_v2i16, src0_v2bf16, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf8_bf16' must be a constant integer}}
+  *out_v2f32 = __builtin_amdgcn_cvt_scalef32_pk_f32_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f32_fp4' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_f32(*out, src0, src1, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp4_f32' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f16_fp4' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf16_fp4' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_fp8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f16_fp8' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_bf8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f16_bf8' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf16_fp8' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_bf8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf16_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_f16(*out, src0_v2f16, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp4_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_bf16(*out, src0_v2bf16, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp4_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f16(*out, src0_v2f16, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_bf16(*out, src0_v2bf16, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f32(*out, src0_v2f32, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f32' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_bf8_bf16(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_bf8_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_bf8_f16(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_bf8_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_bf8_f32(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_bf8_f32' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_bf16(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_fp8_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_f16(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_fp8_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_scalef32_sr_fp8_f32(*out, src0, 0, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_sr_fp8_f32' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_sr_bf16_f32(*out_v2bf16, src0, src, X); // expected-error{{argument to '__builtin_amdgcn_cvt_sr_bf16_f32' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_sr_f16_f32(*out_v2f16, src0, src, X); // expected-error{{argument to '__builtin_amdgcn_cvt_sr_f16_f32' must be a constant integer}}
+}
+
+void test_bitop3_args(global uint* out, uint a, uint b, uint c) {
+  *out = __builtin_amdgcn_bitop3_b32(a, b, c, a); // expected-error {{argument to '__builtin_amdgcn_bitop3_b32' must be a constant integer}}
+  *out = __builtin_amdgcn_bitop3_b16((ushort)a, (ushort)b, (ushort)c, a); // expected-error {{argument to '__builtin_amdgcn_bitop3_b16' must be a constant integer}}
 }
