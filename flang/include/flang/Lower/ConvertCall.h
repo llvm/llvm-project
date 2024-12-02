@@ -24,9 +24,10 @@
 
 namespace Fortran::lower {
 
-struct LoweredResult {
-  std::variant<fir::ExtendedValue, hlfir::EntityWithAttributes> result;
-};
+/// Data structure packaging the SSA value(s) produced for the result of lowered
+/// function calls.
+using LoweredResult =
+    std::variant<fir::ExtendedValue, hlfir::EntityWithAttributes>;
 
 /// Given a call site for which the arguments were already lowered, generate
 /// the call and return the result. This function deals with explicit result

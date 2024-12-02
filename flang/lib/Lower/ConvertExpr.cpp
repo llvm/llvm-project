@@ -2856,7 +2856,7 @@ public:
         Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
                                            caller, callSiteType, resultType)
             .first;
-    auto &result = std::get<ExtValue>(loweredResult.result);
+    auto &result = std::get<ExtValue>(loweredResult);
 
     // Sync pointers and allocatables that may have been modified during the
     // call.
@@ -4887,7 +4887,7 @@ private:
                                              getElementCtx(), caller,
                                              callSiteType, retTy)
               .first;
-      return std::get<ExtValue>(res.result);
+      return std::get<ExtValue>(res);
     };
   }
 

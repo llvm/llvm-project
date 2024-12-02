@@ -1699,11 +1699,10 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   for (auto cleanUp : callCleanUps)
     cleanUp.genCleanUp(loc, builder);
 
-  if (auto *entity =
-          std::get_if<hlfir::EntityWithAttributes>(&loweredResult.result))
+  if (auto *entity = std::get_if<hlfir::EntityWithAttributes>(&loweredResult))
     return *entity;
 
-  auto &result = std::get<fir::ExtendedValue>(loweredResult.result);
+  auto &result = std::get<fir::ExtendedValue>(loweredResult);
 
   // For procedure pointer function result, just return the call.
   if (callContext.resultType &&
