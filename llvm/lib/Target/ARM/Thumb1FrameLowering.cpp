@@ -43,6 +43,8 @@
 #include <iterator>
 #include <vector>
 
+#define DEBUG_TYPE "arm-frame-lowering"
+
 using namespace llvm;
 
 Thumb1FrameLowering::Thumb1FrameLowering(const ARMSubtarget &sti)
@@ -274,6 +276,20 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       // the prologue. Reset MBBI back to the last PUSH of the prologue.
       MBBI = OldMBBI;
       break;
+    }
+  }
+
+  // Skip past this code sequence, which is emitted to restore the LR if it is
+  // live-in and clobbered by the frame record setup code:
+  //   ldr rX, [sp, #Y]
+  //   mov lr, rX
+  if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tLDRspi &&
+      MBBI->getFlag(MachineInstr::FrameSetup)) {
+    ++MBBI;
+    if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tMOVr &&
+        MBBI->getOperand(0).getReg() == ARM::LR &&
+        MBBI->getFlag(MachineInstr::FrameSetup)) {
+      ++MBBI;
     }
   }
 
@@ -857,7 +873,8 @@ static void pushRegsToStack(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const TargetInstrInfo &TII,
                             const std::set<Register> &RegsToSave,
-                            const std::set<Register> &CopyRegs) {
+                            const std::set<Register> &CopyRegs,
+                            bool &UsedLRAsTemp) {
   MachineFunction &MF = *MBB.getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   DebugLoc DL;
@@ -914,6 +931,8 @@ static void pushRegsToStack(MachineBasicBlock &MBB,
         bool isKill = !MRI.isLiveIn(*HiRegToSave);
         if (isKill && !MRI.isReserved(*HiRegToSave))
           MBB.addLiveIn(*HiRegToSave);
+        if (*CopyRegIt == ARM::LR)
+          UsedLRAsTemp = true;
 
         // Emit a MOV from the high reg to the low reg.
         BuildMI(MBB, MI, DL, TII.get(ARM::tMOVr))
@@ -1093,6 +1112,8 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
   // In case FP is a high reg, we need a separate push sequence to generate
   // a correct Frame Record
   bool NeedsFrameRecordPush = hasFP(MF) && ARM::hGPRRegClass.contains(FPReg);
+  bool LRLiveIn = MF.getRegInfo().isLiveIn(ARM::LR);
+  bool UsedLRAsTemp = false;
 
   std::set<Register> FrameRecord;
   std::set<Register> SpilledGPRs;
@@ -1104,7 +1125,22 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
       SpilledGPRs.insert(Reg);
   }
 
-  pushRegsToStack(MBB, MI, TII, FrameRecord, {ARM::LR});
+  // Determine intermediate registers which can be used for pushing the frame
+  // record:
+  // - Unused argument registers
+  // - LR: This is possible because the first PUSH will save it on the stack,
+  //       so it is free to be used as a temporary for the second. However, it
+  //       is possible for LR to be live-in to the function, in which case we
+  //       will need to restore it later in the prologue, so we only use this
+  //       if there are no free argument registers.
+  std::set<Register> FrameRecordCopyRegs;
+  for (unsigned ArgReg : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
+    if (!MF.getRegInfo().isLiveIn(ArgReg))
+      FrameRecordCopyRegs.insert(ArgReg);
+  if (FrameRecordCopyRegs.empty())
+    FrameRecordCopyRegs.insert(ARM::LR);
+
+  pushRegsToStack(MBB, MI, TII, FrameRecord, FrameRecordCopyRegs, UsedLRAsTemp);
 
   // Determine intermediate registers which can be used for pushing high regs:
   // - Spilled low regs
@@ -1118,7 +1154,33 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
     if (!MF.getRegInfo().isLiveIn(ArgReg))
       CopyRegs.insert(ArgReg);
 
-  pushRegsToStack(MBB, MI, TII, SpilledGPRs, CopyRegs);
+  pushRegsToStack(MBB, MI, TII, SpilledGPRs, CopyRegs, UsedLRAsTemp);
+
+  // If the push sequence used LR as a temporary, and LR is live-in (for
+  // example because it is used by the llvm.returnaddress intrinsic), then we
+  // need to reload it from the stack. Thumb1 does not have a load instruction
+  // which can use LR, so we need to load into a temporary low register and
+  // copy to LR.
+  if (LRLiveIn && UsedLRAsTemp) {
+    auto CopyRegIt = getNextOrderedReg(OrderedCopyRegs.rbegin(),
+                                       OrderedCopyRegs.rend(), CopyRegs);
+    assert(CopyRegIt != OrderedCopyRegs.rend());
+    unsigned NumRegsPushed = FrameRecord.size() + SpilledGPRs.size();
+    LLVM_DEBUG(
+        dbgs() << "LR is live-in but clobbered in prologue, restoring via "
+               << RegInfo->getName(*CopyRegIt) << "\n");
+
+    BuildMI(MBB, MI, DebugLoc(), TII.get(ARM::tLDRspi), *CopyRegIt)
+        .addReg(ARM::SP)
+        .addImm(NumRegsPushed - 1)
+        .add(predOps(ARMCC::AL))
+        .setMIFlags(MachineInstr::FrameSetup);
+
+    BuildMI(MBB, MI, DebugLoc(), TII.get(ARM::tMOVr), ARM::LR)
+        .addReg(*CopyRegIt)
+        .add(predOps(ARMCC::AL))
+        .setMIFlags(MachineInstr::FrameSetup);
+  }
 
   return true;
 }

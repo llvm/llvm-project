@@ -16,6 +16,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/DWARF.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
@@ -127,15 +128,9 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
 
 void InputSectionBase::decompress() const {
   Ctx &ctx = getCtx();
-  uint8_t *uncompressedBuf;
-  {
-    static std::mutex mu;
-    std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = ctx.bAlloc.Allocate<uint8_t>(size);
-  }
-
-  invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
-  content_ = uncompressedBuf;
+  uint8_t *buf = makeThreadLocalN<uint8_t>(size);
+  invokeELFT(decompressAux, ctx, *this, buf, size);
+  content_ = buf;
   compressed = false;
 }
 
@@ -316,15 +311,40 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
   return filename + ":(" + secAndOffset;
 }
 
-// This function is intended to be used for constructing an error message.
-// The returned message looks like this:
+static void printFileLine(const ELFSyncStream &s, StringRef path,
+                          unsigned line) {
+  StringRef filename = path::filename(path);
+  s << filename << ':' << line;
+  if (filename != path)
+    s << " (" << path << ':' << line << ')';
+}
+
+// Print an error message that looks like this:
 //
 //   foo.c:42 (/home/alice/possibly/very/long/path/foo.c:42)
-//
-//  Returns an empty string if there's no way to get line info.
-std::string InputSectionBase::getSrcMsg(const Symbol &sym,
-                                        uint64_t offset) const {
-  return file->getSrcMsg(sym, *this, offset);
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     InputSectionBase::SrcMsg &&msg) {
+  auto &sec = msg.sec;
+  if (sec.file->kind() != InputFile::ObjKind)
+    return s;
+  auto &file = cast<ELFFileBase>(*sec.file);
+
+  // First, look up the DWARF line table.
+  ArrayRef<InputSectionBase *> sections = file.getSections();
+  auto it = llvm::find(sections, &sec);
+  uint64_t sectionIndex = it != sections.end()
+                              ? it - sections.begin()
+                              : object::SectionedAddress::UndefSection;
+  DWARFCache *dwarf = file.getDwarf();
+  if (auto info = dwarf->getDILineInfo(msg.offset, sectionIndex))
+    printFileLine(s, info->FileName, info->Line);
+  else if (auto fileLine = dwarf->getVariableLoc(msg.sym.getName()))
+    // If it failed, look up again as a variable.
+    printFileLine(s, fileLine->first, fileLine->second);
+  else
+    // File.sourceFile contains STT_FILE symbol, and that is a last resort.
+    s << file.sourceFile;
+  return s;
 }
 
 // Returns a filename string along with an optional section name. This
@@ -336,22 +356,22 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym,
 // or
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
-std::string InputSectionBase::getObjMsg(uint64_t off) const {
-  std::string filename = std::string(file->getName());
-
-  std::string archive;
-  if (!file->archiveName.empty())
-    archive = (" in archive " + file->archiveName).str();
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     InputSectionBase::ObjMsg &&msg) {
+  auto *sec = msg.sec;
+  s << sec->file->getName() << ":(";
 
   // Find a symbol that encloses a given location. getObjMsg may be called
   // before ObjFile::initSectionsAndLocalSyms where local symbols are
   // initialized.
-  if (Defined *d = getEnclosingSymbol(off))
-    return filename + ":(" + toStr(getCtx(), *d) + ")" + archive;
-
-  // If there's no symbol, print out the offset in the section.
-  return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
-      .str();
+  if (Defined *d = sec->getEnclosingSymbol(msg.offset))
+    s << d;
+  else
+    s << sec->name << "+0x" << Twine::utohexstr(msg.offset);
+  s << ')';
+  if (!sec->file->archiveName.empty())
+    s << (" in archive " + sec->file->archiveName).str();
+  return s;
 }
 
 PotentialSpillSection::PotentialSpillSection(const InputSectionBase &source,

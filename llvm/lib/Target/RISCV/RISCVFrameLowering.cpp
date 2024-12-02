@@ -151,7 +151,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   Register SCSPReg = RISCVABI::getSCSPReg();
 
-  bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
+  bool IsRV64 = STI.is64Bit();
   int64_t SlotSize = STI.getXLen() / 8;
   // Store return address to shadow call stack
   // addi    gp, gp, [4|8]
@@ -215,7 +215,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   Register SCSPReg = RISCVABI::getSCSPReg();
 
-  bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
+  bool IsRV64 = STI.is64Bit();
   int64_t SlotSize = STI.getXLen() / 8;
   // Load return address from shadow call stack
   // l[w|d]  ra, -[4|8](gp)
