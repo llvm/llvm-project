@@ -55,10 +55,9 @@ namespace Vector {
   static_assert(__builtin_vectorelements(v2) == (32 / sizeof(double)), "");
 }
 
-/// FIXME: We need to support BitCasts between vector types.
 namespace {
   typedef float __attribute__((vector_size(16))) VI42;
-  constexpr VI42 A2 = A; // expected-error {{must be initialized by a constant expression}}
+  constexpr VI42 A2 = A;
 }
 
 namespace BoolToSignedIntegralCast{
