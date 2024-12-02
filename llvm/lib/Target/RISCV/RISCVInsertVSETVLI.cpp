@@ -1806,12 +1806,11 @@ void RISCVInsertVSETVLI::insertVSETVLIBeforeCopy(MachineBasicBlock &MBB) {
 
     if (NeedVSETVL && isRVVCopy(MI)) {
       auto VSETVL0MI =
-          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(RISCV::PseudoVSETVLIX0))
+          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(RISCV::PseudoVSETIVLI))
               .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-              .addReg(RISCV::X0, RegState::Kill)
+              .addImm(0)
               .addImm(RISCVVType::encodeVTYPE(RISCVII::VLMUL::LMUL_1, 32, false,
-                                              false))
-              .addReg(RISCV::VL, RegState::Implicit);
+                                              false));
       if (LIS)
         LIS->InsertMachineInstrInMaps(*VSETVL0MI);
       NeedVSETVL = false;
