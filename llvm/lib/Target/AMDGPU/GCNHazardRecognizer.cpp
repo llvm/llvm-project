@@ -49,10 +49,10 @@ static cl::opt<unsigned> MaxExhaustiveHazardSearch(
     "amdgpu-max-exhaustive-hazard-search", cl::init(128), cl::Hidden,
     cl::desc("Maximum function size for exhausive hazard search"));
 
-static cl::opt<unsigned, false, PaddingRatioParser>
-    NopPadding("amdgpu-snop-padding", cl::Hidden,
-               cl::desc("Insert a s_nop before every instruction for a given "
-                        "number of cycles."));
+static cl::opt<unsigned, false, PaddingRatioParser> NopPadding(
+    "amdgpu-snop-padding", cl::Hidden,
+    cl::desc("Insert a s_nop before every instruction for a given "
+             "number of cycles. Does not insert nops into bundles."));
 
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
@@ -291,9 +291,6 @@ void GCNHazardRecognizer::processBundle() {
   for (; MI != E && MI->isInsideBundle(); ++MI) {
     CurrCycleInstr = &*MI;
     unsigned WaitStates = PreEmitNoopsCommon(CurrCycleInstr);
-    unsigned NopPad =
-        NopPadding.getNumOccurrences() && !MI->isTerminator() ? NopPadding : 0;
-    WaitStates = std::max(WaitStates, NopPad);
 
     if (IsHazardRecognizerMode) {
       fixHazards(CurrCycleInstr);
