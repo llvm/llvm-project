@@ -914,6 +914,24 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMBaseDataMemberOpLowering::matchAndRewrite(
+    cir::BaseDataMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerMod->getCXXABI().lowerBaseDataMember(op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMDerivedDataMemberOpLowering::matchAndRewrite(
+    cir::DerivedDataMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult = lowerMod->getCXXABI().lowerDerivedDataMember(
+      op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 static mlir::Value
 getValueForVTableSymbol(mlir::Operation *op,
                         mlir::ConversionPatternRewriter &rewriter,
@@ -1518,7 +1536,13 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Attribute attr = op.getValue();
 
-  if (mlir::isa<cir::BoolType>(op.getType())) {
+  if (mlir::isa<mlir::IntegerType>(op.getType())) {
+    // Verified cir.const operations cannot actually be of these types, but the
+    // lowering pass may generate temporary cir.const operations with these
+    // types. This is OK since MLIR allows unverified operations to be alive
+    // during a pass as long as they don't live past the end of the pass.
+    attr = op.getValue();
+  } else if (mlir::isa<cir::BoolType>(op.getType())) {
     int value = (op.getValue() ==
                  cir::BoolAttr::get(getContext(),
                                     cir::BoolType::get(getContext()), true));
@@ -2412,11 +2436,12 @@ CIRToLLVMBinOpLowering::getIntOverflowFlag(cir::BinOp op) const {
 mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     cir::BinOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert((op.getLhs().getType() == op.getRhs().getType()) &&
+  assert((adaptor.getLhs().getType() == adaptor.getRhs().getType()) &&
          "inconsistent operands' types not supported yet");
+
   mlir::Type type = op.getRhs().getType();
-  assert((mlir::isa<cir::IntType, cir::CIRFPTypeInterface, cir::VectorType>(
-             type)) &&
+  assert((mlir::isa<cir::IntType, cir::CIRFPTypeInterface, cir::VectorType,
+                    mlir::IntegerType>(type)) &&
          "operand type not supported yet");
 
   auto llvmTy = getTypeConverter()->convertType(op.getType());
@@ -2427,29 +2452,32 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
 
   switch (op.getKind()) {
   case cir::BinOpKind::Add:
-    if (mlir::isa<cir::IntType>(type))
+    if (mlir::isa<cir::IntType, mlir::IntegerType>(type))
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, llvmTy, lhs, rhs,
                                                      getIntOverflowFlag(op));
     else
       rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, llvmTy, lhs, rhs);
     break;
   case cir::BinOpKind::Sub:
-    if (mlir::isa<cir::IntType>(type))
+    if (mlir::isa<cir::IntType, mlir::IntegerType>(type))
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmTy, lhs, rhs,
                                                      getIntOverflowFlag(op));
     else
       rewriter.replaceOpWithNewOp<mlir::LLVM::FSubOp>(op, llvmTy, lhs, rhs);
     break;
   case cir::BinOpKind::Mul:
-    if (mlir::isa<cir::IntType>(type))
+    if (mlir::isa<cir::IntType, mlir::IntegerType>(type))
       rewriter.replaceOpWithNewOp<mlir::LLVM::MulOp>(op, llvmTy, lhs, rhs,
                                                      getIntOverflowFlag(op));
     else
       rewriter.replaceOpWithNewOp<mlir::LLVM::FMulOp>(op, llvmTy, lhs, rhs);
     break;
   case cir::BinOpKind::Div:
-    if (auto ty = mlir::dyn_cast<cir::IntType>(type)) {
-      if (ty.isUnsigned())
+    if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
+      auto isUnsigned = mlir::isa<cir::IntType>(type)
+                            ? mlir::cast<cir::IntType>(type).isUnsigned()
+                            : mlir::cast<mlir::IntegerType>(type).isUnsigned();
+      if (isUnsigned)
         rewriter.replaceOpWithNewOp<mlir::LLVM::UDivOp>(op, llvmTy, lhs, rhs);
       else
         rewriter.replaceOpWithNewOp<mlir::LLVM::SDivOp>(op, llvmTy, lhs, rhs);
@@ -2457,8 +2485,11 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
       rewriter.replaceOpWithNewOp<mlir::LLVM::FDivOp>(op, llvmTy, lhs, rhs);
     break;
   case cir::BinOpKind::Rem:
-    if (auto ty = mlir::dyn_cast<cir::IntType>(type)) {
-      if (ty.isUnsigned())
+    if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
+      auto isUnsigned = mlir::isa<cir::IntType>(type)
+                            ? mlir::cast<cir::IntType>(type).isUnsigned()
+                            : mlir::cast<mlir::IntegerType>(type).isUnsigned();
+      if (isUnsigned)
         rewriter.replaceOpWithNewOp<mlir::LLVM::URemOp>(op, llvmTy, lhs, rhs);
       else
         rewriter.replaceOpWithNewOp<mlir::LLVM::SRemOp>(op, llvmTy, lhs, rhs);
@@ -2642,9 +2673,12 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
   mlir::Value llResult;
 
   // Lower to LLVM comparison op.
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(type)) {
-    auto kind =
-        convertCmpKindToICmpPredicate(cmpOp.getKind(), intTy.isSigned());
+  // if (auto intTy = mlir::dyn_cast<cir::IntType>(type)) {
+  if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
+    auto isSigned = mlir::isa<cir::IntType>(type)
+                        ? mlir::cast<cir::IntType>(type).isSigned()
+                        : mlir::cast<mlir::IntegerType>(type).isSigned();
+    auto kind = convertCmpKindToICmpPredicate(cmpOp.getKind(), isSigned);
     llResult = rewriter.create<mlir::LLVM::ICmpOp>(
         cmpOp.getLoc(), kind, adaptor.getLhs(), adaptor.getRhs());
   } else if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
@@ -3847,9 +3881,15 @@ void populateCIRToLLVMConversionPatterns(
   patterns.add<CIRToLLVMAllocaOpLowering>(converter, dataLayout,
                                           stringGlobalsMap, argStringGlobalsMap,
                                           argsVarMap, patterns.getContext());
-  patterns.add<CIRToLLVMConstantOpLowering, CIRToLLVMGlobalOpLowering,
-               CIRToLLVMGetRuntimeMemberOpLowering>(
-      converter, patterns.getContext(), lowerModule);
+  patterns.add<
+      // clang-format off
+      CIRToLLVMBaseDataMemberOpLowering,
+      CIRToLLVMConstantOpLowering,
+      CIRToLLVMDerivedDataMemberOpLowering,
+      CIRToLLVMGetRuntimeMemberOpLowering,
+      CIRToLLVMGlobalOpLowering
+      // clang-format on
+      >(converter, patterns.getContext(), lowerModule);
   patterns.add<
       // clang-format off
       CIRToLLVMAbsOpLowering,

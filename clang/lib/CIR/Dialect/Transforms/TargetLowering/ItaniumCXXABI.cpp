@@ -65,6 +65,14 @@ public:
   lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
                         mlir::Value loweredAddr, mlir::Value loweredMember,
                         mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerBaseDataMember(cir::BaseDataMemberOp op,
+                                  mlir::Value loweredSrc,
+                                  mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDerivedDataMember(cir::DerivedDataMemberOp op,
+                                     mlir::Value loweredSrc,
+                                     mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -127,6 +135,44 @@ mlir::Operation *ItaniumCXXABI::lowerGetRuntimeMember(
       op.getLoc(), bytePtrTy, objectBytesPtr, loweredMember);
   return builder.create<CastOp>(op.getLoc(), op.getType(), CastKind::bitcast,
                                 memberBytesPtr);
+}
+
+static mlir::Value lowerDataMemberCast(mlir::Operation *op,
+                                       mlir::Value loweredSrc,
+                                       std::int64_t offset,
+                                       bool isDerivedToBase,
+                                       mlir::OpBuilder &builder) {
+  if (offset == 0)
+    return loweredSrc;
+
+  auto nullValue = builder.create<cir::ConstantOp>(
+      op->getLoc(), mlir::IntegerAttr::get(loweredSrc.getType(), -1));
+  auto isNull = builder.create<cir::CmpOp>(op->getLoc(), cir::CmpOpKind::eq,
+                                           loweredSrc, nullValue);
+
+  auto offsetValue = builder.create<cir::ConstantOp>(
+      op->getLoc(), mlir::IntegerAttr::get(loweredSrc.getType(), offset));
+  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
+  auto adjustedPtr = builder.create<cir::BinOp>(
+      op->getLoc(), loweredSrc.getType(), binOpKind, loweredSrc, offsetValue);
+
+  return builder.create<cir::SelectOp>(op->getLoc(), loweredSrc.getType(),
+                                       isNull, nullValue, adjustedPtr);
+}
+
+mlir::Value ItaniumCXXABI::lowerBaseDataMember(cir::BaseDataMemberOp op,
+                                               mlir::Value loweredSrc,
+                                               mlir::OpBuilder &builder) const {
+  return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                             /*isDerivedToBase=*/true, builder);
+}
+
+mlir::Value
+ItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
+                                      mlir::Value loweredSrc,
+                                      mlir::OpBuilder &builder) const {
+  return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                             /*isDerivedToBase=*/false, builder);
 }
 
 CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {

@@ -165,6 +165,36 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMBaseDataMemberOpLowering
+    : public mlir::OpConversionPattern<cir::BaseDataMemberOp> {
+  cir::LowerModule *lowerMod;
+
+public:
+  CIRToLLVMBaseDataMemberOpLowering(const mlir::TypeConverter &typeConverter,
+                                    mlir::MLIRContext *context,
+                                    cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BaseDataMemberOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMDerivedDataMemberOpLowering
+    : public mlir::OpConversionPattern<cir::DerivedDataMemberOp> {
+  cir::LowerModule *lowerMod;
+
+public:
+  CIRToLLVMDerivedDataMemberOpLowering(const mlir::TypeConverter &typeConverter,
+                                       mlir::MLIRContext *context,
+                                       cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::DerivedDataMemberOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMVTTAddrPointOpLowering
     : public mlir::OpConversionPattern<cir::VTTAddrPointOp> {
 public:

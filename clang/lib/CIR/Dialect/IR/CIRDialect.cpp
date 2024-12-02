@@ -800,6 +800,32 @@ LogicalResult cir::DynamicCastOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseDataMemberOp & DerivedDataMemberOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyDataMemberCast(Operation *op, mlir::Value src,
+                                          mlir::Type resultTy) {
+  // Let the operand type be T1 C1::*, let the result type be T2 C2::*.
+  // Verify that T1 and T2 are the same type.
+  auto inputMemberTy =
+      mlir::cast<cir::DataMemberType>(src.getType()).getMemberTy();
+  auto resultMemberTy = mlir::cast<cir::DataMemberType>(resultTy).getMemberTy();
+  if (inputMemberTy != resultMemberTy)
+    return op->emitOpError()
+           << "member types of the operand and the result do not match";
+
+  return mlir::success();
+}
+
+LogicalResult cir::BaseDataMemberOp::verify() {
+  return verifyDataMemberCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedDataMemberOp::verify() {
+  return verifyDataMemberCast(getOperation(), getSrc(), getType());
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexCreateOp
 //===----------------------------------------------------------------------===//
 

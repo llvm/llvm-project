@@ -1744,9 +1744,30 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_ReinterpretMemberPointer:
     llvm_unreachable("NYI");
   case CK_BaseToDerivedMemberPointer:
-    llvm_unreachable("NYI");
-  case CK_DerivedToBaseMemberPointer:
-    llvm_unreachable("NYI");
+  case CK_DerivedToBaseMemberPointer: {
+    mlir::Value src = Visit(E);
+
+    QualType derivedTy =
+        Kind == CK_DerivedToBaseMemberPointer ? E->getType() : CE->getType();
+    const CXXRecordDecl *derivedClass = derivedTy->castAs<MemberPointerType>()
+                                            ->getClass()
+                                            ->getAsCXXRecordDecl();
+    CharUnits offset = CGF.CGM.computeNonVirtualBaseClassOffset(
+        derivedClass, CE->path_begin(), CE->path_end());
+
+    if (E->getType()->isMemberFunctionPointerType())
+      llvm_unreachable("NYI");
+
+    mlir::Location loc = CGF.getLoc(E->getExprLoc());
+    mlir::Type resultTy = CGF.getCIRType(DestTy);
+    mlir::IntegerAttr offsetAttr = Builder.getIndexAttr(offset.getQuantity());
+
+    if (Kind == CK_BaseToDerivedMemberPointer)
+      return Builder.create<cir::DerivedDataMemberOp>(loc, resultTy, src,
+                                                      offsetAttr);
+    return Builder.create<cir::BaseDataMemberOp>(loc, resultTy, src,
+                                                 offsetAttr);
+  }
   case CK_ARCProduceObject:
     llvm_unreachable("NYI");
   case CK_ARCConsumeObject:
