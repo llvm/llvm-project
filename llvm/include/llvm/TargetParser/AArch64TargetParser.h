@@ -75,7 +75,7 @@ struct FMVInfo {
   FeatPriorities PriorityBit;    // FMV priority.
   FMVInfo(StringRef Name, CPUFeatures FeatureBit, std::optional<ArchExtKind> ID,
           FeatPriorities PriorityBit)
-      : Name(Name), FeatureBit(FeatureBit), ID(ID), PriorityBit(PriorityBit){};
+      : Name(Name), FeatureBit(FeatureBit), ID(ID), PriorityBit(PriorityBit) {};
 };
 
 const std::vector<FMVInfo> &getFMVInfo();
