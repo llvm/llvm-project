@@ -61,18 +61,12 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto self
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc parallel loop auto copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'pcopy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop auto pcopy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop auto present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
@@ -108,52 +102,33 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto private(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc parallel loop auto copyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop auto pcopyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop auto present_or_copyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc parallel loop auto copyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop auto pcopyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop auto present_or_copyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc parallel loop auto create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcreate' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'pcreate' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop auto pcreate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_create' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop auto present_or_create(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop auto reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -214,18 +189,12 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop self auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc parallel loop copy(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'pcopy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop pcopy(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop present_or_copy(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
@@ -261,52 +230,33 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop private(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc parallel loop copyout(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop pcopyout(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop present_or_copyout(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc parallel loop copyin(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop pcopyin(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop present_or_copyin(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc parallel loop create(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcreate' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'pcreate' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop pcreate(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_create' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop present_or_create(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -368,18 +318,12 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent self
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc parallel loop independent copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'pcopy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop independent pcopy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop independent present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
@@ -415,52 +359,33 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent private(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc parallel loop independent copyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop independent pcopyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop independent present_or_copyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc parallel loop independent copyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop independent pcopyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop independent present_or_copyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc parallel loop independent create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcreate' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'pcreate' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop independent pcreate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_create' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop independent present_or_create(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop independent reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -521,18 +446,12 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop self independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc parallel loop copy(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'pcopy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop pcopy(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop present_or_copy(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
@@ -568,52 +487,33 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop private(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc parallel loop copyout(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TDOOexpected-error@+1{{OpenACC 'pcopyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop pcopyout(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop present_or_copyout(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TDOOexpected-error@+1{{OpenACC 'copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc parallel loop copyin(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop pcopyin(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop present_or_copyin(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc parallel loop create(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcreate' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'pcreate' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop pcreate(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_create' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop present_or_create(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -681,18 +581,12 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq self
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc parallel loop seq copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'pcopy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop seq pcopy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop seq present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
@@ -728,52 +622,33 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq private(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc parallel loop seq copyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop seq pcopyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop seq present_or_copyout(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc parallel loop seq copyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop seq pcopyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop seq present_or_copyin(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc parallel loop seq create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcreate' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'pcreate' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop seq pcreate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_create' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop seq present_or_create(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop seq reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -840,18 +715,12 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop self seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc parallel loop copy(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'pcopy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop pcopy(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copy' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc parallel loop present_or_copy(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
@@ -887,52 +756,33 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop private(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc parallel loop copyout(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop pcopyout(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyout' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyout' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyout' is a deprecated clause name and is now an alias for 'copyout'}}
 #pragma acc parallel loop present_or_copyout(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc parallel loop copyin(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'pcopyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcopyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop pcopyin(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_copyin' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_copyin' is a deprecated clause name and is now an alias for 'copyin'}}
 #pragma acc parallel loop present_or_copyin(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc parallel loop create(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'pcreate' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'pcreate' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop pcreate(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+2{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
-  // expected-warning@+1{{OpenACC clause 'present_or_create' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop present_or_create(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
