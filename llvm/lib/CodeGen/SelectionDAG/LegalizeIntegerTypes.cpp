@@ -3995,11 +3995,18 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT(SDNode *N, SDValue &Lo,
     Op = fpExtendHelper(Op, Chain, IsStrict, MVT::f32, dl, DAG);
   }
 
-  RTLIB::Libcall LC = IsSigned ? RTLIB::getFPTOSINT(Op.getValueType(), VT)
-                               : RTLIB::getFPTOUINT(Op.getValueType(), VT);
+  // NOTE: We need a variable that lives across makeLibCall so
+  // CallOptions.setTypeListBeforeSoften can save a reference to it.
+  EVT OpVT = Op.getValueType();
+
+  RTLIB::Libcall LC =
+      IsSigned ? RTLIB::getFPTOSINT(OpVT, VT) : RTLIB::getFPTOUINT(OpVT, VT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fp-to-xint conversion!");
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
+  if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftenFloat)
+    CallOptions.setTypeListBeforeSoften(OpVT, VT);
+  else
+    CallOptions.setSExt(true);
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, VT, Op,
                                                     CallOptions, dl, Chain);
   SplitInteger(Tmp.first, Lo, Hi);
