@@ -13,6 +13,7 @@ declare <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i
 define <vscale x 1 x i1> @test_vp_splice_nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv1i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
@@ -37,6 +38,7 @@ define <vscale x 1 x i1> @test_vp_splice_nxv1i1(<vscale x 1 x i1> %va, <vscale x
 define <vscale x 1 x i1> @test_vp_splice_nxv1i1_negative_offset(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv1i1_negative_offset:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
@@ -61,6 +63,7 @@ define <vscale x 1 x i1> @test_vp_splice_nxv1i1_negative_offset(<vscale x 1 x i1
 define <vscale x 1 x i1> @test_vp_splice_nxv1i1_masked(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, <vscale x 1 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv1i1_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
@@ -86,6 +89,7 @@ define <vscale x 1 x i1> @test_vp_splice_nxv1i1_masked(<vscale x 1 x i1> %va, <v
 define <vscale x 2 x i1> @test_vp_splice_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv2i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
@@ -110,6 +114,7 @@ define <vscale x 2 x i1> @test_vp_splice_nxv2i1(<vscale x 2 x i1> %va, <vscale x
 define <vscale x 2 x i1> @test_vp_splice_nxv2i1_negative_offset(<vscale x 2 x i1> %va, <vscale x 2 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv2i1_negative_offset:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
@@ -134,6 +139,7 @@ define <vscale x 2 x i1> @test_vp_splice_nxv2i1_negative_offset(<vscale x 2 x i1
 define <vscale x 2 x i1> @test_vp_splice_nxv2i1_masked(<vscale x 2 x i1> %va, <vscale x 2 x i1> %vb, <vscale x 2 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv2i1_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
@@ -159,6 +165,7 @@ define <vscale x 2 x i1> @test_vp_splice_nxv2i1_masked(<vscale x 2 x i1> %va, <v
 define <vscale x 4 x i1> @test_vp_splice_nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv4i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
@@ -183,6 +190,7 @@ define <vscale x 4 x i1> @test_vp_splice_nxv4i1(<vscale x 4 x i1> %va, <vscale x
 define <vscale x 4 x i1> @test_vp_splice_nxv4i1_negative_offset(<vscale x 4 x i1> %va, <vscale x 4 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv4i1_negative_offset:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
@@ -207,6 +215,7 @@ define <vscale x 4 x i1> @test_vp_splice_nxv4i1_negative_offset(<vscale x 4 x i1
 define <vscale x 4 x i1> @test_vp_splice_nxv4i1_masked(<vscale x 4 x i1> %va, <vscale x 4 x i1> %vb, <vscale x 4 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv4i1_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
@@ -232,6 +241,7 @@ define <vscale x 4 x i1> @test_vp_splice_nxv4i1_masked(<vscale x 4 x i1> %va, <v
 define <vscale x 8 x i1> @test_vp_splice_nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv8i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
@@ -256,6 +266,7 @@ define <vscale x 8 x i1> @test_vp_splice_nxv8i1(<vscale x 8 x i1> %va, <vscale x
 define <vscale x 8 x i1> @test_vp_splice_nxv8i1_negative_offset(<vscale x 8 x i1> %va, <vscale x 8 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv8i1_negative_offset:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
@@ -280,6 +291,7 @@ define <vscale x 8 x i1> @test_vp_splice_nxv8i1_negative_offset(<vscale x 8 x i1
 define <vscale x 8 x i1> @test_vp_splice_nxv8i1_masked(<vscale x 8 x i1> %va, <vscale x 8 x i1> %vb, <vscale x 8 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv8i1_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
@@ -305,6 +317,7 @@ define <vscale x 8 x i1> @test_vp_splice_nxv8i1_masked(<vscale x 8 x i1> %va, <v
 define <vscale x 16 x i1> @test_vp_splice_nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv16i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
@@ -329,6 +342,7 @@ define <vscale x 16 x i1> @test_vp_splice_nxv16i1(<vscale x 16 x i1> %va, <vscal
 define <vscale x 16 x i1> @test_vp_splice_nxv16i1_negative_offset(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv16i1_negative_offset:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
@@ -353,6 +367,7 @@ define <vscale x 16 x i1> @test_vp_splice_nxv16i1_negative_offset(<vscale x 16 x
 define <vscale x 16 x i1> @test_vp_splice_nxv16i1_masked(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, <vscale x 16 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv16i1_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
@@ -379,6 +394,7 @@ define <vscale x 16 x i1> @test_vp_splice_nxv16i1_masked(<vscale x 16 x i1> %va,
 define <vscale x 32 x i1> @test_vp_splice_nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv32i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
@@ -403,6 +419,7 @@ define <vscale x 32 x i1> @test_vp_splice_nxv32i1(<vscale x 32 x i1> %va, <vscal
 define <vscale x 32 x i1> @test_vp_splice_nxv32i1_negative_offset(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv32i1_negative_offset:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
@@ -427,6 +444,7 @@ define <vscale x 32 x i1> @test_vp_splice_nxv32i1_negative_offset(<vscale x 32 x
 define <vscale x 32 x i1> @test_vp_splice_nxv32i1_masked(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, <vscale x 32 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv32i1_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
@@ -453,6 +471,7 @@ define <vscale x 32 x i1> @test_vp_splice_nxv32i1_masked(<vscale x 32 x i1> %va,
 define <vscale x 64 x i1> @test_vp_splice_nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv64i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
@@ -477,6 +496,7 @@ define <vscale x 64 x i1> @test_vp_splice_nxv64i1(<vscale x 64 x i1> %va, <vscal
 define <vscale x 64 x i1> @test_vp_splice_nxv64i1_negative_offset(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv64i1_negative_offset:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
@@ -501,6 +521,7 @@ define <vscale x 64 x i1> @test_vp_splice_nxv64i1_negative_offset(<vscale x 64 x
 define <vscale x 64 x i1> @test_vp_splice_nxv64i1_masked(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, <vscale x 64 x i1> %mask, i32 zeroext %evla, i32 zeroext %evlb) {
 ; CHECK-LABEL: test_vp_splice_nxv64i1_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma

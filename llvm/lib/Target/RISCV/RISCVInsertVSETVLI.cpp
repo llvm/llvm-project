@@ -195,6 +195,27 @@ static bool hasUndefinedPassthru(const MachineInstr &MI) {
   return UseMO.getReg() == RISCV::NoRegister || UseMO.isUndef();
 }
 
+/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
+static bool isVecCopy(const MachineInstr &MI) {
+  static const TargetRegisterClass *RVVRegClasses[] = {
+      &RISCV::VRRegClass,     &RISCV::VRM2RegClass,   &RISCV::VRM4RegClass,
+      &RISCV::VRM8RegClass,   &RISCV::VRN2M1RegClass, &RISCV::VRN2M2RegClass,
+      &RISCV::VRN2M4RegClass, &RISCV::VRN3M1RegClass, &RISCV::VRN3M2RegClass,
+      &RISCV::VRN4M1RegClass, &RISCV::VRN4M2RegClass, &RISCV::VRN5M1RegClass,
+      &RISCV::VRN6M1RegClass, &RISCV::VRN7M1RegClass, &RISCV::VRN8M1RegClass};
+  if (!MI.isCopy())
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  for (const auto &RegClass : RVVRegClasses) {
+    if (RegClass->contains(DstReg, SrcReg)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Which subfields of VL or VTYPE have values we need to preserve?
 struct DemandedFields {
   // Some unknown property of VL is used.  If demanded, must preserve entire
@@ -221,10 +242,13 @@ struct DemandedFields {
   bool SEWLMULRatio = false;
   bool TailPolicy = false;
   bool MaskPolicy = false;
+  // If this is true, we demand that VTYPE is set to some legal state, i.e. that
+  // vill is unset.
+  bool VILL = false;
 
   // Return true if any part of VTYPE was used
   bool usedVTYPE() const {
-    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
+    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy || VILL;
   }
 
   // Return true if any property of VL was used
@@ -239,6 +263,7 @@ struct DemandedFields {
     SEWLMULRatio = true;
     TailPolicy = true;
     MaskPolicy = true;
+    VILL = true;
   }
 
   // Mark all VL properties as demanded
@@ -263,6 +288,7 @@ struct DemandedFields {
     SEWLMULRatio |= B.SEWLMULRatio;
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
+    VILL |= B.VILL;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -308,7 +334,8 @@ struct DemandedFields {
     OS << ", ";
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
     OS << "TailPolicy=" << TailPolicy << ", ";
-    OS << "MaskPolicy=" << MaskPolicy;
+    OS << "MaskPolicy=" << MaskPolicy << ", ";
+    OS << "VILL=" << VILL;
     OS << "}";
   }
 #endif
@@ -502,6 +529,16 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
       Res.TailPolicy = false;
     }
   }
+
+  // In §32.16.6, whole vector register moves have a dependency on SEW. At the
+  // MIR level though we don't encode the element type, and it gives the same
+  // result whatever the SEW may be.
+  //
+  // However it does need valid SEW, i.e. vill must be cleared. The entry to a
+  // function, calls and inline assembly may all set it, so make sure we clear
+  // it for whole register copies.
+  if (isVecCopy(MI))
+    Res.VILL = true;
 
   return Res;
 }
@@ -1208,6 +1245,17 @@ static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
+  if (isVecCopy(MI) &&
+      (Info.isUnknown() || !Info.isValid() || Info.hasSEWLMULRatioOnly())) {
+    // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
+    // be coalesced into another vsetvli since we won't demand any fields.
+    VSETVLIInfo NewInfo; // Need a new VSETVLIInfo to clear SEWLMULRatioOnly
+    NewInfo.setAVLImm(0);
+    NewInfo.setVTYPE(RISCVII::VLMUL::LMUL_1, 8, true, true);
+    Info = NewInfo;
+    return;
+  }
+
   if (!RISCVII::hasSEWOp(MI.getDesc().TSFlags))
     return;
 
@@ -1296,7 +1344,8 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
   for (const MachineInstr &MI : MBB) {
     transferBefore(Info, MI);
 
-    if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags))
+    if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags) ||
+        isVecCopy(MI))
       HadVectorOp = true;
 
     transferAfter(Info, MI);
@@ -1423,6 +1472,12 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
              "Unexpected operands where VL and VTYPE should be");
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
+      PrefixTransparent = false;
+    }
+
+    if (isVecCopy(MI) &&
+        !PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
+      insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
       PrefixTransparent = false;
     }
 
