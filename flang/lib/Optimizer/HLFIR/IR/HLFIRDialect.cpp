@@ -220,8 +220,6 @@ mlir::Type hlfir::getExprType(mlir::Type variableType) {
   hlfir::ExprType::Shape typeShape;
   bool isPolymorphic = fir::isPolymorphicType(variableType);
   mlir::Type type = getFortranElementOrSequenceType(variableType);
-  assert(!fir::isa_trivial(type) &&
-         "numerical and logical scalar should not be wrapped in hlfir.expr");
   if (auto seqType = mlir::dyn_cast<fir::SequenceType>(type)) {
     assert(!seqType.hasUnknownShape() && "assumed-rank cannot be expressions");
     typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
