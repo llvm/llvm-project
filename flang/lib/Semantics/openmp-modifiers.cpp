@@ -322,6 +322,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPrescriptiveness>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"prescriptiveness",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &
 OmpGetDescriptor<parser::OmpReductionIdentifier>() {
   static const OmpModifierDescriptor desc{
@@ -363,11 +379,12 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       /*name=*/"task-dependence-type",
       /*props=*/
       {
-          {52, {OmpProperty::Required, OmpProperty::Ultimate}},
+          {45, {OmpProperty::Required, OmpProperty::Ultimate}},
       },
       /*clauses=*/
       {
-          {52, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {45, {Clause::OMPC_depend}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
       },
   };
   return desc;
