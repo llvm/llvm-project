@@ -2858,9 +2858,12 @@ multiclass sve_fp_fcvtntz<string asm> {
   def _DtoS : sve_fp_fcvt2z<0b1110, asm,  ZPR32, ZPR64>;
 }
 
-multiclass sve_fp_fcvtltz<string asm> {
+multiclass sve_fp_fcvtltz<string asm, string op> {
   def _HtoS  : sve_fp_fcvt2z<0b1001, asm,  ZPR32, ZPR16>;
   def _StoD  : sve_fp_fcvt2z<0b1111, asm,  ZPR64, ZPR32>;
+
+  def : SVE_3_Op_UndefZero_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f16), nxv4f32, nxv4i1, nxv8f16, !cast<Instruction>(NAME # _HtoS)>;
+  def : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv2i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3265,6 +3268,12 @@ class sve_fp_z2op_p_zd<bits<7> opc,string asm, RegisterOperand i_zprtype,
 
   let hasSideEffects = 0;
   let mayRaiseFPException = 1;
+}
+
+multiclass sve_fp_z2op_p_zd<string asm, SDPatternOperator op> {
+  def _DtoS : sve_fp_z2op_p_zd<0b0001010, asm, ZPR64, ZPR32>;
+
+  def : SVE_3_Op_UndefZero_Pat<nxv4f32, op, nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 multiclass sve_fp_z2op_p_zd_hsd<bits<5> opc, string asm> {
