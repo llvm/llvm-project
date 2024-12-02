@@ -2004,8 +2004,8 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
   }
 
-  // When the vector need to split into multiple register groups and the index
-  // exceed single vector resgister group, we need to extract the element via
+  // When the vector needs to split into multiple register groups and the index
+  // exceeds single vector register group, we need to extract the element via
   // stack.
   if (Opcode == Instruction::ExtractElement && LT.first > 1 &&
       ((Index == -1U) || (Index > LT.second.getVectorMinNumElements() &&
