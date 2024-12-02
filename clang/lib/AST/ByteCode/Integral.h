@@ -123,7 +123,9 @@ public:
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
   }
-  APSInt toAPSInt(unsigned BitWidth) const { return APSInt(toAPInt(BitWidth)); }
+  APSInt toAPSInt(unsigned BitWidth) const {
+    return APSInt(toAPInt(BitWidth), !Signed);
+  }
   APInt toAPInt(unsigned BitWidth) const {
     if constexpr (Signed)
       return APInt(Bits, static_cast<uint64_t>(V), Signed)
