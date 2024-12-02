@@ -604,6 +604,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(usingDecl);
   REGISTER_MATCHER(usingEnumDecl);
   REGISTER_MATCHER(usingDirectiveDecl);
+  REGISTER_MATCHER(exportDecl);
   REGISTER_MATCHER(valueDecl);
   REGISTER_MATCHER(varDecl);
   REGISTER_MATCHER(variableArrayType);
