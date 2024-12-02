@@ -579,15 +579,15 @@ void SVEType::applyTypespec(StringRef TS) {
   for (char I : TS) {
     switch (I) {
     case 'Q':
-      assert(Kind == Invalid && "Invalid use of modifer!");
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = Svcount;
       break;
     case 'P':
-      assert(Kind == Invalid && "Invalid use of modifer!");
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = Predicate;
       break;
     case 'U':
-      assert(Kind == Invalid && "Invalid use of modifer!");
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = UInt;
       break;
     case 'c':
@@ -607,26 +607,31 @@ void SVEType::applyTypespec(StringRef TS) {
       ElementBitwidth = 64;
       break;
     case 'q':
-      Kind = SInt;
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 128;
       break;
     case 'h':
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = Float;
       ElementBitwidth = 16;
       break;
     case 'f':
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = Float;
       ElementBitwidth = 32;
       break;
     case 'd':
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = Float;
       ElementBitwidth = 64;
       break;
     case 'b':
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = BFloat16;
       ElementBitwidth = 16;
       break;
     case 'm':
+      assert(isInvalid() && "Unexpected use of typespec modifier");
       Kind = MFloat8;
       ElementBitwidth = 8;
       break;
