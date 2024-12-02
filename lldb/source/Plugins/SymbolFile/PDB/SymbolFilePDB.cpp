@@ -421,9 +421,7 @@ static size_t ParseFunctionBlocksForPDBSymbol(
       if (raw_sym.getVirtualAddress() < func_file_vm_addr)
         break;
 
-      auto block_sp = std::make_shared<Block>(pdb_symbol->getSymIndexId());
-      parent_block->AddChild(block_sp);
-      block = block_sp.get();
+      block = parent_block->CreateChild(pdb_symbol->getSymIndexId()).get();
     } else
       llvm_unreachable("Unexpected PDB symbol!");
 

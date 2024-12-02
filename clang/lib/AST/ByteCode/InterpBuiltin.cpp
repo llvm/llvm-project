@@ -89,13 +89,14 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   std::optional<PrimType> T = S.getContext().classify(QT);
   assert(T);
 
+  unsigned BitWidth = S.getASTContext().getTypeSize(QT);
   if (QT->isSignedIntegerOrEnumerationType()) {
     int64_t V = Val.getSExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
   } else {
     assert(QT->isUnsignedIntegerOrEnumerationType());
     uint64_t V = Val.getZExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
   }
 }
 
@@ -103,6 +104,8 @@ template <typename T>
 static void pushInteger(InterpState &S, T Val, QualType QT) {
   if constexpr (std::is_same_v<T, APInt>)
     pushInteger(S, APSInt(Val, !std::is_signed_v<T>), QT);
+  else if constexpr (std::is_same_v<T, APSInt>)
+    pushInteger(S, Val, QT);
   else
     pushInteger(S,
                 APSInt(APInt(sizeof(T) * 8, static_cast<uint64_t>(Val),
@@ -116,14 +119,14 @@ static void assignInteger(Pointer &Dest, PrimType ValueT, const APSInt &Value) {
       ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
 }
 
-static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
+static bool retPrimValue(InterpState &S, CodePtr OpPC,
                          std::optional<PrimType> &T) {
   if (!T)
-    return RetVoid(S, OpPC, Result);
+    return RetVoid(S, OpPC);
 
 #define RET_CASE(X)                                                            \
   case X:                                                                      \
-    return Ret<X>(S, OpPC, Result);
+    return Ret<X>(S, OpPC);
   switch (*T) {
     RET_CASE(PT_Ptr);
     RET_CASE(PT_FnPtr);
@@ -137,6 +140,8 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
     RET_CASE(PT_Uint32);
     RET_CASE(PT_Sint64);
     RET_CASE(PT_Uint64);
+    RET_CASE(PT_IntAP);
+    RET_CASE(PT_IntAPS);
   default:
     llvm_unreachable("Unsupported return type for builtin function");
   }
@@ -1684,10 +1689,88 @@ static bool interp__builtin_arithmetic_fence(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
+                                          const InterpFrame *Frame,
+                                          const Function *Func,
+                                          const CallExpr *Call) {
+  const Pointer &Arg = S.Stk.peek<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+
+  unsigned ID = Func->getBuiltinID();
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  assert(Call->getType() == ElemType);
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+    T Result = Arg.atIndex(0).deref<T>();
+    unsigned BitWidth = Result.bitWidth();
+    for (unsigned I = 1; I != NumElems; ++I) {
+      T Elem = Arg.atIndex(I).deref<T>();
+      T PrevResult = Result;
+
+      if (ID == Builtin::BI__builtin_reduce_add) {
+        if (T::add(Result, Elem, BitWidth, &Result)) {
+          unsigned OverflowBits = BitWidth + 1;
+          (void)handleOverflow(S, OpPC,
+                               (PrevResult.toAPSInt(OverflowBits) +
+                                Elem.toAPSInt(OverflowBits)));
+          return false;
+        }
+      } else if (ID == Builtin::BI__builtin_reduce_mul) {
+        if (T::mul(Result, Elem, BitWidth, &Result)) {
+          unsigned OverflowBits = BitWidth * 2;
+          (void)handleOverflow(S, OpPC,
+                               (PrevResult.toAPSInt(OverflowBits) *
+                                Elem.toAPSInt(OverflowBits)));
+          return false;
+        }
+
+      } else if (ID == Builtin::BI__builtin_reduce_and) {
+        (void)T::bitAnd(Result, Elem, BitWidth, &Result);
+      } else if (ID == Builtin::BI__builtin_reduce_or) {
+        (void)T::bitOr(Result, Elem, BitWidth, &Result);
+      } else if (ID == Builtin::BI__builtin_reduce_xor) {
+        (void)T::bitXor(Result, Elem, BitWidth, &Result);
+      } else {
+        llvm_unreachable("Unhandled vector reduce builtin");
+      }
+    }
+    pushInteger(S, Result.toAPSInt(), Call->getType());
+  });
+
+  return true;
+}
+
+static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  Pointer DestPtr = getParam<Pointer>(Frame, 0);
+  const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
+  const APSInt &Size =
+      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
+
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
+  // If the size is zero, we treat this as always being a valid no-op.
+  if (Size.isZero()) {
+    S.Stk.push<Pointer>(DestPtr);
+    return true;
+  }
+
+  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+    return false;
+
+  S.Stk.push<Pointer>(DestPtr);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
-  APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
@@ -2130,6 +2213,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
+  case Builtin::BI__builtin_reduce_add:
+  case Builtin::BI__builtin_reduce_mul:
+  case Builtin::BI__builtin_reduce_and:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_xor:
+    if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_memcpy:
+    if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -2138,7 +2235,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     return false;
   }
 
-  return retPrimValue(S, OpPC, Dummy, ReturnT);
+  return retPrimValue(S, OpPC, ReturnT);
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,

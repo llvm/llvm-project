@@ -1328,9 +1328,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
 
         block = parent_block;
       } else {
-        BlockSP block_sp(new Block(die.GetID()));
-        parent_block->AddChild(block_sp);
-        block = block_sp.get();
+        block = parent_block->CreateChild(die.GetID()).get();
       }
       DWARFRangeList ranges;
       const char *name = nullptr;

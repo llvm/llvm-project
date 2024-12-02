@@ -102,6 +102,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding, handle_fromBinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, bufferUpdateCounter)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.

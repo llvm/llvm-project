@@ -1775,7 +1775,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   }
 
   // For 2-input shuffles, we must account for splitting the 2 inputs into many.
-  if (Kind == TTI::SK_PermuteTwoSrc && LT.first != 1) {
+  if (Kind == TTI::SK_PermuteTwoSrc && !IsInLaneShuffle && LT.first != 1) {
     // We assume that source and destination have the same vector type.
     InstructionCost NumOfDests = LT.first;
     InstructionCost NumOfShufflesPerDest = LT.first * 2 - 1;
@@ -4854,10 +4854,9 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
          RegisterFileMoveCost;
 }
 
-InstructionCost
-X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
-                                     bool Insert, bool Extract,
-                                     TTI::TargetCostKind CostKind) {
+InstructionCost X86TTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");

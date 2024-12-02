@@ -112,6 +112,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT p5 =
       LLT::pointer(5, PSize); // Input, SPV_INTEL_usm_storage_classes (Device)
   const LLT p6 = LLT::pointer(6, PSize); // SPV_INTEL_usm_storage_classes (Host)
+  const LLT p7 = LLT::pointer(7, PSize); // Input
+  const LLT p8 = LLT::pointer(8, PSize); // Output
+  const LLT p10 = LLT::pointer(10, PSize); // Private
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
@@ -148,7 +151,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,
                                        p2, p3,  p4,  p5,  p6};
 
-  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6};
+  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p10};
 
   bool IsExtendedInts =
       ST.canUseExtension(
@@ -212,7 +215,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
-                               G_USUBSAT})
+                               G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
@@ -357,12 +360,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   verify(*ST.getInstrInfo());
 }
 
-static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpirvType,
+static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
                                 LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI,
                                 SPIRVGlobalRegistry *GR) {
   Register ConvReg = MRI.createGenericVirtualRegister(ConvTy);
-  GR->assignSPIRVTypeToVReg(SpirvType, ConvReg, Helper.MIRBuilder.getMF());
+  MRI.setRegClass(ConvReg, GR->getRegClass(SpvType));
+  GR->assignSPIRVTypeToVReg(SpvType, ConvReg, Helper.MIRBuilder.getMF());
   Helper.MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
       .addDef(ConvReg)
       .addUse(Reg);

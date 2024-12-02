@@ -993,6 +993,15 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
+      // Push all the VP Intrinsic's ops into the Argments even if is nullptr.
+      // Some VP Intrinsic's cost will assert the number of parameters.
+      // Mainly appears in the following two scenarios:
+      // 1. EVL Op is nullptr
+      // 2. The Argmunt of the VP Intrinsic is also the VP Intrinsic
+      if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
+        Arguments.push_back(V);
+        continue;
+      }
       if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
         Arguments.push_back(UI->getArgOperand(Idx));
         continue;
@@ -1693,13 +1702,7 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
 
     // Create a vector splat to use in the induction update.
-    //
-    // FIXME: If the step is non-constant, we create the vector splat with
-    //        IRBuilder. IRBuilder can constant-fold the multiply, but it
-    //        doesn't handle a constant vector splat.
-    SplatVF = isa<Constant>(Mul)
-                  ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
-                  : Builder.CreateVectorSplat(State.VF, Mul);
+    SplatVF = Builder.CreateVectorSplat(State.VF, Mul);
   }
 
   Builder.restoreIP(CurrIP);
