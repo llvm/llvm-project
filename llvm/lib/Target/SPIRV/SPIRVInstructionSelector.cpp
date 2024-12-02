@@ -3398,13 +3398,6 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         GVType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
   }
 
-  const unsigned AddrSpace = GV->getAddressSpace();
-  SPIRV::StorageClass::StorageClass StorageClass =
-      addressSpaceToStorageClass(AddrSpace, STI);
-
-  SPIRVType *ResType =
-      GR.getOrCreateSPIRVPointerType(PointerBaseType, I, TII, StorageClass);
-
   std::string GlobalIdent;
   if (!GV->hasName()) {
     unsigned &ID = UnnamedGlobalIDs[GV];
@@ -3487,6 +3480,11 @@ bool SPIRVInstructionSelector::selectGlobalValue(
                  ? SPIRV::LinkageType::LinkOnceODR
                  : SPIRV::LinkageType::Export);
 
+  const unsigned AddrSpace = GV->getAddressSpace();
+  SPIRV::StorageClass::StorageClass StorageClass =
+      addressSpaceToStorageClass(AddrSpace, STI);
+  SPIRVType *ResType =
+      GR.getOrCreateSPIRVPointerType(PointerBaseType, I, TII, StorageClass);
   Register Reg = GR.buildGlobalVariable(
       ResVReg, ResType, GlobalIdent, GV, StorageClass, Init,
       GlobalVar->isConstant(), HasLnkTy, LnkType, MIRBuilder, true);
