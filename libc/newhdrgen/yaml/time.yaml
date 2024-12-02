@@ -96,3 +96,10 @@ functions:
     return_type: time_t
     arguments:
       - type: time_t *
+  - name: timespec_get
+    standard:
+      - stdc
+    return_type: int
+    arguments:
+      - type: struct timespec *
+      - type: int

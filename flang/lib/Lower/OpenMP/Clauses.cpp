@@ -369,6 +369,15 @@ clause::DependenceType makeDepType(const parser::OmpTaskDependenceType &inp) {
   llvm_unreachable("Unexpected task dependence type");
 }
 
+clause::Prescriptiveness
+makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
+  switch (v) {
+  case parser::OmpPrescriptiveness::Value::Strict:
+    return clause::Prescriptiveness::Strict;
+  }
+  llvm_unreachable("Unexpected prescriptiveness");
+}
+
 // --------------------------------------------------------------------
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
@@ -615,15 +624,18 @@ Depend make(const parser::OmpClause::Depend &inp,
   using Variant = decltype(Depend::u);
 
   auto visitTaskDep = [&](const wrapped::TaskDep &s) -> Variant {
-    auto &t0 = std::get<std::optional<parser::OmpIterator>>(s.t);
-    auto &t1 = std::get<parser::OmpTaskDependenceType>(s.t);
-    auto &t2 = std::get<parser::OmpObjectList>(s.t);
+    auto &mods = semantics::OmpGetModifiers(s);
+    auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+    auto *m1 =
+        semantics::OmpGetUniqueModifier<parser::OmpTaskDependenceType>(mods);
+    auto &t1 = std::get<parser::OmpObjectList>(s.t);
+    assert(m1 && "expecting task dependence type");
 
     auto &&maybeIter =
-        maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
-    return Depend::TaskDep{{/*DependenceType=*/makeDepType(t1),
+        m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
+    return Depend::TaskDep{{/*DependenceType=*/makeDepType(*m1),
                             /*Iterator=*/std::move(maybeIter),
-                            /*LocatorList=*/makeObjects(t2, semaCtx)}};
+                            /*LocatorList=*/makeObjects(t1, semaCtx)}};
   };
 
   return Depend{common::visit( //
@@ -785,19 +797,12 @@ From make(const parser::OmpClause::From &inp,
 Grainsize make(const parser::OmpClause::Grainsize &inp,
                semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpGrainsizeClause
-  using wrapped = parser::OmpGrainsizeClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpGrainsizeClause::Prescriptiveness,
-      Grainsize::Prescriptiveness,
-      // clang-format off
-      MS(Strict,   Strict)
-      // clang-format on
-  );
-  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
-  return Grainsize{{/*Prescriptiveness=*/maybeApply(convert, t0),
-                    /*Grainsize=*/makeExpr(t1, semaCtx)}};
+  return Grainsize{
+      {/*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m0),
+       /*Grainsize=*/makeExpr(t1, semaCtx)}};
 }
 
 HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
@@ -820,27 +825,13 @@ Holds make(const parser::OmpClause::Holds &inp,
 If make(const parser::OmpClause::If &inp,
         semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpIfClause
-  using wrapped = parser::OmpIfClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::DirectiveNameModifier, llvm::omp::Directive,
-      // clang-format off
-      MS(Parallel,         OMPD_parallel)
-      MS(Simd,             OMPD_simd)
-      MS(Target,           OMPD_target)
-      MS(TargetData,       OMPD_target_data)
-      MS(TargetEnterData,  OMPD_target_enter_data)
-      MS(TargetExitData,   OMPD_target_exit_data)
-      MS(TargetUpdate,     OMPD_target_update)
-      MS(Task,             OMPD_task)
-      MS(Taskloop,         OMPD_taskloop)
-      MS(Teams,            OMPD_teams)
-      // clang-format on
-  );
-  auto &t0 = std::get<std::optional<wrapped::DirectiveNameModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(mods);
   auto &t1 = std::get<parser::ScalarLogicalExpr>(inp.v.t);
-  return If{{/*DirectiveNameModifier=*/maybeApply(convert, t0),
-             /*IfExpression=*/makeExpr(t1, semaCtx)}};
+  return If{
+      {/*DirectiveNameModifier=*/maybeApplyToV([](auto &&s) { return s; }, m0),
+       /*IfExpression=*/makeExpr(t1, semaCtx)}};
 }
 
 // Inbranch: empty
@@ -884,20 +875,20 @@ IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
 Lastprivate make(const parser::OmpClause::Lastprivate &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpLastprivateClause
-  using wrapped = parser::OmpLastprivateClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpLastprivateClause::LastprivateModifier,
+      convert, parser::OmpLastprivateModifier::Value,
       Lastprivate::LastprivateModifier,
       // clang-format off
       MS(Conditional, Conditional)
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<wrapped::LastprivateModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpLastprivateModifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  return Lastprivate{{/*LastprivateModifier=*/maybeApply(convert, t0),
+  return Lastprivate{{/*LastprivateModifier=*/maybeApplyToV(convert, m0),
                       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
@@ -1047,18 +1038,10 @@ Novariants make(const parser::OmpClause::Novariants &inp,
 NumTasks make(const parser::OmpClause::NumTasks &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpNumTasksClause
-  using wrapped = parser::OmpNumTasksClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpNumTasksClause::Prescriptiveness,
-      NumTasks::Prescriptiveness,
-      // clang-format off
-      MS(Strict,   Strict)
-      // clang-format on
-  );
-  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
-  return NumTasks{{/*Prescriptiveness=*/maybeApply(convert, t0),
+  return NumTasks{{/*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m0),
                    /*NumTasks=*/makeExpr(t1, semaCtx)}};
 }
 
