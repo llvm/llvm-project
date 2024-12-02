@@ -1750,6 +1750,37 @@ Critical section handling functions modeled by this checker:
    }
  }
 
+.. _unix-Chroot:
+
+unix.Chroot (C)
+"""""""""""""""
+Check improper use of chroot described by SEI Cert C recommendation `POS05-C.
+Limit access to files by creating a jail
+<https://wiki.sei.cmu.edu/confluence/display/c/POS05-C.+Limit+access+to+files+by+creating+a+jail>`_.
+The checker finds usage patterns where ``chdir("/")`` is not called immediately
+after a call to ``chroot(path)``.
+
+.. code-block:: c
+
+ void f();
+
+ void test_bad() {
+   chroot("/usr/local");
+   f(); // warn: no call of chdir("/") immediately after chroot
+ }
+
+  void test_bad_path() {
+    chroot("/usr/local");
+    chdir("/usr"); // warn: no call of chdir("/") immediately after chroot
+    f();
+  }
+
+ void test_good() {
+   chroot("/usr/local");
+   chdir("/"); // no warning
+   f();
+ }
+
 .. _unix-Errno:
 
 unix.Errno (C)
@@ -2811,36 +2842,6 @@ Check for assignment of a fixed address to a pointer.
    p = (int *) 0x10000; // warn
  }
 
-.. _alpha-core-IdenticalExpr:
-
-alpha.core.IdenticalExpr (C, C++)
-"""""""""""""""""""""""""""""""""
-Warn about unintended use of identical expressions in operators.
-
-.. code-block:: cpp
-
- // C
- void test() {
-   int a = 5;
-   int b = a | 4 | a; // warn: identical expr on both sides
- }
-
- // C++
- bool f(void);
-
- void test(bool b) {
-   int i = 10;
-   if (f()) { // warn: true and false branches are identical
-     do {
-       i--;
-     } while (f());
-   } else {
-     do {
-       i--;
-     } while (f());
-   }
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
@@ -3297,21 +3298,6 @@ SEI CERT checkers which tries to find errors based on their `C coding rules <htt
 
 alpha.unix
 ^^^^^^^^^^
-
-.. _alpha-unix-Chroot:
-
-alpha.unix.Chroot (C)
-"""""""""""""""""""""
-Check improper use of chroot.
-
-.. code-block:: c
-
- void f();
-
- void test() {
-   chroot("/usr/local");
-   f(); // warn: no call of chdir("/") immediately after chroot
- }
 
 .. _alpha-unix-PthreadLock:
 

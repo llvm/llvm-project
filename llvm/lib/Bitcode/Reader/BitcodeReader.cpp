@@ -1663,15 +1663,42 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           C = BlockAddress::get(Fn, BB);
           break;
         }
-        case BitcodeConstant::ConstantStructOpcode:
-          C = ConstantStruct::get(cast<StructType>(BC->getType()), ConstOps);
+        case BitcodeConstant::ConstantStructOpcode: {
+          auto *ST = cast<StructType>(BC->getType());
+          if (ST->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in struct initializer");
+
+          for (const auto [Ty, Op] : zip(ST->elements(), ConstOps))
+            if (Op->getType() != Ty)
+              return error("Incorrect type in struct initializer");
+
+          C = ConstantStruct::get(ST, ConstOps);
           break;
-        case BitcodeConstant::ConstantArrayOpcode:
-          C = ConstantArray::get(cast<ArrayType>(BC->getType()), ConstOps);
+        }
+        case BitcodeConstant::ConstantArrayOpcode: {
+          auto *AT = cast<ArrayType>(BC->getType());
+          if (AT->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in array initializer");
+
+          for (Constant *Op : ConstOps)
+            if (Op->getType() != AT->getElementType())
+              return error("Incorrect type in array initializer");
+
+          C = ConstantArray::get(AT, ConstOps);
           break;
-        case BitcodeConstant::ConstantVectorOpcode:
+        }
+        case BitcodeConstant::ConstantVectorOpcode: {
+          auto *VT = cast<FixedVectorType>(BC->getType());
+          if (VT->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in vector initializer");
+
+          for (Constant *Op : ConstOps)
+            if (Op->getType() != VT->getElementType())
+              return error("Incorrect type in vector initializer");
+
           C = ConstantVector::get(ConstOps);
           break;
+        }
         case Instruction::GetElementPtr:
           C = ConstantExpr::getGetElementPtr(
               BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),

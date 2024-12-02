@@ -213,6 +213,10 @@ Changes to the RISC-V Backend
   between e.g. F and Zfinx code.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcicsr` (CSR)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisls` (Scaled Load Store)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
+  extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
