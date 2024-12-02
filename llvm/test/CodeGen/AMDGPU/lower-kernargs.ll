@@ -255,6 +255,25 @@ define amdgpu_kernel void @kern_i32(i32 %arg0) {
   ret void
 }
 
+define amdgpu_kernel void @kern_range_noundef_i32(i32 noundef range(i32 0, 8) %arg0) {
+; HSA-LABEL: @kern_range_noundef_i32(
+; HSA-NEXT:    [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 16, !range [[RNG2:![0-9]+]], !invariant.load [[META1]], !noundef [[META1]]
+; HSA-NEXT:    store volatile i32 [[ARG0_LOAD]], ptr addrspace(1) poison, align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @kern_range_noundef_i32(
+; MESA-NEXT:    [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 4, !range [[RNG2:![0-9]+]], !invariant.load [[META1]], !noundef [[META1]]
+; MESA-NEXT:    store volatile i32 [[ARG0_LOAD]], ptr addrspace(1) poison, align 4
+; MESA-NEXT:    ret void
+;
+  store volatile i32 %arg0, ptr addrspace(1) poison
+  ret void
+}
+
 define amdgpu_kernel void @kern_f32(float %arg0) {
 ; HSA-LABEL: @kern_f32(
 ; HSA-NEXT:    [[KERN_F32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -1022,14 +1041,14 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable(ptr addrspace(1) deref
 ; HSA-LABEL: @kern_global_ptr_dereferencable(
 ; HSA-NEXT:    [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !dereferenceable [[META2:![0-9]+]]
+; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !dereferenceable [[META3:![0-9]+]]
 ; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_global_ptr_dereferencable(
 ; MESA-NEXT:    [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_GLOBAL_PTR_DEREFERENCABLE_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !dereferenceable [[META2:![0-9]+]]
+; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !dereferenceable [[META3:![0-9]+]]
 ; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
 ; MESA-NEXT:    ret void
 ;
@@ -1041,14 +1060,14 @@ define amdgpu_kernel void @kern_global_ptr_dereferencable_or_null(ptr addrspace(
 ; HSA-LABEL: @kern_global_ptr_dereferencable_or_null(
 ; HSA-NEXT:    [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !dereferenceable_or_null [[META3:![0-9]+]]
+; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !dereferenceable_or_null [[META4:![0-9]+]]
 ; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_global_ptr_dereferencable_or_null(
 ; MESA-NEXT:    [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_GLOBAL_PTR_DEREFERENCABLE_OR_NULL_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !dereferenceable_or_null [[META3:![0-9]+]]
+; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !dereferenceable_or_null [[META4:![0-9]+]]
 ; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
 ; MESA-NEXT:    ret void
 ;
@@ -1079,14 +1098,14 @@ define amdgpu_kernel void @kern_align32_global_ptr(ptr addrspace(1) align 1024 %
 ; HSA-LABEL: @kern_align32_global_ptr(
 ; HSA-NEXT:    [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !align [[META4:![0-9]+]]
+; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !align [[META5:![0-9]+]]
 ; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_align32_global_ptr(
 ; MESA-NEXT:    [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_ALIGN32_GLOBAL_PTR_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !align [[META4:![0-9]+]]
+; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !align [[META5:![0-9]+]]
 ; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
 ; MESA-NEXT:    ret void
 ;
@@ -1120,14 +1139,14 @@ define amdgpu_kernel void @kern_noundef_global_ptr(ptr addrspace(1) noundef %ptr
 ; HSA-LABEL: @kern_noundef_global_ptr(
 ; HSA-NEXT:    [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]]
+; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !noundef [[META1]]
 ; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) null, align 8
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_noundef_global_ptr(
 ; MESA-NEXT:    [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]]
+; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !noundef [[META1]]
 ; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) null, align 8
 ; MESA-NEXT:    ret void
 ;
@@ -1729,13 +1748,15 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ;.
 ; HSA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ; HSA: [[META1]] = !{}
-; HSA: [[META2]] = !{i64 42}
-; HSA: [[META3]] = !{i64 128}
-; HSA: [[META4]] = !{i64 1024}
+; HSA: [[RNG2]] = !{i32 0, i32 8}
+; HSA: [[META3]] = !{i64 42}
+; HSA: [[META4]] = !{i64 128}
+; HSA: [[META5]] = !{i64 1024}
 ;.
 ; MESA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ; MESA: [[META1]] = !{}
-; MESA: [[META2]] = !{i64 42}
-; MESA: [[META3]] = !{i64 128}
-; MESA: [[META4]] = !{i64 1024}
+; MESA: [[RNG2]] = !{i32 0, i32 8}
+; MESA: [[META3]] = !{i64 42}
+; MESA: [[META4]] = !{i64 128}
+; MESA: [[META5]] = !{i64 1024}
 ;.
