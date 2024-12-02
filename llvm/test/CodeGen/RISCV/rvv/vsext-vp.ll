@@ -151,7 +151,7 @@ declare <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i8(<vscale x 32 x i8>, <
 define <vscale x 32 x i32> @vsext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vsext_nxv32i8_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v12, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2

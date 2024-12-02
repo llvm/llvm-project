@@ -450,7 +450,7 @@ declare <vscale x 16 x double> @llvm.vp.fneg.nxv16f64(<vscale x 16 x double>, <v
 define <vscale x 16 x double> @vfneg_vv_nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_nxv16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 3

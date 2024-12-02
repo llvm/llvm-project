@@ -53,7 +53,7 @@ declare <128 x i7> @llvm.vp.trunc.v128i7.v128i16(<128 x i16>, <128 x i1>, i32)
 define <128 x i7> @vtrunc_v128i7_v128i16(<128 x i16> %a, <128 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v128i7_v128i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
@@ -232,7 +232,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    mul a2, a2, a3
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc8, 0x00, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 72 * vlenb
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    li a3, 24
@@ -543,7 +543,7 @@ declare <32 x i32> @llvm.vp.trunc.v32i32.v32i64(<32 x i64>, <32 x i1>, i32)
 define <32 x i32> @vtrunc_v32i32_v32i64(<32 x i64> %a, <32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v32i32_v32i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma

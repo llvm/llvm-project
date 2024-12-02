@@ -1809,7 +1809,7 @@ void RISCVInsertVSETVLI::insertVSETIVLIBeforeCopy(MachineBasicBlock &MBB) {
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(RISCV::PseudoVSETIVLI))
               .addReg(RISCV::X0, RegState::Define | RegState::Dead)
               .addImm(0)
-              .addImm(RISCVVType::encodeVTYPE(RISCVII::VLMUL::LMUL_1, 32, false,
+              .addImm(RISCVVType::encodeVTYPE(RISCVII::VLMUL::LMUL_1, 8, false,
                                               false));
       if (LIS)
         LIS->InsertMachineInstrInMaps(*VSETVL0MI);

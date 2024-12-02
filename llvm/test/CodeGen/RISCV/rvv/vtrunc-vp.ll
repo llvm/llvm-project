@@ -157,7 +157,7 @@ declare <vscale x 15 x i16> @llvm.vp.trunc.nxv15i16.nxv15i64(<vscale x 15 x i64>
 define <vscale x 15 x i16> @vtrunc_nxv15i16_nxv15i64(<vscale x 15 x i64> %a, <vscale x 15 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv15i16_nxv15i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 3
@@ -215,7 +215,7 @@ declare <vscale x 32 x i7> @llvm.vp.trunc.nxv32i7.nxv32i32(<vscale x 32 x i32>, 
 define <vscale x 32 x i7> @vtrunc_nxv32i7_nxv32i32(<vscale x 32 x i32> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv32i7_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
@@ -250,7 +250,7 @@ declare <vscale x 32 x i8> @llvm.vp.trunc.nxv32i8.nxv32i32(<vscale x 32 x i32>, 
 define <vscale x 32 x i8> @vtrunc_nxv32i8_nxv32i32(<vscale x 32 x i32> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv32i8_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
@@ -291,7 +291,7 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill

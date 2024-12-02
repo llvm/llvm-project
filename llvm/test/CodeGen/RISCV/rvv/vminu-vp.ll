@@ -410,7 +410,7 @@ declare <vscale x 128 x i8> @llvm.vp.umin.nxv128i8(<vscale x 128 x i8>, <vscale 
 define <vscale x 128 x i8> @vminu_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vminu_vx_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
@@ -973,7 +973,7 @@ declare <vscale x 32 x i32> @llvm.vp.umin.nxv32i32(<vscale x 32 x i32>, <vscale 
 define <vscale x 32 x i32> @vminu_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vminu_vx_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    srli a3, a2, 2
@@ -1034,7 +1034,7 @@ declare i32 @llvm.vscale.i32()
 define <vscale x 32 x i32> @vminu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m) {
 ; CHECK-LABEL: vminu_vx_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a3, a1, 2
