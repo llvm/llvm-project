@@ -4225,6 +4225,20 @@ struct OmpAtomicCapture {
       t;
 };
 
+struct OmpAtomicCompareIfStmt {
+  UNION_CLASS_BOILERPLATE(OmpAtomicCompareIfStmt);
+  std::variant<common::Indirection<IfStmt>, common::Indirection<IfConstruct>> u;
+};
+
+// ATOMIC COMPARE (OpenMP 5.1, OPenMP 5.2 spec: 15.8.4)
+struct OmpAtomicCompare {
+  TUPLE_CLASS_BOILERPLATE(OmpAtomicCompare);
+  CharBlock source;
+  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
+      OmpAtomicCompareIfStmt, std::optional<OmpEndAtomic>>
+      t;
+};
+
 // ATOMIC
 struct OmpAtomic {
   TUPLE_CLASS_BOILERPLATE(OmpAtomic);
@@ -4237,11 +4251,11 @@ struct OmpAtomic {
 // 2.17.7 atomic ->
 //        ATOMIC [atomic-clause-list] atomic-construct [atomic-clause-list] |
 //        ATOMIC [atomic-clause-list]
-//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE
+//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE | COMPARE
 struct OpenMPAtomicConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
   std::variant<OmpAtomicRead, OmpAtomicWrite, OmpAtomicCapture, OmpAtomicUpdate,
-      OmpAtomic>
+      OmpAtomicCompare, OmpAtomic>
       u;
 };
 
