@@ -27,6 +27,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
@@ -196,24 +197,11 @@ static bool hasUndefinedPassthru(const MachineInstr &MI) {
 }
 
 /// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
-static bool isVecCopy(const MachineInstr &MI) {
-  static const TargetRegisterClass *RVVRegClasses[] = {
-      &RISCV::VRRegClass,     &RISCV::VRM2RegClass,   &RISCV::VRM4RegClass,
-      &RISCV::VRM8RegClass,   &RISCV::VRN2M1RegClass, &RISCV::VRN2M2RegClass,
-      &RISCV::VRN2M4RegClass, &RISCV::VRN3M1RegClass, &RISCV::VRN3M2RegClass,
-      &RISCV::VRN4M1RegClass, &RISCV::VRN4M2RegClass, &RISCV::VRN5M1RegClass,
-      &RISCV::VRN6M1RegClass, &RISCV::VRN7M1RegClass, &RISCV::VRN8M1RegClass};
-  if (!MI.isCopy())
-    return false;
-
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  for (const auto &RegClass : RVVRegClasses) {
-    if (RegClass->contains(DstReg, SrcReg)) {
-      return true;
-    }
-  }
-  return false;
+static bool isVectorCopy(const TargetRegisterInfo *TRI,
+                         const MachineInstr &MI) {
+  return MI.isCopy() && MI.getOperand(0).getReg().isPhysical() &&
+         RISCVRegisterInfo::isRVVRegClass(
+             TRI->getMinimalPhysRegClass(MI.getOperand(0).getReg()));
 }
 
 /// Which subfields of VL or VTYPE have values we need to preserve?
@@ -537,7 +525,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   // However it does need valid SEW, i.e. vill must be cleared. The entry to a
   // function, calls and inline assembly may all set it, so make sure we clear
   // it for whole register copies.
-  if (isVecCopy(MI))
+  if (isVectorCopy(ST->getRegisterInfo(), MI))
     Res.VILL = true;
 
   return Res;
@@ -1245,7 +1233,7 @@ static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
-  if (isVecCopy(MI) &&
+  if (isVectorCopy(ST->getRegisterInfo(), MI) &&
       (Info.isUnknown() || !Info.isValid() || Info.hasSEWLMULRatioOnly())) {
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
     // be coalesced into another vsetvli since we won't demand any fields.
@@ -1345,7 +1333,7 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
     transferBefore(Info, MI);
 
     if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags) ||
-        isVecCopy(MI))
+        isVectorCopy(ST->getRegisterInfo(), MI))
       HadVectorOp = true;
 
     transferAfter(Info, MI);
@@ -1475,7 +1463,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       PrefixTransparent = false;
     }
 
-    if (isVecCopy(MI) &&
+    if (isVectorCopy(ST->getRegisterInfo(), MI) &&
         !PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
       insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
       PrefixTransparent = false;
