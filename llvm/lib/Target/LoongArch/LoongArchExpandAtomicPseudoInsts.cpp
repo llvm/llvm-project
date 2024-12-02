@@ -654,6 +654,7 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg128(
   BuildMI(LoopHeadMBB, DL, TII->get(LoongArch::LL_D), DestLoReg)
       .addReg(AddrReg)
       .addImm(0);
+  BuildMI(LoopHeadMBB, DL, TII->get(LoongArch::DBAR)).addImm(0b10100);
   BuildMI(LoopHeadMBB, DL, TII->get(LoongArch::LD_D), DestHiReg)
       .addReg(AddrReg)
       .addImm(8);

@@ -25,6 +25,7 @@ define void @cmpxchg_i128_acquire_acquire(ptr %ptr, i128 %cmp, i128 %val) nounwi
 ; LA64-SCQ:       # %bb.0:
 ; LA64-SCQ-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; LA64-SCQ-NEXT:    ll.d $a5, $a0, 0
+; LA64-SCQ-NEXT:    dbar 20
 ; LA64-SCQ-NEXT:    ld.d $a6, $a0, 8
 ; LA64-SCQ-NEXT:    bne $a5, $a1, .LBB0_3
 ; LA64-SCQ-NEXT:    bne $a6, $a2, .LBB0_3
@@ -63,6 +64,7 @@ define void @cmpxchg_i128_acquire_monotonic(ptr %ptr, i128 %cmp, i128 %val) noun
 ; LA64-SCQ:       # %bb.0:
 ; LA64-SCQ-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; LA64-SCQ-NEXT:    ll.d $a5, $a0, 0
+; LA64-SCQ-NEXT:    dbar 20
 ; LA64-SCQ-NEXT:    ld.d $a6, $a0, 8
 ; LA64-SCQ-NEXT:    bne $a5, $a1, .LBB1_3
 ; LA64-SCQ-NEXT:    bne $a6, $a2, .LBB1_3
@@ -103,6 +105,7 @@ define i128 @cmpxchg_i128_acquire_acquire_reti128(ptr %ptr, i128 %cmp, i128 %val
 ; LA64-SCQ:       # %bb.0:
 ; LA64-SCQ-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
 ; LA64-SCQ-NEXT:    ll.d $a5, $a0, 0
+; LA64-SCQ-NEXT:    dbar 20
 ; LA64-SCQ-NEXT:    ld.d $a6, $a0, 8
 ; LA64-SCQ-NEXT:    bne $a5, $a1, .LBB2_3
 ; LA64-SCQ-NEXT:    bne $a6, $a2, .LBB2_3
@@ -144,6 +147,7 @@ define i1 @cmpxchg_i128_acquire_acquire_reti1(ptr %ptr, i128 %cmp, i128 %val) no
 ; LA64-SCQ:       # %bb.0:
 ; LA64-SCQ-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; LA64-SCQ-NEXT:    ll.d $a5, $a0, 0
+; LA64-SCQ-NEXT:    dbar 20
 ; LA64-SCQ-NEXT:    ld.d $a6, $a0, 8
 ; LA64-SCQ-NEXT:    bne $a5, $a1, .LBB3_3
 ; LA64-SCQ-NEXT:    bne $a6, $a2, .LBB3_3
@@ -187,6 +191,7 @@ define void @cmpxchg_i128_monotonic_monotonic(ptr %ptr, i128 %cmp, i128 %val) no
 ; NO-LD-SEQ-SA:       # %bb.0:
 ; NO-LD-SEQ-SA-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
 ; NO-LD-SEQ-SA-NEXT:    ll.d $a5, $a0, 0
+; NO-LD-SEQ-SA-NEXT:    dbar 20
 ; NO-LD-SEQ-SA-NEXT:    ld.d $a6, $a0, 8
 ; NO-LD-SEQ-SA-NEXT:    bne $a5, $a1, .LBB4_3
 ; NO-LD-SEQ-SA-NEXT:    bne $a6, $a2, .LBB4_3
@@ -204,6 +209,7 @@ define void @cmpxchg_i128_monotonic_monotonic(ptr %ptr, i128 %cmp, i128 %val) no
 ; LD-SEQ-SA:       # %bb.0:
 ; LD-SEQ-SA-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
 ; LD-SEQ-SA-NEXT:    ll.d $a5, $a0, 0
+; LD-SEQ-SA-NEXT:    dbar 20
 ; LD-SEQ-SA-NEXT:    ld.d $a6, $a0, 8
 ; LD-SEQ-SA-NEXT:    bne $a5, $a1, .LBB4_3
 ; LD-SEQ-SA-NEXT:    bne $a6, $a2, .LBB4_3
@@ -242,6 +248,7 @@ define i128 @cmpxchg_i128_monotonic_monotonic_reti128(ptr %ptr, i128 %cmp, i128 
 ; NO-LD-SEQ-SA:       # %bb.0:
 ; NO-LD-SEQ-SA-NEXT:  .LBB5_1: # =>This Inner Loop Header: Depth=1
 ; NO-LD-SEQ-SA-NEXT:    ll.d $a5, $a0, 0
+; NO-LD-SEQ-SA-NEXT:    dbar 20
 ; NO-LD-SEQ-SA-NEXT:    ld.d $a6, $a0, 8
 ; NO-LD-SEQ-SA-NEXT:    bne $a5, $a1, .LBB5_3
 ; NO-LD-SEQ-SA-NEXT:    bne $a6, $a2, .LBB5_3
@@ -261,6 +268,7 @@ define i128 @cmpxchg_i128_monotonic_monotonic_reti128(ptr %ptr, i128 %cmp, i128 
 ; LD-SEQ-SA:       # %bb.0:
 ; LD-SEQ-SA-NEXT:  .LBB5_1: # =>This Inner Loop Header: Depth=1
 ; LD-SEQ-SA-NEXT:    ll.d $a5, $a0, 0
+; LD-SEQ-SA-NEXT:    dbar 20
 ; LD-SEQ-SA-NEXT:    ld.d $a6, $a0, 8
 ; LD-SEQ-SA-NEXT:    bne $a5, $a1, .LBB5_3
 ; LD-SEQ-SA-NEXT:    bne $a6, $a2, .LBB5_3
@@ -300,6 +308,7 @@ define i1 @cmpxchg_i128_monotonic_monotonic_reti1(ptr %ptr, i128 %cmp, i128 %val
 ; NO-LD-SEQ-SA:       # %bb.0:
 ; NO-LD-SEQ-SA-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
 ; NO-LD-SEQ-SA-NEXT:    ll.d $a5, $a0, 0
+; NO-LD-SEQ-SA-NEXT:    dbar 20
 ; NO-LD-SEQ-SA-NEXT:    ld.d $a6, $a0, 8
 ; NO-LD-SEQ-SA-NEXT:    bne $a5, $a1, .LBB6_3
 ; NO-LD-SEQ-SA-NEXT:    bne $a6, $a2, .LBB6_3
@@ -321,6 +330,7 @@ define i1 @cmpxchg_i128_monotonic_monotonic_reti1(ptr %ptr, i128 %cmp, i128 %val
 ; LD-SEQ-SA:       # %bb.0:
 ; LD-SEQ-SA-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
 ; LD-SEQ-SA-NEXT:    ll.d $a5, $a0, 0
+; LD-SEQ-SA-NEXT:    dbar 20
 ; LD-SEQ-SA-NEXT:    ld.d $a6, $a0, 8
 ; LD-SEQ-SA-NEXT:    bne $a5, $a1, .LBB6_3
 ; LD-SEQ-SA-NEXT:    bne $a6, $a2, .LBB6_3
