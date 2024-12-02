@@ -763,14 +763,14 @@ def : InstRW<[WLat5, FXU2, GroupAlone], (instregex "CPSDR(d|s)(d|s)$")>;
 // FP: Load instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[LSULatency, LSU, NormalGr], (instregex "L(E|D)(Y|E32)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "L(E16|E|D)(Y|E32)?$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LX$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Store instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "ST(E|D)(Y)?$")>;
+def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "ST(E16|E|D)(Y)?$")>;
 def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "STX$")>;
 
 //===----------------------------------------------------------------------===//
