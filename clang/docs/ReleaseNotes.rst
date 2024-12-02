@@ -626,9 +626,6 @@ Improvements to Clang's diagnostics
 
 - Fixed a false negative ``-Wunused-private-field`` diagnostic when a defaulted comparison operator is defined out of class (#GH116961).
 
-- Clang now supports using alias templates in deduction guides, aligning with the C++ standard,
-  which treats alias templates as synonyms for their underlying types (#GH54909).
-
 - Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
 
 Improvements to Clang's time-trace
@@ -765,6 +762,7 @@ Bug Fixes to C++ Support
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
+- Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
