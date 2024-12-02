@@ -42,7 +42,6 @@ static const unsigned ZOSAddressMap[] = {
     1, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
-    0, // hlsl_private
     0  // wasm_funcref
 };
 
