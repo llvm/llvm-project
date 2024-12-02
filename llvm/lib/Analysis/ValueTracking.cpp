@@ -4885,6 +4885,13 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
                                         bool CondIsTrue,
                                         const Instruction *CxtI,
                                         KnownFPClass &KnownFromContext) {
+  Value *A, *B;
+  if (CondIsTrue ? match(Cond, m_LogicalAnd(m_Value(A), m_Value(B)))
+                 : match(Cond, m_LogicalOr(m_Value(A), m_Value(B)))) {
+    computeKnownFPClassFromCond(V, A, CondIsTrue, CxtI, KnownFromContext);
+    computeKnownFPClassFromCond(V, B, CondIsTrue, CxtI, KnownFromContext);
+    return;
+  }
   CmpInst::Predicate Pred;
   Value *LHS;
   uint64_t ClassVal = 0;
@@ -10090,7 +10097,7 @@ void llvm::findValuesAffectedByCondition(
 
       if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
         AddAffected(X);
-    } else if (match(Cond, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
+    } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
 
       // fcmp fneg(x), y
