@@ -1541,11 +1541,14 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::VecTypeHint, ST);
 
-    if (F.hasOptNone() &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
-      // Output OpCapability OptNoneINTEL.
-      MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
-      MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+    if (F.hasOptNone()) {
+      if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
+      } else if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+      }
     }
   }
 }
