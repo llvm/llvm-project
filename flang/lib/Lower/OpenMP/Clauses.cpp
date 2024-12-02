@@ -415,47 +415,29 @@ Aligned make(const parser::OmpClause::Aligned &inp,
 Allocate make(const parser::OmpClause::Allocate &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAllocateClause
-  using wrapped = parser::OmpAllocateClause;
-  auto &t0 = std::get<std::optional<wrapped::AllocateModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpAlignModifier>(mods);
+  auto *m1 =
+      semantics::OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(
+          mods);
+  auto *m2 =
+      semantics::OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  if (!t0) {
-    return Allocate{{/*AllocatorSimpleModifier=*/std::nullopt,
-                     /*AllocatorComplexModifier=*/std::nullopt,
-                     /*AlignModifier=*/std::nullopt,
-                     /*List=*/makeObjects(t1, semaCtx)}};
-  }
+  auto makeAllocator = [&](auto *mod) -> std::optional<Allocator> {
+    if (mod)
+      return Allocator{makeExpr(mod->v, semaCtx)};
+    return std::nullopt;
+  };
 
-  using Tuple = decltype(Allocate::t);
+  auto makeAlign = [&](const parser::ScalarIntExpr &expr) {
+    return Align{makeExpr(expr, semaCtx)};
+  };
 
-  return Allocate{Fortran::common::visit(
-      common::visitors{
-          // simple-modifier
-          [&](const wrapped::AllocateModifier::Allocator &v) -> Tuple {
-            return {/*AllocatorSimpleModifier=*/makeExpr(v.v, semaCtx),
-                    /*AllocatorComplexModifier=*/std::nullopt,
-                    /*AlignModifier=*/std::nullopt,
-                    /*List=*/makeObjects(t1, semaCtx)};
-          },
-          // complex-modifier + align-modifier
-          [&](const wrapped::AllocateModifier::ComplexModifier &v) -> Tuple {
-            auto &s0 = std::get<wrapped::AllocateModifier::Allocator>(v.t);
-            auto &s1 = std::get<wrapped::AllocateModifier::Align>(v.t);
-            return {
-                /*AllocatorSimpleModifier=*/std::nullopt,
-                /*AllocatorComplexModifier=*/Allocator{makeExpr(s0.v, semaCtx)},
-                /*AlignModifier=*/Align{makeExpr(s1.v, semaCtx)},
-                /*List=*/makeObjects(t1, semaCtx)};
-          },
-          // align-modifier
-          [&](const wrapped::AllocateModifier::Align &v) -> Tuple {
-            return {/*AllocatorSimpleModifier=*/std::nullopt,
-                    /*AllocatorComplexModifier=*/std::nullopt,
-                    /*AlignModifier=*/Align{makeExpr(v.v, semaCtx)},
-                    /*List=*/makeObjects(t1, semaCtx)};
-          },
-      },
-      t0->u)};
+  auto maybeAllocator = m1 ? makeAllocator(m1) : makeAllocator(m2);
+  return Allocate{{/*AllocatorComplexModifier=*/std::move(maybeAllocator),
+                   /*AlignModifier=*/maybeApplyToV(makeAlign, m0),
+                   /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Allocator make(const parser::OmpClause::Allocator &inp,
@@ -496,7 +478,7 @@ Bind make(const parser::OmpClause::Bind &inp,
   using wrapped = parser::OmpBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Bind::Binding,
+      convert, wrapped::Binding, Bind::Binding,
       // clang-format off
       MS(Teams, Teams)
       MS(Parallel, Parallel)
@@ -541,7 +523,7 @@ Default make(const parser::OmpClause::Default &inp,
   using wrapped = parser::OmpDefaultClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Default::DataSharingAttribute,
+      convert, wrapped::DataSharingAttribute, Default::DataSharingAttribute,
       // clang-format off
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
@@ -698,7 +680,8 @@ DeviceType make(const parser::OmpClause::DeviceType &inp,
   using wrapped = parser::OmpDeviceTypeClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, DeviceType::DeviceTypeDescription,
+      convert, wrapped::DeviceTypeDescription,
+      DeviceType::DeviceTypeDescription,
       // clang-format off
       MS(Any,    Any)
       MS(Host,   Host)
@@ -1160,7 +1143,7 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
   using wrapped = parser::OmpProcBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, ProcBind::AffinityPolicy,
+      convert, wrapped::AffinityPolicy, ProcBind::AffinityPolicy,
       // clang-format off
       MS(Close,    Close)
       MS(Master,   Master)
