@@ -1314,10 +1314,10 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
       }
       if (ScalableDstTy->getElementType() == FixedSrcTy->getElementType()) {
         auto *Load = CGF.Builder.CreateLoad(Src);
-        auto *UndefVec = llvm::UndefValue::get(ScalableDstTy);
+        auto *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
         auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
-            ScalableDstTy, UndefVec, Load, Zero, "cast.scalable");
+            ScalableDstTy, PoisonVec, Load, Zero, "cast.scalable");
         if (ScalableDstTy != Ty)
           Result = CGF.Builder.CreateBitCast(Result, Ty);
         return Result;

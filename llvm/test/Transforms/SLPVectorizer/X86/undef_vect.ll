@@ -9,8 +9,8 @@ define void @_Z2azv() local_unnamed_addr {
 ; CHECK-NEXT:    [[DOTSROA_CAST_4:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", ptr undef, i64 4, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[DOTSROA_CAST_4]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP2]], undef
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP2]], i32 undef
+; CHECK-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 undef, [[TMP2]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 undef, i32 [[TMP2]]
 ; CHECK-NEXT:    [[DOTSROA_SPECULATED_9:%.*]] = select i1 undef, i32 undef, i32 [[OP_RDX1]]
 ; CHECK-NEXT:    [[CMP_I1_10:%.*]] = icmp slt i32 [[DOTSROA_SPECULATED_9]], undef
 ; CHECK-NEXT:    ret void

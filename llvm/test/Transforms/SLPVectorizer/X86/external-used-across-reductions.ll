@@ -14,9 +14,22 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x i64> [ [[TMP0]], [[ENTRY]] ], [ [[TMP1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <8 x i64> [[TMP6]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i64> [[TMP1]], splat (i64 2)
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP7]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX16:%.*]] = add i64 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP7]], i64 0)
+; CHECK-NEXT:    [[TMP15:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP7]], i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP7]], i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP7]], i64 6)
+; CHECK-NEXT:    [[RDX_OP:%.*]] = add <2 x i64> [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[RDX_OP16:%.*]] = add <2 x i64> [[RDX_OP]], [[TMP8]]
+; CHECK-NEXT:    [[RDX_OP17:%.*]] = add <2 x i64> [[RDX_OP16]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP5]], i64 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP5]], i64 2)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP5]], i64 4)
+; CHECK-NEXT:    [[TMP13:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.v8i64(<8 x i64> [[TMP5]], i64 6)
+; CHECK-NEXT:    [[RDX_OP18:%.*]] = add <2 x i64> [[RDX_OP17]], [[TMP10]]
+; CHECK-NEXT:    [[RDX_OP19:%.*]] = add <2 x i64> [[RDX_OP18]], [[TMP11]]
+; CHECK-NEXT:    [[RDX_OP20:%.*]] = add <2 x i64> [[RDX_OP19]], [[TMP12]]
+; CHECK-NEXT:    [[RDX_OP21:%.*]] = add <2 x i64> [[RDX_OP20]], [[TMP13]]
+; CHECK-NEXT:    [[OP_RDX16:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[RDX_OP21]])
 ; CHECK-NEXT:    [[OP_RDX25]] = add i64 [[OP_RDX16]], [[TMP3]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;

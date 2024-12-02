@@ -7,9 +7,8 @@ define i32 @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[RDX_OP]])
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]
 ;
 bb:

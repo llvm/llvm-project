@@ -23,8 +23,8 @@ define i32 @test(i32 %v, ptr %p) {
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i64 [[TMP9]], [[I8_I_I]]
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX1]], [[I9_I_I]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = freeze <16 x i1> [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP10]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP10]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP11]], i1 true, i1 [[TMP13]]
 ; CHECK-NEXT:    [[AND252_US_I_24_I_I:%.*]] = select i1 [[OP_RDX]], i32 0, i32 0

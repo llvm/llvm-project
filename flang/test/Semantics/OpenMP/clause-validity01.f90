@@ -376,7 +376,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp simd aligned(cpt:-2)
   do i = 1, N
      a = 3.14
@@ -572,7 +572,7 @@ use omp_lib
 
   allocate(allc)
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp taskloop simd simdlen(-1) aligned(allc:-2)
   do i = 1, N
      allc = 3.14

@@ -7,10 +7,8 @@ define void @partial_vec_invalid_cost() #0 {
 ; CHECK-LABEL: define void @partial_vec_invalid_cost(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[STORE_THIS:%.*]] = zext i32 [[OP_RDX3]] to i96
+; CHECK-NEXT:    [[STORE_THIS:%.*]] = zext i32 [[TMP1]] to i96
 ; CHECK-NEXT:    store i96 [[STORE_THIS]], ptr null, align 16
 ; CHECK-NEXT:    ret void
 ;

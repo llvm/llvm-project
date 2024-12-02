@@ -337,19 +337,18 @@ define i32 @csr_d8_allocd_framepointer(double %d) "aarch64_pstate_sm_compatible"
 ; CHECK64-LABEL: csr_d8_allocd_framepointer:
 ; CHECK64:       // %bb.0: // %entry
 ; CHECK64-NEXT:    sub sp, sp, #176
-; CHECK64-NEXT:    str d8, [sp, #80] // 8-byte Folded Spill
+; CHECK64-NEXT:    stp d0, d8, [sp, #72] // 8-byte Folded Spill
 ; CHECK64-NEXT:    stp x29, x30, [sp, #152] // 16-byte Folded Spill
-; CHECK64-NEXT:    add x29, sp, #80
-; CHECK64-NEXT:    .cfi_def_cfa w29, 96
+; CHECK64-NEXT:    add x29, sp, #152
+; CHECK64-NEXT:    .cfi_def_cfa w29, 24
 ; CHECK64-NEXT:    .cfi_offset w30, -16
 ; CHECK64-NEXT:    .cfi_offset w29, -24
 ; CHECK64-NEXT:    .cfi_offset b8, -96
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    stur d0, [x29, #-8]
 ; CHECK64-NEXT:    ldr x29, [sp, #152] // 8-byte Folded Reload
-; CHECK64-NEXT:    ldr d8, [sp, #80] // 8-byte Folded Reload
 ; CHECK64-NEXT:    mov w0, wzr
+; CHECK64-NEXT:    ldr d8, [sp, #80] // 8-byte Folded Reload
 ; CHECK64-NEXT:    add sp, sp, #176
 ; CHECK64-NEXT:    ret
 ;
@@ -358,17 +357,17 @@ define i32 @csr_d8_allocd_framepointer(double %d) "aarch64_pstate_sm_compatible"
 ; CHECK1024-NEXT:    sub sp, sp, #1056
 ; CHECK1024-NEXT:    str d8, [sp] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Folded Spill
-; CHECK1024-NEXT:    mov x29, sp
+; CHECK1024-NEXT:    add x29, sp, #1032
 ; CHECK1024-NEXT:    str x30, [sp, #1040] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    .cfi_def_cfa w29, 1056
+; CHECK1024-NEXT:    .cfi_def_cfa w29, 24
 ; CHECK1024-NEXT:    .cfi_offset w30, -16
 ; CHECK1024-NEXT:    .cfi_offset w29, -24
 ; CHECK1024-NEXT:    .cfi_offset b8, -1056
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    stur d0, [x29, #-8]
+; CHECK1024-NEXT:    str d0, [sp, #1032]
 ; CHECK1024-NEXT:    add sp, sp, #1040
 ; CHECK1024-NEXT:    ldr x30, [sp, #1040] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Folded Reload
@@ -2893,8 +2892,8 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    stp x29, x30, [sp, #128] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x9, x20, [sp, #144] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str x19, [sp, #160] // 8-byte Folded Spill
-; CHECK64-NEXT:    mov x29, sp
-; CHECK64-NEXT:    .cfi_def_cfa w29, 176
+; CHECK64-NEXT:    add x29, sp, #128
+; CHECK64-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK64-NEXT:    .cfi_offset w19, -16
 ; CHECK64-NEXT:    .cfi_offset w20, -24
 ; CHECK64-NEXT:    .cfi_offset w30, -40
@@ -2913,11 +2912,11 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    mov w20, w0
 ; CHECK64-NEXT:    msub x9, x8, x8, x9
 ; CHECK64-NEXT:    mov sp, x9
-; CHECK64-NEXT:    stur x9, [x29, #-80]
-; CHECK64-NEXT:    sub x9, x29, #80
-; CHECK64-NEXT:    sturh wzr, [x29, #-70]
-; CHECK64-NEXT:    stur wzr, [x29, #-68]
-; CHECK64-NEXT:    sturh w8, [x29, #-72]
+; CHECK64-NEXT:    stur x9, [x29, #-208]
+; CHECK64-NEXT:    sub x9, x29, #208
+; CHECK64-NEXT:    sturh wzr, [x29, #-198]
+; CHECK64-NEXT:    stur wzr, [x29, #-196]
+; CHECK64-NEXT:    sturh w8, [x29, #-200]
 ; CHECK64-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    smstop sm
@@ -2926,14 +2925,14 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    smstart za
 ; CHECK64-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK64-NEXT:    sub x0, x29, #80
+; CHECK64-NEXT:    sub x0, x29, #208
 ; CHECK64-NEXT:    cbnz x8, .LBB33_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    bl __arm_tpidr2_restore
 ; CHECK64-NEXT:  .LBB33_2: // %entry
 ; CHECK64-NEXT:    mov w0, w20
 ; CHECK64-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK64-NEXT:    mov sp, x29
+; CHECK64-NEXT:    sub sp, x29, #128
 ; CHECK64-NEXT:    .cfi_def_cfa wsp, 176
 ; CHECK64-NEXT:    ldp x20, x19, [sp, #152] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr d14, [sp, #8] // 8-byte Folded Reload
@@ -2972,8 +2971,8 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    str x28, [sp, #1112] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x20, [sp, #1120] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x19, [sp, #1128] // 8-byte Folded Spill
-; CHECK1024-NEXT:    mov x29, sp
-; CHECK1024-NEXT:    .cfi_def_cfa w29, 1136
+; CHECK1024-NEXT:    add x29, sp, #1088
+; CHECK1024-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK1024-NEXT:    .cfi_offset w19, -8
 ; CHECK1024-NEXT:    .cfi_offset w20, -16
 ; CHECK1024-NEXT:    .cfi_offset w28, -24
@@ -2993,14 +2992,14 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    mov w20, w0
 ; CHECK1024-NEXT:    msub x9, x8, x8, x9
 ; CHECK1024-NEXT:    mov sp, x9
-; CHECK1024-NEXT:    sub x10, x29, #784
+; CHECK1024-NEXT:    sub x10, x29, #1872
 ; CHECK1024-NEXT:    stur x9, [x10, #-256]
-; CHECK1024-NEXT:    sub x9, x29, #774
-; CHECK1024-NEXT:    sub x10, x29, #772
+; CHECK1024-NEXT:    sub x9, x29, #1862
+; CHECK1024-NEXT:    sub x10, x29, #1860
 ; CHECK1024-NEXT:    sturh wzr, [x9, #-256]
-; CHECK1024-NEXT:    sub x9, x29, #1040
+; CHECK1024-NEXT:    sub x9, x29, #2128
 ; CHECK1024-NEXT:    stur wzr, [x10, #-256]
-; CHECK1024-NEXT:    sub x10, x29, #776
+; CHECK1024-NEXT:    sub x10, x29, #1864
 ; CHECK1024-NEXT:    sturh w8, [x10, #-256]
 ; CHECK1024-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK1024-NEXT:    .cfi_offset vg, -32
@@ -3010,14 +3009,14 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    smstart za
 ; CHECK1024-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK1024-NEXT:    sub x0, x29, #1040
+; CHECK1024-NEXT:    sub x0, x29, #2128
 ; CHECK1024-NEXT:    cbnz x8, .LBB33_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
 ; CHECK1024-NEXT:    bl __arm_tpidr2_restore
 ; CHECK1024-NEXT:  .LBB33_2: // %entry
 ; CHECK1024-NEXT:    mov w0, w20
 ; CHECK1024-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK1024-NEXT:    mov sp, x29
+; CHECK1024-NEXT:    sub sp, x29, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa wsp, 1136
 ; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x19, [sp, #1128] // 8-byte Folded Reload
@@ -3049,3 +3048,109 @@ entry:
   ret i32 %x
 }
 declare void @other()
+
+declare void @bar(ptr noundef) "aarch64_pstate_sm_compatible"
+
+define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_compatible" "frame-pointer"="all" {
+; CHECK0-LABEL: sve_stack_object_and_vla:
+; CHECK0:       // %bb.0: // %entry
+; CHECK0-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK0-NEXT:    stp x28, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK0-NEXT:    mov x29, sp
+; CHECK0-NEXT:    addvl sp, sp, #-1
+; CHECK0-NEXT:    mov x19, sp
+; CHECK0-NEXT:    .cfi_def_cfa w29, 32
+; CHECK0-NEXT:    .cfi_offset w19, -8
+; CHECK0-NEXT:    .cfi_offset w28, -16
+; CHECK0-NEXT:    .cfi_offset w30, -24
+; CHECK0-NEXT:    .cfi_offset w29, -32
+; CHECK0-NEXT:    lsl x9, x0, #2
+; CHECK0-NEXT:    mov x8, sp
+; CHECK0-NEXT:    add x9, x9, #15
+; CHECK0-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK0-NEXT:    sub x0, x8, x9
+; CHECK0-NEXT:    mov sp, x0
+; CHECK0-NEXT:    mov z0.s, #0 // =0x0
+; CHECK0-NEXT:    ptrue p0.s
+; CHECK0-NEXT:    st1w { z0.s }, p0, [x29, #-1, mul vl]
+; CHECK0-NEXT:    bl bar
+; CHECK0-NEXT:    mov w0, wzr
+; CHECK0-NEXT:    mov sp, x29
+; CHECK0-NEXT:    ldp x28, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK0-NEXT:    ret
+;
+; CHECK64-LABEL: sve_stack_object_and_vla:
+; CHECK64:       // %bb.0: // %entry
+; CHECK64-NEXT:    sub sp, sp, #96
+; CHECK64-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK64-NEXT:    add x29, sp, #64
+; CHECK64-NEXT:    stp x28, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-1
+; CHECK64-NEXT:    mov x19, sp
+; CHECK64-NEXT:    .cfi_def_cfa w29, 32
+; CHECK64-NEXT:    .cfi_offset w19, -8
+; CHECK64-NEXT:    .cfi_offset w28, -16
+; CHECK64-NEXT:    .cfi_offset w30, -24
+; CHECK64-NEXT:    .cfi_offset w29, -32
+; CHECK64-NEXT:    lsl x9, x0, #2
+; CHECK64-NEXT:    mov x8, sp
+; CHECK64-NEXT:    add x9, x9, #15
+; CHECK64-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK64-NEXT:    sub x0, x8, x9
+; CHECK64-NEXT:    mov sp, x0
+; CHECK64-NEXT:    mov z0.s, #0 // =0x0
+; CHECK64-NEXT:    ptrue p0.s
+; CHECK64-NEXT:    sub x8, x29, #64
+; CHECK64-NEXT:    st1w { z0.s }, p0, [x8, #-1, mul vl]
+; CHECK64-NEXT:    bl bar
+; CHECK64-NEXT:    mov w0, wzr
+; CHECK64-NEXT:    sub sp, x29, #64
+; CHECK64-NEXT:    ldp x28, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #96
+; CHECK64-NEXT:    ret
+;
+; CHECK1024-LABEL: sve_stack_object_and_vla:
+; CHECK1024:       // %bb.0: // %entry
+; CHECK1024-NEXT:    sub sp, sp, #1056
+; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Folded Spill
+; CHECK1024-NEXT:    add x29, sp, #1024
+; CHECK1024-NEXT:    str x30, [sp, #1032] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x28, [sp, #1040] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x19, [sp, #1048] // 8-byte Folded Spill
+; CHECK1024-NEXT:    sub sp, sp, #1024
+; CHECK1024-NEXT:    addvl sp, sp, #-1
+; CHECK1024-NEXT:    mov x19, sp
+; CHECK1024-NEXT:    .cfi_def_cfa w29, 32
+; CHECK1024-NEXT:    .cfi_offset w19, -8
+; CHECK1024-NEXT:    .cfi_offset w28, -16
+; CHECK1024-NEXT:    .cfi_offset w30, -24
+; CHECK1024-NEXT:    .cfi_offset w29, -32
+; CHECK1024-NEXT:    lsl x9, x0, #2
+; CHECK1024-NEXT:    mov x8, sp
+; CHECK1024-NEXT:    add x9, x9, #15
+; CHECK1024-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK1024-NEXT:    sub x0, x8, x9
+; CHECK1024-NEXT:    mov sp, x0
+; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
+; CHECK1024-NEXT:    ptrue p0.s
+; CHECK1024-NEXT:    sub x8, x29, #1024
+; CHECK1024-NEXT:    st1w { z0.s }, p0, [x8, #-1, mul vl]
+; CHECK1024-NEXT:    bl bar
+; CHECK1024-NEXT:    mov w0, wzr
+; CHECK1024-NEXT:    sub sp, x29, #1024
+; CHECK1024-NEXT:    ldr x19, [sp, #1048] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x28, [sp, #1040] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x30, [sp, #1032] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Folded Reload
+; CHECK1024-NEXT:    add sp, sp, #1056
+; CHECK1024-NEXT:    ret
+entry:
+  %a = alloca <vscale x 4 x i32>
+  %b = alloca i32, i64 %sz, align 4
+  store <vscale x 4 x i32> zeroinitializer, ptr %a
+  call void @bar(ptr noundef nonnull %b)
+  ret i32 0
+}
