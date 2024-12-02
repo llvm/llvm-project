@@ -1700,7 +1700,7 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   PrimType ElemT = *S.getContext().classify(ElemType);
   unsigned NumElems = Arg.getNumElems();
 
-  INT_TYPE_SWITCH(ElemT, {
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     T Result = Arg.atIndex(0).deref<T>();
     unsigned BitWidth = Result.bitWidth();
     for (unsigned I = 1; I != NumElems; ++I) {
@@ -1723,6 +1723,9 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
                                 Elem.toAPSInt(OverflowBits)));
           return false;
         }
+
+      } else if (ID == Builtin::BI__builtin_reduce_and) {
+        (void)T::bitAnd(Result, Elem, BitWidth, &Result);
       } else {
         llvm_unreachable("Unhandled vector reduce builtin");
       }
@@ -2206,6 +2209,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
+  case Builtin::BI__builtin_reduce_and:
     if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
       return false;
     break;
