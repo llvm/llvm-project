@@ -10756,7 +10756,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT,
                                Op.getOperand(0), Op.getOperand(1));
 
-
   // We can deinterleave through vnsrl.wi if the element type is smaller than
   // ELEN
   if (VecVT.getScalarSizeInBits() < Subtarget.getELen()) {
@@ -10775,12 +10774,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
   SDValue StepVec = DAG.getStepVector(DL, IdxVT);
   // 0, 1, 0, 1, 0, 1
-  SDValue ZeroOnes = DAG.getNode(ISD::AND, DL, IdxVT, StepVec,
-                                 DAG.getConstant(1, DL, IdxVT));
+  SDValue ZeroOnes =
+      DAG.getNode(ISD::AND, DL, IdxVT, StepVec, DAG.getConstant(1, DL, IdxVT));
   MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
-  SDValue EvenMask = DAG.getSetCC(DL, MaskVT, ZeroOnes,
-                                  DAG.getConstant(0, DL, IdxVT),
-                                  ISD::CondCode::SETEQ);
+  SDValue EvenMask =
+      DAG.getSetCC(DL, MaskVT, ZeroOnes, DAG.getConstant(0, DL, IdxVT),
+                   ISD::CondCode::SETEQ);
   // Have the later be the not of the former to minimize the live range of
   // the index vector since that might be large.
   SDValue OddMask = DAG.getLogicalNOT(DL, EvenMask, MaskVT);
@@ -10789,7 +10788,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
                                  EvenMask, DAG.getUNDEF(ConcatVT));
   SDValue OddWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
-                                 OddMask, DAG.getUNDEF(ConcatVT));
+                                OddMask, DAG.getUNDEF(ConcatVT));
 
   // Extract the result half of the gather for even and odd
   SDValue Even = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, EvenWide,
