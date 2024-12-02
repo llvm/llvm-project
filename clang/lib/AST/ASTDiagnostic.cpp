@@ -1899,11 +1899,17 @@ class TemplateDiff {
 
     E = E->IgnoreImpCasts();
 
-    if (isa<IntegerLiteral>(E)) return false;
+    auto CheckIntegerLiteral = [](Expr *E) {
+      if (auto *TemplateExpr = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
+        E = TemplateExpr->getReplacement();
+      return isa<IntegerLiteral>(E);
+    };
+
+    if (CheckIntegerLiteral(E)) return false;
 
     if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
       if (UO->getOpcode() == UO_Minus)
-        if (isa<IntegerLiteral>(UO->getSubExpr()))
+        if (CheckIntegerLiteral(UO->getSubExpr()))
           return false;
 
     if (isa<CXXBoolLiteralExpr>(E))
