@@ -2810,6 +2810,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                           parser::OmpAtomicClauseList>(
                 converter, atomicCapture, loc);
           },
+          [&](const parser::OmpAtomicCompare &atomicCompare) {
+            mlir::Location loc = converter.genLocation(atomicCompare.source);
+            TODO(loc, "OpenMP atomic compare");
+          },
       },
       atomicConstruct.u);
 }
