@@ -37,6 +37,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getSOBAttrName() { return "cir.sob"; }
     static llvm::StringRef getLangAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
 
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }

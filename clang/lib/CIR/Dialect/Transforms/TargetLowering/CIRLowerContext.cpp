@@ -23,8 +23,10 @@
 namespace cir {
 
 CIRLowerContext::CIRLowerContext(mlir::ModuleOp module,
-                                 clang::LangOptions LOpts)
-    : MLIRCtx(module.getContext()), LangOpts(LOpts) {}
+                                 clang::LangOptions LOpts,
+                                 clang::CodeGenOptions CGOpts)
+    : MLIRCtx(module.getContext()), LangOpts(std::move(LOpts)),
+      CodeGenOpts(std::move(CGOpts)) {}
 
 CIRLowerContext::~CIRLowerContext() {}
 

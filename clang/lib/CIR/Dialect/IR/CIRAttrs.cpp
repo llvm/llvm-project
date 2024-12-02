@@ -215,6 +215,23 @@ void LangAttr::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// OptInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult OptInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  unsigned level, unsigned size) {
+  if (level > 3) {
+    emitError() << "optimization level must be between 0 and 3 inclusive";
+    return failure();
+  }
+  if (size > 2) {
+    emitError() << "size optimization level must be between 0 and 2 inclusive";
+    return failure();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstPtrAttr definitions
 //===----------------------------------------------------------------------===//
 

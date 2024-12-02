@@ -42,8 +42,8 @@ class LowerModule {
   mlir::PatternRewriter &rewriter;
 
 public:
-  LowerModule(clang::LangOptions opts, mlir::ModuleOp &module,
-              std::unique_ptr<clang::TargetInfo> target,
+  LowerModule(clang::LangOptions langOpts, clang::CodeGenOptions codeGenOpts,
+              mlir::ModuleOp &module, std::unique_ptr<clang::TargetInfo> target,
               mlir::PatternRewriter &rewriter);
   ~LowerModule() = default;
 

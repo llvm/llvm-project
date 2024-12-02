@@ -44,6 +44,9 @@ private:
   /// this ASTContext object.
   clang::LangOptions LangOpts;
 
+  /// Options for code generation.
+  clang::CodeGenOptions CodeGenOpts;
+
   //===--------------------------------------------------------------------===//
   //                         Built-in Types
   //===--------------------------------------------------------------------===//
@@ -51,7 +54,8 @@ private:
   mlir::Type CharTy;
 
 public:
-  CIRLowerContext(mlir::ModuleOp module, clang::LangOptions LOpts);
+  CIRLowerContext(mlir::ModuleOp module, clang::LangOptions LOpts,
+                  clang::CodeGenOptions CGOpts);
   CIRLowerContext(const CIRLowerContext &) = delete;
   CIRLowerContext &operator=(const CIRLowerContext &) = delete;
   ~CIRLowerContext();
@@ -72,6 +76,8 @@ public:
   const clang::TargetInfo &getTargetInfo() const { return *Target; }
 
   const clang::LangOptions &getLangOpts() const { return LangOpts; }
+
+  const clang::CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
 
   mlir::MLIRContext *getMLIRContext() const { return MLIRCtx; }
 

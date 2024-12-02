@@ -192,6 +192,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                      cir::LangAttr::get(&context, lang));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  if (CGO.OptimizationLevel > 0 || CGO.OptimizeSize > 0)
+    theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
+                       cir::OptInfoAttr::get(&context, CGO.OptimizationLevel,
+                                             CGO.OptimizeSize));
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.

@@ -86,11 +86,14 @@ createTargetLoweringInfo(LowerModule &LM) {
   }
 }
 
-LowerModule::LowerModule(clang::LangOptions opts, mlir::ModuleOp &module,
+LowerModule::LowerModule(clang::LangOptions langOpts,
+                         clang::CodeGenOptions codeGenOpts,
+                         mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target,
                          mlir::PatternRewriter &rewriter)
-    : context(module, opts), module(module), Target(std::move(target)),
-      ABI(createCXXABI(*this)), types(*this), rewriter(rewriter) {
+    : context(module, std::move(langOpts), std::move(codeGenOpts)),
+      module(module), Target(std::move(target)), ABI(createCXXABI(*this)),
+      types(*this), rewriter(rewriter) {
   context.initBuiltinTypes(*Target);
 }
 
@@ -238,8 +241,20 @@ createLowerModule(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
   cir_cconv_assert(!cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
 
-  return std::make_unique<LowerModule>(langOpts, module, std::move(targetInfo),
-                                       rewriter);
+  // FIXME(cir): This just uses the default code generation options. We need to
+  // account for custom options.
+  cir_cconv_assert(!cir::MissingFeatures::codeGenOpts());
+  clang::CodeGenOptions codeGenOpts;
+
+  if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
+          module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
+    codeGenOpts.OptimizationLevel = optInfo.getLevel();
+    codeGenOpts.OptimizeSize = optInfo.getSize();
+  }
+
+  return std::make_unique<LowerModule>(std::move(langOpts),
+                                       std::move(codeGenOpts), module,
+                                       std::move(targetInfo), rewriter);
 }
 
 } // namespace cir

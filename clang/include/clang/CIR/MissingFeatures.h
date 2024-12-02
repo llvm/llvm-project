@@ -377,6 +377,11 @@ struct MissingFeatures {
   // just yet. Right now, it only instantiates the default lang options.
   static bool langOpts() { return false; }
 
+  // CodeGenOpts may affect lowering, but we do not carry this information into
+  // CIR just yet. Right now, it only instantiates the default code generation
+  // options.
+  static bool codeGenOpts() { return false; }
+
   // Several type qualifiers are not yet supported in CIR, but important when
   // evaluating ABI-specific lowering.
   static bool qualifiedTypes() { return false; }

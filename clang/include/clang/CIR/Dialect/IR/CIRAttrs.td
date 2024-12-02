@@ -74,6 +74,54 @@ def LangAttr : CIR_Attr<"Lang", "lang"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OptInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OptInfoAttr : CIR_Attr<"OptInfo", "opt_info"> {
+  let summary =
+    "A module-level attribute that holds the optimization information";
+  let description = [{
+    The `#cir.opt_info` attribute holds the optimization related information.
+    Currently this attribute is a module-level attribute that gets attached to
+    the module operation during CIRGen.
+
+    The `level` parameter gives the optimization level. It must be an integer
+    between 0 and 3, inclusive. It corresponds to the `OptimizationLevel` field
+    within the `clang::CodeGenOptions` structure.
+
+    The `size` parameter gives the code size optimization level. It must be an
+    integer between 0 and 2, inclusive. It corresponds to the `OptimizeSize`
+    field within the `clang::CodeGenOptions` structure.
+
+    The `level` and `size` parameters correspond to the optimization level
+    command line options passed to clang driver. The table below lists the
+    current correspondance relationship:
+
+    | Flag             | `level` | `size` |
+    |------------------|---------|--------|
+    | `-O0` or nothing | 0       | 0      |
+    | `-O1`            | 1       | 0      |
+    | `-O2`            | 2       | 0      |
+    | `-O3`            | 3       | 0      |
+    | `-Os`            | 2       | 1      |
+    | `-Oz`            | 2       | 2      |
+
+    Examples:
+
+    ```mlir
+    #cir.opt_info<level = 2, size = 0>  // -O2
+    ```
+  }];
+
+  let parameters = (ins "unsigned":$level, "unsigned":$size);
+
+  let assemblyFormat = [{
+    `<` `level` `=` $level `,` `size` `=` $size `>`
+  }];
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // BoolAttr
 //===----------------------------------------------------------------------===//
 
@@ -311,7 +359,7 @@ def ComplexAttr : CIR_Attr<"Complex", "complex", [TypedAttrInterface]> {
     contains values of the same CIR type.
   }];
 
-  let parameters = (ins 
+  let parameters = (ins
     AttributeSelfTypeParameter<"", "cir::ComplexType">:$type,
     "mlir::TypedAttr":$real, "mlir::TypedAttr":$imag);
 
