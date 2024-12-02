@@ -3989,6 +3989,90 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
+/// For Apple CPUs, we want to runtime-unroll loops to make better use if the
+/// OOO engine's wide instruction window and various predictors.
+static void
+getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
+                                 TargetTransformInfo::UnrollingPreferences &UP,
+                                 AArch64TTIImpl &TTI) {
+  // Limit loops with structure that is highly likely to benefit from runtime
+  // unrolling; that is we exclude outer loops, loops with multiple exits and
+  // many blocks (i.e. likely with complex control flow). Note that the
+  // heuristics here may be overly conservative and we err on the side of
+  // avoiding runtime unrolling rather than unroll excessively. They are all
+  // subject to further refinement.
+  if (!L->isInnermost() || !L->getExitBlock() || L->getNumBlocks() > 8)
+    return;
+
+  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
+      (SE.getSmallConstantMaxTripCount(L) > 0 &&
+       SE.getSmallConstantMaxTripCount(L) <= 32))
+    return;
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+    return;
+
+  int64_t Size = 0;
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (!isa<IntrinsicInst>(&I) && isa<CallBase>(&I))
+        return;
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      Size +=
+          *TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize).getValue();
+    }
+  }
+
+  // Limit to loops with trip counts that are cheap to expand.
+  UP.SCEVExpansionBudget = 1;
+
+  // Try to unroll small, single block loops, if they have load/store
+  // dependencies, to expose more parallel memory access streams.
+  if (L->getHeader() != L->getLoopLatch() || Size > 8)
+    return;
+
+  SmallPtrSet<const SCEV *, 8> LoadPtrs;
+  SmallPtrSet<const SCEV *, 8> StorePtrs;
+  SmallPtrSet<Value *, 8> LoadedValues;
+  SmallVector<StoreInst *> Stores;
+  for (auto *BB : L->blocks()) {
+    for (auto &I : *BB) {
+      Value *Ptr = getLoadStorePointerOperand(&I);
+      if (!Ptr)
+        continue;
+      const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+      if (SE.isLoopInvariant(PtrSCEV, L))
+        continue;
+      if (isa<LoadInst>(&I)) {
+        LoadPtrs.insert(PtrSCEV);
+        LoadedValues.insert(&I);
+      } else {
+        Stores.push_back(cast<StoreInst>(&I));
+        StorePtrs.insert(PtrSCEV);
+      }
+    }
+  }
+
+  // Try to find an unroll count that maximizes the use of the instruction
+  // window.
+  unsigned UC = std::max(16ll / Size, 2ll);
+  unsigned BestUC = 0;
+  while (UC <= 8 && UC * Size <= 48) {
+    if ((UC * Size % 16) == 0 || (BestUC * Size % 16) < (UC * Size % 16) % 16) {
+      BestUC = UC;
+    }
+    UC++;
+  }
+
+  if (BestUC == 0 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
+        return LoadedValues.contains(SI->getOperand(0));
+      }))
+    return;
+
+  UP.Runtime = true;
+  UP.DefaultUnrollRuntimeCount = BestUC;
+}
+
 void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP,
                                              OptimizationRemarkEmitter *ORE) {
@@ -4009,6 +4093,12 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
       EnableFalkorHWPFUnrollFix)
     getFalkorUnrollingPreferences(L, SE, UP);
+
+  if (ST->getProcFamily() == AArch64Subtarget::AppleA14 ||
+      ST->getProcFamily() == AArch64Subtarget::AppleA15 ||
+      ST->getProcFamily() == AArch64Subtarget::AppleA16 ||
+      ST->getProcFamily() == AArch64Subtarget::AppleM4)
+    getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
 
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining. Don't unroll vector loops either, as they don't benefit much from
