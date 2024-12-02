@@ -574,6 +574,7 @@ private:
   static StringRef getCallingConvQualifierName(CallingConv CC);
   void mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo info);
   void mangleExtFunctionInfo(const FunctionType *T);
+  void mangleSMEAttrs(unsigned SMEAttrs);
   void mangleBareFunctionType(const FunctionProtoType *T, bool MangleReturnType,
                               const FunctionDecl *FD = nullptr);
   void mangleNeonVectorType(const VectorType *T);
@@ -3532,6 +3533,69 @@ void CXXNameMangler::mangleExtFunctionInfo(const FunctionType *T) {
   // FIXME: noreturn
 }
 
+enum class AAPCSBitmaskSME : unsigned {
+  ArmStreamingBit = 1 << 0,
+  ArmStreamingCompatibleBit = 1 << 1,
+  ArmAgnosticSMEZAStateBit = 1 << 2,
+  ZA_Shift = 3,
+  ZT0_Shift = 6,
+  NoState = 0b000,
+  ArmIn = 0b001,
+  ArmOut = 0b010,
+  ArmInOut = 0b011,
+  ArmPreserves = 0b100,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ArmPreserves << ZT0_Shift)
+};
+
+static AAPCSBitmaskSME encodeAAPCSZAState(unsigned SMEAttrs) {
+  switch (SMEAttrs) {
+  case FunctionType::ARM_None:
+    return AAPCSBitmaskSME::NoState;
+  case FunctionType::ARM_In:
+    return AAPCSBitmaskSME::ArmIn;
+  case FunctionType::ARM_Out:
+    return AAPCSBitmaskSME::ArmOut;
+  case FunctionType::ARM_InOut:
+    return AAPCSBitmaskSME::ArmInOut;
+  case FunctionType::ARM_Preserves:
+    return AAPCSBitmaskSME::ArmPreserves;
+  default:
+    llvm_unreachable("Unrecognised SME attribute");
+  }
+}
+
+// The mangling scheme for function types which have SME attributes is
+// implemented as a "pseudo" template:
+//
+//   '__SME_ATTRS<<normal_function_type>, <sme_state>>'
+//
+// Combining the function type with a bitmask representing the streaming and ZA
+// properties of the function's interface.
+//
+// Mangling of SME keywords is described in more detail in the AArch64 ACLE:
+// https://github.com/ARM-software/acle/blob/main/main/acle.md#c-mangling-of-sme-keywords
+//
+void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
+  if (!SMEAttrs)
+    return;
+
+  AAPCSBitmaskSME Bitmask = AAPCSBitmaskSME(0);
+  if (SMEAttrs & FunctionType::SME_PStateSMEnabledMask)
+    Bitmask |= AAPCSBitmaskSME::ArmStreamingBit;
+  else if (SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)
+    Bitmask |= AAPCSBitmaskSME::ArmStreamingCompatibleBit;
+
+  // TODO: Must represent __arm_agnostic("sme_za_state")
+
+  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
+             << AAPCSBitmaskSME::ZA_Shift;
+
+  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
+             << AAPCSBitmaskSME::ZT0_Shift;
+
+  Out << "Lj" << static_cast<unsigned>(Bitmask) << "EE";
+}
+
 void
 CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
   // Vendor-specific qualifiers are emitted in reverse alphabetical order.
@@ -3569,6 +3633,11 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
 // <function-type> ::= [<CV-qualifiers>] F [Y]
 //                      <bare-function-type> [<ref-qualifier>] E
 void CXXNameMangler::mangleType(const FunctionProtoType *T) {
+  unsigned SMEAttrs = T->getAArch64SMEAttributes();
+
+  if (SMEAttrs)
+    Out << "11__SME_ATTRSI";
+
   mangleExtFunctionInfo(T);
 
   // Mangle CV-qualifiers, if present.  These are 'this' qualifiers,
@@ -3603,6 +3672,8 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
   mangleRefQualifier(T->getRefQualifier());
 
   Out << 'E';
+
+  mangleSMEAttrs(SMEAttrs);
 }
 
 void CXXNameMangler::mangleType(const FunctionNoProtoType *T) {
