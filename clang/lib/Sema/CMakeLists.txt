@@ -56,6 +56,7 @@ add_clang_library(clangSema
   SemaExprObjC.cpp
   SemaFixItUtils.cpp
   SemaFunctionEffects.cpp
+  ParseHLSLRootSignature.cpp
   SemaHLSL.cpp
   SemaHexagon.cpp
   SemaInit.cpp

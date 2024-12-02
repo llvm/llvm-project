@@ -14,7 +14,6 @@ add_clang_library(clangParse
   ParseExpr.cpp
   ParseExprCXX.cpp
   ParseHLSL.cpp
-  ParseHLSLRootSignature.cpp
   ParseInit.cpp
   ParseObjc.cpp
   ParseOpenMP.cpp

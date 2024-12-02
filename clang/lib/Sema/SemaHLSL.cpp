@@ -24,6 +24,8 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Parse/Parser.h"
+#include "clang/Sema/HLSLRootSignature.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -709,6 +711,10 @@ void SemaHLSL::handleHLSLRootSignature(Decl *D, const ParsedAttr &AL) {
   StringRef Signature;
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Signature))
     return;
+
+  RootSignaturParser Parser(Signature);
+
+  Parser.ParseRootDefinition();
 }
 
 void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
