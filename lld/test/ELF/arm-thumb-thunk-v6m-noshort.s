@@ -2,7 +2,7 @@
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -filetype=obj -arm-add-build-attributes -triple=armv6m-none-eabi asm -o v6m.o
 // RUN: ld.lld --script=lds v6m.o -o v6m
-// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d v6m --triple=armv6m-none-eabi
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d v6m --triple=armv6m-none-eabi | FileCheck %s
 
 // RUN: llvm-mc -filetype=obj -arm-add-build-attributes -triple=armv8m.base-none-eabi asm -o v8m.o
 // RUN: ld.lld --script=lds v8m.o -o v8m
@@ -33,7 +33,7 @@ _start:
 // CHECK-NEXT:       ldr     r0, [pc, #4]
 // CHECK-NEXT:       str     r0, [sp, #4]
 // CHECK-NEXT:       pop     {r0, pc}
-// CHECK-NEXT: bo01 20 00 01   .word   0x01002001
+// CHECK-NEXT:   01 20 00 01   .word   0x01002001
 
 // CHECKV8BASE-LABEL: <__Thumbv7ABSLongThunk_far>:
 // CHECKV8BASE-NEXT: 2000: b.w     0x1002000 <far>
