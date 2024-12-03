@@ -17,7 +17,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_assumed_rank(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_assumed_rankEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_assumed_rankEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<!fir.box<!fir.array<*:f32>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<tuple<!fir.box<!fir.array<*:f32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<*:f32>>>
@@ -55,7 +55,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_assumed_rank_optional(
 ! CHECK-SAME:                                             %[[VAL_0:.*]]: !fir.class<!fir.array<*:none>> {fir.bindc_name = "x", fir.optional}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_assumed_rank_optionalEx"} : (!fir.class<!fir.array<*:none>>, !fir.dscope) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<optional, internal_assoc>, uniq_name = "_QFtest_assumed_rank_optionalEx"} : (!fir.class<!fir.array<*:none>>, !fir.dscope) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<!fir.class<!fir.array<*:none>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<tuple<!fir.class<!fir.array<*:none>>>>, i32) -> !fir.ref<!fir.class<!fir.array<*:none>>>
@@ -107,7 +107,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_assumed_rank_ptr(
 ! CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_assumed_rank_ptrEx"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer, internal_assoc>, uniq_name = "_QFtest_assumed_rank_ptrEx"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>

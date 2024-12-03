@@ -117,11 +117,11 @@ def libc_function(
     func_attrs = [
         "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'",
     ] if weak else []
-        
-    local_defines = (local_defines
-                    + ["LIBC_COPT_PUBLIC_PACKAGING"]
-                    + ["LLVM_LIBC_FUNCTION_ATTR='[[gnu::visibility(\"default\")]]'"]
-                    + func_attrs)
+
+    local_defines = (local_defines +
+                     ["LIBC_COPT_PUBLIC_PACKAGING"] +
+                     ["LLVM_LIBC_FUNCTION_ATTR='[[gnu::visibility(\"default\")]]'"] +
+                     func_attrs)
     _libc_library(
         name = name,
         hidden = True,

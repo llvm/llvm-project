@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReturnConstRefFromParameterCheck.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -15,17 +16,28 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
+AST_MATCHER(ParmVarDecl, hasLifetimeBoundAttr) {
+  return Node.hasAttr<LifetimeBoundAttr>();
+}
+
+} // namespace
+
 void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
   const auto DRef = ignoringParens(
       declRefExpr(
           to(parmVarDecl(hasType(hasCanonicalType(
                              qualType(lValueReferenceType(pointee(
                                           qualType(isConstQualified()))))
-                                 .bind("type"))))
+                                 .bind("type"))),
+                         hasDeclContext(functionDecl().bind("owner")),
+                         unless(hasLifetimeBoundAttr()))
                  .bind("param")))
           .bind("dref"));
   const auto Func =
-      functionDecl(hasReturnTypeLoc(loc(
+      functionDecl(equalsBoundNode("owner"),
+                   hasReturnTypeLoc(loc(
                        qualType(hasCanonicalType(equalsBoundNode("type"))))))
           .bind("func");
 

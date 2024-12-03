@@ -67,9 +67,8 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
 
 OutputSection::OutputSection(Ctx &ctx, StringRef name, uint32_t type,
                              uint64_t flags)
-    : SectionBase(Output, ctx.internalFile, name, flags, /*entsize=*/0,
-                  /*addralign=*/1, type,
-                  /*info=*/0, /*link=*/0),
+    : SectionBase(Output, ctx.internalFile, name, type, flags, /*link=*/0,
+                  /*info=*/0, /*addralign=*/1, /*entsize=*/0),
       ctx(ctx) {}
 
 uint64_t OutputSection::getLMA() const {
@@ -156,9 +155,9 @@ void OutputSection::commitSection(InputSection *isec) {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
       ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
-                     << isec << ": 0x" << utohexstr(isec->flags)
+                     << isec << ": 0x" << utohexstr(isec->flags, true)
                      << "\n>>> output section " << name << ": 0x"
-                     << utohexstr(flags);
+                     << utohexstr(flags, true);
   }
 
   isec->parent = this;
