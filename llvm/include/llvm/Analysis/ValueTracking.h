@@ -159,7 +159,7 @@ bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-bool isKnownNegative(const Value *V, const SimplifyQuery &DL,
+bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
                      unsigned Depth = 0);
 
 /// Return true if the given values are known to be non-equal when defined.
@@ -180,7 +180,7 @@ bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the elements in the vector.
 bool MaskedValueIsZero(const Value *V, const APInt &Mask,
-                       const SimplifyQuery &DL, unsigned Depth = 0);
+                       const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Return the number of times the sign bit of the register is replicated into
 /// the other bits. We know that at least 1 bit is always equal to the sign
