@@ -215,7 +215,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
     using UNSIGNED_T = make_integral_or_big_int_unsigned_t<T>;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
-      const char result = static_cast<char>(internal::int_to_b36_char(digit));
+      const int result = internal::int_to_b36_char(digit);
       return static_cast<char>(Fmt::IS_UPPERCASE ? internal::toupper(result)
                                                  : result);
     }
