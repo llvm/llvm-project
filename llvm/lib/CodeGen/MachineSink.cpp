@@ -1652,13 +1652,18 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     MachineCycle *Cycle, MachineInstr &I,
     DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
         &SunkInstrs) {
+  // TODO: support instructions with multiple defs
+  if (I.getNumDefs() > 1)
+    return false;
+
+  // Only sink instructions which the target considers to be low latency
+  if (!TII->isLowLatencyInstruction(I))
+    return false;
+
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
   MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
   assert(Preheader && "Cycle sink needs a preheader block");
   SmallVector<std::pair<RegSubRegPair, MachineInstr *>> Uses;
-  // TODO: support instructions with multiple defs
-  if (I.getNumDefs() > 1)
-    return false;
 
   MachineOperand &DefMO = I.getOperand(0);
   for (MachineInstr &MI : MRI->use_instructions(DefMO.getReg())) {
