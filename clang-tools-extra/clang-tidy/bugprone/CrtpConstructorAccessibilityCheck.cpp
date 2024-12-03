@@ -58,10 +58,10 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
                Arg.getAsType()->getAsCXXRecordDecl() == Derived;
       });
 
-  return AnyOf ? CRTP->getSpecializedTemplate()
-                     ->getTemplateParameters()
-                     ->getParam(Idx - 1)
-               : nullptr;
+  return AnyOf && Idx > 0 ? CRTP->getSpecializedTemplate()
+                                ->getTemplateParameters()
+                                ->getParam(Idx - 1)
+                          : nullptr;
 }
 
 static std::vector<FixItHint>
