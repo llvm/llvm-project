@@ -1760,6 +1760,17 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
   if (!match(And, m_And(m_Value(X), m_APInt(C2))))
     return nullptr;
 
+  // (and X, highmask) s> [0, ~highmask] --> X s> ~highmask
+  if (Cmp.getPredicate() == ICmpInst::ICMP_SGT && C1.ule(~*C2) &&
+      C2->isNegatedPowerOf2())
+    return new ICmpInst(ICmpInst::ICMP_SGT, X,
+                        ConstantInt::get(X->getType(), ~*C2));
+  // (and X, highmask) s< [1, -highmask] --> X s< -highmask
+  if (Cmp.getPredicate() == ICmpInst::ICMP_SLT && !C1.isSignMask() &&
+      (C1 - 1).ule(~*C2) && C2->isNegatedPowerOf2() && !C2->isSignMask())
+    return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                        ConstantInt::get(X->getType(), -*C2));
+
   // Don't perform the following transforms if the AND has multiple uses
   if (!And->hasOneUse())
     return nullptr;
