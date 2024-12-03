@@ -253,7 +253,9 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
       }
       switch (Sym->getScope()) {
       case Scope::Local:
-        llvm_unreachable("External symbol should not have local linkage");
+      case Scope::SideEffectsOnly:
+        llvm_unreachable("External symbol should not have local or "
+                         "side-effects-only linkage");
       case Scope::Hidden:
         break;
       case Scope::Default:
