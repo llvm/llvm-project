@@ -82,8 +82,12 @@ public:
       return hashGlobalValue(&GVar);
 
     // Hash the contents of a string.
-    if (GVar.getName().starts_with(".str"))
-      return hashConstant(GVar.getInitializer());
+    if (GVar.getName().starts_with(".str")) {
+      auto *C = GVar.getInitializer();
+      if (const auto *Seq = dyn_cast<ConstantDataSequential>(C))
+        if (Seq->isString())
+          return stable_hash_name(Seq->getAsString());
+    }
 
     // Hash structural contents of Objective-C metadata in specific sections.
     // This can be extended to other metadata if needed.
@@ -93,10 +97,9 @@ public:
     };
     if (GVar.hasSection()) {
       StringRef SectionName = GVar.getSection();
-      for (const char *Name : SectionNames) {
+      for (const char *Name : SectionNames)
         if (SectionName.contains(Name))
           return hashConstant(GVar.getInitializer());
-      }
     }
 
     return hashGlobalValue(&GVar);
