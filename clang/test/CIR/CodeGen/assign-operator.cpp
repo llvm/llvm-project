@@ -99,3 +99,95 @@ int main() {
 // CHECK:     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK:     cir.return %2 : !s32i
 // CHECK: }
+
+struct HasNonTrivialAssignOp {
+  HasNonTrivialAssignOp &operator=(const HasNonTrivialAssignOp &);
+};
+
+struct ContainsNonTrivial {
+  HasNonTrivialAssignOp start;
+  int i;
+  int *j;
+  HasNonTrivialAssignOp middle;
+  int k : 4;
+  int l : 4;
+  int m : 4;
+  HasNonTrivialAssignOp end;
+  ContainsNonTrivial &operator=(const ContainsNonTrivial &);
+};
+
+// CHECK-LABEL: cir.func @_ZN18ContainsNonTrivialaSERKS_(
+// CHECK-NEXT:    %[[#THIS:]] = cir.alloca !cir.ptr<!ty_ContainsNonTrivial>
+// CHECK-NEXT:    %[[#OTHER:]] = cir.alloca !cir.ptr<!ty_ContainsNonTrivial>
+// CHECK-NEXT:    %[[#RETVAL:]] = cir.alloca !cir.ptr<!ty_ContainsNonTrivial>
+// CHECK-NEXT:    cir.store %arg0, %[[#THIS]]
+// CHECK-NEXT:    cir.store %arg1, %[[#OTHER]]
+// CHECK-NEXT:    %[[#THIS_LOAD:]] = cir.load deref %[[#THIS]]
+// CHECK-NEXT:    %[[#THIS_START:]] = cir.get_member %[[#THIS_LOAD]][0] {name = "start"}
+// CHECK-NEXT:    %[[#OTHER_LOAD:]] = cir.load %[[#OTHER]]
+// CHECK-NEXT:    %[[#OTHER_START:]] = cir.get_member %[[#OTHER_LOAD]][0] {name = "start"}
+// CHECK-NEXT:    cir.call @_ZN21HasNonTrivialAssignOpaSERKS_(%[[#THIS_START]], %[[#OTHER_START]])
+// CHECK-NEXT:    %[[#THIS_I:]] = cir.get_member %[[#THIS_LOAD]][2] {name = "i"}
+// CHECK-NEXT:    %[[#OTHER_LOAD:]] = cir.load %[[#OTHER]]
+// CHECK-NEXT:    %[[#OTHER_I:]] = cir.get_member %[[#OTHER_LOAD]][2] {name = "i"}
+// CHECK-NEXT:    %[[#MEMCPY_SIZE:]] = cir.const #cir.int<12> : !u64i
+// CHECK-NEXT:    %[[#THIS_I_CAST:]] = cir.cast(bitcast, %[[#THIS_I]] : !cir.ptr<!s32i>), !cir.ptr<!void>
+// CHECK-NEXT:    %[[#OTHER_I_CAST:]] = cir.cast(bitcast, %[[#OTHER_I]] : !cir.ptr<!s32i>), !cir.ptr<!void>
+// CHECK-NEXT:    cir.libc.memcpy %[[#MEMCPY_SIZE]] bytes from %[[#OTHER_I_CAST]] to %[[#THIS_I_CAST]]
+// CHECK-NEXT:    %[[#THIS_MIDDLE:]] = cir.get_member %[[#THIS_LOAD]][4] {name = "middle"}
+// CHECK-NEXT:    %[[#OTHER_LOAD:]] = cir.load %[[#OTHER]]
+// CHECK-NEXT:    %[[#OTHER_MIDDLE:]] = cir.get_member %[[#OTHER_LOAD]][4] {name = "middle"}
+// CHECK-NEXT:    cir.call @_ZN21HasNonTrivialAssignOpaSERKS_(%[[#THIS_MIDDLE]], %[[#OTHER_MIDDLE]])
+// CHECK-NEXT:    %[[#THIS_K:]] = cir.get_member %[[#THIS_LOAD]][5] {name = "k"}
+// CHECK-NEXT:    %[[#OTHER_LOAD:]] = cir.load %[[#OTHER]]
+// CHECK-NEXT:    %[[#OTHER_K:]] = cir.get_member %[[#OTHER_LOAD]][5] {name = "k"}
+// CHECK-NEXT:    %[[#MEMCPY_SIZE:]] = cir.const #cir.int<2> : !u64i
+// CHECK-NEXT:    %[[#THIS_K_CAST:]] = cir.cast(bitcast, %[[#THIS_K]] : !cir.ptr<!u16i>), !cir.ptr<!void>
+// CHECK-NEXT:    %[[#OTHER_K_CAST:]] = cir.cast(bitcast, %[[#OTHER_K]] : !cir.ptr<!u16i>), !cir.ptr<!void>
+// CHECK-NEXT:    cir.libc.memcpy %[[#MEMCPY_SIZE]] bytes from %[[#OTHER_K_CAST]] to %[[#THIS_K_CAST]]
+// CHECK-NEXT:    %[[#THIS_END:]] = cir.get_member %[[#THIS_LOAD]][6] {name = "end"}
+// CHECK-NEXT:    %[[#OTHER_LOAD:]] = cir.load %[[#OTHER]]
+// CHECK-NEXT:    %[[#OTHER_END:]] = cir.get_member %[[#OTHER_LOAD]][6] {name = "end"}
+// CHECK-NEXT:    cir.call @_ZN21HasNonTrivialAssignOpaSERKS_(%[[#THIS_END]], %[[#OTHER_END]])
+// CHECK-NEXT:    cir.store %[[#THIS_LOAD]], %[[#RETVAL]]
+// CHECK-NEXT:    %[[#RETVAL_LOAD:]] = cir.load %[[#RETVAL]]
+// CHECK-NEXT:    cir.return %[[#RETVAL_LOAD]]
+// CHECK-NEXT:  }
+ContainsNonTrivial &
+ContainsNonTrivial::operator=(const ContainsNonTrivial &) = default;
+
+struct Trivial {
+  int i;
+  int *j;
+  double k;
+  int l[3];
+};
+
+// CHECK-LABEL: cir.func linkonce_odr @_ZN7TrivialaSERKS_(
+// CHECK-NEXT:    %[[#THIS:]] = cir.alloca !cir.ptr<!ty_Trivial>
+// CHECK-NEXT:    %[[#OTHER:]] = cir.alloca !cir.ptr<!ty_Trivial>
+// CHECK-NEXT:    %[[#RETVAL:]] = cir.alloca !cir.ptr<!ty_Trivial>
+// CHECK-NEXT:    cir.store %arg0, %[[#THIS]]
+// CHECK-NEXT:    cir.store %arg1, %[[#OTHER]]
+// CHECK-NEXT:    %[[#THIS_LOAD:]] = cir.load deref %[[#THIS]]
+// CHECK-NEXT:    %[[#THIS_I:]] = cir.get_member %[[#THIS_LOAD]][0] {name = "i"}
+// CHECK-NEXT:    %[[#OTHER_LOAD:]] = cir.load %[[#OTHER]]
+// CHECK-NEXT:    %[[#OTHER_I:]] = cir.get_member %[[#OTHER_LOAD]][0] {name = "i"}
+// Note that tail padding bytes are not included.
+// CHECK-NEXT:    %[[#MEMCPY_SIZE:]] = cir.const #cir.int<36> : !u64i
+// CHECK-NEXT:    %[[#THIS_I_CAST:]] = cir.cast(bitcast, %[[#THIS_I]] : !cir.ptr<!s32i>), !cir.ptr<!void>
+// CHECK-NEXT:    %[[#OTHER_I_CAST:]] = cir.cast(bitcast, %[[#OTHER_I]] : !cir.ptr<!s32i>), !cir.ptr<!void>
+// CHECK-NEXT:    cir.libc.memcpy %[[#MEMCPY_SIZE]] bytes from %[[#OTHER_I_CAST]] to %[[#THIS_I_CAST]]
+// CHECK-NEXT:    cir.store %[[#THIS_LOAD]], %[[#RETVAL]]
+// CHECK-NEXT:    cir.br ^bb1
+// CHECK-NEXT:  ^bb1:
+// CHECK-NEXT:    %[[#RETVAL_LOAD:]] = cir.load %[[#RETVAL]]
+// CHECK-NEXT:    cir.return %[[#RETVAL_LOAD]]
+// CHECK-NEXT:  }
+
+// We should explicitly call operator= even for trivial types.
+// CHECK-LABEL: cir.func @_Z11copyTrivialR7TrivialS0_(
+// CHECK:         cir.call @_ZN7TrivialaSERKS_(
+void copyTrivial(Trivial &a, Trivial &b) {
+  a = b;
+}

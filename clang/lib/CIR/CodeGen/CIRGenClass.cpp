@@ -98,15 +98,13 @@ private:
 
 class FieldMemcpyizer {
 public:
-  FieldMemcpyizer(CIRGenFunction &CGF, const CXXRecordDecl *ClassDecl,
+  FieldMemcpyizer(CIRGenFunction &CGF, const CXXMethodDecl *MethodDecl,
                   const VarDecl *SrcRec)
-      : CGF(CGF), ClassDecl(ClassDecl),
-        // SrcRec(SrcRec),
+      : CGF(CGF), MethodDecl(MethodDecl), ClassDecl(MethodDecl->getParent()),
+        SrcRec(SrcRec),
         RecLayout(CGF.getContext().getASTRecordLayout(ClassDecl)),
         FirstField(nullptr), LastField(nullptr), FirstFieldOffset(0),
-        LastFieldOffset(0), LastAddedFieldIndex(0) {
-    (void)SrcRec;
-  }
+        LastFieldOffset(0), LastAddedFieldIndex(0) {}
 
   bool isMemcpyableField(FieldDecl *F) const {
     // Never memcpy fields when we are adding poised paddings.
@@ -115,11 +113,11 @@ public:
     Qualifiers Qual = F->getType().getQualifiers();
     if (Qual.hasVolatile() || Qual.hasObjCLifetime())
       return false;
-
     return true;
   }
 
   void addMemcpyableField(FieldDecl *F) {
+    assert(!cir::MissingFeatures::isEmptyFieldForLayout());
     if (F->isZeroSize(CGF.getContext()))
       return;
     if (!FirstField)
@@ -148,18 +146,54 @@ public:
       return;
     }
 
-    llvm_unreachable("NYI");
+    uint64_t firstByteOffset;
+    if (FirstField->isBitField()) {
+      const CIRGenRecordLayout &rl =
+          CGF.getTypes().getCIRGenRecordLayout(FirstField->getParent());
+      const CIRGenBitFieldInfo &bfInfo = rl.getBitFieldInfo(FirstField);
+      // FirstFieldOffset is not appropriate for bitfields,
+      // we need to use the storage offset instead.
+      firstByteOffset = CGF.getContext().toBits(bfInfo.StorageOffset);
+    } else {
+      firstByteOffset = FirstFieldOffset;
+    }
+
+    CharUnits memcpySize = getMemcpySize(firstByteOffset);
+    QualType recordTy = CGF.getContext().getTypeDeclType(ClassDecl);
+    Address thisPtr = CGF.LoadCXXThisAddress();
+    LValue destLv = CGF.makeAddrLValue(thisPtr, recordTy);
+    LValue dest = CGF.emitLValueForFieldInitialization(destLv, FirstField,
+                                                       FirstField->getName());
+    cir::LoadOp srcPtr = CGF.getBuilder().createLoad(
+        CGF.getLoc(MethodDecl->getLocation()), CGF.GetAddrOfLocalVar(SrcRec));
+    LValue srcLv = CGF.MakeNaturalAlignAddrLValue(srcPtr, recordTy);
+    LValue src = CGF.emitLValueForFieldInitialization(srcLv, FirstField,
+                                                      FirstField->getName());
+
+    emitMemcpyIR(dest.isBitField() ? dest.getBitFieldAddress()
+                                   : dest.getAddress(),
+                 src.isBitField() ? src.getBitFieldAddress() : src.getAddress(),
+                 memcpySize);
+    reset();
   }
 
   void reset() { FirstField = nullptr; }
 
 protected:
   CIRGenFunction &CGF;
+  const CXXMethodDecl *MethodDecl;
   const CXXRecordDecl *ClassDecl;
 
 private:
   void emitMemcpyIR(Address DestPtr, Address SrcPtr, CharUnits Size) {
-    llvm_unreachable("NYI");
+    mlir::Location loc = CGF.getLoc(MethodDecl->getLocation());
+    cir::ConstantOp sizeOp =
+        CGF.getBuilder().getConstInt(loc, CGF.SizeTy, Size.getQuantity());
+    mlir::Value dest =
+        CGF.getBuilder().createBitcast(DestPtr.getPointer(), CGF.VoidPtrTy);
+    mlir::Value src =
+        CGF.getBuilder().createBitcast(SrcPtr.getPointer(), CGF.VoidPtrTy);
+    CGF.getBuilder().createMemCpy(loc, dest, src, sizeOp);
   }
 
   void addInitialField(FieldDecl *F) {
@@ -192,7 +226,7 @@ private:
     }
   }
 
-  // const VarDecl *SrcRec;
+  const VarDecl *SrcRec;
   const ASTRecordLayout &RecLayout;
   FieldDecl *FirstField;
   FieldDecl *LastField;
@@ -307,8 +341,7 @@ private:
 public:
   ConstructorMemcpyizer(CIRGenFunction &CGF, const CXXConstructorDecl *CD,
                         FunctionArgList &Args)
-      : FieldMemcpyizer(CGF, CD->getParent(),
-                        getTrivialCopySource(CGF, CD, Args)),
+      : FieldMemcpyizer(CGF, CD, getTrivialCopySource(CGF, CD, Args)),
         ConstructorDecl(CD),
         MemcpyableCtor(CD->isDefaulted() && CD->isCopyOrMoveConstructor() &&
                        CGF.getLangOpts().getGC() == LangOptions::NonGC),
@@ -446,7 +479,7 @@ private:
 public:
   AssignmentMemcpyizer(CIRGenFunction &CGF, const CXXMethodDecl *AD,
                        FunctionArgList &Args)
-      : FieldMemcpyizer(CGF, AD->getParent(), Args[Args.size() - 1]),
+      : FieldMemcpyizer(CGF, AD, Args[Args.size() - 1]),
         AssignmentsMemcpyable(CGF.getLangOpts().getGC() == LangOptions::NonGC) {
     assert(Args.size() == 2);
   }

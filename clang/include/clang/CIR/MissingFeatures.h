@@ -174,6 +174,7 @@ struct MissingFeatures {
 
   // ABIInfo queries.
   static bool useTargetLoweringABIInfo() { return false; }
+  static bool isEmptyFieldForLayout() { return false; }
 
   // Misc
   static bool cacheRecordLayouts() { return false; }
