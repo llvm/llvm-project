@@ -694,14 +694,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  // TODO OpenACC:  Remove this check when we have combined constructs for this
-  // clause.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense.
@@ -730,6 +722,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
   // OpenACC 3.3 Section 2.5.4:
   // A reduction clause may not appear on a parallel construct with a
   // num_gangs clause that has more than one argument.
+  // TODO: OpenACC: Reduction on Combined Construct needs to do this too.
   if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel &&
       Clause.getIntExprs().size() > 1) {
     auto *Parallel =
@@ -751,13 +744,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  // TODO: OpenACC: Remove when we get combined constructs.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense.
@@ -773,13 +759,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  // TODO: OpenACC: Remove when we get combined constructs.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense.

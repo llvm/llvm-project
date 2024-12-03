@@ -4440,10 +4440,10 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
   // a zero extend and the simm5 check in isel would fail.
   // FIXME: Should we ignore the upper bits in isel instead?
   unsigned ExtOpc =
-    isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
+      isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
   Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
-  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT,
-                     DAG.getUNDEF(VT), Scalar, VL);
+  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, DAG.getUNDEF(VT), Scalar,
+                     VL);
 }
 
 // Is this a shuffle extracts either the even or odd elements of a vector?
@@ -10736,10 +10736,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT,
                                Op.getOperand(0), Op.getOperand(1));
 
-  // We want to operate on all lanes, so get the mask and VL and mask for it
-  auto [Mask, VL] = getDefaultScalableVLOps(ConcatVT, DL, DAG, Subtarget);
-  SDValue Passthru = DAG.getUNDEF(ConcatVT);
-
   // We can deinterleave through vnsrl.wi if the element type is smaller than
   // ELEN
   if (VecVT.getScalarSizeInBits() < Subtarget.getELen()) {
@@ -10749,19 +10745,28 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   }
 
   // For the indices, use the same SEW to avoid an extra vsetvli
-  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
-  // Create a vector of even indices {0, 2, 4, ...}
-  SDValue EvenIdx =
-      DAG.getStepVector(DL, IdxVT, APInt(IdxVT.getScalarSizeInBits(), 2));
-  // Create a vector of odd indices {1, 3, 5, ... }
-  SDValue OddIdx =
-      DAG.getNode(ISD::ADD, DL, IdxVT, EvenIdx, DAG.getConstant(1, DL, IdxVT));
+  // TODO: If container type is larger than m1, we can consider using a splat
+  // of a constant instead of the following sequence
 
-  // Gather the even and odd elements into two separate vectors
-  SDValue EvenWide = DAG.getNode(RISCVISD::VRGATHER_VV_VL, DL, ConcatVT,
-                                 Concat, EvenIdx, Passthru, Mask, VL);
-  SDValue OddWide = DAG.getNode(RISCVISD::VRGATHER_VV_VL, DL, ConcatVT,
-                                Concat, OddIdx, Passthru, Mask, VL);
+  // Create a vector of even indices {0, 1, 2, ...}
+  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
+  SDValue StepVec = DAG.getStepVector(DL, IdxVT);
+  // 0, 1, 0, 1, 0, 1
+  SDValue ZeroOnes =
+      DAG.getNode(ISD::AND, DL, IdxVT, StepVec, DAG.getConstant(1, DL, IdxVT));
+  MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
+  SDValue EvenMask =
+      DAG.getSetCC(DL, MaskVT, ZeroOnes, DAG.getConstant(0, DL, IdxVT),
+                   ISD::CondCode::SETEQ);
+  // Have the latter be the not of the former to minimize the live range of
+  // the index vector since that might be large.
+  SDValue OddMask = DAG.getLogicalNOT(DL, EvenMask, MaskVT);
+
+  // vcompress the even and odd elements into two separate vectors
+  SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
+                                 EvenMask, DAG.getUNDEF(ConcatVT));
+  SDValue OddWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
+                                OddMask, DAG.getUNDEF(ConcatVT));
 
   // Extract the result half of the gather for even and odd
   SDValue Even = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, EvenWide,
