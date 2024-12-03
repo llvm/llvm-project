@@ -514,6 +514,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
 )
