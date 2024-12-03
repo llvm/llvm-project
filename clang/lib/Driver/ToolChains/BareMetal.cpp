@@ -128,32 +128,6 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
-namespace clang {
-namespace driver {
-namespace toolchains {
-/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
-bool isARMEABIBareMetal(const llvm::Triple &Triple) {
-  auto arch = Triple.getArch();
-  if (arch != llvm::Triple::arm && arch != llvm::Triple::thumb &&
-      arch != llvm::Triple::armeb && arch != llvm::Triple::thumbeb)
-    return false;
-
-  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
-    return false;
-
-  if (Triple.getOS() != llvm::Triple::UnknownOS)
-    return false;
-
-  if (Triple.getEnvironment() != llvm::Triple::EABI &&
-      Triple.getEnvironment() != llvm::Triple::EABIHF)
-    return false;
-
-  return true;
-}
-} // namespace toolchains
-} // namespace driver
-} // namespace clang
-
 /// Is the triple {aarch64.aarch64_be}-none-elf?
 static bool isAArch64BareMetal(const llvm::Triple &Triple) {
   if (Triple.getArch() != llvm::Triple::aarch64 &&
@@ -272,7 +246,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return isARMEABIBareMetal(Triple) || isAArch64BareMetal(Triple) ||
+  return arm::isARMEABIBareMetal(Triple) || isAArch64BareMetal(Triple) ||
          isRISCVBareMetal(Triple) || isPPCBareMetal(Triple);
 }
 
@@ -566,7 +540,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
   // arm*-*-*bsd).
-  if (isARMEABIBareMetal(TC.getTriple()))
+  if (arm::isARMEABIBareMetal(TC.getTriple()))
     CmdArgs.push_back("--target2=rel");
 
   CmdArgs.push_back("-o");
