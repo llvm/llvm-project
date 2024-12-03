@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegAllocPriorityAdvisor.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "RegAllocGreedy.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -20,72 +20,113 @@
 
 using namespace llvm;
 
-static cl::opt<RegAllocPriorityAdvisorAnalysis::AdvisorMode> Mode(
+static cl::opt<RegAllocPriorityAdvisorProvider::AdvisorMode> Mode(
     "regalloc-enable-priority-advisor", cl::Hidden,
-    cl::init(RegAllocPriorityAdvisorAnalysis::AdvisorMode::Default),
+    cl::init(RegAllocPriorityAdvisorProvider::AdvisorMode::Default),
     cl::desc("Enable regalloc advisor mode"),
     cl::values(
-        clEnumValN(RegAllocPriorityAdvisorAnalysis::AdvisorMode::Default,
+        clEnumValN(RegAllocPriorityAdvisorProvider::AdvisorMode::Default,
                    "default", "Default"),
-        clEnumValN(RegAllocPriorityAdvisorAnalysis::AdvisorMode::Release,
+        clEnumValN(RegAllocPriorityAdvisorProvider::AdvisorMode::Release,
                    "release", "precompiled"),
-        clEnumValN(RegAllocPriorityAdvisorAnalysis::AdvisorMode::Development,
+        clEnumValN(RegAllocPriorityAdvisorProvider::AdvisorMode::Development,
                    "development", "for training"),
         clEnumValN(
-            RegAllocPriorityAdvisorAnalysis::AdvisorMode::Dummy, "dummy",
+            RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy, "dummy",
             "prioritize low virtual register numbers for test and debug")));
 
-char RegAllocPriorityAdvisorAnalysis::ID = 0;
-INITIALIZE_PASS(RegAllocPriorityAdvisorAnalysis, "regalloc-priority",
+char RegAllocPriorityAdvisorAnalysisLegacy::ID = 0;
+INITIALIZE_PASS(RegAllocPriorityAdvisorAnalysisLegacy, "regalloc-priority",
                 "Regalloc priority policy", false, true)
 
 namespace {
-class DefaultPriorityAdvisorAnalysis final
-    : public RegAllocPriorityAdvisorAnalysis {
+
+class DefaultPriorityAdvisorProvider final
+    : public RegAllocPriorityAdvisorProvider {
 public:
-  DefaultPriorityAdvisorAnalysis(bool NotAsRequested)
-      : RegAllocPriorityAdvisorAnalysis(AdvisorMode::Default),
+  DefaultPriorityAdvisorProvider(bool NotAsRequested, LLVMContext &Ctx)
+      : RegAllocPriorityAdvisorProvider(AdvisorMode::Default) {
+    if (NotAsRequested)
+      Ctx.emitError("Requested regalloc priority advisor analysis "
+                    "could be created. Using default");
+  }
+
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocPriorityAdvisorProvider *R) {
+    return R->getAdvisorMode() == AdvisorMode::Default;
+  }
+
+  std::unique_ptr<RegAllocPriorityAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+    assert(SI && "SlotIndexes result must be set");
+    return std::make_unique<DefaultPriorityAdvisor>(MF, RA, SI);
+  }
+};
+
+class DummyPriorityAdvisorProvider final : public RegAllocPriorityAdvisorProvider {
+public:
+  DummyPriorityAdvisorProvider() : RegAllocPriorityAdvisorProvider(AdvisorMode::Dummy) {}
+
+  static bool classof(const RegAllocPriorityAdvisorProvider *R) {
+    return R->getAdvisorMode() == AdvisorMode::Dummy;
+  }
+
+  std::unique_ptr<RegAllocPriorityAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+    assert(SI && "SlotIndexes result must be set");
+    return std::make_unique<DummyPriorityAdvisor>(MF, RA, SI);
+  }
+};
+
+class DefaultPriorityAdvisorAnalysisLegacy final
+    : public RegAllocPriorityAdvisorAnalysisLegacy {
+public:
+  DefaultPriorityAdvisorAnalysisLegacy(bool NotAsRequested)
+      : RegAllocPriorityAdvisorAnalysisLegacy(AdvisorMode::Default),
         NotAsRequested(NotAsRequested) {}
 
   // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocPriorityAdvisorAnalysis *R) {
+  static bool classof(const RegAllocPriorityAdvisorAnalysisLegacy *R) {
     return R->getAdvisorMode() == AdvisorMode::Default;
   }
 
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexesWrapperPass>();
-    RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
+    RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
+
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
-    return std::make_unique<DefaultPriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI());
+    Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
+    return Provider->getAdvisor(MF, RA);
   }
   bool doInitialization(Module &M) override {
-    if (NotAsRequested)
-      M.getContext().emitError("Requested regalloc priority advisor analysis "
-                               "could be created. Using default");
-    return RegAllocPriorityAdvisorAnalysis::doInitialization(M);
+    Provider.reset(
+        new DefaultPriorityAdvisorProvider(NotAsRequested, M.getContext()));
+    return false;
   }
+
   const bool NotAsRequested;
+  std::unique_ptr<DefaultPriorityAdvisorProvider> Provider;
 };
 
 class DummyPriorityAdvisorAnalysis final
-    : public RegAllocPriorityAdvisorAnalysis {
+    : public RegAllocPriorityAdvisorAnalysisLegacy {
 public:
+  using RegAllocPriorityAdvisorAnalysisLegacy::AdvisorMode;
   DummyPriorityAdvisorAnalysis()
-      : RegAllocPriorityAdvisorAnalysis(AdvisorMode::Dummy) {}
+      : RegAllocPriorityAdvisorAnalysisLegacy(AdvisorMode::Dummy) {}
 
   // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocPriorityAdvisorAnalysis *R) {
+  static bool classof(const RegAllocPriorityAdvisorAnalysisLegacy *R) {
     return R->getAdvisorMode() == AdvisorMode::Dummy;
   }
 
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexesWrapperPass>();
-    RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
+    RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 
   std::unique_ptr<RegAllocPriorityAdvisor>
@@ -97,30 +138,70 @@ private:
 
 } // namespace
 
-template <> Pass *llvm::callDefaultCtor<RegAllocPriorityAdvisorAnalysis>() {
-  Pass *Ret = nullptr;
+void RegAllocPriorityAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
+  if (Provider)
+    return;
+
   switch (Mode) {
-  case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Default:
-    Ret = new DefaultPriorityAdvisorAnalysis(/*NotAsRequested*/ false);
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Default:
+    Provider.reset(
+        new DefaultPriorityAdvisorProvider(/*NotAsRequested*/ false, Ctx));
     break;
-  case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Dummy:
-    Ret = new DummyPriorityAdvisorAnalysis();
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy:
+    Provider.reset(new DummyPriorityAdvisorProvider());
     break;
-  case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Development:
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
-    Ret = createDevelopmentModePriorityAdvisor();
+    Provider.reset(createDevelopmentModePriorityAdvisorProvider(Ctx));
 #endif
     break;
-  case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Release:
-    Ret = createReleaseModePriorityAdvisor();
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
+    Provider.reset(createReleaseModePriorityAdvisorProvider());
+    break;
+  }
+  if (!Provider)
+    Provider.reset(
+        new DefaultPriorityAdvisorProvider(/*NotAsRequested*/ true, Ctx));
+}
+
+AnalysisKey RegAllocPriorityAdvisorAnalysis::Key;
+
+RegAllocPriorityAdvisorAnalysis::Result
+RegAllocPriorityAdvisorAnalysis::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  // Lazily initialize the provider.
+  initializeProvider(MF.getFunction().getContext());
+  // On each run, update the analysis for the provider.
+  Provider->setAnalyses(&MFAM.getResult<SlotIndexesAnalysis>(MF));
+  // The requiring analysis will construct the advisor.
+  return Result{Provider.get()};
+}
+
+template <>
+Pass *llvm::callDefaultCtor<RegAllocPriorityAdvisorAnalysisLegacy>() {
+  Pass *Ret = nullptr;
+  switch (Mode) {
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Default:
+    Ret = new DefaultPriorityAdvisorAnalysisLegacy(/*NotAsRequested*/ false);
+    break;
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Development:
+#if defined(LLVM_HAVE_TFLITE)
+    Ret = createDevelopmentModePriorityAdvisorAnalysis();
+#endif
+    break;
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
+    Ret = createReleaseModePriorityAdvisorAnalysis();
+    break;
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy:
+    Ret = new DummyPriorityAdvisorAnalysis();
     break;
   }
   if (Ret)
     return Ret;
-  return new DefaultPriorityAdvisorAnalysis(/*NotAsRequested*/ true);
+  return new DefaultPriorityAdvisorAnalysisLegacy(/*NotAsRequested*/ true);
 }
 
-StringRef RegAllocPriorityAdvisorAnalysis::getPassName() const {
+StringRef RegAllocPriorityAdvisorAnalysisLegacy::getPassName() const {
   switch (getAdvisorMode()) {
   case AdvisorMode::Default:
     return "Default Regalloc Priority Advisor";
