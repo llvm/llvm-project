@@ -42,14 +42,7 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-struct LiveOffset {
-  InputSectionBase *sec;
-  std::optional<uint64_t> offset;
-
-  LiveOffset(InputSectionBase *sec,
-             std::optional<uint64_t> offset = std::nullopt)
-      : sec(sec), offset(offset) {}
-};
+typedef std::pair<InputSectionBase *, uint64_t> LiveOffset;
 
 template <class ELFT> class MarkLive {
 public:
@@ -341,11 +334,11 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, 0, &sec);
+      enqueue(isec, 0, {{&sec, 0}});
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, 0, &sec);
+      enqueue(sec.nextInSectionGroup, 0, {{&sec, 0}});
   }
 }
 
