@@ -211,7 +211,8 @@ public:
           continue;
 
         const TypeSourceInfo *TSI = nullptr;
-        if (const auto *VD = dyn_cast<const VarDecl *>(CallRec.CastedExprParent)) {
+        if (const auto *VD =
+                dyn_cast<const VarDecl *>(CallRec.CastedExprParent)) {
           TSI = VD->getTypeSourceInfo();
         } else {
           TSI = CallRec.ExplicitCastType;
