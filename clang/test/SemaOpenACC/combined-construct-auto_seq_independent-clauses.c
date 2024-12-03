@@ -129,7 +129,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop auto reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -159,7 +158,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto async
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
 #pragma acc parallel loop auto tile(1+2, 1)
   for(unsigned j = 0; j < 5; ++j)
     for(unsigned i = 0; i < 5; ++i);
@@ -258,7 +256,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -288,7 +285,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop async auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
 #pragma acc parallel loop tile(1+2, 1) auto
   for(unsigned j = 0; j < 5; ++j)
     for(unsigned i = 0; i < 5; ++i);
@@ -388,7 +384,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop independent reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -418,7 +413,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent async
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
 #pragma acc parallel loop independent tile(1+2, 1)
   for(unsigned j = 0; j < 5; ++j)
     for(unsigned i = 0; i < 5; ++i);
@@ -517,7 +511,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -547,7 +540,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop async independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
 #pragma acc parallel loop tile(1+2, 1) independent
   for(unsigned j = 0; j < 5; ++j)
     for(unsigned i = 0; i < 5; ++i);
@@ -653,7 +645,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop seq reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -683,7 +674,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq async
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
 #pragma acc parallel loop seq tile(1+2, 1)
   for(;;)
     for(unsigned i = 0; i < 5; ++i);
@@ -788,7 +778,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc parallel loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -818,7 +807,6 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop async seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
 #pragma acc parallel loop tile(1+2, 1) seq
   for(;;)
     for(unsigned i = 0; i < 5; ++i);
