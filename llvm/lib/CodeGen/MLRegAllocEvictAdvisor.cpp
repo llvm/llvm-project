@@ -588,7 +588,7 @@ public:
       return nullptr;
     if (Log)
       Log->switchContext(MF.getName());
-    assert((MBFI && Loops) &&
+    assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     return std::make_unique<DevelopmentModeEvictAdvisor>(
         MF, RA, Runner.get(), *MBFI, *Loops, Log.get());
