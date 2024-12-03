@@ -11,6 +11,7 @@
 #include "Arch/ARM.h"
 #include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
@@ -564,8 +565,6 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
-
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -811,16 +810,22 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (NonStandardSearchPath) {
       if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
-        auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
+        auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath,
+                                 bool HasPrefix = false) {
           SmallString<128> P(Sysroot->getValue());
-          AppendPlatformPrefix(P, Triple);
+          if (!HasPrefix)
+            P.append(getSystemPrefix(Triple));
           llvm::sys::path::append(P, SearchPath);
           if (getToolChain().getVFS().exists(P)) {
             CmdArgs.push_back(Args.MakeArgString(Flag + P));
           }
         };
+
         AddSearchPath("-L", "/usr/lib");
-        AddSearchPath("-F", "/System/Library/Frameworks");
+        for (const StringRef Path : getCommonSystemPaths(Triple)) {
+          if (Path.contains("Framework"))
+            AddSearchPath("-F", Path, /*HasPrefix=*/true);
+        }
       }
     }
   }
@@ -2463,16 +2468,6 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 }
 
-// For certain platforms/environments almost all resources (e.g., headers) are
-// located in sub-directories, e.g., for DriverKit they live in
-// <SYSROOT>/System/DriverKit/usr/include (instead of <SYSROOT>/usr/include).
-static void AppendPlatformPrefix(SmallString<128> &Path,
-                                 const llvm::Triple &T) {
-  if (T.isDriverKit()) {
-    llvm::sys::path::append(Path, "System", "DriverKit");
-  }
-}
-
 // Returns the effective sysroot from either -isysroot or --sysroot, plus the
 // platform prefix (if any).
 llvm::SmallString<128>
@@ -2484,7 +2479,7 @@ DarwinClang::GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const {
     Path = getDriver().SysRoot;
 
   if (hasEffectiveTriple()) {
-    AppendPlatformPrefix(Path, getEffectiveTriple());
+    Path.append(getSystemPrefix(getEffectiveTriple()));
   }
   return Path;
 }

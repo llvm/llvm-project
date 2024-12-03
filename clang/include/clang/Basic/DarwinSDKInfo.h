@@ -1,4 +1,4 @@
-//===--- DarwinSDKInfo.h - SDK Information parser for darwin ----*- C++ -*-===//
+//===--- DarwinSDKInfo.h - SDK Information for darwin -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -191,6 +191,17 @@ private:
 /// the SDK has no SDKSettings.json, or a valid \c DarwinSDKInfo otherwise.
 Expected<std::optional<DarwinSDKInfo>>
 parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath);
+
+/// Get the system platform prefix for the active target triple.
+StringRef getSystemPrefix(const llvm::Triple &T);
+
+using KnownSystemPaths = std::array<std::string, 2>;
+
+/// Compute and get the common system search paths for header frontend and
+/// library linker searching.
+///
+/// \param T The active target triple to determine platform specific paths.
+KnownSystemPaths getCommonSystemPaths(llvm::Triple T);
 
 } // end namespace clang
 
