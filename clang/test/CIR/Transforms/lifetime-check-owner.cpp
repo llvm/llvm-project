@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-lifetime-check="history=all;remarks=all;history_limit=1" -clangir-verify-diagnostics -emit-cir %s -o %t.cir
 
-struct [[gsl::Owner(int)]] MyIntOwner {
+struct [[gsl::Owner(int)]] MyIntOwner { // expected-remark {{pset => { fn_arg:0 }}}
   int val;
   MyIntOwner(int v) : val(v) {}
   void changeInt(int i);
@@ -8,7 +8,7 @@ struct [[gsl::Owner(int)]] MyIntOwner {
   int read() const;
 };
 
-struct [[gsl::Pointer(int)]] MyIntPointer {
+struct [[gsl::Pointer(int)]] MyIntPointer { // expected-remark {{pset => { fn_arg:0 }}}
   int *ptr;
   MyIntPointer(int *p = nullptr) : ptr(p) {}
   MyIntPointer(const MyIntOwner &);

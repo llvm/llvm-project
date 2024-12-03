@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -clangir-disable-emit-cxx-default -fclangir-lifetime-check="history=all;remarks=all" -clangir-verify-diagnostics -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -fclangir-lifetime-check="history=all;remarks=all" -clangir-verify-diagnostics -emit-cir %s -o %t.cir
 
 int strlen(char const *);
 
-struct [[gsl::Owner(char *)]] String {
+struct [[gsl::Owner(char *)]] String { // expected-remark {{pset => { fn_arg:0 }}}
   long size;
   long capacity;
   const char *storage;
@@ -11,7 +11,7 @@ struct [[gsl::Owner(char *)]] String {
   String(char const *s) : size{strlen(s)}, capacity{size}, storage{s} {}
 };
 
-struct [[gsl::Pointer(int)]] StringView {
+struct [[gsl::Pointer(int)]] StringView { // expected-remark {{pset => { fn_arg:0 }}}
   long size;
   const char *storage;
   char operator[](int);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -clangir-disable-emit-cxx-default -fclangir-lifetime-check="history=all" -clangir-verify-diagnostics -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -fclangir-lifetime-check="history=all" -clangir-verify-diagnostics -emit-cir %s -o %t.cir
 
 class _j {};
 typedef _j* jobj;

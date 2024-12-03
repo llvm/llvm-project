@@ -566,14 +566,6 @@ public:
     DeferredDeclsToEmit.emplace_back(GD);
   }
 
-  // After HandleTranslation finishes, differently from DeferredDeclsToEmit,
-  // DefaultMethodsToEmit is only called after a set of CIR passes run. See
-  // addDefaultMethodsToEmit usage for examples.
-  std::vector<clang::GlobalDecl> DefaultMethodsToEmit;
-  void addDefaultMethodsToEmit(clang::GlobalDecl GD) {
-    DefaultMethodsToEmit.emplace_back(GD);
-  }
-
   std::pair<cir::FuncType, cir::FuncOp> getAddrAndTypeOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
       cir::FuncType FnType = nullptr, bool Dontdefer = false,
@@ -717,9 +709,6 @@ public:
 
   /// Helper for `emitDeferred` to apply actual codegen.
   void emitGlobalDecl(clang::GlobalDecl &D);
-
-  /// Build default methods not emitted before this point.
-  void emitDefaultMethods();
 
   const llvm::Triple &getTriple() const { return target.getTriple(); }
 

@@ -264,10 +264,6 @@ public:
     case CIRGenAction::OutputType::EmitCIR:
     case CIRGenAction::OutputType::EmitCIRFlat:
       if (outputStream && mlirMod) {
-        // Emit remaining defaulted C++ methods
-        if (!feOptions.ClangIRDisableEmitCXXDefault)
-          gen->emitDefaultMethods();
-
         // FIXME: we cannot roundtrip prettyForm=true right now.
         mlir::OpPrintingFlags flags;
         flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);

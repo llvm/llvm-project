@@ -2786,10 +2786,7 @@ cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
            FD = FD->getPreviousDecl()) {
         if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
           if (FD->doesThisDeclarationHaveABody()) {
-            if (isDefaultedMethod(FD))
-              addDefaultMethodsToEmit(GD.getWithDecl(FD));
-            else
-              addDeferredDeclToEmit(GD.getWithDecl(FD));
+            addDeferredDeclToEmit(GD.getWithDecl(FD));
             break;
           }
         }
@@ -2937,13 +2934,6 @@ void CIRGenModule::emitDeferred(unsigned recursionLimit) {
       assert(DeferredVTables.empty() && DeferredDeclsToEmit.empty());
     }
   }
-}
-
-void CIRGenModule::emitDefaultMethods() {
-  // Differently from DeferredDeclsToEmit, there's no recurrent use of
-  // DefaultMethodsToEmit, so use it directly for emission.
-  for (auto &D : DefaultMethodsToEmit)
-    emitGlobalDecl(D);
 }
 
 mlir::IntegerAttr CIRGenModule::getSize(CharUnits size) {

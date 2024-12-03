@@ -1,9 +1,6 @@
 // RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -clangir-disable-emit-cxx-default %s -o %t-disable.cir
-// RUN: FileCheck --input-file=%t-disable.cir %s --check-prefix=DISABLE
-
 int strlen(char const *);
 
 struct String {
@@ -40,9 +37,6 @@ struct String {
   // CHECK:   cir.return
   // CHECK: }
 
-  // DISABLE: cir.func linkonce_odr @_ZN10StringViewC2ERK6String
-  // DISABLE-NEXT:   %0 = cir.alloca !cir.ptr<!ty_StringView>, !cir.ptr<!cir.ptr<!ty_StringView>>, ["this", init] {alignment = 8 : i64}
-
   // StringView::operator=(StringView&&)
   //
   // CHECK: cir.func linkonce_odr @_ZN10StringViewaSEOS_
@@ -61,9 +55,6 @@ struct String {
   // CHECK:   %8 = cir.load %2 : !cir.ptr<!cir.ptr<!ty_StringView>>
   // CHECK:   cir.return %8 : !cir.ptr<!ty_StringView>
   // CHECK: }
-
-  // DISABLE: cir.func private @_ZN10StringViewaSEOS_
-  // DISABLE-NEXT: cir.func @main()
 };
 
 struct StringView {
@@ -179,8 +170,6 @@ struct Trivial {
 // CHECK-NEXT:    %[[#OTHER_I_CAST:]] = cir.cast(bitcast, %[[#OTHER_I]] : !cir.ptr<!s32i>), !cir.ptr<!void>
 // CHECK-NEXT:    cir.libc.memcpy %[[#MEMCPY_SIZE]] bytes from %[[#OTHER_I_CAST]] to %[[#THIS_I_CAST]]
 // CHECK-NEXT:    cir.store %[[#THIS_LOAD]], %[[#RETVAL]]
-// CHECK-NEXT:    cir.br ^bb1
-// CHECK-NEXT:  ^bb1:
 // CHECK-NEXT:    %[[#RETVAL_LOAD:]] = cir.load %[[#RETVAL]]
 // CHECK-NEXT:    cir.return %[[#RETVAL_LOAD]]
 // CHECK-NEXT:  }

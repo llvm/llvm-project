@@ -123,8 +123,6 @@ void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *D) {
     CGM->AddDeferredUnusedCoverageMapping(D);
 }
 
-void CIRGenerator::emitDefaultMethods() { CGM->emitDefaultMethods(); }
-
 void CIRGenerator::emitDeferredDecls() {
   if (DeferredInlineMemberFuncDefs.empty())
     return;

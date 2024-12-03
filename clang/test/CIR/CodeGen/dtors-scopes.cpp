@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -clangir-disable-emit-cxx-default -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -fclangir -emit-cir %s -o %t2.cir
 // RUN: FileCheck --input-file=%t2.cir %s --check-prefix=DTOR_BODY
