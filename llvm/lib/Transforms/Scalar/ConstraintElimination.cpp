@@ -1619,8 +1619,8 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
           int64_t MinVal = CR->getSignedMin().getSExtValue();
           if (MaxVal != MaxConstraintValue) {
             ConstraintTy VarPos(
-                SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), false,
-                false, false);
+                SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), true, false,
+                false);
             VarPos.Coefficients[0] = MaxVal;
             VarPos.Coefficients[Value2Index[V]] = 1;
             CSToUse.addVariableRow(VarPos.Coefficients);
@@ -1629,9 +1629,9 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
           }
           if (MinVal != MinSignedConstraintValue) {
             ConstraintTy VarPos(
-                SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), false,
-                false, false);
-            VarPos.Coefficients[0] = MinVal;
+                SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), true, false,
+                false);
+            VarPos.Coefficients[0] = -MinVal;
             VarPos.Coefficients[Value2Index[V]] = -1;
             CSToUse.addVariableRow(VarPos.Coefficients);
             DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
@@ -1655,7 +1655,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
           ConstraintTy VarPos(
               SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), false, false,
               false);
-          VarPos.Coefficients[0] = MinVal;
+          VarPos.Coefficients[0] = -MinVal;
           VarPos.Coefficients[Value2Index[V]] = -1;
           CSToUse.addVariableRow(VarPos.Coefficients);
           DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
