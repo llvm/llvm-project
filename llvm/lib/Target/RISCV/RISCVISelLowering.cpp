@@ -3509,8 +3509,8 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   if (Idx.getValueType() != Subtarget.getXLenVT())
     return SDValue();
 
-  if (Vec.getValueSizeInBits().getKnownMinValue() >
-      VT.getSizeInBits().getKnownMinValue())
+  // FIXME: Can we use the indexes that are in-bound here instead?
+  if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits()))
     return SDValue();
 
   MVT ContainerVT = VT;
