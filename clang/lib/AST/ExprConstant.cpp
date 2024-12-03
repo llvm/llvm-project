@@ -14588,8 +14588,21 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         return Error(E);
       const Expr *LHSExpr = LHSValue.Base.dyn_cast<const Expr *>();
       const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr *>();
-      if (!LHSExpr || !RHSExpr)
-        return Error(E);
+      if (!LHSExpr || !RHSExpr) {
+        std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
+        std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
+        Info.FFDiag(E, diag::note_constexpr_pointer_arith_unspecified)
+            << LHS << RHS;
+        return false;
+      }
+
+      if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue)) {
+        std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
+        std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
+        Info.FFDiag(E, diag::note_constexpr_literal_arith) << LHS << RHS;
+        return false;
+      }
+
       const AddrLabelExpr *LHSAddrExpr = dyn_cast<AddrLabelExpr>(LHSExpr);
       const AddrLabelExpr *RHSAddrExpr = dyn_cast<AddrLabelExpr>(RHSExpr);
       if (!LHSAddrExpr || !RHSAddrExpr)
