@@ -962,31 +962,21 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   // Use vector version of the intrinsic.
   Module *M = State.Builder.GetInsertBlock()->getModule();
-  bool IsVPIntrinsic = VPIntrinsic::isVPIntrinsic(VectorIntrinsicID);
   Function *VectorF =
-      IsVPIntrinsic
-          ? VPIntrinsic::getOrInsertDeclarationForParams(M, VectorIntrinsicID,
-                                                         TysForDecl[0], Args)
-          : Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
+      Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
   assert(VectorF &&
          "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
+  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
-  if (!IsVPIntrinsic) {
-    if (auto *CI = cast_or_null<CallInst>(getUnderlyingValue()))
-      CI->getOperandBundlesAsDefs(OpBundles);
-  }
+  if (CI)
+    CI->getOperandBundlesAsDefs(OpBundles);
 
-  Instruction *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+  CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
-  if (IsVPIntrinsic) {
-    // Currently vp-intrinsics only accept FMF flags. llvm.vp.uitofp will get
-    // Flags of OperationType::NonNegOp && OperationType::FPMathOp.
-    if (isa<FPMathOperator>(V) && VectorIntrinsicID != Intrinsic::vp_uitofp)
-      setFlags(V);
-  } else {
-    setFlags(V);
-  }
+  // FIXME: vp.cast and vp.select dont pass the underlying instruction into the
+  // recipe, which set the flags and metadata be needed.
+  setFlags(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);

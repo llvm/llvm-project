@@ -1445,8 +1445,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
-  VPValue *AllOneMask =
-      Plan.getOrAddLiveIn(ConstantInt::getTrue(IntegerType::getInt1Ty(Ctx)));
+
   for (VPUser *U : Plan.getVF().users()) {
     if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
       R->setOperand(1, &EVL);
@@ -1486,14 +1485,17 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
                     Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
                         CI->getCalledFunction()->getIntrinsicID());
-                    if (VPID == Intrinsic::not_intrinsic)
-                      return nullptr;
+                    assert(VPID != Intrinsic::not_intrinsic &&
+                           "Expected VP Instrinsic");
 
                     SmallVector<VPValue *> Ops(CInst->operands());
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    Ops.push_back(AllOneMask);
+                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                        IntegerType::getInt1Ty(CI->getContext())));
+                    Ops.push_back(Mask);
+                    ;
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
                         *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
@@ -1504,14 +1506,16 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     auto *CI = dyn_cast<CastInst>(CInst->getUnderlyingInstr());
                     Intrinsic::ID VPID =
                         VPIntrinsic::getForOpcode(CI->getOpcode());
-                    if (VPID == Intrinsic::not_intrinsic)
-                      return nullptr;
+                    assert(VPID != Intrinsic::not_intrinsic &&
+                           "Expected vp.casts Instrinsic");
 
                     SmallVector<VPValue *> Ops(CInst->operands());
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
                            VPIntrinsic::getVectorLengthParamPos(VPID) &&
                            "Expected VP intrinsic");
-                    Ops.push_back(AllOneMask);
+                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                        IntegerType::getInt1Ty(CI->getContext())));
+                    Ops.push_back(Mask);
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
                         VPID, Ops, TypeInfo.inferScalarType(CInst),
