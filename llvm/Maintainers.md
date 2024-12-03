@@ -450,8 +450,11 @@ tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 
 #### OpenMP (runtime library)
 
-Andrey Churbanov \
-andrey.churbanov@intel.com (email), [AndreyChurbanov](https://github.com/AndreyChurbanov) (GitHub)
+Michael Klemm \
+michael.klemm@amd.com (email), [mjklemm](https://github.com/mjklemm) (GitHub)
+
+Terry Wilmarth \
+terry.l.wilmarth@intel.com (email), [TerryLWilmarth](https://github.com/TerryLWilmarth) (GitHub)
 
 #### Polly
 
