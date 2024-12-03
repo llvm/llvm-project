@@ -14,7 +14,7 @@ subroutine test_ptr(p)
   end do
 end subroutine
 
-subroutine test_default_init(p)
+subroutine test_default_init()
   type t
     integer :: i = 2
   end type
