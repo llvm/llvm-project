@@ -429,20 +429,11 @@ private:
       }
       return nullptr;
     } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
-      CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
-      if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
-        return nullptr;
-      MemberExpr *IOA = dyn_cast<MemberExpr>(MCE->getImplicitObjectArgument());
-      if (!IOA)
-        return nullptr;
-      FieldDecl *Field = dyn_cast<FieldDecl>(IOA->getMemberDecl());
-      if (!Field || !isMemcpyableField(Field))
-        return nullptr;
-      MemberExpr *Arg0 = dyn_cast<MemberExpr>(MCE->getArg(0));
-      if (!Arg0 || Field != dyn_cast<FieldDecl>(Arg0->getMemberDecl()))
-        return nullptr;
-      return Field;
+      // We want to represent all calls explicitly for analysis purposes.
+      return nullptr;
     } else if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
+      // TODO(cir): https://github.com/llvm/clangir/issues/1177: This can result
+      // in memcpys instead of calls to trivial member functions.
       FunctionDecl *FD = dyn_cast<FunctionDecl>(CE->getCalleeDecl());
       if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_memcpy)
         return nullptr;

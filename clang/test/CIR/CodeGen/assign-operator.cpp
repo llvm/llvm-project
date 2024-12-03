@@ -191,3 +191,33 @@ struct Trivial {
 void copyTrivial(Trivial &a, Trivial &b) {
   a = b;
 }
+
+struct ContainsTrivial {
+  Trivial t1;
+  Trivial t2;
+  ContainsTrivial &operator=(const ContainsTrivial &);
+};
+
+// We should explicitly call operator= even for trivial types.
+// CHECK-LABEL: cir.func @_ZN15ContainsTrivialaSERKS_(
+// CHECK:         cir.call @_ZN7TrivialaSERKS_(
+// CHECK:         cir.call @_ZN7TrivialaSERKS_(
+ContainsTrivial &ContainsTrivial::operator=(const ContainsTrivial &) = default;
+
+struct ContainsTrivialArray {
+  Trivial arr[2];
+  ContainsTrivialArray &operator=(const ContainsTrivialArray &);
+};
+
+// We should be calling operator= here but don't currently.
+// CHECK-LABEL: cir.func @_ZN20ContainsTrivialArrayaSERKS_(
+// CHECK:         %[[#THIS_LOAD:]] = cir.load deref %[[#]]
+// CHECK-NEXT:    %[[#THIS_ARR:]] = cir.get_member %[[#THIS_LOAD]][0] {name = "arr"}
+// CHECK-NEXT:    %[[#THIS_ARR_CAST:]] = cir.cast(bitcast, %[[#THIS_ARR]] : !cir.ptr<!cir.array<!ty_Trivial x 2>>), !cir.ptr<!void>
+// CHECK-NEXT:    %[[#OTHER_LOAD:]] = cir.load %[[#]]
+// CHECK-NEXT:    %[[#OTHER_ARR:]] = cir.get_member %[[#OTHER_LOAD]][0] {name = "arr"}
+// CHECK-NEXT:    %[[#OTHER_ARR_CAST:]] = cir.cast(bitcast, %[[#OTHER_ARR]] : !cir.ptr<!cir.array<!ty_Trivial x 2>>), !cir.ptr<!void>
+// CHECK-NEXT:    %[[#MEMCPY_SIZE:]] = cir.const #cir.int<80> : !u64i
+// CHECK-NEXT:    cir.libc.memcpy %[[#MEMCPY_SIZE]] bytes from %[[#OTHER_ARR_CAST]] to %[[#THIS_ARR_CAST]]
+ContainsTrivialArray &
+ContainsTrivialArray::operator=(const ContainsTrivialArray &) = default;
