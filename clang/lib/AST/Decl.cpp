@@ -3876,8 +3876,17 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
 
 FunctionTypeLoc FunctionDecl::getFunctionTypeLoc() const {
   const TypeSourceInfo *TSI = getTypeSourceInfo();
-  return TSI ? TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>()
-             : FunctionTypeLoc();
+
+  if (!TSI)
+    return FunctionTypeLoc();
+
+  TypeLoc TL = TSI->getTypeLoc().IgnoreParens();
+
+  // ignore function type attributes
+  while (auto ATL = TL.getAs<AttributedTypeLoc>())
+    TL = ATL.getModifiedLoc();
+
+  return TL.getAs<FunctionTypeLoc>();
 }
 
 SourceRange FunctionDecl::getReturnTypeSourceRange() const {
