@@ -1,4 +1,3 @@
-
 ; This test verifies that global variables (objc metadata) are hashed based on their initial contents,
 ; allowing them to be merged even if they appear different due to their names.
 ; Now they become identical functions that can be merged without creating a parameter
@@ -7,7 +6,6 @@
 
 ; CHECK: _f1.Tgm
 ; CHECK: _f2.Tgm
-
 
 %struct._class_t = type { ptr, ptr, ptr, ptr, ptr }
 
