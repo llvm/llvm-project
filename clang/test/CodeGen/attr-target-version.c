@@ -269,7 +269,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@foo
-// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @fmv()
 // CHECK-NEXT:    [[CALL1:%.*]] = call i32 @fmv_one()
@@ -288,7 +288,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@fmv_c._Mssbs
-// CHECK-SAME: () #[[ATTR16:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
@@ -302,7 +302,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@goo
-// CHECK-SAME: () #[[ATTR15]] {
+// CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @fmv_inline()
 // CHECK-NEXT:    [[CALL1:%.*]] = call i32 @fmv_e()
@@ -321,7 +321,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@recur
-// CHECK-SAME: () #[[ATTR15]] {
+// CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @reca()
 // CHECK-NEXT:    ret void
@@ -329,7 +329,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@hoo
-// CHECK-SAME: () #[[ATTR15]] {
+// CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FP1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[FP2:%.*]] = alloca ptr, align 8
@@ -346,28 +346,28 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_with_forward_default_decl._Mmops
-// CHECK-SAME: () #[[ATTR19:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_extern_forward_default_decl._Mdotprod
-// CHECK-SAME: () #[[ATTR20:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR18:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_with_default_decl._Maes
-// CHECK-SAME: () #[[ATTR5]] {
+// CHECK-SAME: () #[[ATTR19:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_with_default_def._Msve
-// CHECK-SAME: () #[[ATTR21:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR20:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
@@ -381,7 +381,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_default_def._Mfp16
-// CHECK-SAME: () #[[ATTR22:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR21:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
@@ -395,49 +395,49 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_forward_default_def.default
-// CHECK-SAME: () #[[ATTR15]] {
+// CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_with_implicit_forward_default_def._Mlse
-// CHECK-SAME: () #[[ATTR23:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR22:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@unused_without_default._Mrdm
-// CHECK-SAME: () #[[ATTR24:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR23:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.default
-// CHECK-SAME: () #[[ATTR15]] {
+// CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_def_without_default_decl._Mjscvt
-// CHECK-SAME: () #[[ATTR26:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR25:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_def_without_default_decl._Mrdm
-// CHECK-SAME: () #[[ATTR24]] {
+// CHECK-SAME: () #[[ATTR26:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@caller
-// CHECK-SAME: () #[[ATTR15]] {
+// CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @used_def_without_default_decl()
 // CHECK-NEXT:    [[CALL1:%.*]] = call i32 @used_decl_without_default_decl()
@@ -973,21 +973,21 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv
-// CHECK-NOFMV-SAME: () #[[ATTR1:[0-9]+]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 0
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_one
-// CHECK-NOFMV-SAME: () #[[ATTR1]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 0
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_two
-// CHECK-NOFMV-SAME: () #[[ATTR1]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 0
 //
@@ -1013,21 +1013,21 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_d
-// CHECK-NOFMV-SAME: () #[[ATTR1]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 1
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_c
-// CHECK-NOFMV-SAME: () #[[ATTR1]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret void
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_default
-// CHECK-NOFMV-SAME: () #[[ATTR1]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 111
 //
@@ -1080,7 +1080,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@main
-// CHECK-NOFMV-SAME: () #[[ATTR1]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NOFMV-NEXT:    store i32 0, ptr [[RETVAL]], align 4
@@ -1091,7 +1091,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@unused_with_default_def
-// CHECK-NOFMV-SAME: () #[[ATTR1]] {
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 1
 //
