@@ -17,10 +17,8 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -34,10 +32,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 
@@ -899,7 +895,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
         MF->getContext(), Subtarget);
-    if (Subtarget->hasReferenceTypes()) {
+    if (Subtarget->hasCallIndirectOverlong()) {
       MIB.addSym(Table);
     } else {
       // Otherwise for the MVP there is at most one table whose number is 0, but

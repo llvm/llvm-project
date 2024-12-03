@@ -203,6 +203,18 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+void Flang::AddLoongArch64TargetArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  // Currently, flang only support `-mabi=lp64d` in LoongArch64.
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V != "lp64d") {
+      D.Diag(diag::err_drv_argument_not_allowed_with) << "-mabi" << V;
+    }
+  }
+}
+
 void Flang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const Driver &D = getToolChain().getDriver();
@@ -413,6 +425,10 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     AddPPCTargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::loongarch64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddLoongArch64TargetArgs(Args, CmdArgs);
     break;
   }
 
@@ -744,6 +760,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   } else if (isa<AssembleJobAction>(JA)) {
     CmdArgs.push_back("-emit-obj");
+  } else if (isa<PrecompileJobAction>(JA)) {
+    // The precompile job action is only needed for options such as -mcpu=help.
+    // Those will already have been handled by the fc1 driver.
   } else {
     assert(false && "Unexpected action class for Flang tool.");
   }
@@ -908,8 +927,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Output.getFilename());
   }
 
-  assert(Input.isFilename() && "Invalid input.");
-
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
@@ -929,7 +946,18 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  CmdArgs.push_back(Input.getFilename());
+  // The input could be Ty_Nothing when "querying" options such as -mcpu=help
+  // are used.
+  ArrayRef<InputInfo> FrontendInputs = Input;
+  if (Input.isNothing())
+    FrontendInputs = {};
+
+  for (const InputInfo &Input : FrontendInputs) {
+    if (Input.isFilename())
+      CmdArgs.push_back(Input.getFilename());
+    else
+      Input.getInputArg().renderAsInput(Args, CmdArgs);
+  }
 
   const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,

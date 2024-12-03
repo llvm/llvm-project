@@ -413,6 +413,9 @@ def err_function_scope_depth_exceeded : Error<
   "function scope depth exceeded maximum of %0">, DefaultFatal;
 def err_missing_comma_before_ellipsis : Error<
   "C requires a comma prior to the ellipsis in a variadic function type">;
+def warn_deprecated_missing_comma_before_ellipsis : Warning<
+  "declaration of a variadic function without a comma before '...' is deprecated">,
+  InGroup<DeprecatedMissingCommaVariadicParam>;
 def err_unexpected_typedef_ident : Error<
   "unexpected type name %0: expected identifier">;
 def warn_cxx98_compat_decltype : Warning<
@@ -976,7 +979,7 @@ def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
-def ext_delete_with_message : ExtWarn<
+def ext_delete_with_message : Extension<
   "'= delete' with a message is a C++2c extension">, InGroup<CXX26>;
 def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,

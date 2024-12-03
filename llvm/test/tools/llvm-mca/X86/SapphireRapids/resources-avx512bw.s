@@ -373,16 +373,19 @@ vpmovswb          %zmm16, %ymm19
 vpmovswb          %zmm16, (%rax)
 vpmovswb          %zmm16, %ymm19 {k1}
 vpmovswb          %zmm16, (%rax) {k1}
+vpmovswb          %zmm16, %ymm19 {z}{k1}
 
 vpmovuswb         %zmm16, %ymm19
 vpmovuswb         %zmm16, (%rax)
 vpmovuswb         %zmm16, %ymm19 {k1}
 vpmovuswb         %zmm16, (%rax) {k1}
+vpmovuswb         %zmm16, %ymm19 {z}{k1}
 
 vpmovwb           %zmm16, %ymm19
 vpmovwb           %zmm16, (%rax)
 vpmovwb           %zmm16, %ymm19 {k1}
 vpmovwb           %zmm16, (%rax) {k1}
+vpmovwb           %zmm16, %ymm19 {z}{k1}
 
 vpmovzxbw         %ymm16, %zmm19
 vpmovzxbw         (%rax), %zmm19
@@ -919,14 +922,17 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  4      12    2.00           *            vpmovswb	%zmm16, (%rax)
 # CHECK-NEXT:  2      6     2.00                        vpmovswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  4      15    2.00           *            vpmovswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      6     2.00                        vpmovswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      4     2.00                        vpmovuswb	%zmm16, %ymm19
 # CHECK-NEXT:  4      12    2.00           *            vpmovuswb	%zmm16, (%rax)
 # CHECK-NEXT:  2      6     2.00                        vpmovuswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  4      15    2.00           *            vpmovuswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      6     2.00                        vpmovuswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      4     2.00                        vpmovwb	%zmm16, %ymm19
 # CHECK-NEXT:  4      12    2.00           *            vpmovwb	%zmm16, (%rax)
 # CHECK-NEXT:  2      6     2.00                        vpmovwb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  4      15    2.00           *            vpmovwb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      6     2.00                        vpmovwb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vpmovzxbw	%ymm16, %zmm19
 # CHECK-NEXT:  2      11    1.00    *                   vpmovzxbw	(%rax), %zmm19
 # CHECK-NEXT:  1      5     1.00                        vpmovzxbw	%ymm16, %zmm19 {%k1}
@@ -1129,7 +1135,7 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 269.20 4.20   73.33  73.33  7.50   272.20 0.20   7.50   7.50   7.50   0.20   73.33   -
+# CHECK-NEXT: 269.20 4.20   73.33  73.33  7.50   278.20 0.20   7.50   7.50   7.50   73.33  0.20    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -1140,12 +1146,12 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kandnd	%k0, %k1, %k2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kandnq	%k0, %k1, %k2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kmovd	%k0, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     kmovd	(%rax), %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     kmovd	(%rax), %k2
 # CHECK-NEXT:  -      -      -      -     0.50    -      -     0.50   0.50   0.50    -      -      -     kmovd	%k0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     kmovd	%eax, %k2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kmovd	%k0, %eax
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kmovq	%k0, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     kmovq	(%rax), %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     kmovq	(%rax), %k2
 # CHECK-NEXT:  -      -      -      -     0.50    -      -     0.50   0.50   0.50    -      -      -     kmovq	%k0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     kmovq	%rax, %k2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kmovq	%k0, %rax
@@ -1168,468 +1174,471 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kxord	%k0, %k1, %k2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     kxorq	%k0, %k1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vdbpsadbw	$0, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vdbpsadbw	$0, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vdbpsadbw	$0, (%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vdbpsadbw	$0, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vdbpsadbw	$0, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu8	%zmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vmovdqu8	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vmovdqu8	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.50    -      -     0.50   0.50   0.50    -      -      -     vmovdqu8	%zmm16, (%rax)
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vmovdqu8	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vmovdqu8	(%rax), %zmm19 {%k1}
-# CHECK-NEXT: 0.20   0.20    -      -     1.00   0.20   0.20   1.00   1.00   1.00   0.20    -      -     vmovdqu8	%zmm16, (%rax) {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vmovdqu8	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 0.20   0.20    -      -     1.00   0.20   0.20   1.00   1.00   1.00    -     0.20    -     vmovdqu8	%zmm16, (%rax) {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vmovdqu8	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vmovdqu8	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vmovdqu8	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu16	%zmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vmovdqu16	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vmovdqu16	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.50    -      -     0.50   0.50   0.50    -      -      -     vmovdqu16	%zmm16, (%rax)
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vmovdqu16	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vmovdqu16	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vmovdqu16	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.50    -      -     0.50   0.50   0.50    -      -      -     vmovdqu16	%zmm16, (%rax) {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vmovdqu16	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vmovdqu16	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vmovdqu16	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpabsb	%zmm16, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpabsb	(%rax), %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpabsb	(%rax), %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpabsb	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpabsb	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpabsb	(%rax), %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpabsb	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpabsb	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpabsb	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpabsw	%zmm16, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpabsw	(%rax), %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpabsw	(%rax), %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpabsw	%zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpabsw	(%rax), %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpabsw	(%rax), %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpabsw	%zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpabsw	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpabsw	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackssdw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackssdw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackssdw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackssdw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackssdw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackssdw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackssdw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackssdw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackssdw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpacksswb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpacksswb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpacksswb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpacksswb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpacksswb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpacksswb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpacksswb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpacksswb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpacksswb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackusdw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackusdw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackusdw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackusdw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackusdw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackusdw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackusdw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackusdw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackusdw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackuswb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackuswb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackuswb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackuswb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackuswb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackuswb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpackuswb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpackuswb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpackuswb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpaddb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpaddb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpaddb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpaddb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpaddb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpaddb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpaddb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpaddb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpaddb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddsb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddsb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddsb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddsb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddsb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddsb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddsb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddsb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddsb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddsw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddsw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddsw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddsw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddsw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddsw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddsw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddsw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddsw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddusb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddusb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddusb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddusb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddusb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddusb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddusb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddusb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddusb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddusw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddusw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddusw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddusw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddusw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddusw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpaddusw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpaddusw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpaddusw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpaddw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpaddw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpaddw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpaddw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpaddw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpaddw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpaddw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpaddw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpaddw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpalignr	$1, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpalignr	$1, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpalignr	$1, (%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpalignr	$1, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpalignr	$1, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpalignr	$1, (%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpalignr	$1, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpalignr	$1, (%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpalignr	$1, (%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpavgb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpavgb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpavgb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpavgb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpavgb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpavgb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpavgb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpavgb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpavgb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpavgw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpavgw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpavgw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpavgw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpavgw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpavgw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpavgw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpavgw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpavgw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpblendmb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpblendmb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpblendmb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpblendmb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpblendmb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpblendmb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpblendmb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpblendmb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpblendmb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpblendmw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpblendmw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpblendmw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpblendmw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpblendmw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpblendmw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpblendmw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpblendmw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpblendmw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastb	%xmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpbroadcastb	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpbroadcastb	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastb	%eax, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastb	%xmm16, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpbroadcastb	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpbroadcastb	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastb	%eax, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastb	%xmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpbroadcastb	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpbroadcastb	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastb	%eax, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastw	%xmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpbroadcastw	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpbroadcastw	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastw	%eax, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastw	%xmm16, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpbroadcastw	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpbroadcastw	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastw	%eax, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastw	%xmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpbroadcastw	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpbroadcastw	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpbroadcastw	%eax, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqb	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqb	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqb	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqb	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqb	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqb	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqb	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqb	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqb	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqb	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqb	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqb	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqw	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqw	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqw	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpgtb	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpgtb	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpgtb	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpgtb	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpgtb	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpgtb	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpgtw	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpgtw	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpgtw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpgtw	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpgtw	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpgtw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpequb	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpequb	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpequb	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpequb	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpequb	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpequb	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpequw	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpequw	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpequw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpequw	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpequw	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpequw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqw	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqw	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpcmpeqw	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT: 1.00   0.50    -      -      -     0.50    -      -      -      -      -      -      -     vpextrb	$0, %xmm16, %eax
 # CHECK-NEXT:  -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50    -      -      -     vpextrb	$0, %xmm16, (%rax)
 # CHECK-NEXT: 1.00   0.50    -      -      -     0.50    -      -      -      -      -      -      -     vpextrw	$0, %xmm16, %eax
 # CHECK-NEXT:  -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50    -      -      -     vpextrw	$0, %xmm16, (%rax)
 # CHECK-NEXT:  -     0.50    -      -      -     1.50    -      -      -      -      -      -      -     vpinsrb	$0, %eax, %xmm16, %xmm19
-# CHECK-NEXT:  -     0.50   0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpinsrb	$0, (%rax), %xmm16, %xmm19
+# CHECK-NEXT:  -     0.50   0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpinsrb	$0, (%rax), %xmm16, %xmm19
 # CHECK-NEXT:  -     0.50    -      -      -     1.50    -      -      -      -      -      -      -     vpinsrw	$0, %eax, %xmm16, %xmm19
-# CHECK-NEXT:  -     0.50   0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpinsrw	$0, (%rax), %xmm16, %xmm19
+# CHECK-NEXT:  -     0.50   0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpinsrw	$0, (%rax), %xmm16, %xmm19
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpermw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpermw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpermw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     2.50    -      -      -      -      -      -      -     vpermi2w	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -      -     0.33    -     vpermi2w	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -     0.33    -      -     vpermi2w	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     2.50    -      -      -      -      -      -      -     vpermi2w	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -      -     0.33    -     vpermi2w	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -     0.33    -      -     vpermi2w	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     2.50    -      -      -      -      -      -      -     vpermi2w	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -      -     0.33    -     vpermi2w	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -     0.33    -      -     vpermi2w	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     2.50    -      -      -      -      -      -      -     vpermt2w	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -      -     0.33    -     vpermt2w	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -     0.33    -      -     vpermt2w	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     2.50    -      -      -      -      -      -      -     vpermt2w	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -      -     0.33    -     vpermt2w	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -     0.33    -      -     vpermt2w	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     2.50    -      -      -      -      -      -      -     vpermt2w	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -      -     0.33    -     vpermt2w	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     2.50    -      -      -      -     0.33    -      -     vpermt2w	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaddubsw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaddubsw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaddubsw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaddubsw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaddubsw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaddubsw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaddubsw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaddubsw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaddubsw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaddwd	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaddwd	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaddwd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaddwd	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaddwd	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaddwd	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaddwd	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaddwd	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaddwd	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxsb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxsb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxsb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxsb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxsb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxsb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxsb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxsb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxsb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxsw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxsw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxsw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxsw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxsw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxsw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxsw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxsw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxsw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxub	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxub	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxub	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxub	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxub	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxub	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxub	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxub	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxub	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxuw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxuw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxuw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxuw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxuw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxuw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmaxuw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmaxuw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmaxuw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminsb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminsb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminsb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminsb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminsb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminsb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminsb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminsb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminsb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminsw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminsw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminsw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminsw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminsw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminsw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminsw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminsw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminsw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminub	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminub	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminub	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminub	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminub	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminub	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminub	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminub	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminub	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminuw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminuw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminuw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminuw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminuw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminuw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpminuw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpminuw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpminuw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmovb2m	%zmm0, %k0
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmovw2m	%zmm0, %k0
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpmovm2b	%k0, %zmm0
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpmovm2w	%k0, %zmm0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmovsxbw	%ymm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmovsxbw	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmovsxbw	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmovsxbw	%ymm16, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmovsxbw	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmovsxbw	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmovsxbw	%ymm16, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmovsxbw	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmovsxbw	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovswb	%zmm16, %ymm19
 # CHECK-NEXT:  -      -      -      -     0.50   2.00    -     0.50   0.50   0.50    -      -      -     vpmovswb	%zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.50   2.00    -     0.50   0.50   0.50    -      -      -     vpmovswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovuswb	%zmm16, %ymm19
 # CHECK-NEXT:  -      -      -      -     0.50   2.00    -     0.50   0.50   0.50    -      -      -     vpmovuswb	%zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovuswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.50   2.00    -     0.50   0.50   0.50    -      -      -     vpmovuswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovuswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovwb	%zmm16, %ymm19
 # CHECK-NEXT:  -      -      -      -     0.50   2.00    -     0.50   0.50   0.50    -      -      -     vpmovwb	%zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovwb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.50   2.00    -     0.50   0.50   0.50    -      -      -     vpmovwb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -     vpmovwb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmovzxbw	%ymm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmovzxbw	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmovzxbw	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmovzxbw	%ymm16, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmovzxbw	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmovzxbw	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmovzxbw	%ymm16, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmovzxbw	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmovzxbw	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhrsw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhrsw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhrsw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhrsw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhrsw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhrsw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhrsw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhrsw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhrsw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhuw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhuw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhuw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhuw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhuw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhuw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhuw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhuw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhuw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmulhw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmulhw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmulhw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmullw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmullw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmullw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmullw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmullw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmullw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpmullw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpmullw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpmullw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpsadbw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpsadbw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpsadbw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufhw	$0, %zmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufhw	$0, (%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufhw	$0, (%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufhw	$0, %zmm16, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufhw	$0, (%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufhw	$0, (%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufhw	$0, %zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufhw	$0, (%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufhw	$0, (%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshuflw	$0, %zmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshuflw	$0, (%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshuflw	$0, (%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshuflw	$0, %zmm16, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshuflw	$0, (%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshuflw	$0, (%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpshuflw	$0, %zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshuflw	$0, (%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshuflw	$0, (%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpslldq	$1, %zmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpslldq	$1, (%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpslldq	$1, (%rax), %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsllvw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllvw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllvw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsllvw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllvw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllvw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsllvw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllvw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllvw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsllw	$0, %zmm16, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllw	$0, (%rax), %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllw	$0, (%rax), %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsllw	$0, %zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllw	$0, (%rax), %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllw	$0, (%rax), %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsllw	$0, %zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllw	$0, (%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllw	$0, (%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsllw	%xmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsllw	%xmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsllw	%xmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsllw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsllw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsravw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsravw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsravw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsravw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsravw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsravw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsravw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsravw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsravw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsraw	$0, %zmm16, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsraw	$0, (%rax), %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsraw	$0, (%rax), %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsraw	$0, %zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsraw	$0, (%rax), %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsraw	$0, (%rax), %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsraw	$0, %zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsraw	$0, (%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsraw	$0, (%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsraw	%xmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsraw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsraw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsraw	%xmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsraw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsraw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsraw	%xmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsraw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsraw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpsrldq	$1, %zmm16, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpsrldq	$1, (%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpsrldq	$1, (%rax), %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsrlvw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlvw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlvw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsrlvw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlvw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlvw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsrlvw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlvw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlvw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsrlw	$0, %zmm16, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlw	$0, (%rax), %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlw	$0, (%rax), %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsrlw	$0, %zmm16, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlw	$0, (%rax), %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlw	$0, (%rax), %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsrlw	$0, %zmm16, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlw	$0, (%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlw	$0, (%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsrlw	%xmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsrlw	%xmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpsrlw	%xmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsrlw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsrlw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpsubb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpsubb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpsubb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpsubb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpsubb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpsubb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpsubb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpsubb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpsubb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubsb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubsb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubsb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubsb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubsb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubsb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubsb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubsb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubsb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubsw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubsw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubsw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubsw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubsw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubsw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubsw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubsw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubsw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubusb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubusb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubusb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubusb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubusb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubusb	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubusb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubusb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubusb	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubusw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubusw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubusw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubusw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubusw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubusw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpsubusw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vpsubusw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -     0.33    -      -     vpsubusw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpsubw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpsubw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpsubw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpsubw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpsubw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpsubw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT: 0.50    -      -      -      -     0.50    -      -      -      -      -      -      -     vpsubw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -      -     0.33    -     vpsubw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: 0.50    -     0.33   0.33    -     0.50    -      -      -      -     0.33    -      -     vpsubw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestmb	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestmb	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestmb	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestmb	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestmb	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestmb	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestmw	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestmw	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestmw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestmw	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestmw	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestmw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestnmb	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestnmb	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestnmb	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestnmb	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestnmb	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestnmb	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestnmw	%zmm0, %zmm1, %k2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestnmw	(%rax), %zmm1, %k2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestnmw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vptestnmw	%zmm0, %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vptestnmw	(%rax), %zmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vptestnmw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpckhbw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpckhbw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpckhbw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpckhbw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpckhbw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpckhbw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpckhbw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpckhbw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpckhbw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpckhwd	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpckhwd	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpckhwd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpckhwd	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpckhwd	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpckhwd	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpckhwd	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpckhwd	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpckhwd	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpcklbw	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpcklbw	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpcklbw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpcklbw	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpcklbw	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpcklbw	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpcklbw	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpcklbw	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpcklbw	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpcklwd	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpcklwd	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpcklwd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpcklwd	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpunpcklwd	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1} {z}

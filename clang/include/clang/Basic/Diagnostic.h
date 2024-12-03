@@ -23,7 +23,6 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -561,7 +560,7 @@ private:
   ArgToStringFnTy ArgToStringFn;
 
   /// Whether the diagnostic should be suppressed in FilePath.
-  llvm::unique_function<bool(diag::kind, llvm::StringRef /*FilePath*/) const>
+  llvm::unique_function<bool(diag::kind, StringRef /*FilePath*/) const>
       DiagSuppressionMapping;
 
 public:
@@ -973,8 +972,7 @@ public:
   /// These take presumed locations into account, and can still be overriden by
   /// clang-diagnostics pragmas.
   void setDiagSuppressionMapping(llvm::MemoryBuffer &Input);
-  bool isSuppressedViaMapping(diag::kind DiagId,
-                              llvm::StringRef FilePath) const;
+  bool isSuppressedViaMapping(diag::kind DiagId, StringRef FilePath) const;
 
   /// Issue the message to the client.
   ///

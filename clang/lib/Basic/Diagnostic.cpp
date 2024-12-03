@@ -500,14 +500,14 @@ public:
   // the last section take precedence in such cases.
   void processSections(DiagnosticsEngine &Diags);
 
-  bool isDiagSuppressed(diag::kind DiagId, llvm::StringRef FilePath) const;
+  bool isDiagSuppressed(diag::kind DiagId, StringRef FilePath) const;
 
 private:
   // Find the longest glob pattern that matches FilePath amongst
   // CategoriesToMatchers, return true iff the match exists and belongs to a
   // positive category.
   bool globsMatches(const llvm::StringMap<Matcher> &CategoriesToMatchers,
-                    llvm::StringRef FilePath) const;
+                    StringRef FilePath) const;
 
   llvm::DenseMap<diag::kind, const Section *> DiagToSection;
 };
@@ -532,7 +532,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
       LineAndSectionEntry;
   LineAndSectionEntry.reserve(Sections.size());
   for (const auto &Entry : Sections) {
-    llvm::StringRef DiagName = Entry.getKey();
+    StringRef DiagName = Entry.getKey();
     // Each section has a matcher with that section's name, attached to that
     // line.
     const auto &DiagSectionMatcher = Entry.getValue().SectionMatcher;
@@ -543,7 +543,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
   for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
     SmallVector<diag::kind> GroupDiags;
-    llvm::StringRef DiagGroup = SectionEntry->getKey();
+    StringRef DiagGroup = SectionEntry->getKey();
     if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
             WarningFlavor, DiagGroup, GroupDiags)) {
       StringRef Suggestion =
@@ -564,6 +564,8 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
   std::string Error;
   auto WarningSuppressionList = WarningsSpecialCaseList::create(Input, Error);
   if (!WarningSuppressionList) {
+    // FIXME: Use a `%select` statement instead of printing `Error` as-is. This
+    // should help localization.
     Report(diag::err_drv_malformed_warning_suppression_mapping)
         << Input.getBufferIdentifier() << Error;
     return;
@@ -571,13 +573,13 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
   WarningSuppressionList->processSections(*this);
   DiagSuppressionMapping =
       [WarningSuppressionList(std::move(WarningSuppressionList))](
-          diag::kind DiagId, llvm::StringRef Path) {
+          diag::kind DiagId, StringRef Path) {
         return WarningSuppressionList->isDiagSuppressed(DiagId, Path);
       };
 }
 
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
-                                               llvm::StringRef FilePath) const {
+                                               StringRef FilePath) const {
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
     return false;
@@ -592,11 +594,11 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
 bool WarningsSpecialCaseList::globsMatches(
     const llvm::StringMap<Matcher> &CategoriesToMatchers,
-    llvm::StringRef FilePath) const {
-  llvm::StringRef LongestMatch;
+    StringRef FilePath) const {
+  StringRef LongestMatch;
   bool LongestIsPositive = false;
   for (const auto &Entry : CategoriesToMatchers) {
-    llvm::StringRef Category = Entry.getKey();
+    StringRef Category = Entry.getKey();
     const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
     bool IsPositive = Category != "emit";
     for (const auto &[Pattern, Glob] : Matcher.Globs) {
@@ -612,7 +614,7 @@ bool WarningsSpecialCaseList::globsMatches(
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
-                                               llvm::StringRef FilePath) const {
+                                               StringRef FilePath) const {
   return DiagSuppressionMapping && DiagSuppressionMapping(DiagId, FilePath);
 }
 
@@ -789,6 +791,35 @@ static void HandleOrdinalModifier(unsigned ValNo,
   // We could use text forms for the first N ordinals, but the numeric
   // forms are actually nicer in diagnostics because they stand out.
   Out << ValNo << llvm::getOrdinalSuffix(ValNo);
+}
+
+// 123 -> "123".
+// 1234 -> "1.23k".
+// 123456 -> "123.46k".
+// 1234567 -> "1.23M".
+// 1234567890 -> "1.23G".
+// 1234567890123 -> "1.23T".
+static void HandleIntegerHumanModifier(int64_t ValNo,
+                                       SmallVectorImpl<char> &OutStr) {
+  static constexpr std::array<std::pair<int64_t, char>, 4> Units = {
+      {{1'000'000'000'000L, 'T'},
+       {1'000'000'000L, 'G'},
+       {1'000'000L, 'M'},
+       {1'000L, 'k'}}};
+
+  llvm::raw_svector_ostream Out(OutStr);
+  if (ValNo < 0) {
+    Out << "-";
+    ValNo = -ValNo;
+  }
+  for (const auto &[UnitSize, UnitSign] : Units) {
+    if (ValNo >= UnitSize) {
+      Out << llvm::format("%0.2f%c", ValNo / static_cast<double>(UnitSize),
+                          UnitSign);
+      return;
+    }
+  }
+  Out << ValNo;
 }
 
 /// PluralNumber - Parse an unsigned integer and advance Start.
@@ -1127,6 +1158,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                              OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "ordinal")) {
         HandleOrdinalModifier((unsigned)Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "human")) {
+        HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;
@@ -1145,6 +1178,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                              OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "ordinal")) {
         HandleOrdinalModifier(Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "human")) {
+        HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;

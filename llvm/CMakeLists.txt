@@ -27,7 +27,7 @@ if (NOT PACKAGE_VERSION)
 endif()
 
 if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
-  # "Symbol version prefix for libLLVM.so"
+  # "Symbol version prefix for libLLVM.so and libclang-cpp.so"
   set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
@@ -148,6 +148,13 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
   endif()
+endif()
+
+if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
+    "become a fatal error in the LLVM 21 release.  Please use "
+    "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
+    "https://libc.llvm.org/ for building the runtimes.")
 endif()
 
 # Select the runtimes to build
@@ -864,7 +871,7 @@ if(MSVC)
   if (BUILD_SHARED_LIBS)
     message(FATAL_ERROR "BUILD_SHARED_LIBS options is not supported on Windows.")
   endif()
- else()
+else()
   option(LLVM_BUILD_LLVM_C_DYLIB "Build libllvm-c re-export library (Darwin only)" OFF)
 endif()
 

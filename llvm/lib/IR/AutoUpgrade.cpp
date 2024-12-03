@@ -1119,6 +1119,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if (Name.consume_front("experimental.vector.")) {
       Intrinsic::ID ID =
           StringSwitch<Intrinsic::ID>(Name)
+              // Skip over extract.last.active, otherwise it will be 'upgraded'
+              // to a regular vector extract which is a different operation.
+              .StartsWith("extract.last.active.", Intrinsic::not_intrinsic)
               .StartsWith("extract.", Intrinsic::vector_extract)
               .StartsWith("insert.", Intrinsic::vector_insert)
               .StartsWith("splice.", Intrinsic::vector_splice)

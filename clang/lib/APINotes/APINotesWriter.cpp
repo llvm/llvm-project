@@ -1266,11 +1266,13 @@ public:
 class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
 public:
   unsigned getUnversionedInfoSize(const TagInfo &TI) {
+    // clang-format off
     return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
            2 + (TI.SwiftConformance ? TI.SwiftConformance->size() : 0) +
-           2 + getCommonTypeInfoSize(TI);
+           3 + getCommonTypeInfoSize(TI);
+    // clang-format on
   }
 
   void emitUnversionedInfo(raw_ostream &OS, const TagInfo &TI) {
@@ -1289,7 +1291,12 @@ public:
     writer.write<uint8_t>(Flags);
 
     if (auto Copyable = TI.isSwiftCopyable())
-      writer.write<uint8_t>(*Copyable ? kSwiftCopyable : kSwiftNonCopyable);
+      writer.write<uint8_t>(*Copyable ? kSwiftConforms : kSwiftDoesNotConform);
+    else
+      writer.write<uint8_t>(0);
+
+    if (auto Escapable = TI.isSwiftEscapable())
+      writer.write<uint8_t>(*Escapable ? kSwiftConforms : kSwiftDoesNotConform);
     else
       writer.write<uint8_t>(0);
 

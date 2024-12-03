@@ -3025,7 +3025,7 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
     return Kind == RegKind::Matrix ? RegNum : 0;
 
  if (Name.equals_insensitive("zt0"))
-    return Kind == RegKind::LookupTable ? AArch64::ZT0 : 0;
+    return Kind == RegKind::LookupTable ? unsigned(AArch64::ZT0) : 0;
 
   // The parsed register must be of RegKind Scalar
   if ((RegNum = MatchRegisterName(Name)))
@@ -3738,7 +3738,8 @@ static const struct Extension {
     {"sve", {AArch64::FeatureSVE}},
     {"sve-b16b16", {AArch64::FeatureSVEB16B16}},
     {"sve2", {AArch64::FeatureSVE2}},
-    {"sve2-aes", {AArch64::FeatureSVE2AES}},
+    {"sve-aes", {AArch64::FeatureSVEAES}},
+    {"sve2-aes", {AArch64::FeatureAliasSVE2AES, AArch64::FeatureSVEAES}},
     {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
     {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},

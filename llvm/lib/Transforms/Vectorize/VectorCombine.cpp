@@ -106,6 +106,7 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
+  bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -449,6 +450,8 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // TODO: Evaluate whether that always results in lowest cost. Alternatively,
   //       check the cost of creating a broadcast shuffle and shuffling both
   //       operands to element 0.
+  unsigned BestExtIndex = Extract0Cost > Extract1Cost ? Ext0Index : Ext1Index;
+  unsigned BestInsIndex = Extract0Cost > Extract1Cost ? Ext1Index : Ext0Index;
   InstructionCost CheapExtractCost = std::min(Extract0Cost, Extract1Cost);
 
   // Extra uses of the extracts mean that we include those costs in the
@@ -484,8 +487,18 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     // ShufMask = { poison, poison, 0, poison }
     // TODO: The cost model has an option for a "broadcast" shuffle
     //       (splat-from-element-0), but no option for a more general splat.
-    NewCost +=
-        TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+    if (auto *FixedVecTy = dyn_cast<FixedVectorType>(VecTy)) {
+      SmallVector<int> ShuffleMask(FixedVecTy->getNumElements(),
+                                   PoisonMaskElem);
+      ShuffleMask[BestInsIndex] = BestExtIndex;
+      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                    VecTy, ShuffleMask, CostKind, 0, nullptr,
+                                    {ConvertToShuffle});
+    } else {
+      NewCost +=
+          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
+                             {}, CostKind, 0, nullptr, {ConvertToShuffle});
+    }
   }
 
   // Aggressively form a vector op if the cost is equal because the transform
@@ -1708,11 +1721,11 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   Value *V0, *V1;
   UndefValue *U0, *U1;
   ArrayRef<int> OuterMask, InnerMask0, InnerMask1;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Shuffle(m_Value(V0), m_UndefValue(U0),
-                                              m_Mask(InnerMask0))),
-                           m_OneUse(m_Shuffle(m_Value(V1), m_UndefValue(U1),
-                                              m_Mask(InnerMask1))),
-                           m_Mask(OuterMask))))
+  if (!match(&I,
+             m_Shuffle(
+                 m_Shuffle(m_Value(V0), m_UndefValue(U0), m_Mask(InnerMask0)),
+                 m_Shuffle(m_Value(V1), m_UndefValue(U1), m_Mask(InnerMask1)),
+                 m_Mask(OuterMask))))
     return false;
 
   auto *ShufI0 = dyn_cast<Instruction>(I.getOperand(0));
@@ -1756,17 +1769,24 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   // Try to merge the shuffles if the new shuffle is not costly.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  InstructionCost OldCost =
+  InstructionCost InnerCost0 =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
-                         InnerMask0, CostKind, 0, nullptr, {V0, U0}, ShufI0) +
+                         InnerMask0, CostKind, 0, nullptr, {V0, U0}, ShufI0);
+  InstructionCost InnerCost1 =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
-                         InnerMask1, CostKind, 0, nullptr, {V1, U1}, ShufI1) +
+                         InnerMask1, CostKind, 0, nullptr, {V1, U1}, ShufI1);
+  InstructionCost OuterCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleImmTy,
                          OuterMask, CostKind, 0, nullptr, {ShufI0, ShufI1}, &I);
+  InstructionCost OldCost = InnerCost0 + InnerCost1 + OuterCost;
 
   InstructionCost NewCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleSrcTy,
                          NewMask, CostKind, 0, nullptr, {V0, V1});
+  if (!ShufI0->hasOneUse())
+    NewCost += InnerCost0;
+  if (!ShufI1->hasOneUse())
+    NewCost += InnerCost1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two shuffles: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -2787,6 +2807,51 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   return true;
 }
 
+/// insert (DstVec, (extract SrcVec, ExtIdx), InsIdx) -->
+/// shuffle (DstVec, SrcVec, Mask)
+bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
+  Value *DstVec, *SrcVec;
+  uint64_t ExtIdx, InsIdx;
+  if (!match(&I,
+             m_InsertElt(m_Value(DstVec),
+                         m_ExtractElt(m_Value(SrcVec), m_ConstantInt(ExtIdx)),
+                         m_ConstantInt(InsIdx))))
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!VecTy || SrcVec->getType() != VecTy)
+    return false;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (ExtIdx >= NumElts || InsIdx >= NumElts)
+    return false;
+
+  SmallVector<int> Mask(NumElts, 0);
+  std::iota(Mask.begin(), Mask.end(), 0);
+  Mask[InsIdx] = ExtIdx + NumElts;
+  // Cost
+  auto *Ins = cast<InsertElementInst>(&I);
+  auto *Ext = cast<ExtractElementInst>(I.getOperand(1));
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost OldCost =
+      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx) +
+      TTI.getVectorInstrCost(*Ins, VecTy, CostKind, InsIdx);
+
+  InstructionCost NewCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, VecTy, Mask);
+  if (!Ext->hasOneUse())
+    NewCost += TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
+
+  if (OldCost < NewCost)
+    return false;
+
+  Value *Shuf = Builder.CreateShuffleVector(DstVec, SrcVec, Mask);
+  replaceValue(I, *Shuf);
+
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -2843,6 +2908,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::InsertElement:
         MadeChange |= foldInsExtFNeg(I);
+        MadeChange |= foldInsExtVectorToShuffle(I);
         break;
       case Instruction::ShuffleVector:
         MadeChange |= foldPermuteOfBinops(I);

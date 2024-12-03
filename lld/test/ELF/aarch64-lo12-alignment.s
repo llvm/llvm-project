@@ -1,5 +1,5 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
 // RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
 
 // Test derived from a typical ODR violation where a global is declared

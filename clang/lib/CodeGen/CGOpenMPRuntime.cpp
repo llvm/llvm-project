@@ -23,14 +23,10 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/BitmaskEnum.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -40,7 +36,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -4671,7 +4666,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                                CGF.getContext().VoidPtrTy);
   }
   enum { NoSchedule = 0, Grainsize = 1, NumTasks = 2 };
-  llvm::Value *TaskArgs[] = {
+  llvm::SmallVector<llvm::Value *, 12> TaskArgs{
       UpLoc,
       ThreadID,
       Result.NewTask,
@@ -4688,12 +4683,18 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
       Data.Schedule.getPointer()
           ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
                                       /*isSigned=*/false)
-          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
-      Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                             Result.TaskDupFn, CGF.VoidPtrTy)
-                       : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
+          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0)};
+  if (Data.HasModifier)
+    TaskArgs.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 1));
+
+  TaskArgs.push_back(Result.TaskDupFn
+                         ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                               Result.TaskDupFn, CGF.VoidPtrTy)
+                         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_taskloop),
+                          CGM.getModule(), Data.HasModifier
+                                               ? OMPRTL___kmpc_taskloop_5
+                                               : OMPRTL___kmpc_taskloop),
                       TaskArgs);
 }
 
