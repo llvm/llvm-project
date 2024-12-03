@@ -19,7 +19,6 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
@@ -80,7 +79,7 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
       continue;
 
     PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
-    llvm::dbgs() << "Running " << Pass->name() << "\n";
+
     // Update the analysis manager as each pass runs and potentially
     // invalidates analyses.
     AM.invalidate(IR, PassPA);
