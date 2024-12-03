@@ -26,8 +26,6 @@ class TestCase(lldbtest.TestBase):
         expected_line_nums = [4]  # print(x)
         expected_line_nums += [5, 6, 7, 5, 6, 7, 5]  # two runs over the loop
         expected_line_nums += [8, 9]  # if line + if block
-        # FIXME: IRGen is producing incorrected line numbers. rdar://139826231
-        expected_line_nums[-1] = 11
         for expected_line_num in expected_line_nums:
             thread.StepOver()
             stop_reason = thread.GetStopReason()

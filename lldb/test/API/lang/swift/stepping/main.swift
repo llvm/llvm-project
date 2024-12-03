@@ -191,12 +191,12 @@ func main () -> Void
         case (let x, let y) where  
                 return_same(x) == return_same(y): // First case with a where statement.
             print("(\(x), \(y)) is on the line x == y")
-        case (let x, let y) where // Sometimes the line table steps to here after the body of the case. 
+        case (let x, let y) where
                 return_same(x) == -return_same(y): // Second case with a where statement.
             print("(\(x), \(y)) is on the line x == -y") // print in second case with where statement.
         case (let x, let y):
             print("Position is: (\(x), \(y))")
-    }  // This is the end of the switch statement
+    }
 
     var direct : P = ConformsDirectly() // Make a version of P that conforms directly
     direct.protocol_func(10)
