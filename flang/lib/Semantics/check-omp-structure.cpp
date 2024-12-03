@@ -428,7 +428,7 @@ void OmpStructureChecker::HasInvalidLoopBinding(
     for (const auto &clause : clauseList.v) {
       if (const auto *bindClause{
               std::get_if<parser::OmpClause::Bind>(&clause.u)}) {
-        if (bindClause->v.v != parser::OmpBindClause::Type::Teams) {
+        if (bindClause->v.v != parser::OmpBindClause::Binding::Teams) {
           context_.Say(beginDir.source, msg);
         }
       }
@@ -1481,34 +1481,26 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocator &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_allocate);
-  if (const auto &modifier{
-          std::get<std::optional<parser::OmpAllocateClause::AllocateModifier>>(
-              x.v.t)}) {
-    common::visit(
-        common::visitors{
-            [&](const parser::OmpAllocateClause::AllocateModifier::Allocator
-                    &y) {
-              RequiresPositiveParameter(llvm::omp::Clause::OMPC_allocate, y.v);
-              isPredefinedAllocator = GetIntValue(y.v).has_value();
-            },
-            [&](const parser::OmpAllocateClause::AllocateModifier::
-                    ComplexModifier &y) {
-              const auto &alloc = std::get<
-                  parser::OmpAllocateClause::AllocateModifier::Allocator>(y.t);
-              const auto &align =
-                  std::get<parser::OmpAllocateClause::AllocateModifier::Align>(
-                      y.t);
-              RequiresPositiveParameter(
-                  llvm::omp::Clause::OMPC_allocate, alloc.v);
-              RequiresPositiveParameter(
-                  llvm::omp::Clause::OMPC_allocate, align.v);
-              isPredefinedAllocator = GetIntValue(alloc.v).has_value();
-            },
-            [&](const parser::OmpAllocateClause::AllocateModifier::Align &y) {
-              RequiresPositiveParameter(llvm::omp::Clause::OMPC_allocate, y.v);
-            },
-        },
-        modifier->u);
+  if (OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_allocate, GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *align{
+            OmpGetUniqueModifier<parser::OmpAlignModifier>(modifiers)}) {
+      if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
+        context_.Say(OmpGetModifierSource(modifiers, align),
+            "The alignment value should be a constant positive integer"_err_en_US);
+      }
+    }
+    // The simple and complex modifiers have the same structure. They only
+    // differ in their syntax.
+    if (auto *alloc{OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(
+            modifiers)}) {
+      isPredefinedAllocator = GetIntValue(alloc->v).has_value();
+    }
+    if (auto *alloc{OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(
+            modifiers)}) {
+      isPredefinedAllocator = GetIntValue(alloc->v).has_value();
+    }
   }
 }
 
@@ -1652,7 +1644,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
               [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
                 deviceTypeClauseFound = true;
                 if (deviceTypeClause.v.v !=
-                    parser::OmpDeviceTypeClause::Type::Host) {
+                    parser::OmpDeviceTypeClause::DeviceTypeDescription::Host) {
                   // Function / subroutine explicitly marked as runnable by the
                   // target device.
                   deviceConstructFound_ = true;
@@ -2421,6 +2413,23 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
   ErrIfAllocatableVariable(var);
 }
 
+void OmpStructureChecker::CheckAtomicCompareConstruct(
+    const parser::OmpAtomicCompare &atomicCompareConstruct) {
+
+  // TODO: Check that the if-stmt is `if (var == expr) var = new`
+  //       [with or without then/end-do]
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  if (version < 51) {
+    context_.Say(atomicCompareConstruct.source,
+        "%s construct not allowed in %s, %s"_err_en_US,
+        atomicCompareConstruct.source, ThisVersion(version), TryVersion(51));
+  }
+
+  // TODO: More work needed here. Some of the Update restrictions need to
+  // be added, but Update isn't the same either.
+}
+
 // TODO: Allow cond-update-stmt once compare clause is supported.
 void OmpStructureChecker::CheckAtomicCaptureConstruct(
     const parser::OmpAtomicCapture &atomicCaptureConstruct) {
@@ -2565,6 +2574,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
             CheckHintClause<const parser::OmpAtomicClauseList>(
                 &std::get<0>(atomicCapture.t), &std::get<2>(atomicCapture.t));
             CheckAtomicCaptureConstruct(atomicCapture);
+          },
+          [&](const parser::OmpAtomicCompare &atomicCompare) {
+            const auto &dir{std::get<parser::Verbatim>(atomicCompare.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicMemoryOrderClause(
+                &std::get<0>(atomicCompare.t), &std::get<2>(atomicCompare.t));
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<0>(atomicCompare.t), &std::get<2>(atomicCompare.t));
+            CheckAtomicCompareConstruct(atomicCompare);
           },
       },
       x.u);
@@ -3380,10 +3399,15 @@ void OmpStructureChecker::Leave(const parser::OmpAtomic &) {
 // generalized restrictions.
 void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_aligned);
-
-  if (const auto &expr{
-          std::get<std::optional<parser::ScalarIntConstantExpr>>(x.v.t)}) {
-    RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_aligned, *expr);
+  if (OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_aligned, GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *align{OmpGetUniqueModifier<parser::OmpAlignment>(modifiers)}) {
+      if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
+        context_.Say(OmpGetModifierSource(modifiers, align),
+            "The alignment value should be a constant positive integer"_err_en_US);
+      }
+    }
   }
   // 2.8.1 TODO: list-item attribute check
 }
@@ -3431,36 +3455,82 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_if);
-  using dirNameModifier = parser::OmpIfClause::DirectiveNameModifier;
-  // TODO Check that, when multiple 'if' clauses are applied to a combined
-  // construct, at most one of them applies to each directive.
-  static std::unordered_map<dirNameModifier, OmpDirectiveSet>
-      dirNameModifierMap{{dirNameModifier::Parallel, llvm::omp::allParallelSet},
-          {dirNameModifier::Simd, llvm::omp::allSimdSet},
-          {dirNameModifier::Target, llvm::omp::allTargetSet},
-          {dirNameModifier::TargetData,
-              {llvm::omp::Directive::OMPD_target_data}},
-          {dirNameModifier::TargetEnterData,
-              {llvm::omp::Directive::OMPD_target_enter_data}},
-          {dirNameModifier::TargetExitData,
-              {llvm::omp::Directive::OMPD_target_exit_data}},
-          {dirNameModifier::TargetUpdate,
-              {llvm::omp::Directive::OMPD_target_update}},
-          {dirNameModifier::Task, {llvm::omp::Directive::OMPD_task}},
-          {dirNameModifier::Taskloop, llvm::omp::allTaskloopSet},
-          {dirNameModifier::Teams, llvm::omp::allTeamsSet}};
-  if (const auto &directiveName{
-          std::get<std::optional<dirNameModifier>>(x.v.t)}) {
-    auto search{dirNameModifierMap.find(*directiveName)};
-    if (search == dirNameModifierMap.end() ||
-        !search->second.test(GetContext().directive)) {
-      context_
-          .Say(GetContext().clauseSource,
-              "Unmatched directive name modifier %s on the IF clause"_err_en_US,
-              parser::ToUpperCaseLetters(
-                  parser::OmpIfClause::EnumToString(*directiveName)))
-          .Attach(
-              GetContext().directiveSource, "Cannot apply to directive"_en_US);
+  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Directive dir{GetContext().directive};
+
+  auto isConstituent{[](llvm::omp::Directive dir, llvm::omp::Directive part) {
+    using namespace llvm::omp;
+    llvm::ArrayRef<Directive> dirLeafs{getLeafConstructsOrSelf(dir)};
+    llvm::ArrayRef<Directive> partLeafs{getLeafConstructsOrSelf(part)};
+    // Maybe it's sufficient to check if every leaf of `part` is also a leaf
+    // of `dir`, but to be safe check if `partLeafs` is a sub-sequence of
+    // `dirLeafs`.
+    size_t dirSize{dirLeafs.size()}, partSize{partLeafs.size()};
+    // Find the first leaf from `part` in `dir`.
+    if (auto first = llvm::find(dirLeafs, partLeafs.front());
+        first != dirLeafs.end()) {
+      // A leaf can only appear once in a compound directive, so if `part`
+      // is a subsequence of `dir`, it must start here.
+      size_t firstPos{
+          static_cast<size_t>(std::distance(dirLeafs.begin(), first))};
+      llvm::ArrayRef<Directive> subSeq{
+          first, std::min<size_t>(dirSize - firstPos, partSize)};
+      return subSeq == partLeafs;
+    }
+    return false;
+  }};
+
+  if (OmpVerifyModifiers(
+          x.v, llvm::omp::OMPC_if, GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *dnm{OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(
+            modifiers)}) {
+      llvm::omp::Directive sub{dnm->v};
+      std::string subName{parser::ToUpperCaseLetters(
+          llvm::omp::getOpenMPDirectiveName(sub).str())};
+      std::string dirName{parser::ToUpperCaseLetters(
+          llvm::omp::getOpenMPDirectiveName(dir).str())};
+
+      parser::CharBlock modifierSource{OmpGetModifierSource(modifiers, dnm)};
+      auto desc{OmpGetDescriptor<parser::OmpDirectiveNameModifier>()};
+      std::string modName{desc.name.str()};
+
+      if (!isConstituent(dir, sub)) {
+        context_
+            .Say(modifierSource,
+                "%s is not a constituent of the %s directive"_err_en_US,
+                subName, dirName)
+            .Attach(GetContext().directiveSource,
+                "Cannot apply to directive"_en_US);
+      } else {
+        static llvm::omp::Directive valid45[]{
+            llvm::omp::OMPD_cancel, //
+            llvm::omp::OMPD_parallel, //
+            /* OMP 5.0+ also allows OMPD_simd */
+            llvm::omp::OMPD_target, //
+            llvm::omp::OMPD_target_data, //
+            llvm::omp::OMPD_target_enter_data, //
+            llvm::omp::OMPD_target_exit_data, //
+            llvm::omp::OMPD_target_update, //
+            llvm::omp::OMPD_task, //
+            llvm::omp::OMPD_taskloop, //
+            /* OMP 5.2+ also allows OMPD_teams */
+        };
+        if (version < 50 && sub == llvm::omp::OMPD_simd) {
+          context_.Say(modifierSource,
+              "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName,
+              modName, ThisVersion(version), TryVersion(50));
+        } else if (version < 52 && sub == llvm::omp::OMPD_teams) {
+          context_.Say(modifierSource,
+              "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName,
+              modName, ThisVersion(version), TryVersion(52));
+        } else if (!llvm::is_contained(valid45, sub) &&
+            sub != llvm::omp::OMPD_simd && sub != llvm::omp::OMPD_teams) {
+          context_.Say(modifierSource,
+              "%s is not allowed as '%s' in %s"_err_en_US, subName, modName,
+              ThisVersion(version));
+        }
+      }
     }
   }
 }
@@ -3605,19 +3675,25 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_device);
-  const parser::OmpDeviceClause &deviceClause = x.v;
-  const auto &device{std::get<1>(deviceClause.t)};
+  const parser::OmpDeviceClause &deviceClause{x.v};
+  const auto &device{std::get<parser::ScalarIntExpr>(deviceClause.t)};
   RequiresPositiveParameter(
       llvm::omp::Clause::OMPC_device, device, "device expression");
-  std::optional<parser::OmpDeviceClause::DeviceModifier> modifier =
-      std::get<0>(deviceClause.t);
-  if (modifier &&
-      *modifier == parser::OmpDeviceClause::DeviceModifier::Ancestor) {
-    if (GetContext().directive != llvm::omp::OMPD_target) {
-      context_.Say(GetContext().clauseSource,
-          "The ANCESTOR device-modifier must not appear on the DEVICE clause on"
-          " any directive other than the TARGET construct. Found on %s construct."_err_en_US,
-          parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
+  llvm::omp::Directive dir{GetContext().directive};
+
+  if (OmpVerifyModifiers(deviceClause, llvm::omp::OMPC_device,
+          GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(deviceClause)};
+
+    if (auto *deviceMod{
+            OmpGetUniqueModifier<parser::OmpDeviceModifier>(modifiers)}) {
+      using Value = parser::OmpDeviceModifier::Value;
+      if (dir != llvm::omp::OMPD_target && deviceMod->v == Value::Ancestor) {
+        auto name{OmpGetDescriptor<parser::OmpDeviceModifier>().name};
+        context_.Say(OmpGetModifierSource(modifiers, deviceMod),
+            "The ANCESTOR %s must not appear on the DEVICE clause on any directive other than the TARGET construct. Found on %s construct."_err_en_US,
+            name.str(), parser::ToUpperCaseLetters(getDirectiveName(dir)));
+      }
     }
   }
 }
@@ -3695,18 +3771,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         }
       }
     }
-    if (std::get<std::optional<parser::OmpIterator>>(taskDep->t)) {
-      unsigned allowedInVersion{50};
-      if (version < allowedInVersion) {
-        context_.Say(GetContext().clauseSource,
-            "Iterator modifiers are not supported in %s, %s"_warn_en_US,
-            ThisVersion(version), TryVersion(allowedInVersion));
-      } else {
+    if (OmpVerifyModifiers(*taskDep, llvm::omp::OMPC_depend,
+            GetContext().clauseSource, context_)) {
+      auto &modifiers{OmpGetModifiers(*taskDep)};
+      if (OmpGetUniqueModifier<parser::OmpIterator>(modifiers)) {
         if (dir == llvm::omp::OMPD_depobj) {
           context_.Say(GetContext().clauseSource,
-              "An iterator-modifier may specify multiple locators, "
-              "a DEPEND clause on a DEPOBJ construct must only specify "
-              "one locator"_warn_en_US);
+              "An iterator-modifier may specify multiple locators, a DEPEND clause on a DEPOBJ construct must only specify one locator"_warn_en_US);
         }
       }
     }
@@ -3859,20 +3930,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_lastprivate);
 
-  using LastprivateModifier = parser::OmpLastprivateClause::LastprivateModifier;
-  const auto &maybeMod{std::get<std::optional<LastprivateModifier>>(x.v.t)};
-  if (maybeMod) {
-    unsigned version{context_.langOptions().OpenMPVersion};
-    unsigned allowedInVersion = 50;
-    if (version < allowedInVersion) {
-      std::string thisVersion{
-          std::to_string(version / 10) + "." + std::to_string(version % 10)};
-      context_.Say(GetContext().clauseSource,
-          "LASTPRIVATE clause with CONDITIONAL modifier is not "
-          "allowed in %s, %s"_err_en_US,
-          ThisVersion(version), TryVersion(allowedInVersion));
-    }
-  }
+  OmpVerifyModifiers(
+      x.v, llvm::omp::OMPC_lastprivate, GetContext().clauseSource, context_);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {

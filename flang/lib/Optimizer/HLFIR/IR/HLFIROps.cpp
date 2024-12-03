@@ -1427,16 +1427,7 @@ llvm::LogicalResult hlfir::EndAssociateOp::verify() {
 void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &result, mlir::Value var,
                             mlir::Value mustFree) {
-  hlfir::ExprType::Shape typeShape;
-  bool isPolymorphic = fir::isPolymorphicType(var.getType());
-  mlir::Type type = getFortranElementOrSequenceType(var.getType());
-  if (auto seqType = mlir::dyn_cast<fir::SequenceType>(type)) {
-    typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
-    type = seqType.getEleTy();
-  }
-
-  auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
-                                         isPolymorphic);
+  mlir::Type resultType = hlfir::getExprType(var.getType());
   return build(builder, result, resultType, var, mustFree);
 }
 

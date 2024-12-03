@@ -390,17 +390,17 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-struct FP8DstByteSelInfo {
-  uint16_t Opcode;
-  bool HasFP8DstByteSel;
-};
-
 #define GET_FP8DstByteSelTable_DECL
 #define GET_FP8DstByteSelTable_IMPL
 
 struct DPMACCInstructionInfo {
   uint16_t Opcode;
   bool IsDPMACCInstruction;
+};
+
+struct FP8DstByteSelInfo {
+  uint16_t Opcode;
+  bool HasFP8DstByteSel;
 };
 
 #define GET_DPMACCInstructionTable_DECL
@@ -438,6 +438,8 @@ struct DPMACCInstructionInfo {
 #define GET_getMFMA_F8F6F4_WithSize_DECL
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
 #define GET_isMFMA_F8F6F4Table_IMPL
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {

@@ -428,7 +428,7 @@ def unary_undef_to_zero: GICombineRule<
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST, G_ANYEXT):$root,
+  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -1857,6 +1857,26 @@ class integer_of_opcode<Instruction castOpcode> : GICombineRule <
 
 def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 
+def anyext_undef: GICombineRule<
+   (defs root:$root),
+   (match (G_IMPLICIT_DEF $undef),
+          (G_ANYEXT $root, $undef):$Aext),
+   (apply [{ Helper.replaceInstWithUndef(*${Aext}); }])>;
+
+def zext_undef: GICombineRule<
+   (defs root:$root),
+   (match (G_IMPLICIT_DEF $undef),
+          (G_ZEXT $root, $undef):$Zext,
+   [{ return Helper.isConstantLegalOrBeforeLegalizer(MRI.getType(${Zext}->getOperand(0).getReg())); }]),
+   (apply [{ Helper.replaceInstWithConstant(*${Zext}, 0); }])>;
+
+def sext_undef: GICombineRule<
+   (defs root:$root),
+   (match (G_IMPLICIT_DEF $undef),
+          (G_SEXT $root, $undef):$Sext,
+   [{ return Helper.isConstantLegalOrBeforeLegalizer(MRI.getType(${Sext}->getOperand(0).getReg())); }]),
+   (apply [{ Helper.replaceInstWithConstant(*${Sext}, 0); }])>;
+
 def cast_of_cast_combines: GICombineGroup<[
   truncate_of_zext,
   truncate_of_sext,
@@ -1882,7 +1902,10 @@ def cast_combines: GICombineGroup<[
   narrow_binop_and,
   narrow_binop_or,
   narrow_binop_xor,
-  integer_of_truncate
+  integer_of_truncate,
+  anyext_undef,
+  sext_undef,
+  zext_undef
 ]>;
 
 def canonicalize_icmp : GICombineRule<
