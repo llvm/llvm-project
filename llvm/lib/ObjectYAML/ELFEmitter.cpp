@@ -1800,7 +1800,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     return;
 
   unsigned Align;
-  switch (SHeader.sh_addralign) {
+  switch (Section.AddressAlign) {
   case 0:
   case 4:
     Align = 4;
@@ -1810,7 +1810,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     break;
   default:
     reportError(Section.Name + ": invalid alignment for a note section: 0x" +
-                Twine::utohexstr(SHeader.sh_addralign));
+                Twine::utohexstr(Section.AddressAlign));
     return;
   }
 
