@@ -134,7 +134,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
 
   uint32_t *Address = reinterpret_cast<uint32_t *>(Sled.address());
   if (Enable) {
-#if SANITIZER_RISCV64
+#if __riscv_xlen == 64
     // If the ISA is RV64, the Tracing Hook needs to be typecast to a 64 bit
     // value.
     uint32_t LoTracingHookAddr = lo12(reinterpret_cast<uint64_t>(TracingHook));
@@ -143,7 +143,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
         lo12((reinterpret_cast<uint64_t>(TracingHook) + 0x80000000) >> 32);
     uint32_t HighestTracingHookAddr =
         hi20((reinterpret_cast<uint64_t>(TracingHook) + 0x80000000) >> 32);
-#elif defined(__riscv) && (__riscv_xlen == 32)
+#elif __riscv_xlen == 32
     // We typecast the Tracing Hook to a 32 bit value for RV32
     uint32_t LoTracingHookAddr = lo12(reinterpret_cast<uint32_t>(TracingHook));
     uint32_t HiTracingHookAddr = hi20((reinterpret_cast<uint32_t>(TracingHook));
@@ -159,10 +159,10 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
     // differences in addresses to which instructions are stored.
     size_t Idx = 1U;
     const uint32_t XLenBytes = __riscv_xlen / 8;
-#if SANITIZER_RISCV64
+#if __riscv_xlen == 64
     const unsigned LoadOp = PatchOpcodes::PO_LD;
     const unsigned StoreOp = PatchOpcodes::PO_SD;
-#elif defined(__riscv) && (__riscv_xlen == 32)
+#elif __riscv_xlen == 32
     const unsigned LoadOp = PatchOpcodes::PO_LW;
     const unsigned StoreOp = PatchOpcodes::PO_SW;
 #endif
@@ -174,7 +174,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
     Address[Idx++] = encodeSTypeInstruction(StoreOp, RegNum::RN_SP,
                                             RegNum::RN_A0, XLenBytes);
 
-#if SANITIZER_RISCV64
+#if __riscv_xlen == 64
     Address[Idx++] = encodeUTypeInstruction(PatchOpcodes::PO_LUI, RegNum::RN_T1,
                                             HighestTracingHookAddr);
     Address[Idx++] =
@@ -187,7 +187,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
                                             HiTracingHookAddr);
     Address[Idx++] = encodeITypeInstruction(
         PatchOpcodes::PO_ADDI, RegNum::RN_RA, RegNum::RN_RA, LoTracingHookAddr);
-#if SANITIZER_RISCV64
+#if __riscv_xlen == 64
     Address[Idx++] = encodeRTypeInstruction(PatchOpcodes::PO_ADD, RegNum::RN_RA,
                                             RegNum::RN_T1, RegNum::RN_RA);
 #endif
@@ -217,10 +217,10 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
     uint32_t CreateBranch = encodeJTypeInstruction(
     // Jump distance is different in both ISAs due to difference in size of
     // sleds
-#if SANITIZER_RISCV64
+#if __riscv_xlen == 64
         PatchOpcodes::PO_J, RegNum::RN_X0,
         68); // jump encodes an offset of 68
-#elif defined(__riscv) && (__riscv_xlen == 32)
+#elif __riscv_xlen == 32
         PatchOpcodes::PO_J, RegNum::RN_X0,
         52); // jump encodes an offset of 52
 #endif
