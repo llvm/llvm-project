@@ -733,6 +733,8 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
     LLVM_DEBUG(dbgs() << "LV: FindLastIV valid range is " << ValidRange
                       << ", and the signed range of " << *AR << " is "
                       << IVRange << "\n");
+    // Ensure the induction variable does not wrap around by verifying that its
+    // range is fully contained within the valid range.
     return ValidRange.contains(IVRange);
   };
 
