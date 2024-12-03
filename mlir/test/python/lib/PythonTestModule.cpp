@@ -1,31 +1,27 @@
-//===- PythonTestModuleNanobind.cpp - PythonTest dialect extension --------===//
+//===- PythonTestModule.cpp - Python extension for the PythonTest dialect -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This is the nanobind edition of the PythonTest dialect module.
-//===----------------------------------------------------------------------===//
-
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/vector.h>
 
 #include "PythonTestCAPI.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
 
-namespace nb = nanobind;
-using namespace mlir::python::nanobind_adaptors;
+namespace py = pybind11;
+using namespace mlir::python::adaptors;
+using namespace pybind11::literals;
 
 static bool mlirTypeIsARankedIntegerTensor(MlirType t) {
   return mlirTypeIsARankedTensor(t) &&
          mlirTypeIsAInteger(mlirShapedTypeGetElementType(t));
 }
 
-NB_MODULE(_mlirPythonTestNanobind, m) {
+PYBIND11_MODULE(_mlirPythonTest, m) {
   m.def(
       "register_python_test_dialect",
       [](MlirContext context, bool load) {
@@ -36,7 +32,7 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
           mlirDialectHandleLoadDialect(pythonTestDialect, context);
         }
       },
-      nb::arg("context"), nb::arg("load") = true);
+      py::arg("context"), py::arg("load") = true);
 
   m.def(
       "register_dialect",
@@ -45,53 +41,52 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
             mlirGetDialectHandle__python_test__();
         mlirDialectHandleInsertDialect(pythonTestDialect, registry);
       },
-      nb::arg("registry"));
+      py::arg("registry"));
 
   mlir_attribute_subclass(m, "TestAttr",
                           mlirAttributeIsAPythonTestTestAttribute,
                           mlirPythonTestTestAttributeGetTypeID)
       .def_classmethod(
           "get",
-          [](const nb::object &cls, MlirContext ctx) {
+          [](const py::object &cls, MlirContext ctx) {
             return cls(mlirPythonTestTestAttributeGet(ctx));
           },
-          nb::arg("cls"), nb::arg("context").none() = nb::none());
+          py::arg("cls"), py::arg("context") = py::none());
 
   mlir_type_subclass(m, "TestType", mlirTypeIsAPythonTestTestType,
                      mlirPythonTestTestTypeGetTypeID)
       .def_classmethod(
           "get",
-          [](const nb::object &cls, MlirContext ctx) {
+          [](const py::object &cls, MlirContext ctx) {
             return cls(mlirPythonTestTestTypeGet(ctx));
           },
-          nb::arg("cls"), nb::arg("context").none() = nb::none());
+          py::arg("cls"), py::arg("context") = py::none());
 
   auto typeCls =
       mlir_type_subclass(m, "TestIntegerRankedTensorType",
                          mlirTypeIsARankedIntegerTensor,
-                         nb::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+                         py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
                              .attr("RankedTensorType"))
           .def_classmethod(
               "get",
-              [](const nb::object &cls, std::vector<int64_t> shape,
+              [](const py::object &cls, std::vector<int64_t> shape,
                  unsigned width, MlirContext ctx) {
                 MlirAttribute encoding = mlirAttributeGetNull();
                 return cls(mlirRankedTensorTypeGet(
                     shape.size(), shape.data(), mlirIntegerTypeGet(ctx, width),
                     encoding));
               },
-              nb::arg("cls"), nb::arg("shape"), nb::arg("width"),
-              nb::arg("context").none() = nb::none());
+              "cls"_a, "shape"_a, "width"_a, "context"_a = py::none());
 
-  assert(nb::hasattr(typeCls.get_class(), "static_typeid") &&
+  assert(py::hasattr(typeCls.get_class(), "static_typeid") &&
          "TestIntegerRankedTensorType has no static_typeid");
 
   MlirTypeID mlirRankedTensorTypeID = mlirRankedTensorTypeGetTypeID();
 
-  nb::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-      .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
-          mlirRankedTensorTypeID, nb::arg("replace") = true)(
-          nanobind::cpp_function([typeCls](const nb::object &mlirType) {
+  py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+      .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(mlirRankedTensorTypeID,
+                                                        "replace"_a = true)(
+          pybind11::cpp_function([typeCls](const py::object &mlirType) {
             return typeCls.get_class()(mlirType);
           }));
 
@@ -101,11 +96,11 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
                         return mlirValueIsNull(self);
                       });
 
-  nb::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+  py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
       .attr(MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR)(
           mlirRankedTensorTypeID)(
-          nanobind::cpp_function([valueCls](const nb::object &valueObj) {
-            nb::object capsule = mlirApiObjectToCapsule(valueObj);
+          pybind11::cpp_function([valueCls](const py::object &valueObj) {
+            py::object capsule = mlirApiObjectToCapsule(valueObj);
             MlirValue v = mlirPythonCapsuleToValue(capsule.ptr());
             MlirType t = mlirValueGetType(v);
             // This is hyper-specific in order to exercise/test registering a
