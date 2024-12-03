@@ -76,7 +76,7 @@ public:
     // Init symbol is __ImageBase symbol.
     auto &ImageBaseSymbol = G->addDefinedSymbol(
         HeaderBlock, 0, *R->getInitializerSymbol(), HeaderBlock.getSize(),
-        jitlink::Linkage::Strong, jitlink::Scope::SideEffectsOnly, false, true);
+        jitlink::Linkage::Strong, jitlink::Scope::Default, false, true);
 
     addImageBaseRelocationEdge(HeaderBlock, ImageBaseSymbol);
 
