@@ -5325,8 +5325,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           break;
         }
       } else if (I->getType()->isArrayParameterType()) {
-        // use the tmp created by the HLSLOutArgExpr
-        // instead of creating a new one below and copying the tmp into it.
+        // Don't produce a temporary for ArrayParameterType arguments.
+        // ArrayParameterType arguments are only created from
+        // HLSL_ArrayRValue casts and HLSLOutArgExpr expressions, both
+        // of which create temporaries already. This allows us to just use the
+        // scalar for the decayed array pointer as the argument directly.
         IRCallArgs[FirstIRArg] = I->getKnownRValue().getScalarVal();
         break;
       }
