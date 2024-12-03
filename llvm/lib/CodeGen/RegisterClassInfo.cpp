@@ -222,8 +222,7 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   assert(RC && "Failed to find register class");
   compute(RC);
   unsigned NAllocatableRegs = getNumAllocatableRegs(RC);
-  unsigned RegPressureSetLimit =
-      TRI->getRegPressureSetLimit(*MF, Idx, /*RemoveReserved=*/false);
+  unsigned RegPressureSetLimit = TRI->getRegPressureSetLimit(*MF, Idx);
   // If all the regs are reserved, return raw RegPressureSetLimit.
   // One example is VRSAVERC in PowerPC.
   // Avoid returning zero, getRegPressureSetLimit(Idx) assumes computePSetLimit

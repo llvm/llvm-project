@@ -144,8 +144,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
   }
-  unsigned getRegPressureSetLimit(const MachineFunction &MF, unsigned Idx,
-                                  bool RemoveReserved = true) const override;
+  unsigned getRegPressureSetLimit(const MachineFunction &MF,
+                                  unsigned Idx) const override;
 };
 } // namespace llvm
 

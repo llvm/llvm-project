@@ -914,10 +914,8 @@ public:
 
   /// Get the register unit pressure limit for this dimension.
   /// This limit must be adjusted dynamically for reserved registers.
-  /// If RemoveReserved is true, the target should remove reserved registers.
   virtual unsigned getRegPressureSetLimit(const MachineFunction &MF,
-                                          unsigned Idx,
-                                          bool RemoveReserved = true) const = 0;
+                                          unsigned Idx) const = 0;
 
   /// Get the dimensions of register pressure impacted by this register class.
   /// Returns a -1 terminated array of pressure set IDs.

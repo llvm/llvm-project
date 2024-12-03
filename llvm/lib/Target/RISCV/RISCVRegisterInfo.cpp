@@ -936,12 +936,8 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 }
 
 unsigned RISCVRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
-                                                   unsigned Idx,
-                                                   bool RemoveReserved) const {
+                                                   unsigned Idx) const {
   if (Idx == RISCV::RegisterPressureSets::GPRAll) {
-    if (!RemoveReserved)
-      return 32;
-
     unsigned Reserved = 0;
     BitVector ReservedRegs = getReservedRegs(MF);
     for (MCPhysReg Reg = RISCV::X0_H; Reg <= RISCV::X31_H; Reg++)
@@ -950,5 +946,5 @@ unsigned RISCVRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
 
     return 32 - Reserved;
   }
-  return RISCVGenRegisterInfo::getRegPressureSetLimit(MF, Idx, RemoveReserved);
+  return RISCVGenRegisterInfo::getRegPressureSetLimit(MF, Idx);
 }
