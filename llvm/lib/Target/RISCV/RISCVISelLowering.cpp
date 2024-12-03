@@ -4442,8 +4442,8 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
   unsigned ExtOpc =
     isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
   Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
-  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT,
-                     DAG.getUNDEF(VT), Scalar, VL);
+  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, DAG.getUNDEF(VT), Scalar,
+                     VL);
 }
 
 // Can this shuffle be performed on exactly one (possibly larger) input?
@@ -4476,7 +4476,6 @@ static SDValue getSingleShuffleSrc(MVT VT, MVT ContainerVT, SDValue V1,
 
   return Src;
 }
-
 
 /// Is this shuffle interleaving contiguous elements from one vector into the
 /// even elements and contiguous elements from another vector into the odd
@@ -4594,9 +4593,9 @@ static int isElementRotate(int &LoSrc, int &HiSrc, ArrayRef<int> Mask) {
 // element type must be a legal element type.
 // [a, p, b, q, c, r, d, s] -> [a, b, c, d] (Factor=2, Index=0)
 //                          -> [p, q, r, s] (Factor=2, Index=1)
-static SDValue getDeinterleaveShiftAndTrunc(const SDLoc &DL, MVT VT, SDValue Src,
-                                            unsigned Factor, unsigned Index,
-                                            SelectionDAG &DAG) {
+static SDValue getDeinterleaveShiftAndTrunc(const SDLoc &DL, MVT VT,
+                                            SDValue Src, unsigned Factor,
+                                            unsigned Index, SelectionDAG &DAG) {
   unsigned EltBits = VT.getScalarSizeInBits();
   ElementCount SrcEC = Src.getValueType().getVectorElementCount();
   MVT WideSrcVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits * Factor),
@@ -4610,8 +4609,8 @@ static SDValue getDeinterleaveShiftAndTrunc(const SDLoc &DL, MVT VT, SDValue Src
                             DAG.getConstant(Shift, DL, WideSrcVT));
   Res = DAG.getNode(ISD::TRUNCATE, DL, ResVT, Res);
   MVT IntVT = VT.changeVectorElementTypeToInteger();
-  Res = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, IntVT, DAG.getUNDEF(IntVT),
-                    Res, DAG.getVectorIdxConstant(0, DL));
+  Res = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, IntVT, DAG.getUNDEF(IntVT), Res,
+                    DAG.getVectorIdxConstant(0, DL));
   return DAG.getBitcast(VT, Res);
 }
 
@@ -5302,8 +5301,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (ShuffleVectorInst::isReverseMask(Mask, NumElts) && V2.isUndef())
     return DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1);
 
-  // If this is a deinterleave(2,4,8) and we can widen the vector, then we can use
-  // shift and truncate to perform the shuffle.
+  // If this is a deinterleave(2,4,8) and we can widen the vector, then we can
+  // use shift and truncate to perform the shuffle.
   // TODO: For Factor=6, we can perform the first step of the deinterleave via
   // shift-and-trunc reducing total cost for everything except an mf8 result.
   // TODO: For Factor=4,8, we can do the same when the ratio isn't high enough
@@ -5318,15 +5317,15 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         if (SDValue Src = getSingleShuffleSrc(VT, ContainerVT, V1, V2)) {
           if (Src.getValueType() == VT) {
             EVT WideVT = VT.getDoubleNumVectorElementsVT();
-            Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, DAG.getUNDEF(WideVT),
-                              Src, DAG.getVectorIdxConstant(0, DL));
+            Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT,
+                              DAG.getUNDEF(WideVT), Src,
+                              DAG.getVectorIdxConstant(0, DL));
           }
           return getDeinterleaveShiftAndTrunc(DL, VT, Src, Factor, Index, DAG);
         }
       }
     }
   }
-
 
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
