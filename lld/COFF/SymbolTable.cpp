@@ -117,7 +117,7 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
-    file->ctx.symtab.addFile(file);
+    file->symtab.ctx.symtab.addFile(file);
     break;
   }
   case Symbol::Kind::LazyDLLSymbolKind: {
@@ -177,7 +177,7 @@ getFileLine(const SectionChunk *c, uint32_t addr) {
   std::optional<std::pair<StringRef, uint32_t>> fileLine =
       getFileLineCodeView(c, addr);
   // If codeview didn't yield any result, check dwarf in MinGW mode.
-  if (!fileLine && c->file->ctx.config.mingw)
+  if (!fileLine && c->file->symtab.ctx.config.mingw)
     fileLine = getFileLineDwarf(c, addr);
   return fileLine;
 }
@@ -235,7 +235,7 @@ getSymbolLocations(ObjFile *file, uint32_t symIndex, size_t maxStrings) {
          << "\n>>>               ";
     os << toString(file);
     if (loc.sym)
-      os << ":(" << toString(file->ctx, *loc.sym) << ')';
+      os << ":(" << toString(file->symtab.ctx, *loc.sym) << ')';
   }
   return std::make_pair(symbolLocations, numLocations);
 }
