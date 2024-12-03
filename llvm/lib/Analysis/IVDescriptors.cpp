@@ -688,8 +688,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 // value of the data type or a non-constant value by using mask and multiple
 // reduction operations.
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
-                                          ScalarEvolution &SE) {
+RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
+                                          Instruction *I, ScalarEvolution &SE) {
   // TODO: Support the vectorization of FindLastIV when the reduction phi is
   // used by more than one select instruction. This vectorization is only
   // performed when the SCEV of each increasing induction variable used by the
@@ -711,7 +711,7 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
       return false;
 
     auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(V));
-    if (!AR)
+    if (!AR || AR->getLoop() != TheLoop)
       return false;
 
     const SCEV *Step = AR->getStepRecurrence(SE);
@@ -880,7 +880,7 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
         Kind == RecurKind::Add || Kind == RecurKind::Mul)
       return isConditionalRdxPattern(Kind, I);
     if (isFindLastIVRecurrenceKind(Kind) && SE)
-      return isFindLastIVPattern(OrigPhi, I, *SE);
+      return isFindLastIVPattern(L, OrigPhi, I, *SE);
     [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
