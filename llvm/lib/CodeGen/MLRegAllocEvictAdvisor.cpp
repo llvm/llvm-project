@@ -109,7 +109,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<RegAllocEvictionAdvisorAnalysisLegacy>();
-    AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
+    AU.addRequired<RegAllocPriorityAdvisorAnalysisLegacy>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -1213,8 +1213,8 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
 
   getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().logRewardIfNeeded(
       MF, GetReward);
-  getAnalysis<RegAllocPriorityAdvisorAnalysis>().logRewardIfNeeded(MF,
-                                                                   GetReward);
+  getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().logRewardIfNeeded(
+      MF, GetReward);
   return false;
 }
 #endif // #ifdef LLVM_HAVE_TFLITE
