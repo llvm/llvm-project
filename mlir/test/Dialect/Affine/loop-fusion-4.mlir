@@ -285,3 +285,50 @@ module {
     spirv.ReturnValue %3 : !spirv.array<8192 x f32>
   }
 }
+
+// -----
+
+// Basic test for not fusing loops where a vector load depends on 
+// the entire result of a previous loop. store shape < load shape
+
+// CHECK-LABEL: func @should_not_fuse_across_memref_store_load_bounds() {
+func.func @should_not_fuse_across_memref_store_load_bounds() {
+  %a = memref.alloc() : memref<64x512xf32> 
+  %b = memref.alloc() : memref<64x512xf32>
+  %c = memref.alloc() : memref<64x512xf32> 
+  %d = memref.alloc() : memref<64x4096xf32>
+  %e = memref.alloc() : memref<64x4096xf32>
+
+  affine.for %j = 0 to 8 {
+      %lhs = affine.vector_load %a[0, %j * 64] : memref<64x512xf32>, vector<64x64xf32>
+      %rhs = affine.vector_load %b[0, %j * 64] : memref<64x512xf32>, vector<64x64xf32>
+      %res = arith.addf %lhs, %rhs : vector<64x64xf32>
+      affine.vector_store %res, %c[0, %j * 64] : memref<64x512xf32>, vector<64x64xf32>
+  }
+
+  affine.for %j = 0 to 8 {
+      %lhs = affine.vector_load %c[0, 0] : memref<64x512xf32>, vector<64x512xf32>
+      %rhs = affine.vector_load %d[0, %j * 512] : memref<64x4096xf32>, vector<64x512xf32>
+      %res = arith.subf %lhs, %rhs : vector<64x512xf32>
+      affine.vector_store %res, %d[0, %j * 512] : memref<64x4096xf32>, vector<64x512xf32>
+  }
+
+  return
+}
+// CHECK-LABEL: func.func @should_not_fuse_across_memref_store_load_bounds
+// CHECK: [[a:%[0-9]+]] = memref.alloc() : memref<64x512xf32>
+// CHECK: [[b:%[0-9]+]] = memref.alloc() : memref<64x512xf32>
+// CHECK: [[c:%[0-9]+]] = memref.alloc() : memref<64x512xf32>
+// CHECK: [[d:%[0-9]+]] = memref.alloc() : memref<64x4096xf32>
+// CHECK: [[e:%[0-9]+]] = memref.alloc() : memref<64x4096xf32>
+// CHECK: affine.for %[[j:[a-z0-9]+]] = 0 to 8
+// CHECK: %[[lhs:[a-z0-9]+]] = affine.vector_load [[a]][0, %[[j]] * 64] : memref<64x512xf32>, vector<64x64xf32>
+// CHECK: %[[rhs:[a-z0-9]+]] = affine.vector_load [[b]][0, %[[j]] * 64] : memref<64x512xf32>, vector<64x64xf32>
+// CHECK: %[[res:[a-z0-9]+]] = arith.addf %[[lhs]], %[[rhs]] : vector<64x64xf32>
+// CHECK: affine.vector_store %[[res]], [[c]][0, %[[j]] * 64] : memref<64x512xf32>, vector<64x64xf32>
+// CHECK: affine.for %[[j_2:[a-z0-9]+]] = 0 to 8
+// CHECK: %[[lhs_2:[a-z0-9]+]] = affine.vector_load [[c]][0, 0] : memref<64x512xf32>, vector<64x512xf32>
+// CHECK: %[[rhs_2:[a-z0-9]+]] = affine.vector_load [[d]][0, %[[j_2]] * 512] : memref<64x4096xf32>, vector<64x512xf32>
+// CHECK: %[[res_2:[a-z0-9]+]] = arith.subf %[[lhs_2]], %[[rhs_2]] : vector<64x512xf32>
+// CHECK: affine.vector_store %[[res_2]], [[d]][0, %[[j_2]] * 512] : memref<64x4096xf32>, vector<64x512xf32>
+// CHECK: return
