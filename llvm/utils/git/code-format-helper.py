@@ -345,7 +345,8 @@ class UndefGetFormatHelper(FormatHelper):
         cmd += files
 
         if args.verbose:
-            print(f"Running: {' '.join(f"'{c}'" for c in cmd)}")
+            cmd_str = ' '.join(f"'{c}'" for c in cmd)
+            print(f"Running: {cmd_str}")
         self.cmd = cmd
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sys.stdout.write(proc.stderr.decode("utf-8"))
