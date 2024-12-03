@@ -1676,6 +1676,14 @@ def StdC : StandardSpec<"stdc"> {
               RetValSpec<TimeTType>,
               [ArgSpec<TimeTTypePtr>]
           >,
+          FunctionSpec<
+              "timespec_get",
+              RetValSpec<IntType>,
+              [
+                ArgSpec<StructTimeSpecPtr>,
+                ArgSpec<IntType>,
+              ]
+          >,
       ]
   >;
 

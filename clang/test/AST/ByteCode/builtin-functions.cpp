@@ -7,6 +7,10 @@
 // RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
 // RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
 
+extern "C" {
+  typedef decltype(sizeof(int)) size_t;
+  extern size_t wcslen(const wchar_t *p);
+}
 
 namespace strcmp {
   constexpr char kFoobar[6] = {'f','o','o','b','a','r'};
@@ -85,6 +89,14 @@ constexpr const char *a = "foo\0quux";
   constexpr char d[] = { 'f', 'o', 'o' }; // no nul terminator.
   constexpr int bad = __builtin_strlen(d); // both-error {{constant expression}} \
                                            // both-note {{one-past-the-end}}
+
+  constexpr int wn = __builtin_wcslen(L"hello");
+  static_assert(wn == 5);
+  constexpr int wm = wcslen(L"hello"); // both-error {{constant expression}} \
+                                       // both-note {{non-constexpr function 'wcslen' cannot be used in a constant expression}}
+
+  int arr[3]; // both-note {{here}}
+  int wk = arr[wcslen(L"hello")]; // both-warning {{array index 5}}
 }
 
 namespace nan {
@@ -1138,4 +1150,19 @@ namespace BuiltinMemcpy {
     return b;
   }
   static_assert(simple() == 12);
+
+
+  extern struct Incomplete incomplete;
+  constexpr struct Incomplete *null_incomplete = 0;
+  static_assert(__builtin_memcpy(null_incomplete, null_incomplete, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                      // both-note {{source of 'memcpy' is nullptr}}
+
+
+  constexpr int simpleMove() {
+    int a = 12;
+    int b = 0;
+    __builtin_memmove(&b, &a, sizeof(a));
+    return b;
+  }
+  static_assert(simpleMove() == 12);
 }

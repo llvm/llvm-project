@@ -139,7 +139,7 @@ C++ Specific Potentially Breaking Changes
     // Fixed version:
     unsigned operator""_udl_name(unsigned long long);
 
-- Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
+- Clang will now produce an error diagnostic when ``[[clang::lifetimebound]]`` is
   applied on a parameter or an implicit object parameter of a function that
   returns void. This was previously ignored and had no effect. (#GH107556)
 
@@ -147,6 +147,21 @@ C++ Specific Potentially Breaking Changes
 
     // Now diagnoses with an error.
     void f(int& i [[clang::lifetimebound]]);
+
+- Clang will now produce an error diagnostic when ``[[clang::lifetimebound]]``
+  is applied on a type (instead of a function parameter or an implicit object
+  parameter); this includes the case when the attribute is specified for an
+  unnamed function parameter. These were previously ignored and had no effect.
+  (#GH118281)
+
+  .. code-block:: c++
+
+    // Now diagnoses with an error.
+    int* [[clang::lifetimebound]] x;
+    // Now diagnoses with an error.
+    void f(int* [[clang::lifetimebound]] i);
+    // Now diagnoses with an error.
+    void g(int* [[clang::lifetimebound]]);
 
 - Clang now rejects all field accesses on null pointers in constant expressions. The following code
   used to work but will now be rejected:
@@ -404,6 +419,7 @@ Non-comprehensive list of changes in this release
 - ``__builtin_reduce_and`` function can now be used in constant expressions.
 - ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
 - ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
+- ``__builtin_elementwise_bitreverse`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -763,6 +779,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
+- Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
+  captures at the end of a full expression. (#GH115931)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
