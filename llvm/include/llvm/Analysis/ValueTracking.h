@@ -1255,8 +1255,7 @@ std::optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
                                        const DataLayout &DL,
                                        bool LHSIsTrue = true,
                                        unsigned Depth = 0);
-std::optional<bool> isImpliedCondition(const Value *LHS,
-                                       CmpInst::Predicate RHSPred,
+std::optional<bool> isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
                                        const Value *RHSOp0, const Value *RHSOp1,
                                        const DataLayout &DL,
                                        bool LHSIsTrue = true,
@@ -1267,8 +1266,8 @@ std::optional<bool> isImpliedCondition(const Value *LHS,
 std::optional<bool> isImpliedByDomCondition(const Value *Cond,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
-std::optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
-                                            const Value *LHS, const Value *RHS,
+std::optional<bool> isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS,
+                                            const Value *RHS,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
 
