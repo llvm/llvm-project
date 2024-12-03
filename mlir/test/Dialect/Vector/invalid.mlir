@@ -1803,7 +1803,8 @@ func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
 // -----
 
 func.func @invalid_from_elements(%a: f32) {
-  // expected-error @+1 {{'vector.from_elements' 1 operands present, but expected 2}}
+  // expected-error @+2 {{'vector.from_elements' number of operands and types do not match}}
+  // expected-note @+1 {{got 2 types but only 1 operand}}
   vector.from_elements %a : vector<2xf32>
   return
 }
