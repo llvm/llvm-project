@@ -28,7 +28,6 @@ unittest("IRTests") {
     "DemandedBitsTest.cpp",
     "DominatorTreeBatchUpdatesTest.cpp",
     "DominatorTreeTest.cpp",
-    "DroppedVariableStatsTest.cpp",
     "FunctionTest.cpp",
     "IRBuilderTest.cpp",
     "InstructionsTest.cpp",

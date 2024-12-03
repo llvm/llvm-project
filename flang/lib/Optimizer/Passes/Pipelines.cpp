@@ -16,7 +16,8 @@ namespace fir {
 void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
                                           PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-                     mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
+                     mlir::omp::PrivateClauseOp, fir::GlobalOp,
+                     mlir::gpu::GPUModuleOp>(pm, ctor);
 }
 
 void addNestedPassToAllTopLevelOperationsConditionally(
