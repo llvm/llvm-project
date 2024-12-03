@@ -1,4 +1,4 @@
-//===---- ClangReadDiagnostics.cpp - clang-read-diagnostics tool -----------===//
+//===---- ClangReadDiagnostics.cpp - clang-read-diagnostics tool ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,8 @@ using namespace clang;
 using namespace clang::serialized_diags;
 using namespace llvm;
 
-static cl::list<std::string> InputFiles(cl::Sink, cl::desc("<input files...>"), cl::Required);
+static cl::list<std::string> InputFiles(cl::Sink, cl::desc("<input files...>"),
+                                        cl::Required);
 
 class BasicSerializedDiagnosticReader : public SerializedDiagnosticReader {
 public:
@@ -89,9 +90,11 @@ protected:
     return {};
   }
 
-  virtual std::error_code
-  visitDiagnosticRecord(unsigned Severity, const Location &Location,
-                        unsigned Category, unsigned Flag, StringRef Message) override {
+  virtual std::error_code visitDiagnosticRecord(unsigned Severity,
+                                                const Location &Location,
+                                                unsigned Category,
+                                                unsigned Flag,
+                                                StringRef Message) override {
     Diagnostics_.emplace_back(
         RawDiagnostic{Severity, Location, Category, Flag, Message});
     return {};
