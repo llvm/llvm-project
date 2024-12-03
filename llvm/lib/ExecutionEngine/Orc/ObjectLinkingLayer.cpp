@@ -65,8 +65,6 @@ JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
 
   if (Sym.getScope() == Scope::Default)
     Flags |= JITSymbolFlags::Exported;
-  else if (Sym.getScope() == Scope::SideEffectsOnly)
-    Flags |= JITSymbolFlags::MaterializationSideEffectsOnly;
 
   if (Sym.isCallable())
     Flags |= JITSymbolFlags::Callable;
@@ -238,7 +236,7 @@ public:
 
     SymbolMap InternedResult;
     for (auto *Sym : G.defined_symbols())
-      if (Sym->getScope() < Scope::SideEffectsOnly) {
+      if (Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
@@ -251,7 +249,7 @@ public:
       }
 
     for (auto *Sym : G.absolute_symbols())
-      if (Sym->getScope() < Scope::SideEffectsOnly) {
+      if (Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
@@ -283,9 +281,11 @@ public:
         // If this is a materialization-side-effects only symbol then bump
         // the counter and remove in from the result, otherwise make sure that
         // it's defined.
-        if (Flags.hasMaterializationSideEffectsOnly())
+        if (Flags.hasMaterializationSideEffectsOnly()) {
           ++NumMaterializationSideEffectsOnlySymbols;
-        else if (I == InternedResult.end())
+          InternedResult.erase(Sym);
+          continue;
+        } else if (I == InternedResult.end())
           MissingSymbols.push_back(Sym);
         else if (Layer.OverrideObjectFlags)
           I->second.setFlags(Flags);

@@ -222,10 +222,24 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
+                                        unsigned ID) {
+  auto Loc = S.Current->getSource(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_function)
+        << /*isConstexpr=*/0 << /*isConstructor=*/0
+        << ("'" + S.getASTContext().BuiltinInfo.getName(ID) + "'").str();
+  else
+    S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
+}
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const CallExpr *Call) {
+                                   const Function *Func, const CallExpr *Call) {
+  unsigned ID = Func->getBuiltinID();
   const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
+
+  if (ID == Builtin::BIstrlen)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   if (!CheckArray(S, OpPC, StrPtr))
     return false;
@@ -1781,11 +1795,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call) {
   assert(Call->getNumArgs() == 3);
+  unsigned ID = Func->getBuiltinID();
   Pointer DestPtr = getParam<Pointer>(Frame, 0);
   const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
   const APSInt &Size =
       peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
   assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
+
+  if (ID == Builtin::BImemcpy || ID == Builtin::BImemmove)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  bool Move = (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove);
 
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
@@ -1799,7 +1819,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (SrcPtr.isZero() || DestPtr.isZero()) {
     Pointer DiagPtr = (SrcPtr.isZero() ? SrcPtr : DestPtr);
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
-        << /*IsMove=*/false << /*IsWchar=*/false << !SrcPtr.isZero()
+        << /*IsMove=*/Move << /*IsWchar=*/false << !SrcPtr.isZero()
         << DiagPtr.toDiagnosticString(S.getASTContext());
     return false;
   }
@@ -1830,7 +1850,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
   case Builtin::BI__builtin_strlen:
-    if (!interp__builtin_strlen(S, OpPC, Frame, Call))
+  case Builtin::BIstrlen:
+    if (!interp__builtin_strlen(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_nan:
@@ -2271,6 +2292,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_memcpy:
+  case Builtin::BImemcpy:
+  case Builtin::BI__builtin_memmove:
+  case Builtin::BImemmove:
     if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
       return false;
     break;
