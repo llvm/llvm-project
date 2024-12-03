@@ -382,6 +382,9 @@ define void @fn(i1 %cond) {{
   br i1 %cond, ...
 }}
 '''
+            if args.verbose:
+                print(f"error: {self.name} failed")
+                print(report)
             return report
         else:
             return None
