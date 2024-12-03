@@ -35,6 +35,8 @@ struct Bits {
     N += O;
     return *this;
   }
+
+  bool operator>=(Bits Other) { return N >= Other.N; }
 };
 
 /// A quantity in bytes.

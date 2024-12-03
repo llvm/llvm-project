@@ -80,7 +80,7 @@ static void swapBytes(std::byte *M, size_t N) {
 /// We use this to recursively iterate over all fields and elements of a pointer
 /// and extract relevant data for a bitcast.
 static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
-                          DataFunc F) {
+                          Bits BitsToRead, DataFunc F) {
   const Descriptor *FieldDesc = P.getFieldDesc();
   assert(FieldDesc);
 
@@ -97,9 +97,11 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     bool PackedBools = FieldDesc->getType()->isExtVectorBoolType();
     unsigned NumElems = FieldDesc->getNumElems();
     bool Ok = true;
-    for (unsigned I = 0; I != NumElems; ++I) {
+    for (unsigned I = P.getIndex(); I != NumElems; ++I) {
       Ok = Ok && F(P.atIndex(I), ElemT, Offset, PackedBools);
       Offset += PackedBools ? 1 : ElemSizeInBits;
+      if (Offset >= BitsToRead)
+        break;
     }
     return Ok;
   }
@@ -109,8 +111,10 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     QualType ElemType = FieldDesc->getElemQualType();
     size_t ElemSizeInBits = Ctx.getASTContext().getTypeSize(ElemType);
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
-      enumerateData(P.atIndex(I).narrow(), Ctx, Offset, F);
+      enumerateData(P.atIndex(I).narrow(), Ctx, Offset, BitsToRead, F);
       Offset += ElemSizeInBits;
+      if (Offset >= BitsToRead)
+        break;
     }
     return true;
   }
@@ -126,14 +130,14 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
       Pointer Elem = P.atField(Fi.Offset);
       Bits BitOffset =
           Offset + Bits(Layout.getFieldOffset(Fi.Decl->getFieldIndex()));
-      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, F);
+      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, BitsToRead, F);
     }
     for (const Record::Base &B : R->bases()) {
       Pointer Elem = P.atField(B.Offset);
       CharUnits ByteOffset =
           Layout.getBaseClassOffset(cast<CXXRecordDecl>(B.Decl));
       Bits BitOffset = Offset + Bits(Ctx.getASTContext().toBits(ByteOffset));
-      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, F);
+      Ok = Ok && enumerateData(Elem, Ctx, BitOffset, BitsToRead, F);
     }
 
     return Ok;
@@ -143,8 +147,8 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
 }
 
 static bool enumeratePointerFields(const Pointer &P, const Context &Ctx,
-                                   DataFunc F) {
-  return enumerateData(P, Ctx, Bits::zero(), F);
+                                   Bits BitsToRead, DataFunc F) {
+  return enumerateData(P, Ctx, Bits::zero(), BitsToRead, F);
 }
 
 //  This function is constexpr if and only if To, From, and the types of
@@ -222,7 +226,7 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
 
   return enumeratePointerFields(
-      FromPtr, Ctx,
+      FromPtr, Ctx, Buffer.size(),
       [&](const Pointer &P, PrimType T, Bits BitOffset,
           bool PackedBools) -> bool {
         // if (!P.isInitialized()) {
@@ -327,7 +331,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   Endian TargetEndianness =
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
   bool Success = enumeratePointerFields(
-      ToPtr, S.getContext(),
+      ToPtr, S.getContext(), Buffer.size(),
       [&](const Pointer &P, PrimType T, Bits BitOffset,
           bool PackedBools) -> bool {
         CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());

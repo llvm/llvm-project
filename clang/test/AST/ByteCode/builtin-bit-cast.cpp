@@ -265,6 +265,21 @@ static_assert(check_round_trip<long long>(splice));
 #endif
 
 
+namespace Overread {
+  /// This used to crash becaus we were reading all elements of the
+  /// source array even though we should only be reading 1.
+  constexpr int a[] = {2,3, 4, 5};
+  constexpr int b = __builtin_bit_cast(int, *(a + 1));
+  static_assert(b == 3);
+
+  struct S {
+    int a;
+  };
+  constexpr S ss[] = {{1},{2}};
+  constexpr int c = __builtin_bit_cast(int, *(ss + 1));
+  static_assert(c == 2);
+}
+
 
 /// ---------------------------------------------------------------------------
 /// From here on, it's things copied from test/SemaCXX/constexpr-builtin-bit.cast.cpp
