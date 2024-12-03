@@ -105,4 +105,29 @@ struct KernelLaunchEnvironmentTy {
   void *ReductionBuffer = nullptr;
 };
 
+/// The environment used to communicate sanitizer information from the device to
+/// the host.
+struct SanitizerEnvironmentTy {
+  enum ErrorCodeTy : uint8_t {
+    NONE = 0,
+    TRAP,
+    LAST = TRAP,
+  } ErrorCode;
+
+  /// Flag to indicate the environment has been initialized fully.
+  uint8_t IsInitialized;
+
+  /// Return the error code location for use in an atomic compare-and-swap.
+  uint8_t *getErrorCodeLocation() {
+    return reinterpret_cast<uint8_t *>(&ErrorCode);
+  }
+
+  /// Thread info
+  /// {
+  uint32_t ThreadId[3];
+  uint32_t BlockId[3];
+  uint64_t PC;
+  /// }
+};
+
 #endif // OMPTARGET_SHARED_ENVIRONMENT_H
