@@ -93,6 +93,8 @@ private:
   void EmitRegUnitPressure(raw_ostream &OS, StringRef ClassName);
   void emitComposeSubRegIndices(raw_ostream &OS, StringRef ClassName);
   void emitComposeSubRegIndexLaneMask(raw_ostream &OS, StringRef ClassName);
+  void emitNumAllocatableSubRegs(raw_ostream &OS, StringRef ClassName,
+                                 llvm::BitVector &InAllocClass);
 };
 
 } // end anonymous namespace
@@ -677,6 +679,31 @@ static bool combine(const CodeGenSubRegIndex *Idx,
   return true;
 }
 
+void RegisterInfoEmitter::emitNumAllocatableSubRegs(
+    raw_ostream &OS, StringRef ClassName, llvm::BitVector &InAllocClass) {
+  OS << "unsigned " << ClassName
+     << "::getNumAllocatableSubRegsImpl(MCPhysReg R) const {\n";
+  OS << "  static unsigned numAllocatableSubRegsMap[] = { \n";
+  OS << "    0, // NoRegister\n";
+  const auto &Regs = RegBank.getRegisters();
+  for (auto [I, R] : llvm::enumerate(Regs)) {
+    unsigned NumAllocatableSubRegs = 0;
+    for (unsigned U : R.getRegUnits()) {
+      for (const CodeGenRegister *UR : RegBank.getRegUnit(U).getRoots())
+        if (!UR->Artificial && InAllocClass[UR->EnumValue])
+          NumAllocatableSubRegs++;
+    }
+    OS << "    " << NumAllocatableSubRegs;
+    if (I < Regs.size() - 1)
+      OS << ",";
+    OS << " // " << R.getName() << "\n";
+  }
+  OS << "  };\n";
+  OS << "  assert(R <= " << Regs.size() << " && \"Unexpected physreg\");\n";
+  OS << "  return numAllocatableSubRegsMap[R];\n";
+  OS << "};\n";
+}
+
 void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
                                                    StringRef ClassName) {
   const auto &SubRegIndices = RegBank.getSubRegIndices();
@@ -1122,7 +1149,9 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
        << "  const TargetRegisterClass *getSubClassWithSubReg"
        << "(const TargetRegisterClass *, unsigned) const override;\n"
        << "  const TargetRegisterClass *getSubRegisterClass"
-       << "(const TargetRegisterClass *, unsigned) const override;\n";
+       << "(const TargetRegisterClass *, unsigned) const override;\n"
+       << "  unsigned getNumAllocatableSubRegsImpl(MCPhysReg) const "
+          "override;\n";
   }
   OS << "  const RegClassWeight &getRegClassWeight("
      << "const TargetRegisterClass *RC) const override;\n"
@@ -1483,6 +1512,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   if (!SubRegIndices.empty()) {
     emitComposeSubRegIndices(OS, ClassName);
     emitComposeSubRegIndexLaneMask(OS, ClassName);
+    emitNumAllocatableSubRegs(OS, ClassName, InAllocClass);
   }
 
   if (!SubRegIndices.empty()) {
