@@ -2476,7 +2476,8 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
 
 /// Given a store node \p StoreNode, return true if it is safe to fold that node
 /// into \p FPNode, which expands to a library call with output pointers.
-static bool CanFoldStoreIntoFPLibCall(StoreSDNode *StoreNode, SDNode *FPNode) {
+static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
+                                                  SDNode *FPNode) {
   SmallVector<const SDNode *, 8> Worklist;
   SmallVector<const SDNode *, 8> DeferredNodes;
   SmallPtrSet<const SDNode *, 16> Visited;
@@ -2561,11 +2562,11 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
         ST->getAlign() <
             getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
         // Ensure all store chains are the same (so they don't alias).
-        (StoresInChain && ST->getChain() != StoresInChain)
+        (StoresInChain && ST->getChain() != StoresInChain) ||
         // Avoid:
         //  1. Creating cyclic dependencies.
         //  2. Expanding the node to a call within a call sequence.
-        || !CanFoldStoreIntoFPLibCall(ST, Node))
+        !canFoldStoreIntoLibCallOutputPointers(ST, Node))
       continue;
     ResultStores[ResNo] = ST;
     StoresInChain = ST->getChain();
