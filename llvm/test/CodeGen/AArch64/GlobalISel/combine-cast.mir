@@ -217,3 +217,55 @@ body:             |
     %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
     $q0 = COPY %large(<2 x s64>)
     $d0 = COPY %bv(<2 x s32>)
+...
+---
+name:            test_combine_anyext_undef
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-PRE-LABEL: name: test_combine_anyext_undef
+    ; CHECK-PRE: %aext:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-PRE-NEXT: $x0 = COPY %aext(s64)
+    ;
+    ; CHECK-POST-LABEL: name: test_combine_anyext_undef
+    ; CHECK-POST: %undef:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-POST-NEXT: %aext:_(s64) = G_ANYEXT %undef(s32)
+    ; CHECK-POST-NEXT: $x0 = COPY %aext(s64)
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %aext:_(s64) = G_ANYEXT %undef(s32)
+    $x0 = COPY %aext(s64)
+...
+---
+name:            test_combine_sext_undef
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-PRE-LABEL: name: test_combine_sext_undef
+    ; CHECK-PRE: %sext:_(s64) = G_CONSTANT i64 0
+    ; CHECK-PRE-NEXT: $x0 = COPY %sext(s64)
+    ;
+    ; CHECK-POST-LABEL: name: test_combine_sext_undef
+    ; CHECK-POST: %undef:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-POST-NEXT: %sext:_(s64) = G_SEXT %undef(s32)
+    ; CHECK-POST-NEXT: $x0 = COPY %sext(s64)
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %sext:_(s64) = G_SEXT %undef(s32)
+    $x0 = COPY %sext(s64)
+...
+---
+name:            test_combine_zext_undef
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-PRE-LABEL: name: test_combine_zext_undef
+    ; CHECK-PRE: %zext:_(s64) = G_CONSTANT i64 0
+    ; CHECK-PRE-NEXT: $x0 = COPY %zext(s64)
+    ;
+    ; CHECK-POST-LABEL: name: test_combine_zext_undef
+    ; CHECK-POST: %undef:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-POST-NEXT: %zext:_(s64) = G_ZEXT %undef(s32)
+    ; CHECK-POST-NEXT: $x0 = COPY %zext(s64)
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %zext:_(s64) = G_ZEXT %undef(s32)
+    $x0 = COPY %zext(s64)
+...
