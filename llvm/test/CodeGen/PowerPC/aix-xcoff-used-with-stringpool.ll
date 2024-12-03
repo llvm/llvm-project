@@ -1,4 +1,4 @@
-;; Test that the string pooling pass does not pool globals that are
+;; Test that the global merge pass does not pool globals that are
 ;; in llvm.used or in llvm.compiler.used.
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
