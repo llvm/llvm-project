@@ -6,7 +6,7 @@
 declare void @foo()
 
 ; CHECK-LABEL: @Test
-define void @Test(i32, i1 %arg) {
+define void @Test(i32) {
 entry:
   br label %outer
 outer:

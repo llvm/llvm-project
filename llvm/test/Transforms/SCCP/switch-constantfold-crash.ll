@@ -2,9 +2,8 @@
 ; RUN: opt -passes=ipsccp < %s -S | FileCheck %s
 ; RUN: opt -passes='ipsccp,ipsccp' < %s -S | FileCheck %s
 
-define void @barney(i1 %arg) {
-; CHECK-LABEL: define {{[^@]+}}@barney
-; CHECK-SAME: (i1 [[ARG:%.*]]) {
+define void @barney() {
+; CHECK-LABEL: define {{[^@]+}}@barney() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb6:
@@ -27,9 +26,8 @@ bb9:                                              ; preds = %bb
   ]
 }
 
-define void @blam(i1 %arg) {
-; CHECK-LABEL: define {{[^@]+}}@blam
-; CHECK-SAME: (i1 [[ARG:%.*]]) {
+define void @blam() {
+; CHECK-LABEL: define {{[^@]+}}@blam() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB16:%.*]]
 ; CHECK:       bb16:
