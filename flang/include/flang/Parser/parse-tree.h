@@ -3558,6 +3558,23 @@ struct OmpDeviceModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceModifier, Value);
 };
 
+// Ref: [5.2:72-73,230-323], in 4.5-5.1 it's scattered over individual
+// directives that allow the IF clause.
+//
+// directive-name-modifier ->
+//    PARALLEL | TARGET | TARGET DATA |
+//    TARGET ENTER DATA | TARGET EXIT DATA |
+//    TARGET UPDATE | TASK | TASKLOOP |             // since 4.5
+//    CANCEL[*] | SIMD |                            // since 5.0
+//    TEAMS                                         // since 5.2
+//
+// [*] The IF clause is allowed on CANCEL in OpenMP 4.5, but only without
+// the directive-name-modifier. For the sake of uniformity CANCEL can be
+// considered a valid value in 4.5 as well.
+struct OmpDirectiveNameModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpDirectiveNameModifier, llvm::omp::Directive);
+};
+
 // Ref: [5.1:205-209], [5.2:166-168]
 //
 // motion-modifier ->
@@ -3579,6 +3596,15 @@ struct OmpExpectation {
 //    ITERATOR(iterator-specifier [, ...])          // since 5.0
 struct OmpIterator {
   WRAPPER_CLASS_BOILERPLATE(OmpIterator, std::list<OmpIteratorSpecifier>);
+};
+
+// Ref: [5.0:288-290], [5.1:321-322], [5.2:115-117]
+//
+// lastprivate-modifier ->
+//    CONDITIONAL                                   // since 5.0
+struct OmpLastprivateModifier {
+  ENUM_CLASS(Value, Conditional)
+  WRAPPER_CLASS_BOILERPLATE(OmpLastprivateModifier, Value);
 };
 
 // Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
@@ -3640,6 +3666,15 @@ struct OmpOrderingModifier {
 struct OmpOrderModifier {
   ENUM_CLASS(Value, Reproducible, Unconstrained)
   WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Value);
+};
+
+// Ref: [5.1:166-171], [5.2:269-270]
+//
+// prescriptiveness ->
+//    STRICT                                        // since 5.1
+struct OmpPrescriptiveness {
+  ENUM_CLASS(Value, Strict)
+  WRAPPER_CLASS_BOILERPLATE(OmpPrescriptiveness, Value);
 };
 
 // Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
@@ -3831,8 +3866,8 @@ struct OmpDependClause {
   struct TaskDep {
     OmpTaskDependenceType::Value GetTaskDepType() const;
     TUPLE_CLASS_BOILERPLATE(TaskDep);
-    std::tuple<std::optional<OmpIterator>, OmpTaskDependenceType, OmpObjectList>
-        t;
+    MODIFIER_BOILERPLATE(OmpIterator, OmpTaskDependenceType);
+    std::tuple<MODIFIERS(), OmpObjectList> t;
   };
   std::variant<TaskDep, OmpDoacross> u;
 };
@@ -3893,19 +3928,27 @@ struct OmpFromClause {
   std::tuple<MODIFIERS(), OmpObjectList, bool> t;
 };
 
-// OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
+// Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:269]
+//
+// grainsize-clause ->
+//    GRAINSIZE(grain-size) |                       // since 4.5
+//    GRAINSIZE([prescriptiveness:] grain-size)     // since 5.1
 struct OmpGrainsizeClause {
   TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
-  ENUM_CLASS(Prescriptiveness, Strict);
-  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
+  MODIFIER_BOILERPLATE(OmpPrescriptiveness);
+  std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
-// 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
+// Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives
+// that allow the IF clause.
+//
+// if-clause ->
+//    IF([directive-name-modifier:]
+//        scalar-logical-expression)                // since 4.5
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
-  ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
-      TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
-  std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
+  MODIFIER_BOILERPLATE(OmpDirectiveNameModifier);
+  std::tuple<MODIFIERS(), ScalarLogicalExpr> t;
 };
 
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
@@ -3915,13 +3958,15 @@ struct OmpInReductionClause {
   std::tuple<OmpReductionIdentifier, OmpObjectList> t;
 };
 
-// OMP 5.0 2.19.4.5 lastprivate-clause ->
-//                    LASTPRIVATE ([lastprivate-modifier :] list)
-//                  lastprivate-modifier -> CONDITIONAL
+// Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
+//
+// lastprivate-clause ->
+//    LASTPRIVATE(list) |                           // since 4.5
+//    LASTPRIVATE([lastprivate-modifier:] list)     // since 5.0
 struct OmpLastprivateClause {
   TUPLE_CLASS_BOILERPLATE(OmpLastprivateClause);
-  ENUM_CLASS(LastprivateModifier, Conditional);
-  std::tuple<std::optional<LastprivateModifier>, OmpObjectList> t;
+  MODIFIER_BOILERPLATE(OmpLastprivateModifier);
+  std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
 // 2.15.3.7 linear-clause -> LINEAR (linear-list[ : linear-step])
@@ -3961,6 +4006,17 @@ struct OmpMapClause {
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
   MODIFIER_BOILERPLATE(OmpMapTypeModifier, OmpMapper, OmpIterator, OmpMapType);
   std::tuple<MODIFIERS(), OmpObjectList, bool> t;
+};
+
+// Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]
+//
+// num-tasks-clause ->
+//    NUM_TASKS(num-tasks) |                        // since 4.5
+//    NUM_TASKS([prescriptiveness:] num-tasks)      // since 5.1
+struct OmpNumTasksClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
+  MODIFIER_BOILERPLATE(OmpPrescriptiveness);
+  std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
 // Ref: [5.0:101-109], [5.1:126-134], [5.2:233-234]
@@ -4030,13 +4086,6 @@ struct OmpToClause {
   std::tuple<MODIFIERS(), OmpObjectList, bool> t;
 };
 
-// OMP 5.2 12.6.2 num_tasks-clause -> num_tasks ([prescriptiveness :] value)
-struct OmpNumTasksClause {
-  TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
-  ENUM_CLASS(Prescriptiveness, Strict);
-  std::tuple<std::optional<Prescriptiveness>, ScalarIntExpr> t;
-};
-
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
 //
 // update-clause ->
@@ -4045,6 +4094,7 @@ struct OmpNumTasksClause {
 //    UPDATE(task-dependence-type)                  // since 5.2
 struct OmpUpdateClause {
   UNION_CLASS_BOILERPLATE(OmpUpdateClause);
+  // The dependence type is an argument here, not a modifier.
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };
 
