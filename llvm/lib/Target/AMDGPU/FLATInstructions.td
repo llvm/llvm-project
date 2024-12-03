@@ -13,6 +13,7 @@ def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWant
 def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 4, "SelectGlobalSAddrNoIOffset", [], [SDNPWantRoot], -3>;
 def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
 def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [SDNPWantRoot], -10>;
+def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [SDNPWantRoot], -10>;
 def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
 def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
 
@@ -1300,7 +1301,7 @@ class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueTyp
 >;
 
 class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 timm:$cpol))),
+  (vt (node (GlobalSAddrCPol (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm))),
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 
