@@ -264,7 +264,14 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
   const auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
     return false;
-  return II->getIntrinsicID() == Intrinsic::invariant_start;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::invariant_start:
+  case Intrinsic::spv_resource_handlefrombinding:
+  case Intrinsic::spv_resource_getpointer:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool allowEmitFakeUse(const Value *Arg) {
@@ -724,6 +731,14 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       Ty = deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
       if (Ty)
         break;
+    }
+  } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
+      assert(ImageType->getTargetExtName() == "spirv.Image");
+      Ty = ImageType->getTypeParameter(0);
+      // TODO: Need to look at the use to see if it needs to be a vector of the
+      // type.
     }
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
     static StringMap<unsigned> ResTypeByArg = {
