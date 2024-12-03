@@ -406,8 +406,8 @@ entry:
   ret i32 %conv
 }
 
-define zeroext i32 @test_half_to_u32(half %a) nounwind {
-; LA32-LABEL: test_half_to_u32:
+define zeroext i32 @test_half_to_s32_u32(half %a) nounwind {
+; LA32-LABEL: test_half_to_s32_u32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
@@ -418,7 +418,7 @@ define zeroext i32 @test_half_to_u32(half %a) nounwind {
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
-; LA64-LABEL: test_half_to_u32:
+; LA64-LABEL: test_half_to_s32_u32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
