@@ -141,16 +141,18 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
 
    * - Extension Name
      - Description
+   * - ``SPV_EXT_arithmetic_fence``
+     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
+   * - ``SPV_EXT_demote_to_helper_invocation``
+     - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
+   * - ``SPV_EXT_optnone``
+     - Adds OptNoneEXT value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_EXT_shader_atomic_float16_add``
      - Extends the SPV_EXT_shader_atomic_float_add extension to support atomically adding to 16-bit floating-point numbers in memory.
    * - ``SPV_EXT_shader_atomic_float_add``
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
-   * - ``SPV_EXT_arithmetic_fence``
-     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
-   * - ``SPV_EXT_demote_to_helper_invocation``
-     - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
