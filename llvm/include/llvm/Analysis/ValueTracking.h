@@ -14,13 +14,14 @@
 #ifndef LLVM_ANALYSIS_VALUETRACKING_H
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
+#include "DomConditionCache.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
 #include <cstdint>
@@ -1274,8 +1275,9 @@ std::optional<bool> isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS,
 /// Call \p InsertAffected on all Values whose known bits / value may be
 /// affected by the condition \p Cond. Used by AssumptionCache and
 /// DomConditionCache.
-void findValuesAffectedByCondition(Value *Cond, bool IsAssume,
-                                   function_ref<void(Value *)> InsertAffected);
+void findValuesAffectedByCondition(
+    Value *Cond, bool IsAssume,
+    function_ref<void(Value *, DomConditionFlag)> InsertAffected);
 
 } // end namespace llvm
 

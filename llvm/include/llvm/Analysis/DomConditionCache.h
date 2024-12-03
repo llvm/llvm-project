@@ -18,18 +18,34 @@
 #define LLVM_ANALYSIS_DOMCONDITIONCACHE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cstdint>
 
 namespace llvm {
 
 class Value;
 class BranchInst;
 
+enum class DomConditionFlag : uint8_t {
+  None = 0,
+  KnownBits = 1 << 0,
+  KnownFPClass = 1 << 1,
+  PowerOfTwo = 1 << 2,
+  ICmp = 1 << 3,
+};
+
+LLVM_DECLARE_ENUM_AS_BITMASK(
+    DomConditionFlag,
+    /*LargestValue=*/static_cast<uint8_t>(DomConditionFlag::ICmp));
+
 class DomConditionCache {
 private:
   /// A map of values about which a branch might be providing information.
-  using AffectedValuesMap = DenseMap<Value *, SmallVector<BranchInst *, 1>>;
+  using AffectedValuesMap =
+      DenseMap<Value *,
+               SmallVector<std::pair<BranchInst *, DomConditionFlag>, 1>>;
   AffectedValuesMap AffectedValues;
 
 public:
@@ -40,10 +56,11 @@ public:
   void removeValue(Value *V) { AffectedValues.erase(V); }
 
   /// Access the list of branches which affect this value.
-  ArrayRef<BranchInst *> conditionsFor(const Value *V) const {
+  ArrayRef<std::pair<BranchInst *, DomConditionFlag>>
+  conditionsFor(const Value *V) const {
     auto AVI = AffectedValues.find_as(const_cast<Value *>(V));
     if (AVI == AffectedValues.end())
-      return ArrayRef<BranchInst *>();
+      return {};
 
     return AVI->second;
   }

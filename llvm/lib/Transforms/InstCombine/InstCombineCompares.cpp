@@ -1385,7 +1385,9 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     return nullptr;
   };
 
-  for (BranchInst *BI : DC.conditionsFor(X)) {
+  for (auto [BI, Flags] : DC.conditionsFor(X)) {
+    if (!any(Flags & DomConditionFlag::ICmp))
+      continue;
     ICmpInst::Predicate DomPred;
     const APInt *DomC;
     if (!match(BI->getCondition(),

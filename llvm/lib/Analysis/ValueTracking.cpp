@@ -790,7 +790,9 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
   if (Q.DC && Q.DT) {
     // Handle dominating conditions.
-    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+    for (auto [BI, Flag] : Q.DC->conditionsFor(V)) {
+      if (!any(Flag & DomConditionFlag::KnownBits))
+        continue;
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
         computeKnownBitsFromCond(V, BI->getCondition(), Known, Depth, Q,
@@ -2299,7 +2301,9 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
 
   // Handle dominating conditions.
   if (Q.DC && Q.CxtI && Q.DT) {
-    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+    for (auto [BI, Flag] : Q.DC->conditionsFor(V)) {
+      if (!any(Flag & DomConditionFlag::PowerOfTwo))
+        continue;
       Value *Cond = BI->getCondition();
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
@@ -4930,7 +4934,9 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
   if (Q.DC && Q.DT) {
     // Handle dominating conditions.
-    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+    for (auto [BI, Flag] : Q.DC->conditionsFor(V)) {
+      if (!any(Flag & DomConditionFlag::KnownFPClass))
+        continue;
       Value *Cond = BI->getCondition();
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
@@ -10014,36 +10020,38 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   return CR;
 }
 
-static void
-addValueAffectedByCondition(Value *V,
-                            function_ref<void(Value *)> InsertAffected) {
+static void addValueAffectedByCondition(
+    Value *V, function_ref<void(Value *, DomConditionFlag)> InsertAffected,
+    DomConditionFlag Flags) {
   assert(V != nullptr);
   if (isa<Argument>(V) || isa<GlobalValue>(V)) {
-    InsertAffected(V);
+    InsertAffected(V, Flags);
   } else if (auto *I = dyn_cast<Instruction>(V)) {
-    InsertAffected(V);
+    InsertAffected(V, Flags);
 
     // Peek through unary operators to find the source of the condition.
     Value *Op;
     if (match(I, m_CombineOr(m_PtrToInt(m_Value(Op)), m_Trunc(m_Value(Op))))) {
       if (isa<Instruction>(Op) || isa<Argument>(Op))
-        InsertAffected(Op);
+        InsertAffected(Op, Flags);
     }
   }
 }
 
 void llvm::findValuesAffectedByCondition(
-    Value *Cond, bool IsAssume, function_ref<void(Value *)> InsertAffected) {
-  auto AddAffected = [&InsertAffected](Value *V) {
-    addValueAffectedByCondition(V, InsertAffected);
+    Value *Cond, bool IsAssume,
+    function_ref<void(Value *, DomConditionFlag)> InsertAffected) {
+  auto AddAffected = [&InsertAffected](Value *V, DomConditionFlag Flags) {
+    addValueAffectedByCondition(V, InsertAffected, Flags);
   };
 
-  auto AddCmpOperands = [&AddAffected, IsAssume](Value *LHS, Value *RHS) {
+  auto AddCmpOperands = [&AddAffected, IsAssume](Value *LHS, Value *RHS,
+                                                 DomConditionFlag Flags) {
     if (IsAssume) {
-      AddAffected(LHS);
-      AddAffected(RHS);
+      AddAffected(LHS, Flags);
+      AddAffected(RHS, Flags);
     } else if (match(RHS, m_Constant()))
-      AddAffected(LHS);
+      AddAffected(LHS, Flags);
   };
 
   SmallVector<Value *, 8> Worklist;
@@ -10058,9 +10066,9 @@ void llvm::findValuesAffectedByCondition(
     Value *A, *B, *X;
 
     if (IsAssume) {
-      AddAffected(V);
+      AddAffected(V, DomConditionFlag::KnownBits);
       if (match(V, m_Not(m_Value(X))))
-        AddAffected(X);
+        AddAffected(X, DomConditionFlag::KnownBits);
     }
 
     if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
@@ -10074,7 +10082,8 @@ void llvm::findValuesAffectedByCondition(
         Worklist.push_back(B);
       }
     } else if (match(V, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
-      AddCmpOperands(A, B);
+      AddCmpOperands(A, B,
+                     DomConditionFlag::KnownBits | DomConditionFlag::ICmp);
 
       bool HasRHSC = match(B, m_ConstantInt());
       if (ICmpInst::isEquality(Pred)) {
@@ -10084,11 +10093,11 @@ void llvm::findValuesAffectedByCondition(
           // (X << C) or (X >>_s C) or (X >>_u C).
           if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
               match(A, m_Shift(m_Value(X), m_ConstantInt())))
-            AddAffected(X);
+            AddAffected(X, DomConditionFlag::KnownBits);
           else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
                    match(A, m_Or(m_Value(X), m_Value(Y)))) {
-            AddAffected(X);
-            AddAffected(Y);
+            AddAffected(X, DomConditionFlag::KnownBits);
+            AddAffected(Y, DomConditionFlag::KnownBits);
           }
         }
       } else {
@@ -10096,7 +10105,7 @@ void llvm::findValuesAffectedByCondition(
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
           if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
-            AddAffected(X);
+            AddAffected(X, DomConditionFlag::KnownBits);
 
           if (ICmpInst::isUnsigned(Pred)) {
             Value *Y;
@@ -10106,12 +10115,12 @@ void llvm::findValuesAffectedByCondition(
             if (match(A, m_And(m_Value(X), m_Value(Y))) ||
                 match(A, m_Or(m_Value(X), m_Value(Y))) ||
                 match(A, m_NUWAdd(m_Value(X), m_Value(Y)))) {
-              AddAffected(X);
-              AddAffected(Y);
+              AddAffected(X, DomConditionFlag::KnownBits);
+              AddAffected(Y, DomConditionFlag::KnownBits);
             }
             // X nuw- Y u> C -> X u> C
             if (match(A, m_NUWSub(m_Value(X), m_Value())))
-              AddAffected(X);
+              AddAffected(X, DomConditionFlag::KnownBits);
           }
         }
 
@@ -10119,29 +10128,29 @@ void llvm::findValuesAffectedByCondition(
         // by computeKnownFPClass().
         if (match(A, m_ElementWiseBitCast(m_Value(X)))) {
           if (Pred == ICmpInst::ICMP_SLT && match(B, m_Zero()))
-            InsertAffected(X);
+            InsertAffected(X, DomConditionFlag::KnownFPClass);
           else if (Pred == ICmpInst::ICMP_SGT && match(B, m_AllOnes()))
-            InsertAffected(X);
+            InsertAffected(X, DomConditionFlag::KnownFPClass);
         }
       }
 
       if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
-        AddAffected(X);
+        AddAffected(X, DomConditionFlag::PowerOfTwo);
     } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
-      AddCmpOperands(A, B);
+      AddCmpOperands(A, B, DomConditionFlag::KnownFPClass);
 
       // fcmp fneg(x), y
       // fcmp fabs(x), y
       // fcmp fneg(fabs(x)), y
       if (match(A, m_FNeg(m_Value(A))))
-        AddAffected(A);
+        AddAffected(A, DomConditionFlag::KnownFPClass);
       if (match(A, m_FAbs(m_Value(A))))
-        AddAffected(A);
+        AddAffected(A, DomConditionFlag::KnownFPClass);
 
     } else if (match(V, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A),
                                                            m_Value()))) {
       // Handle patterns that computeKnownFPClass() support.
-      AddAffected(A);
+      AddAffected(A, DomConditionFlag::KnownFPClass);
     }
   }
 }

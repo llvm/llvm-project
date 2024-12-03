@@ -59,7 +59,8 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
   // Note: This code must be kept in-sync with the code in
   // computeKnownBitsFromAssume in ValueTracking.
 
-  auto InsertAffected = [&Affected](Value *V) {
+  // TODO: Use DomConditionFlag to filter out non-interesting conditions.
+  auto InsertAffected = [&Affected](Value *V, DomConditionFlag) {
     Affected.push_back({V, AssumptionCache::ExprResultIdx});
   };
 

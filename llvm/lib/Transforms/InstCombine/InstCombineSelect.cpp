@@ -4293,9 +4293,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       (!isa<Constant>(TrueVal) || !isa<Constant>(FalseVal))) {
     // Try to simplify select arms based on KnownBits implied by the condition.
     CondContext CC(CondVal);
-    findValuesAffectedByCondition(CondVal, /*IsAssume=*/false, [&](Value *V) {
-      CC.AffectedValues.insert(V);
-    });
+    findValuesAffectedByCondition(
+        CondVal, /*IsAssume=*/false, [&](Value *V, DomConditionFlag Flags) {
+          if (any(Flags & DomConditionFlag::KnownBits))
+            CC.AffectedValues.insert(V);
+        });
     SimplifyQuery Q = SQ.getWithInstruction(&SI).getWithCondContext(CC);
     if (!CC.AffectedValues.empty()) {
       if (!isa<Constant>(TrueVal) &&
