@@ -444,7 +444,10 @@ public:
 
   Function *CalculateSymbolContextFunction() override;
 
+  /// DEPRECATED: Use GetAddressRanges instead.
   const AddressRange &GetAddressRange() { return m_range; }
+
+  const AddressRanges &GetAddressRanges() const { return m_ranges; }
 
   lldb::LanguageType GetLanguage() const;
   /// Find the file and line number of the source location of the start of the
