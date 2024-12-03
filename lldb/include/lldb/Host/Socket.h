@@ -153,7 +153,9 @@ public:
   virtual std::string GetRemoteConnectionURI() const { return ""; };
 
   // If the Socket is listening then return the URI for clients to connect.
-  virtual std::vector<std::string> GetListeningConnectionURI() const { return {}; }
+  virtual std::vector<std::string> GetListeningConnectionURI() const {
+    return {};
+  }
 
 protected:
   Socket(SocketProtocol protocol, bool should_close);
