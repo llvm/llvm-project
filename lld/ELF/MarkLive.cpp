@@ -56,6 +56,7 @@ public:
 private:
   void enqueue(InputSectionBase *sec, std::optional<uint64_t> offset,
                std::optional<LiveObject> parent);
+  void printWhyLive(const Symbol *s) const;
   void markSymbol(Symbol *sym);
   void mark();
 
@@ -230,6 +231,10 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec,
     queue.push_back(s);
 }
 
+template <class ELFT>
+void MarkLive<ELFT>::printWhyLive(const Symbol *s) const {
+}
+
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
   if (auto *d = dyn_cast_or_null<Defined>(sym))
     if (auto *isec = dyn_cast_or_null<InputSectionBase>(d->section))
@@ -353,6 +358,8 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
     if (sec.nextInSectionGroup)
       enqueue(sec.nextInSectionGroup, std::nullopt, &sec);
   }
+
+  printWhyLive(ctx.symtab->find("foo"));
 }
 
 // Move the sections for some symbols to the main partition, specifically ifuncs
