@@ -33,9 +33,11 @@ TEST_F(OpenMPContextTest, RoundTripAndAssociation) {
 #define OMP_TRAIT_SELECTOR(Enum, TraitSetEnum, Str, RequiresProperty)          \
   EXPECT_EQ(TraitSelector::Enum,                                               \
             getOpenMPContextTraitSelectorKind(                                 \
-                getOpenMPContextTraitSelectorName(TraitSelector::Enum)));      \
+                getOpenMPContextTraitSelectorName(TraitSelector::Enum),        \
+                TraitSet::TraitSetEnum));                                      \
   EXPECT_EQ(Str, getOpenMPContextTraitSelectorName(                            \
-                     getOpenMPContextTraitSelectorKind(Str)));
+                     getOpenMPContextTraitSelectorKind(                        \
+                         Str, TraitSet::TraitSetEnum)));
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   EXPECT_EQ(TraitProperty::Enum,                                               \
             getOpenMPContextTraitPropertyKind(                                 \
@@ -68,10 +70,10 @@ TEST_F(OpenMPContextTest, ValidNesting) {
 }
 
 TEST_F(OpenMPContextTest, ApplicabilityNonConstruct) {
-  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"));
-  OMPContext DeviceLinux(true, Triple("x86_64-unknown-linux"));
-  OMPContext HostNVPTX(false, Triple("nvptx64-nvidia-cuda"));
-  OMPContext DeviceNVPTX(true, Triple("nvptx64-nvidia-cuda"));
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple());
+  OMPContext DeviceLinux(true, Triple("x86_64-unknown-linux"), Triple());
+  OMPContext HostNVPTX(false, Triple("nvptx64-nvidia-cuda"), Triple());
+  OMPContext DeviceNVPTX(true, Triple("nvptx64-nvidia-cuda"), Triple());
 
   VariantMatchInfo Empty;
   EXPECT_TRUE(isVariantApplicableInContext(Empty, HostLinux));
@@ -129,19 +131,21 @@ TEST_F(OpenMPContextTest, ApplicabilityNonConstruct) {
 }
 
 TEST_F(OpenMPContextTest, ApplicabilityAllTraits) {
-  OMPContext HostLinuxParallelParallel(false, Triple("x86_64-unknown-linux"));
+  OMPContext HostLinuxParallelParallel(false, Triple("x86_64-unknown-linux"),
+                                       Triple());
   HostLinuxParallelParallel.addTrait(
       TraitProperty::construct_parallel_parallel);
   HostLinuxParallelParallel.addTrait(
       TraitProperty::construct_parallel_parallel);
-  OMPContext DeviceLinuxTargetParallel(true, Triple("x86_64-unknown-linux"));
+  OMPContext DeviceLinuxTargetParallel(true, Triple("x86_64-unknown-linux"),
+                                       Triple());
   DeviceLinuxTargetParallel.addTrait(TraitProperty::construct_target_target);
   DeviceLinuxTargetParallel.addTrait(
       TraitProperty::construct_parallel_parallel);
-  OMPContext HostNVPTXFor(false, Triple("nvptx64-nvidia-cuda"));
+  OMPContext HostNVPTXFor(false, Triple("nvptx64-nvidia-cuda"), Triple());
   HostNVPTXFor.addTrait(TraitProperty::construct_for_for);
-  OMPContext DeviceNVPTXTargetTeamsParallel(true,
-                                            Triple("nvptx64-nvidia-cuda"));
+  OMPContext DeviceNVPTXTargetTeamsParallel(true, Triple("nvptx64-nvidia-cuda"),
+                                            Triple());
   DeviceNVPTXTargetTeamsParallel.addTrait(
       TraitProperty::construct_target_target);
   DeviceNVPTXTargetTeamsParallel.addTrait(TraitProperty::construct_teams_teams);

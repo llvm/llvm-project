@@ -2929,7 +2929,10 @@ TargetOMPContext::TargetOMPContext(
     const FunctionDecl *CurrentFunctionDecl,
     ArrayRef<llvm::omp::TraitProperty> ConstructTraits)
     : OMPContext(ASTCtx.getLangOpts().OpenMPIsTargetDevice,
-                 ASTCtx.getTargetInfo().getTriple()),
+                 ASTCtx.getTargetInfo().getTriple(),
+                 ASTCtx.getLangOpts().OMPTargetTriples.empty()
+                     ? llvm::Triple()
+                     : ASTCtx.getLangOpts().OMPTargetTriples[0]),
       FeatureValidityCheck([&](StringRef FeatureName) {
         return ASTCtx.getTargetInfo().isValidFeatureName(FeatureName);
       }),

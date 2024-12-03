@@ -15631,6 +15631,35 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
   return ICE;
 }
 
+void SemaOpenMP::ActOnOpenMPDeviceNum(Expr *DeviceNumExpr) {
+  llvm::APSInt Result;
+  Expr::EvalResult EvalResult;
+  // Strip implicit casts from the expression
+  DeviceNumExpr = DeviceNumExpr->IgnoreImpCasts();
+  // Evaluate the expression to an integer value
+  if (!DeviceNumExpr->isValueDependent() &&
+      DeviceNumExpr->EvaluateAsInt(EvalResult, SemaRef.Context)) {
+    // The device expression must evaluate to a non-negative integer value.
+    Result = EvalResult.Val.getInt();
+    if (Result.isNonNegative()) {
+      OMPContext::DeviceNum = Result.getZExtValue();
+    } else {
+      Diag(DeviceNumExpr->getExprLoc(),
+           diag::err_omp_negative_expression_in_clause)
+          << "device_num" << 0 << DeviceNumExpr->getSourceRange();
+    }
+  } else if (auto *DeclRef = dyn_cast<DeclRefExpr>(DeviceNumExpr)) {
+    // Check if the expression is an identifier
+    IdentifierInfo *IdInfo = DeclRef->getDecl()->getIdentifier();
+    if (IdInfo) {
+      StringRef Identifier = IdInfo->getName();
+      OMPContext::DeviceNumID = Identifier;
+    }
+  } else {
+    Diag(DeviceNumExpr->getExprLoc(), diag::err_expected_expression);
+  }
+}
+
 OMPClause *SemaOpenMP::ActOnOpenMPSafelenClause(Expr *Len,
                                                 SourceLocation StartLoc,
                                                 SourceLocation LParenLoc,
