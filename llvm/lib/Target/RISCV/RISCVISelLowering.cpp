@@ -5314,15 +5314,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       unsigned Index = 0;
       if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index) &&
           1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
-        if (SDValue Src = getSingleShuffleSrc(VT, ContainerVT, V1, V2)) {
-          if (Src.getValueType() == VT) {
-            EVT WideVT = VT.getDoubleNumVectorElementsVT();
-            Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT,
-                              DAG.getUNDEF(WideVT), Src,
-                              DAG.getVectorIdxConstant(0, DL));
-          }
+        if (SDValue Src = getSingleShuffleSrc(VT, ContainerVT, V1, V2))
           return getDeinterleaveShiftAndTrunc(DL, VT, Src, Factor, Index, DAG);
-        }
       }
     }
   }
