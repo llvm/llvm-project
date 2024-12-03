@@ -105,9 +105,9 @@ TEST_P(SocketTest, DomainListenGetListeningConnectionURI) {
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   ASSERT_TRUE(listen_socket_up->IsValid());
 
-  const auto &URIs = listen_socket_up->GetListeningConnectionURI();
-  ASSERT_EQ(URIs.size(), 1u);
-  ASSERT_EQ(URIs[0], llvm::formatv("unix-connect://{0}", Path).str());
+  ASSERT_THAT(
+      listen_socket_up->GetListeningConnectionURI(),
+      testing::ElementsAre(llvm::formatv("unix-connect://{0}", Path).str()));
 }
 
 TEST_P(SocketTest, DomainMainLoopAccept) {
@@ -262,12 +262,12 @@ TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_TRUE(sock.get()->IsValid());
 
-  for (const auto &URI : sock.get()->GetListeningConnectionURI()) {
-    EXPECT_EQ(URI,
-              llvm::formatv("connection://[{0}]:{1}", GetParam().localhost_ip,
-                            sock->get()->GetLocalPortNumber())
-                  .str());
-  }
+  EXPECT_THAT(
+      sock.get()->GetListeningConnectionURI(),
+      testing::ElementsAre(llvm::formatv("connection://[{0}]:{1}",
+                                         GetParam().localhost_ip,
+                                         sock->get()->GetLocalPortNumber())
+                               .str()));
 }
 
 TEST_P(SocketTest, TCPGetConnectURI) {

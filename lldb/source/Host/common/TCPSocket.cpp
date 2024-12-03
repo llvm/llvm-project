@@ -116,14 +116,10 @@ std::string TCPSocket::GetRemoteConnectionURI() const {
 }
 
 std::vector<std::string> TCPSocket::GetListeningConnectionURI() const {
-  if (m_listen_sockets.empty())
-    return {};
-
   std::vector<std::string> URIs;
-  for (auto &s : m_listen_sockets)
-    URIs.emplace_back(llvm::formatv(
-        "connection://[{0}]:{1}", s.second.GetIPAddress(), s.second.GetPort()));
-
+  for (const auto &[fd, addr] : m_listen_sockets)
+    URIs.emplace_back(llvm::formatv("connection://[{0}]:{1}",
+                                    addr.GetIPAddress(), addr.GetPort()));
   return URIs;
 }
 
