@@ -69,7 +69,7 @@
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
-// CHECK-NEXT:     FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable AES SVE2 instructions
+// CHECK-NEXT:     FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword SVE polynomial multiply instructions
 // CHECK-NEXT:     FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
 // CHECK-NEXT:     FEAT_SVE_SHA3                                          Enable SHA3 SVE2 instructions
 // CHECK-NEXT:     FEAT_SVE_SM4                                           Enable SM4 SVE2 instructions

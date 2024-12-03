@@ -854,7 +854,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> MONAKA = [HasV9_3aOps, FeaturePerfMon, FeatureCCIDX,
                                    FeatureFPAC, FeatureFP16FML, FeatureRandGen,
                                    FeatureSSBS, FeatureLS64, FeatureCLRBHB,
-                                   FeatureSPECRES2, FeatureSVE2AES, FeatureSVE2SM4,
+                                   FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
                                    FeatureSVE2SHA3, FeatureSVE2BitPerm, FeatureETE,
                                    FeatureMEC, FeatureFP8DOT2];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
