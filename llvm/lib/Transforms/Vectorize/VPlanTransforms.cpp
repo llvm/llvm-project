@@ -1819,3 +1819,24 @@ void VPlanTransforms::createInterleaveGroups(
       }
   }
 }
+
+void VPlanTransforms::prepareToExecute(VPlan &Plan) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getVectorLoopRegion());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
+      if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
+        continue;
+      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+      StringRef Name =
+          isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
+      auto *ScalarR =
+          new VPScalarPHIRecipe(PhiR->getStartValue(), PhiR->getBackedgeValue(),
+                                PhiR->getDebugLoc(), Name);
+      ScalarR->insertBefore(PhiR);
+      PhiR->replaceAllUsesWith(ScalarR);
+      PhiR->eraseFromParent();
+    }
+  }
+}
