@@ -195,7 +195,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) num_gangs(1)
   for(int i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel loop device_type(*) num_workers(1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'device_num' may not follow a 'device_type' clause in a 'serial loop' construct}}
