@@ -3500,6 +3500,10 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   // FIXME: Support i1 vectors, maybe by promoting to i8?
   if (VT.getVectorElementType() == MVT::i1)
     return SDValue();
+  // Additionally the element types should match
+  if (Vec.getSimpleValueType().getVectorElementType() !=
+      VT.getVectorElementType())
+    return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
   if (Idx.getValueType() != Subtarget.getXLenVT())
