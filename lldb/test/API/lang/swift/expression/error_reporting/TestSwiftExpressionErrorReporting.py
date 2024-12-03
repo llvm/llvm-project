@@ -56,5 +56,5 @@ class TestSwiftExpressionErrorReporting(TestBase):
                     substrs=['Missing type'])
         
         process.Continue()
-        self.expect('dwim-print -O -- number', error=True,
+        self.expect('expression -O -- number', error=True,
                     substrs=['self', 'not', 'found'])
