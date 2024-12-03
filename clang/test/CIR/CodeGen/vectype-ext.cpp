@@ -135,7 +135,7 @@ void vector_int_test(int x) {
   vi4 n = ~a;
   // CIR: %{{[0-9]+}} = cir.unary(not, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
   // LLVM:      %[[#VAL:]] = load <4 x i32>, ptr %{{[0-9]+}}, align 16
-  // LLVM-NEXT: %[[#RES:]] = xor <4 x i32> splat (i32 -1), %[[#VAL]]
+  // LLVM-NEXT: %[[#RES:]] = xor <4 x i32> %[[#VAL]], splat (i32 -1)
   // LLVM-NEXT: store <4 x i32> %[[#RES]], ptr %{{[0-9]+}}, align 16
 
   // TODO: Ternary conditional operator

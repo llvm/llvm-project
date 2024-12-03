@@ -18,7 +18,7 @@ module {
 // MLIR: = llvm.mlir.constant(-1 : i32)
 // MLIR: = llvm.xor
 
-// LLVM: = xor i32 -1, %[[#]]
+// LLVM: = xor i32 %[[#]], -1
 
 
     cir.func @floatingPoint(%arg0: !cir.float, %arg1: !cir.double) {

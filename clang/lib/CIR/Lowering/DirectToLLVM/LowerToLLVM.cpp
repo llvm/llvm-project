@@ -2326,7 +2326,7 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     }
     case cir::UnaryOpKind::Not: {
       // bit-wise compliment operator, implemented as an XOR with -1.
-      mlir::Value MinusOne;
+      mlir::Value minusOne;
       if (IsVector) {
         // Creating a vector object with all -1 values is easier said than
         // done. It requires a series of insertelement ops.
@@ -2334,20 +2334,20 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
             getTypeConverter()->convertType(elementType);
         auto MinusOneInt = rewriter.create<mlir::LLVM::ConstantOp>(
             loc, llvmElementType, mlir::IntegerAttr::get(llvmElementType, -1));
-        MinusOne = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmType);
+        minusOne = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmType);
         auto NumElements = mlir::dyn_cast<cir::VectorType>(type).getSize();
         for (uint64_t i = 0; i < NumElements; ++i) {
           mlir::Value indexValue = rewriter.create<mlir::LLVM::ConstantOp>(
               loc, rewriter.getI64Type(), i);
-          MinusOne = rewriter.create<mlir::LLVM::InsertElementOp>(
-              loc, MinusOne, MinusOneInt, indexValue);
+          minusOne = rewriter.create<mlir::LLVM::InsertElementOp>(
+              loc, minusOne, MinusOneInt, indexValue);
         }
       } else {
-        MinusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+        minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
             loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
       }
-      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, llvmType, MinusOne,
-                                                     adaptor.getInput());
+      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
+          op, llvmType, adaptor.getInput(), minusOne);
       return mlir::success();
     }
     }

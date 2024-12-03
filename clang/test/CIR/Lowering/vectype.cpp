@@ -138,7 +138,7 @@ void vector_int_test(int x) {
   // CHECK: %[[#T101:]] = llvm.insertelement %[[#T94]], %[[#T99]][%[[#T100]] : i64] : vector<4xi32>
   // CHECK: %[[#T102:]] = llvm.mlir.constant(3 : i64) : i64
   // CHECK: %[[#T103:]] = llvm.insertelement %[[#T94]], %[[#T101]][%[[#T102]] : i64] : vector<4xi32>
-  // CHECK: %[[#T104:]] = llvm.xor %[[#T103]], %[[#T93]]  : vector<4xi32>
+  // CHECK: %[[#T104:]] = llvm.xor %[[#T93]], %[[#T103]]  : vector<4xi32>
   // CHECK: llvm.store %[[#T104]], %[[#T29:]] {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr
 
   // Ternary conditional operator
