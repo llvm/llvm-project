@@ -328,6 +328,13 @@ void ModuleSummaryIndex::propagateAttributes(
 
 bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
                                             bool AnalyzeRefs) const {
+  bool CanImportDecl;
+  return canImportGlobalVar(S, AnalyzeRefs, CanImportDecl);
+}
+
+bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
+                                            bool AnalyzeRefs,
+                                            bool &CanImportDecl) const {
   auto HasRefsPreventingImport = [this](const GlobalVarSummary *GVS) {
     // We don't analyze GV references during attribute propagation, so
     // GV with non-trivial initializer can be marked either read or
@@ -348,13 +355,20 @@ bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
   };
   auto *GVS = cast<GlobalVarSummary>(S->getBaseObject());
 
+  const bool nonInterposable =
+      !GlobalValue::isInterposableLinkage(S->linkage());
+  const bool eligibleToImport = !S->notEligibleToImport();
+
+  // It's correct to import a global variable only when it is not interposable
+  // and eligible to import.
+  CanImportDecl = (nonInterposable && eligibleToImport);
+
   // Global variable with non-trivial initializer can be imported
   // if it's readonly. This gives us extra opportunities for constant
   // folding and converting indirect calls to direct calls. We don't
   // analyze GV references during attribute propagation, because we
   // don't know yet if it is readonly or not.
-  return !GlobalValue::isInterposableLinkage(S->linkage()) &&
-         !S->notEligibleToImport() &&
+  return nonInterposable && eligibleToImport &&
          (!AnalyzeRefs || !HasRefsPreventingImport(GVS));
 }
 

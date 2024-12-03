@@ -3842,10 +3842,7 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // These can often be turned into switches and other things.
   auto IsBinOpOrAnd = [](Value *V) {
     return match(
-        V, m_CombineOr(
-               m_BinOp(),
-               m_CombineOr(m_Select(m_Value(), m_ImmConstant(), m_Value()),
-                           m_Select(m_Value(), m_Value(), m_ImmConstant()))));
+        V, m_CombineOr(m_BinOp(), m_c_Select(m_ImmConstant(), m_Value())));
   };
   if (PN->getType()->isIntegerTy(1) &&
       (IsBinOpOrAnd(PN->getIncomingValue(0)) ||
