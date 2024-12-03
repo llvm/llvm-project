@@ -1138,4 +1138,12 @@ namespace BuiltinMemcpy {
     return b;
   }
   static_assert(simple() == 12);
+
+
+  extern struct Incomplete incomplete;
+  constexpr struct Incomplete *null_incomplete = 0;
+  static_assert(__builtin_memcpy(null_incomplete, null_incomplete, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                      // both-note {{source of 'memcpy' is nullptr}}
+
+
 }
