@@ -42,6 +42,7 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_global_variable_host_access",
          SPIRV::Extension::Extension::SPV_INTEL_global_variable_host_access},
         {"SPV_INTEL_optnone", SPIRV::Extension::Extension::SPV_INTEL_optnone},
+        {"SPV_EXT_optnone", SPIRV::Extension::Extension::SPV_EXT_optnone},
         {"SPV_INTEL_usm_storage_classes",
          SPIRV::Extension::Extension::SPV_INTEL_usm_storage_classes},
         {"SPV_INTEL_split_barrier",
