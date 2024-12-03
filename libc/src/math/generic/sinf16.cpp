@@ -67,10 +67,11 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   // Exhaustive tests show that for |x| <= 0x1.f4p-11, 1ULP rounding errors
   // occur. To fix this, the following apply:
   if (LIBC_UNLIKELY(x_abs <= 0x13d0)) {
-    // When x >= 0, and rounding upward, sin(x) == x.
+    // sin(+/-0) = +/-0
     if (LIBC_UNLIKELY(x_abs == 0U))
       return x;
 
+    // When x > 0, and rounding upward, sin(x) == x.
     // When x < 0, and rounding downward, sin(x) == x.
     if ((rounding == FE_UPWARD && xbits.is_pos()) ||
         (rounding == FE_DOWNWARD && xbits.is_neg()))
