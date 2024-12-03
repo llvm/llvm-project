@@ -20,13 +20,13 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[X4:%.*]] = ptrtoint ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[Y5:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X4]], [[Y5]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 128
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_BODY_PREHEADER9:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK6:%.*]] = icmp ult i32 [[N]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK6:%.*]] = icmp samesign ult i32 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK6]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH1:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483632

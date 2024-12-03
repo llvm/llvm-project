@@ -12,7 +12,7 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[RAND_BLOCK_LENGTH]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[RAND_BLOCK_LENGTH]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[RAND_BLOCK_LENGTH]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER23:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
@@ -189,7 +189,7 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    br i1 [[CMP211]], label %[[FOR_BODY_US_PREHEADER:.*]], label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY_US_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[RAND_BLOCK_LENGTH]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[RAND_BLOCK_LENGTH]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[RAND_BLOCK_LENGTH]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
@@ -200,7 +200,7 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK:       [[FOR_BODY_US]]:
 ; CHECK-NEXT:    [[V1_021_US:%.*]] = phi double [ [[V1_2_US_LCSSA:%.*]], %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US:.*]] ], [ 0.000000e+00, %[[FOR_BODY_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[V0_020_US:%.*]] = phi double [ [[V0_2_US_LCSSA:%.*]], %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]] ], [ 0.000000e+00, %[[FOR_BODY_US_PREHEADER]] ]
-; CHECK-NEXT:    [[BLOCK_017_US:%.*]] = phi i32 [ [[INC9_US:%.*]], %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]] ], [ 0, %[[FOR_BODY_US_PREHEADER]] ]
+; CHECK-NEXT:    [[BLOCK_019_US:%.*]] = phi i32 [ [[INC9_US:%.*]], %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]] ], [ 0, %[[FOR_BODY_US_PREHEADER]] ]
 ; CHECK-NEXT:    tail call void @resample(i32 noundef [[RAND_BLOCK_LENGTH]], ptr noundef [[SAMPLES]])
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY3_US_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -273,13 +273,13 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK:       [[FOR_COND1_FOR_INC8_CRIT_EDGE_US]]:
 ; CHECK-NEXT:    [[V0_2_US_LCSSA]] = phi double [ [[TMP26]], %[[MIDDLE_BLOCK]] ], [ [[V0_2_US]], %[[FOR_BODY3_US]] ]
 ; CHECK-NEXT:    [[V1_2_US_LCSSA]] = phi double [ [[TMP25]], %[[MIDDLE_BLOCK]] ], [ [[V1_2_US]], %[[FOR_BODY3_US]] ]
-; CHECK-NEXT:    [[INC9_US]] = add nuw nsw i32 [[BLOCK_017_US]], 1
+; CHECK-NEXT:    [[INC9_US]] = add nuw i32 [[BLOCK_019_US]], 1
 ; CHECK-NEXT:    [[EXITCOND26_NOT:%.*]] = icmp eq i32 [[INC9_US]], [[NBLOCKS]]
 ; CHECK-NEXT:    br i1 [[EXITCOND26_NOT]], label %[[FOR_END10]], label %[[FOR_BODY_US]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[BLOCK_017:%.*]] = phi i32 [ [[INC9:%.*]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[BLOCK_019:%.*]] = phi i32 [ [[INC9:%.*]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    tail call void @resample(i32 noundef [[RAND_BLOCK_LENGTH]], ptr noundef [[SAMPLES]])
-; CHECK-NEXT:    [[INC9]] = add nuw nsw i32 [[BLOCK_017]], 1
+; CHECK-NEXT:    [[INC9]] = add nuw i32 [[BLOCK_019]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC9]], [[NBLOCKS]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END10]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END10]]:

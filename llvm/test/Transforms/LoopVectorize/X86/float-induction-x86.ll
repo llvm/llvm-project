@@ -21,10 +21,10 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    br i1 [[CMP4]], label [[ITER_CHECK:%.*]], label [[FOR_END:%.*]]
 ; AUTO_VEC:       iter.check:
 ; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[N]] to i64
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp samesign ult i32 [[N]], 4
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; AUTO_VEC:       vector.main.loop.iter.check:
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[N]], 32
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp samesign ult i32 [[N]], 32
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[ZEXT]], 2147483616
@@ -138,7 +138,7 @@ define void @fp_iv_loop2(ptr noalias nocapture %A, i32 %N) {
 ; AUTO_VEC:       for.body.preheader:
 ; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[N]] to i64
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[ZEXT]], 7
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N]], 8
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp samesign ult i32 [[N]], 8
 ; AUTO_VEC-NEXT:    br i1 [[TMP0]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; AUTO_VEC:       for.body.preheader.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[ZEXT]], 2147483640
