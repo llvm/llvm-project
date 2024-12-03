@@ -170,13 +170,13 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   auto addLime1Features = [&]() {
     // Lime1:
     // <https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1>
+    Features["bulk-memory-opt"] = true;
+    Features["call-indirect-overlong"] = true;
+    Features["extended-const"] = true;
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
-    Features["call-indirect-overlong"] = true;
-    Features["sign-ext"] = true;
-    Features["bulk-memory-opt"] = true;
     Features["nontrapping-fptoint"] = true;
-    Features["extended-const"] = true;
+    Features["sign-ext"] = true;
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
