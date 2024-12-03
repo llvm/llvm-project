@@ -110,8 +110,8 @@ public:
   const DominatorTree *DT;
   const UniformityInfo &UA;
   const DataLayout &DL;
-  bool HasUnsafeFPMath;
-  bool HasFP32DenormalFlush;
+  const bool HasUnsafeFPMath;
+  const bool HasFP32DenormalFlush;
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
   mutable Function *LdexpF32 = nullptr;
