@@ -42,6 +42,7 @@ static ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
     ISA = StringSwitch<VFISAKind>(MangledName.take_front(1))
               .Case("n", VFISAKind::AdvancedSIMD)
               .Case("s", VFISAKind::SVE)
+              .Case("r", VFISAKind::RVV)
               .Case("b", VFISAKind::SSE)
               .Case("c", VFISAKind::AVX)
               .Case("d", VFISAKind::AVX2)
@@ -79,9 +80,9 @@ static ParseRet tryParseVLEN(StringRef &ParseString, VFISAKind ISA,
                              std::pair<unsigned, bool> &ParsedVF) {
   if (ParseString.consume_front("x")) {
     // SVE is the only scalable ISA currently supported.
-    if (ISA != VFISAKind::SVE) {
+    if (ISA != VFISAKind::SVE && ISA != VFISAKind::RVV) {
       LLVM_DEBUG(dbgs() << "Vector function variant declared with scalable VF "
-                        << "but ISA is not SVE\n");
+                        << "but ISA supported for SVE and RVV only\n");
       return ParseRet::Error;
     }
     // We can't determine the VF of a scalable vector by looking at the vlen
@@ -301,9 +302,8 @@ static ParseRet tryParseAlign(StringRef &ParseString, Align &Alignment) {
 // the number of elements of the given type which would fit in such a vector.
 static std::optional<ElementCount> getElementCountForTy(const VFISAKind ISA,
                                                         const Type *Ty) {
-  // Only AArch64 SVE is supported at present.
-  assert(ISA == VFISAKind::SVE &&
-         "Scalable VF decoding only implemented for SVE\n");
+  assert((ISA == VFISAKind::SVE || ISA == VFISAKind::RVV) &&
+         "Scalable VF decoding only implemented for SVE and RVV\n");
 
   if (Ty->isIntegerTy(64) || Ty->isDoubleTy() || Ty->isPointerTy())
     return ElementCount::getScalable(2);

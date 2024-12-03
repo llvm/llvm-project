@@ -3296,6 +3296,8 @@ defm BUFFER_WBINVL1_VOL         : MUBUF_Real_vi <0x3f>;
 
 
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
+defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Real_Atomic_vi <0x52>;
+
 defm BUFFER_ATOMIC_ADD_F32    : MUBUF_Real_Atomic_vi <0x4d>;
 
 let SubtargetPredicate = isGFX90APlus in {
