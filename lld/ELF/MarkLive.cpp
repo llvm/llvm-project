@@ -44,7 +44,7 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-typedef std::variant<InputSectionBase *, Defined *> LiveObject;
+typedef std::variant<InputSectionBase *, Symbol *> LiveObject;
 
 template <class ELFT> class MarkLive {
 public:
@@ -134,9 +134,12 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     return;
   }
 
-  if (auto *ss = dyn_cast<SharedSymbol>(&sym))
-    if (!ss->isWeak())
+  if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
+    if (!ss->isWeak()) {
       cast<SharedFile>(ss->file)->isNeeded = true;
+      whyLive.try_emplace(&sym, parent);
+    }
+  }
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
     enqueue(sec, std::nullopt, parent);
