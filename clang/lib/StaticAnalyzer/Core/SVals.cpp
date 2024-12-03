@@ -205,8 +205,8 @@ const NamedDecl *nonloc::PointerToMember::getDecl() const {
     return nullptr;
 
   const NamedDecl *ND = nullptr;
-  if (isa<const NamedDecl *>(PTMD))
-    ND = cast<const NamedDecl *>(PTMD);
+  if (const auto *NDP = dyn_cast<const NamedDecl *>(PTMD))
+    ND = NDP;
   else
     ND = cast<const PointerToMemberData *>(PTMD)->getDeclaratorDecl();
 

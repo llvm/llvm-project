@@ -230,7 +230,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
 
   if (!V) {
     // Switch from single-node to multi-node representation.
-    ExplodedNode *Old = cast<ExplodedNode *>(Storage);
+    auto *Old = cast<ExplodedNode *>(Storage);
 
     BumpVectorContext &Ctx = G.getNodeAllocator();
     V = new (G.getAllocator()) ExplodedNodeVector(Ctx, 4);

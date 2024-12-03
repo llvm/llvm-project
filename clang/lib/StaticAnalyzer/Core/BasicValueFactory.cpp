@@ -197,12 +197,12 @@ const PointerToMemberData *BasicValueFactory::accumCXXBase(
   llvm::ImmutableList<const CXXBaseSpecifier *> BaseSpecList;
 
   if (PTMDT.isNull() || isa<const NamedDecl *>(PTMDT)) {
-    if (isa<const NamedDecl *>(PTMDT))
-      ND = cast<const NamedDecl *>(PTMDT);
+    if (const auto *NDP = dyn_cast_if_present<const NamedDecl *>(PTMDT))
+      ND = NDP;
 
     BaseSpecList = CXXBaseListFactory.getEmptyList();
   } else {
-    const PointerToMemberData *PTMD = cast<const PointerToMemberData *>(PTMDT);
+    const auto *PTMD = cast<const PointerToMemberData *>(PTMDT);
     ND = PTMD->getDeclaratorDecl();
 
     BaseSpecList = PTMD->getCXXBaseList();

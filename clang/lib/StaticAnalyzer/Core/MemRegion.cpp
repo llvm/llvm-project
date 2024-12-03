@@ -1068,8 +1068,8 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     llvm::PointerUnion<const StackFrameContext *, const VarRegion *> V =
       getStackOrCaptureRegionForDeclContext(LC, DC, D);
 
-    if (isa<const VarRegion *>(V))
-      return cast<const VarRegion *>(V);
+    if (const auto *VR = dyn_cast_if_present<const VarRegion *>(V))
+      return VR;
 
     const auto *STC = cast<const StackFrameContext *>(V);
 
