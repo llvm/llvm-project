@@ -5,7 +5,7 @@
 # RUN: %lldb %t/input.o -o "command script import %t/script.py" -o exit | FileCheck %s
 
 # CHECK: Found 1 function(s).
-# CHECK: foo: [input.o[0x0-0x7), input.o[0x7-0xe), input.o[0x14-0x1b), input.o[0x1b-0x1c)]
+# CHECK: foo: [input.o[0x0-0xe), input.o[0x14-0x1c)]
 
 #--- script.py
 import lldb
