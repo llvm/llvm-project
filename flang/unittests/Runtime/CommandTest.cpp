@@ -352,9 +352,6 @@ TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
 #if defined(_WIN32)
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
   CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXXXX");
-#elif defined(_AIX)
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXXXX");
 #else
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
   CheckDescriptorEqStr(cmdMsg.get(), "Command line execution failed");
