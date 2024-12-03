@@ -118,6 +118,10 @@ let TargetPrefix = "spv" in {
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
                               [IntrInaccessibleMemOrArgMemOnly]>;
 
+  def int_spv_resource_getpointer
+      : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
+                              [IntrNoMem]>;
+
   // Read a value from the image buffer. It does not translate directly to a
   // single OpImageRead because the result type is not necessarily a 4 element
   // vector.
