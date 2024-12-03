@@ -1101,6 +1101,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   uint32_t getNumMultiDevices() const { return OMPX_NumMultiDevices; }
 
+  bool enableRuntimeAutotuning() const { return OMPX_EnableRuntimeAutotuning; }
+
   bool getMultiDeviceKernelValue(void *EntryPtr);
 
   /// Reference to the underlying plugin that created this device.
@@ -1211,6 +1213,9 @@ protected:
 
   /// Specify the number of devices used by multi-device kernels.
   UInt32Envar OMPX_NumMultiDevices;
+
+  /// Envar to enable runtime tuning.
+  BoolEnvar OMPX_EnableRuntimeAutotuning;
 
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.

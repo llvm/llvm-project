@@ -741,8 +741,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         OMPX_BigJumpLoopOccupancyBasedOpt(
             "OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT", false),
         OMPX_XTeamReductionOccupancyBasedOpt(
-            "OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT", false),
-        OMPX_EnableRuntimeAutotuning("OMPX_ENABLE_RUNTIME_AUTOTUNING", false) {}
+            "OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT", false) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -879,9 +878,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Envar to enable occupancy-based optimization for cross team reduction.
   BoolEnvar OMPX_XTeamReductionOccupancyBasedOpt;
-
-  /// Envar to enable runtime tuning.
-  BoolEnvar OMPX_EnableRuntimeAutotuning;
 
 private:
   /// The kernel object to execute.
@@ -2169,7 +2165,7 @@ public:
 
     // If runtime autotuning is enabled, setup the callback functions to process
     // the data after kernel completed.
-    if (Kernel.OMPX_EnableRuntimeAutotuning) {
+    if (Device.enableRuntimeAutotuning()) {
       PostKernelRunProcessingArgs.Agent = Agent;
       PostKernelRunProcessingArgs.Signal = OutputSignal;
       PostKernelRunProcessingArgs.TicksToTime = 1.0;
@@ -2589,7 +2585,13 @@ struct AMDGPUStreamManagerTy final
         OMPX_QueueTracking("LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING", true),
         OMPX_EnableQueueProfiling("LIBOMPTARGET_AMDGPU_ENABLE_QUEUE_PROFILING",
                                   false),
-        NextQueue(0), Agent(HSAAgent) {}
+        NextQueue(0), Agent(HSAAgent) {
+    // If OMPX_ENABLE_RUNTIME_AUTOTUNING is enabled,
+    // set queue profiling to true.
+    if (Device.enableRuntimeAutotuning()) {
+      OMPX_EnableQueueProfiling = true;
+    }
+  }
 
   Error init(uint32_t InitialSize, int NumHSAQueues, int HSAQueueSize) {
     Queues = std::vector<AMDGPUQueueTy>(NumHSAQueues);
