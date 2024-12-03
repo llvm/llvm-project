@@ -3748,7 +3748,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
       if (!RequireCompleteType(StartLoc, Pointee,
-                               LangOpts.CPlusPlus26
+                               Pointee->isStructureOrClassType() &&
+                                       LangOpts.CPlusPlus26
                                    ? diag::err_delete_incomplete
                                    : diag::warn_delete_incomplete,
                                Ex.get())) {
