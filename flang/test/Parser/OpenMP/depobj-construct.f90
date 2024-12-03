@@ -8,14 +8,14 @@ end
 
 !UNPARSE: SUBROUTINE f00
 !UNPARSE:  INTEGER x, y
-!UNPARSE: !$OMP DEPOBJ(x) DEPEND(IN:y)
+!UNPARSE: !$OMP DEPOBJ(x) DEPEND(IN: y)
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct
 !PARSE-TREE: | Verbatim
 !PARSE-TREE: | OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> TaskDep
-!PARSE-TREE: | | OmpTaskDependenceType -> Value = In
+!PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> Value = In
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
 
 subroutine f01

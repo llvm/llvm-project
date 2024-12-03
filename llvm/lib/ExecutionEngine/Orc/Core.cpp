@@ -938,7 +938,6 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
           auto &MI = MII->second;
           for (auto &Q : MI.takeQueriesMeeting(SymbolState::Resolved)) {
             Q->notifySymbolMetRequiredState(Name, ResolvedSym);
-            Q->removeQueryDependence(*this, Name);
             if (Q->isComplete())
               CompletedQueries.insert(std::move(Q));
           }
@@ -1207,9 +1206,8 @@ void JITDylib::MaterializingInfo::removeQuery(
       PendingQueries, [&Q](const std::shared_ptr<AsynchronousSymbolQuery> &V) {
         return V.get() == &Q;
       });
-  assert(I != PendingQueries.end() &&
-         "Query is not attached to this MaterializingInfo");
-  PendingQueries.erase(I);
+  if (I != PendingQueries.end())
+    PendingQueries.erase(I);
 }
 
 JITDylib::AsynchronousSymbolQueryList
@@ -2615,6 +2613,12 @@ void ExecutionSession::OL_completeLookup(
               LLVM_DEBUG(dbgs()
                          << "matched, symbol already in required state\n");
               Q->notifySymbolMetRequiredState(Name, SymI->second.getSymbol());
+
+              // If this symbol is in anything other than the Ready state then
+              // we need to track the dependence.
+              if (SymI->second.getState() != SymbolState::Ready)
+                Q->addQueryDependence(JD, Name);
+
               return true;
             }
 
@@ -3165,7 +3169,6 @@ void ExecutionSession::IL_makeEDUEmitted(
       Q->notifySymbolMetRequiredState(SymbolStringPtr(Sym), Entry.getSymbol());
       if (Q->isComplete())
         Queries.insert(Q);
-      Q->removeQueryDependence(JD, SymbolStringPtr(Sym));
     }
   }
 
@@ -3308,7 +3311,7 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
           continue;
         }
 
-        // If we get here thene Dep is Emitted. We need to look up its defining
+        // If we get here then Dep is Emitted. We need to look up its defining
         // EDU and add this EDU to the defining EDU's list of users (this means
         // creating an EDUInfos entry if the defining EDU doesn't have one
         // already).
@@ -3317,8 +3320,6 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
         auto &DepMI = DepJD->MaterializingInfos[SymbolStringPtr(Dep)];
         assert(DepMI.DefiningEDU &&
                "Emitted symbol does not have a defining EDU");
-        assert(!DepMI.DefiningEDU->Dependencies.empty() &&
-               "Emitted symbol has empty dependencies (should be ready)");
         assert(DepMI.DependantEDUs.empty() &&
                "Already-emitted symbol has dependant EDUs?");
         auto &DepEDUInfo = EDUInfos[DepMI.DefiningEDU.get()];

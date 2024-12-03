@@ -131,6 +131,7 @@ set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include
+             -I${LLVM_MAIN_SRC_DIR}/../libc
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 
@@ -275,6 +276,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
     target_include_directories(${ide_target_name} PRIVATE
       ${include_directory}
+      ${LLVM_MAIN_SRC_DIR}/../libc
       ${devicertl_base_directory}/../include
       ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
     )

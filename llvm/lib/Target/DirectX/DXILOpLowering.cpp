@@ -568,23 +568,47 @@ public:
         return make_error<StringError>(
             "typedBufferStore data must be a vector of 4 elements",
             inconvertibleErrorCode());
-      Value *Data0 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
-      Value *Data1 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
-      Value *Data2 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
-      Value *Data3 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
 
-      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
-                                  Data1,  Data2,  Data3,  Mask};
+      // Since we're post-scalarizer, we likely have a vector that's constructed
+      // solely for the argument of the store. If so, just use the scalar values
+      // from before they're inserted into the temporary.
+      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI) {
+        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+        if (!IndexOp)
+          break;
+        size_t IndexVal = IndexOp->getZExtValue();
+        assert(IndexVal < 4 && "Too many elements for buffer store");
+        DataElements[IndexVal] = IEI->getOperand(1);
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      }
+
+      // If for some reason we weren't able to forward the arguments from the
+      // scalarizer artifact, then we need to actually extract elements from the
+      // vector.
+      for (int I = 0, E = 4; I != E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] =
+              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+
+      std::array<Value *, 8> Args{
+          Handle,          Index0,          Index1,          DataElements[0],
+          DataElements[1], DataElements[2], DataElements[3], Mask};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
+      // Clean up any leftover `insertelement`s
+      IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI && IEI->use_empty()) {
+        InsertElementInst *Tmp = IEI;
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        Tmp->eraseFromParent();
+      }
+
       return Error::success();
     });
   }

@@ -369,10 +369,6 @@ enum NodeType : unsigned {
   VWMACCU_VL,
   VWMACCSU_VL,
 
-  // Narrowing logical shift right.
-  // Operands are (source, shift, passthru, mask, vl)
-  VNSRL_VL,
-
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.
   SETCC_VL,
