@@ -404,6 +404,7 @@ Non-comprehensive list of changes in this release
 - ``__builtin_reduce_and`` function can now be used in constant expressions.
 - ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
 - ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
+- ``__builtin_elementwise_bitreverse`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -763,6 +764,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
+- Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
+  captures at the end of a full expression. (#GH115931)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

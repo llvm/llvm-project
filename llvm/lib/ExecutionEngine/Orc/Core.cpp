@@ -3308,7 +3308,7 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
           continue;
         }
 
-        // If we get here thene Dep is Emitted. We need to look up its defining
+        // If we get here then Dep is Emitted. We need to look up its defining
         // EDU and add this EDU to the defining EDU's list of users (this means
         // creating an EDUInfos entry if the defining EDU doesn't have one
         // already).
