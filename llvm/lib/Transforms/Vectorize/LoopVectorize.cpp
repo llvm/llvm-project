@@ -134,6 +134,7 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -441,6 +442,8 @@ using SCEV2ValueTy = DenseMap<const SCEV *, Value *>;
 } // namespace
 
 namespace llvm {
+
+AnalysisKey ShouldRunExtraVectorPasses::Key;
 
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
@@ -10475,8 +10478,8 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     // extra simplification passes should be run.
     // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
     // be run if runtime checks have been added.
-    AM.getResult<ShouldRunExtraPasses>(F);
-    PA.preserve<ShouldRunExtraPasses>();
+    AM.getResult<ShouldRunExtraVectorPasses>(F);
+    PA.preserve<ShouldRunExtraVectorPasses>();
   } else {
     PA.preserveSet<CFGAnalyses>();
   }

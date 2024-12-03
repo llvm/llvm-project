@@ -58,6 +58,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include <functional>
 
 namespace llvm {
@@ -169,6 +170,13 @@ void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
 
+/// A marker analyss to determine if extra passes should be run after loop
+/// vectorization.
+struct ShouldRunExtraVectorPasses
+    : public ShouldRunExtraPasses<ShouldRunExtraVectorPasses>,
+      public AnalysisInfoMixin<ShouldRunExtraVectorPasses> {
+  static AnalysisKey Key;
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H

@@ -161,4 +161,3 @@ AnalysisSetKey CFGAnalyses::SetKey;
 
 AnalysisSetKey PreservedAnalyses::AllAnalysesKey;
 
-AnalysisKey ShouldRunExtraPasses::Key;

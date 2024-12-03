@@ -935,38 +935,6 @@ struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
   }
 };
 
-/// A marker analyss to determine if extra passes should be run on demand.
-/// Passes requesting extra transformations to run need to request and preserve
-/// this analysis.
-struct ShouldRunExtraPasses : public AnalysisInfoMixin<ShouldRunExtraPasses> {
-  static AnalysisKey Key;
-  struct Result {
-    bool invalidate(Function &F, const PreservedAnalyses &PA,
-                    FunctionAnalysisManager::Invalidator &) {
-      // Check whether the analysis has been explicitly invalidated. Otherwise,
-      // it remains preserved.
-      auto PAC = PA.getChecker<ShouldRunExtraPasses>();
-      return !PAC.preservedWhenStateless();
-    }
-  };
-
-  Result run(Function &F, FunctionAnalysisManager &FAM) { return Result(); }
-};
-
-/// A pass manager to run a set of extra function passes if the
-/// ShouldRunExtraPasses marker analysis is present. This allows passes to
-/// request additional transformations on demand. An example is extra
-/// simplifications after loop-vectorization, if runtime checks have been added.
-struct ExtraPassManager : public FunctionPassManager {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
-    auto PA = PreservedAnalyses::all();
-    if (AM.getCachedResult<ShouldRunExtraPasses>(F))
-      PA.intersect(FunctionPassManager::run(F, AM));
-    PA.abandon<ShouldRunExtraPasses>();
-    return PA;
-  }
-};
-
 } // end namespace llvm
 
 #endif // LLVM_IR_PASSMANAGER_H
