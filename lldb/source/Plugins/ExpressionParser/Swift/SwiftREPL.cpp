@@ -500,8 +500,7 @@ bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
 
     DumpValueObjectOptions options;
     options.SetUseDynamicType(lldb::eDynamicCanRunTarget);
-    options.SetMaximumPointerDepth(
-        {DumpValueObjectOptions::PointerDepth::Mode::Formatters, 1});
+    options.SetMaximumPointerDepth(1);
     options.SetUseSyntheticValue(true);
     options.SetRevealEmptyAggregates(false);
     options.SetHidePointerValue(true);

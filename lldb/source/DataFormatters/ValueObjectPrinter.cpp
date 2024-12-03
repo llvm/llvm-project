@@ -502,36 +502,8 @@ ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
   return llvm::Error::success();
 }
 
-bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion(
-    bool is_root, TypeSummaryImpl *entry, ValueObject &valobj,
-    const std::string &summary) {
-  switch (m_mode) {
-  case Mode::Always:
-    return (m_count > 0);
-  case Mode::Never:
-    return false;
-  case Mode::Default:
-    if (is_root)
-      m_count = std::min<decltype(m_count)>(m_count, 1);
-    return m_count > 0;
-  case Mode::Formatters:
-    if (!entry || entry->DoesPrintChildren(&valobj) || summary.empty())
-      return m_count > 0;
-    return false;
-  }
-  return false;
-}
-
 bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
-  switch (m_mode) {
-  case Mode::Always:
-  case Mode::Default:
-  case Mode::Formatters:
-    return m_count > 0;
-  case Mode::Never:
-    return false;
-  }
-  return false;
+  return m_count > 0;
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(
@@ -584,8 +556,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
       return true;
     }
 
-    TypeSummaryImpl *entry = GetSummaryFormatter();
-    return curr_ptr_depth.CanAllowExpansion(false, entry, valobj, m_summary);
+    return curr_ptr_depth.CanAllowExpansion();
   }
 
   return print_children || m_summary.empty();
