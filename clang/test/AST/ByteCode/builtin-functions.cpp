@@ -1169,6 +1169,10 @@ namespace BuiltinMemcpy {
   static_assert(__builtin_memcpy(null_incomplete, null_incomplete, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
                                                                                       // both-note {{source of 'memcpy' is nullptr}}
 
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_memcpy(&global, null, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                   // both-note {{source of 'memcpy' is nullptr}}
 
   constexpr int simpleMove() {
     int a = 12;
