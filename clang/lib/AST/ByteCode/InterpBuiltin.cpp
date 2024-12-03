@@ -148,6 +148,17 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC,
 #undef RET_CASE
 }
 
+static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
+                                        unsigned ID) {
+  auto Loc = S.Current->getSource(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_function)
+        << /*isConstexpr=*/0 << /*isConstructor=*/0
+        << ("'" + S.getASTContext().BuiltinInfo.getName(ID) + "'").str();
+  else
+    S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
+}
+
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -181,9 +192,13 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const CallExpr *Call) {
+                                   const Function *Func, const CallExpr *Call) {
+  unsigned ID = Func->getBuiltinID();
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
+
+  if (ID == Builtin::BIstrcmp)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   if (!CheckLive(S, OpPC, A, AK_Read) || !CheckLive(S, OpPC, B, AK_Read))
     return false;
@@ -222,16 +237,6 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
-                                        unsigned ID) {
-  auto Loc = S.Current->getSource(OpPC);
-  if (S.getLangOpts().CPlusPlus11)
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_function)
-        << /*isConstexpr=*/0 << /*isConstructor=*/0
-        << ("'" + S.getASTContext().BuiltinInfo.getName(ID) + "'").str();
-  else
-    S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
-}
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call) {
@@ -1846,7 +1851,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__assume:
     break;
   case Builtin::BI__builtin_strcmp:
-    if (!interp__builtin_strcmp(S, OpPC, Frame, Call))
+  case Builtin::BIstrcmp:
+    if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_strlen:
