@@ -1791,6 +1791,7 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       Dst.atIndex(I).deref<T>() =
           T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+      Dst.atIndex(I).initialize();
     });
   }
 
