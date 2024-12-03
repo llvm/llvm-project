@@ -39,10 +39,9 @@ static_assert(
     "There must be the same number of uppercase and lowercase letters.");
 
 int span_index(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
-  for (size_t i = 0; i < arr.size(); ++i) {
+  for (size_t i = 0; i < arr.size(); ++i)
     if (static_cast<int>(arr[i]) == ch)
       return static_cast<int>(i);
-  }
   return -1;
 }
 

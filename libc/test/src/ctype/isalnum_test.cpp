@@ -32,10 +32,9 @@ constexpr char ALNUM_ARRAY[] = {
 };
 
 bool in_span(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
-  for (size_t i = 0; i < arr.size(); ++i) {
+  for (size_t i = 0; i < arr.size(); ++i)
     if (static_cast<int>(arr[i]) == ch)
       return true;
-  }
   return false;
 }
 

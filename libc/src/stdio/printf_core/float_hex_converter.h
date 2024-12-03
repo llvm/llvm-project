@@ -137,9 +137,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   for (; mant_cur > 0; --mant_cur, mantissa >>= 4) {
     char mant_mod_16 = static_cast<char>(mantissa % 16);
     char new_digit = static_cast<char>(internal::int_to_b36_char(mant_mod_16));
-    if (internal::isupper(to_conv.conv_name)) {
+    if (internal::isupper(to_conv.conv_name))
       new_digit = static_cast<char>(internal::toupper(new_digit));
-    }
     mant_buffer[mant_cur - 1] = new_digit;
     if (new_digit != '0' && first_non_zero < mant_cur)
       first_non_zero = mant_cur;

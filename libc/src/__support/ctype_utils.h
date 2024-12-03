@@ -26,6 +26,17 @@ namespace internal {
 // functions, make sure you have benchmarks to show your new solution is faster,
 // as well as a way to support non-ASCII character encodings.
 
+// Similarly, do not change these functions to use case ranges. e.g.
+//  bool islower(int ch) {
+//    switch(ch) {
+//    case 'a'...'z':
+//      return true;
+//    }
+//  }
+// This assumes the character ranges are contiguous, which they aren't in
+// EBCDIC. Technically we could use some smaller ranges, but that's even harder
+// to read.
+
 LIBC_INLINE static constexpr bool islower(int ch) {
   switch (ch) {
   case 'a':
