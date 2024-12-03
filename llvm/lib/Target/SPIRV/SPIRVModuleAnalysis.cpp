@@ -421,6 +421,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);
+
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
         if (MAI.getSkipEmission(&MI))
@@ -1609,6 +1610,28 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
   }
 }
 
+static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
+                        MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
+                        SPIRV::ModuleAnalysisInfo &MAI) {
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    //MachineIRBuilder MIRBuilder(*MF);
+    for (auto &MBB : *MF) {
+      if (!MBB.hasName() || MBB.empty())
+        continue;
+      // Emit basic block names.
+      Register Reg = MRI.createGenericVirtualRegister(LLT::scalar(64));
+      MRI.setRegClass(Reg, &SPIRV::IDRegClass);
+      buildOpName(Reg, MBB.getName(), *std::prev(MBB.end()), TII);
+      Register GlobalReg = MAI.getOrCreateMBBRegister(MBB);
+      MAI.setRegisterAlias(MF, Reg, GlobalReg);
+    }
+  }
+}
+
 struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1627,6 +1650,7 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   setBaseInfo(M);
 
+  addMBBNames(M, *TII, MMI, *ST, MAI);
   addDecorations(M, *TII, MMI, *ST, MAI);
 
   collectReqs(M, MAI, MMI, *ST);

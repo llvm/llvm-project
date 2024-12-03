@@ -199,6 +199,8 @@ class SPIRVEmitIntrinsics
                             DenseMap<Function *, CallInst *> Ptrcasts);
 
   void replaceAllUsesWith(Value *Src, Value *Dest, bool DeleteOld = true);
+  void replaceAllUsesWithAndErase(IRBuilder<> &B, Instruction *Src,
+                                  Instruction *Dest, bool DeleteOld = true);
 
   bool runOnFunction(Function &F);
   bool postprocessTypes(Module &M);
@@ -322,6 +324,17 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
                        false);
 }
 
+static void emitAssignName(Instruction *I, IRBuilder<> &B) {
+  if (!I->hasName() || I->getType()->isAggregateType() ||
+      expectIgnoredInIRTranslation(I))
+    return;
+  reportFatalOnTokenType(I);
+  setInsertPointAfterDef(B, I);
+  std::vector<Value *> Args = {I};
+  addStringImm(I->getName(), B, Args);
+  B.CreateIntrinsic(Intrinsic::spv_assign_name, {I->getType()}, Args);
+}
+
 void SPIRVEmitIntrinsics::replaceAllUsesWith(Value *Src, Value *Dest,
                                              bool DeleteOld) {
   Src->replaceAllUsesWith(Dest);
@@ -333,6 +346,19 @@ void SPIRVEmitIntrinsics::replaceAllUsesWith(Value *Src, Value *Dest,
     if (DeleteOld)
       eraseTodoType(Src);
     insertTodoType(Dest);
+  }
+}
+
+void SPIRVEmitIntrinsics::replaceAllUsesWithAndErase(IRBuilder<> &B,
+                                                     Instruction *Src,
+                                                     Instruction *Dest,
+                                                     bool DeleteOld) {
+  replaceAllUsesWith(Src, Dest, DeleteOld);
+  std::string Name = Src->hasName() ? Src->getName().str() : "";
+  Src->eraseFromParent();
+  if (!Name.empty()) {
+    Dest->setName(Name);
+    emitAssignName(Dest, B);
   }
 }
 
@@ -1300,8 +1326,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   for (auto &Op : I.operands())
     Args.push_back(Op);
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
-  replaceAllUsesWith(&I, NewI);
-  I.eraseFromParent();
+  replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
 
@@ -1323,10 +1348,7 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
   SmallVector<Type *, 2> Types = {I.getType(), Source->getType()};
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_bitcast, {Types}, {Args});
-  std::string InstName = I.hasName() ? I.getName().str() : "";
-  replaceAllUsesWith(&I, NewI);
-  I.eraseFromParent();
-  NewI->setName(InstName);
+  replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
 
@@ -1585,10 +1607,7 @@ Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
-  std::string InstName = I.hasName() ? I.getName().str() : "";
-  replaceAllUsesWith(&I, NewI);
-  I.eraseFromParent();
-  NewI->setName(InstName);
+  replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
 
@@ -1600,10 +1619,7 @@ SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
                                   I.getIndexOperand()->getType()};
   SmallVector<Value *, 2> Args = {I.getVectorOperand(), I.getIndexOperand()};
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
-  std::string InstName = I.hasName() ? I.getName().str() : "";
-  replaceAllUsesWith(&I, NewI);
-  I.eraseFromParent();
-  NewI->setName(InstName);
+  replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
 
@@ -1637,8 +1653,7 @@ Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
     Args.push_back(B.getInt32(Op));
   auto *NewI =
       B.CreateIntrinsic(Intrinsic::spv_extractv, {I.getType()}, {Args});
-  replaceAllUsesWith(&I, NewI);
-  I.eraseFromParent();
+  replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
 
@@ -1697,10 +1712,7 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
       ArraySize ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
                                     {PtrTy, ArraySize->getType()}, {ArraySize})
                 : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
-  std::string InstName = I.hasName() ? I.getName().str() : "";
-  replaceAllUsesWith(&I, NewI);
-  I.eraseFromParent();
-  NewI->setName(InstName);
+  replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
 
@@ -1895,14 +1907,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
     }
   }
-  if (I->hasName() && !I->getType()->isAggregateType() &&
-      !expectIgnoredInIRTranslation(I)) {
-    reportFatalOnTokenType(I);
-    setInsertPointAfterDef(B, I);
-    std::vector<Value *> Args = {I};
-    addStringImm(I->getName(), B, Args);
-    B.CreateIntrinsic(Intrinsic::spv_assign_name, {I->getType()}, Args);
-  }
+  emitAssignName(I, B);
 }
 
 Type *SPIRVEmitIntrinsics::deduceFunParamElementType(Function *F,
