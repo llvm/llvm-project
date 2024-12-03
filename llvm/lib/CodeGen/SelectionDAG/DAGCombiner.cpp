@@ -22750,7 +22750,7 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
 /// Transform a vector binary operation into a scalar binary operation by moving
 /// the math/logic after an extract element of a vector.
 static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
-                                       const SDLoc &DL) {
+                                       const SDLoc &DL, bool LegalTypes) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
@@ -22761,7 +22761,8 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
     return SDValue();
 
   EVT ResVT = ExtElt->getValueType(0);
-  if (Opc == ISD::SETCC && ResVT != Vec.getValueType().getVectorElementType())
+  if (Opc == ISD::SETCC &&
+      (ResVT != Vec.getValueType().getVectorElementType() || LegalTypes))
     return SDValue();
 
   // Targets may want to avoid this to prevent an expensive register transfer.
@@ -23024,7 +23025,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     }
   }
 
-  if (SDValue BO = scalarizeExtractedBinOp(N, DAG, DL))
+  if (SDValue BO = scalarizeExtractedBinOp(N, DAG, DL, LegalTypes))
     return BO;
 
   if (VecVT.isScalableVector())
