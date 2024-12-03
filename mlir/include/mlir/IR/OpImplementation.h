@@ -1609,9 +1609,8 @@ public:
       return success();
     }
 
-    InFlightDiagnostic diag =
-        emitError(loc)
-        << "number of operands and types do not match";
+    InFlightDiagnostic diag = emitError(loc)
+                              << "number of operands and types do not match";
     std::string lesserQuantityText = "operand";
     if (operandSize != 1)
       lesserQuantityText += "s";
