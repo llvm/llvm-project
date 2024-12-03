@@ -832,7 +832,7 @@ void PipelineSolver::solve() {
 enum IGLPStrategyID : int {
   MFMASmallGemmOptID = 0,
   MFMASmallGemmSingleWaveOptID = 1,
-  MFMAExpInterleave = 2,
+  MFMAExpInterleaveID = 2,
   MFMAExpSimpleInterleaveID = 3
 };
 
@@ -1847,7 +1847,6 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
 }
 
 class MFMAExpSimpleInterleaveOpt final : public IGLPStrategy {
-private:
 public:
   bool applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
@@ -1876,9 +1875,8 @@ bool MFMAExpSimpleInterleaveOpt::applyIGLPStrategy(
       ++MFMACount;
 
   const unsigned PipelineSyncID = 0;
-  SchedGroup *SG = nullptr;
   for (unsigned I = 0; I < MFMACount * 3; ++I) {
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+    SchedGroup *SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::TRANS, 1, PipelineSyncID, DAG, TII);
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
 
@@ -2353,7 +2351,7 @@ createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
     return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
   case MFMASmallGemmSingleWaveOptID:
     return std::make_unique<MFMASmallGemmSingleWaveOpt>(DAG, TII);
-  case MFMAExpInterleave:
+  case MFMAExpInterleaveID:
     return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII);
   case MFMAExpSimpleInterleaveID:
     return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII);
