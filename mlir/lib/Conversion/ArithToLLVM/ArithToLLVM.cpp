@@ -505,7 +505,7 @@ struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
-    arith::populateCeilFloorDivExpandOpsPatterns (patterns);
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   }
 };
