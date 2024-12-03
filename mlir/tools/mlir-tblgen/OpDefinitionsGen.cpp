@@ -3092,8 +3092,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
   // Check if parameters besides default valued one are enough to distinguish
   // between builders with wrapped and unwrapped arguments.
   bool hasBuilderAmbiguity = true;
-  for (int i = 0; i < op.getNumArgs(); ++i) {
-    auto *namedAttr = dyn_cast<NamedAttribute *>(op.getArg(i));
+  for (const auto &arg : op.getArgs()) {
+    auto *namedAttr = dyn_cast<NamedAttribute *>(arg);
     if (!namedAttr)
       continue;
     Attribute attr = namedAttr->attr;
