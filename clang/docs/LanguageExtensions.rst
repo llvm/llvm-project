@@ -1996,13 +1996,15 @@ This specifies that the underlying type, which is used to store the enumeration
 value, is ``unsigned char``.
 
 Use ``__has_feature(objc_fixed_enum)`` to determine whether support for fixed
-underlying types is available in Objective-C
+underlying types is available in Objective-C.
 
 Use ``__has_extension(c_fixed_enum)`` to determine whether support for fixed
-underlying types is available in C prior to C23
+underlying types is available in C prior to C23. This will also report ``true`` in C23
+and later modes as the functionality is available even if it's not an extension in
+those modes.
 
 Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
-underlying types is available in C23 and later
+underlying types is available in C23 and later.
 
 Interoperability with C++11 lambdas
 -----------------------------------
