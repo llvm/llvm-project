@@ -127,6 +127,8 @@
 
 // RUN: %clang_cl -c -### /Zc:referenceBinding- -- %s 2>&1 | FileCheck -check-prefix CHECK-REFERENCE_BINDING_ %s
 // CHECK-REFERENCE_BINDING_: "-fms-reference-binding"
+// RUN: %clang_cl -c -### /Zc:referenceBinding -- %s 2>&1 | FileCheck -check-prefix CHECK-REFERENCE_BINDING %s
+// CHECK-REFERENCE_BINDING-NOT: "-fms-reference-binding"
 
 
 // These never warn, but don't have an effect yet.

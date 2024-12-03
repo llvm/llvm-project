@@ -3098,7 +3098,8 @@ def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"MicrosoftExt">>, ImpliedByAnyOf<[fms_compatibility.KeyPath]>;
 def fms_reference_binding : Flag<["-"], "fms-reference-binding">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
-  HelpText<"Accept expressions that bind a non-const lvalue reference to a user-defined type temporary as supported by the Microsoft Compiler">,
+  HelpText<"Accept expressions that bind a non-const lvalue reference to a "
+           "user-defined type temporary as supported by the Microsoft compiler">,
   MarshallingInfoFlag<LangOpts<"MSVCReferenceBinding">>;
 def fno_ms_reference_binding : Flag<["-"], "fno-ms-reference-binding">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>;
@@ -8690,10 +8691,11 @@ def _SLASH_Zc_wchar_t : CLFlag<"Zc:wchar_t">,
 def _SLASH_Zc_wchar_t_ : CLFlag<"Zc:wchar_t-">,
   HelpText<"Disable C++ builtin type wchar_t">;
 def _SLASH_Zc_referenceBinding : CLFlag<"Zc:referenceBinding">,
-  HelpText<"Do not accept expressions that bind a non-const lvalue reference to a user-defined type temporary">,
+  HelpText<"Do not accept expressions that bind a non-const lvalue reference to a user-defined type temporary (default)">,
   Alias<fno_ms_reference_binding>;
 def _SLASH_Zc_referenceBinding_ : CLFlag<"Zc:referenceBinding-">,
-  HelpText<"Accept expressions that bind a non-const lvalue reference to a user-defined type temporary">,
+  HelpText<"Accept expressions that bind a non-const lvalue reference to a "
+           "user-defined type temporary">,
   Alias<fms_reference_binding>;
 def _SLASH_Z7 : CLFlag<"Z7">, Alias<g_Flag>,
   HelpText<"Enable CodeView debug information in object files">;
