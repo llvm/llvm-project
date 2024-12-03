@@ -325,8 +325,8 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
 
 Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
                                                MachineIRBuilder &MIRBuilder,
-                                               SPIRVType *SpvType,
-                                               bool EmitIR) {
+                                               SPIRVType *SpvType, bool EmitIR,
+                                               bool ZeroAsNull) {
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *LLVMIntTy =
@@ -348,7 +348,7 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
     } else {
       Register SpvTypeReg = getSPIRVTypeID(SpvType);
       MachineInstrBuilder MIB;
-      if (Val) {
+      if (Val || !ZeroAsNull) {
         MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                   .addDef(Res)
                   .addUse(SpvTypeReg);
