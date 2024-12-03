@@ -266,12 +266,10 @@ public:
   /// Returns the sentinel value for FindLastIV recurrences to replace the start
   /// value.
   Value *getSentinelValue() const {
-    if (isFindLastIVRecurrenceKind(Kind)) {
-      Type *Ty = StartValue->getType();
-      return ConstantInt::get(
-          Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
-    }
-    return nullptr;
+    assert(isFindLastIVRecurrenceKind(Kind) && "Unexpected recurrence kind");
+    Type *Ty = StartValue->getType();
+    return ConstantInt::get(Ty,
+                            APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
   }
 
   /// Returns a reference to the instructions used for type-promoting the
