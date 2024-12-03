@@ -32,6 +32,11 @@
 using namespace llvm;
 using namespace ore;
 
+static cl::opt<bool> DroppedVarStatsMIR(
+    "dropped-variable-stats-mir", cl::Hidden,
+    cl::desc("Dump dropped debug variables stats for MIR passes"),
+    cl::init(false));
+
 Pass *MachineFunctionPass::createPrinterPass(raw_ostream &O,
                                              const std::string &Banner) const {
   return createMachineFunctionPrinterPass(O, Banner);
@@ -91,7 +96,15 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
 
   MFProps.reset(ClearedProperties);
 
-  bool RV = runOnMachineFunction(MF);
+  bool RV;
+  if (DroppedVarStatsMIR) {
+    auto PassName = getPassName();
+    DroppedVarStatsMF.runBeforePass(PassName, &MF);
+    RV = runOnMachineFunction(MF);
+    DroppedVarStatsMF.runAfterPass(PassName, &MF);
+  } else {
+    RV = runOnMachineFunction(MF);
+  }
 
   if (ShouldEmitSizeRemarks) {
     // We wanted size remarks. Check if there was a change to the number of
