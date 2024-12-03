@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_subgroups %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_subgroups %s -o - | FileCheck %s
 
 ; CHECK-DAG: Capability SubgroupShuffleINTEL
 ; CHECK-DAG: Capability SubgroupBufferBlockIOINTEL

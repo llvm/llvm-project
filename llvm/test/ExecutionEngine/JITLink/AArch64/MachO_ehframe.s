@@ -8,9 +8,7 @@
 # CHECK: DWARFRecordSectionSplitter: Processing __TEXT,__eh_frame...
 # CHECK:  Processing block at
 # CHECK:    Processing CFI record at
-# CHECK:      Extracted {{.*}} section = __TEXT,__eh_frame
 # CHECK:    Processing CFI record at
-# CHECK:      Extracted {{.*}} section = __TEXT,__eh_frame
 # CHECK: EHFrameEdgeFixer: Processing __TEXT,__eh_frame in "{{.*}}"...
 # CHECK:   Processing block at
 # CHECK:     Record is CIE

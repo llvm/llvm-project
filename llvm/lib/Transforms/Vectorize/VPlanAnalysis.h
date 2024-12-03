@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Type.h"
 
 namespace llvm {
 
@@ -54,8 +55,8 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(Type *CanonicalIVTy, LLVMContext &Ctx)
-      : CanonicalIVTy(CanonicalIVTy), Ctx(Ctx) {}
+  VPTypeAnalysis(Type *CanonicalIVTy)
+      : CanonicalIVTy(CanonicalIVTy), Ctx(CanonicalIVTy->getContext()) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);

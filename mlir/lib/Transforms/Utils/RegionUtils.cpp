@@ -709,8 +709,7 @@ static SmallVector<SmallVector<Value, 8>, 2> pruneRedundantArguments(
   DenseMap<Value, unsigned> firstValueToIdx;
   for (unsigned j = 0; j < numArgs; ++j) {
     Value newArg = newArguments[0][j];
-    if (!firstValueToIdx.contains(newArg))
-      firstValueToIdx[newArg] = j;
+    firstValueToIdx.try_emplace(newArg, j);
   }
 
   // Go through the first list of arguments (list 0).
@@ -877,6 +876,15 @@ static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
       if (hasNonEmptyRegion)
         continue;
 
+      // Don't allow merging if this block's arguments are used outside of the
+      // original block.
+      bool argHasExternalUsers = llvm::any_of(
+          block->getArguments(), [block](mlir::BlockArgument &arg) {
+            return arg.isUsedOutsideOfBlock(block);
+          });
+      if (argHasExternalUsers)
+        continue;
+
       // Try to add this block to an existing cluster.
       bool addedToCluster = false;
       for (auto &cluster : clusters)
@@ -1012,7 +1020,8 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
 
     // Add any nested regions to the worklist.
     for (Block &block : *region) {
-      anyChanged = succeeded(dropRedundantArguments(rewriter, block));
+      anyChanged =
+          succeeded(dropRedundantArguments(rewriter, block)) || anyChanged;
 
       for (Operation &op : block)
         for (Region &nestedRegion : op.getRegions())

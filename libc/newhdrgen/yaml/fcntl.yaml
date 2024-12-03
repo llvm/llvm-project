@@ -20,7 +20,7 @@ functions:
     arguments:
       - type: int
       - type: int
-      - type: ...
+      - type: '...'
   - name: open
     standards:
       - POSIX
@@ -28,7 +28,7 @@ functions:
     arguments:
       - type: const char *
       - type: int
-      - type: ...
+      - type: '...'
   - name: openat
     standards:
       - POSIX
@@ -37,4 +37,4 @@ functions:
       - type: int
       - type: const char *
       - type: int
-      - type: ...
+      - type: '...'

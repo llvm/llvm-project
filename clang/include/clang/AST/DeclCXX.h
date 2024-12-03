@@ -256,6 +256,7 @@ public:
 
 /// Represents a C++ struct/union/class.
 class CXXRecordDecl : public RecordDecl {
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
@@ -889,6 +890,13 @@ public:
             needsOverloadResolutionForDestructor()) &&
            "destructor should not be deleted");
     data().DefaultedDestructorIsDeleted = true;
+    // C++23 [dcl.constexpr]p3.2:
+    //   if the function is a constructor or destructor, its class does not have
+    //   any virtual base classes.
+    // C++20 [dcl.constexpr]p5:
+    //   The definition of a constexpr destructor whose function-body is
+    //   not = delete shall additionally satisfy...
+    data().DefaultedDestructorIsConstexpr = data().NumVBases == 0;
   }
 
   /// Determine whether this class should get an implicit move
@@ -1546,6 +1554,10 @@ public:
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
 
+  /// Returns true if the class contains HLSL intangible type, either as
+  /// a field or in base class.
+  bool isHLSLIntangible() const { return data().IsHLSLIntangible; }
+
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
   const FunctionDecl *isLocalClass() const {
@@ -1960,9 +1972,11 @@ private:
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                        CXXConstructorDecl *Ctor, DeductionCandidate Kind)
+                        CXXConstructorDecl *Ctor, DeductionCandidate Kind,
+                        Expr *TrailingRequiresClause)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
-                     SC_None, false, false, ConstexprSpecKind::Unspecified),
+                     SC_None, false, false, ConstexprSpecKind::Unspecified,
+                     TrailingRequiresClause),
         Ctor(Ctor), ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
@@ -1982,7 +1996,8 @@ public:
          ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
          TypeSourceInfo *TInfo, SourceLocation EndLocation,
          CXXConstructorDecl *Ctor = nullptr,
-         DeductionCandidate Kind = DeductionCandidate::Normal);
+         DeductionCandidate Kind = DeductionCandidate::Normal,
+         Expr *TrailingRequiresClause = nullptr);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);

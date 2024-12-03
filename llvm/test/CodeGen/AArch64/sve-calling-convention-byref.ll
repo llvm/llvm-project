@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=CHECK,LINUX
+; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=CHECK,DARWIN
 
 ; Test that z8 and z9, passed in by reference, are correctly loaded from x0 and x1.
 ; i.e. z0 =  %z0
@@ -97,7 +98,8 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_1xv16i
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
 ; CHECK:    [[STACK:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
 ; CHECK:    $x0 = COPY [[STACK]]
-; CHECK:    BL @callee_with_svepred_arg_4xv16i1_1xv16i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0
+; LINUX:    BL @callee_with_svepred_arg_4xv16i1_1xv16i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0
+; DARWIN:   BL @callee_with_svepred_arg_4xv16i1_1xv16i1, csr_darwin_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0
 ; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   %res = call <vscale x 16 x i1> @callee_with_svepred_arg_4xv16i1_1xv16i1([4 x <vscale x 16 x i1>] %arg2, [1 x <vscale x 16 x i1>] %arg1)
   ret <vscale x 16 x i1> %res
@@ -157,7 +159,8 @@ define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_4xv16i1_4xv16i1([4 x <v
 ; CHECK:    STR_PXI [[PRED1]], killed [[ADDR1]], 0 :: (store (<vscale x 1 x s16>))
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
 ; CHECK:    $x0 = COPY [[STACK]]
-; CHECK:    BL @callee_with_svepred_arg_4xv16i1_4xv16i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
+; LINUX:    BL @callee_with_svepred_arg_4xv16i1_4xv16i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
+; DARWIN:   BL @callee_with_svepred_arg_4xv16i1_4xv16i1, csr_darwin_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
 ; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   %res = call [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_4xv16i1_4xv16i1([4 x <vscale x 16 x i1>] %arg2, [4 x <vscale x 16 x i1>] %arg1)
   ret [4 x <vscale x 16 x i1>] %res
@@ -217,7 +220,8 @@ define [2 x <vscale x 32 x i1>] @caller_with_svepred_arg_2xv32i1_1xv16i1([2 x <v
 ; CHECK:    STR_PXI [[PRED1]], killed [[ADDR1]], 0 :: (store (<vscale x 1 x s16>))
 ; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
 ; CHECK:    $x0 = COPY [[STACK]]
-; CHECK:    BL @callee_with_svepred_arg_1xv16i1_2xv32i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
+; LINUX:    BL @callee_with_svepred_arg_1xv16i1_2xv32i1, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
+; DARWIN:   BL @callee_with_svepred_arg_1xv16i1_2xv32i1, csr_darwin_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
 ; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   %res = call [2 x <vscale x 32 x i1>] @callee_with_svepred_arg_1xv16i1_2xv32i1([1 x <vscale x 16 x i1>] %arg2, [2 x <vscale x 32 x i1>] %arg1)
   ret [2 x <vscale x 32 x i1>] %res

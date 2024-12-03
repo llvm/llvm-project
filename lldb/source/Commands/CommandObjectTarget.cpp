@@ -15,7 +15,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -56,6 +55,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
@@ -186,8 +186,8 @@ public:
       if (error.Success())
         m_load_dependent_files = tmp_load_dependents;
     } else {
-      error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                     short_option);
+      error = Status::FromErrorStringWithFormat(
+          "unrecognized short option '%c'", short_option);
     }
 
     return error;
@@ -2200,7 +2200,7 @@ protected:
     }
 
     clang::CompilerInstance compiler;
-    compiler.createDiagnostics();
+    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
 
     const char *clang_args[] = {"clang", pcm_path};
     compiler.setInvocation(clang::createInvocation(clang_args));
@@ -2775,7 +2775,7 @@ protected:
           result.AppendErrorWithFormat(
               "Unable to locate the executable or symbol file with UUID %s",
               strm.GetData());
-          result.SetError(error);
+          result.SetError(std::move(error));
           return;
         }
       } else {
@@ -3461,8 +3461,8 @@ public:
         m_addr = OptionArgParser::ToAddress(execution_context, option_arg,
                                             LLDB_INVALID_ADDRESS, &error);
         if (m_addr == LLDB_INVALID_ADDRESS)
-          error.SetErrorStringWithFormat("invalid address string '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid address string '%s'", option_arg.str().c_str());
         break;
       }
 
@@ -3805,8 +3805,8 @@ public:
 
       case 'o':
         if (option_arg.getAsInteger(0, m_offset))
-          error.SetErrorStringWithFormat("invalid offset string '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid offset string '%s'", option_arg.str().c_str());
         break;
 
       case 's':
@@ -3825,10 +3825,10 @@ public:
 
       case 'l':
         if (option_arg.getAsInteger(0, m_line_number))
-          error.SetErrorStringWithFormat("invalid line number string '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid line number string '%s'", option_arg.str().c_str());
         else if (m_line_number == 0)
-          error.SetErrorString("zero is an invalid line number");
+          error = Status::FromErrorString("zero is an invalid line number");
         m_type = eLookupTypeFileLine;
         break;
 
@@ -3886,8 +3886,9 @@ public:
     Status OptionParsingFinished(ExecutionContext *execution_context) override {
       Status status;
       if (m_all_ranges && !m_verbose) {
-        status.SetErrorString("--show-variable-ranges must be used in "
-                              "conjunction with --verbose.");
+        status =
+            Status::FromErrorString("--show-variable-ranges must be used in "
+                                    "conjunction with --verbose.");
       }
       return status;
     }
@@ -4408,7 +4409,7 @@ protected:
         return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
                                 result);
     } else {
-      result.SetError(error);
+      result.SetError(std::move(error));
     }
     return false;
   }
@@ -4709,8 +4710,8 @@ public:
 
       case 'e':
         if (option_arg.getAsInteger(0, m_line_end)) {
-          error.SetErrorStringWithFormat("invalid end line number: \"%s\"",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid end line number: \"%s\"", option_arg.str().c_str());
           break;
         }
         m_sym_ctx_specified = true;
@@ -4722,14 +4723,14 @@ public:
         if (success) {
           m_auto_continue = value;
         } else
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid boolean value '%s' passed for -G option",
               option_arg.str().c_str());
       } break;
       case 'l':
         if (option_arg.getAsInteger(0, m_line_start)) {
-          error.SetErrorStringWithFormat("invalid start line number: \"%s\"",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid start line number: \"%s\"", option_arg.str().c_str());
           break;
         }
         m_sym_ctx_specified = true;
@@ -4757,8 +4758,8 @@ public:
 
       case 't':
         if (option_arg.getAsInteger(0, m_thread_id))
-          error.SetErrorStringWithFormat("invalid thread id string '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid thread id string '%s'", option_arg.str().c_str());
         m_thread_specified = true;
         break;
 
@@ -4774,8 +4775,8 @@ public:
 
       case 'x':
         if (option_arg.getAsInteger(0, m_thread_index))
-          error.SetErrorStringWithFormat("invalid thread index string '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid thread index string '%s'", option_arg.str().c_str());
         m_thread_specified = true;
         break;
 

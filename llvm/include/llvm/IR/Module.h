@@ -62,7 +62,7 @@ class VersionTuple;
 /// constant references to global variables in the module.  When a global
 /// variable is destroyed, it should have no entries in the GlobalList.
 /// The main container class for the LLVM Intermediate Representation.
-class LLVM_EXTERNAL_VISIBILITY Module {
+class LLVM_ABI Module {
   /// @name Types And Enumerations
   /// @{
 public:
@@ -202,6 +202,9 @@ private:
                              ///< ID and FunctionType maps to the extension that
                              ///< is used to make the intrinsic name unique.
 
+  /// llvm.module.flags metadata
+  NamedMDNode *ModuleFlags = nullptr;
+
   friend class Constant;
 
 /// @}
@@ -253,9 +256,12 @@ public:
   /// The module destructor. This will dropAllReferences.
   ~Module();
 
-/// @}
-/// @name Module Level Accessors
-/// @{
+  /// Move assignment.
+  Module &operator=(Module &&Other);
+
+  /// @}
+  /// @name Module Level Accessors
+  /// @{
 
   /// Get the module identifier which is, essentially, the name of the module.
   /// @returns the module identifier as a string
@@ -528,7 +534,7 @@ public:
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// This method returns null if there are no module-level flags.
-  NamedMDNode *getModuleFlagsMetadata() const;
+  NamedMDNode *getModuleFlagsMetadata() const { return ModuleFlags; }
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// If module-level flags aren't found, it creates the named metadata that

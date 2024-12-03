@@ -7,8 +7,7 @@ define dso_local signext i32 @local_small() #0 {
 ; CHECK-LABEL: local_small:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(a)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(a)
-; CHECK-NEXT:    ld.w $a0, $a0, 0
+; CHECK-NEXT:    ld.w $a0, $a0, %pc_lo12(a)
 ; CHECK-NEXT:    ret
   %1 = load i32, ptr @a, align 4
   ret i32 %1
@@ -23,8 +22,7 @@ define dso_local signext i32 @local_large() #0 {
 ; CHECK-NEXT:    addi.d $a1, $zero, %pc_lo12(b)
 ; CHECK-NEXT:    lu32i.d $a1, %pc64_lo20(b)
 ; CHECK-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(b)
-; CHECK-NEXT:    add.d $a0, $a1, $a0
-; CHECK-NEXT:    ld.w $a0, $a0, 0
+; CHECK-NEXT:    ldx.w $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %1 = load i32, ptr @b, align 4
   ret i32 %1

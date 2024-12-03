@@ -320,6 +320,13 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Memset->eraseFromParent();
       break;
     }
+    case Intrinsic::experimental_memset_pattern: {
+      auto *Memset = cast<MemSetPatternInst>(Inst);
+      expandMemSetPatternAsLoop(Memset);
+      Changed = true;
+      Memset->eraseFromParent();
+      break;
+    }
     default:
       llvm_unreachable("unhandled intrinsic");
     }
@@ -339,6 +346,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::memmove:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
+    case Intrinsic::experimental_memset_pattern:
       Changed |= expandMemIntrinsicUses(F);
       break;
     case Intrinsic::load_relative:
@@ -349,8 +357,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Function *Parent = CI->getParent()->getParent();
         TargetLibraryInfo &TLI = LookupTLI(*Parent);
+        // Intrinsics in unreachable code are not lowered.
         bool Changed = lowerConstantIntrinsics(*Parent, TLI, /*DT=*/nullptr);
-        assert(Changed && "lowerConstantIntrinsics did not lower intrinsic");
         return Changed;
       });
       break;
@@ -361,10 +369,14 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Function *Parent = CI->getParent()->getParent();
         const TargetTransformInfo &TTI = LookupTTI(*Parent);
         auto *VPI = cast<VPIntrinsic>(CI);
-        return expandVectorPredicationIntrinsic(*VPI, TTI);
+        VPExpansionDetails ED = expandVectorPredicationIntrinsic(*VPI, TTI);
+        // Expansion of VP intrinsics may change the IR but not actually
+        // replace the intrinsic, so update Changed for the pass
+        // and compute Removed for forEachCall.
+        Changed |= ED != VPExpansionDetails::IntrinsicUnchanged;
+        bool Removed = ED == VPExpansionDetails::IntrinsicReplaced;
+        return Removed;
       });
-      // Not all intrinsics are removed, but the code is changed in any case.
-      Changed = true;
       break;
     case Intrinsic::objc_autorelease:
       Changed |= lowerObjCCall(F, "objc_autorelease");

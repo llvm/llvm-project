@@ -11,6 +11,7 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/algorithm.h" // max
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
@@ -23,6 +24,9 @@
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #include "src/__support/fixed_point/fx_rep.h"
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+#include "src/errno/libc_errno.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
@@ -210,11 +214,11 @@ public:
         case (LengthModifier::wf):
           if (bw == 0) {
             section.has_conv = false;
-          } else if (bw <= INT_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned int>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
-          } else if (bw <= LONG_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long, conv_index);
-          } else if (bw <= LLONG_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long long, conv_index);
           } else {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, intmax_t, conv_index);
@@ -257,9 +261,16 @@ public:
         }
         break;
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+      case ('m'):
+        // %m is an odd conversion in that it doesn't consume an argument, it
+        // just takes the current value of errno as its argument.
+        section.conv_val_raw = static_cast<int>(libc_errno);
+        break;
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
-      case ('n'):
-#endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
+      case ('n'): // Intentional fallthrough
+#endif            // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('p'):
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
@@ -596,11 +607,11 @@ private:
             break;
           case (LengthModifier::w):
           case (LengthModifier::wf):
-            if (bw <= INT_WIDTH) {
+            if (bw <= cpp::numeric_limits<unsigned int>::digits) {
               conv_size = type_desc_from_type<int>();
-            } else if (bw <= LONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
               conv_size = type_desc_from_type<long>();
-            } else if (bw <= LLONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
               conv_size = type_desc_from_type<long long>();
             } else {
               conv_size = type_desc_from_type<intmax_t>();

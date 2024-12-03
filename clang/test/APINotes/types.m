@@ -7,6 +7,9 @@
 
 // CHECK: struct __attribute__((swift_name("SuccessfullyRenamedA"))) RenamedAgainInAPINotesA {
 // CHECK: struct __attribute__((swift_name("SuccessfullyRenamedB"))) RenamedAgainInAPINotesB {
+// CHECK: typedef enum __attribute__((swift_name("SuccessfullyRenamedC"))) {
+// CHECK-NEXT: kConstantInAnonEnum
+// CHECK-NEXT: } AnonEnumWithTypedefName
 
 void test(OverriddenTypes *overridden) {
   int *ip1 = global_int_ptr; // expected-warning{{incompatible pointer types initializing 'int *' with an expression of type 'double (*)(int, int)'}}

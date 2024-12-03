@@ -50,6 +50,8 @@ bool Operator::hasPoisonGeneratingFlags() const {
     if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
       return NNI->hasNonNeg();
     return false;
+  case Instruction::ICmp:
+    return cast<ICmpInst>(this)->hasSameSign();
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))
       return FP->hasNoNaNs() || FP->hasNoInfs();
@@ -134,7 +136,9 @@ bool GEPOperator::accumulateConstantOffset(
   bool UsedExternalAnalysis = false;
   auto AccumulateOffset = [&](APInt Index, uint64_t Size) -> bool {
     Index = Index.sextOrTrunc(Offset.getBitWidth());
-    APInt IndexedSize = APInt(Offset.getBitWidth(), Size);
+    // Truncate if type size exceeds index space.
+    APInt IndexedSize(Offset.getBitWidth(), Size, /*isSigned=*/false,
+                      /*implcitTrunc=*/true);
     // For array or vector indices, scale the index by the size of the type.
     if (!UsedExternalAnalysis) {
       Offset += Index * IndexedSize;
@@ -201,14 +205,16 @@ bool GEPOperator::accumulateConstantOffset(
 
 bool GEPOperator::collectOffset(
     const DataLayout &DL, unsigned BitWidth,
-    MapVector<Value *, APInt> &VariableOffsets,
+    SmallMapVector<Value *, APInt, 4> &VariableOffsets,
     APInt &ConstantOffset) const {
   assert(BitWidth == DL.getIndexSizeInBits(getPointerAddressSpace()) &&
          "The offset bit width does not match DL specification.");
 
   auto CollectConstantOffset = [&](APInt Index, uint64_t Size) {
     Index = Index.sextOrTrunc(BitWidth);
-    APInt IndexedSize = APInt(BitWidth, Size);
+    // Truncate if type size exceeds index space.
+    APInt IndexedSize(BitWidth, Size, /*isSigned=*/false,
+                      /*implcitTrunc=*/true);
     ConstantOffset += Index * IndexedSize;
   };
 
@@ -246,7 +252,9 @@ bool GEPOperator::collectOffset(
 
     if (STy || ScalableType)
       return false;
-    APInt IndexedSize = APInt(BitWidth, GTI.getSequentialElementStride(DL));
+    // Truncate if type size exceeds index space.
+    APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
+                      /*isSigned=*/false, /*implicitTrunc=*/true);
     // Insert an initial offset of 0 for V iff none exists already, then
     // increment the offset by IndexedSize.
     if (!IndexedSize.isZero()) {

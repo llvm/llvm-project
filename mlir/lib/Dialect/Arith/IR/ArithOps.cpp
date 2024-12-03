@@ -21,6 +21,8 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/VectorTypes.h"
+#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -224,8 +226,8 @@ LogicalResult arith::ConstantOp::verify() {
   // Note, we could relax this for vectors with 1 scalable dim, e.g.:
   //  * arith.constant dense<[[3, 3], [1, 1]]> : vector<2 x [2] x i32>
   // However, this would most likely require updating the lowerings to LLVM.
-  auto vecType = dyn_cast<VectorType>(type);
-  if (vecType && vecType.isScalable() && !isa<SplatElementsAttr>(getValue()))
+  if (isa<vector::ScalableVectorType>(type) &&
+      !isa<SplatElementsAttr>(getValue()))
     return emitOpError(
         "intializing scalable vectors with elements attribute is not supported"
         " unless it's a vector splat");
@@ -595,10 +597,17 @@ OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
+/// Returns whether an unsigned division by `divisor` is speculatable.
+static Speculation::Speculatability getDivUISpeculatability(Value divisor) {
   // X / 0 => UB
-  return matchPattern(getRhs(), m_NonZero()) ? Speculation::Speculatable
-                                             : Speculation::NotSpeculatable;
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
+  return getDivUISpeculatability(getRhs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -624,16 +633,21 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
-  bool mayHaveUB = true;
-
-  APInt constRHS;
+/// Returns whether a signed division by `divisor` is speculatable. This
+/// function conservatively assumes that all signed division by -1 are not
+/// speculatable.
+static Speculation::Speculatability getDivSISpeculatability(Value divisor) {
   // X / 0 => UB
   // INT_MIN / -1 => UB
-  if (matchPattern(getRhs(), m_ConstantInt(&constRHS)))
-    mayHaveUB = constRHS.isAllOnes() || constRHS.isZero();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
 
-  return mayHaveUB ? Speculation::NotSpeculatable : Speculation::Speculatable;
+  return Speculation::NotSpeculatable;
+}
+
+Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
+  return getDivSISpeculatability(getRhs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -675,9 +689,7 @@ OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
-  // X / 0 => UB
-  return matchPattern(getRhs(), m_NonZero()) ? Speculation::Speculatable
-                                             : Speculation::NotSpeculatable;
+  return getDivUISpeculatability(getRhs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -746,15 +758,7 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
-  bool mayHaveUB = true;
-
-  APInt constRHS;
-  // X / 0 => UB
-  // INT_MIN / -1 => UB
-  if (matchPattern(getRhs(), m_ConstantInt(&constRHS)))
-    mayHaveUB = constRHS.isAllOnes() || constRHS.isZero();
-
-  return mayHaveUB ? Speculation::NotSpeculatable : Speculation::Speculatable;
+  return getDivSISpeculatability(getRhs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -950,7 +954,7 @@ void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
-  /// negf(negf(x)) -> x
+  // negf(negf(x)) -> x
   if (auto op = this->getOperand().getDefiningOp<arith::NegFOp>())
     return op.getOperand();
   return constFoldUnaryOp<FloatAttr>(adaptor.getOperands(),
@@ -978,6 +982,14 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
 OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
+    return getLhs();
+
+  // Simplifies subf(x, rhs) to x if the following conditions are met:
+  // 1. `rhs` is a denormal floating-point value.
+  // 2. The denormal mode for the operation is set to positive zero.
+  bool isPositiveZeroMode =
+      getDenormalModeAttr().getValue() == DenormalMode::positive_zero;
+  if (isPositiveZeroMode && matchPattern(adaptor.getRhs(), m_isDenormalFloat()))
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(
@@ -1012,13 +1024,11 @@ OpFoldResult arith::MaxNumFOp::fold(FoldAdaptor adaptor) {
   if (getLhs() == getRhs())
     return getRhs();
 
-  // maxnumf(x, -inf) -> x
-  if (matchPattern(adaptor.getRhs(), m_NegInfFloat()))
+  // maxnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
     return getLhs();
 
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(),
-      [](const APFloat &a, const APFloat &b) { return llvm::maximum(a, b); });
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maxnum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1098,8 +1108,8 @@ OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
   if (getLhs() == getRhs())
     return getRhs();
 
-  // minnumf(x, +inf) -> x
-  if (matchPattern(adaptor.getRhs(), m_PosInfFloat()))
+  // minnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(
@@ -2312,7 +2322,8 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
     return trueVal;
 
   // select %x, true, false => %x
-  if (getType().isInteger(1) && matchPattern(adaptor.getTrueValue(), m_One()) &&
+  if (getType().isSignlessInteger(1) &&
+      matchPattern(adaptor.getTrueValue(), m_One()) &&
       matchPattern(adaptor.getFalseValue(), m_Zero()))
     return condition;
 

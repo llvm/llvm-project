@@ -169,6 +169,7 @@ static const OmpDirectiveSet topTeamsSet{
     Directive::OMPD_teams_distribute_parallel_do,
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd,
+    Directive::OMPD_teams_loop,
 };
 
 static const OmpDirectiveSet allTeamsSet{
@@ -210,7 +211,9 @@ static const OmpDirectiveSet blockConstructSet{
     Directive::OMPD_ordered,
     Directive::OMPD_parallel,
     Directive::OMPD_parallel_masked,
+    Directive::OMPD_parallel_master,
     Directive::OMPD_parallel_workshare,
+    Directive::OMPD_scope,
     Directive::OMPD_single,
     Directive::OMPD_target,
     Directive::OMPD_target_data,
@@ -281,10 +284,17 @@ static const OmpDirectiveSet workShareSet{
         Directive::OMPD_workshare,
         Directive::OMPD_parallel_workshare,
         Directive::OMPD_parallel_sections,
+        Directive::OMPD_scope,
         Directive::OMPD_sections,
         Directive::OMPD_single,
     } | allDoSet,
 };
+
+//===----------------------------------------------------------------------===//
+// Directive sets for parent directives that do allow/not allow a construct
+//===----------------------------------------------------------------------===//
+
+static const OmpDirectiveSet scanParentAllowedSet{allDoSet | allSimdSet};
 
 //===----------------------------------------------------------------------===//
 // Directive sets for allowed/not allowed nested directives
@@ -363,6 +373,7 @@ static const OmpDirectiveSet nestedTeamsAllowedSet{
     Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_distribute_simd,
+    Directive::OMPD_loop,
     Directive::OMPD_parallel,
     Directive::OMPD_parallel_do,
     Directive::OMPD_parallel_do_simd,

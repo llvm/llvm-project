@@ -148,6 +148,8 @@ template<class R>
 #include <__concepts/convertible_to.h>
 #include <__concepts/equality_comparable.h>
 #include <__config>
+#include <__cstddef/byte.h>
+#include <__cstddef/ptrdiff_t.h>
 #include <__fwd/array.h>
 #include <__fwd/span.h>
 #include <__iterator/bounded_iter.h>
@@ -173,7 +175,6 @@ template<class R>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
-#include <cstddef> // for byte
 #include <initializer_list>
 #include <stdexcept>
 #include <version>
@@ -206,11 +207,11 @@ struct __is_std_span<span<_Tp, _Sz>> : true_type {};
 
 template <class _Range, class _ElementType>
 concept __span_compatible_range =
+    !__is_std_span<remove_cvref_t<_Range>>::value &&                //
     ranges::contiguous_range<_Range> &&                             //
     ranges::sized_range<_Range> &&                                  //
     (ranges::borrowed_range<_Range> || is_const_v<_ElementType>) && //
-    !__is_std_span<remove_cvref_t<_Range>>::value &&                //
-    !__is_std_array<remove_cvref_t<_Range>>::value &&               //
+    !__is_std_array_v<remove_cvref_t<_Range>> &&                    //
     !is_array_v<remove_cvref_t<_Range>> &&                          //
     is_convertible_v<remove_reference_t<ranges::range_reference_t<_Range>> (*)[], _ElementType (*)[]>;
 

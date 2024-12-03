@@ -23,7 +23,6 @@ set(files
   __algorithm/find_if.h
   __algorithm/find_if_not.h
   __algorithm/find_segment_if.h
-  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -98,6 +97,7 @@ set(files
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
   __algorithm/ranges_find_last.h
+  __algorithm/ranges_fold.h
   __algorithm/ranges_for_each.h
   __algorithm/ranges_for_each_n.h
   __algorithm/ranges_generate.h
@@ -205,7 +205,6 @@ set(files
   __assert
   __atomic/aliases.h
   __atomic/atomic.h
-  __atomic/atomic_base.h
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
@@ -235,6 +234,7 @@ set(files
   __bit/rotate.h
   __bit_reference
   __charconv/chars_format.h
+  __charconv/from_chars_floating_point.h
   __charconv/from_chars_integral.h
   __charconv/from_chars_result.h
   __charconv/tables.h
@@ -324,6 +324,11 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
+  __cstddef/byte.h
+  __cstddef/max_align_t.h
+  __cstddef/nullptr_t.h
+  __cstddef/ptrdiff_t.h
+  __cstddef/size_t.h
   __debug_utils/randomize_range.h
   __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
@@ -352,6 +357,8 @@ set(files
   __filesystem/recursive_directory_iterator.h
   __filesystem/space_info.h
   __filesystem/u8path.h
+  __flat_map/flat_map.h
+  __flat_map/sorted_unique.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -413,11 +420,13 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/byte.h
   __fwd/complex.h
   __fwd/deque.h
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
+  __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -434,6 +443,7 @@ set(files
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/variant.h
   __fwd/vector.h
   __hash_table
   __ios/fpos.h
@@ -478,6 +488,7 @@ set(files
   __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
+  __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
@@ -487,11 +498,14 @@ set(files
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/locale_guard.h
   __locale_dir/locale_base_api/musl.h
-  __locale_dir/locale_base_api/newlib.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
+  __locale_dir/locale_guard.h
+  __locale_dir/pad_and_output.h
+  __locale_dir/support/apple.h
+  __locale_dir/support/bsd_like.h
+  __locale_dir/support/freebsd.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -528,6 +542,7 @@ set(files
   __memory/allocator_arg_t.h
   __memory/allocator_destructor.h
   __memory/allocator_traits.h
+  __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
   __memory/builtin_new_allocator.h
@@ -536,20 +551,22 @@ set(files
   __memory/construct_at.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
+  __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
+  __memory/shared_count.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
+  __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
-  __memory/voidify.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -579,6 +596,7 @@ set(files
   __numeric/transform_reduce.h
   __ostream/basic_ostream.h
   __ostream/print.h
+  __ostream/put_character_sequence.h
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
@@ -677,7 +695,6 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
-  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
@@ -700,6 +717,7 @@ set(files
   __system_error/error_code.h
   __system_error/error_condition.h
   __system_error/system_error.h
+  __system_error/throw_system_error.h
   __thread/formatter.h
   __thread/id.h
   __thread/jthread.h
@@ -724,12 +742,10 @@ set(files
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
-  __type_traits/add_const.h
-  __type_traits/add_cv.h
+  __type_traits/add_cv_quals.h
   __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
   __type_traits/add_rvalue_reference.h
-  __type_traits/add_volatile.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
@@ -738,12 +754,14 @@ set(files
   __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/container_traits.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
   __type_traits/decay.h
   __type_traits/dependent_type.h
   __type_traits/desugars_to.h
+  __type_traits/detected_or.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
@@ -778,6 +796,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
   __type_traits/is_literal_type.h
@@ -824,7 +843,6 @@ set(files
   __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
-  __type_traits/noexcept_move_assign_container.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -866,11 +884,20 @@ set(files
   __utility/priority_tag.h
   __utility/private_constructor_tag.h
   __utility/rel_ops.h
+  __utility/scope_guard.h
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
+  __vector/comparison.h
+  __vector/container_traits.h
+  __vector/erase.h
+  __vector/pmr.h
+  __vector/swap.h
+  __vector/vector.h
+  __vector/vector_bool.h
+  __vector/vector_bool_formatter.h
   __verbose_abort
   algorithm
   any
@@ -901,6 +928,7 @@ set(files
   coroutine
   csetjmp
   csignal
+  cstdalign
   cstdarg
   cstdbool
   cstddef
@@ -919,7 +947,6 @@ set(files
   exception
   execution
   expected
-  experimental/__config
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h
@@ -940,6 +967,7 @@ set(files
   ext/hash_set
   fenv.h
   filesystem
+  flat_map
   float.h
   format
   forward_list
@@ -958,7 +986,6 @@ set(files
   limits
   list
   locale
-  locale.h
   map
   math.h
   mdspan
@@ -989,7 +1016,6 @@ set(files
   stdbool.h
   stddef.h
   stdexcept
-  stdint.h
   stdio.h
   stdlib.h
   stop_token
@@ -1037,7 +1063,7 @@ endforeach()
 # "include" for dependency tracking.
 add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
   COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
-  DEPENDS ${_all_includes}
+  DEPENDS "${LIBCXX_SOURCE_DIR}/utils/libcxx/header_information.py"
   COMMENT "Generate the mapping file for include-what-you-use"
 )
 list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")

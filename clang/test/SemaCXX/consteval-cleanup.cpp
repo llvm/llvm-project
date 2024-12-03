@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fblocks -Wno-unused-value -std=c++20 -ast-dump -verify %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -fblocks -Wno-unused-value -std=c++20 -ast-dump -verify %s -ast-dump -fexperimental-new-constant-interpreter | FileCheck %s
 
 // expected-no-diagnostics
 

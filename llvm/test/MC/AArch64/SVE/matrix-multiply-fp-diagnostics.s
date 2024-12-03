@@ -3,11 +3,6 @@
 // --------------------------------------------------------------------------//
 // FMMLA (SVE)
 
-// Invalid element size
-
-fmmla z0.h, z1.h, z2.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-
 // Mis-matched element size
 
 fmmla z0.d, z1.s, z2.s

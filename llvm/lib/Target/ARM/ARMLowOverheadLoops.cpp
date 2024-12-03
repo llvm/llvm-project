@@ -53,12 +53,10 @@
 
 #include "ARM.h"
 #include "ARMBaseInstrInfo.h"
-#include "ARMBaseRegisterInfo.h"
 #include "ARMBasicBlockInfo.h"
 #include "ARMSubtarget.h"
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -142,12 +140,11 @@ namespace {
     // Visit all the blocks within the loop, as well as exit blocks and any
     // blocks properly dominating the header.
     void ProcessLoop() {
-      std::function<void(MachineBasicBlock*)> Search = [this, &Search]
-        (MachineBasicBlock *MBB) -> void {
-        if (Visited.count(MBB))
+      std::function<void(MachineBasicBlock *)> Search =
+          [this, &Search](MachineBasicBlock *MBB) -> void {
+        if (!Visited.insert(MBB).second)
           return;
 
-        Visited.insert(MBB);
         for (auto *Succ : MBB->successors()) {
           if (!ML.contains(Succ))
             continue;

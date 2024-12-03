@@ -3,7 +3,7 @@
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=i32 \
-// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:  -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 
 // NOTE: To run this test, your CPU must support SME.
 

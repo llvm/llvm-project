@@ -111,7 +111,7 @@ static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
   bool ListContainsPC = false, ListContainsLR = false;
   for (unsigned OI = 4, OE = MI.getNumOperands(); OI < OE; ++OI) {
     assert(MI.getOperand(OI).isReg() && "expected register");
-    switch (MI.getOperand(OI).getReg()) {
+    switch (MI.getOperand(OI).getReg().id()) {
     default:
       break;
     case ARM::LR:

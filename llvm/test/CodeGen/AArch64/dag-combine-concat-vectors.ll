@@ -16,14 +16,13 @@ define fastcc i8 @allocno_reload_assign() {
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p0.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p0.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    uunpkhi z0.h, z0.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    uunpklo z5.s, z0.h
@@ -31,15 +30,15 @@ define fastcc i8 @allocno_reload_assign() {
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p2.h, p1.b
+; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    uunpklo z0.d, z2.s
 ; CHECK-NEXT:    uunpkhi z1.d, z2.s
-; CHECK-NEXT:    punpkhi p3.h, p1.b
+; CHECK-NEXT:    punpklo p5.h, p0.b
 ; CHECK-NEXT:    uunpklo z2.d, z3.s
 ; CHECK-NEXT:    uunpkhi z3.d, z3.s
-; CHECK-NEXT:    punpklo p5.h, p0.b
+; CHECK-NEXT:    punpkhi p7.h, p0.b
 ; CHECK-NEXT:    uunpklo z4.d, z5.s
 ; CHECK-NEXT:    uunpkhi z5.d, z5.s
-; CHECK-NEXT:    punpkhi p7.h, p0.b
 ; CHECK-NEXT:    uunpklo z6.d, z7.s
 ; CHECK-NEXT:    uunpkhi z7.d, z7.s
 ; CHECK-NEXT:    punpklo p0.h, p2.b

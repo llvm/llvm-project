@@ -28,12 +28,16 @@ if (CAN_USE_ASSEMBLER)
     check_symbol_exists(_M_X64 "" IS_X64)
     if (IS_X64)
       enable_language(ASM_MASM)
-      list(APPEND LLVM_BLAKE3_FILES
+      set(LLVM_BLAKE3_ASM_FILES
         blake3_sse2_x86-64_windows_msvc.asm
         blake3_sse41_x86-64_windows_msvc.asm
         blake3_avx2_x86-64_windows_msvc.asm
         blake3_avx512_x86-64_windows_msvc.asm
       )
+      list(APPEND LLVM_BLAKE3_FILES ${LLVM_BLAKE3_ASM_FILES})
+      # Supress the copyright message.
+      set_source_files_properties(${LLVM_BLAKE3_ASM_FILES}
+        PROPERTIES COMPILE_OPTIONS "/nologo")
     else()
       disable_blake3_x86_simd()
     endif()

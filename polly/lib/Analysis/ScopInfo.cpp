@@ -1818,11 +1818,9 @@ std::pair<std::string, std::string> Scop::getEntryExitStr() const {
   raw_string_ostream EntryStr(EntryName);
 
   R.getEntry()->printAsOperand(EntryStr, false);
-  EntryStr.str();
 
   if (R.getExit()) {
     R.getExit()->printAsOperand(ExitStr, false);
-    ExitStr.str();
   } else
     ExitName = "FunctionExit";
 

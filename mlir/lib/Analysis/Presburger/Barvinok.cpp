@@ -357,7 +357,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
 
     if (!vertex)
       continue;
-    if (std::find(vertices.begin(), vertices.end(), vertex) != vertices.end())
+    if (llvm::is_contained(vertices, vertex))
       continue;
     // If this subset corresponds to a vertex that has not been considered,
     // store it.

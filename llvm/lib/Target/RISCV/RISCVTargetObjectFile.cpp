@@ -105,10 +105,34 @@ bool RISCVELFTargetObjectFile::isGlobalInSmallSection(
 MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // Handle Small Section classification here.
-  if (Kind.isBSS() && isGlobalInSmallSection(GO, TM))
-    return SmallBSSSection;
-  if (Kind.isData() && isGlobalInSmallSection(GO, TM))
-    return SmallDataSection;
+  if (isGlobalInSmallSection(GO, TM)) {
+    // Emit to an unique sdata/sbss section when -fdata-section is set.
+    // However, if a symbol has an explicit sdata/sbss section, place it in that
+    // section.
+    bool EmitUniquedSection = TM.getDataSections() && !GO->hasSection();
+
+    if (Kind.isBSS()) {
+      if (EmitUniquedSection) {
+        SmallString<128> Name(".sbss.");
+        Name.append(GO->getName());
+        return getContext().getELFSection(Name.str(), ELF::SHT_NOBITS,
+                                          ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      }
+
+      return SmallBSSSection;
+    }
+
+    if (Kind.isData()) {
+      if (EmitUniquedSection) {
+        SmallString<128> Name(".sdata.");
+        Name.append(GO->getName());
+        return getContext().getELFSection(Name.str(), ELF::SHT_PROGBITS,
+                                          ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      }
+
+      return SmallDataSection;
+    }
+  }
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
@@ -137,7 +161,7 @@ bool RISCVELFTargetObjectFile::isConstantInSmallSection(
 MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     Align &Alignment) const {
-  if (isConstantInSmallSection(DL, C)) {
+  if (C && isConstantInSmallSection(DL, C)) {
     if (Kind.isMergeableConst4())
       return SmallROData4Section;
     if (Kind.isMergeableConst8())

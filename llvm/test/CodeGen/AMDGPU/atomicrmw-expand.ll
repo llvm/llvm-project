@@ -210,7 +210,6 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -222,7 +221,7 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 
 define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX908-LABEL: syncscope_workgroup_nortn:
-; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -272,7 +271,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: syncscope_workgroup_nortn:
-; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
+; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
@@ -345,7 +344,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -437,7 +435,6 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0

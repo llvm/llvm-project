@@ -994,6 +994,12 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     }
   }
 
+  // umax(X, C) + -C --> usub.sat(X, C)
+  if (match(Op0, m_OneUse(m_UMax(m_Value(X), m_SpecificInt(-*C)))))
+    return replaceInstUsesWith(
+        Add, Builder.CreateBinaryIntrinsic(
+                 Intrinsic::usub_sat, X, ConstantInt::get(Add.getType(), -*C)));
+
   // Fold (add (zext (add X, -1)), 1) -> (zext X) if X is non-zero.
   // TODO: There's a general form for any constant on the outer add.
   if (C->isOne()) {
@@ -1232,7 +1238,8 @@ static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
   assert(I.getOpcode() == Instruction::Add && "Expecting add instruction");
   Type *Ty = I.getType();
   auto getUAddSat = [&]() {
-    return Intrinsic::getDeclaration(I.getModule(), Intrinsic::uadd_sat, Ty);
+    return Intrinsic::getOrInsertDeclaration(I.getModule(), Intrinsic::uadd_sat,
+                                             Ty);
   };
 
   // add (umin X, ~Y), Y --> uaddsat X, Y
@@ -1304,6 +1311,24 @@ static Instruction *foldAddToAshr(BinaryOperator &Add) {
       X, ConstantInt::get(Add.getType(), DivC->exactLogBase2()));
 }
 
+Instruction *InstCombinerImpl::foldAddLikeCommutative(Value *LHS, Value *RHS,
+                                                      bool NSW, bool NUW) {
+  Value *A, *B, *C;
+  if (match(LHS, m_Sub(m_Value(A), m_Value(B))) &&
+      match(RHS, m_Sub(m_Value(C), m_Specific(A)))) {
+    Instruction *R = BinaryOperator::CreateSub(C, B);
+    bool NSWOut = NSW && match(LHS, m_NSWSub(m_Value(), m_Value())) &&
+                  match(RHS, m_NSWSub(m_Value(), m_Value()));
+
+    bool NUWOut = match(LHS, m_NUWSub(m_Value(), m_Value())) &&
+                  match(RHS, m_NUWSub(m_Value(), m_Value()));
+    R->setHasNoSignedWrap(NSWOut);
+    R->setHasNoUnsignedWrap(NUWOut);
+    return R;
+  }
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::
     canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
         BinaryOperator &I) {
@@ -1338,14 +1363,10 @@ Instruction *InstCombinerImpl::
   //   low bits to skip = shift bitwidth - high bits to extract
   // The shift amount itself may be extended, and we need to look past zero-ext
   // when matching NBits, that will matter for matching later.
-  Constant *C;
   Value *NBits;
-  if (!match(
-          LowBitsToSkip,
-          m_ZExtOrSelf(m_Sub(m_Constant(C), m_ZExtOrSelf(m_Value(NBits))))) ||
-      !match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                                   APInt(C->getType()->getScalarSizeInBits(),
-                                         X->getType()->getScalarSizeInBits()))))
+  if (!match(LowBitsToSkip,
+             m_ZExtOrSelf(m_Sub(m_SpecificInt(XTy->getScalarSizeInBits()),
+                                m_ZExtOrSelf(m_Value(NBits))))))
     return nullptr;
 
   // Sign-extending value can be zero-extended if we `sub`tract it,
@@ -1521,6 +1542,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return R;
 
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+  if (Instruction *R = foldAddLikeCommutative(LHS, RHS, I.hasNoSignedWrap(),
+                                              I.hasNoUnsignedWrap()))
+    return R;
+  if (Instruction *R = foldAddLikeCommutative(RHS, LHS, I.hasNoSignedWrap(),
+                                              I.hasNoUnsignedWrap()))
+    return R;
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(LHS, RHS);
@@ -1548,8 +1575,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   // A + -B  -->  A - B
-  if (match(RHS, m_Neg(m_Value(B))))
-    return BinaryOperator::CreateSub(LHS, B);
+  if (match(RHS, m_Neg(m_Value(B)))) {
+    auto *Sub = BinaryOperator::CreateSub(LHS, B);
+    auto *OBO = cast<OverflowingBinaryOperator>(RHS);
+    Sub->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO->hasNoSignedWrap());
+    return Sub;
+  }
 
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);
@@ -1621,6 +1652,26 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (match(&I, m_c_BinOp(m_ZExt(m_Value(A)), m_SExt(m_Deferred(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
+
+  // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
+  ICmpInst::Predicate LTPred, GTPred;
+  if (match(&I,
+            m_c_Add(m_SExt(m_c_ICmp(LTPred, m_Value(A), m_Value(B))),
+                    m_ZExt(m_c_ICmp(GTPred, m_Deferred(A), m_Deferred(B))))) &&
+      A->getType()->isIntOrIntVectorTy()) {
+    if (ICmpInst::isGT(LTPred)) {
+      std::swap(LTPred, GTPred);
+      std::swap(A, B);
+    }
+
+    if (ICmpInst::isLT(LTPred) && ICmpInst::isGT(GTPred) &&
+        ICmpInst::isSigned(LTPred) == ICmpInst::isSigned(GTPred))
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(
+                 Ty,
+                 ICmpInst::isSigned(LTPred) ? Intrinsic::scmp : Intrinsic::ucmp,
+                 {A, B}));
+  }
 
   // A+B --> A|B iff A and B have no bits set in common.
   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
@@ -1818,6 +1869,15 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
+
+  // Re-enqueue users of the induction variable of add recurrence if we infer
+  // new nuw/nsw flags.
+  if (Changed) {
+    PHINode *PHI;
+    Value *Start, *Step;
+    if (matchSimpleRecurrence(&I, PHI, Start, Step))
+      Worklist.pushUsersToWorkList(*PHI);
+  }
 
   return Changed ? &I : nullptr;
 }
@@ -2079,7 +2139,7 @@ static Instruction *foldSubOfMinMax(BinaryOperator &I,
   if (match(Op0, m_c_Add(m_Specific(X), m_Specific(Y))) &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
     Intrinsic::ID InvID = getInverseMinMaxIntrinsic(MinMax->getIntrinsicID());
-    Function *F = Intrinsic::getDeclaration(I.getModule(), InvID, Ty);
+    Function *F = Intrinsic::getOrInsertDeclaration(I.getModule(), InvID, Ty);
     return CallInst::Create(F, {X, Y});
   }
 
@@ -2102,7 +2162,7 @@ static Instruction *foldSubOfMinMax(BinaryOperator &I,
   if (MinMax->isSigned() && match(Y, m_ZeroInt()) &&
       match(X, m_NSWSub(m_Specific(Op0), m_Value(Z)))) {
     Intrinsic::ID InvID = getInverseMinMaxIntrinsic(MinMax->getIntrinsicID());
-    Function *F = Intrinsic::getDeclaration(I.getModule(), InvID, Ty);
+    Function *F = Intrinsic::getOrInsertDeclaration(I.getModule(), InvID, Ty);
     return CallInst::Create(F, {Op0, Z});
   }
 
@@ -2191,9 +2251,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         const Instruction *UI = dyn_cast<Instruction>(U);
         if (!UI)
           return false;
-        return match(UI,
-                     m_Select(m_Value(), m_Specific(Op1), m_Specific(&I))) ||
-               match(UI, m_Select(m_Value(), m_Specific(&I), m_Specific(Op1)));
+        return match(UI, m_c_Select(m_Specific(Op1), m_Specific(&I)));
       })) {
     if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
                                                         I.hasNoSignedWrap(),
@@ -2259,6 +2317,33 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       Value *OpsSub = Builder.CreateSub(X, Y);
       Constant *ConstsSub = ConstantExpr::getSub(CX, CY);
       return BinaryOperator::CreateAdd(OpsSub, ConstsSub);
+    }
+  }
+
+  {
+    Value *W, *Z;
+    if (match(Op0, m_AddLike(m_Value(W), m_Value(X))) &&
+        match(Op1, m_AddLike(m_Value(Y), m_Value(Z)))) {
+      Instruction *R = nullptr;
+      if (W == Y)
+        R = BinaryOperator::CreateSub(X, Z);
+      else if (W == Z)
+        R = BinaryOperator::CreateSub(X, Y);
+      else if (X == Y)
+        R = BinaryOperator::CreateSub(W, Z);
+      else if (X == Z)
+        R = BinaryOperator::CreateSub(W, Y);
+      if (R) {
+        bool NSW = I.hasNoSignedWrap() &&
+                   match(Op0, m_NSWAddLike(m_Value(), m_Value())) &&
+                   match(Op1, m_NSWAddLike(m_Value(), m_Value()));
+
+        bool NUW = I.hasNoUnsignedWrap() &&
+                   match(Op1, m_NUWAddLike(m_Value(), m_Value()));
+        R->setHasNoSignedWrap(NSW);
+        R->setHasNoUnsignedWrap(NUW);
+        return R;
+      }
     }
   }
 
@@ -2555,6 +2640,23 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
                                                /* IsNUW */ false))
       return replaceInstUsesWith(I, Res);
 
+  if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
+      match(Op1, m_ZExtOrSelf(m_PtrToInt(m_Value(RHSOp))))) {
+    if (auto *GEP = dyn_cast<GEPOperator>(LHSOp)) {
+      if (GEP->getPointerOperand() == RHSOp) {
+        if (GEP->hasNoUnsignedWrap() || GEP->hasNoUnsignedSignedWrap()) {
+          Value *Offset = EmitGEPOffset(GEP);
+          Value *Res = GEP->hasNoUnsignedWrap()
+                           ? Builder.CreateZExt(
+                                 Offset, I.getType(), "",
+                                 /*IsNonNeg=*/GEP->hasNoUnsignedSignedWrap())
+                           : Builder.CreateSExt(Offset, I.getType());
+          return replaceInstUsesWith(I, Res);
+        }
+      }
+    }
+  }
+
   // Canonicalize a shifty way to code absolute value to the common pattern.
   // There are 2 potential commuted variants.
   // We're relying on the fact that we only do this transform when the shift has
@@ -2715,8 +2817,10 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
                                                       Instruction &FMFSource) {
   Value *X, *Y;
   if (match(FNegOp, m_FMul(m_Value(X), m_Value(Y)))) {
+    // Push into RHS which is more likely to simplify (const or another fneg).
+    // FIXME: It would be better to invert the transform.
     return cast<Instruction>(Builder.CreateFMulFMF(
-        Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+        X, Builder.CreateFNegFMF(Y, &FMFSource), &FMFSource));
   }
 
   if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y)))) {

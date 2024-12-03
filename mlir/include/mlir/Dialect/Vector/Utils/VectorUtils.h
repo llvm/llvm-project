@@ -120,6 +120,11 @@ inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
   };
 }
 
+/// Returns a range over the dims (size and scalability) of a VectorType.
+inline auto getDims(VectorType vType) {
+  return llvm::zip_equal(vType.getShape(), vType.getScalableDims());
+}
+
 /// A wrapper for getMixedSizes for vector.transfer_read and
 /// vector.transfer_write Ops (for source and destination, respectively).
 ///

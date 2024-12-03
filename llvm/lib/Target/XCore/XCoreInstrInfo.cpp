@@ -12,8 +12,6 @@
 
 #include "XCoreInstrInfo.h"
 #include "XCore.h"
-#include "XCoreMachineFunctionInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -21,8 +19,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -331,7 +327,8 @@ XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
 void XCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 MCRegister SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   bool GRDest = XCore::GRRegsRegClass.contains(DestReg);
   bool GRSrc  = XCore::GRRegsRegClass.contains(SrcReg);
 

@@ -194,9 +194,9 @@ subroutine parallel_multiple_clauses(alpha, num_threads)
    !CHECK: omp.terminator
    !$omp end parallel
 
-   !CHECK: omp.parallel if({{.*}}) num_threads({{.*}} : i32) allocate(
-   !CHECK: %{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>
-   !CHECK: ) {
+   !CHECK: omp.parallel allocate(%{{.+}} : i64 -> %{{.+}}#1 : !fir.ref<i32>)
+   !CHECK: if({{.*}}) num_threads({{.*}} : i32)
+   !CHECK: private(@{{.+}} %{{.+}}#0 -> %{{.+}} : !fir.ref<i32>) {
    !$omp parallel num_threads(num_threads) if(alpha .le. 0) allocate(omp_high_bw_mem_alloc: alpha) private(alpha)
    !CHECK: fir.call
    call f3()

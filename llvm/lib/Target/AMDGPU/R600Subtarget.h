@@ -160,6 +160,12 @@ public:
   unsigned getMinWavesPerEU() const override {
     return AMDGPU::IsaInfo::getMinWavesPerEU(this);
   }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
+  }
 };
 
 } // end namespace llvm

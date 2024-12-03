@@ -42,7 +42,7 @@ export namespace std {
 
   using std::default_random_engine;
 
-#ifndef _LIBCPP_HAS_NO_RANDOM_DEVICE
+#if _LIBCPP_HAS_RANDOM_DEVICE
   // [rand.device], class random_device
   using std::random_device;
 #endif

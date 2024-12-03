@@ -15,7 +15,6 @@
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
-#include "RISCVTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -23,7 +22,7 @@
 
 using namespace llvm;
 
-static cl::opt<uint32_t> PreferredLandingPadLabel(
+cl::opt<uint32_t> PreferredLandingPadLabel(
     "riscv-landing-pad-label", cl::ReallyHidden,
     cl::desc("Use preferred fixed label for all labels"));
 

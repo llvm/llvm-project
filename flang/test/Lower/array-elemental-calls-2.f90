@@ -141,11 +141,11 @@ end subroutine
 ! CHECK-LABEL: func @_QMtest_opsPcheck_cmplx_part() {
 subroutine check_cmplx_part()
   print *,  elem_func_real(AIMAG(z1 + z2))
-! CHECK:  %[[VAL_13:.*]] = fir.load %{{.*}} : !fir.ref<!fir.complex<8>>
+! CHECK:  %[[VAL_13:.*]] = fir.load %{{.*}} : !fir.ref<complex<f64>>
 ! CHECK:  fir.do_loop
-! CHECK:  %[[VAL_23:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10x!fir.complex<8>>, index) -> !fir.complex<8>
-! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] {fastmath = #arith.fastmath<contract>} : !fir.complex<8>
-! CHECK:  %[[VAL_25:.*]] = fir.extract_value %[[VAL_24]], [1 : index] : (!fir.complex<8>) -> f64
+! CHECK:  %[[VAL_23:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xcomplex<f64>>, index) -> complex<f64>
+! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] {fastmath = #arith.fastmath<contract>} : complex<f64>
+! CHECK:  %[[VAL_25:.*]] = fir.extract_value %[[VAL_24]], [1 : index] : (complex<f64>) -> f64
 ! CHECK:  fir.call @_QPelem_func_real(%[[VAL_25]]) {{.*}}: (f64) -> i32
 end subroutine
 

@@ -34,7 +34,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -120,7 +119,7 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
         OS << '%' << Register::virtReg2Index(Reg);
       }
     } else if (!TRI)
-      OS << '$' << "physreg" << Reg;
+      OS << '$' << "physreg" << Reg.id();
     else if (Reg < TRI->getNumRegs()) {
       OS << '$';
       printLowerCase(TRI->getName(Reg), OS);

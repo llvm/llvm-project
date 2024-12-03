@@ -45,6 +45,8 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
@@ -89,9 +91,9 @@ else()
 
   # Check for flang
   if (NOT MSVC)
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
   else()
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new.exe)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang.exe)
   endif()
 
   # Set fortran test compiler if flang is found
@@ -159,8 +161,8 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
                    "Linux x86_64, ppc64le, or aarch64 hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
   endif()
-  if("nvptx" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
-    message(STATUS "Not building CUDA plugin: only support AMDGPU in "
+  if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building CUDA plugin: only support CUDA in "
                    "Linux x86_64, ppc64le, or aarch64 hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "cuda")
   endif()
@@ -192,13 +194,15 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu-LTO")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-unknown-linux-gnu")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-unknown-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-JIT-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} s390x-ibm-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux-gnu")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux-gnu-LTO")
 
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.

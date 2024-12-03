@@ -485,11 +485,11 @@ public:
       llvm::PointerUnion<const CXXDeleteExpr *, const CXXMemberCallExpr *>;
 
   /// Emit the ABI-specific virtual destructor call.
-  virtual llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
-                                                 const CXXDestructorDecl *Dtor,
-                                                 CXXDtorType DtorType,
-                                                 Address This,
-                                                 DeleteOrMemberCallExpr E) = 0;
+  virtual llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) = 0;
 
   virtual void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF,
                                                 GlobalDecl GD,

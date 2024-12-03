@@ -31,12 +31,6 @@ functions:
     return_type: int
     arguments:
       - type: pthread_attr_t *
-  - name: pthread_attr_init
-    standards:
-      - POSIX
-    return_type: int
-    arguments:
-      - type: pthread_attr_t *
   - name: pthread_attr_getdetachstate
     standards:
       - POSIX
@@ -66,6 +60,12 @@ functions:
     arguments:
       - type: const pthread_attr_t *__restrict
       - type: size_t *__restrict
+  - name: pthread_attr_init
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: pthread_attr_t *
   - name: pthread_attr_setdetachstate
     standards:
       - POSIX
@@ -197,19 +197,6 @@ functions:
     return_type: int
     arguments:
       - type: pthread_key_t
-  - name: pthread_self
-    standards:
-      - POSIX
-    return_type: pthread_t
-    arguments:
-      - type: void
-  - name: pthread_setname_np
-    standards:
-      - GNUExtensions
-    return_type: int
-    arguments:
-      - type: pthread_t
-      - type: const char *
   - name: pthread_mutex_destroy
     standards:
       - POSIX
@@ -241,12 +228,6 @@ functions:
     return_type: int
     arguments:
       - type: pthread_mutexattr_t *
-  - name: pthread_mutexattr_init
-    standards:
-      - POSIX
-    return_type: int
-    arguments:
-      - type: pthread_mutexattr_t *
   - name: pthread_mutexattr_getpshared
     standards:
       - POSIX
@@ -268,6 +249,12 @@ functions:
     arguments:
       - type: const pthread_mutexattr_t *__restrict
       - type: int *__restrict
+  - name: pthread_mutexattr_init
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: pthread_mutexattr_t *
   - name: pthread_mutexattr_setpshared
     standards:
       - POSIX
@@ -296,6 +283,68 @@ functions:
     arguments:
       - type: pthread_once_t *
       - type: __pthread_once_func_t
+  - name: pthread_rwlock_clockrdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: clockid_t
+      - type: const struct timespec *__restrict
+  - name: pthread_rwlock_clockwrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: clockid_t
+      - type: const struct timespec *__restrict
+  - name: pthread_rwlock_destroy
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_init
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+      - type: const pthread_rwlockattr_t *__restrict
+  - name: pthread_rwlock_rdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_timedrdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: const struct timespec *__restrict
+  - name: pthread_rwlock_timedwrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *__restrict
+      - type: const struct timespec *__restrict
+  - name: pthread_rwlock_tryrdlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_trywrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_unlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
+  - name: pthread_rwlock_wrlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: pthread_rwlock_t *
   - name: pthread_rwlockattr_destroy
     standards:
       - POSIX
@@ -336,6 +385,19 @@ functions:
     arguments:
       - type: pthread_rwlockattr_t *
       - type: int
+  - name: pthread_self
+    standards:
+      - POSIX
+    return_type: pthread_t
+    arguments:
+      - type: void
+  - name: pthread_setname_np
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: pthread_t
+      - type: const char *
   - name: pthread_setspecific
     standards:
       - POSIX
@@ -343,79 +405,17 @@ functions:
     arguments:
       - type: pthread_key_t
       - type: const void *
-  - name: pthread_rwlock_init
+  - name: pthread_spin_destroy
     standards: POSIX
     return_type: int
     arguments:
-      - type: pthread_rwlock_t *
-      - type: const pthread_rwlockattr_t *__restrict
-  - name: pthread_rwlock_tryrdlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *
-  - name: pthread_rwlock_trywrlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *
-  - name: pthread_rwlock_timedrdlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *__restrict
-      - type: const struct timespec *__restrict
-  - name: pthread_rwlock_timedwrlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *__restrict
-      - type: const struct timespec *__restrict
-  - name: pthread_rwlock_clockrdlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *__restrict
-      - type: clockid_t
-      - type: const struct timespec *__restrict
-  - name: pthread_rwlock_clockwrlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *__restrict
-      - type: clockid_t
-      - type: const struct timespec *__restrict
-  - name: pthread_rwlock_rdlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *
-  - name: pthread_rwlock_wrlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *
-  - name: pthread_rwlock_unlock
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *
-  - name: pthread_rwlock_destroy
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_rwlock_t *
+      - type: pthread_spinlock_t *
   - name: pthread_spin_init
     standards: POSIX
     return_type: int
     arguments:
       - type: pthread_spinlock_t *
       - type: int
-  - name: pthread_spin_destroy
-    standards: POSIX
-    return_type: int
-    arguments:
-      - type: pthread_spinlock_t *
   - name: pthread_spin_lock
     standards: POSIX
     return_type: int

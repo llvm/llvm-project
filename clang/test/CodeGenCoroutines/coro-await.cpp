@@ -388,7 +388,7 @@ extern "C" void TestTailcall() {
   //   ... many lines of code to coerce coroutine_handle into an ptr scalar
   // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
   // CHECK-NEXT: %[[RESULT:.+]] = call ptr @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]]) 
-  // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
+  // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds nuw %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
   // CHECK-NEXT: store ptr %[[RESULT]], ptr %[[COERCE]]
   // CHECK-NEXT: %[[ADDR:.+]] = call ptr @_ZNSt16coroutine_handleIvE7addressEv(ptr {{[^,]*}} %[[TMP]])
   // CHECK-NEXT: ret ptr %[[ADDR]]

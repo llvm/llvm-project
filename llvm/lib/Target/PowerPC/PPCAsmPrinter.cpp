@@ -73,7 +73,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -289,6 +288,8 @@ public:
   void emitFunctionBodyEnd() override;
 
   void emitPGORefs(Module &M);
+
+  void emitGCOVRefs();
 
   void emitEndOfAsmFile(Module &) override;
 
@@ -2962,6 +2963,31 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   }
 }
 
+void PPCAIXAsmPrinter::emitGCOVRefs() {
+  if (!OutContext.hasXCOFFSection(
+          "__llvm_gcov_ctr_section",
+          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
+    return;
+
+  MCSection *CtrSection = OutContext.getXCOFFSection(
+      "__llvm_gcov_ctr_section", SectionKind::getData(),
+      XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD),
+      /*MultiSymbolsAllowed*/ true);
+
+  OutStreamer->switchSection(CtrSection);
+  const XCOFF::StorageMappingClass MappingClass =
+      TM.Options.XCOFFReadOnlyPointers ? XCOFF::XMC_RO : XCOFF::XMC_RW;
+  if (OutContext.hasXCOFFSection(
+          "__llvm_covinit",
+          XCOFF::CsectProperties(MappingClass, XCOFF::XTY_SD))) {
+    const char *SymbolStr = TM.Options.XCOFFReadOnlyPointers
+                                ? "__llvm_covinit[RO]"
+                                : "__llvm_covinit[RW]";
+    MCSymbol *S = OutContext.getOrCreateSymbol(SymbolStr);
+    OutStreamer->emitXCOFFRefDirective(S);
+  }
+}
+
 void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   // If there are no functions and there are no toc-data definitions in this
   // module, we will never need to reference the TOC base.
@@ -2969,6 +2995,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     return;
 
   emitPGORefs(M);
+  emitGCOVRefs();
 
   // Switch to section to emit TOC base.
   OutStreamer->switchSection(getObjFileLowering().getTOCBaseSection());
@@ -3246,7 +3273,6 @@ static std::string convertToSinitPriority(int Priority) {
   std::string PrioritySuffix;
   llvm::raw_string_ostream os(PrioritySuffix);
   os << llvm::format_hex_no_prefix(P, 8);
-  os.flush();
   return PrioritySuffix;
 }
 

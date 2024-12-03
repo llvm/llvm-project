@@ -50,15 +50,10 @@ define void @i64_simplifiedi_reversed(ptr noalias %st, ptr noalias %ld) {
 define void @i64_simplifiedi_extract(ptr noalias %st, ptr noalias %ld) {
 ; CHECK-LABEL: @i64_simplifiedi_extract(
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[LD:%.*]], i64 1
-; CHECK-NEXT:    [[T0:%.*]] = load i64, ptr [[LD]], align 8
 ; CHECK-NEXT:    [[T1:%.*]] = load i64, ptr [[ARRAYIDX1]], align 8
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, ptr [[ST:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, ptr [[ST]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i64, ptr [[ST]], i64 3
-; CHECK-NEXT:    store i64 [[T0]], ptr [[ST]], align 8
-; CHECK-NEXT:    store i64 [[T0]], ptr [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    store i64 [[T0]], ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    store i64 [[T1]], ptr [[ARRAYIDX5]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[LD]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr [[ST:%.*]], align 8
 ; CHECK-NEXT:    store i64 [[T1]], ptr [[LD]], align 8
 ; CHECK-NEXT:    ret void
 ;

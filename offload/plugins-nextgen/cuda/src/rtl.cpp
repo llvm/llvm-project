@@ -496,9 +496,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// We want to set up the RPC server for host services to the GPU if it is
   /// availible.
-  bool shouldSetupRPCServer() const override {
-    return libomptargetSupportsRPC();
-  }
+  bool shouldSetupRPCServer() const override { return true; }
 
   /// The RPC interface should have enough space for all availible parallelism.
   uint64_t requestedRPCPortCount() const override {
@@ -705,7 +703,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Plugin::error("Wrong device Page size");
 
     // Ceil to page size.
-    Size = roundUp(Size, Granularity);
+    Size = utils::roundUp(Size, Granularity);
 
     // Create a handler of our allocation
     CUmemGenericAllocationHandle AHandle;

@@ -1,3 +1,5 @@
+.. _header_generation:
+
 Generating Public and Internal headers
 ======================================
 
@@ -36,9 +38,6 @@ Required Versions:
    ``build/projects/libc/include/sys``.
 
 
-New Headergen is turned on by default, but if you want to use old Headergen,
-you can include this statement when building: ``-DLIBC_USE_NEW_HEADER_GEN=OFF``
-
 To add a function to the YAML files, you can either manually enter it in the
 YAML file corresponding to the header it belongs to or add it through the
 command line.
@@ -68,6 +67,8 @@ To add through the command line:
 3. Check the YAML file that the added function is present. You will also get a
    generated header file with the new addition in the newhdrgen directory to
    examine.
+
+If you want to sort the functions alphabetically you can check out libc/newhdrgen/yaml_functions_sorted.py.
 
 
 Testing

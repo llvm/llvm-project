@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
@@ -30,7 +29,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -191,7 +189,18 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
   W.write<uint32_t>(is64Bit() ? MachO::MH_MAGIC_64 : MachO::MH_MAGIC);
 
   W.write<uint32_t>(TargetObjectWriter->getCPUType());
-  W.write<uint32_t>(TargetObjectWriter->getCPUSubtype());
+
+  uint32_t Cpusubtype = TargetObjectWriter->getCPUSubtype();
+
+  // Promote arm64e subtypes to always be ptrauth-ABI-versioned, at version 0.
+  // We never need to emit unversioned binaries.
+  // And we don't support arbitrary ABI versions (or the kernel flag) yet.
+  if (TargetObjectWriter->getCPUType() == MachO::CPU_TYPE_ARM64 &&
+      Cpusubtype == MachO::CPU_SUBTYPE_ARM64E)
+    Cpusubtype = MachO::CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        /*PtrAuthABIVersion=*/0, /*PtrAuthKernelABIVersion=*/false);
+
+  W.write<uint32_t>(Cpusubtype);
 
   W.write<uint32_t>(Type);
   W.write<uint32_t>(NumLoadCommands);

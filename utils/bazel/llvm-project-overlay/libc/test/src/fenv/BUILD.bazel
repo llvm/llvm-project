@@ -171,6 +171,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_macros_properties_os",
         "//libc:hdr_fenv_macros",
         "//libc:types_fenv_t",
         "//libc/test/UnitTest:fp_test_helpers",

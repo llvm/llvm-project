@@ -85,6 +85,8 @@ class SessionSaveTestCase(TestBase):
         interpreter.HandleCommand("session save", res)
         self.assertTrue(res.Succeeded())
         raw += self.raw_transcript_builder(cmd, res)
+        # Also check that we don't print an error message about an empty transcript.
+        self.assertNotIn("interpreter.save-transcript is set to false", res.GetError())
 
         with open(os.path.join(td.name, os.listdir(td.name)[0]), "r") as file:
             content = file.read()
@@ -92,6 +94,37 @@ class SessionSaveTestCase(TestBase):
             lines = raw.splitlines()[:-1]
             for line in lines:
                 self.assertIn(line, content)
+
+    @no_debug_info_test
+    def test_session_save_no_transcript_warning(self):
+        interpreter = self.dbg.GetCommandInterpreter()
+
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # These commands won't be saved, so are arbitrary.
+        commands = [
+            "settings set interpreter.open-transcript-in-editor false",
+            "p 1",
+            "settings set interpreter.save-session-on-quit true",
+            "fr v",
+            "settings set interpreter.echo-comment-commands true",
+        ]
+
+        for command in commands:
+            res = lldb.SBCommandReturnObject()
+            interpreter.HandleCommand(command, res)
+
+        output_file = self.getBuildArtifact("my-session")
+
+        res = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand("session save " + output_file, res)
+        self.assertTrue(res.Succeeded())
+        # We should warn about the setting being false.
+        self.assertIn("interpreter.save-transcript is set to false", res.GetError())
+        self.assertTrue(
+            os.path.getsize(output_file) == 0,
+            "Output file should be empty since we didn't save the transcript.",
+        )
 
     @no_debug_info_test
     def test_session_save_on_quit(self):

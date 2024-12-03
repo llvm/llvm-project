@@ -24,20 +24,20 @@ define void @testfunc(ptr nocapture %dest, ptr nocapture readonly %src) {
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP4]], [[SHUFFLE1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fcmp olt <2 x float> [[TMP5]], <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP5]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x float> [[TMP7]], <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x float> [[TMP5]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP8]], <2 x float> [[TMP5]], <2 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP15:%.*]] = fcmp olt <2 x float> [[TMP7]], splat (float -1.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x float> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP8]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, <2 x float> [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP15]], <2 x float> splat (float -0.000000e+00), <2 x float> [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP10]], i32 1
 ; CHECK-NEXT:    [[ADD13]] = fadd float [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[ADD13]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = fcmp olt <2 x float> [[TMP14]], <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x float> [[TMP14]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP17:%.*]] = fcmp olt <2 x float> [[TMP16]], <float -1.000000e+00, float -1.000000e+00>
-; CHECK-NEXT:    [[TMP18]] = select <2 x i1> [[TMP17]], <2 x float> <float -1.000000e+00, float -1.000000e+00>, <2 x float> [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fcmp olt <2 x float> [[TMP14]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP20:%.*]] = select <2 x i1> [[TMP17]], <2 x float> [[TMP14]], <2 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP19:%.*]] = fcmp olt <2 x float> [[TMP20]], splat (float -1.000000e+00)
+; CHECK-NEXT:    [[TMP18]] = select <2 x i1> [[TMP19]], <2 x float> splat (float -1.000000e+00), <2 x float> [[TMP20]]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:

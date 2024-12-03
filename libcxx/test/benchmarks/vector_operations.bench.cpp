@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "benchmark/benchmark.h"
-
 #include "ContainerBenchmarks.h"
 #include "GenerateInput.h"
 
@@ -50,6 +53,16 @@ BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_string, std::vector<std::string>
 
 BENCHMARK_CAPTURE(BM_Pushback_no_grow, vector_int, std::vector<int>{})->Arg(TestNumInputs);
 
+BENCHMARK_CAPTURE(BM_erase_iter_in_middle, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+BENCHMARK_CAPTURE(BM_erase_iter_in_middle, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+
+BENCHMARK_CAPTURE(BM_erase_iter_at_start, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+BENCHMARK_CAPTURE(BM_erase_iter_at_start, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+    ->Range(TestNumInputs, TestNumInputs * 10);
+
 template <class T>
 void bm_grow(benchmark::State& state) {
   for (auto _ : state) {
@@ -64,5 +77,18 @@ BENCHMARK(bm_grow<int>);
 BENCHMARK(bm_grow<std::string>);
 BENCHMARK(bm_grow<std::unique_ptr<int>>);
 BENCHMARK(bm_grow<std::deque<int>>);
+
+BENCHMARK_CAPTURE(BM_AssignInputIterIter, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
+    ->Args({TestNumInputs, TestNumInputs});
+
+BENCHMARK_CAPTURE(
+    BM_AssignInputIterIter<32>, vector_string, std::vector<std::string>{}, getRandomStringInputsWithLength)
+    ->Args({TestNumInputs, TestNumInputs});
+
+BENCHMARK_CAPTURE(BM_AssignInputIterIter<100>,
+                  vector_vector_int,
+                  std::vector<std::vector<int>>{},
+                  getRandomIntegerInputsWithLength<int>)
+    ->Args({TestNumInputs, TestNumInputs});
 
 BENCHMARK_MAIN();

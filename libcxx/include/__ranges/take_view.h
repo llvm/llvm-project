@@ -42,7 +42,6 @@
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -347,7 +346,7 @@ struct __fn {
     requires constructible_from<decay_t<_Np>, _Np>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const
       noexcept(is_nothrow_constructible_v<decay_t<_Np>, _Np>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Np>(__n)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Np>(__n)));
   }
 };
 

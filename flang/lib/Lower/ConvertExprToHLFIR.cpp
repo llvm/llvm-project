@@ -579,7 +579,8 @@ private:
       return createVectorSubscriptElementAddrOp(partInfo, baseType,
                                                 resultExtents);
 
-    mlir::Type resultType = mlir::cast<fir::SequenceType>(baseType).getEleTy();
+    mlir::Type resultType =
+        mlir::cast<fir::SequenceType>(baseType).getElementType();
     if (!resultTypeShape.empty()) {
       // Ranked array section. The result shape comes from the array section
       // subscripts.
@@ -811,7 +812,7 @@ private:
       }
     }
     builder.setInsertionPoint(elementalAddrOp);
-    return mlir::cast<fir::SequenceType>(baseType).getEleTy();
+    return mlir::cast<fir::SequenceType>(baseType).getElementType();
   }
 
   /// Yield the designator for the final part-ref inside the
@@ -1218,7 +1219,7 @@ struct BinaryOp<Fortran::evaluate::ComplexConstructor<KIND>> {
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Value res =
-        fir::factory::Complex{builder, loc}.createComplex(KIND, lhs, rhs);
+        fir::factory::Complex{builder, loc}.createComplex(lhs, rhs);
     return hlfir::EntityWithAttributes{res};
   }
 };
@@ -1584,9 +1585,14 @@ private:
       auto rightVal = hlfir::loadTrivialScalar(l, b, rightElement);
       return binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
     };
+    auto iofBackup = builder.getIntegerOverflowFlags();
+    // nsw is never added to operations on vector subscripts
+    // even if -fno-wrapv is enabled.
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::none);
     mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
                                                   shape, typeParams, genKernel,
                                                   /*isUnordered=*/true);
+    builder.setIntegerOverflowFlags(iofBackup);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
@@ -1690,18 +1696,17 @@ private:
     // required chains of hlfir.designate to address the parent components so
     // that the StructureConstructor can later be lowered by addressing these
     // parent components if needed. Note: the front-end orders the components in
-    // structure constructors. The code below relies on the component to appear
-    // in order.
+    // structure constructors.
     using ValueAndParent = std::tuple<const Fortran::lower::SomeExpr &,
                                       const Fortran::semantics::Symbol &,
                                       hlfir::EntityWithAttributes>;
     llvm::SmallVector<ValueAndParent> valuesAndParents;
-    Fortran::lower::ComponentReverseIterator compIterator(
-        ctor.result().derivedTypeSpec());
-    hlfir::EntityWithAttributes currentParent = varOp;
     for (const auto &value : llvm::reverse(ctor.values())) {
       const Fortran::semantics::Symbol &compSym = *value.first;
-      while (!compIterator.lookup(compSym.name())) {
+      hlfir::EntityWithAttributes currentParent = varOp;
+      for (Fortran::lower::ComponentReverseIterator compIterator(
+               ctor.result().derivedTypeSpec());
+           !compIterator.lookup(compSym.name());) {
         const auto &parentType = compIterator.advanceToParentType();
         llvm::StringRef parentName = toStringRef(parentType.name());
         auto baseRecTy = mlir::cast<fir::RecordType>(
@@ -1899,10 +1904,17 @@ private:
 template <typename T>
 hlfir::Entity
 HlfirDesignatorBuilder::genSubscript(const Fortran::evaluate::Expr<T> &expr) {
+  fir::FirOpBuilder &builder = getBuilder();
+  mlir::arith::IntegerOverflowFlags iofBackup{};
+  if (!getConverter().getLoweringOptions().getIntegerWrapAround()) {
+    iofBackup = builder.getIntegerOverflowFlags();
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
+  }
   auto loweredExpr =
       HlfirBuilder(getLoc(), getConverter(), getSymMap(), getStmtCtx())
           .gen(expr);
-  fir::FirOpBuilder &builder = getBuilder();
+  if (!getConverter().getLoweringOptions().getIntegerWrapAround())
+    builder.setIntegerOverflowFlags(iofBackup);
   // Skip constant conversions that litters designators and makes generated
   // IR harder to read: directly use index constants for constant subscripts.
   mlir::Type idxTy = builder.getIndexType();

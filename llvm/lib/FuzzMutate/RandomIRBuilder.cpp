@@ -67,11 +67,11 @@ AllocaInst *RandomIRBuilder::createStackMemory(Function *F, Type *Ty,
                                                Value *Init) {
   /// TODO: For all Allocas, maybe allocate an array.
   BasicBlock *EntryBB = &F->getEntryBlock();
-  DataLayout DL(F->getParent());
+  const DataLayout &DL = F->getDataLayout();
   AllocaInst *Alloca = new AllocaInst(Ty, DL.getAllocaAddrSpace(), "A",
-                                      &*EntryBB->getFirstInsertionPt());
+                                      EntryBB->getFirstInsertionPt());
   if (Init)
-    new StoreInst(Init, Alloca, Alloca->getNextNode());
+    new StoreInst(Init, Alloca, std::next(Alloca->getIterator()));
   return Alloca;
 }
 
@@ -81,7 +81,7 @@ RandomIRBuilder::findOrCreateGlobalVariable(Module *M, ArrayRef<Value *> Srcs,
   auto MatchesPred = [&Srcs, &Pred](GlobalVariable *GV) {
     // Can't directly compare GV's type, as it would be a pointer to the actual
     // type.
-    return Pred.matches(Srcs, UndefValue::get(GV->getValueType()));
+    return Pred.matches(Srcs, PoisonValue::get(GV->getValueType()));
   };
   bool DidCreate = false;
   SmallVector<GlobalVariable *, 4> GlobalVars;
@@ -165,7 +165,7 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
       Type *Ty = GV->getValueType();
       LoadInst *LoadGV = nullptr;
       if (BB.getTerminator()) {
-        LoadGV = new LoadInst(Ty, GV, "LGV", &*BB.getFirstInsertionPt());
+        LoadGV = new LoadInst(Ty, GV, "LGV", BB.getFirstInsertionPt());
       } else {
         LoadGV = new LoadInst(Ty, GV, "LGV", &BB);
       }
@@ -213,7 +213,7 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
     }
     // Pick the type independently.
     Type *AccessTy = RS.getSelection()->getType();
-    auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", &*IP);
+    auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", IP);
 
     // Only sample this load if it really matches the descriptor
     if (Pred.matches(Srcs, NewLoad))
@@ -231,7 +231,8 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
     Function *F = BB.getParent();
     AllocaInst *Alloca = createStackMemory(F, Ty, newSrc);
     if (BB.getTerminator()) {
-      newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L", BB.getTerminator());
+      newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L",
+                            BB.getTerminator()->getIterator());
     } else {
       newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L", &BB);
     }
@@ -325,7 +326,7 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       for (BasicBlock *Dom : Dominators) {
         for (Instruction &I : *Dom) {
           if (isa<PointerType>(I.getType()))
-            return new StoreInst(V, &I, Insts.back());
+            return new StoreInst(V, &I, Insts.back()->getIterator());
         }
       }
       break;
@@ -351,7 +352,7 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       Module *M = BB.getParent()->getParent();
       auto [GV, DidCreate] =
           findOrCreateGlobalVariable(M, {}, fuzzerop::onlyType(V->getType()));
-      return new StoreInst(V, GV, Insts.back());
+      return new StoreInst(V, GV, Insts.back()->getIterator());
     }
     case EndOfValueSink:
     default:
@@ -367,13 +368,13 @@ Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
   if (!Ptr) {
     if (uniform(Rand, 0, 1)) {
       Type *Ty = V->getType();
-      Ptr = createStackMemory(BB.getParent(), Ty, UndefValue::get(Ty));
+      Ptr = createStackMemory(BB.getParent(), Ty, PoisonValue::get(Ty));
     } else {
-      Ptr = UndefValue::get(PointerType::get(V->getType(), 0));
+      Ptr = PoisonValue::get(PointerType::get(V->getType(), 0));
     }
   }
 
-  return new StoreInst(V, Ptr, Insts.back());
+  return new StoreInst(V, Ptr, Insts.back()->getIterator());
 }
 
 Value *RandomIRBuilder::findPointer(BasicBlock &BB,
@@ -422,7 +423,7 @@ Function *RandomIRBuilder::createFunctionDefinition(Module &M,
   // TODO: Some arguments and a return value would probably be more
   // interesting.
   LLVMContext &Context = M.getContext();
-  DataLayout DL(&M);
+  const DataLayout &DL = M.getDataLayout();
   BasicBlock *BB = BasicBlock::Create(Context, "BB", F);
   Type *RetTy = F->getReturnType();
   if (RetTy != Type::getVoidTy(Context)) {

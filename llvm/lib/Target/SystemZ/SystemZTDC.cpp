@@ -51,12 +51,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
-#include <deque>
 #include <set>
 
 using namespace llvm;
@@ -366,11 +364,10 @@ bool SystemZTDCPass::runOnFunction(Function &F) {
       if (!Worthy)
         continue;
       // Call the intrinsic, compare result with 0.
-      Function *TDCFunc =
-          Intrinsic::getDeclaration(&M, Intrinsic::s390_tdc, V->getType());
       IRBuilder<> IRB(I);
       Value *MaskVal = ConstantInt::get(Type::getInt64Ty(Ctx), Mask);
-      Instruction *TDC = IRB.CreateCall(TDCFunc, {V, MaskVal});
+      Instruction *TDC =
+          IRB.CreateIntrinsic(Intrinsic::s390_tdc, V->getType(), {V, MaskVal});
       Value *ICmp = IRB.CreateICmp(CmpInst::ICMP_NE, TDC, Zero32);
       I->replaceAllUsesWith(ICmp);
     }

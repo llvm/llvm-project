@@ -66,20 +66,19 @@ protected:
     });
   }
 
-  std::unique_ptr<LLVMTargetMachine>
+  std::unique_ptr<TargetMachine>
   createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T)
       return nullptr;
     TargetOptions Options;
-    return std::unique_ptr<LLVMTargetMachine>(
-        static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-            TT, CPU, FS, Options, std::nullopt, std::nullopt)));
+    return std::unique_ptr<TargetMachine>(T->createTargetMachine(
+        TT, CPU, FS, Options, std::nullopt, std::nullopt));
   }
 
   std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,
-                                   const char *FnName, MachineModuleInfo &MMI) {
+                                   MachineModuleInfo &MMI) {
     SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
@@ -106,7 +105,6 @@ static std::string print(std::function<void(raw_ostream &OS)> PrintFn) {
   std::string Str;
   raw_string_ostream OS(Str);
   PrintFn(OS);
-  OS.flush();
   return Str;
 }
 
@@ -227,7 +225,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -338,7 +336,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -376,7 +374,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -474,7 +472,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -563,7 +561,7 @@ body:             |
 ...
 )MIR";
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "foo", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
@@ -594,7 +592,7 @@ body:             |
 ...
 )MIR";
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "foo", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();

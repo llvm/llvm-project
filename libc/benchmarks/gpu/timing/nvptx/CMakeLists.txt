@@ -4,4 +4,8 @@ add_header_library(
     timing.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.array
 )

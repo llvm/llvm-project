@@ -1124,12 +1124,12 @@ v_add_nc_i32 v256, v0, v1
 // register not available on this GPU
 
 s_and_b32     ttmp9, tma_hi, 0x0000ffff
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: tma_hi register not available on this GPU
 // CHECK-NEXT:{{^}}s_and_b32     ttmp9, tma_hi, 0x0000ffff
 // CHECK-NEXT:{{^}}                     ^
 
 s_mov_b32 flat_scratch, -1
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: flat_scratch register not available on this GPU
 // CHECK-NEXT:{{^}}s_mov_b32 flat_scratch, -1
 // CHECK-NEXT:{{^}}          ^
 

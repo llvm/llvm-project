@@ -189,3 +189,15 @@ msr SSBS, #1
 .arch_extension tme
 tstart x0
 // CHECK: tstart x0
+
+.arch_extension fprcvt
+fcvtns s0, d1
+// CHECK: fcvtns s0, d1
+
+.arch_extension f8f16mm
+fmmla v1.8h, v2.16b, v3.16b
+// CHECK: fmmla v1.8h, v2.16b, v3.16b
+
+.arch_extension f8f32mm
+fmmla v1.4s, v2.16b, v3.16b
+// CHECK: fmmla v1.4s, v2.16b, v3.16b

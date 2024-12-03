@@ -77,10 +77,16 @@ FLAGS_ENUM(TypeQueryOptions){
     /// If set, the query will ignore all Module entries in the type context,
     /// even for exact matches.
     e_ignore_modules = (1u << 2),
+    /// If set, all anonymous namespaces in the context must be matched exactly
+    /// by the pattern. Otherwise, superfluous namespaces are skipped.
+    e_strict_namespaces = (1u << 3),
     /// When true, the find types call should stop the query as soon as a single
     /// matching type is found. When false, the type query should find all
     /// matching types.
-    e_find_one = (1u << 3),
+    e_find_one = (1u << 4),
+    // If set, treat TypeQuery::m_name as a mangled name that should be
+    // searched.
+    e_search_by_mangled_name = (1u << 5),
 };
 LLDB_MARK_AS_BITMASK_ENUM(TypeQueryOptions)
 
@@ -264,7 +270,22 @@ public:
   bool GetExactMatch() const { return (m_options & e_exact_match) != 0; }
 
   bool GetIgnoreModules() const { return (m_options & e_ignore_modules) != 0; }
-  void SetIgnoreModules() { m_options &= ~e_ignore_modules; }
+  void SetIgnoreModules(bool b) {
+    if (b)
+      m_options |= e_ignore_modules;
+    else
+      m_options &= ~e_ignore_modules;
+  }
+
+  bool GetStrictNamespaces() const {
+    return (m_options & e_strict_namespaces) != 0;
+  }
+  void SetStrictNamespaces(bool b) {
+    if (b)
+      m_options |= e_strict_namespaces;
+    else
+      m_options &= ~e_strict_namespaces;
+  }
 
   /// The \a m_context can be used in two ways: normal types searching with
   /// the context containing a stanadard declaration context for a type, or
@@ -279,7 +300,20 @@ public:
     if (b)
       m_options |= e_find_one;
     else
-      m_options &= (e_exact_match | e_find_one);
+      m_options &= ~e_find_one;
+  }
+
+  /// Returns true if the type query is supposed to treat the name to be
+  /// searched as a mangled name.
+  bool GetSearchByMangledName() const {
+    return (m_options & e_search_by_mangled_name) != 0;
+  }
+
+  void SetSearchByMangledName(bool b) {
+    if (b)
+      m_options |= e_search_by_mangled_name;
+    else
+      m_options &= ~e_search_by_mangled_name;
   }
 
   /// Access the internal compiler context array.

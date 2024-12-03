@@ -1,4 +1,5 @@
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj %s | llvm-nm --no-sort --special-syms - | FileCheck %s --match-full-lines
+# RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj %s -o %t
+# RUN: llvm-readelf -Ss %t | FileCheck %s
 
     .text
 // $x at 0x0000
@@ -22,9 +23,11 @@
 $d:
 $x:
 
-// CHECK:      0000000000000000 t $x
-// CHECK-NEXT: 0000000000000004 t $d
-// CHECK-NEXT: 0000000000000064 t $x
-// CHECK-NEXT: 0000000000000068 t $x
-// CHECK-NEXT: 0000000000000068 T $d
-// CHECK-NOT:  {{.}}
+# CHECK: [[#TEXT:]]] .text
+
+# CHECK:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]] $x
+# CHECK-NEXT: 2: 0000000000000004     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]] $d
+# CHECK-NEXT: 3: 0000000000000064     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]] $x
+# CHECK-NEXT: 4: 0000000000000068     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]] $x
+# CHECK-NEXT: 5: 0000000000000068     0 NOTYPE  GLOBAL DEFAULT [[#TEXT]] $d
+# CHECK-NOT:  {{.}}

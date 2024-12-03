@@ -163,8 +163,8 @@ std::string MetadataStreamerMsgPackV4::getTypeName(Type *Ty,
   case Type::DoubleTyID:
     return "double";
   case Type::FixedVectorTyID: {
-    auto VecTy = cast<FixedVectorType>(Ty);
-    auto ElTy = VecTy->getElementType();
+    auto *VecTy = cast<FixedVectorType>(Ty);
+    auto *ElTy = VecTy->getElementType();
     auto NumElements = VecTy->getNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();
   }
@@ -199,7 +199,7 @@ void MetadataStreamerMsgPackV4::emitTargetID(
 }
 
 void MetadataStreamerMsgPackV4::emitPrintf(const Module &Mod) {
-  auto Node = Mod.getNamedMetadata("llvm.printf.fmts");
+  auto *Node = Mod.getNamedMetadata("llvm.printf.fmts");
   if (!Node)
     return;
 
@@ -214,10 +214,10 @@ void MetadataStreamerMsgPackV4::emitPrintf(const Module &Mod) {
 void MetadataStreamerMsgPackV4::emitKernelLanguage(const Function &Func,
                                                    msgpack::MapDocNode Kern) {
   // TODO: What about other languages?
-  auto Node = Func.getParent()->getNamedMetadata("opencl.ocl.version");
+  auto *Node = Func.getParent()->getNamedMetadata("opencl.ocl.version");
   if (!Node || !Node->getNumOperands())
     return;
-  auto Op0 = Node->getOperand(0);
+  auto *Op0 = Node->getOperand(0);
   if (Op0->getNumOperands() <= 1)
     return;
 
@@ -233,11 +233,11 @@ void MetadataStreamerMsgPackV4::emitKernelLanguage(const Function &Func,
 void MetadataStreamerMsgPackV4::emitKernelAttrs(const Function &Func,
                                                 msgpack::MapDocNode Kern) {
 
-  if (auto Node = Func.getMetadata("reqd_work_group_size"))
+  if (auto *Node = Func.getMetadata("reqd_work_group_size"))
     Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Node);
-  if (auto Node = Func.getMetadata("work_group_size_hint"))
+  if (auto *Node = Func.getMetadata("work_group_size_hint"))
     Kern[".workgroup_size_hint"] = getWorkGroupDimensions(Node);
-  if (auto Node = Func.getMetadata("vec_type_hint")) {
+  if (auto *Node = Func.getMetadata("vec_type_hint")) {
     Kern[".vec_type_hint"] = Kern.getDocument()->getNode(
         getTypeName(
             cast<ValueAsMetadata>(Node->getOperand(0))->getType(),
@@ -260,8 +260,12 @@ void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
   auto &Func = MF.getFunction();
   unsigned Offset = 0;
   auto Args = HSAMetadataDoc->getArrayNode();
-  for (auto &Arg : Func.args())
+  for (auto &Arg : Func.args()) {
+    if (Arg.hasAttribute("amdgpu-hidden-argument"))
+      continue;
+
     emitKernelArg(Arg, Offset, Args);
+  }
 
   emitHiddenKernelArgs(MF, Offset, Args);
 
@@ -271,7 +275,7 @@ void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
 void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
                                               unsigned &Offset,
                                               msgpack::ArrayDocNode Args) {
-  auto Func = Arg.getParent();
+  const auto *Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
 
@@ -317,7 +321,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   Type *Ty = Arg.hasByRefAttr() ? Arg.getParamByRefType() : Arg.getType();
 
   // FIXME: Need to distinguish in memory alignment from pointer alignment.
-  if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
       PointeeAlign = Arg.getParamAlign().valueOrOne();
   }
@@ -353,7 +357,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
   if (PointeeAlign)
     Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign->value());
 
-  if (auto PtrTy = dyn_cast<PointerType>(Ty))
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty))
     if (auto Qualifier = getAddressSpaceQualifier(PtrTy->getAddressSpace()))
       // Limiting address space to emit only for a certain ValueKind.
       if (ValueKind == "global_buffer" || ValueKind == "dynamic_shared_pointer")
@@ -393,7 +397,7 @@ void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
 
   const Module *M = Func.getParent();
   auto &DL = M->getDataLayout();
-  auto Int64Ty = Type::getInt64Ty(Func.getContext());
+  auto *Int64Ty = Type::getInt64Ty(Func.getContext());
 
   Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
 
@@ -407,7 +411,7 @@ void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
     emitKernelArg(DL, Int64Ty, Align(8), "hidden_global_offset_z", Offset,
                   Args);
 
-  auto Int8PtrTy =
+  auto *Int8PtrTy =
       PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
@@ -500,14 +504,21 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
 
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
-  unsigned NumWGX = MFI.getMaxNumWorkGroupsX();
-  unsigned NumWGY = MFI.getMaxNumWorkGroupsY();
-  unsigned NumWGZ = MFI.getMaxNumWorkGroupsZ();
-  if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0) {
+
+  uint32_t NumWGY = MFI.getMaxNumWorkGroupsY();
+  uint32_t NumWGZ = MFI.getMaxNumWorkGroupsZ();
+  uint32_t NumWGX = MFI.getMaxNumWorkGroupsX();
+
+  // TODO: Should consider 0 invalid and reject in IR verifier.
+  if (NumWGX != std::numeric_limits<uint32_t>::max() && NumWGX != 0)
     Kern[".max_num_workgroups_x"] = Kern.getDocument()->getNode(NumWGX);
+
+  if (NumWGY != std::numeric_limits<uint32_t>::max() && NumWGY != 0)
     Kern[".max_num_workgroups_y"] = Kern.getDocument()->getNode(NumWGY);
+
+  if (NumWGZ != std::numeric_limits<uint32_t>::max() && NumWGZ != 0)
     Kern[".max_num_workgroups_z"] = Kern.getDocument()->getNode(NumWGZ);
-  }
+
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
   Kern[".vgpr_spill_count"] =
@@ -592,9 +603,9 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   auto &DL = M->getDataLayout();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
-  auto Int64Ty = Type::getInt64Ty(Func.getContext());
-  auto Int32Ty = Type::getInt32Ty(Func.getContext());
-  auto Int16Ty = Type::getInt16Ty(Func.getContext());
+  auto *Int64Ty = Type::getInt64Ty(Func.getContext());
+  auto *Int32Ty = Type::getInt32Ty(Func.getContext());
+  auto *Int16Ty = Type::getInt16Ty(Func.getContext());
 
   Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset, Args);
@@ -621,7 +632,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   emitKernelArg(DL, Int16Ty, Align(2), "hidden_grid_dims", Offset, Args);
 
   Offset += 6; // Reserved.
-  auto Int8PtrTy =
+  auto *Int8PtrTy =
       PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (M->getNamedMetadata("llvm.printf.fmts")) {

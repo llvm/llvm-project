@@ -376,6 +376,18 @@ def CC_AArch64_DarwinPCS : CallingConv<[
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
+           CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
+           CCPassIndirect<i64>>,
+
+  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, aarch64svcount],
+           CCAssignToReg<[P0, P1, P2, P3]>>,
+  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, aarch64svcount],
+           CCPassIndirect<i64>>,
+
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
   // up to eight each of GPR and FPR.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
@@ -601,6 +613,11 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                  (sequence "P%u", 4, 15),
                                                  X19, X20, X21, X22, X23, X24,
                                                  X25, X26, X27, X28, LR, FP)>;
+
+def CSR_Darwin_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
+                                                        (sequence "P%u", 4, 15),
+                                                        LR, FP, X19, X20, X21, X22,
+                                                        X23, X24, X25, X26, X27, X28)>;
 
 // SME ABI support routines such as __arm_tpidr2_save/restore preserve most registers.
 def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0

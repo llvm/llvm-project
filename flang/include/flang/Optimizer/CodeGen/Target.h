@@ -126,17 +126,14 @@ public:
   structArgumentType(mlir::Location loc, fir::RecordType recTy,
                      const Marshalling &previousArguments) const = 0;
 
+  /// Type representation of a `fir.type<T>` type argument when returned by
+  /// value. Such value may need to be converted to a hidden reference argument.
+  virtual Marshalling structReturnType(mlir::Location loc,
+                                       fir::RecordType eleTy) const = 0;
+
   /// Type representation of a `boxchar<n>` type argument when passed by value.
   /// An argument value may need to be passed as a (safe) reference argument.
-  ///
-  /// A function that returns a `boxchar<n>` type value must already have
-  /// converted that return value to a parameter decorated with the 'sret'
-  /// Attribute (https://llvm.org/docs/LangRef.html#parameter-attributes).
-  /// This requirement is in keeping with Fortran semantics, which require the
-  /// caller to allocate the space for the return CHARACTER value and pass
-  /// a pointer and the length of that space (a boxchar) to the called function.
-  virtual Marshalling boxcharArgumentType(mlir::Type eleTy,
-                                          bool sret = false) const = 0;
+  virtual Marshalling boxcharArgumentType(mlir::Type eleTy) const = 0;
 
   // Compute ABI rules for an integer argument of the given mlir::IntegerType
   // \p argTy. Note that this methods is supposed to be called for

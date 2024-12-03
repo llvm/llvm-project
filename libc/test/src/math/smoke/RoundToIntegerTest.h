@@ -17,7 +17,6 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
-#include <errno.h>
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};

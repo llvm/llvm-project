@@ -89,6 +89,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
     target.GetFrameRecognizerManager().AddRecognizer(
         std::make_shared<AssertFrameRecognizer>(),
         location.module_spec.GetFilename(), location.symbols,
+        Mangled::ePreferDemangled,
         /*first_instruction_only*/ false);
     return;
   }
@@ -112,6 +113,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
       std::make_shared<AssertFrameRecognizer>(),
       std::make_shared<RegularExpression>(std::move(module_re)),
       std::make_shared<RegularExpression>(std::move(symbol_re)),
+      Mangled::ePreferDemangled,
       /*first_instruction_only*/ false);
 }
 

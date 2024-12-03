@@ -144,7 +144,7 @@ TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
   for (; currRhsDim < rhsShape.size(); currRhsDim++) {
     assert(rhsShape[currRhsDim] == 1);
   }
-  
+
   return lhsType.clone(intermediateShape);
 }
 
@@ -264,7 +264,7 @@ public:
   matchAndRewrite(tosa::SliceOp sliceOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     Location loc = sliceOp.getLoc();
-    Value input = adaptor.getInput();
+    Value input = adaptor.getInput1();
     ShapedType resultType = cast<ShapedType>(sliceOp.getType());
     if (llvm::isa<UnrankedTensorType>(resultType))
       return failure();
@@ -438,7 +438,7 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
-    TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns) {
   patterns
       ->add<ConcatConverter, PadConverter, ReshapeConverter, SliceConverter>(
           converter, patterns->getContext());

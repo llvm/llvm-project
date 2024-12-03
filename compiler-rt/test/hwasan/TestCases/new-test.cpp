@@ -1,5 +1,5 @@
 // Test basic new functionality.
-// RUN: %clangxx_hwasan -std=c++17 %s -o %t -fsized-deallocation
+// RUN: %clangxx_hwasan -std=c++17 %s -o %t
 // RUN: %run %t
 
 #include <cassert>

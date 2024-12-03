@@ -34,6 +34,10 @@
 
 // --- C++26 features ---
 
+#if check(variadic_friend, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_variadic_friend"
+#endif
+
 #if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
 #error "wrong value for __cpp_deleted_function"
 #endif
@@ -313,7 +317,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202306)
+#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202406L)
 #error "wrong value for __cpp_constexpr"
 #endif
 
@@ -321,7 +325,7 @@
 #error "wrong value for __cpp_range_based_for"
 #endif
 
-#if check(static_assert, 0, 200410, 200410, 201411, 201411, 201411, 202306)
+#if check(static_assert, 0, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_static_assert"
 #endif
 

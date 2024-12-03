@@ -497,13 +497,21 @@ constexpr uint64_t alignTo(uint64_t Value, uint64_t Align) {
   return CeilDiv * Align;
 }
 
+/// Will overflow only if result is not representable in T.
+template <typename U, typename V, typename T = common_uint<U, V>>
+constexpr T alignToPowerOf2(U Value, V Align) {
+  assert(Align != 0 && (Align & (Align - 1)) == 0 &&
+         "Align must be a power of 2");
+  T NegAlign = static_cast<T>(0) - Align;
+  return (Value + (Align - 1)) & NegAlign;
+}
+
+/// Fallback when arguments aren't integral.
 constexpr uint64_t alignToPowerOf2(uint64_t Value, uint64_t Align) {
   assert(Align != 0 && (Align & (Align - 1)) == 0 &&
          "Align must be a power of 2");
-  // Replace unary minus to avoid compilation error on Windows:
-  // "unary minus operator applied to unsigned type, result still unsigned"
-  uint64_t NegAlign = (~Align) + 1;
-  return (Value + Align - 1) & NegAlign;
+  uint64_t NegAlign = 0 - Align;
+  return (Value + (Align - 1)) & NegAlign;
 }
 
 /// If non-zero \p Skew is specified, the return value will be a minimal integer

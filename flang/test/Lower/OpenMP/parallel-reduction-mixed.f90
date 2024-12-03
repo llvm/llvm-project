@@ -17,19 +17,19 @@ subroutine proc
 end subroutine proc
 
 !CHECK-LABEL: define void @proc_()
-!CHECK: call void
+!CHECK: call void (ptr, i32, ptr, ...)
 !CHECK-SAME: @__kmpc_fork_call(ptr {{.*}}, i32 1, ptr @[[OMP_PAR:.*]], {{.*}})
 
 !CHECK: define internal void @[[OMP_PAR]](ptr {{.*}} %[[TID_ADDR:.*]], ptr noalias 
 !CHECK:  %[[TID_LOCAL:.*]] = alloca i32
 !CHECK:  %[[TID:.*]] = load i32, ptr %[[TID_ADDR]]
 !CHECK:  store i32 %[[TID]], ptr %[[TID_LOCAL]]
-!CHECK:  %[[I_priv:.*]] = alloca i32
 !CHECK:  %[[F_priv:.*]] = alloca ptr
+!CHECK:  %[[I_priv:.*]] = alloca i32
 
 !CHECK: omp.reduction.init:
-!CHECK: store ptr %{{.*}}, ptr %[[F_priv]]
-!CHECK: store i32 0, ptr %[[I_priv]]
+!CHECK:  store ptr %{{.*}}, ptr %[[F_priv]]
+!CHECK:  store i32 0, ptr %[[I_priv]]
 
 !CHECK: omp.par.region:
 !CHECK:  br label %[[MALLOC_BB:.*]]

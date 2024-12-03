@@ -18,6 +18,23 @@ void ParamPackFunction(T... args);
 // CHECK: ---
 // CHECK-NEXT: USR:             '{{([0-9A-F]{40})}}'
 // CHECK-NEXT: ChildFunctions:
+// CHECK-NEXT:  - USR:             '{{([0-9A-F]{40})}}'
+// CHECK-NEXT:    Name:            'ParamPackFunction'
+// CHECK-NEXT:    Location:
+// CHECK-NEXT:      - LineNumber:      16
+// CHECK-NEXT:        Filename:        '{{.*}}'
+// CHECK-NEXT:    Params:
+// CHECK-NEXT:      - Type:
+// CHECK-NEXT:          Name:            'T...'
+// CHECK-NEXT:          QualName:        'T...'
+// CHECK-NEXT:        Name:            'args'
+// CHECK-NEXT:    ReturnType:
+// CHECK-NEXT:      Type:
+// CHECK-NEXT:        Name:            'void'
+// CHECK-NEXT:        QualName:        'void'
+// CHECK-NEXT:    Template:
+// CHECK-NEXT:      Params:
+// CHECK-NEXT:        - Contents:        'class... T'
 // CHECK-NEXT:   - USR:             '{{([0-9A-F]{40})}}'
 // CHECK-NEXT:     Name:            'function'
 // CHECK-NEXT:     DefLocation:
@@ -56,21 +73,4 @@ void ParamPackFunction(T... args);
 // CHECK-NEXT:         Params:
 // CHECK-NEXT:           - Contents:        'bool'
 // CHECK-NEXT:           - Contents:        '0'
-// CHECK-NEXT:  - USR:             '{{([0-9A-F]{40})}}'
-// CHECK-NEXT:    Name:            'ParamPackFunction'
-// CHECK-NEXT:    Location:
-// CHECK-NEXT:      - LineNumber:      16
-// CHECK-NEXT:        Filename:        '{{.*}}'
-// CHECK-NEXT:    Params:
-// CHECK-NEXT:      - Type:
-// CHECK-NEXT:          Name:            'T...'
-// CHECK-NEXT:          QualName:        'T...'
-// CHECK-NEXT:        Name:            'args'
-// CHECK-NEXT:    ReturnType:
-// CHECK-NEXT:      Type:
-// CHECK-NEXT:        Name:            'void'
-// CHECK-NEXT:        QualName:        'void'
-// CHECK-NEXT:    Template:
-// CHECK-NEXT:      Params:
-// CHECK-NEXT:        - Contents:        'class... T'
 // CHECK-NEXT: ...

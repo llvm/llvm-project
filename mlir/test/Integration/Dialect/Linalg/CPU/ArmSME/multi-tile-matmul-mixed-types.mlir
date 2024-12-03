@@ -6,21 +6,15 @@
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib,%mlir_arm_runner_utils | \
+// RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib,%native_mlir_arm_runner_utils | \
 // RUN: FileCheck %s
 
 /// This is very similar to the SME multi-tile-matmul.mlir test, except that it
 /// tests a mixed i8 to i32 matmul and outer product fusion which fuses 16
 /// outer products (four per tile) into four 4-way outer products.
 
-/// NOTE: QEMU gives incorrect result for SME SMOPA 4-way outer product
-/// instruction (version <= 8.2.0, latest version at time of writing), see:
-/// https://gitlab.com/qemu-project/qemu/-/issues/2083
-/// This test is expected to fail until a fixed version of QEMU can be used.
-
-/// FIXME: Remove the 'XFAIL' below once a fixed QEMU version is available
-/// (and installed on CI buildbot).
-/// XFAIL: *
+// NOTE: QEMU <= 8.2.0 gives incorrect result for SME SMOPA 4-way outer product
+// instruction see: https://gitlab.com/qemu-project/qemu/-/issues/2083.
 
 func.func @matmul_i8_to_i32(%A : tensor<?x?xi8>, %B : tensor<?x?xi8>, %C : tensor<?x?xi32>) {
   %res = linalg.matmul ins(%A, %B: tensor<?x?xi8>, tensor<?x?xi8>)

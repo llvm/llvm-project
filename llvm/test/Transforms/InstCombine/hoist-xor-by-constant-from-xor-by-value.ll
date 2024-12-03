@@ -20,7 +20,7 @@ define i8 @t0_scalar(i8 %x, i8 %y) {
 define <2 x i8> @t1_splatvec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t1_splatvec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[TMP1]], <i8 42, i8 42>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[TMP1]], splat (i8 42)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %i0 = xor <2 x i8> %x, <i8 42, i8 42>
@@ -64,7 +64,7 @@ define i8 @t4_extrause(i8 %x, i8 %y) {
 define i8 @t5_commutativity(i8 %x) {
 ; CHECK-LABEL: @t5_commutativity(
 ; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], 42
 ; CHECK-NEXT:    ret i8 [[R]]
 ;

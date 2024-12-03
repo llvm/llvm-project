@@ -130,7 +130,7 @@ define i64 @select_zext_different_condition(i1 %c, i1 %d) {
 define <2 x i64> @vector_test(i1 %c) {
 ; CHECK-LABEL: define <2 x i64> @vector_test
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], <2 x i64> <i64 64, i64 64>, <2 x i64> <i64 1, i64 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], <2 x i64> splat (i64 64), <2 x i64> splat (i64 1)
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
 ; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i64> poison, i64 [[EXT]], i64 0
 ; CHECK-NEXT:    [[VEC1:%.*]] = shufflevector <2 x i64> [[VEC0]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -215,8 +215,8 @@ define i6 @sub_select_zext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) 
 define <2 x i8> @vectorized_add(<2 x i1> %c, <2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i8> @vectorized_add
 ; CHECK-SAME: (<2 x i1> [[C:%.*]], <2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[ARG]], <i8 1, i8 1>
-; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[C]], <2 x i8> [[TMP1]], <2 x i8> <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[ARG]], splat (i8 1)
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[C]], <2 x i8> [[TMP1]], <2 x i8> splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i8> [[ADD]]
 ;
   %zext = zext <2 x i1> %c to <2 x i8>

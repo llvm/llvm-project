@@ -21,7 +21,6 @@ namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class Instruction;
-class Value;
 
 /// Index of elements in the operand bundle.
 /// If the element exist it is guaranteed to be what is specified in this enum

@@ -1,6 +1,3 @@
-# `-no_objc_relative_method_lists` needs to be explicitly added to this test to avoid crashing after `-objc_relative_method_lists` was made default.
-# TODO: Make this test compatible with default `-objc_relative_method_lists` and remove the `-no_objc_relative_method_lists` flag. Issue #101419
-
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s -o %t/cat1.o

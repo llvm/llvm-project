@@ -18,7 +18,8 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   dag InOperandList = ins;
   let Size = size;
   let Pattern = pattern;
-  let AsmString = asmstr;
+  // Convert tabs to spaces, and remove space after comma for HLASM syntax
+  let AsmString = !subst("\t", "{\t| }", !subst(", ", "{, |,}", asmstr));
 
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -2050,7 +2051,7 @@ class CondVariant<bits<4> ccmaskin, string suffixin, bit alternatein,
   bit alternate = alternatein;
 
   // Whether this needs be to restricted to a specific dialect.
-  // Valid values are "att" and "hlasm", which when passed in
+  // Valid values are "gnu" and "hlasm", which when passed in
   // will set AsmVariantName.
   string asmvariant = asmvariantin;
 }
@@ -2063,20 +2064,20 @@ def CondAlways : CondVariant<15, "", 0>;
 def CondVariantO   : CondVariant<1,  "o",   0>;
 def CondVariantH   : CondVariant<2,  "h",   0>;
 def CondVariantP   : CondVariant<2,  "p",   1>;
-def CondVariantNLE : CondVariant<3,  "nle", 0, "att">;
+def CondVariantNLE : CondVariant<3,  "nle", 0, "gnu">;
 def CondVariantL   : CondVariant<4,  "l",   0>;
 def CondVariantM   : CondVariant<4,  "m",   1>;
-def CondVariantNHE : CondVariant<5,  "nhe", 0, "att">;
-def CondVariantLH  : CondVariant<6,  "lh",  0, "att">;
+def CondVariantNHE : CondVariant<5,  "nhe", 0, "gnu">;
+def CondVariantLH  : CondVariant<6,  "lh",  0, "gnu">;
 def CondVariantNE  : CondVariant<7,  "ne",  0>;
 def CondVariantNZ  : CondVariant<7,  "nz",  1>;
 def CondVariantE   : CondVariant<8,  "e",   0>;
 def CondVariantZ   : CondVariant<8,  "z",   1>;
-def CondVariantNLH : CondVariant<9,  "nlh", 0, "att">;
-def CondVariantHE  : CondVariant<10, "he",  0, "att">;
+def CondVariantNLH : CondVariant<9,  "nlh", 0, "gnu">;
+def CondVariantHE  : CondVariant<10, "he",  0, "gnu">;
 def CondVariantNL  : CondVariant<11, "nl",  0>;
 def CondVariantNM  : CondVariant<11, "nm",  1>;
-def CondVariantLE  : CondVariant<12, "le",  0, "att">;
+def CondVariantLE  : CondVariant<12, "le",  0, "gnu">;
 def CondVariantNH  : CondVariant<13, "nh",  0>;
 def CondVariantNP  : CondVariant<13, "np",  1>;
 def CondVariantNO  : CondVariant<14, "no",  0>;
@@ -2093,16 +2094,16 @@ class CV<string name>
 // and that the low bit of the mask is therefore always 0.  This means
 // that each condition has two names.  Conditions "o" and "no" are not used.
 def IntCondVariantH   : CondVariant<2,  "h",   0>;
-def IntCondVariantNLE : CondVariant<2,  "nle", 1, "att">;
+def IntCondVariantNLE : CondVariant<2,  "nle", 1, "gnu">;
 def IntCondVariantL   : CondVariant<4,  "l",   0>;
-def IntCondVariantNHE : CondVariant<4,  "nhe", 1, "att">;
-def IntCondVariantLH  : CondVariant<6,  "lh",  0, "att">;
+def IntCondVariantNHE : CondVariant<4,  "nhe", 1, "gnu">;
+def IntCondVariantLH  : CondVariant<6,  "lh",  0, "gnu">;
 def IntCondVariantNE  : CondVariant<6,  "ne",  1>;
 def IntCondVariantE   : CondVariant<8,  "e",   0>;
-def IntCondVariantNLH : CondVariant<8,  "nlh", 1, "att">;
-def IntCondVariantHE  : CondVariant<10, "he",  0, "att">;
+def IntCondVariantNLH : CondVariant<8,  "nlh", 1, "gnu">;
+def IntCondVariantHE  : CondVariant<10, "he",  0, "gnu">;
 def IntCondVariantNL  : CondVariant<10, "nl",  1>;
-def IntCondVariantLE  : CondVariant<12, "le",  0, "att">;
+def IntCondVariantLE  : CondVariant<12, "le",  0, "gnu">;
 def IntCondVariantNH  : CondVariant<12, "nh",  1>;
 
 // A helper class to look up one of the above by name.
@@ -2327,6 +2328,12 @@ class AsmCondBranchRI<string mnemonic, bits<12> opcode>
   : InstRIc<opcode, (outs), (ins imm32zx4:$M1, brtarget16:$RI2),
             mnemonic#"\t$M1, $RI2", []>;
 
+class NeverCondBranchRI<string mnemonic, bits<12> opcode>
+  : InstRIc<opcode, (outs), (ins brtarget16:$RI2),
+            mnemonic#"\t$RI2", []> {
+  let M1 = 0;
+}
+
 class FixedCondBranchRI<CondVariant V, string mnemonic, bits<12> opcode,
                         SDPatternOperator operator = null_frag>
   : InstRIc<opcode, (outs), (ins brtarget16:$RI2),
@@ -2346,6 +2353,12 @@ class AsmCondBranchRIL<string mnemonic, bits<12> opcode>
   : InstRILc<opcode, (outs), (ins imm32zx4:$M1, brtarget32:$RI2),
              mnemonic#"\t$M1, $RI2", []>;
 
+class NeverCondBranchRIL<string mnemonic, bits<12> opcode>
+  : InstRILc<opcode, (outs), (ins brtarget32:$RI2),
+             mnemonic#"\t$RI2", []> {
+  let M1 = 0;
+}
+
 class FixedCondBranchRIL<CondVariant V, string mnemonic, bits<12> opcode>
   : InstRILc<opcode, (outs), (ins brtarget32:$RI2),
              !subst("#", V.suffix, mnemonic)#"\t$RI2", []> {
@@ -2364,10 +2377,16 @@ class AsmCondBranchRR<string mnemonic, bits<8> opcode>
   : InstRR<opcode, (outs), (ins imm32zx4:$R1, GR64:$R2),
            mnemonic#"\t$R1, $R2", []>;
 
-class NeverCondBranchRR<string mnemonic, bits<8> opcode>
-  : InstRR<opcode, (outs), (ins GR64:$R2),
-           mnemonic#"\t$R2", []> {
-  let R1 = 0;
+multiclass NeverCondBranchRR<string mnemonic, bits<8> opcode> {
+  // For the no-op (always false) branch, the target is optional.
+  def "" : InstRR<opcode, (outs), (ins GR64:$R2),
+                  mnemonic#"\t$R2", []> {
+             let R1 = 0;
+           }
+  def Opt : InstRR<opcode, (outs), (ins), mnemonic, []> {
+              let R1 = 0;
+              let R2 = 0;
+            }
 }
 
 class FixedCondBranchRR<CondVariant V, string mnemonic, bits<8> opcode,
@@ -2391,11 +2410,19 @@ class AsmCondBranchRX<string mnemonic, bits<8> opcode>
             (ins imm32zx4:$M1, (bdxaddr12only $B2, $D2, $X2):$XBD2),
             mnemonic#"\t$M1, $XBD2", []>;
 
-class NeverCondBranchRX<string mnemonic, bits<8> opcode> 
-  : InstRXb<opcode, (outs),
-            (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
-            mnemonic#"\t$XBD2", []> {
-  let M1 = 0;
+multiclass NeverCondBranchRX<string mnemonic, bits<8> opcode> {
+  // For the no-op (always false) branch, the target is optional.
+  def "" : InstRXb<opcode, (outs),
+                  (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                  mnemonic#"\t$XBD2", []> {
+             let M1 = 0;
+           }
+  def Opt : InstRXb<opcode, (outs), (ins), mnemonic, []> {
+              let M1 = 0;
+              let B2 = 0;
+              let D2 = 0;
+              let X2 = 0;
+            }
 }
 
 class FixedCondBranchRX<CondVariant V, string mnemonic, bits<8> opcode>

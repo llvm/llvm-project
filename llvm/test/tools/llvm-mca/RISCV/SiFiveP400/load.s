@@ -42,15 +42,20 @@ fld ft0, 0(a0)
 # CHECK-NEXT: [5]   - SiFiveP400IEXQ2
 # CHECK-NEXT: [6]   - SiFiveP400Load
 # CHECK-NEXT: [7]   - SiFiveP400Store
+# CHECK-NEXT: [8]   - SiFiveP400VDiv
+# CHECK-NEXT: [9]   - SiFiveP400VEXQ0
+# CHECK-NEXT: [10]  - SiFiveP400VFloatDiv
+# CHECK-NEXT: [11]  - SiFiveP400VLD
+# CHECK-NEXT: [12]  - SiFiveP400VST
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -      -      -      -     5.00    -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     lw	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     ld	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     flh	ft0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     flw	ft0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     fld	ft0, 0(a0)
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     lw	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     ld	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     flh	ft0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     flw	ft0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     fld	ft0, 0(a0)

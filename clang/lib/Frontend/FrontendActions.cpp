@@ -26,6 +26,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -622,7 +623,8 @@ namespace {
       Out.indent(2) << "Module map file: " << ModuleMapPath << "\n";
     }
 
-    bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+    bool ReadLanguageOptions(const LangOptions &LangOpts,
+                             StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
       Out.indent(2) << "Language options:\n";
 #define LANGOPT(Name, Bits, Default, Description) \
@@ -645,7 +647,8 @@ namespace {
       return false;
     }
 
-    bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+    bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
       Out.indent(2) << "Target options:\n";
       Out.indent(4) << "  Triple: " << TargetOpts.Triple << "\n";
@@ -665,6 +668,7 @@ namespace {
     }
 
     bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+                               StringRef ModuleFilename,
                                bool Complain) override {
       Out.indent(2) << "Diagnostic options:\n";
 #define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts->Name, #Name);
@@ -684,6 +688,7 @@ namespace {
     }
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                                 StringRef ModuleFilename,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
       Out.indent(2) << "Header search options:\n";
@@ -717,7 +722,8 @@ namespace {
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                                 bool ReadMacros, bool Complain,
+                                 StringRef ModuleFilename, bool ReadMacros,
+                                 bool Complain,
                                  std::string &SuggestedPredefines) override {
       Out.indent(2) << "Preprocessor options:\n";
       DUMP_BOOLEAN(PPOpts.UsePredefines,
@@ -1102,7 +1108,6 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::Unknown:
   case Language::Asm:
   case Language::LLVM_IR:
-  case Language::RenderScript:
     // We can't do anything with these.
     return;
   }

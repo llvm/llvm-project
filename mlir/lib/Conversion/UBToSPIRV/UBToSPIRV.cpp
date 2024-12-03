@@ -79,6 +79,6 @@ struct UBToSPIRVConversionPass final
 //===----------------------------------------------------------------------===//
 
 void mlir::ub::populateUBToSPIRVConversionPatterns(
-    SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
+    const SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<PoisonOpLowering>(converter, patterns.getContext());
 }

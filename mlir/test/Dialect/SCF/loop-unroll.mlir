@@ -448,3 +448,44 @@ func.func @loop_unroll_yield_iter_arg() {
 // CHECK-NEXT:      affine.yield %[[ITER_ARG]] : index
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
+
+// -----
+
+// Test the loop unroller works with integer IV type.
+func.func @static_loop_unroll_with_integer_iv() -> (f32, f32) {
+  %0 = arith.constant 7.0 : f32
+  %lb = arith.constant 0 : i32
+  %ub = arith.constant 20 : i32
+  %step = arith.constant 1 : i32
+  %result:2 = scf.for %i0 = %lb to %ub step %step iter_args(%arg0 = %0, %arg1 = %0) -> (f32, f32) : i32{
+    %add = arith.addf %arg0, %arg1 : f32
+    %mul = arith.mulf %arg0, %arg1 : f32
+    scf.yield %add, %mul : f32, f32
+  }
+  return %result#0, %result#1 : f32, f32
+}
+// UNROLL-BY-3-LABEL: func @static_loop_unroll_with_integer_iv
+//
+//   UNROLL-BY-3-DAG:   %[[CST:.*]] = arith.constant {{.*}} : f32
+//   UNROLL-BY-3-DAG:   %[[C0:.*]] = arith.constant 0 : i32
+//   UNROLL-BY-3-DAG:   %[[C1:.*]] = arith.constant 1 : i32
+//   UNROLL-BY-3-DAG:   %[[C20:.*]] = arith.constant 20 : i32
+//   UNROLL-BY-3-DAG:   %[[C18:.*]] = arith.constant 18 : i32
+//   UNROLL-BY-3-DAG:   %[[C3:.*]] = arith.constant 3 : i32
+//       UNROLL-BY-3:   %[[FOR:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C18]] step %[[C3]]
+//  UNROLL-BY-3-SAME:     iter_args(%[[ARG0:.*]] = %[[CST]], %[[ARG1:.*]] = %[[CST]]) -> (f32, f32)  : i32 {
+//  UNROLL-BY-3-NEXT:     %[[ADD0:.*]] = arith.addf %[[ARG0]], %[[ARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ARG0]], %[[ARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[ADD1:.*]] = arith.addf %[[ADD0]], %[[MUL0]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL1:.*]] = arith.mulf %[[ADD0]], %[[MUL0]] : f32
+//  UNROLL-BY-3-NEXT:     %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[MUL1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL2:.*]] = arith.mulf %[[ADD1]], %[[MUL1]] : f32
+//  UNROLL-BY-3-NEXT:     scf.yield %[[ADD2]], %[[MUL2]] : f32, f32
+//  UNROLL-BY-3-NEXT:   }
+//       UNROLL-BY-3:   %[[EFOR:.*]]:2 = scf.for %[[EIV:.*]] = %[[C18]] to %[[C20]] step %[[C1]]
+//  UNROLL-BY-3-SAME:     iter_args(%[[EARG0:.*]] = %[[FOR]]#0, %[[EARG1:.*]] = %[[FOR]]#1) -> (f32, f32)  : i32 {
+//  UNROLL-BY-3-NEXT:     %[[EADD:.*]] = arith.addf %[[EARG0]], %[[EARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[EMUL:.*]] = arith.mulf %[[EARG0]], %[[EARG1]] : f32
+//  UNROLL-BY-3-NEXT:     scf.yield %[[EADD]], %[[EMUL]] : f32, f32
+//  UNROLL-BY-3-NEXT:   }
+//  UNROLL-BY-3-NEXT:   return %[[EFOR]]#0, %[[EFOR]]#1 : f32, f32

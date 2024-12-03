@@ -14,9 +14,10 @@
 
 #include <tuple>
 #include <array>
-#include <utility>
-#include <string>
 #include <cassert>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 #include "test_macros.h"
 #include "type_id.h"
@@ -197,7 +198,7 @@ void test_noexcept() {
 
 namespace LWG3528 {
 template <class T, class Tuple>
-auto test_make_from_tuple(T&&, Tuple&& t) -> decltype(std::make_from_tuple<T>(t), uint8_t()) {
+auto test_make_from_tuple(T&&, Tuple&& t) -> decltype(std::make_from_tuple<T>(t), std::uint8_t()) {
   return 0;
 }
 template <class T, class Tuple>
@@ -207,14 +208,14 @@ uint32_t test_make_from_tuple(...) {
 
 template <class T, class Tuple>
 static constexpr bool can_make_from_tuple =
-    std::is_same_v<decltype(test_make_from_tuple<T, Tuple>(T{}, Tuple{})), uint8_t>;
+    std::is_same_v<decltype(test_make_from_tuple<T, Tuple>(T{}, Tuple{})), std::uint8_t>;
 
 #ifdef _LIBCPP_VERSION
 template <class T, class Tuple>
 auto test_make_from_tuple_impl(T&&, Tuple&& t)
     -> decltype(std::__make_from_tuple_impl<T>(
                     t, typename std::__make_tuple_indices< std::tuple_size_v<std::remove_reference_t<Tuple>>>::type{}),
-                uint8_t()) {
+                std::uint8_t()) {
   return 0;
 }
 template <class T, class Tuple>
@@ -224,7 +225,7 @@ uint32_t test_make_from_tuple_impl(...) {
 
 template <class T, class Tuple>
 static constexpr bool can_make_from_tuple_impl =
-    std::is_same_v<decltype(test_make_from_tuple_impl<T, Tuple>(T{}, Tuple{})), uint8_t>;
+    std::is_same_v<decltype(test_make_from_tuple_impl<T, Tuple>(T{}, Tuple{})), std::uint8_t>;
 #endif // _LIBCPP_VERSION
 
 struct A {

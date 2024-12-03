@@ -1,6 +1,17 @@
-; RUN: llc -mtriple=arm64 -global-isel=0 -fast-isel=0         -relocation-model=pic -o - %s -mcpu=cyclone -mattr=+pauth | FileCheck %s
-; RUN: llc -mtriple=arm64 -global-isel=0 -fast-isel=1         -relocation-model=pic -o - %s -mcpu=cyclone -mattr=+pauth | FileCheck %s
-; RUN: llc -mtriple=arm64 -global-isel=1 -global-isel-abort=1 -relocation-model=pic -o - %s -mcpu=cyclone -mattr=+pauth | FileCheck %s
+; RUN: llc -mtriple=arm64 -global-isel=0 -fast-isel=0         -relocation-model=pic -o - %s \
+; RUN:   -mcpu=cyclone -mattr=+pauth -mattr=+fpac | FileCheck --check-prefixes=CHECK,NOTRAP %s
+; RUN: llc -mtriple=arm64 -global-isel=0 -fast-isel=0         -relocation-model=pic -o - %s \
+; RUN:   -mcpu=cyclone -mattr=+pauth              | FileCheck --check-prefixes=CHECK,TRAP %s
+
+; RUN: llc -mtriple=arm64 -global-isel=0 -fast-isel=1         -relocation-model=pic -o - %s \
+; RUN:   -mcpu=cyclone -mattr=+pauth -mattr=+fpac | FileCheck --check-prefixes=CHECK,NOTRAP %s
+; RUN: llc -mtriple=arm64 -global-isel=0 -fast-isel=1         -relocation-model=pic -o - %s \
+; RUN:   -mcpu=cyclone -mattr=+pauth              | FileCheck --check-prefixes=CHECK,TRAP %s
+
+; RUN: llc -mtriple=arm64 -global-isel=1 -global-isel-abort=1 -relocation-model=pic -o - %s \
+; RUN:   -mcpu=cyclone -mattr=+pauth -mattr=+fpac | FileCheck --check-prefixes=CHECK,NOTRAP %s
+; RUN: llc -mtriple=arm64 -global-isel=1 -global-isel-abort=1 -relocation-model=pic -o - %s \
+; RUN:   -mcpu=cyclone -mattr=+pauth              | FileCheck --check-prefixes=CHECK,TRAP %s
 
 ;; Note: for FastISel, we fall back to SelectionDAG
 
@@ -11,13 +22,25 @@ define i8 @test_i8(i8 %new) {
   store i8 %new, ptr @var8
   ret i8 %val
 
-; CHECK:      adrp x[[HIREG:[0-9]+]], :got_auth:var8
-; CHECK-NEXT: add x[[HIREG]], x[[HIREG]], :got_auth_lo12:var8
-; CHECK-NEXT: ldr x[[VAR_ADDR:[0-9]+]], [x[[HIREG]]]
-; CHECK-NEXT: autda x[[VAR_ADDR]], x[[HIREG]]
-; CHECK-NEXT: ldrb {{w[0-9]+}}, [x[[VAR_ADDR]]]
+; CHECK-LABEL: test_i8:
+; CHECK:         adrp  x17, :got_auth:var8
+; CHECK-NEXT:    add   x17, x17, :got_auth_lo12:var8
+; NOTRAP-NEXT:   ldr   x9,  [x17]
+; NOTRAP-NEXT:   autda x9,  x17
+; TRAP-NEXT:     ldr   x16, [x17]
+; TRAP-NEXT:     autda x16, x17
+; TRAP-NEXT:     mov   x17, x16
+; TRAP-NEXT:     xpacd x17
+; TRAP-NEXT:     cmp   x16, x17
+; TRAP-NEXT:     b.eq  .Lauth_success_0
+; TRAP-NEXT:     brk   #0xc472
+; TRAP-NEXT:   .Lauth_success_0:
+; TRAP-NEXT:     mov   x9,  x16
+; CHECK-NEXT:    ldrb  w8,  [x9]
+; CHECK-NEXT:    strb  w0,  [x9]
+; CHECK-NEXT:    mov   x0,  x8
+; CHECK-NEXT:    ret
 }
 
-!llvm.module.flags = !{!0, !1}
-!0 = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
-!1 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 256}
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 1}

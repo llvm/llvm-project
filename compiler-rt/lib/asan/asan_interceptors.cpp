@@ -365,7 +365,7 @@ INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
   va_list ap;
   uptr args[64];
   // We don't know a better way to forward ... into REAL function. We can
-  // increase args size if neccecary.
+  // increase args size if necessary.
   CHECK_LE(argc, ARRAY_SIZE(args));
   internal_memset(args, 0, sizeof(args));
   va_start(ap, argc);
@@ -650,8 +650,33 @@ static ALWAYS_INLINE auto StrtolImpl(void *ctx, Fn real, const char *nptr,
       return StrtolImpl(ctx, REAL(func), nptr, endptr, base);                \
     }
 
-INTERCEPTOR_STRTO_BASE(long, strtol)
 INTERCEPTOR_STRTO_BASE(long long, strtoll)
+
+#  if SANITIZER_WINDOWS
+INTERCEPTOR(long, strtol, const char *nptr, char **endptr, int base) {
+  // REAL(strtol) may be ntdll!strtol, which doesn't set errno. Instead,
+  // call REAL(strtoll) and do the range check ourselves.
+  COMPILER_CHECK(sizeof(long) == sizeof(u32));
+
+  void *ctx;
+  ASAN_INTERCEPTOR_ENTER(ctx, strtol);
+  AsanInitFromRtl();
+
+  long long result = StrtolImpl(ctx, REAL(strtoll), nptr, endptr, base);
+
+  if (result > INT32_MAX) {
+    errno = errno_ERANGE;
+    return INT32_MAX;
+  }
+  if (result < INT32_MIN) {
+    errno = errno_ERANGE;
+    return INT32_MIN;
+  }
+  return (long)result;
+}
+#  else
+INTERCEPTOR_STRTO_BASE(long, strtol)
+#  endif
 
 #  if SANITIZER_GLIBC
 INTERCEPTOR_STRTO_BASE(long, __isoc23_strtol)

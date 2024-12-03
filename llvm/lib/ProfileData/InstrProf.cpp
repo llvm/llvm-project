@@ -437,13 +437,31 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
   return VarName;
 }
 
+bool isGPUProfTarget(const Module &M) {
+  const auto &T = Triple(M.getTargetTriple());
+  return T.isAMDGPU() || T.isNVPTX();
+}
+
+void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
+  // If the target is a GPU, make the symbol protected so it can
+  // be read from the host device
+  if (isGPUProfTarget(M))
+    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
+  // Hide the symbol so that we correctly get a copy for each executable.
+  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
+}
+
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
+  // Ensure profiling variables on GPU are visible to be read from host
+  if (isGPUProfTarget(M))
+    Linkage = GlobalValue::ExternalLinkage;
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
-  if (Linkage == GlobalValue::ExternalWeakLinkage)
+  else if (Linkage == GlobalValue::ExternalWeakLinkage)
     Linkage = GlobalValue::LinkOnceAnyLinkage;
   else if (Linkage == GlobalValue::AvailableExternallyLinkage)
     Linkage = GlobalValue::LinkOnceODRLinkage;
@@ -457,10 +475,7 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
                          getPGOFuncNameVarName(PGOFuncName, Linkage));
 
-  // Hide the symbol so that we correctly get a copy for each executable.
-  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
-    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
-
+  setPGOFuncVisibility(M, FuncNameVar);
   return FuncNameVar;
 }
 
@@ -468,16 +483,16 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
-Error InstrProfSymtab::create(Module &M, bool InLTO) {
+Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
   for (Function &F : M) {
     // Function may not have a name: like using asm("") to overwrite the name.
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO), AddCanonical))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
-    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO), AddCanonical))
       return E;
   }
 
@@ -615,7 +630,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   return PGOName;
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
+                                       bool AddCanonical) {
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
@@ -624,6 +640,9 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   };
   if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
+
+  if (!AddCanonical)
+    return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
   if (CanonicalFuncName != PGOFuncName)

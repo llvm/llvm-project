@@ -10,7 +10,7 @@ subroutine shared_iv
 
   !$omp parallel shared(i)
     !$omp single
-      !DEF: /shared_iv/OtherConstruct1/i HostAssoc INTEGER(4)
+      !DEF: /shared_iv/OtherConstruct1/i (OmpShared) HostAssoc INTEGER(4)
       do i = 0, 1
       end do
     !$omp end single

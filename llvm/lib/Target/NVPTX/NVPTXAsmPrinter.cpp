@@ -78,16 +78,13 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <new>
 #include <string>
 #include <utility>
 #include <vector>
@@ -209,8 +206,8 @@ bool NVPTXAsmPrinter::lowerImageHandleOperand(const MachineInstr *MI,
 
 void NVPTXAsmPrinter::lowerImageHandleSymbol(unsigned Index, MCOperand &MCOp) {
   // Ewwww
-  LLVMTargetMachine &TM = const_cast<LLVMTargetMachine&>(MF->getTarget());
-  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine&>(TM);
+  TargetMachine &TM = const_cast<TargetMachine &>(MF->getTarget());
+  NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine &>(TM);
   const NVPTXMachineFunctionInfo *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
   const char *Sym = MFI->getImageHandleSymbol(Index);
   StringRef SymName = nvTM.getStrPool().save(Sym);
@@ -490,6 +487,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   // Emit open brace for function body.
   OutStreamer->emitRawText(StringRef("{\n"));
   setAndEmitFunctionVirtualRegisters(*MF);
+  encodeDebugInfoRegisterNumbers(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
   if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
     assert(SP->getUnit());
@@ -563,21 +561,40 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
     O << ".maxntid " << Maxntidx.value_or(1) << ", " << Maxntidy.value_or(1)
       << ", " << Maxntidz.value_or(1) << "\n";
 
-  unsigned Mincta = 0;
-  if (getMinCTASm(F, Mincta))
-    O << ".minnctapersm " << Mincta << "\n";
+  if (const auto Mincta = getMinCTASm(F))
+    O << ".minnctapersm " << *Mincta << "\n";
 
-  unsigned Maxnreg = 0;
-  if (getMaxNReg(F, Maxnreg))
-    O << ".maxnreg " << Maxnreg << "\n";
+  if (const auto Maxnreg = getMaxNReg(F))
+    O << ".maxnreg " << *Maxnreg << "\n";
 
   // .maxclusterrank directive requires SM_90 or higher, make sure that we
   // filter it out for lower SM versions, as it causes a hard ptxas crash.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
-  unsigned Maxclusterrank = 0;
-  if (getMaxClusterRank(F, Maxclusterrank) && STI->getSmVersion() >= 90)
-    O << ".maxclusterrank " << Maxclusterrank << "\n";
+
+  if (STI->getSmVersion() >= 90) {
+    std::optional<unsigned> ClusterX = getClusterDimx(F);
+    std::optional<unsigned> ClusterY = getClusterDimy(F);
+    std::optional<unsigned> ClusterZ = getClusterDimz(F);
+
+    if (ClusterX || ClusterY || ClusterZ) {
+      O << ".explicitcluster\n";
+      if (ClusterX.value_or(1) != 0) {
+        assert(ClusterY.value_or(1) && ClusterZ.value_or(1) &&
+               "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
+               "should be non-zero as well");
+
+        O << ".reqnctapercluster " << ClusterX.value_or(1) << ", "
+          << ClusterY.value_or(1) << ", " << ClusterZ.value_or(1) << "\n";
+      } else {
+        assert(!ClusterY.value_or(1) && !ClusterZ.value_or(1) &&
+               "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
+               "should be 0 as well");
+      }
+    }
+    if (const auto Maxclusterrank = getMaxClusterRank(F))
+      O << ".maxclusterrank " << *Maxclusterrank << "\n";
+  }
 }
 
 std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
@@ -596,7 +613,6 @@ std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
 
   NameStr << getNVPTXRegClassStr(RC) << MappedVR;
 
-  NameStr.flush();
   return Name;
 }
 
@@ -945,8 +961,8 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   // Close the last emitted section
   if (hasDebugInfo()) {
     TS->closeLastSection();
-    // Emit empty .debug_loc section for better support of the empty files.
-    OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
+    // Emit empty .debug_macinfo section for better support of the empty files.
+    OutStreamer->emitRawText("\t.section\t.debug_macinfo\t{\t}");
   }
 
   // Output last DWARF .file directives, if any.
@@ -1126,13 +1142,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   const Function *demotedFunc = nullptr;
   if (!processDemoted && canDemoteGlobalVar(GVar, demotedFunc)) {
     O << "// " << GVar->getName() << " has been demoted\n";
-    if (localDecls.find(demotedFunc) != localDecls.end())
-      localDecls[demotedFunc].push_back(GVar);
-    else {
-      std::vector<const GlobalVariable *> temp;
-      temp.push_back(GVar);
-      localDecls[demotedFunc] = temp;
-    }
+    localDecls[demotedFunc].push_back(GVar);
     return;
   }
 
@@ -1349,10 +1359,11 @@ void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
-  if (localDecls.find(f) == localDecls.end())
+  auto It = localDecls.find(f);
+  if (It == localDecls.end())
     return;
 
-  std::vector<const GlobalVariable *> &gvars = localDecls[f];
+  std::vector<const GlobalVariable *> &gvars = It->second;
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI =
@@ -1586,30 +1597,27 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       if (isKernelFunc) {
         if (PTy) {
-          // Special handling for pointer arguments to kernel
-          O << "\t.param .u" << PTySizeInBits << " ";
+          O << "\t.param .u" << PTySizeInBits << " .ptr";
 
-          if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
-              NVPTX::CUDA) {
-            int addrSpace = PTy->getAddressSpace();
-            switch (addrSpace) {
-            default:
-              O << ".ptr ";
-              break;
-            case ADDRESS_SPACE_CONST:
-              O << ".ptr .const ";
-              break;
-            case ADDRESS_SPACE_SHARED:
-              O << ".ptr .shared ";
-              break;
-            case ADDRESS_SPACE_GLOBAL:
-              O << ".ptr .global ";
-              break;
-            }
-            Align ParamAlign = I->getParamAlign().valueOrOne();
-            O << ".align " << ParamAlign.value() << " ";
+          switch (PTy->getAddressSpace()) {
+          default:
+            break;
+          case ADDRESS_SPACE_GLOBAL:
+            O << " .global";
+            break;
+          case ADDRESS_SPACE_SHARED:
+            O << " .shared";
+            break;
+          case ADDRESS_SPACE_CONST:
+            O << " .const";
+            break;
+          case ADDRESS_SPACE_LOCAL:
+            O << " .local";
+            break;
           }
-          O << TLI->getParamName(F, paramIndex);
+
+          O << " .align " << I->getParamAlign().valueOrOne().value();
+          O << " " << TLI->getParamName(F, paramIndex);
           continue;
         }
 
@@ -1772,6 +1780,26 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   }
 
   OutStreamer->emitRawText(O.str());
+}
+
+/// Translate virtual register numbers in DebugInfo locations to their printed
+/// encodings, as used by CUDA-GDB.
+void NVPTXAsmPrinter::encodeDebugInfoRegisterNumbers(
+    const MachineFunction &MF) {
+  const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
+  const NVPTXRegisterInfo *registerInfo = STI.getRegisterInfo();
+
+  // Clear the old mapping, and add the new one.  This mapping is used after the
+  // printing of the current function is complete, but before the next function
+  // is printed.
+  registerInfo->clearDebugRegisterMap();
+
+  for (auto &classMap : VRegMapping) {
+    for (auto &registerMapping : classMap.getSecond()) {
+      auto reg = registerMapping.getFirst();
+      registerInfo->addToDebugRegisterMap(reg, getVirtualRegisterName(reg));
+    }
+  }
 }
 
 void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp, raw_ostream &O) {

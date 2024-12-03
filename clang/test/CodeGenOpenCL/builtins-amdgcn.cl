@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK-AMDGCN,CHECK %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefix=CHECK %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK,CHECK-SPIRV %s
 
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -638,12 +638,8 @@ void test_get_workgroup_size(int d, global int *out)
 
 // CHECK-LABEL: @test_get_grid_size(
 // CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 12
-// CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !invariant.load
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 16
-// CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !invariant.load
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 20
-// CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !invariant.load
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 %{{.+}}
+// CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !range [[$GRID_RANGE:![0-9]+]], !invariant.load
 void test_get_grid_size(int d, global int *out)
 {
 	switch (d) {
@@ -669,23 +665,24 @@ void test_s_getpc(global ulong* out)
 }
 
 // CHECK-LABEL: @test_ds_append_lds(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %ptr, i1 false)
-kernel void test_ds_append_lds(global int* out, local int* ptr) {
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %{{.+}}, i1 false)
 #if !defined(__SPIRV__)
-  *out = __builtin_amdgcn_ds_append(ptr);
+kernel void test_ds_append_lds(global int* out, local int* ptr) {
 #else
-  *out = __builtin_amdgcn_ds_append((__attribute__((address_space(3))) int*)(int*)ptr);
+kernel void test_ds_append_lds(__attribute__((address_space(1))) int* out, __attribute__((address_space(3))) int* ptr) {
 #endif
+  *out = __builtin_amdgcn_ds_append(ptr);
 }
 
 // CHECK-LABEL: @test_ds_consume_lds(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %ptr, i1 false)
-kernel void test_ds_consume_lds(global int* out, local int* ptr) {
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %{{.+}}, i1 false)
+
 #if !defined(__SPIRV__)
-  *out = __builtin_amdgcn_ds_consume(ptr);
+kernel void test_ds_consume_lds(global int* out, local int* ptr) {
 #else
-  *out = __builtin_amdgcn_ds_consume((__attribute__((address_space(3))) int*)(int*)ptr);
+kernel void test_ds_consume_lds(__attribute__((address_space(1))) int* out, __attribute__((address_space(3))) int* ptr) {
 #endif
+  *out = __builtin_amdgcn_ds_consume(ptr);
 }
 
 // CHECK-LABEL: @test_gws_init(
@@ -839,7 +836,11 @@ kernel void test_s_setreg(uint val) {
 }
 
 // CHECK-LABEL test_atomic_inc_dec(
+#if !defined(__SPIRV__)
 void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
+#else
+void test_atomic_inc_dec(__attribute__((address_space(3))) uint *lptr, __attribute__((address_space(1))) uint *gptr, uint val) {
+#endif
   uint res;
 
   // CHECK: atomicrmw uinc_wrap ptr addrspace(3) %lptr, i32 %val syncscope("workgroup") seq_cst, align 4
@@ -855,13 +856,18 @@ void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
   res = __builtin_amdgcn_atomic_dec32(gptr, val, __ATOMIC_SEQ_CST, "");
 
   // CHECK: atomicrmw volatile udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
+  #if !defined(__SPIRV__)
   res = __builtin_amdgcn_atomic_dec32((volatile global uint*)gptr, val, __ATOMIC_SEQ_CST, "");
+  #else
+  res = __builtin_amdgcn_atomic_dec32((volatile __attribute__((address_space(1))) uint*)gptr, val, __ATOMIC_SEQ_CST, "");
+  #endif
 }
 
 // CHECK-LABEL test_wavefrontsize(
 unsigned test_wavefrontsize() {
 
-  // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wavefrontsize()
+  // CHECK-AMDGCN: ret i32 {{[0-9]+}}
+  // CHECK-SPIRV: {{.*}}call{{.*}} i32 @llvm.amdgcn.wavefrontsize()
   return __builtin_amdgcn_wavefrontsize();
 }
 
@@ -891,5 +897,6 @@ void test_set_fpenv(unsigned long env) {
   __builtin_amdgcn_set_fpenv(env);
 }
 
+// CHECK-DAG: [[$GRID_RANGE]] = !{i32 1, i32 0}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }

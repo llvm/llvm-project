@@ -337,6 +337,10 @@ protected:
       Builder.defineMacro("_GNU_SOURCE");
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+    if (Triple.isTime64ABI()) {
+      Builder.defineMacro("_FILE_OFFSET_BITS", "64");
+      Builder.defineMacro("_TIME_BITS", "64");
+    }
   }
 
 public:
@@ -775,6 +779,21 @@ public:
 
   bool areDefaultedSMFStillPOD(const LangOptions &) const override {
     return false;
+  }
+};
+
+// UEFI target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {}
+
+public:
+  UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WCharType = TargetInfo::UnsignedShort;
+    this->WIntType = TargetInfo::UnsignedShort;
   }
 };
 

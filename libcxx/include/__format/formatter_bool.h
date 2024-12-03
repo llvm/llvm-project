@@ -20,7 +20,7 @@
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <__locale>
 #endif
 
@@ -72,8 +72,8 @@ public:
 #  if _LIBCPP_STD_VER >= 23
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<bool> = true;
-#  endif //_LIBCPP_STD_VER >= 23
-#endif   //_LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 23
+#endif   // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -18,6 +18,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "double_move_tracker.h"
 #include "test_macros.h"
 #include "type_algorithms.h"
 
@@ -28,6 +29,7 @@ template <class It>
 class cpp17_output_iterator
 {
     It it_;
+    support::double_move_tracker tracker_;
 
     template <class U> friend class cpp17_output_iterator;
 public:
@@ -40,10 +42,13 @@ public:
     TEST_CONSTEXPR explicit cpp17_output_iterator(It it) : it_(std::move(it)) {}
 
     template <class U>
-    TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
     template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    TEST_CONSTEXPR_CXX14 cpp17_output_iterator(cpp17_output_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
+    TEST_CONSTEXPR_CXX14 cpp17_output_iterator(cpp17_output_iterator<U>&& u)
+        : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
+      u.it_ = U();
+    }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -71,6 +76,7 @@ class cpp17_input_iterator
 {
     typedef std::iterator_traits<ItTraits> Traits;
     It it_;
+    support::double_move_tracker tracker_;
 
     template <class U, class T> friend class cpp17_input_iterator;
 public:
@@ -83,10 +89,13 @@ public:
     TEST_CONSTEXPR explicit cpp17_input_iterator(It it) : it_(it) {}
 
     template <class U, class T>
-    TEST_CONSTEXPR cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
     template <class U, class T, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    TEST_CONSTEXPR_CXX14 cpp17_input_iterator(cpp17_input_iterator<U, T>&& u) : it_(u.it_) { u.it_ = U(); }
+    TEST_CONSTEXPR_CXX14 cpp17_input_iterator(cpp17_input_iterator<U, T>&& u)
+        : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
+      u.it_ = U();
+    }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -114,6 +123,7 @@ template <class It>
 class forward_iterator
 {
     It it_;
+    support::double_move_tracker tracker_;
 
     template <class U> friend class forward_iterator;
 public:
@@ -127,10 +137,13 @@ public:
     TEST_CONSTEXPR explicit forward_iterator(It it) : it_(it) {}
 
     template <class U>
-    TEST_CONSTEXPR forward_iterator(const forward_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR forward_iterator(const forward_iterator<U>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
     template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    TEST_CONSTEXPR_CXX14 forward_iterator(forward_iterator<U>&& other) : it_(other.it_) { other.it_ = U(); }
+    TEST_CONSTEXPR_CXX14 forward_iterator(forward_iterator<U>&& other)
+        : it_(std::move(other.it_)), tracker_(std::move(other.tracker_)) {
+      other.it_ = U();
+    }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -154,6 +167,7 @@ template <class It>
 class bidirectional_iterator
 {
     It it_;
+    support::double_move_tracker tracker_;
 
     template <class U> friend class bidirectional_iterator;
 public:
@@ -167,10 +181,13 @@ public:
     TEST_CONSTEXPR explicit bidirectional_iterator(It it) : it_(it) {}
 
     template <class U>
-    TEST_CONSTEXPR bidirectional_iterator(const bidirectional_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR bidirectional_iterator(const bidirectional_iterator<U>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
     template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    TEST_CONSTEXPR_CXX14 bidirectional_iterator(bidirectional_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
+    TEST_CONSTEXPR_CXX14 bidirectional_iterator(bidirectional_iterator<U>&& u)
+        : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
+      u.it_ = U();
+    }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -196,6 +213,7 @@ template <class It>
 class random_access_iterator
 {
     It it_;
+    support::double_move_tracker tracker_;
 
     template <class U> friend class random_access_iterator;
 public:
@@ -209,10 +227,13 @@ public:
     TEST_CONSTEXPR explicit random_access_iterator(It it) : it_(it) {}
 
     template <class U>
-    TEST_CONSTEXPR random_access_iterator(const random_access_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR random_access_iterator(const random_access_iterator<U>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
     template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    TEST_CONSTEXPR_CXX14 random_access_iterator(random_access_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
+    TEST_CONSTEXPR_CXX14 random_access_iterator(random_access_iterator<U>&& u)
+        : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
+      u.it_ = U();
+    }
 
     TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
     TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
@@ -251,6 +272,7 @@ random_access_iterator(It) -> random_access_iterator<It>;
 template <std::random_access_iterator It>
 class cpp20_random_access_iterator {
   It it_;
+  support::double_move_tracker tracker_;
 
   template <std::random_access_iterator>
   friend class cpp20_random_access_iterator;
@@ -265,10 +287,11 @@ public:
   constexpr explicit cpp20_random_access_iterator(It it) : it_(it) {}
 
   template <class U>
-  constexpr cpp20_random_access_iterator(const cpp20_random_access_iterator<U>& u) : it_(u.it_) {}
+  constexpr cpp20_random_access_iterator(const cpp20_random_access_iterator<U>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
   template <class U>
-  constexpr cpp20_random_access_iterator(cpp20_random_access_iterator<U>&& u) : it_(u.it_) {
+  constexpr cpp20_random_access_iterator(cpp20_random_access_iterator<U>&& u)
+      : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
     u.it_ = U();
   }
 
@@ -342,6 +365,7 @@ static_assert(std::random_access_iterator<cpp20_random_access_iterator<int*>>);
 template <std::contiguous_iterator It>
 class contiguous_iterator {
   It it_;
+  support::double_move_tracker tracker_;
 
   template <std::contiguous_iterator U>
   friend class contiguous_iterator;
@@ -360,10 +384,10 @@ public:
   constexpr explicit contiguous_iterator(It it) : it_(it) {}
 
   template <class U>
-  constexpr contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+  constexpr contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
   template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-  constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) {
+  constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
     u.it_ = U();
   }
 
@@ -435,6 +459,7 @@ class three_way_contiguous_iterator
     static_assert(std::is_pointer_v<It>, "Things probably break in this case");
 
     It it_;
+    support::double_move_tracker tracker_;
 
     template <class U> friend class three_way_contiguous_iterator;
 public:
@@ -451,10 +476,14 @@ public:
     constexpr explicit three_way_contiguous_iterator(It it) : it_(it) {}
 
     template <class U>
-    constexpr three_way_contiguous_iterator(const three_way_contiguous_iterator<U>& u) : it_(u.it_) {}
+    constexpr three_way_contiguous_iterator(const three_way_contiguous_iterator<U>& u)
+        : it_(u.it_), tracker_(u.tracker_) {}
 
     template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    constexpr three_way_contiguous_iterator(three_way_contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
+    constexpr three_way_contiguous_iterator(three_way_contiguous_iterator<U>&& u)
+        : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
+      u.it_ = U();
+    }
 
     constexpr reference operator*() const {return *it_;}
     constexpr pointer operator->() const {return it_;}
@@ -671,6 +700,7 @@ template <class It>
 class cpp20_input_iterator
 {
     It it_;
+    support::double_move_tracker tracker_;
 
 public:
     using value_type = std::iter_value_t<It>;
@@ -705,6 +735,7 @@ struct iter_value_or_void<I> {
 template <class It>
 class cpp20_output_iterator {
   It it_;
+  support::double_move_tracker tracker_;
 
 public:
   using difference_type = std::iter_difference_t<It>;

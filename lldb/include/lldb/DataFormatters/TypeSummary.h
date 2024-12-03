@@ -258,6 +258,14 @@ public:
 
   virtual std::string GetDescription() = 0;
 
+  /// Get the name of the Type Summary Provider, either a C++ class, a summary
+  /// string, or a script function name.
+  virtual std::string GetName() = 0;
+
+  /// Get the name of the kind of Summary Provider, either c++, summary string,
+  /// script or python.
+  virtual std::string GetSummaryKindName();
+
   uint32_t &GetRevision() { return m_my_revision; }
 
   typedef std::shared_ptr<TypeSummaryImpl> SharedPointer;
@@ -292,6 +300,8 @@ struct StringSummaryFormat : public TypeSummaryImpl {
                     const TypeSummaryOptions &options) override;
 
   std::string GetDescription() override;
+
+  std::string GetName() override;
 
   static bool classof(const TypeSummaryImpl *S) {
     return S->GetKind() == Kind::eSummaryString;
@@ -340,6 +350,8 @@ struct CXXFunctionSummaryFormat : public TypeSummaryImpl {
     return S->GetKind() == Kind::eCallback;
   }
 
+  std::string GetName() override;
+
   typedef std::shared_ptr<CXXFunctionSummaryFormat> SharedPointer;
 
 private:
@@ -352,6 +364,7 @@ private:
 struct ScriptSummaryFormat : public TypeSummaryImpl {
   std::string m_function_name;
   std::string m_python_script;
+  std::string m_script_formatter_name;
   StructuredData::ObjectSP m_script_function_sp;
 
   ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
@@ -383,6 +396,8 @@ struct ScriptSummaryFormat : public TypeSummaryImpl {
                     const TypeSummaryOptions &options) override;
 
   std::string GetDescription() override;
+
+  std::string GetName() override;
 
   static bool classof(const TypeSummaryImpl *S) {
     return S->GetKind() == Kind::eScript;

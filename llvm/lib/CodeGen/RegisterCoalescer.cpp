@@ -1375,6 +1375,27 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   NewMI.setDebugLoc(DL);
 
   // In a situation like the following:
+  //
+  //    undef %2.subreg:reg = INST %1:reg         ; DefMI (rematerializable),
+  //                                              ; DefSubIdx = subreg
+  //    %3:reg = COPY %2                          ; SrcIdx = DstIdx = 0
+  //    .... = SOMEINSTR %3:reg
+  //
+  // there are no subranges for %3 so after rematerialization we need
+  // to explicitly create them. Undefined subranges are removed later on.
+  if (DstReg.isVirtual() && DefSubIdx && !CP.getSrcIdx() && !CP.getDstIdx() &&
+      MRI->shouldTrackSubRegLiveness(DstReg)) {
+    LiveInterval &DstInt = LIS->getInterval(DstReg);
+    if (!DstInt.hasSubRanges()) {
+      LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(DstReg);
+      LaneBitmask UsedLanes = TRI->getSubRegIndexLaneMask(DefSubIdx);
+      LaneBitmask UnusedLanes = FullMask & ~UsedLanes;
+      DstInt.createSubRangeFrom(LIS->getVNInfoAllocator(), UsedLanes, DstInt);
+      DstInt.createSubRangeFrom(LIS->getVNInfoAllocator(), UnusedLanes, DstInt);
+    }
+  }
+
+  // In a situation like the following:
   //     %0:subreg = instr              ; DefMI, subreg = DstIdx
   //     %1        = copy %0:subreg ; CopyMI, SrcIdx = 0
   // instead of widening %1 to the register class of %0 simply do:
@@ -1486,6 +1507,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         NewRC = TRI->getCommonSubClass(NewRC, DefRC);
       assert(NewRC && "subreg chosen for remat incompatible with instruction");
     }
+
     // Remap subranges to new lanemask and change register class.
     LiveInterval &DstInt = LIS->getInterval(DstReg);
     for (LiveInterval::SubRange &SR : DstInt.subranges()) {
@@ -1820,9 +1842,12 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
 
   if (DstInt && DstInt->hasSubRanges() && DstReg != SrcReg) {
     for (MachineOperand &MO : MRI->reg_operands(DstReg)) {
-      unsigned SubReg = MO.getSubReg();
-      if (SubReg == 0 || MO.isUndef())
+      if (MO.isUndef())
         continue;
+      unsigned SubReg = MO.getSubReg();
+      if (SubReg == 0 && MO.isDef())
+        continue;
+
       MachineInstr &MI = *MO.getParent();
       if (MI.isDebugInstr())
         continue;
@@ -1866,7 +1891,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
 
       // A subreg use of a partially undef (super) register may be a complete
       // undef use now and then has to be marked that way.
-      if (MO.isUse() && !DstIsPhys) {
+      if (MO.isUse() && !MO.isUndef() && !DstIsPhys) {
         unsigned SubUseIdx = TRI->composeSubRegIndices(SubIdx, MO.getSubReg());
         if (SubUseIdx != 0 && MRI->shouldTrackSubRegLiveness(DstReg)) {
           if (!DstInt->hasSubRanges()) {
@@ -3230,8 +3255,8 @@ void JoinVals::pruneValues(JoinVals &Other,
           // Also remove dead flags since the joined live range will
           // continue past this instruction.
           for (MachineOperand &MO :
-               Indexes->getInstructionFromIndex(Def)->operands()) {
-            if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
+               Indexes->getInstructionFromIndex(Def)->all_defs()) {
+            if (MO.getReg() == Reg) {
               if (MO.getSubReg() != 0 && MO.isUndef() && !EraseImpDef)
                 MO.setIsUndef(false);
               MO.setIsDead(false);
@@ -3548,8 +3573,7 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
   LHSVals.removeImplicitDefs();
   RHSVals.removeImplicitDefs();
 
-  LRange.verify();
-  RRange.verify();
+  assert(LRange.verify() && RRange.verify());
 
   // Join RRange into LHS.
   LRange.join(RRange, LHSVals.getAssignments(), RHSVals.getAssignments(),
@@ -4240,7 +4264,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   JoinSplitEdges = EnableJoinSplits;
 
   if (VerifyCoalescing)
-    MF->verify(this, "Before register coalescing");
+    MF->verify(this, "Before register coalescing", &errs());
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
@@ -4300,7 +4324,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 
   LLVM_DEBUG(dump());
   if (VerifyCoalescing)
-    MF->verify(this, "After register coalescing");
+    MF->verify(this, "After register coalescing", &errs());
   return true;
 }
 

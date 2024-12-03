@@ -418,8 +418,7 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
 
 bool LLVMStructType::isValidElementType(Type type) {
   return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                    LLVMFunctionType, LLVMTokenType, LLVMScalableVectorType>(
-      type);
+                    LLVMFunctionType, LLVMTokenType>(type);
 }
 
 LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
@@ -481,25 +480,26 @@ LogicalResult LLVMStructType::setBody(ArrayRef<Type> types, bool isPacked) {
 
 bool LLVMStructType::isPacked() const { return getImpl()->isPacked(); }
 bool LLVMStructType::isIdentified() const { return getImpl()->isIdentified(); }
-bool LLVMStructType::isOpaque() {
+bool LLVMStructType::isOpaque() const {
   return getImpl()->isIdentified() &&
          (getImpl()->isOpaque() || !getImpl()->isInitialized());
 }
 bool LLVMStructType::isInitialized() { return getImpl()->isInitialized(); }
-StringRef LLVMStructType::getName() { return getImpl()->getIdentifier(); }
+StringRef LLVMStructType::getName() const { return getImpl()->getIdentifier(); }
 ArrayRef<Type> LLVMStructType::getBody() const {
   return isIdentified() ? getImpl()->getIdentifiedStructBody()
                         : getImpl()->getTypeList();
 }
 
-LogicalResult LLVMStructType::verify(function_ref<InFlightDiagnostic()>,
-                                     StringRef, bool) {
+LogicalResult
+LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()>, StringRef,
+                                 bool) {
   return success();
 }
 
 LogicalResult
-LLVMStructType::verify(function_ref<InFlightDiagnostic()> emitError,
-                       ArrayRef<Type> types, bool) {
+LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                 ArrayRef<Type> types, bool) {
   for (Type t : types)
     if (!isValidElementType(t))
       return emitError() << "invalid LLVM structure element type: " << t;
@@ -780,7 +780,8 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMFixedVectorType,
       LLVMScalableVectorType,
       LLVMTargetExtType,
-      LLVMVoidType
+      LLVMVoidType,
+      LLVMX86AMXType
     >(type)) {
     // clang-format on
     return true;
@@ -842,7 +843,8 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             LLVMMetadataType,
             LLVMPPCFP128Type,
             LLVMTokenType,
-            LLVMVoidType
+            LLVMVoidType,
+            LLVMX86AMXType
           >([](Type) { return true; })
           // clang-format on
           .Default([](Type) { return false; });

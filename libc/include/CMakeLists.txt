@@ -17,25 +17,17 @@ add_header(
     __llvm-libc-common.h
 )
 
+# TODO: Can we simplify this macro expansion?
+# https://github.com/llvm/llvm-project/issues/117254
 macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
-  if (LIBC_USE_NEW_HEADER_GEN)
-    add_gen_header2(
-      ${TARGET_NAME}
-      YAML_FILE ${YAML_FILE}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  else()
-    add_gen_header(
-      ${TARGET_NAME}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  endif()
+  add_gen_header(
+    ${TARGET_NAME}
+    YAML_FILE ${YAML_FILE}
+    DEF_FILE ${DEF_FILE}
+    GEN_HDR ${GEN_HDR}
+    ${DEPENDS}
+    ${ARGN}
+  )
 endmacro()
 
 add_header_macro(
@@ -45,6 +37,7 @@ add_header_macro(
   ctype.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(
@@ -146,6 +139,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  malloc
+  ../libc/newhdrgen/yaml/malloc.yaml
+  malloc.h.def
+  malloc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.malloc_macros
+)
+
+add_header_macro(
   math
   ../libc/newhdrgen/yaml/math.yaml
   math.h.def
@@ -167,6 +170,7 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
+    .llvm-libc-types.stdfix-types
 )
 
 # TODO: This should be conditional on POSIX networking being included.
@@ -189,6 +193,16 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.assert_macros
+)
+
+add_header_macro(
+  complex
+  ../libc/newhdrgen/yaml/complex.yaml
+  complex.h.def
+  complex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.complex_macros
 )
 
 add_header_macro(
@@ -233,6 +247,7 @@ add_header_macro(
     .llvm-libc-types.ENTRY
     .llvm-libc-types.struct_hsearch_data
     .llvm-libc-types.size_t
+    .llvm-libc-types.__lsearchcompare_t
 )
 
 add_header_macro(
@@ -346,6 +361,7 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__atexithandler_t
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(
@@ -418,6 +434,25 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.posix_spawnattr_t
     .llvm-libc-types.posix_spawn_file_actions_t
+)
+
+add_header_macro(
+  link
+  ../libc/newhdrgen/yaml/link.yaml
+  link.h.def
+  link.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.link_macros
+)
+
+add_header_macro(
+  elf
+  ../libc/newhdrgen/yaml/elf.yaml
+  elf.h.def
+  elf.h
+  DEPENDS
+    .llvm-libc-macros.elf_macros
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -572,6 +607,8 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_un
 )
@@ -700,6 +737,18 @@ add_header_macro(
     .llvm-libc-types.wchar_t
 )
 
+add_header_macro(
+  locale
+  ../libc/newhdrgen/yaml/locale.yaml
+  locale.h.def
+  locale.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.locale_macros
+    .llvm-libc-types.locale_t
+    .llvm-libc-types.struct_lconv
+)
+
 if(LIBC_TARGET_OS_IS_GPU)
   file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
 
@@ -710,7 +759,6 @@ if(LIBC_TARGET_OS_IS_GPU)
     gpu/rpc.h
     DEPENDS
       .llvm_libc_common_h
-      .llvm-libc-types.rpc_opcodes_t
   )
 endif()
 

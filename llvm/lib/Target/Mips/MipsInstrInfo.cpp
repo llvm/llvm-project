@@ -13,6 +13,7 @@
 #include "MipsInstrInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "Mips.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -571,6 +572,13 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
   return 0;
 }
 
+bool MipsInstrInfo::SafeAfterMflo(const MachineInstr &MI) const {
+  if (IsDIVMULT(MI.getOpcode()))
+    return false;
+
+  return true;
+}
+
 /// Predicate for distingushing between control transfer instructions and all
 /// other instructions for handling forbidden slots. Consider inline assembly
 /// as unsafe as well.
@@ -621,6 +629,13 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
   return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
     return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr);
   });
+}
+
+bool MipsInstrInfo::IsMfloOrMfhi(const MachineInstr &MI) const {
+  if (IsMFLOMFHI(MI.getOpcode()))
+    return true;
+
+  return false;
 }
 
 /// Predicate for distingushing instructions that have forbidden slots.

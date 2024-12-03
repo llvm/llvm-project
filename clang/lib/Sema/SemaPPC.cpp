@@ -19,6 +19,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/APSInt.h"
 

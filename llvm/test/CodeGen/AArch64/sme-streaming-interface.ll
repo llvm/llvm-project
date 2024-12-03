@@ -269,8 +269,6 @@ define <vscale x 4 x i32> @smstart_clobber_sve_duplicate(<vscale x 4 x i32> %x) 
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    bl streaming_callee
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    bl streaming_callee
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload

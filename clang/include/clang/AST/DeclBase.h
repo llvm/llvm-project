@@ -324,6 +324,7 @@ private:
   static bool StatisticsEnabled;
 
 protected:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
@@ -670,6 +671,13 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether this declaration comes from the same module unit being compiled.
+  bool isInCurrentModuleUnit() const;
+
+  /// Whether the definition of the declaration should be emitted in external
+  /// sources.
+  bool shouldEmitInExternalSource() const;
+
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
@@ -678,6 +686,9 @@ public:
 
   /// Whether this declaration comes from a named module.
   bool isInNamedModule() const;
+
+  /// Whether this declaration comes from a header unit.
+  bool isFromHeaderUnit() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.

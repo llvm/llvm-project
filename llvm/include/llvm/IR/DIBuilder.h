@@ -225,9 +225,13 @@ namespace llvm {
     /// \param SizeInBits  Size of the type.
     /// \param Encoding    DWARF encoding code, e.g., dwarf::DW_ATE_float.
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for instances of a given type. This is used by the Swift language.
     DIBasicType *createBasicType(StringRef Name, uint64_t SizeInBits,
                                  unsigned Encoding,
-                                 DINode::DIFlags Flags = DINode::FlagZero);
+                                 DINode::DIFlags Flags = DINode::FlagZero,
+                                 uint32_t NumExtraInhabitants = 0);
 
     /// Create debugging information entry for a string
     /// type.
@@ -484,11 +488,17 @@ namespace llvm {
     /// \param Elements     Struct elements.
     /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
     /// \param UniqueIdentifier A unique identifier for the struct.
+    /// \param Specification The type that this type completes. This is used by
+    /// Swift to represent generic types.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for instances of a given type. This is used by the Swift language.
     DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
-        DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "");
+        DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
 
     /// Create debugging information entry for an union.
     /// \param Scope        Scope in which this union is defined.
@@ -772,7 +782,7 @@ namespace llvm {
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
     /// \param Addr        An array of complex address operations.
-    DIExpression *createExpression(ArrayRef<uint64_t> Addr = std::nullopt);
+    DIExpression *createExpression(ArrayRef<uint64_t> Addr = {});
 
     /// Create an expression for a variable that does not have an address, but
     /// does have a constant value.

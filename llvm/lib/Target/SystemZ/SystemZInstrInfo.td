@@ -109,20 +109,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 }
 
 // NOPs.  These are again variants of the conditional branches, with the
-// condition mask set to "never".  NOP_bare can't be an InstAlias since it
-// would need R0D hard coded which is not part of ADDR64BitRegClass.
-def NOP : NeverCondBranchRX<"nop", 0x47>;
-let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
-  def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
-def NOPR : NeverCondBranchRR<"nopr", 0x07>;
-def NOPR_bare : InstAlias<"nopr", (NOPR R0D), 0>;
-
-// An alias of BRC 0, label
-def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
-
-// An alias of BRCL 0, label
-// jgnop on att ; jlnop on hlasm
-def JGNOP : InstAlias<"{jgnop|jlnop}\t$RI2", (BRCLAsm 0, brtarget32:$RI2), 0>;
+// condition mask set to "never".
+defm NOP  : NeverCondBranchRX<"nop", 0x47>;
+defm NOPR : NeverCondBranchRR<"nopr", 0x07>;
+def JNOP  : NeverCondBranchRI<"jnop", 0xA74>;
+def JGNOP : NeverCondBranchRIL<"j{g|l}nop", 0xC04>;
 
 // Fused compare-and-branch instructions.
 //
@@ -2351,12 +2342,12 @@ def JXHG  : MnemonicAlias<"jxhg", "brxhg">;
 def JXLEG : MnemonicAlias<"jxleg", "brxlg">;
 
 def BRU   : MnemonicAlias<"bru", "j">;
-def BRUL  : MnemonicAlias<"brul", "jg", "att">;
+def BRUL  : MnemonicAlias<"brul", "jg", "gnu">;
 def BRUL_HLASM  : MnemonicAlias<"brul", "jlu", "hlasm">;
 
 foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
               "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
   defm BRUAsm#V  : MnemonicCondBranchAlias <CV<V>, "br#", "j#">;
-  defm BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#", "att">;
+  defm BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#", "gnu">;
   defm BRUL_HLASMAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jl#", "hlasm">;
 }

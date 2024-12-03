@@ -76,7 +76,7 @@ public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false);
+      bool EagerLoadModules = false, bool TraceVFS = false);
 
   ScanningMode getMode() const { return Mode; }
 
@@ -85,6 +85,8 @@ public:
   ScanningOptimizations getOptimizeArgs() const { return OptimizeArgs; }
 
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
+
+  bool shouldTraceVFS() const { return TraceVFS; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     return SharedCache;
@@ -97,6 +99,8 @@ private:
   const ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   const bool EagerLoadModules;
+  /// Whether to trace VFS accesses.
+  const bool TraceVFS;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
 };

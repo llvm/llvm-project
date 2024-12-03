@@ -14,13 +14,10 @@
 #define LLVM_ANALYSIS_LOOPINFO_H
 
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericLoopInfo.h"
-#include <algorithm>
 #include <optional>
 #include <utility>
 
@@ -28,10 +25,8 @@ namespace llvm {
 
 class DominatorTree;
 class InductionDescriptor;
-class Instruction;
 class LoopInfo;
 class Loop;
-class MDNode;
 class MemorySSAUpdater;
 class ScalarEvolution;
 class raw_ostream;
@@ -41,7 +36,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
-class LLVM_EXTERNAL_VISIBILITY Loop : public LoopBase<BasicBlock, Loop> {
+class LLVM_ABI Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// A range representing the start and end location of a loop.
   class LocRange {
