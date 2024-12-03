@@ -91,6 +91,7 @@ struct IntelSubgroupsBuiltin {
   uint32_t Opcode;
   bool IsBlock;
   bool IsWrite;
+  bool IsMedia;
 };
 
 #define GET_IntelSubgroupsBuiltins_DECL
@@ -215,6 +216,8 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   // - "__spirv_ReadClockKHR"
   // - "__spirv_SubgroupBlockReadINTEL"
   // - "__spirv_SubgroupImageBlockReadINTEL"
+  // - "__spirv_SubgroupImageMediaBlockReadINTEL"
+  // - "__spirv_SubgroupImageMediaBlockWriteINTEL"
   // - "__spirv_Convert"
   // - "__spirv_UConvert"
   // - "__spirv_SConvert"
@@ -225,7 +228,9 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   static const std::regex SpvWithR(
       "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageQuerySizeLod|UDotKHR|"
       "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
-      "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|Convert|"
+      "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
+      "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
+      "Convert|"
       "UConvert|SConvert|FConvert|SatConvert).*)_R.*");
   std::smatch Match;
   if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 2)
@@ -1192,19 +1197,28 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   MachineFunction &MF = MIRBuilder.getMF();
   const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
-  if (!ST->canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+  const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
+      SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
+
+  if (IntelSubgroups->IsMedia &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_media_block_io)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_INTEL_media_block_io";
+    report_fatal_error(DiagMsg.c_str(), false);
+  } else if (!IntelSubgroups->IsMedia &&
+             !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
     std::string DiagMsg = std::string(Builtin->Name) +
                           ": the builtin requires the following SPIR-V "
                           "extension: SPV_INTEL_subgroups";
     report_fatal_error(DiagMsg.c_str(), false);
   }
-  const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
-      SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
 
   uint32_t OpCode = IntelSubgroups->Opcode;
   if (Call->isSpirvOp()) {
     bool IsSet = OpCode != SPIRV::OpSubgroupBlockWriteINTEL &&
-                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL;
+                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL &&
+                 OpCode != SPIRV::OpSubgroupImageMediaBlockWriteINTEL;
     return buildOpFromWrapper(MIRBuilder, OpCode, Call,
                               IsSet ? GR->getSPIRVTypeID(Call->ReturnType)
                                     : Register(0));

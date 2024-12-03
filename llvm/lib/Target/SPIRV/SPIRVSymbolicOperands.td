@@ -446,7 +446,7 @@ defm RayTracingNV : CapabilityOperand<5340, 0, 0, [], [Shader]>;
 defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [SPV_INTEL_subgroups], []>;
-defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [], []>;
+defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [SPV_INTEL_media_block_io], []>;
 defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationChromaINTEL : CapabilityOperand<5698, 0, 0, [], []>;

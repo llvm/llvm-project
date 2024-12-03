@@ -1320,6 +1320,13 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::SubgroupImageBlockIOINTEL);
     }
     break;
+  case SPIRV::OpSubgroupImageMediaBlockReadINTEL:
+  case SPIRV::OpSubgroupImageMediaBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_media_block_io)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_media_block_io);
+      Reqs.addCapability(SPIRV::Capability::SubgroupImageMediaBlockIOINTEL);
+    }
+    break;
   case SPIRV::OpAssumeTrueKHR:
   case SPIRV::OpExpectKHR:
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
