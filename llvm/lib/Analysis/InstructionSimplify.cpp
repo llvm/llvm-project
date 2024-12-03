@@ -7179,7 +7179,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::Xor:
     return simplifyXorInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::ICmp:
-    return simplifyICmpInst(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
+    return simplifyICmpInst(cast<ICmpInst>(I)->getCmpPredicate(), NewOps[0],
                             NewOps[1], Q, MaxRecurse);
   case Instruction::FCmp:
     return simplifyFCmpInst(cast<FCmpInst>(I)->getPredicate(), NewOps[0],

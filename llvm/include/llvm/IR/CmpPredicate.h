@@ -24,37 +24,37 @@ class CmpPredicate {
   bool HasSameSign;
 
 public:
-  // Constructed implictly with a either Predicate and samesign information, or
-  // just a Predicate, dropping samesign information.
+  /// Constructed implictly with a either Predicate and samesign information, or
+  /// just a Predicate, dropping samesign information.
   CmpPredicate(CmpInst::Predicate Pred, bool HasSameSign = false)
       : Pred(Pred), HasSameSign(HasSameSign) {
     assert(!HasSameSign || CmpInst::isIntPredicate(Pred));
   }
 
-  // Implictly converts to the underlying Predicate, dropping samesign
-  // information.
+  /// Implictly converts to the underlying Predicate, dropping samesign
+  /// information.
   operator CmpInst::Predicate() const { return Pred; }
 
-  // Query samesign information, for optimizations.
+  /// Query samesign information, for optimizations.
   bool hasSameSign() const { return HasSameSign; }
 
-  // Compares two CmpPredicates taking samesign into account and returns the
-  // canonicalized CmpPredicate if they match. An alternative to operator==.
-  //
-  // For example,
-  //   samesign ult + samesign ult -> samesign ult
-  //   samesign ult + ult -> ult
-  //   samesign ult + slt -> slt
-  //   ult + ult -> ult
-  //   ult + slt -> std::nullopt
+  /// Compares two CmpPredicates taking samesign into account and returns the
+  /// canonicalized CmpPredicate if they match. An alternative to operator==.
+  ///
+  /// For example,
+  ///   samesign ult + samesign ult -> samesign ult
+  ///   samesign ult + ult -> ult
+  ///   samesign ult + slt -> slt
+  ///   ult + ult -> ult
+  ///   ult + slt -> std::nullopt
   static std::optional<CmpPredicate> getMatching(CmpPredicate A,
                                                  CmpPredicate B);
 
-  // An operator== on the underlying Predicate.
+  /// An operator== on the underlying Predicate.
   bool operator==(CmpInst::Predicate P) const { return Pred == P; }
 
-  // There is no operator== defined on CmpPredicate. Use getMatching instead to
-  // get the canonicalized matching CmpPredicate.
+  /// There is no operator== defined on CmpPredicate. Use getMatching instead to
+  /// get the canonicalized matching CmpPredicate.
   bool operator==(CmpPredicate) const = delete;
 };
 } // namespace llvm
