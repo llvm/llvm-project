@@ -36,7 +36,8 @@ class Dex : public SymbolIndex {
 public:
   // All data must outlive this index.
   template <typename SymbolRange, typename RefsRange, typename RelationsRange>
-  Dex(SymbolRange &&Symbols, RefsRange &&Refs, RelationsRange &&Relations)
+  Dex(SymbolRange &&Symbols, RefsRange &&Refs, RelationsRange &&Relations,
+      bool SupportContainedRefs)
       : Corpus(0) {
     for (auto &&Sym : Symbols)
       this->Symbols.push_back(&Sym);
@@ -46,15 +47,15 @@ public:
       this->Relations[std::make_pair(Rel.Subject,
                                      static_cast<uint8_t>(Rel.Predicate))]
           .push_back(Rel.Object);
-    buildIndex();
+    buildIndex(SupportContainedRefs);
   }
   // Symbols and Refs are owned by BackingData, Index takes ownership.
   template <typename SymbolRange, typename RefsRange, typename RelationsRange,
             typename Payload>
   Dex(SymbolRange &&Symbols, RefsRange &&Refs, RelationsRange &&Relations,
-      Payload &&BackingData, size_t BackingDataSize)
+      Payload &&BackingData, size_t BackingDataSize, bool SupportContainedRefs)
       : Dex(std::forward<SymbolRange>(Symbols), std::forward<RefsRange>(Refs),
-            std::forward<RelationsRange>(Relations)) {
+            std::forward<RelationsRange>(Relations), SupportContainedRefs) {
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
     this->BackingDataSize = BackingDataSize;
@@ -64,16 +65,18 @@ public:
             typename FileRange, typename Payload>
   Dex(SymbolRange &&Symbols, RefsRange &&Refs, RelationsRange &&Relations,
       FileRange &&Files, IndexContents IdxContents, Payload &&BackingData,
-      size_t BackingDataSize)
+      size_t BackingDataSize, bool SupportContainedRefs)
       : Dex(std::forward<SymbolRange>(Symbols), std::forward<RefsRange>(Refs),
             std::forward<RelationsRange>(Relations),
-            std::forward<Payload>(BackingData), BackingDataSize) {
+            std::forward<Payload>(BackingData), BackingDataSize,
+            SupportContainedRefs) {
     this->Files = std::forward<FileRange>(Files);
     this->IdxContents = IdxContents;
   }
 
   /// Builds an index from slabs. The index takes ownership of the slab.
-  static std::unique_ptr<SymbolIndex> build(SymbolSlab, RefSlab, RelationSlab);
+  static std::unique_ptr<SymbolIndex> build(SymbolSlab, RefSlab, RelationSlab,
+                                            bool SupportContainedRefs);
 
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
@@ -112,7 +115,7 @@ private:
     }
   };
 
-  void buildIndex();
+  void buildIndex(bool EnableOutgoingCalls);
   llvm::iterator_range<std::vector<RevRef>::const_iterator>
   lookupRevRefs(const SymbolID &Container) const;
   std::unique_ptr<Iterator> iterator(const Token &Tok) const;

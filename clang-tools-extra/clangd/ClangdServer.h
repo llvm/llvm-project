@@ -110,6 +110,11 @@ public:
     /// Cached preambles are potentially large. If false, store them on disk.
     bool StorePreamblesInMemory = true;
 
+    /// Call hierarchy's outgoing calls feature requires additional index
+    /// serving structures which increase memory usage. If false, these are
+    /// not created and the feature is not enabled.
+    bool EnableOutgoingCalls = true;
+
     /// This throttler controls which preambles may be built at a given time.
     clangd::PreambleThrottler *PreambleThrottler = nullptr;
 

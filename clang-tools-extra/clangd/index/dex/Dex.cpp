@@ -33,13 +33,14 @@ namespace clangd {
 namespace dex {
 
 std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs,
-                                        RelationSlab Rels) {
+                                        RelationSlab Rels,
+                                        bool SupportContainedRefs) {
   auto Size = Symbols.bytes() + Refs.bytes();
   // There is no need to include "Rels" in Data because the relations are self-
   // contained, without references into a backing store.
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
   return std::make_unique<Dex>(Data.first, Data.second, Rels, std::move(Data),
-                                Size);
+                               Size, SupportContainedRefs);
 }
 
 namespace {
@@ -120,7 +121,7 @@ public:
 
 } // namespace
 
-void Dex::buildIndex() {
+void Dex::buildIndex(bool SupportContainedRefs) {
   this->Corpus = dex::Corpus(Symbols.size());
   std::vector<std::pair<float, const Symbol *>> ScoredSymbols(Symbols.size());
 
@@ -148,7 +149,10 @@ void Dex::buildIndex() {
     Builder.add(*Symbols[SymbolRank], SymbolRank);
   InvertedIndex = std::move(Builder).build();
 
-  // Build RevRefs
+  // If the containedRefs() operation is supported, build the RevRefs
+  // data structure used to implement it.
+  if (!SupportContainedRefs)
+    return;
   for (const auto &[ID, RefList] : Refs)
     for (const auto &R : RefList)
       if ((R.Kind & ContainedRefsRequest::SupportedRefKinds) !=
