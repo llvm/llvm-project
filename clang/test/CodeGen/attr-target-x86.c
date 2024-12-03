@@ -18,6 +18,8 @@
 // CHECK: define {{.*}}@f_x86_64_v4({{.*}} [[f_x86_64_v4:#[0-9]+]]
 // CHECK: define {{.*}}@f_avx10_1_256{{.*}} [[f_avx10_1_256:#[0-9]+]]
 // CHECK: define {{.*}}@f_avx10_1_512{{.*}} [[f_avx10_1_512:#[0-9]+]]
+// CHECK: define {{.*}}@f_prefer_256_bit({{.*}} [[f_prefer_256_bit:#[0-9]+]]
+// CHECK: define {{.*}}@f_no_prefer_256_bit({{.*}} [[f_no_prefer_256_bit:#[0-9]+]]
 
 // CHECK: [[f_default]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87" "tune-cpu"="i686"
 void f_default(void) {}
@@ -103,3 +105,11 @@ void f_avx10_1_256(void) {}
 // CHECK: [[f_avx10_1_512]] = {{.*}}"target-cpu"="i686" "target-features"="+aes,+avx,+avx10.1-256,+avx10.1-512,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+vaes,+vpclmulqdq,+x87,+xsave"
 __attribute__((target("avx10.1-512")))
 void f_avx10_1_512(void) {}
+
+// CHECK: [[f_prefer_256_bit]] = {{.*}}"target-features"="{{.*}}+prefer-256-bit
+__attribute__((target("prefer-256-bit")))
+void f_prefer_256_bit(void) {}
+
+// CHECK: [[f_no_prefer_256_bit]] = {{.*}}"target-features"="{{.*}}-prefer-256-bit
+__attribute__((target("no-prefer-256-bit")))
+void f_no_prefer_256_bit(void) {}
