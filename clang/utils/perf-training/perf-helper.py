@@ -16,6 +16,8 @@ import time
 import bisect
 import shlex
 import tempfile
+import re
+import shutil
 
 test_env = {"PATH": os.environ["PATH"]}
 
@@ -558,7 +560,74 @@ def genOrderFile(args):
     return 0
 
 
+def bolt_optimize(args):
+    parser = argparse.ArgumentParser("%prog  [options] ")
+    parser.add_argument('--method')
+    parser.add_argument('--input')
+    parser.add_argument('--instrumented-output')
+    parser.add_argument('--fdata')
+    parser.add_argument('--perf-training-binary-dir')
+    parser.add_argument('--readelf')
+    parser.add_argument('--bolt')
+    parser.add_argument('--lit')
+    parser.add_argument('--merge-fdata')
+    
+    opts = parser.parse_args(args)
+
+    readelf = opts.readelf
+    bolt = opts.bolt
+    lit = opts.lit
+
+    output = subprocess.check_output(
+        [readelf, "-WS", opts.input], universal_newlines=True
+    )
+   
+    # This binary has already been bolt-optimized, so skip further processing.
+    if re.search('\\.bolt\\.org\\.text', output, re.MULTILINE):
+        return 0
+
+    if opts.method == 'INSTRUMENT':
+        process = subprocess.run(
+            [bolt, opts.input, '-o', opts.instrumented_output, '-instrument', '--instrumentation-file-append-pid',
+             f'--instrumentation-file={opts.fdata}'],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text = True)
+
+        print(process.args)
+        for line in process.stdout:
+            sys.stdout.write(line)
+        process.check_returncode()
+
+    process = subprocess.run(
+        [sys.executable, lit, os.path.join(opts.perf_training_binary_dir, 'bolt-fdata')],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text = True)
+
+    print(process.args)
+    for line in process.stdout:
+        sys.stdout.write(line)
+    process.check_returncode()
+
+    if opts.method == 'PERF':
+        perf2bolt([bolt, opts.perf_training_binary_dir, opts.input])
+
+    merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
+    
+    shutil.copy(opts.input, f'{opts.input}-prebolt')
+
+    process = subprocess.run(
+        [bolt, f'{opts.input}-prebolt', '-o', opts.input, '-data', opts.fdata,
+         '-reorder-blocks=ext-tsp', '-reorder-functions=cdsort', '-split-functions',
+         '-split-all-cold', '-split-eh', '-dyno-stats', '-use-gnu-stack', '-update-debug-sections',
+         '-nl' if opts.method == 'PERF' else ''],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text = True)
+
+    print(process.args)
+    for line in process.stdout:
+        sys.stdout.write(line)
+    process.check_returncode()
+    
+
 commands = {
+    "bolt-optimize" : bolt_optimize,
     "clean": clean,
     "merge": merge,
     "dtrace": dtrace,
