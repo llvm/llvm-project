@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
+
 #include "mlir-c/Dialect/Transform/Interpreter.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Diagnostics.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
-
-#include <pybind11/detail/common.h>
-#include <pybind11/pybind11.h>
 
 namespace py = pybind11;
 
