@@ -1602,33 +1602,15 @@ public:
                   SmallVectorImpl<Value> &result) {
     size_t operandSize = llvm::range_size(operands);
     size_t typeSize = llvm::range_size(types);
-    if (operandSize == typeSize) {
-      for (auto [operand, type] : llvm::zip_equal(operands, types))
-        if (resolveOperand(operand, type, result))
-          return failure();
-      return success();
-    }
+    if (operandSize != typeSize)
+      return emitError(loc)
+             << "number of operands and types do not match: got " << operandSize
+             << " operands and " << typeSize << " types";
 
-    InFlightDiagnostic diag = emitError(loc)
-                              << "number of operands and types do not match";
-    std::string lesserQuantityText = "operand";
-    if (operandSize != 1)
-      lesserQuantityText += "s";
-    std::string higherQuantityText = "type";
-    if (typeSize != 1)
-      higherQuantityText += "s";
-
-    size_t lesserQuantity = operandSize;
-    size_t higherQuantity = typeSize;
-    if (operandSize > typeSize) {
-      std::swap(lesserQuantity, higherQuantity);
-      std::swap(lesserQuantityText, higherQuantityText);
-    }
-
-    diag.attachNote() << "got " << higherQuantity << " " << higherQuantityText
-                      << " but only " << lesserQuantity << " "
-                      << lesserQuantityText;
-    return diag;
+    for (auto [operand, type] : llvm::zip_equal(operands, types))
+      if (resolveOperand(operand, type, result))
+        return failure();
+    return success();
   }
 
   /// Parses an affine map attribute where dims and symbols are SSA operands.

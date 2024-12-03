@@ -57,8 +57,7 @@ func.func @access_chain_non_composite() -> () {
 
 func.func @access_chain_no_indices(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+2 {{custom op 'spirv.AccessChain' number of operands and types do not match}}
-  // expected-note @+1 {{got 1 type but only 0 operands}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 0 operands and 1 types}}
   %1 = spirv.AccessChain %0[] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
@@ -76,8 +75,7 @@ func.func @access_chain_missing_comma(%index0 : i32) -> () {
 
 func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+2 {{custom op 'spirv.AccessChain' number of operands and types do not match}}
-  // expected-note @+1 {{got 2 types but only 1 operand}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 1 operands and 2 types}}
   %1 = spirv.AccessChain %0[%index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   return
 }
@@ -86,8 +84,7 @@ func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
 
 func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+2 {{custom op 'spirv.AccessChain' number of operands and types do not match}}
-  // expected-note @+1 {{got 2 operands but only 1 type}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 2 operands and 1 types}}
   %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }

@@ -90,8 +90,7 @@ func.func @tensor.from_elements_wrong_result_type() {
 // -----
 
 func.func @tensor.from_elements_wrong_elements_count() {
-  // expected-error@+3 {{number of operands and types do not match}}
-  // expected-note@+2 {{got 2 types but only 1 operand}}
+  // expected-error@+2 {{number of operands and types do not match: got 1 operands and 2 types}}
   %c0 = arith.constant 0 : index
   %0 = tensor.from_elements %c0 : tensor<2xindex>
   return
