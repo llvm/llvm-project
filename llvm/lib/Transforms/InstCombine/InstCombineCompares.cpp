@@ -691,7 +691,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     RHS = RHS->stripPointerCasts();
 
   Value *PtrBase = GEPLHS->getOperand(0);
-  if (PtrBase == RHS && (GEPLHS->isInBounds() || ICmpInst::isEquality(Cond))) {
+  if (PtrBase == RHS &&
+      (GEPLHS->hasNoUnsignedSignedWrap() || ICmpInst::isEquality(Cond))) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     Value *Offset = EmitGEPOffset(GEPLHS);
     return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
@@ -785,7 +786,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
-    bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();
+    GEPNoWrapFlags NW = GEPLHS->getNoWrapFlags() & GEPRHS->getNoWrapFlags();
     if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
         GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType()) {
       // If the GEPs only differ by one index, compare it.
@@ -813,7 +814,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         return replaceInstUsesWith(I, // No comparison is needed here.
           ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
 
-      else if (NumDifferences == 1 && GEPsInBounds) {
+      else if (NumDifferences == 1 && NW.hasNoUnsignedSignedWrap()) {
         Value *LHSV = GEPLHS->getOperand(DiffOperand);
         Value *RHSV = GEPRHS->getOperand(DiffOperand);
         // Make sure we do a signed comparison here.
@@ -821,7 +822,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       }
     }
 
-    if (GEPsInBounds || CmpInst::isEquality(Cond)) {
+    if (NW.hasNoUnsignedSignedWrap() || CmpInst::isEquality(Cond)) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
       Value *L = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
       Value *R = EmitGEPOffset(GEPRHS, /*RewriteGEP=*/true);
