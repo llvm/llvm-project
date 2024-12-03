@@ -2755,8 +2755,8 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   _isSignalFrame = true;
   return UNW_STEP_SUCCESS;
 }
-#elif defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
 
+#elif defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
 #include <commpage_defs.h>
 #include <signal.h>
 
