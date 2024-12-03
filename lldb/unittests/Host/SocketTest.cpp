@@ -299,7 +299,8 @@ TEST_P(SocketTest, UDPGetConnectURI) {
 #if LLDB_ENABLE_POSIX
 TEST_P(SocketTest, DomainGetConnectURI) {
   llvm::SmallString<64> domain_path;
-  std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(domain_path, "test");
 
