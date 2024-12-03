@@ -1796,6 +1796,14 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return true;
   }
 
+  if (SrcPtr.isZero() || DestPtr.isZero()) {
+    Pointer DiagPtr = (SrcPtr.isZero() ? SrcPtr : DestPtr);
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
+        << /*IsMove=*/false << /*IsWchar=*/false << !SrcPtr.isZero()
+        << DiagPtr.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
     return false;
 
