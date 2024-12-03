@@ -6,11 +6,5 @@ add_clang_tool(clang-read-diagnostics
 
 clang_target_link_libraries(clang-read-diagnostics
   PRIVATE
-  clangAST
-  clangASTMatchers
-  clangBasic
-  clangDynamicASTMatchers
   clangFrontend
-  clangSerialization
-  clangTooling
   )

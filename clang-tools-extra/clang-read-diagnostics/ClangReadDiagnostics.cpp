@@ -15,19 +15,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/SerializedDiagnosticReader.h"
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/WithColor.h"
 
-#include <optional>
 #include <string>
 
 using namespace clang;
@@ -53,7 +45,7 @@ public:
     for (const auto &Diag : Diagnostics_) {
       auto Filename = FilenameIdx_.at(Diag.Location.FileID);
       auto Category = CategoryIdx_.at(Diag.Category);
-      auto Flag = FlagIdx_.at(Diag.Flag);
+      auto Flag = Diag.Flag == 0 ? "" : FlagIdx_.at(Diag.Flag);
       Ret.emplace_back(DecodedDiagnostics{Diag.Severity, Filename,
                                           Diag.Location.Line, Diag.Location.Col,
                                           Category, Flag, Diag.Message});
@@ -64,8 +56,13 @@ public:
   void dump() {
     for (const auto &Diag : getDiagnostics()) {
       llvm::dbgs() << Diag.Filename << ":" << Diag.Line << ":" << Diag.Col
-                   << ": " << Diag.Message << " [Category=\'" << Diag.Category
-                   << "', flag=" << Diag.Flag << "]" << "\n";
+                   << ": " << Diag.Message << " [category=\'" << Diag.Category
+                   << "'";
+
+      if (!Diag.Flag.empty())
+        llvm::dbgs() << ", flag=" << Diag.Flag;
+
+      llvm::dbgs() << "]" << "\n";
     }
   }
 
