@@ -10,6 +10,7 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from typing import List, Optional
@@ -312,7 +313,81 @@ class DarkerFormatHelper(FormatHelper):
             return None
 
 
-ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
+class UndefGetFormatHelper(FormatHelper):
+    name = "undef deprecator"
+    friendly_name = "undef deprecator"
+
+    @property
+    def instructions(self) -> str:
+        return " ".join(self.cmd)
+
+    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+        filtered_files = []
+        for path in changed_files:
+            _, ext = os.path.splitext(path)
+            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm", ".ll"):
+                filtered_files.append(path)
+        return filtered_files
+
+    def has_tool(self) -> bool:
+        return True
+
+    def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
+        files = self.filter_changed_files(changed_files)
+
+        regex = '([^a-zA-Z0-9#_-]undef[^a-zA-Z0-9_-]|UndefValue::get)'
+        cmd = ['git', 'diff', '-U0', '--pickaxe-regex', '-S', regex]
+
+        if args.start_rev and args.end_rev:
+            cmd.append(args.start_rev)
+            cmd.append(args.end_rev)
+
+        cmd += files
+
+        if args.verbose:
+            print(f"Running: {' '.join(f"'{c}'" for c in cmd)}")
+        self.cmd = cmd
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        sys.stdout.write(proc.stderr.decode("utf-8"))
+        stdout = proc.stdout.decode("utf-8")
+
+        files = []
+        for file in re.split('^diff --git ', stdout, 0, re.MULTILINE):
+            if re.search('^[+].*'+regex, file, re.MULTILINE):
+                files.append(re.match('a/([^ ]+)', file.splitlines()[0])[1])
+
+        if files:
+            files = '\n'.join(files)
+            report = f'''
+The following files introduce new uses of undef:
+{files}
+
+Undef is now deprecated and should only be used in the rare cases where no
+replacement is possible. For example, load of uninitialized memory yields undef.
+You should use poison values for placeholders instead.
+
+In tests, avoid using undef and having tests that trigger undefined behavior.
+If you need a value with some unimportant value, you can add a new argument
+to the function and use that instead.
+
+For example, this is considered a bad practice:
+define void @fn() {{
+  ...
+  br i1 undef, ...
+}}
+
+Use the following instead:
+define void @fn(i1 %cond) {{
+  ...
+  br i1 %cond, ...
+}}
+'''
+            return report
+        else:
+            return None
+
+
+ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper())
 
 
 def hook_main():
