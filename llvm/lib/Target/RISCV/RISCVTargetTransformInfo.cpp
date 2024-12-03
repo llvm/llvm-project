@@ -1013,20 +1013,65 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
-  case Intrinsic::usub_sat:
+  case Intrinsic::usub_sat: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::sadd_sat:
+        Op = RISCV::VSADD_VV;
+        break;
+      case Intrinsic::ssub_sat:
+        Op = RISCV::VSSUBU_VV;
+        break;
+      case Intrinsic::uadd_sat:
+        Op = RISCV::VSADDU_VV;
+        break;
+      case Intrinsic::usub_sat:
+        Op = RISCV::VSSUBU_VV;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::fabs:
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && LT.second.isVector())
-      return LT.first;
+    // TODO: add f16/bf16, bf16 with zvfbfmin && f16 with zvfhmin
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::fabs:
+        Op = RISCV::VFSGNJX_VV;
+        break;
+      case Intrinsic::sqrt:
+        Op = RISCV::VFSQRT_V;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
     break;
   }
   case Intrinsic::cttz:
   case Intrinsic::ctlz:
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector())
-      return LT.first;
+    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::cttz:
+        Op = RISCV::VCTZ_V;
+        break;
+      case Intrinsic::ctlz:
+        Op = RISCV::VCLZ_V;
+        break;
+      case Intrinsic::ctpop:
+        Op = RISCV::VCPOP_V;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
     break;
   }
   case Intrinsic::abs: {
