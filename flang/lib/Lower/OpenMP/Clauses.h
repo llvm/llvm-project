@@ -153,10 +153,11 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
   return func(*arg);
 }
 
-template <
+template <           //
     typename FuncTy, //
     typename ArgTy,  //
-    typename ResultTy = std::invoke_result_t<FuncTy, typename ArgTy::Value>>
+    typename ResultTy =
+        std::invoke_result_t<FuncTy, decltype(std::declval<ArgTy>().v)>>
 std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
   if (!arg)
     return std::nullopt;
@@ -175,6 +176,7 @@ using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
 using DependenceType = tomp::type::DependenceType;
+using Prescriptiveness = tomp::type::Prescriptiveness;
 
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.

@@ -598,9 +598,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // TODO OpenACC: Remove this when we get combined construct impl for this.
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
-    return isNotImplemented();
 
   // Duplicates here are not really sensible.  We could possible permit
   // multiples if they all had the same value, but there isn't really a good
@@ -877,10 +874,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPresentClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -893,10 +891,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyInClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -909,10 +908,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyInClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyOutClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -925,10 +925,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyOutClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCreateClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  // Restrictions only properly implemented on 'compute'/'combined' constructs,
+  // and 'compute'/'combined' constructs are the only construct that can do
+  // anything with this yet, so skip/treat as unimplemented in this case.
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
@@ -1500,10 +1501,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // TODO: Remove this check once we implement this for combined constructs.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
-    return isNotImplemented();
   // Duplicates here are not really sensible.  We could possible permit
   // multiples if they all had the same value, but there isn't really a good
   // reason to do so. Also, this simplifies the suppression of duplicates, in
@@ -1697,6 +1694,7 @@ void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
   SemaRef.CollapseInfo.CollapseDepthSatisfied = false;
   SemaRef.CollapseInfo.CurCollapseCount =
       cast<ConstantExpr>(LoopCount)->getResultAsAPSInt();
+  SemaRef.CollapseInfo.DirectiveKind = DirKind;
 }
 
 void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
@@ -1717,6 +1715,7 @@ void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
   SemaRef.TileInfo.ActiveTile = TileClause;
   SemaRef.TileInfo.TileDepthSatisfied = false;
   SemaRef.TileInfo.CurTileCount = TileClause->getSizeExprs().size();
+  SemaRef.TileInfo.DirectiveKind = DirKind;
 }
 
 SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
@@ -2593,7 +2592,8 @@ void SemaOpenACC::ActOnWhileStmt(SourceLocation WhileLoc) {
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
     Diag(WhileLoc, diag::err_acc_invalid_in_loop)
-        << /*while loop*/ 1 << OpenACCClauseKind::Collapse;
+        << /*while loop*/ 1 << CollapseInfo.DirectiveKind
+        << OpenACCClauseKind::Collapse;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
          diag::note_acc_active_clause_here)
@@ -2606,7 +2606,8 @@ void SemaOpenACC::ActOnWhileStmt(SourceLocation WhileLoc) {
 
   if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
     Diag(WhileLoc, diag::err_acc_invalid_in_loop)
-        << /*while loop*/ 1 << OpenACCClauseKind::Tile;
+        << /*while loop*/ 1 << TileInfo.DirectiveKind
+        << OpenACCClauseKind::Tile;
     assert(TileInfo.ActiveTile && "tile count without object?");
     Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
         << OpenACCClauseKind::Tile;
@@ -2626,7 +2627,8 @@ void SemaOpenACC::ActOnDoStmt(SourceLocation DoLoc) {
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
     Diag(DoLoc, diag::err_acc_invalid_in_loop)
-        << /*do loop*/ 2 << OpenACCClauseKind::Collapse;
+        << /*do loop*/ 2 << CollapseInfo.DirectiveKind
+        << OpenACCClauseKind::Collapse;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
          diag::note_acc_active_clause_here)
@@ -2639,7 +2641,7 @@ void SemaOpenACC::ActOnDoStmt(SourceLocation DoLoc) {
 
   if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
     Diag(DoLoc, diag::err_acc_invalid_in_loop)
-        << /*do loop*/ 2 << OpenACCClauseKind::Tile;
+        << /*do loop*/ 2 << TileInfo.DirectiveKind << OpenACCClauseKind::Tile;
     assert(TileInfo.ActiveTile && "tile count without object?");
     Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
         << OpenACCClauseKind::Tile;
@@ -2666,7 +2668,8 @@ void SemaOpenACC::ForStmtBeginHelper(SourceLocation ForLoc,
     // This checks for more than 1 loop at the current level, the
     // 'depth'-satisifed checking manages the 'not zero' case.
     if (LoopInfo.CurLevelHasLoopAlready) {
-      Diag(ForLoc, diag::err_acc_clause_multiple_loops) << /*Collapse*/ 0;
+      Diag(ForLoc, diag::err_acc_clause_multiple_loops)
+          << CollapseInfo.DirectiveKind << OpenACCClauseKind::Collapse;
       assert(CollapseInfo.ActiveCollapse && "No collapse object?");
       Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
            diag::note_acc_active_clause_here)
@@ -2685,7 +2688,8 @@ void SemaOpenACC::ForStmtBeginHelper(SourceLocation ForLoc,
     C.check();
 
     if (LoopInfo.CurLevelHasLoopAlready) {
-      Diag(ForLoc, diag::err_acc_clause_multiple_loops) << /*Tile*/ 1;
+      Diag(ForLoc, diag::err_acc_clause_multiple_loops)
+          << TileInfo.DirectiveKind << OpenACCClauseKind::Tile;
       assert(TileInfo.ActiveTile && "No tile object?");
       Diag(TileInfo.ActiveTile->getBeginLoc(),
            diag::note_acc_active_clause_here)
@@ -3188,7 +3192,7 @@ void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
 
     if (OtherStmtLoc.isValid() && IsActiveCollapse) {
       Diag(OtherStmtLoc, diag::err_acc_intervening_code)
-          << OpenACCClauseKind::Collapse;
+          << OpenACCClauseKind::Collapse << CollapseInfo.DirectiveKind;
       Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
            diag::note_acc_active_clause_here)
           << OpenACCClauseKind::Collapse;
@@ -3196,7 +3200,7 @@ void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
 
     if (OtherStmtLoc.isValid() && IsActiveTile) {
       Diag(OtherStmtLoc, diag::err_acc_intervening_code)
-          << OpenACCClauseKind::Tile;
+          << OpenACCClauseKind::Tile << TileInfo.DirectiveKind;
       Diag(TileInfo.ActiveTile->getBeginLoc(),
            diag::note_acc_active_clause_here)
           << OpenACCClauseKind::Tile;
@@ -3216,7 +3220,8 @@ bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
   // ALL constructs are ill-formed if there is an active 'collapse'
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
     Diag(StartLoc, diag::err_acc_invalid_in_loop)
-        << /*OpenACC Construct*/ 0 << OpenACCClauseKind::Collapse << K;
+        << /*OpenACC Construct*/ 0 << CollapseInfo.DirectiveKind
+        << OpenACCClauseKind::Collapse << K;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
          diag::note_acc_active_clause_here)
@@ -3224,7 +3229,8 @@ bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
   }
   if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
     Diag(StartLoc, diag::err_acc_invalid_in_loop)
-        << /*OpenACC Construct*/ 0 << OpenACCClauseKind::Tile << K;
+        << /*OpenACC Construct*/ 0 << TileInfo.DirectiveKind
+        << OpenACCClauseKind::Tile << K;
     assert(TileInfo.ActiveTile && "Tile count without object?");
     Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
         << OpenACCClauseKind::Tile;

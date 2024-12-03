@@ -10,6 +10,8 @@
 /// \file
 /// This is a generic pass for adding attributes to functions.
 //===----------------------------------------------------------------------===//
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -44,6 +46,24 @@ void FunctionAttrPass::runOnOperation() {
   mlir::func::FuncOp func = getOperation();
 
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
+
+  llvm::StringRef name = func.getSymName();
+  auto deconstructed = fir::NameUniquer::deconstruct(name);
+  bool isFromModule = !deconstructed.second.modules.empty();
+
+  if ((isFromModule || !func.isDeclaration()) &&
+      !fir::hasBindcAttr(func.getOperation())) {
+    llvm::StringRef nocapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
+    mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
+
+    for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
+      if (mlir::isa<fir::ReferenceType>(argType) &&
+          !func.getArgAttr(index, fir::getTargetAttrName()) &&
+          !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
+          !func.getArgAttr(index, fir::getVolatileAttrName()))
+        func.setArgAttr(index, nocapture, unitAttr);
+    }
+  }
 
   mlir::MLIRContext *context = &getContext();
   if (framePointerKind != mlir::LLVM::framePointerKind::FramePointerKind::None)

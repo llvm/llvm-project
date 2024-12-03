@@ -298,6 +298,22 @@ void __trans_tmp_1() {
 
 }
 
+namespace GH115931 {
+
+struct Range {};
+
+template <Range>
+struct LengthPercentage {};
+
+void reflectSum() {
+  Range resultR;
+  [&] (auto) -> LengthPercentage<resultR> { 
+    return {};
+  }(0);
+}
+
+} // namespace GH115931
+
 namespace GH47400 {
 
 struct Foo {};
