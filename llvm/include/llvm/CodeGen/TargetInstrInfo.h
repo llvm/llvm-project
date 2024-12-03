@@ -1812,7 +1812,7 @@ public:
   };
 
   /// Return true if this opcode has high latency to its result.
-  virtual bool isHighLatencyDef(int opc) const { return false; };
+  virtual bool isHighLatencyDef(int opc) const { return false; }
 
   /// Compute operand latency between a def of 'Reg'
   /// and a use in the current loop. Return true if the target considered
