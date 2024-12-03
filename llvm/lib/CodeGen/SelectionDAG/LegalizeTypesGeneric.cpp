@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 using namespace llvm;
 
@@ -242,6 +243,66 @@ void DAGTypeLegalizer::ExpandRes_EXTRACT_VECTOR_ELT(SDNode *N, SDValue &Lo,
 
   if (DAG.getDataLayout().isBigEndian())
     std::swap(Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandRes_VECTOR_EXTRACT_LAST_ACTIVE(SDNode *N,
+                                                            SDValue &Lo,
+                                                            SDValue &Hi) {
+  SDValue Data = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  SDValue PassThru = N->getOperand(2);
+
+  ElementCount OldEltCount = Data.getValueType().getVectorElementCount();
+  EVT OldEltVT = Data.getValueType().getVectorElementType();
+  SDLoc dl(N);
+
+  EVT OldVT = N->getValueType(0);
+  EVT NewVT = TLI.getTypeToTransformTo(*DAG.getContext(), OldVT);
+
+  if (OldVT != OldEltVT) {
+    // The result of EXTRACT_LAST_ACTIVE may be larger than the element type of
+    // the input vector.  If so, extend the elements of the input vector to the
+    // same bitwidth as the result before expanding.
+    assert(OldEltVT.bitsLT(OldVT) && "Result type smaller then element type!");
+    EVT NVecVT = EVT::getVectorVT(*DAG.getContext(), OldVT, OldEltCount);
+    Data = DAG.getNode(ISD::ANY_EXTEND, dl, NVecVT, N->getOperand(0));
+  }
+
+  SDValue NewVec = DAG.getNode(
+      ISD::BITCAST, dl,
+      EVT::getVectorVT(*DAG.getContext(), NewVT, OldEltCount * 2), Data);
+
+  auto [DataLo, DataHi] = DAG.SplitVector(NewVec, dl);
+  auto [PassLo, PassHi] = DAG.SplitScalar(PassThru, dl, NewVT, NewVT);
+
+  EVT SplitVT = DataLo.getValueType();
+
+  // TODO: I *think* this works correctly, but I haven't confirmed it yet by
+  // actually running a compiled program with example data.
+  //
+  // We want the matching lo and hi parts from whichever lane was the last
+  // active.
+  SDValue Deinterleaved;
+  if (SplitVT.isFixedLengthVector()) {
+    unsigned SplitNum = SplitVT.getVectorMinNumElements();
+    SDValue Even = DAG.getVectorShuffle(SplitVT, dl, DataLo, DataHi,
+                                        createStrideMask(0, 2, SplitNum));
+    SDValue Odd = DAG.getVectorShuffle(SplitVT, dl, DataLo, DataHi,
+                                       createStrideMask(1, 2, SplitNum));
+    Deinterleaved = DAG.getMergeValues({Even, Odd}, dl);
+  } else
+    Deinterleaved =
+        DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl,
+                    DAG.getVTList(SplitVT, SplitVT), DataLo, DataHi);
+
+  Lo = DAG.getNode(ISD::VECTOR_EXTRACT_LAST_ACTIVE, dl, NewVT,
+                   Deinterleaved.getValue(0), Mask, PassLo);
+  Hi = DAG.getNode(ISD::VECTOR_EXTRACT_LAST_ACTIVE, dl, NewVT,
+                   Deinterleaved.getValue(1), Mask, PassHi);
+
+  // FIXME: Endianness?
+  assert(!DAG.getDataLayout().isBigEndian() &&
+         "Implement big endian result expansion for extract_last_active");
 }
 
 void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,

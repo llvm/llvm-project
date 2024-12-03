@@ -1480,6 +1480,10 @@ enum NodeType {
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  // experimental.vector.extract.last.active intrinsic
+  // Operands: Data, Mask, PassThru
+  VECTOR_EXTRACT_LAST_ACTIVE,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain
