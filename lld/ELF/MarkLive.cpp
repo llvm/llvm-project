@@ -29,9 +29,11 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <variant>
 #include <vector>
 
 using namespace llvm;
@@ -42,7 +44,7 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-typedef std::pair<InputSectionBase *, uint64_t> LiveOffset;
+typedef std::variant<InputSectionBase *, Defined *> LiveObject;
 
 template <class ELFT> class MarkLive {
 public:
@@ -53,7 +55,7 @@ public:
 
 private:
   void enqueue(InputSectionBase *sec, uint64_t offset,
-               std::optional<LiveOffset> parent);
+               std::optional<LiveObject> parent);
   void markSymbol(Symbol *sym);
   void mark();
 
@@ -74,7 +76,7 @@ private:
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 
-  DenseMap<LiveOffset, LiveOffset> whyLive;
+  DenseMap<LiveObject, LiveObject> whyLive;
 };
 } // namespace
 
@@ -106,7 +108,8 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
   Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
-  LiveOffset parent = {&sec, rel.r_offset};
+  Defined *parentSym = sec.getEnclosingSymbol(rel.r_offset);
+  auto parent = parentSym ? LiveObject(parentSym) : LiveObject(&sec);
 
   if (auto *d = dyn_cast<Defined>(&sym)) {
     auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section);
@@ -195,7 +198,7 @@ static bool isReserved(InputSectionBase *sec) {
 
 template <class ELFT>
 void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
-                             std::optional<LiveOffset> parent) {
+                             std::optional<LiveObject> parent) {
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
@@ -210,11 +213,10 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
   sec->partition = sec->partition ? 1 : partition;
 
   if (parent) {
-    whyLive.try_emplace(LiveOffset{sec, offset}, *parent);
-    // Offset zero is treated as a stand-in for the section itself. The parent
-    // is both a specific reason that an offset within this section is alive and
-    // a generic reason the section itself is alive.
-    whyLive.try_emplace(LiveOffset{sec, 0}, *parent);
+    whyLive.try_emplace(sec, *parent);
+    Defined *sym = sec->getEnclosingSymbol(offset);
+    if (sym)
+      whyLive.try_emplace(sym, *parent);
   }
 
   // Add input section to the queue.
@@ -339,11 +341,11 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, 0, {{&sec, 0}});
+      enqueue(isec, 0, &sec);
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, 0, {{&sec, 0}});
+      enqueue(sec.nextInSectionGroup, 0, &sec);
   }
 }
 
