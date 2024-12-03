@@ -333,9 +333,23 @@ private:
   bool isMemberInitMemcpyable(CXXCtorInitializer *MemberInit) const {
     if (!MemcpyableCtor)
       return false;
+    FieldDecl *field = MemberInit->getMember();
+    assert(field && "No field for member init.");
+    QualType fieldType = field->getType();
+    CXXConstructExpr *ce = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
 
-    assert(!cir::MissingFeatures::fieldMemcpyizerBuildMemcpy());
-    return false;
+    // Bail out on any members of record type (unlike CodeGen, which emits a
+    // memcpy for trivially-copyable record types).
+    if (ce || (fieldType->isArrayType() &&
+               CGF.getContext().getBaseElementType(fieldType)->isRecordType()))
+      return false;
+
+    // Bail out on volatile fields.
+    if (!isMemcpyableField(field))
+      return false;
+
+    // Otherwise we're good.
+    return true;
   }
 
 public:
@@ -363,7 +377,10 @@ public:
       // This memcpy is too small to be worthwhile. Fall back on default
       // codegen.
       if (!AggregatedInits.empty()) {
-        llvm_unreachable("NYI");
+        CopyingValueRepresentation cvr(CGF);
+        emitMemberInitializer(CGF, ConstructorDecl->getParent(),
+                              AggregatedInits[0], ConstructorDecl, Args);
+        AggregatedInits.clear();
       }
       reset();
       return;
@@ -375,21 +392,14 @@ public:
   }
 
   void pushEHDestructors() {
-    Address ThisPtr = CGF.LoadCXXThisAddress();
-    QualType RecordTy = CGF.getContext().getTypeDeclType(ClassDecl);
-    LValue LHS = CGF.makeAddrLValue(ThisPtr, RecordTy);
-    (void)LHS;
-
-    for (unsigned i = 0; i < AggregatedInits.size(); ++i) {
-      CXXCtorInitializer *MemberInit = AggregatedInits[i];
-      QualType FieldType = MemberInit->getAnyMember()->getType();
-      QualType::DestructionKind dtorKind = FieldType.isDestructedType();
-      if (!CGF.needsEHCleanup(dtorKind))
-        continue;
-      LValue FieldLHS = LHS;
-      emitLValueForAnyFieldInitialization(CGF, MemberInit, FieldLHS);
-      CGF.pushEHDestroy(dtorKind, FieldLHS.getAddress(), FieldType);
+#ifndef NDEBUG
+    for (CXXCtorInitializer *memberInit : AggregatedInits) {
+      QualType fieldType = memberInit->getAnyMember()->getType();
+      QualType::DestructionKind dtorKind = fieldType.isDestructedType();
+      assert(!CGF.needsEHCleanup(dtorKind) &&
+             "Non-record types shouldn't need EH cleanup");
     }
+#endif
   }
 
   void finish() { emitAggregatedInits(); }

@@ -141,7 +141,6 @@ struct MissingFeatures {
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldCreateMemCpyFromGlobal() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
-  static bool fieldMemcpyizerBuildMemcpy() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
