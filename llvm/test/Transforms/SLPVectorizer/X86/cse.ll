@@ -280,10 +280,10 @@ return:                                           ; preds = %entry, %if.end
 
 @a = external global double, align 8
 
-define void @PR19646(ptr %this) {
+define void @PR19646(ptr %this, i1 %arg) {
 ; CHECK-LABEL: @PR19646(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_END13:%.*]], label [[IF_END13]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END13:%.*]], label [[IF_END13]]
 ; CHECK:       sw.epilog7:
 ; CHECK-NEXT:    [[DOTIN:%.*]] = getelementptr inbounds [[CLASS_B_53_55:%.*]], ptr [[THIS:%.*]], i64 0, i32 0, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[DOTIN]], align 8
@@ -294,7 +294,7 @@ define void @PR19646(ptr %this) {
 ; CHECK-NEXT:    [[_DY:%.*]] = getelementptr inbounds [[CLASS_B_53_55]], ptr [[THIS]], i64 0, i32 0, i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[_DY]], align 8
 ; CHECK-NEXT:    [[ADD10:%.*]] = fadd double [[ADD8]], [[TMP2]]
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN12:%.*]], label [[IF_END13]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN12:%.*]], label [[IF_END13]]
 ; CHECK:       if.then12:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    br label [[IF_END13]]
@@ -304,7 +304,7 @@ define void @PR19646(ptr %this) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  br i1 undef, label %if.end13, label %if.end13
+  br i1 %arg, label %if.end13, label %if.end13
 
 sw.epilog7:                                       ; No predecessors!
   %.in = getelementptr inbounds %class.B.53.55, ptr %this, i64 0, i32 0, i32 1
@@ -316,7 +316,7 @@ sw.epilog7:                                       ; No predecessors!
   %_dy = getelementptr inbounds %class.B.53.55, ptr %this, i64 0, i32 0, i32 2
   %2 = load double, ptr %_dy, align 8
   %add10 = fadd double %add8, %2
-  br i1 undef, label %if.then12, label %if.end13
+  br i1 %arg, label %if.then12, label %if.end13
 
 if.then12:                                        ; preds = %sw.epilog7
   %3 = load double, ptr undef, align 8
