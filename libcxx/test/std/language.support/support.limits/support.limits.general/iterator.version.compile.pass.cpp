@@ -23,7 +23,8 @@
     __cpp_lib_move_iterator_concept         202207L [C++20]
     __cpp_lib_nonmember_container_access    201411L [C++17]
     __cpp_lib_null_iterators                201304L [C++14]
-    __cpp_lib_ranges                        202207L [C++20]
+    __cpp_lib_ranges                        202110L [C++20]
+                                            202406L [C++23]
     __cpp_lib_ssize                         201902L [C++20]
 */
 
@@ -197,8 +198,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202207L
-#   error "__cpp_lib_ranges should have the value 202207L in c++20"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++20"
 # endif
 
 # ifndef __cpp_lib_ssize
@@ -255,8 +256,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202207L
-#   error "__cpp_lib_ranges should have the value 202207L in c++23"
+# if __cpp_lib_ranges != 202406L
+#   error "__cpp_lib_ranges should have the value 202406L in c++23"
 # endif
 
 # ifndef __cpp_lib_ssize
@@ -313,8 +314,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202207L
-#   error "__cpp_lib_ranges should have the value 202207L in c++26"
+# if __cpp_lib_ranges != 202406L
+#   error "__cpp_lib_ranges should have the value 202406L in c++26"
 # endif
 
 # ifndef __cpp_lib_ssize

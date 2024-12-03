@@ -35,7 +35,6 @@ TEST(Object, DataRefImplOstream) {
   }
 
   OS << Data;
-  OS.flush();
 
   EXPECT_EQ(Expected, s);
 }

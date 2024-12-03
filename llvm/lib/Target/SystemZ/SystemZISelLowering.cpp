@@ -34,6 +34,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-lower"
 
+// Temporarily let this be disabled by default until all known problems
+// related to argument extensions are fixed.
+static cl::opt<bool> EnableIntArgExtCheck(
+    "argext-abi-check", cl::init(false),
+    cl::desc("Verify that narrow int args are properly extended per the "
+             "SystemZ ABI."));
+
 namespace {
 // Represents information about a comparison.
 struct Comparison {
@@ -786,6 +793,9 @@ EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
 
 bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
+  if (useSoftFloat())
+    return false;
+
   VT = VT.getScalarType();
 
   if (!VT.isSimple())
@@ -1390,9 +1400,11 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                          const MachineFunction &MF) const {
   Register Reg =
       StringSwitch<Register>(RegName)
-          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D : 0)
-          .Case("r15", Subtarget.isTargetELF() ? SystemZ::R15D : 0)
-          .Default(0);
+          .Case("r4", Subtarget.isTargetXPLINK64() ? SystemZ::R4D
+                                                   : SystemZ::NoRegister)
+          .Case("r15",
+                Subtarget.isTargetELF() ? SystemZ::R15D : SystemZ::NoRegister)
+          .Default(SystemZ::NoRegister);
 
   if (Reg)
     return Reg;
@@ -1432,15 +1444,15 @@ void SystemZTargetLowering::LowerAsmOperandForConstraint(
     case 'K': // Signed 16-bit constant
       if (auto *C = dyn_cast<ConstantSDNode>(Op))
         if (isInt<16>(C->getSExtValue()))
-          Ops.push_back(DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                              Op.getValueType()));
+          Ops.push_back(DAG.getSignedTargetConstant(
+              C->getSExtValue(), SDLoc(Op), Op.getValueType()));
       return;
 
     case 'L': // Signed 20-bit displacement (on all targets we support)
       if (auto *C = dyn_cast<ConstantSDNode>(Op))
         if (isInt<20>(C->getSExtValue()))
-          Ops.push_back(DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                              Op.getValueType()));
+          Ops.push_back(DAG.getSignedTargetConstant(
+              C->getSExtValue(), SDLoc(Op), Op.getValueType()));
       return;
 
     case 'M': // 0x7fffffff
@@ -1917,6 +1929,9 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (Subtarget.isTargetXPLINK64())
     IsTailCall = false;
 
+  // Integer args <=32 bits should have an extension attribute.
+  verifyNarrowIntegerArgs_Call(Outs, &MF.getFunction(), Callee);
+
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   SystemZCCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
@@ -2176,6 +2191,9 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+
+  // Integer args <=32 bits should have an extension attribute.
+  verifyNarrowIntegerArgs_Ret(Outs, &MF.getFunction());
 
   // Assign locations to each returned value.
   SmallVector<CCValAssign, 16> RetLocs;
@@ -2560,7 +2578,7 @@ static void adjustSubwordCmp(SelectionDAG &DAG, const SDLoc &DL,
   // Make sure that the second operand is an i32 with the right value.
   if (C.Op1.getValueType() != MVT::i32 ||
       Value != ConstOp1->getZExtValue())
-    C.Op1 = DAG.getConstant(Value, DL, MVT::i32);
+    C.Op1 = DAG.getConstant((uint32_t)Value, DL, MVT::i32);
 }
 
 // Return true if Op is either an unextended load, or a load suitable
@@ -2658,10 +2676,7 @@ static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
            (N->getOperand(0) == C.Op1 && N->getOperand(1) == C.Op0))) {
         // Disable the nsw and nuw flags: the backend needs to handle
         // overflow as well during comparison elimination.
-        SDNodeFlags Flags = N->getFlags();
-        Flags.setNoSignedWrap(false);
-        Flags.setNoUnsignedWrap(false);
-        N->setFlags(Flags);
+        N->dropFlags(SDNodeFlags::NoWrap);
         C.Op0 = SDValue(N, 0);
         C.Op1 = DAG.getConstant(0, DL, N->getValueType(0));
         return;
@@ -3395,7 +3410,7 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
   }
   if (Invert) {
     SDValue Mask =
-      DAG.getSplatBuildVector(VT, DL, DAG.getConstant(-1, DL, MVT::i64));
+        DAG.getSplatBuildVector(VT, DL, DAG.getAllOnesConstant(DL, MVT::i64));
     Cmp = DAG.getNode(ISD::XOR, DL, VT, Cmp, Mask);
   }
   if (Chain && Chain.getNode() != Cmp.getNode()) {
@@ -3556,7 +3571,7 @@ SDValue SystemZTargetLowering::lowerGlobalAddress(GlobalAddressSDNode *Node,
   // addition for it.
   if (Offset != 0)
     Result = DAG.getNode(ISD::ADD, DL, PtrVT, Result,
-                         DAG.getConstant(Offset, DL, PtrVT));
+                         DAG.getSignedConstant(Offset, DL, PtrVT));
 
   return Result;
 }
@@ -3819,7 +3834,7 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
     const auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
     int Offset = TFL->getReturnAddressOffset(MF);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, FrameAddr,
-                              DAG.getConstant(Offset, DL, PtrVT));
+                              DAG.getSignedConstant(Offset, DL, PtrVT));
     return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Ptr,
                        MachinePointerInfo());
   }
@@ -4569,7 +4584,7 @@ static void getCSAddressAndShifts(SDValue Addr, SelectionDAG &DAG, SDLoc DL,
 
   // Get the address of the containing word.
   AlignedAddr = DAG.getNode(ISD::AND, DL, PtrVT, Addr,
-                            DAG.getConstant(-4, DL, PtrVT));
+                            DAG.getSignedConstant(-4, DL, PtrVT));
 
   // Get the number of bits that the word must be rotated left in order
   // to bring the field to the top bits of a GR32.
@@ -4608,7 +4623,8 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   if (Opcode == SystemZISD::ATOMIC_LOADW_SUB)
     if (auto *Const = dyn_cast<ConstantSDNode>(Src2)) {
       Opcode = SystemZISD::ATOMIC_LOADW_ADD;
-      Src2 = DAG.getConstant(-Const->getSExtValue(), DL, Src2.getValueType());
+      Src2 = DAG.getSignedConstant(-Const->getSExtValue(), DL,
+                                   Src2.getValueType());
     }
 
   SDValue AlignedAddr, BitShift, NegBitShift;
@@ -7208,7 +7224,16 @@ SDValue SystemZTargetLowering::combineSTORE(
       if (C->getAPIntValue().getBitWidth() > 64 || C->isAllOnes() ||
           isInt<16>(C->getSExtValue()) || MemVT.getStoreSize() <= 2)
         return;
-      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, C->getZExtValue()));
+
+      APInt Val = C->getAPIntValue();
+      // Truncate Val in case of a truncating store.
+      if (!llvm::isUIntN(TotBytes * 8, Val.getZExtValue())) {
+        assert(SN->isTruncatingStore() &&
+               "Non-truncating store and immediate value does not fit?");
+        Val = Val.trunc(TotBytes * 8);
+      }
+
+      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, Val.getZExtValue()));
       if (VCI.isVectorConstantLegal(Subtarget) &&
           VCI.Opcode == SystemZISD::REPLICATE) {
         Word = DAG.getConstant(VCI.OpVals[0], SDLoc(SN), MVT::i32);
@@ -7344,8 +7369,9 @@ SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
   if (auto *IndexN = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
     SDValue Op0 = N->getOperand(0);
     EVT VecVT = Op0.getValueType();
-    return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
-                          IndexN->getZExtValue(), DCI, false);
+    if (canTreatAsByteVector(VecVT))
+      return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
+                            IndexN->getZExtValue(), DCI, false);
   }
   return SDValue();
 }
@@ -7981,7 +8007,7 @@ static APInt getDemandedSrcElements(SDValue Op, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::s390_vperm:
-      SrcDemE = APInt(NumElts, -1);
+      SrcDemE = APInt::getAllOnes(NumElts);
       break;
     default:
       llvm_unreachable("Unhandled intrinsic.");
@@ -8326,11 +8352,11 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     if (MI->getOperand(4).getImm() == (CCValid ^ CCMask))
       std::swap(TrueReg, FalseReg);
 
-    if (RegRewriteTable.contains(TrueReg))
-      TrueReg = RegRewriteTable[TrueReg].first;
+    if (auto It = RegRewriteTable.find(TrueReg); It != RegRewriteTable.end())
+      TrueReg = It->second.first;
 
-    if (RegRewriteTable.contains(FalseReg))
-      FalseReg = RegRewriteTable[FalseReg].second;
+    if (auto It = RegRewriteTable.find(FalseReg); It != RegRewriteTable.end())
+      FalseReg = It->second.second;
 
     DebugLoc DL = MI->getDebugLoc();
     BuildMI(*SinkMBB, SinkInsertionPoint, DL, TII->get(SystemZ::PHI), DestReg)
@@ -9799,4 +9825,104 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   return DAG.getNode(
       ISD::EXTRACT_VECTOR_ELT, DL, VT, DAG.getBitcast(OpVT, Op),
       DAG.getConstant(OpVT.getVectorNumElements() - 1, DL, MVT::i32));
+}
+
+// Only consider a function fully internal as long as it has local linkage
+// and is not used in any other way than acting as the called function at
+// call sites.
+bool SystemZTargetLowering::isFullyInternal(const Function *Fn) const {
+  if (!Fn->hasLocalLinkage())
+    return false;
+  for (const User *U : Fn->users()) {
+    if (auto *CB = dyn_cast<CallBase>(U)) {
+      if (CB->getCalledFunction() != Fn)
+        return false;
+    } else
+      return false;
+  }
+  return true;
+}
+
+static void printFunctionArgExts(const Function *F, raw_fd_ostream &OS) {
+  FunctionType *FT = F->getFunctionType();
+  const AttributeList &Attrs = F->getAttributes();
+  if (Attrs.hasRetAttrs())
+    OS << Attrs.getAsString(AttributeList::ReturnIndex) << " ";
+  OS << *F->getReturnType() << " @" << F->getName() << "(";
+  for (unsigned I = 0, E = FT->getNumParams(); I != E; ++I) {
+    if (I)
+      OS << ", ";
+    OS << *FT->getParamType(I);
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(I);
+    for (auto A : {Attribute::SExt, Attribute::ZExt, Attribute::NoExt})
+      if (ArgAttrs.hasAttribute(A))
+        OS << " " << Attribute::getNameFromAttrKind(A);
+  }
+  OS << ")\n";
+}
+
+void SystemZTargetLowering::
+verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                             const Function *F, SDValue Callee) const {
+  bool IsInternal = false;
+  const Function *CalleeFn = nullptr;
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
+    if ((CalleeFn = dyn_cast<Function>(G->getGlobal())))
+      IsInternal = isFullyInternal(CalleeFn);
+  if (!verifyNarrowIntegerArgs(Outs, IsInternal)) {
+    errs() << "ERROR: Missing extension attribute of passed "
+           << "value in call to function:\n" << "Callee:  ";
+    if (CalleeFn != nullptr)
+      printFunctionArgExts(CalleeFn, errs());
+    else
+      errs() << "-\n";
+    errs() << "Caller:  ";
+    printFunctionArgExts(F, errs());
+    llvm_unreachable("");
+  }
+}
+
+void SystemZTargetLowering::
+verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                            const Function *F) const {
+  if (!verifyNarrowIntegerArgs(Outs, isFullyInternal(F))) {
+    errs() << "ERROR: Missing extension attribute of returned "
+           << "value from function:\n";
+    printFunctionArgExts(F, errs());
+    llvm_unreachable("");
+  }
+}
+
+// Verify that narrow integer arguments are extended as required by the ABI.
+// Return false if an error is found.
+bool SystemZTargetLowering::
+verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        bool IsInternal) const {
+  if (IsInternal || !Subtarget.isTargetELF())
+    return true;
+
+  // Temporarily only do the check when explicitly requested, until it can be
+  // enabled by default.
+  if (!EnableIntArgExtCheck)
+    return true;
+
+  if (EnableIntArgExtCheck.getNumOccurrences()) {
+    if (!EnableIntArgExtCheck)
+      return true;
+  } else if (!getTargetMachine().Options.VerifyArgABICompliance)
+    return true;
+
+  for (unsigned i = 0; i < Outs.size(); ++i) {
+    MVT VT = Outs[i].VT;
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    if (VT.isInteger()) {
+      assert((VT == MVT::i32 || VT.getSizeInBits() >= 64) &&
+             "Unexpected integer argument VT.");
+      if (VT == MVT::i32 &&
+          !Flags.isSExt() && !Flags.isZExt() && !Flags.isNoExt())
+        return false;
+    }
+  }
+
+  return true;
 }

@@ -36,7 +36,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -257,6 +256,9 @@ bool SanitizerBinaryMetadata::run() {
 
 void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
   if (F.empty())
+    return;
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
     return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
     return;

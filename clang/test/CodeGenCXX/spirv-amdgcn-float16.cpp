@@ -7,22 +7,25 @@
 // CHECK-NEXT:    [[X:%.*]] = alloca half, align 2
 // CHECK-NEXT:    [[Y:%.*]] = alloca half, align 2
 // CHECK-NEXT:    [[Z:%.*]] = alloca half, align 2
-// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[X]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[Y]], align 2
+// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
+// CHECK-NEXT:    [[Y_ASCAST:%.*]] = addrspacecast ptr [[Y]] to ptr addrspace(4)
+// CHECK-NEXT:    [[Z_ASCAST:%.*]] = addrspacecast ptr [[Z]] to ptr addrspace(4)
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr addrspace(4) [[X_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr addrspace(4) [[Y_ASCAST]], align 2
 // CHECK-NEXT:    [[ADD:%.*]] = fadd half [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    store half [[ADD]], ptr [[Z]], align 2
-// CHECK-NEXT:    [[TMP2:%.*]] = load half, ptr [[X]], align 2
-// CHECK-NEXT:    [[TMP3:%.*]] = load half, ptr [[Y]], align 2
+// CHECK-NEXT:    store half [[ADD]], ptr addrspace(4) [[Z_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = load half, ptr addrspace(4) [[X_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP3:%.*]] = load half, ptr addrspace(4) [[Y_ASCAST]], align 2
 // CHECK-NEXT:    [[SUB:%.*]] = fsub half [[TMP2]], [[TMP3]]
-// CHECK-NEXT:    store half [[SUB]], ptr [[Z]], align 2
-// CHECK-NEXT:    [[TMP4:%.*]] = load half, ptr [[X]], align 2
-// CHECK-NEXT:    [[TMP5:%.*]] = load half, ptr [[Y]], align 2
+// CHECK-NEXT:    store half [[SUB]], ptr addrspace(4) [[Z_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP4:%.*]] = load half, ptr addrspace(4) [[X_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP5:%.*]] = load half, ptr addrspace(4) [[Y_ASCAST]], align 2
 // CHECK-NEXT:    [[MUL:%.*]] = fmul half [[TMP4]], [[TMP5]]
-// CHECK-NEXT:    store half [[MUL]], ptr [[Z]], align 2
-// CHECK-NEXT:    [[TMP6:%.*]] = load half, ptr [[X]], align 2
-// CHECK-NEXT:    [[TMP7:%.*]] = load half, ptr [[Y]], align 2
+// CHECK-NEXT:    store half [[MUL]], ptr addrspace(4) [[Z_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP6:%.*]] = load half, ptr addrspace(4) [[X_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP7:%.*]] = load half, ptr addrspace(4) [[Y_ASCAST]], align 2
 // CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[TMP6]], [[TMP7]]
-// CHECK-NEXT:    store half [[DIV]], ptr [[Z]], align 2
+// CHECK-NEXT:    store half [[DIV]], ptr addrspace(4) [[Z_ASCAST]], align 2
 // CHECK-NEXT:    ret void
 //
 void f() {

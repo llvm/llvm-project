@@ -178,6 +178,12 @@ static const char kValueReplaceAllUsesWithDocstring[] =
 the IR that uses 'self' to use the other value instead.
 )";
 
+static const char kValueReplaceAllUsesExceptDocstring[] =
+    R"("Replace all uses of this value with the 'with' value, except for those
+in 'exceptions'. 'exceptions' can be either a single operation or a list of
+operations.
+)";
+
 //------------------------------------------------------------------------------
 // Utilities.
 //------------------------------------------------------------------------------
@@ -1534,7 +1540,7 @@ py::object PyOperation::create(const std::string &name,
       PyOperation::createDetached(location->getContext(), operation);
   maybeInsertOperation(created, maybeIp);
 
-  return created->createOpView();
+  return created.getObject();
 }
 
 py::object PyOperation::clone(const py::object &maybeIp) {
@@ -3718,6 +3724,29 @@ void mlir::python::populateIRCore(py::module &m) {
             mlirValueReplaceAllUsesOfWith(self.get(), with.get());
           },
           kValueReplaceAllUsesWithDocstring)
+      .def(
+          "replace_all_uses_except",
+          [](MlirValue self, MlirValue with, PyOperation &exception) {
+            MlirOperation exceptedUser = exception.get();
+            mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
+          },
+          py::arg("with"), py::arg("exceptions"),
+          kValueReplaceAllUsesExceptDocstring)
+      .def(
+          "replace_all_uses_except",
+          [](MlirValue self, MlirValue with, py::list exceptions) {
+            // Convert Python list to a SmallVector of MlirOperations
+            llvm::SmallVector<MlirOperation> exceptionOps;
+            for (py::handle exception : exceptions) {
+              exceptionOps.push_back(exception.cast<PyOperation &>().get());
+            }
+
+            mlirValueReplaceAllUsesExcept(
+                self, with, static_cast<intptr_t>(exceptionOps.size()),
+                exceptionOps.data());
+          },
+          py::arg("with"), py::arg("exceptions"),
+          kValueReplaceAllUsesExceptDocstring)
       .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
            [](PyValue &self) { return self.maybeDownCast(); });
   PyBlockArgument::bind(m);

@@ -537,6 +537,8 @@ struct ConstantInliner {
   std::vector<MCInst> loadImplicitRegAndFinalize(unsigned Opcode,
                                                  unsigned Value);
 
+  std::vector<MCInst> loadDirectionFlagAndFinalize();
+
 private:
   ConstantInliner &add(const MCInst &Inst) {
     Instructions.push_back(Inst);
@@ -609,6 +611,15 @@ ConstantInliner::loadImplicitRegAndFinalize(unsigned Opcode, unsigned Value) {
           .addImm(0)        // Disp
           .addReg(0));      // Segment
   add(releaseStackSpace(4));
+  return std::move(Instructions);
+}
+
+std::vector<MCInst> ConstantInliner::loadDirectionFlagAndFinalize() {
+  if (Constant_.isZero())
+    add(MCInstBuilder(X86::CLD));
+  else if (Constant_.isOne())
+    add(MCInstBuilder(X86::STD));
+
   return std::move(Instructions);
 }
 
@@ -747,8 +758,8 @@ private:
   std::vector<MCInst> generateExitSyscall(unsigned ExitCode) const override;
 
   std::vector<MCInst>
-  generateMmap(intptr_t Address, size_t Length,
-               intptr_t FileDescriptorAddress) const override;
+  generateMmap(uintptr_t Address, size_t Length,
+               uintptr_t FileDescriptorAddress) const override;
 
   void generateMmapAuxMem(std::vector<MCInst> &GeneratedCode) const override;
 
@@ -758,7 +769,7 @@ private:
 
   std::vector<MCInst> setStackRegisterToAuxMem() const override;
 
-  intptr_t getAuxiliaryMemoryStartAddress() const override;
+  uintptr_t getAuxiliaryMemoryStartAddress() const override;
 
   std::vector<MCInst> configurePerfCounter(long Request, bool SaveRegisters) const override;
 
@@ -1054,18 +1065,22 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
   ConstantInliner CI(Value);
   if (X86::VR64RegClass.contains(Reg))
     return CI.loadAndFinalize(Reg, 64, X86::MMX_MOVQ64rm);
-  if (X86::VR128XRegClass.contains(Reg)) {
-    if (STI.getFeatureBits()[X86::FeatureAVX512])
-      return CI.loadAndFinalize(Reg, 128, X86::VMOVDQU32Z128rm);
+  if (X86::VR128RegClass.contains(Reg)) {
     if (STI.getFeatureBits()[X86::FeatureAVX])
       return CI.loadAndFinalize(Reg, 128, X86::VMOVDQUrm);
     return CI.loadAndFinalize(Reg, 128, X86::MOVDQUrm);
   }
+  if (X86::VR128XRegClass.contains(Reg)) {
+    if (STI.getFeatureBits()[X86::FeatureAVX512])
+      return CI.loadAndFinalize(Reg, 128, X86::VMOVDQU32Z128rm);
+  }
+  if (X86::VR256RegClass.contains(Reg)) {
+    if (STI.getFeatureBits()[X86::FeatureAVX])
+      return CI.loadAndFinalize(Reg, 256, X86::VMOVDQUYrm);
+  }
   if (X86::VR256XRegClass.contains(Reg)) {
     if (STI.getFeatureBits()[X86::FeatureAVX512])
       return CI.loadAndFinalize(Reg, 256, X86::VMOVDQU32Z256rm);
-    if (STI.getFeatureBits()[X86::FeatureAVX])
-      return CI.loadAndFinalize(Reg, 256, X86::VMOVDQUYrm);
   }
   if (X86::VR512RegClass.contains(Reg))
     if (STI.getFeatureBits()[X86::FeatureAVX512])
@@ -1085,15 +1100,17 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
         0x1f80);
   if (Reg == X86::FPCW)
     return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
+  if (Reg == X86::DF)
+    return CI.loadDirectionFlagAndFinalize();
   return {}; // Not yet implemented.
 }
 
 #ifdef __linux__
 
 #ifdef __arm__
-static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 void generateRoundToNearestPage(unsigned int Register,
@@ -1180,8 +1197,8 @@ ExegesisX86Target::generateExitSyscall(unsigned ExitCode) const {
 }
 
 std::vector<MCInst>
-ExegesisX86Target::generateMmap(intptr_t Address, size_t Length,
-                                intptr_t FileDescriptorAddress) const {
+ExegesisX86Target::generateMmap(uintptr_t Address, size_t Length,
+                                uintptr_t FileDescriptorAddress) const {
   std::vector<MCInst> MmapCode;
   MmapCode.push_back(loadImmediate(X86::RDI, 64, APInt(64, Address)));
   MmapCode.push_back(loadImmediate(X86::RSI, 64, APInt(64, Length)));
@@ -1249,7 +1266,7 @@ std::vector<MCInst> ExegesisX86Target::setStackRegisterToAuxMem() const {
                       SubprocessMemory::AuxiliaryMemorySize)};
 }
 
-intptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
+uintptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
   // Return the second to last page in the virtual address space to try and
   // prevent interference with memory annotations in the snippet
   return VAddressSpaceCeiling - 2 * getpagesize();

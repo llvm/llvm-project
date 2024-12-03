@@ -16,6 +16,10 @@ on:
         description: Release Version
         required: true
         type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
   # Run on pull_requests for testing purposes.
   pull_request:
     paths:

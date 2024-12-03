@@ -14,16 +14,13 @@
 #include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/ilist_iterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -33,7 +30,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/xxhash.h"
 
 #define DEBUG_TYPE "machine-stable-hash"
 
@@ -84,25 +80,33 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   }
 
   case MachineOperand::MO_MachineBasicBlock:
-    StableHashBailingMachineBasicBlock++;
+    ++StableHashBailingMachineBasicBlock;
     return 0;
   case MachineOperand::MO_ConstantPoolIndex:
-    StableHashBailingConstantPoolIndex++;
+    ++StableHashBailingConstantPoolIndex;
     return 0;
   case MachineOperand::MO_BlockAddress:
-    StableHashBailingBlockAddress++;
+    ++StableHashBailingBlockAddress;
     return 0;
   case MachineOperand::MO_Metadata:
-    StableHashBailingMetadataUnsupported++;
+    ++StableHashBailingMetadataUnsupported;
     return 0;
-  case MachineOperand::MO_GlobalAddress:
-    StableHashBailingGlobalAddress++;
-    return 0;
+  case MachineOperand::MO_GlobalAddress: {
+    const GlobalValue *GV = MO.getGlobal();
+    if (!GV->hasName()) {
+      ++StableHashBailingGlobalAddress;
+      return 0;
+    }
+    auto Name = GV->getName();
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               stable_hash_name(Name), MO.getOffset());
+  }
+
   case MachineOperand::MO_TargetIndex: {
     if (const char *Name = MO.getTargetIndexName())
       return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                                 xxh3_64bits(Name), MO.getOffset());
-    StableHashBailingTargetIndexNoName++;
+                                 stable_hash_name(Name), MO.getOffset());
+    ++StableHashBailingTargetIndexNoName;
     return 0;
   }
 
@@ -113,7 +117,8 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
 
   case MachineOperand::MO_ExternalSymbol:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               MO.getOffset(), xxh3_64bits(MO.getSymbolName()));
+                               MO.getOffset(),
+                               stable_hash_name(MO.getSymbolName()));
 
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
@@ -149,7 +154,7 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_MCSymbol: {
     auto SymbolName = MO.getMCSymbol()->getName();
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               xxh3_64bits(SymbolName));
+                               stable_hash_name(SymbolName));
   }
   case MachineOperand::MO_CFIIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),

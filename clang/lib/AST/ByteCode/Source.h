@@ -83,8 +83,12 @@ public:
   SourceLocation getLoc() const;
   SourceRange getRange() const;
 
-  const Stmt *asStmt() const { return Source.dyn_cast<const Stmt *>(); }
-  const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
+  const Stmt *asStmt() const {
+    return dyn_cast_if_present<const Stmt *>(Source);
+  }
+  const Decl *asDecl() const {
+    return dyn_cast_if_present<const Decl *>(Source);
+  }
   const Expr *asExpr() const;
 
   operator bool() const { return !Source.isNull(); }

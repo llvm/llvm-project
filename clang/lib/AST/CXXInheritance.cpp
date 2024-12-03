@@ -24,10 +24,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
-#include <utility>
 #include <cassert>
+#include <utility>
 #include <vector>
 
 using namespace clang;
@@ -135,7 +134,7 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
         return false;
 
       CXXRecordDecl *Base =
-            cast_or_null<CXXRecordDecl>(Ty->getDecl()->getDefinition());
+          cast_if_present<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!Base ||
           (Base->isDependentContext() &&
            !Base->isCurrentInstantiation(Record))) {
@@ -170,13 +169,21 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
     QualType BaseType =
         Context.getCanonicalType(BaseSpec.getType()).getUnqualifiedType();
 
+    bool isCurrentInstantiation = isa<InjectedClassNameType>(BaseType);
+    if (!isCurrentInstantiation) {
+      if (auto *BaseRecord = cast_if_present<CXXRecordDecl>(
+              BaseSpec.getType()->getAsRecordDecl()))
+        isCurrentInstantiation = BaseRecord->isDependentContext() &&
+                                 BaseRecord->isCurrentInstantiation(Record);
+    }
     // C++ [temp.dep]p3:
     //   In the definition of a class template or a member of a class template,
     //   if a base class of the class template depends on a template-parameter,
     //   the base class scope is not examined during unqualified name lookup
     //   either at the point of definition of the class template or member or
     //   during an instantiation of the class tem- plate or member.
-    if (!LookupInDependent && BaseType->isDependentType())
+    if (!LookupInDependent &&
+        (BaseType->isDependentType() && !isCurrentInstantiation))
       continue;
 
     // Determine whether we need to visit this base class at all,
@@ -244,9 +251,8 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
         return FoundPath;
       }
     } else if (VisitBase) {
-      CXXRecordDecl *BaseRecord;
+      CXXRecordDecl *BaseRecord = nullptr;
       if (LookupInDependent) {
-        BaseRecord = nullptr;
         const TemplateSpecializationType *TST =
             BaseSpec.getType()->getAs<TemplateSpecializationType>();
         if (!TST) {
@@ -259,16 +265,13 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
             BaseRecord = TD->getTemplatedDecl();
         }
         if (BaseRecord) {
-          if (!BaseRecord->hasDefinition() ||
-              VisitedDependentRecords.count(BaseRecord)) {
+          if (!BaseRecord->hasDefinition())
             BaseRecord = nullptr;
-          } else {
-            VisitedDependentRecords.insert(BaseRecord);
-          }
+          else if (!VisitedDependentRecords.insert(BaseRecord).second)
+            BaseRecord = nullptr;
         }
       } else {
-        BaseRecord = cast<CXXRecordDecl>(
-            BaseSpec.getType()->castAs<RecordType>()->getDecl());
+        BaseRecord = cast<CXXRecordDecl>(BaseSpec.getType()->getAsRecordDecl());
       }
       if (BaseRecord &&
           lookupInBases(Context, BaseRecord, BaseMatches, LookupInDependent)) {

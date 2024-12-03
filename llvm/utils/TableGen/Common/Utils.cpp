@@ -27,7 +27,7 @@ struct LessRecordFieldNameAndID {
 
 /// Sort an array of Records on the "Name" field, and check for records with
 /// duplicate "Name" field. If duplicates are found, report a fatal error.
-void llvm::sortAndReportDuplicates(MutableArrayRef<Record *> Records,
+void llvm::sortAndReportDuplicates(MutableArrayRef<const Record *> Records,
                                    StringRef ObjectName) {
   llvm::sort(Records, LessRecordFieldNameAndID());
 

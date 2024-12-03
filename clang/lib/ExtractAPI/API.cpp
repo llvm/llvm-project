@@ -150,11 +150,13 @@ void APISet::removeRecord(StringRef USR) {
       if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record))
         ParentCtx->stealRecordChain(*RecordAsCtx);
     } else {
-      TopLevelRecords.erase(Record);
+      auto *It = llvm::find(TopLevelRecords, Record);
+      if (It != TopLevelRecords.end())
+        TopLevelRecords.erase(It);
       if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record)) {
         for (const auto *Child = RecordAsCtx->First; Child != nullptr;
              Child = Child->getNextInContext())
-          TopLevelRecords.insert(Child);
+          TopLevelRecords.push_back(Child);
       }
     }
     USRBasedLookupTable.erase(Result);

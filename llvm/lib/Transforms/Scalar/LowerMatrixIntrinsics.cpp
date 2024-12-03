@@ -323,10 +323,11 @@ class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
-  AliasAnalysis *AA;
-  DominatorTree *DT;
-  LoopInfo *LI;
-  OptimizationRemarkEmitter *ORE;
+  FunctionAnalysisManager *AM;
+  AliasAnalysis *AA = nullptr;
+  DominatorTree *DT = nullptr;
+  LoopInfo *LI = nullptr;
+  OptimizationRemarkEmitter *ORE = nullptr;
 
   /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
   struct OpInfoTy {
@@ -519,10 +520,8 @@ private:
 
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
-                        AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI,
-                        OptimizationRemarkEmitter *ORE)
-      : Func(F), DL(F.getDataLayout()), TTI(TTI), AA(AA), DT(DT),
-        LI(LI), ORE(ORE) {}
+                        FunctionAnalysisManager *AM)
+      : Func(F), DL(F.getDataLayout()), TTI(TTI), AM(AM) {}
 
   unsigned getNumOps(Type *VT) {
     assert(isa<VectorType>(VT) && "Expected vector type");
@@ -974,6 +973,13 @@ public:
     if (WorkList.empty())
       return false;
 
+    if (AM) {
+      ORE = &AM->getResult<OptimizationRemarkEmitterAnalysis>(Func);
+      AA = &AM->getResult<AAManager>(Func);
+      DT = &AM->getResult<DominatorTreeAnalysis>(Func);
+      LI = &AM->getResult<LoopAnalysis>(Func);
+    }
+
     // Propagate shapes until nothing changes any longer.
     while (!WorkList.empty()) {
       WorkList = propagateShapeForward(WorkList);
@@ -1014,7 +1020,8 @@ public:
 
     // Third, try to fuse candidates.
     for (CallInst *CI : MaybeFusableInsts)
-      LowerMatrixMultiplyFused(CI, FusedInsts, LifetimeEnds);
+      if (!FusedInsts.contains(CI))
+        LowerMatrixMultiplyFused(CI, FusedInsts, LifetimeEnds);
 
     Changed = !FusedInsts.empty();
 
@@ -1290,9 +1297,8 @@ public:
       if (AllowContraction) {
         // Use fmuladd for floating point operations and let the backend decide
         // if that's profitable.
-        Function *FMulAdd = Intrinsic::getDeclaration(
-            Func.getParent(), Intrinsic::fmuladd, A->getType());
-        return Builder.CreateCall(FMulAdd, {A, B, Sum});
+        return Builder.CreateIntrinsic(Intrinsic::fmuladd, A->getType(),
+                                       {A, B, Sum});
       }
       NumComputeOps += getNumOps(A->getType());
       Value *Mul = Builder.CreateFMul(A, B);
@@ -1380,7 +1386,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost +=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 std::nullopt, TTI::TCK_RecipThroughput);
+                                 {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1402,7 +1408,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost -=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 std::nullopt, TTI::TCK_RecipThroughput);
+                                 {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1463,9 +1469,12 @@ public:
       if (!CanBeFlattened(Op))
         return;
 
-      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
-        ShapeMap[Op] = ShapeMap[Op].t();
-        return;
+      if (match(Op, m_BinOp())) {
+        auto It = ShapeMap.find(Op);
+        if (It != ShapeMap.end()) {
+          It->second = It->second.t();
+          return;
+        }
       }
 
       FusedInsts.insert(cast<Instruction>(Op));
@@ -2306,7 +2315,6 @@ public:
         default:
           llvm_unreachable("Unhandled case");
         }
-        SS.flush();
         write(Tmp);
       }
     }
@@ -2361,7 +2369,6 @@ public:
         else
           TmpStream << "scalar";
       }
-      TmpStream.flush();
       Tmp = std::string(StringRef(Tmp).trim());
       LineLength += Tmp.size();
       Stream << Tmp;
@@ -2435,7 +2442,6 @@ public:
     }
 
     const std::string &getResult() {
-      Stream.flush();
       return Str;
     }
   };
@@ -2489,8 +2495,7 @@ public:
       if (!ExprsInSubprogram.count(V))
         return;
 
-      auto I = Shared.insert({V, {}});
-      I.first->second.insert(Leaf);
+      Shared[V].insert(Leaf);
 
       for (Value *Op : cast<Instruction>(V)->operand_values())
         collectSharedInfo(Leaf, Op, ExprsInSubprogram, Shared);
@@ -2541,14 +2546,12 @@ public:
           auto *I = cast<Instruction>(KV.first);
           DILocation *Context = I->getDebugLoc();
           while (Context) {
-            auto I =
-                Subprog2Exprs.insert({getSubprogram(Context->getScope()), {}});
-            I.first->second.push_back(KV.first);
+            Subprog2Exprs[getSubprogram(Context->getScope())].push_back(
+                KV.first);
             Context = DebugLoc(Context).getInlinedAt();
           }
         } else {
-          auto I = Subprog2Exprs.insert({nullptr, {}});
-          I.first->second.push_back(KV.first);
+          Subprog2Exprs[nullptr].push_back(KV.first);
         }
       }
       for (auto &KV : Subprog2Exprs) {
@@ -2621,19 +2624,8 @@ public:
 PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  OptimizationRemarkEmitter *ORE = nullptr;
-  AAResults *AA = nullptr;
-  DominatorTree *DT = nullptr;
-  LoopInfo *LI = nullptr;
 
-  if (!Minimal) {
-    ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    AA = &AM.getResult<AAManager>(F);
-    DT = &AM.getResult<DominatorTreeAnalysis>(F);
-    LI = &AM.getResult<LoopAnalysis>(F);
-  }
-
-  LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
+  LowerMatrixIntrinsics LMT(F, TTI, Minimal ? nullptr : &AM);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
     if (!Minimal) {

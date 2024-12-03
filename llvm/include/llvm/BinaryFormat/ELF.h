@@ -811,7 +811,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F   = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_GFX950          = 0x04f,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50   = 0x050,
   EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
   EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
@@ -820,13 +820,14 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56   = 0x056,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X58   = 0x058,
+  EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
   EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
+  EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC  = 0x05f,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1129,6 +1130,7 @@ enum : unsigned {
   SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
   SHT_LLVM_LTO = 0x6fff4c0c,                // .llvm.lto for fat LTO.
+  SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.

@@ -103,7 +103,7 @@ float defined_func_f32(float a, float b, float c) {
 // CFINITEONLY-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = call nnan ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// CFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// CFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // CFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -111,7 +111,7 @@ float defined_func_f32(float a, float b, float c) {
 // CLFINITEONLY-SAME: (<2 x double> noundef nofpclass(nan inf) [[A:%.*]], <2 x double> noundef nofpclass(nan inf) [[B:%.*]], <2 x double> noundef nofpclass(nan inf) [[C:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[A]], <2 x double> [[B]], <2 x double> [[C]])
-// CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP0]], <double 4.000000e+00, double 4.000000e+00>
+// CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP0]], splat (double 4.000000e+00)
 // CLFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
@@ -128,7 +128,7 @@ float defined_func_f32(float a, float b, float c) {
 // NONANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // NONANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // NONANS-NEXT:    [[TMP3:%.*]] = call nnan <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// NONANS-NEXT:    [[ADD:%.*]] = fadd nnan <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// NONANS-NEXT:    [[ADD:%.*]] = fadd nnan <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // NONANS-NEXT:    ret <2 x double> [[ADD]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
@@ -145,7 +145,7 @@ float defined_func_f32(float a, float b, float c) {
 // NOINFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // NOINFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // NOINFS-NEXT:    [[TMP3:%.*]] = call ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// NOINFS-NEXT:    [[ADD:%.*]] = fadd ninf <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// NOINFS-NEXT:    [[ADD:%.*]] = fadd ninf <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // NOINFS-NEXT:    ret <2 x double> [[ADD]]
 //
 double2 defined_func_v2f64(double2 a, double2 b, double2 c) {
@@ -519,7 +519,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) { double, double } @defined_complex_func_f64_ret
 // CFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[C_COERCE0:%.*]], double noundef nofpclass(nan inf) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -548,7 +548,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CFINITEONLY-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan ninf uno double [[MUL_I]], [[MUL_I]]
 // CFINITEONLY-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // CFINITEONLY:       complex_mul_libcall:
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan inf) [[C_REAL]], double noundef nofpclass(nan inf) [[C_IMAG]], double noundef nofpclass(nan inf) [[C_REAL2]], double noundef nofpclass(nan inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) { double, double } @__muldc3(double noundef nofpclass(nan inf) [[C_REAL]], double noundef nofpclass(nan inf) [[C_IMAG]], double noundef nofpclass(nan inf) [[C_REAL2]], double noundef nofpclass(nan inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // CFINITEONLY-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -563,7 +563,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CFINITEONLY-NEXT:    ret { double, double } [[TMP4]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-// CLFINITEONLY-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) { double, double } @defined_complex_func_f64_ret
 // CLFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[C_COERCE0:%.*]], double noundef nofpclass(nan inf) [[C_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[MUL_AD:%.*]] = fmul nnan ninf double [[C_COERCE0]], [[C_COERCE1]]
@@ -576,7 +576,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CLFINITEONLY-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// NONANS-LABEL: define dso_local nofpclass(nan) { double, double } @defined_complex_func_f64_ret
 // NONANS-SAME: (double noundef nofpclass(nan) [[C_COERCE0:%.*]], double noundef nofpclass(nan) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -605,7 +605,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NONANS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan uno double [[MUL_I]], [[MUL_I]]
 // NONANS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NONANS:       complex_mul_libcall:
-// NONANS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan) [[C_REAL]], double noundef nofpclass(nan) [[C_IMAG]], double noundef nofpclass(nan) [[C_REAL2]], double noundef nofpclass(nan) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) { double, double } @__muldc3(double noundef nofpclass(nan) [[C_REAL]], double noundef nofpclass(nan) [[C_IMAG]], double noundef nofpclass(nan) [[C_REAL2]], double noundef nofpclass(nan) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NONANS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NONANS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NONANS-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -620,7 +620,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NONANS-NEXT:    ret { double, double } [[TMP4]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// NOINFS-LABEL: define dso_local nofpclass(inf) { double, double } @defined_complex_func_f64_ret
 // NOINFS-SAME: (double noundef nofpclass(inf) [[C_COERCE0:%.*]], double noundef nofpclass(inf) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -649,7 +649,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NOINFS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp ninf uno double [[MUL_I]], [[MUL_I]]
 // NOINFS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NOINFS:       complex_mul_libcall:
-// NOINFS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(inf) [[C_REAL]], double noundef nofpclass(inf) [[C_IMAG]], double noundef nofpclass(inf) [[C_REAL2]], double noundef nofpclass(inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) { double, double } @__muldc3(double noundef nofpclass(inf) [[C_REAL]], double noundef nofpclass(inf) [[C_IMAG]], double noundef nofpclass(inf) [[C_REAL2]], double noundef nofpclass(inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NOINFS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NOINFS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NOINFS-NEXT:    br label [[COMPLEX_MUL_CONT]]

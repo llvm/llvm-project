@@ -17,7 +17,6 @@
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
-#include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
@@ -25,10 +24,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -58,7 +54,7 @@ static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
 static cl::opt<unsigned>
     NSAThreshold("amdgpu-nsa-threshold",
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
-                 cl::init(3), cl::Hidden);
+                 cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
 
@@ -104,14 +100,16 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (Gen == AMDGPUSubtarget::INVALID) {
     Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
-  }
-
-  if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
-      !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    // Assume wave64 for the unknown target, if not explicitly set.
+    if (getWavefrontSizeLog2() == 0)
+      WavefrontSizeLog2 = 6;
+  } else if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
+             !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     // If there is no default wave size it must be a generation before gfx10,
     // these have FeatureWavefrontSize64 in their definition already. For gfx10+
     // set wave32 as a default.
     ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    WavefrontSizeLog2 = getGeneration() >= AMDGPUSubtarget::GFX10 ? 5 : 6;
   }
 
   // We don't support FP64 for EG/NI atm.
@@ -143,18 +141,13 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.getArch() == Triple::amdgcn && LocalMemorySize == 0)
-    LocalMemorySize = 32768;
+  if (TT.getArch() == Triple::amdgcn && AddressableLocalMemorySize == 0)
+    AddressableLocalMemorySize = 32768;
 
-  AddressableLocalMemorySize = LocalMemorySize;
-
+  LocalMemorySize = AddressableLocalMemorySize;
   if (AMDGPU::isGFX10Plus(*this) &&
       !getFeatureBits().test(AMDGPU::FeatureCuMode))
     LocalMemorySize *= 2;
-
-  // Don't crash on invalid devices.
-  if (WavefrontSizeLog2 == 0)
-    WavefrontSizeLog2 = 5;
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -171,7 +164,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   LLVMContext &Ctx = F.getContext();
-  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) &&
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
@@ -708,7 +701,7 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   if (Value > 0)
     return std::max(Value, 2);
 
-  return 3;
+  return NSAThreshold;
 }
 
 GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,

@@ -303,6 +303,8 @@ defm SPV_INTEL_cache_controls : ExtensionOperand<108>;
 defm SPV_INTEL_global_variable_host_access : ExtensionOperand<109>;
 defm SPV_INTEL_global_variable_fpga_decorations : ExtensionOperand<110>;
 defm SPV_KHR_cooperative_matrix : ExtensionOperand<111>;
+defm SPV_EXT_arithmetic_fence : ExtensionOperand<112>;
+defm SPV_EXT_optnone : ExtensionOperand<113>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -354,7 +356,9 @@ defm GeometryPointSize : CapabilityOperand<24, 0, 0, [], [Geometry]>;
 defm ImageGatherExtended : CapabilityOperand<25, 0, 0, [], [Shader]>;
 defm StorageImageMultisample : CapabilityOperand<27, 0, 0, [], [Shader]>;
 defm UniformBufferArrayDynamicIndexing : CapabilityOperand<28, 0, 0, [], [Shader]>;
-defm SampledImageArrayDymnamicIndexing : CapabilityOperand<29, 0, 0, [], [Shader]>;
+defm SampledImageArrayDynamicIndexing : CapabilityOperand<29, 0, 0, [], [Shader]>;
+defm StorageBufferArrayDynamicIndexing : CapabilityOperand<30, 0, 0, [], [Shader]>;
+defm StorageImageArrayDynamicIndexing : CapabilityOperand<31, 0, 0, [], [Shader]>;
 defm ClipDistance : CapabilityOperand<32, 0, 0, [], [Shader]>;
 defm CullDistance : CapabilityOperand<33, 0, 0, [], [Shader]>;
 defm SampleRateShading : CapabilityOperand<35, 0, 0, [], [Shader]>;
@@ -443,7 +447,7 @@ defm RayTracingNV : CapabilityOperand<5340, 0, 0, [], [Shader]>;
 defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [SPV_INTEL_subgroups], []>;
-defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [], []>;
+defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [SPV_INTEL_media_block_io], []>;
 defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationChromaINTEL : CapabilityOperand<5698, 0, 0, [], []>;
@@ -453,17 +457,23 @@ defm VulkanMemoryModelDeviceScopeKHR : CapabilityOperand<5346, 0, 0, [], []>;
 defm ImageFootprintNV : CapabilityOperand<5282, 0, 0, [], []>;
 defm FragmentBarycentricNV : CapabilityOperand<5284, 0, 0, [], []>;
 defm ComputeDerivativeGroupQuadsNV : CapabilityOperand<5288, 0, 0, [], []>;
+defm DemoteToHelperInvocation : CapabilityOperand<5379, 0x10600, 0, [SPV_EXT_demote_to_helper_invocation], []>;
 defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
 defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shader]>;
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
 defm ArbitraryPrecisionIntegersINTEL : CapabilityOperand<5844, 0, 0, [SPV_INTEL_arbitrary_precision_integers], [Int8, Int16]>;
 defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
+defm OptNoneEXT : CapabilityOperand<6094, 0, 0, [SPV_EXT_optnone], []>;
 defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions], []>;
 defm ExpectAssumeKHR : CapabilityOperand<5629, 0, 0, [SPV_KHR_expect_assume], []>;
 defm FunctionPointersINTEL : CapabilityOperand<5603, 0, 0, [SPV_INTEL_function_pointers], []>;
 defm IndirectReferencesINTEL : CapabilityOperand<5604, 0, 0, [SPV_INTEL_function_pointers], []>;
 defm AsmINTEL : CapabilityOperand<5606, 0, 0, [SPV_INTEL_inline_assembly], []>;
+defm DotProductInputAll : CapabilityOperand<6016, 0x10600, 0, [SPV_KHR_integer_dot_product], []>;
+defm DotProductInput4x8Bit : CapabilityOperand<6017, 0x10600, 0, [SPV_KHR_integer_dot_product], [Int8]>;
+defm DotProductInput4x8BitPacked : CapabilityOperand<6018, 0x10600, 0, [SPV_KHR_integer_dot_product], []>;
+defm DotProduct : CapabilityOperand<6019, 0x10600, 0, [SPV_KHR_integer_dot_product], []>;
 defm GroupNonUniformRotateKHR : CapabilityOperand<6026, 0, 0, [SPV_KHR_subgroup_rotate], [GroupNonUniform]>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
@@ -480,6 +490,8 @@ defm HostAccessINTEL : CapabilityOperand<6188, 0, 0, [SPV_INTEL_global_variable_
 defm GlobalVariableFPGADecorationsINTEL : CapabilityOperand<6189, 0, 0, [SPV_INTEL_global_variable_fpga_decorations], []>;
 defm CacheControlsINTEL : CapabilityOperand<6441, 0, 0, [SPV_INTEL_cache_controls], []>;
 defm CooperativeMatrixKHR : CapabilityOperand<6022, 0, 0, [SPV_KHR_cooperative_matrix], []>;
+defm ArithmeticFenceEXT : CapabilityOperand<6144, 0, 0, [SPV_EXT_arithmetic_fence], []>;
+defm SplitBarrierINTEL : CapabilityOperand<6141, 0, 0, [SPV_INTEL_split_barrier], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1094,6 +1106,7 @@ multiclass AccessQualifierOperand<bits<32> value, list<Capability> reqCapabiliti
 defm ReadOnly : AccessQualifierOperand<0, [Kernel]>;
 defm WriteOnly : AccessQualifierOperand<1, [Kernel]>;
 defm ReadWrite : AccessQualifierOperand<2, [Kernel]>;
+defm None : AccessQualifierOperand<3, []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FunctionParameterAttribute enum values and at the
@@ -1422,6 +1435,7 @@ defm Inline : FunctionControlOperand<0x1>;
 defm DontInline : FunctionControlOperand<0x2>;
 defm Pure : FunctionControlOperand<0x4>;
 defm Const : FunctionControlOperand<0x8>;
+defm OptNoneEXT : FunctionControlOperand<0x10000>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemorySemantics enum values and at the same time
@@ -1628,8 +1642,10 @@ multiclass OpcodeOperand<bits<32> value> {
   defm : SymbolicOperandWithRequirements<OpcodeOperand, value, NAME, 0, 0, [], []>;
 }
 // TODO: implement other mnemonics.
+defm InBoundsAccessChain : OpcodeOperand<66>;
 defm InBoundsPtrAccessChain : OpcodeOperand<70>;
 defm PtrCastToGeneric : OpcodeOperand<121>;
+defm GenericCastToPtr : OpcodeOperand<122>;
 defm Bitcast : OpcodeOperand<124>;
 defm ConvertPtrToU : OpcodeOperand<117>;
 defm ConvertUToPtr : OpcodeOperand<120>;

@@ -172,7 +172,6 @@ TEST(ConstantsTest, PointerCast) {
     Instruction *__I = cast<ConstantExpr>(x)->getAsInstruction();              \
     __I->print(__o);                                                           \
     __I->deleteValue();                                                        \
-    __o.flush();                                                               \
     EXPECT_EQ(std::string("  <badref> = " y), __s);                            \
   }
 

@@ -1637,40 +1637,41 @@ enum CPUSubTypeARM {
   CPU_SUBTYPE_ARM_V7EM = 16
 };
 
-enum CPUSubTypeARM64 {
+enum CPUSubTypeARM64 : uint32_t {
   CPU_SUBTYPE_ARM64_ALL = 0,
   CPU_SUBTYPE_ARM64_V8 = 1,
   CPU_SUBTYPE_ARM64E = 2,
 
   // arm64e uses the capability bits to encode ptrauth ABI information.
   // Bit 63 marks the binary as Versioned.
-  CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK = 0x80000000,
+  CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK = 0x80000000U,
   // Bit 62 marks the binary as using a kernel ABI.
-  CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK = 0x40000000,
+  CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK = 0x40000000U,
   // Bits [59:56] hold the 4-bit ptrauth ABI version.
-  CPU_SUBTYPE_ARM64E_PTRAUTH_MASK = 0x0f000000,
+  CPU_SUBTYPE_ARM64E_PTRAUTH_MASK = 0x0f000000U,
 };
 
-inline int CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(unsigned ST) {
+inline unsigned CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(uint32_t ST) {
   return (ST & CPU_SUBTYPE_ARM64E_PTRAUTH_MASK) >> 24;
 }
 
-inline unsigned
+inline uint32_t
 CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(unsigned PtrAuthABIVersion,
                                         bool PtrAuthKernelABIVersion) {
   assert((PtrAuthABIVersion <= 0xF) &&
          "ptrauth abi version must fit in 4 bits");
   return CPU_SUBTYPE_ARM64E | CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK |
-         (PtrAuthKernelABIVersion ? CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK
-                                  : 0) |
+         (PtrAuthKernelABIVersion
+              ? (uint32_t)CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK
+              : 0) |
          (PtrAuthABIVersion << 24);
 }
 
-inline unsigned CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(unsigned ST) {
+inline bool CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(uint32_t ST) {
   return ST & CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK;
 }
 
-inline unsigned CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(unsigned ST) {
+inline bool CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(uint32_t ST) {
   return ST & CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK;
 }
 

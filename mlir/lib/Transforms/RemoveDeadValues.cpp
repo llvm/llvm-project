@@ -191,10 +191,10 @@ static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
 ///   non-live across all callers),
 ///   (5) Dropping the uses of these return values from its callers, AND
 ///   (6) Erasing these return values
-/// iff it is not public.
+/// iff it is not public or declaration.
 static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
                         RunLivenessAnalysis &la) {
-  if (funcOp.isPublic())
+  if (funcOp.isPublic() || funcOp.isDeclaration())
     return;
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
@@ -573,21 +573,19 @@ void RemoveDeadValues::runOnOperation() {
   Operation *module = getOperation();
 
   // The removal of non-live values is performed iff there are no branch ops,
-  // all symbol ops present in the IR are function-like, and all symbol user ops
-  // present in the IR are call-like.
+  // and all symbol user ops present in the IR are call-like.
   WalkResult acceptableIR = module->walk([&](Operation *op) {
-    if (isa<BranchOpInterface>(op) ||
-        (isa<SymbolOpInterface>(op) && !isa<FunctionOpInterface>(op)) ||
-        (isa<SymbolUserOpInterface>(op) && !isa<CallOpInterface>(op))) {
-      op->emitError() << "cannot optimize an IR with non-function symbol ops, "
-                         "non-call symbol user ops or branch ops\n";
+    if (op == module)
+      return WalkResult::advance();
+    if (isa<BranchOpInterface>(op)) {
+      op->emitError() << "cannot optimize an IR with branch ops\n";
       return WalkResult::interrupt();
     }
     return WalkResult::advance();
   });
 
   if (acceptableIR.wasInterrupted())
-    return;
+    return signalPassFailure();
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {

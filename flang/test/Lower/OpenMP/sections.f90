@@ -83,7 +83,7 @@ end program sample
 !CHECK:   %[[PRIVATE_ALPHA:.*]] = fir.alloca f32 {bindc_name = "alpha", pinned, uniq_name = "_QFfirstprivateEalpha"}
 !CHECK:   %[[PRIVATE_ALPHA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ALPHA]] {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[TEMP:.*]] = fir.load %[[ARG_DECL]]#0 : !fir.ref<f32>
-!CHECK:   hlfir.assign %[[TEMP]] to %[[PRIVATE_ALPHA_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
+!CHECK:   hlfir.assign %[[TEMP]] to %[[PRIVATE_ALPHA_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:   omp.sections {
 !CHECK:     omp.section  {
 !CHECK:       omp.terminator
@@ -138,7 +138,7 @@ subroutine lastprivate()
 !CHECK: %[[RESULT:.*]] = arith.addi %[[TEMP]], %[[CONST]] : i32
 !CHECK: hlfir.assign %[[RESULT]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[TEMP1:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[TEMP1]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[TEMP1]] to %[[X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.terminator
 !CHECK: }
         !$omp section
@@ -150,7 +150,7 @@ subroutine lastprivate()
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.barrier
 !CHECK: omp.sections {
     !$omp sections firstprivate(x) lastprivate(x)
@@ -169,7 +169,7 @@ subroutine lastprivate()
 !CHECK: %[[RESULT:.*]] = arith.addi %[[TEMP]], %[[CONST]] : i32
 !CHECK: hlfir.assign %[[RESULT]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.terminator
 !CHECK: }
         !$omp section
@@ -181,7 +181,7 @@ subroutine lastprivate()
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.barrier
 !CHECK: omp.sections nowait {
     !$omp sections firstprivate(x) lastprivate(x)
@@ -200,7 +200,7 @@ subroutine lastprivate()
 !CHECK: %[[RESULT:.*]] = arith.addi %[[TEMP]], %[[CONST]] : i32
 !CHECK: hlfir.assign %[[RESULT]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.terminator
 !CHECK: }
         !$omp section
@@ -221,7 +221,7 @@ subroutine lastprivate()
 !CHECK: %[[RESULT:.*]] = arith.addi %[[INNER_PRIVATE_X]], %[[CONST]] : i32
 !CHECK: hlfir.assign %[[RESULT]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[LOADED_VALUE:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
-!CHECK: hlfir.assign %[[LOADED_VALUE]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[LOADED_VALUE]] to %[[X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.terminator
 !CHECK: }
 !CHECK: omp.terminator
@@ -247,9 +247,9 @@ end subroutine
 !CHECK: omp.sections {
 !CHECK:   omp.section {
 !CHECK:     %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
-!CHECK:     hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK:     hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:     %[[TEMP2:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<i32>
-!CHECK:     hlfir.assign %[[TEMP2]] to %[[Y_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK:     hlfir.assign %[[TEMP2]] to %[[Y_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:     omp.terminator
 !CHECK:   }
 !CHECK:   omp.terminator
@@ -289,7 +289,7 @@ subroutine unstructured_sections_privatization()
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFunstructured_sections_privatizationEx"}
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFunstructured_sections_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
-!CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
+!CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK: omp.sections {
 !CHECK: omp.section {
 !CHECK: cf.br ^bb1

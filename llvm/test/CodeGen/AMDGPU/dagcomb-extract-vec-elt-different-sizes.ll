@@ -6,14 +6,14 @@
 define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg5, ptr %arg6, ptr %arg7, ptr %arg8, ptr %arg9) {
 ; CHECK-LABEL: eggs:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x0
-; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[6:7], 0x8
+; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
+; CHECK-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x8
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp0_b32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb10
-; CHECK-NEXT:    global_load_dwordx2 v[8:9], v0, s[8:9]
+; CHECK-NEXT:    global_load_dwordx2 v[8:9], v0, s[12:13]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v7, 0xff, v8
 ; CHECK-NEXT:    v_bfe_u32 v6, v8, 8, 8
@@ -33,21 +33,21 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0
 ; CHECK-NEXT:  .LBB0_3: ; %bb41
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x48
-; CHECK-NEXT:    v_mov_b32_e32 v8, s10
-; CHECK-NEXT:    v_mov_b32_e32 v9, s11
-; CHECK-NEXT:    v_mov_b32_e32 v10, s12
-; CHECK-NEXT:    v_mov_b32_e32 v11, s13
-; CHECK-NEXT:    v_mov_b32_e32 v12, s14
-; CHECK-NEXT:    v_mov_b32_e32 v13, s15
-; CHECK-NEXT:    v_mov_b32_e32 v14, s16
-; CHECK-NEXT:    v_mov_b32_e32 v15, s17
-; CHECK-NEXT:    v_mov_b32_e32 v16, s18
-; CHECK-NEXT:    v_mov_b32_e32 v17, s19
-; CHECK-NEXT:    v_mov_b32_e32 v18, s20
-; CHECK-NEXT:    v_mov_b32_e32 v19, s21
-; CHECK-NEXT:    v_mov_b32_e32 v20, s22
-; CHECK-NEXT:    v_mov_b32_e32 v21, s23
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x48
+; CHECK-NEXT:    v_mov_b32_e32 v8, s14
+; CHECK-NEXT:    v_mov_b32_e32 v9, s15
+; CHECK-NEXT:    v_mov_b32_e32 v10, s16
+; CHECK-NEXT:    v_mov_b32_e32 v11, s17
+; CHECK-NEXT:    v_mov_b32_e32 v12, s18
+; CHECK-NEXT:    v_mov_b32_e32 v13, s19
+; CHECK-NEXT:    v_mov_b32_e32 v14, s20
+; CHECK-NEXT:    v_mov_b32_e32 v15, s21
+; CHECK-NEXT:    v_mov_b32_e32 v16, s22
+; CHECK-NEXT:    v_mov_b32_e32 v17, s23
+; CHECK-NEXT:    v_mov_b32_e32 v18, s24
+; CHECK-NEXT:    v_mov_b32_e32 v19, s25
+; CHECK-NEXT:    v_mov_b32_e32 v20, s26
+; CHECK-NEXT:    v_mov_b32_e32 v21, s27
 ; CHECK-NEXT:    flat_store_byte v[8:9], v7
 ; CHECK-NEXT:    flat_store_byte v[10:11], v6
 ; CHECK-NEXT:    flat_store_byte v[12:13], v5

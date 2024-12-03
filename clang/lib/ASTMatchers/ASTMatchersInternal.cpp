@@ -655,7 +655,9 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
 
     PrintingPolicy Policy = Node.getASTContext().getPrintingPolicy();
     Policy.SuppressUnwrittenScope = SkipUnwritten;
-    Policy.SuppressInlineNamespace = SkipUnwritten;
+    Policy.SuppressInlineNamespace =
+        SkipUnwritten ? PrintingPolicy::SuppressInlineNamespaceMode::All
+                      : PrintingPolicy::SuppressInlineNamespaceMode::None;
     Node.printQualifiedName(OS, Policy);
 
     const StringRef FullName = OS.str();
@@ -797,6 +799,7 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, ExportDecl> exportDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConstructorDecl>
     cxxConstructorDecl;

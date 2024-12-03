@@ -47,7 +47,7 @@ struct LVSymbolTableEntry final {
 
 // Function names extracted from the object symbol table.
 class LVSymbolTable final {
-  using LVSymbolNames = std::map<std::string, LVSymbolTableEntry>;
+  using LVSymbolNames = std::map<std::string, LVSymbolTableEntry, std::less<>>;
   LVSymbolNames SymbolNames;
 
 public:

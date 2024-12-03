@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -27,6 +28,13 @@ BasicBlock *getBlockByName(Function *F, StringRef name) {
   for (auto &BB : *F)
     if (BB.getName() == name)
       return &BB;
+  return nullptr;
+}
+
+Instruction *getInstByName(Function *F, StringRef Name) {
+  for (Instruction &I : instructions(F))
+    if (I.getName() == Name)
+      return &I;
   return nullptr;
 }
 
@@ -513,16 +521,127 @@ TEST(CodeExtractor, PartialAggregateArgs) {
     target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
     target triple = "x86_64-unknown-linux-gnu"
 
-    declare void @use(i32)
+    ; use different types such that an index mismatch will result in a type mismatch during verification.
+    declare void @use16(i16)
+    declare void @use32(i32)
+    declare void @use64(i64)
 
-    define void @foo(i32 %a, i32 %b, i32 %c) {
+    define void @foo(i16 %a, i32 %b, i64 %c) {
     entry:
       br label %extract
 
     extract:
-      call void @use(i32 %a)
-      call void @use(i32 %b)
-      call void @use(i32 %c)
+      call void @use16(i16 %a)
+      call void @use32(i32 %b)
+      call void @use64(i64 %c)
+      %d = add i16 21, 21
+      %e = add i32 21, 21
+      %f = add i64 21, 21
+      br label %exit
+
+    exit:
+      call void @use16(i16 %d)
+      call void @use32(i32 %e)
+      call void @use64(i64 %f)
+      ret void
+    }
+  )ir",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
+
+  // Create the CodeExtractor with arguments aggregation enabled.
+  CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
+                   /* AggregateArgs */ true);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
+  CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
+  CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
+  // Exclude the middle input and output from the argument aggregate.
+  CE.excludeArgFromAggregate(Inputs[1]);
+  CE.excludeArgFromAggregate(Outputs[1]);
+
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+  // Expect 3 arguments in the outlined function: the excluded input, the
+  // excluded output, and the struct aggregate for the remaining inputs.
+  EXPECT_EQ(Outlined->arg_size(), 3U);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
+TEST(CodeExtractor, AllocaBlock) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    define i32 @foo(i32 %x, i32 %y, i32 %z) {
+    entry:
+      br label %allocas
+
+    allocas:
+      br label %body
+
+    body:
+      %w = add i32 %x, %y
+      br label %notExtracted
+
+    notExtracted:
+      %r = add i32 %w, %x
+      ret i32 %r
+    }
+  )invalid",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 3> Candidates{getBlockByName(Func, "body")};
+
+  BasicBlock *AllocaBlock = getBlockByName(Func, "allocas");
+  CodeExtractor CE(Candidates, nullptr, true, nullptr, nullptr, nullptr, false,
+                   false, AllocaBlock);
+  CE.excludeArgFromAggregate(Func->getArg(0));
+  CE.excludeArgFromAggregate(getInstByName(Func, "w"));
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs;
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+
+  // The only added allocas may be in the dedicated alloca block. There should
+  // be one alloca for the struct, and another one for the reload value.
+  int NumAllocas = 0;
+  for (Instruction &I : instructions(Func)) {
+    if (!isa<AllocaInst>(I))
+      continue;
+    EXPECT_EQ(I.getParent(), AllocaBlock);
+    NumAllocas += 1;
+  }
+  EXPECT_EQ(NumAllocas, 2);
+}
+
+/// Regression test to ensure we don't crash trying to set the name of the ptr
+/// argument
+TEST(CodeExtractor, PartialAggregateArgs2) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+    declare void @usei(i32)
+    declare void @usep(ptr)
+
+    define void @foo(i32 %a, i32 %b, ptr %p) {
+    entry:
+      br label %extract
+
+    extract:
+      call void @usei(i32 %a)
+      call void @usei(i32 %b)
+      call void @usep(ptr %p)
       br label %exit
 
     exit:
@@ -544,14 +663,11 @@ TEST(CodeExtractor, PartialAggregateArgs) {
   BasicBlock *CommonExit = nullptr;
   CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
-  // Exclude the first input from the argument aggregate.
-  CE.excludeArgFromAggregate(Inputs[0]);
+  // Exclude the last input from the argument aggregate.
+  CE.excludeArgFromAggregate(Inputs[2]);
 
   Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
   EXPECT_TRUE(Outlined);
-  // Expect 2 arguments in the outlined function: the excluded input and the
-  // struct aggregate for the remaining inputs.
-  EXPECT_EQ(Outlined->arg_size(), 2U);
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }

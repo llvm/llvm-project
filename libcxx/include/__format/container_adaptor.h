@@ -66,7 +66,7 @@ template <class _CharT, class _Tp, formattable<_CharT> _Container>
 struct _LIBCPP_TEMPLATE_VIS formatter<stack<_Tp, _Container>, _CharT>
     : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
 
-#endif //_LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

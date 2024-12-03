@@ -197,15 +197,21 @@ public:
 
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
-  static Expected<std::unique_ptr<InstrProfReader>>
-  create(const Twine &Path, vfs::FileSystem &FS,
-         const InstrProfCorrelator *Correlator = nullptr,
-         std::function<void(Error)> Warn = nullptr);
+  static Expected<std::unique_ptr<InstrProfReader>> create(
+      const Twine &Path, vfs::FileSystem &FS,
+      const InstrProfCorrelator *Correlator = nullptr,
+      const object::BuildIDFetcher *BIDFetcher = nullptr,
+      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
+          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::function<void(Error)> Warn = nullptr);
 
-  static Expected<std::unique_ptr<InstrProfReader>>
-  create(std::unique_ptr<MemoryBuffer> Buffer,
-         const InstrProfCorrelator *Correlator = nullptr,
-         std::function<void(Error)> Warn = nullptr);
+  static Expected<std::unique_ptr<InstrProfReader>> create(
+      std::unique_ptr<MemoryBuffer> Buffer,
+      const InstrProfCorrelator *Correlator = nullptr,
+      const object::BuildIDFetcher *BIDFetcher = nullptr,
+      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
+          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::function<void(Error)> Warn = nullptr);
 
   /// \param Weight for raw profiles use this as the temporal profile trace
   ///               weight
@@ -314,6 +320,14 @@ private:
   /// If available, this hold the ProfileData array used to correlate raw
   /// instrumentation data to their functions.
   const InstrProfCorrelatorImpl<IntPtrT> *Correlator;
+  /// Fetches debuginfo by build id to correlate profiles.
+  const object::BuildIDFetcher *BIDFetcher;
+  /// Correlates profiles with build id fetcher by fetching debuginfo with build
+  /// ID.
+  std::unique_ptr<InstrProfCorrelator> BIDFetcherCorrelator;
+  /// Indicates if should use debuginfo or binary to correlate with build id
+  /// fetcher.
+  InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind;
   /// A list of timestamps paired with a function name reference.
   std::vector<std::pair<uint64_t, uint64_t>> TemporalProfTimestamps;
   bool ShouldSwapBytes;
@@ -349,13 +363,18 @@ private:
   static const uint64_t MaxCounterValue = (1ULL << 56);
 
 public:
-  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
-                     const InstrProfCorrelator *Correlator,
-                     std::function<void(Error)> Warn)
+  RawInstrProfReader(
+      std::unique_ptr<MemoryBuffer> DataBuffer,
+      const InstrProfCorrelator *Correlator,
+      const object::BuildIDFetcher *BIDFetcher,
+      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+      std::function<void(Error)> Warn)
       : DataBuffer(std::move(DataBuffer)),
         Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
             Correlator)),
-        Warn(Warn) {}
+        BIDFetcher(BIDFetcher),
+        BIDFetcherCorrelatorKind(BIDFetcherCorrelatorKind), Warn(Warn) {}
+
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
 
@@ -439,7 +458,7 @@ private:
 
   void advanceData() {
     // `CountersDelta` is a constant zero when using debug info correlation.
-    if (!Correlator) {
+    if (!Correlator && !BIDFetcherCorrelator) {
       // The initial CountersDelta is the in-memory address difference between
       // the data and counts sections:
       // start(__llvm_prf_cnts) - start(__llvm_prf_data)
@@ -650,7 +669,8 @@ public:
 class IndexedMemProfReader {
 private:
   /// The MemProf version.
-  memprof::IndexedVersion Version = memprof::Version0;
+  memprof::IndexedVersion Version =
+      static_cast<memprof::IndexedVersion>(memprof::MinimumSupportedVersion);
   /// MemProf profile schema (if available).
   memprof::MemProfSchema Schema;
   /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
@@ -663,9 +683,10 @@ private:
   const unsigned char *FrameBase = nullptr;
   /// The starting address of the call stack array.
   const unsigned char *CallStackBase = nullptr;
+  // The number of elements in the radix tree array.
+  unsigned RadixTreeSize = 0;
 
-  Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
-                        uint64_t FirstWord);
+  Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:
@@ -675,6 +696,9 @@ public:
 
   Expected<memprof::MemProfRecord>
   getMemProfRecord(const uint64_t FuncNameHash) const;
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -771,6 +795,11 @@ public:
   /// llvm::md5(Name).
   Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
     return MemProfReader.getMemProfRecord(FuncNameHash);
+  }
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() {
+    return MemProfReader.getMemProfCallerCalleePairs();
   }
 
   /// Fill Counts with the profile data for the given function name.

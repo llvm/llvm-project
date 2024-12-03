@@ -22,6 +22,8 @@ class TestMemoryReadMaximumSize(TestBase):
         )
         self.assertTrue(self.bp.IsValid())
 
+        self.runCmd("settings set target.max-memory-read-size 1024")
+
         self.expect(
             "mem rea -f x -s 4 -c 2048 `&c`",
             error=True,

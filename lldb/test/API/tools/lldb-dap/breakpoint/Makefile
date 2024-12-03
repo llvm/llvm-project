@@ -15,5 +15,5 @@ main-copy.cpp: main.cpp
 
 # The following shared library will be used to test breakpoints under dynamic loading
 libother:  other-copy.c
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES DYLIB_C_SOURCES=other-copy.c DYLIB_NAME=other 

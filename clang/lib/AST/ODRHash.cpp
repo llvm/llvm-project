@@ -16,7 +16,6 @@
 
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
 using namespace clang;
@@ -162,6 +161,8 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::SubstTemplateTemplateParmPack:
   case TemplateName::UsingTemplate:
     break;
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("Unexpected DeducedTemplate");
   }
 }
 

@@ -8,7 +8,7 @@ define { i128, i128 } @foo(i64 %a, i32 %b) {
   %3 = insertvalue { i128, i128 } undef, i128 %1, 0
   %4 = insertvalue { i128, i128 } %3, i128 %2, 1
 
-  ; CHECK: st.param.v2.b64 [func_retval0+0],  {%[[REG1:rd[0-9]+]], %[[REG2:rd[0-9]+]]};
+  ; CHECK: st.param.v2.b64 [func_retval0],  {%[[REG1:rd[0-9]+]], %[[REG2:rd[0-9]+]]};
   ; CHECK: st.param.v2.b64 [func_retval0+16], {%[[REG3:rd[0-9]+]], %[[REG4:rd[0-9]+]]};
   ret { i128, i128 } %4
 }

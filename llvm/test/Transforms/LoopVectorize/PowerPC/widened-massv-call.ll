@@ -20,7 +20,7 @@ define dso_local double @test(ptr %Arr) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <2 x double> [ [[TMP3]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[DOTLCSSA]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[DOTLCSSA]])
 ; CHECK-NEXT:    ret double [[TMP5]]
 ;
 entry:

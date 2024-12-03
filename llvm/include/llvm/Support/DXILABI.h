@@ -96,6 +96,9 @@ enum class SamplerFeedbackType : uint32_t {
   MipRegionUsed = 1,
 };
 
+const unsigned MinWaveSize = 4;
+const unsigned MaxWaveSize = 128;
+
 } // namespace dxil
 } // namespace llvm
 

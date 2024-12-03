@@ -22,7 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace flangomp {
-#define GEN_PASS_DEF_FUNCTIONFILTERING
+#define GEN_PASS_DEF_FUNCTIONFILTERINGPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
@@ -30,7 +30,7 @@ using namespace mlir;
 
 namespace {
 class FunctionFilteringPass
-    : public flangomp::impl::FunctionFilteringBase<FunctionFilteringPass> {
+    : public flangomp::impl::FunctionFilteringPassBase<FunctionFilteringPass> {
 public:
   FunctionFilteringPass() = default;
 

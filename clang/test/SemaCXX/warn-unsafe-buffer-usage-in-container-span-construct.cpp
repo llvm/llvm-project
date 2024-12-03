@@ -21,6 +21,12 @@ namespace std {
 
   template< class T >
   T&& move( T&& t ) noexcept;
+
+  template <class _Tp>
+  _Tp* addressof(_Tp& __x) {
+    return &__x;
+  }
+ 
 }
 
 namespace irrelevant_constructors {
@@ -74,15 +80,26 @@ namespace construct_wt_ptr_size {
     return std::span<int>{p, 10};                    // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
   }
 
+  // addressof method defined outside std namespace.
+  template <class _Tp>
+  _Tp* addressof(_Tp& __x) {
+    return &__x;
+  }
+
   void notWarnSafeCases(unsigned n, int *p) {
     int X;
     unsigned Y = 10;
     std::span<int> S = std::span{&X, 1}; // no-warning
+    S = std::span{std::addressof(X), 1}; // no-warning
     int Arr[10];
     typedef int TenInts_t[10];
     TenInts_t Arr2;
 
     S = std::span{&X, 2};                // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    S = std::span{std::addressof(X), 2}; // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    // Warn when a non std method also named addressof
+    S = std::span{addressof(X), 1}; // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+
     S = std::span{new int[10], 10};      // no-warning
     S = std::span{new int[n], n};        // no-warning
     S = std::span{new int, 1};           // no-warning
@@ -157,3 +174,23 @@ namespace test_flag {
 
   }
 } //namespace test_flag
+
+struct HoldsStdSpanAndInitializedInCtor {
+  char* Ptr;
+  unsigned Size;
+  std::span<char> Span{Ptr, Size};  // no-warning (this code is unreachable)
+
+  HoldsStdSpanAndInitializedInCtor(char* P, unsigned S)
+      : Span(P, S)  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+  {}
+};
+
+struct HoldsStdSpanAndNotInitializedInCtor {
+  char* Ptr;
+  unsigned Size;
+  std::span<char> Span{Ptr, Size}; // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+
+  HoldsStdSpanAndNotInitializedInCtor(char* P, unsigned S)
+      : Ptr(P), Size(S)
+  {}
+};

@@ -112,6 +112,7 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
+set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
@@ -131,12 +132,31 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  if (LIBC_TARGET_OS_IS_GPU)
-    message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
-  else()
-    set(COMPILER_RESOURCE_DIR OFF)
-    message(STATUS "COMPILER_RESOURCE_DIR not set
-                    --print-resource-dir not supported by host compiler")
+  # Try with GCC option: -print-search-dirs, which will output in the form:
+  #   install: <path>
+  #   programs: ........
+  # So we try to capture the <path> after "install: " in the first line of the
+  # output.
+  execute_process(
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+    RESULT_VARIABLE COMMAND_RETURN_CODE
+    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+  )
+  if(COMMAND_RETURN_CODE EQUAL 0)
+    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
+    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
+    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
+    message(STATUS "Set COMPILER_RESOURCE_DIR to "
+    "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+else()
+    if (LIBC_TARGET_OS_IS_GPU)
+      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+    else()
+      set(COMPILER_RESOURCE_DIR OFF)
+      message(STATUS "COMPILER_RESOURCE_DIR not set
+                      --print-resource-dir not supported by host compiler")
+    endif()
   endif()
 endif()
 
@@ -228,10 +248,17 @@ foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
   load_libc_config(${config_path}/config.json ${cmd_line_conf})
 endforeach()
 
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(LIBC_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBC_LIBDIR_SUBDIR)
+    string(APPEND LIBC_TARGET_SUBDIR /${LIBC_LIBDIR_SUBDIR})
+  endif()
+endif()
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))
   set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBC_TARGET_SUBDIR})
 else()
   if(NOT LIBC_ENABLE_USE_BY_CLANG)
     set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -257,8 +284,7 @@ endif()
 if(LIBC_TARGET_TRIPLE)
   set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
 elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-  set(LIBC_INSTALL_LIBRARY_DIR
-      lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_SUBDIR})
 else()
   set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX})
 endif()
@@ -385,6 +411,12 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
+
+if(MSVC AND NOT MSYS)
+  set(libc_opt_high_flag "/O2")
+else()
+  set(libc_opt_high_flag "-O3")
+endif()
 
 add_subdirectory(include)
 add_subdirectory(config)

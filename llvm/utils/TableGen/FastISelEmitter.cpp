@@ -236,7 +236,7 @@ struct OperandsSignature {
           // not needed and just bloat the fast instruction selector.  For
           // example, X86 doesn't need to generate code to match ADD16ri8 since
           // ADD16ri will do just fine.
-          Record *Rec = PredFn.getOrigPatFragRecord()->getRecord();
+          const Record *Rec = PredFn.getOrigPatFragRecord()->getRecord();
           if (Rec->getValueAsBit("FastIselShouldIgnore"))
             return false;
 
@@ -269,10 +269,10 @@ struct OperandsSignature {
       if (Op.getSimpleType(0) != VT)
         return false;
 
-      DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
+      const DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
       if (!OpDI)
         return false;
-      Record *OpLeafRec = OpDI->getDef();
+      const Record *OpLeafRec = OpDI->getDef();
 
       // For now, the only other thing we accept is register operands.
       const CodeGenRegisterClass *RC = nullptr;
@@ -407,7 +407,7 @@ class FastISelMap {
 public:
   explicit FastISelMap(StringRef InstNS);
 
-  void collectPatterns(CodeGenDAGPatterns &CGP);
+  void collectPatterns(const CodeGenDAGPatterns &CGP);
   void printImmediatePredicates(raw_ostream &OS);
   void printFunctionDefinitions(raw_ostream &OS);
 
@@ -417,7 +417,8 @@ private:
 };
 } // End anonymous namespace
 
-static std::string getOpcodeName(Record *Op, CodeGenDAGPatterns &CGP) {
+static std::string getOpcodeName(const Record *Op,
+                                 const CodeGenDAGPatterns &CGP) {
   return std::string(CGP.getSDNodeInfo(Op).getEnumName());
 }
 
@@ -437,7 +438,7 @@ static std::string PhyRegForNode(TreePatternNode &Op,
   if (!Op.isLeaf())
     return PhysReg;
 
-  Record *OpLeafRec = cast<DefInit>(Op.getLeafValue())->getDef();
+  const Record *OpLeafRec = cast<DefInit>(Op.getLeafValue())->getDef();
   if (!OpLeafRec->isSubClassOf("Register"))
     return PhysReg;
 
@@ -448,7 +449,7 @@ static std::string PhyRegForNode(TreePatternNode &Op,
   return PhysReg;
 }
 
-void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
+void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
   const CodeGenTarget &Target = CGP.getTargetInfo();
 
   // Scan through all the patterns and record the simple ones.
@@ -461,7 +462,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     TreePatternNode &Dst = Pattern.getDstPattern();
     if (Dst.isLeaf())
       continue;
-    Record *Op = Dst.getOperator();
+    const Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
@@ -494,7 +495,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     const CodeGenRegisterClass *DstRC = nullptr;
     std::string SubRegNo;
     if (Op->getName() != "EXTRACT_SUBREG") {
-      Record *Op0Rec = II.Operands[0].Rec;
+      const Record *Op0Rec = II.Operands[0].Rec;
       if (Op0Rec->isSubClassOf("RegisterOperand"))
         Op0Rec = Op0Rec->getValueAsDef("RegClass");
       if (!Op0Rec->isSubClassOf("RegisterClass"))
@@ -508,7 +509,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
       if (!Dst.getChild(1).isLeaf())
         continue;
 
-      DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
+      const DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
       if (SR)
         SubRegNo = getQualifiedName(SR->getDef());
       else
@@ -524,7 +525,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     if (InstPatNode.getNumTypes() > 1)
       continue;
 
-    Record *InstPatOp = InstPatNode.getOperator();
+    const Record *InstPatOp = InstPatNode.getOperator();
     std::string OpcodeName = getOpcodeName(InstPatOp, CGP);
     MVT::SimpleValueType RetVT = MVT::isVoid;
     if (InstPatNode.getNumTypes())
@@ -566,7 +567,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
           ++DstIndex;
         }
 
-        PhysRegInputs.push_back(PhysReg);
+        PhysRegInputs.push_back(std::move(PhysReg));
       }
 
       if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst.getNumChildren())
@@ -590,7 +591,8 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
 
     // Ok, we found a pattern that we can handle. Remember it.
     InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
-                         DstRC, SubRegNo, PhysRegInputs, PredicateCheck);
+                         DstRC, std::move(SubRegNo), std::move(PhysRegInputs),
+                         PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);
 
@@ -717,19 +719,20 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
             const PredMap &PM = RI.second;
 
             OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
-               << getLegalCName(std::string(getName(VT))) << "_"
-               << getLegalCName(std::string(getName(RetVT))) << "_";
+               << getLegalCName(std::string(getEnumName(VT))) << "_"
+               << getLegalCName(std::string(getEnumName(RetVT))) << "_";
             Operands.PrintManglingSuffix(OS, ImmediatePredicates);
             OS << "(";
             Operands.PrintParameters(OS);
             OS << ") {\n";
 
-            emitInstructionCode(OS, Operands, PM, std::string(getName(RetVT)));
+            emitInstructionCode(OS, Operands, PM,
+                                std::string(getEnumName(RetVT)));
           }
 
           // Emit one function for the type that demultiplexes on return type.
           OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
-             << getLegalCName(std::string(getName(VT))) << "_";
+             << getLegalCName(std::string(getEnumName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
           if (!Operands.empty())
@@ -738,10 +741,10 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
           OS << ") {\nswitch (RetVT.SimpleTy) {\n";
           for (const auto &RI : RM) {
             MVT::SimpleValueType RetVT = RI.first;
-            OS << "  case " << getName(RetVT) << ": return fastEmit_"
+            OS << "  case " << getEnumName(RetVT) << ": return fastEmit_"
                << getLegalCName(Opcode) << "_"
-               << getLegalCName(std::string(getName(VT))) << "_"
-               << getLegalCName(std::string(getName(RetVT))) << "_";
+               << getLegalCName(std::string(getEnumName(VT))) << "_"
+               << getLegalCName(std::string(getEnumName(RetVT))) << "_";
             Operands.PrintManglingSuffix(OS, ImmediatePredicates);
             OS << "(";
             Operands.PrintArguments(OS);
@@ -752,7 +755,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
         } else {
           // Non-variadic return type.
           OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
-             << getLegalCName(std::string(getName(VT))) << "_";
+             << getLegalCName(std::string(getEnumName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
           if (!Operands.empty())
@@ -760,7 +763,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
           Operands.PrintParameters(OS);
           OS << ") {\n";
 
-          OS << "  if (RetVT.SimpleTy != " << getName(RM.begin()->first)
+          OS << "  if (RetVT.SimpleTy != " << getEnumName(RM.begin()->first)
              << ")\n    return 0;\n";
 
           const PredMap &PM = RM.begin()->second;
@@ -780,7 +783,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       OS << "  switch (VT.SimpleTy) {\n";
       for (const auto &TI : TM) {
         MVT::SimpleValueType VT = TI.first;
-        std::string TypeName = std::string(getName(VT));
+        std::string TypeName = std::string(getEnumName(VT));
         OS << "  case " << TypeName << ": return fastEmit_"
            << getLegalCName(Opcode) << "_" << getLegalCName(TypeName) << "_";
         Operands.PrintManglingSuffix(OS, ImmediatePredicates);
@@ -864,8 +867,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
   // TODO: SignaturesWithConstantForms should be empty here.
 }
 
-static void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
-  CodeGenDAGPatterns CGP(RK);
+static void EmitFastISel(const RecordKeeper &RK, raw_ostream &OS) {
+  const CodeGenDAGPatterns CGP(RK);
   const CodeGenTarget &Target = CGP.getTargetInfo();
   emitSourceFileHeader("\"Fast\" Instruction Selector for the " +
                            Target.getName().str() + " target",

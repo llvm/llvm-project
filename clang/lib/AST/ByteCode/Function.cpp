@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Function.h"
-#include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -20,11 +19,10 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
-                   bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
+                   bool HasThisPointer, bool HasRVO, unsigned BuiltinID)
     : P(P), Source(Source), ArgSize(ArgSize), ParamTypes(std::move(ParamTypes)),
       Params(std::move(Params)), ParamOffsets(std::move(ParamOffsets)),
-      HasThisPointer(HasThisPointer), HasRVO(HasRVO),
-      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {
+      HasThisPointer(HasThisPointer), HasRVO(HasRVO), BuiltinID(BuiltinID) {
   if (const auto *F = Source.dyn_cast<const FunctionDecl *>())
     Variadic = F->isVariadic();
 }
@@ -52,4 +50,20 @@ bool Function::isVirtual() const {
           Source.dyn_cast<const FunctionDecl *>()))
     return M->isVirtual();
   return false;
+}
+
+/// Unevaluated builtins don't get their arguments put on the stack
+/// automatically. They instead operate on the AST of their Call
+/// Expression.
+/// Similar information is available via ASTContext::BuiltinInfo,
+/// but that is not correct for our use cases.
+static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
+  return BuiltinID == Builtin::BI__builtin_classify_type ||
+         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         BuiltinID == Builtin::BI__builtin_constant_p ||
+         BuiltinID == Builtin::BI__noop;
+}
+
+bool Function::isUnevaluatedBuiltin() const {
+  return ::isUnevaluatedBuiltin(BuiltinID);
 }

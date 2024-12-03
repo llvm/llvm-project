@@ -48,6 +48,10 @@ static std::string computeDataLayout(const Triple &T, bool is64Bit) {
   // Alignments for 64 bit integers.
   Ret += "-i64:64";
 
+  // Alignments for 128 bit integers.
+  // This is not specified in the ABI document but is the de facto standard.
+  Ret += "-i128:128";
+
   // On SparcV9 128 floats are aligned to 128 bits, on others only to 64.
   // On SparcV9 registers can hold 64 or 32 bits, on others only 32.
   if (is64Bit)
@@ -103,11 +107,12 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT,
                                        bool is64bit)
-    : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveSparcCodeModel(
-                            CM, getEffectiveRelocModel(RM), is64bit, JIT),
-                        OL),
+    : CodeGenTargetMachineImpl(
+          T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM), is64bit,
+                                     JIT),
+          OL),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
   initAsmInfo();
 }

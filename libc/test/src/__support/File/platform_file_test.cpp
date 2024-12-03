@@ -9,7 +9,7 @@
 #include "src/__support/File/file.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h> // For SEEK_* macros
+#include "hdr/stdio_macros.h" // For SEEK_* macros
 
 using File = LIBC_NAMESPACE::File;
 constexpr char TEXT[] = "Hello, File";

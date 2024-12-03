@@ -378,6 +378,12 @@ public:
                                         LLT CastTy);
   LegalizeResult bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
                                      LLT CastTy);
+  LegalizeResult bitcastShuffleVector(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT CastTy);
+  LegalizeResult bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT CastTy);
+  LegalizeResult bitcastInsertSubvector(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT CastTy);
 
   LegalizeResult lowerConstant(MachineInstr &MI);
   LegalizeResult lowerFConstant(MachineInstr &MI);
@@ -394,10 +400,13 @@ public:
   LegalizeResult lowerRotate(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
+  LegalizeResult lowerU64ToF32WithSITOFP(MachineInstr &MI);
+  LegalizeResult lowerU64ToF64BitFloatOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI);
   LegalizeResult lowerSITOFP(MachineInstr &MI);
   LegalizeResult lowerFPTOUI(MachineInstr &MI);
   LegalizeResult lowerFPTOSI(MachineInstr &MI);
+  LegalizeResult lowerFPTOINT_SAT(MachineInstr &MI);
 
   LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LegalizeResult lowerFPTRUNC(MachineInstr &MI);
@@ -437,6 +446,7 @@ public:
   LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
   LegalizeResult lowerAbsToCNeg(MachineInstr &MI);
+  LegalizeResult lowerFAbs(MachineInstr &MI);
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);

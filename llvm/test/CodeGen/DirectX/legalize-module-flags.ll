@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-prepare < %s | FileCheck %s
+; RUN: opt -S -dxil-prepare -mtriple=dxil-unknown-shadermodel6.0-compute %s | FileCheck %s
 
 ; Make sure behavior flag > 6 is fixed.
 ; CHECK: !{i32 2, !"frame-pointer", i32 2}

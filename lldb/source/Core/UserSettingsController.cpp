@@ -53,9 +53,7 @@ Status Properties::SetPropertyValue(const ExecutionContext *exe_ctx,
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp)
     return properties_sp->SetSubValue(exe_ctx, op, path, value);
-  Status error;
-  error.SetErrorString("no properties");
-  return error;
+  return Status::FromErrorString("no properties");
 }
 
 void Properties::DumpAllPropertyValues(const ExecutionContext *exe_ctx,
@@ -90,9 +88,7 @@ Status Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
     return properties_sp->DumpPropertyValue(exe_ctx, strm, property_path,
                                             dump_mask, is_json);
   }
-  Status error;
-  error.SetErrorString("empty property list");
-  return error;
+  return Status::FromErrorString("empty property list");
 }
 
 size_t

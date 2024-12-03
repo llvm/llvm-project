@@ -27,10 +27,10 @@ WalkResult AttrTypeWalker::walkImpl(T element, WalkFns &walkFns,
                                     WalkOrder order) {
   // Check if we've already walk this element before.
   auto key = std::make_pair(element.getAsOpaquePointer(), (int)order);
-  auto it = visitedAttrTypes.find(key);
-  if (it != visitedAttrTypes.end())
+  auto [it, inserted] =
+      visitedAttrTypes.try_emplace(key, WalkResult::advance());
+  if (!inserted)
     return it->second;
-  visitedAttrTypes.try_emplace(key, WalkResult::advance());
 
   // If we are walking in post order, walk the sub elements first.
   if (order == WalkOrder::PostOrder) {

@@ -16,9 +16,12 @@
 namespace LIBC_NAMESPACE_DECL {
 
 extern ExitCallbackList at_quick_exit_callbacks;
+[[gnu::weak]] extern void teardown_main_tls();
 
 [[noreturn]] LLVM_LIBC_FUNCTION(void, quick_exit, (int status)) {
   call_exit_callbacks(at_quick_exit_callbacks);
+  if (teardown_main_tls)
+    teardown_main_tls();
   internal::exit(status);
 }
 

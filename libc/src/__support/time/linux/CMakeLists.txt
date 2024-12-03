@@ -1,7 +1,9 @@
-add_header_library(
+add_object_library(
   clock_gettime
   HDRS
     clock_gettime.h
+  SRCS
+    clock_gettime.cpp
   DEPENDS
     libc.include.sys_syscall
     libc.hdr.types.struct_timespec
@@ -9,6 +11,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.vdso
 )
 
 add_header_library(

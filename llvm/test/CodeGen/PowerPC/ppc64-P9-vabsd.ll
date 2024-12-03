@@ -1933,13 +1933,19 @@ define <16 x i8> @absd_int8_sle(<16 x i8>, <16 x i8>) {
 ; some cases we are unable to optimize
 ; check whether goes beyond the scope
 define <4 x i32> @absd_int32_ugt_opp(<4 x i32>, <4 x i32>) {
-; CHECK-LABEL: absd_int32_ugt_opp:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpgtuw v4, v2, v3
-; CHECK-NEXT:    vsubuwm v5, v2, v3
-; CHECK-NEXT:    vsubuwm v2, v3, v2
-; CHECK-NEXT:    xxsel v2, v5, v2, v4
-; CHECK-NEXT:    blr
+; CHECK-PWR9-LABEL: absd_int32_ugt_opp:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    vnegw v2, v2
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_ugt_opp:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtuw v4, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v5, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-PWR78-NEXT:    blr
   %3 = icmp ugt <4 x i32> %0, %1
   %4 = sub <4 x i32> %0, %1
   %5 = sub <4 x i32> %1, %0

@@ -213,7 +213,6 @@ StringRef getLanguageName(Language Lang) {
   case Language::OpenCL:
   case Language::OpenCLCXX:
   case Language::CUDA:
-  case Language::RenderScript:
   case Language::HIP:
   case Language::HLSL:
 
@@ -928,8 +927,8 @@ bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     return true;
 
   auto *CurrentModule = ModuleForCurrentSymbol;
-  if (Record->isExtendingExternalModule())
-    ModuleForCurrentSymbol = &ExtendedModules[Record->Interface.Source];
+  if (auto ModuleExtendedByRecord = Record->getExtendedExternalModule())
+    ModuleForCurrentSymbol = &ExtendedModules[*ModuleExtendedByRecord];
 
   if (!walkUpFromObjCCategoryRecord(Record))
     return false;

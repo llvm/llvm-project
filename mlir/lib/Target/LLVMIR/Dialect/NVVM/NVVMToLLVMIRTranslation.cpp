@@ -120,6 +120,41 @@ static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
   }
 }
 
+static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
+                                              NVVM::ProxyKind toProxy,
+                                              NVVM::MemScopeKind scope,
+                                              bool isRelease) {
+  if (fromProxy == NVVM::ProxyKind::GENERIC &&
+      toProxy == NVVM::ProxyKind::TENSORMAP) {
+    switch (scope) {
+    case NVVM::MemScopeKind::CTA: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_cta;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta;
+    }
+    case NVVM::MemScopeKind::CLUSTER: {
+      if (isRelease)
+        return llvm::Intrinsic::
+            nvvm_fence_proxy_tensormap_generic_release_cluster;
+      return llvm::Intrinsic::
+          nvvm_fence_proxy_tensormap_generic_acquire_cluster;
+    }
+    case NVVM::MemScopeKind::GPU: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_gpu;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu;
+    }
+    case NVVM::MemScopeKind::SYS: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_sys;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys;
+    }
+    }
+    llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
+  }
+  llvm_unreachable("Unsupported proxy kinds");
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the NVVM dialect to LLVM IR.
@@ -179,6 +214,20 @@ public:
         generateMetadata(values[1], NVVM::NVVMDialect::getReqntidYName());
       if (values.size() > 2)
         generateMetadata(values[2], NVVM::NVVMDialect::getReqntidZName());
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getClusterDimAttrName()) {
+      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+        return failure();
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
+      generateMetadata(values[0], NVVM::NVVMDialect::getClusterDimXName());
+      if (values.size() > 1)
+        generateMetadata(values[1], NVVM::NVVMDialect::getClusterDimYName());
+      if (values.size() > 2)
+        generateMetadata(values[2], NVVM::NVVMDialect::getClusterDimZName());
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+      generateMetadata(value.getInt(), "cluster_max_blocks");
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getMinctasmAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());

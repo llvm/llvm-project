@@ -357,11 +357,11 @@ define <vscale x 2 x float> @vpmerge_constrained_fadd(<vscale x 2 x float> %pass
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 %vl) strictfp
   ret <vscale x 2 x float> %b
 }
-declare <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
+declare <vscale x 2 x float> @llvm.experimental.constrained.fadd.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
 declare <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i64)
 
 ; This shouldn't be folded because we need to preserve exceptions with
@@ -374,7 +374,7 @@ define <vscale x 2 x float> @vpmerge_constrained_fadd_vlmax(<vscale x 2 x float>
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 -1) strictfp
   ret <vscale x 2 x float> %b
 }
@@ -1072,9 +1072,8 @@ define <vscale x 2 x i32> @vmerge_larger_vl_same_passthru(<vscale x 2 x i32> %pa
 define <vscale x 2 x i32> @vmerge_smaller_vl_different_passthru(<vscale x 2 x i32> %pt1, <vscale x 2 x i32> %pt2, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_smaller_vl_different_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret

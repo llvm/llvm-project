@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_CMPINSTANALYSIS_H
 #define LLVM_ANALYSIS_CMPINSTANALYSIS_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/InstrTypes.h"
 
 namespace llvm {
@@ -91,12 +92,21 @@ namespace llvm {
   Constant *getPredForFCmpCode(unsigned Code, Type *OpTy,
                                CmpInst::Predicate &Pred);
 
-  /// Decompose an icmp into the form ((X & Mask) pred 0) if possible. The
-  /// returned predicate is either == or !=. Returns false if decomposition
-  /// fails.
-  bool decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate &Pred,
-                            Value *&X, APInt &Mask,
-                            bool LookThroughTrunc = true);
+  /// Represents the operation icmp (X & Mask) pred C, where pred can only be
+  /// eq or ne.
+  struct DecomposedBitTest {
+    Value *X;
+    CmpInst::Predicate Pred;
+    APInt Mask;
+    APInt C;
+  };
+
+  /// Decompose an icmp into the form ((X & Mask) pred C) if possible.
+  /// Unless \p AllowNonZeroC is true, C will always be 0.
+  std::optional<DecomposedBitTest>
+  decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
+                       bool LookThroughTrunc = true,
+                       bool AllowNonZeroC = false);
 
 } // end namespace llvm
 

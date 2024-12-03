@@ -24,9 +24,9 @@ static const char StructTypeClassName[] = "Struct";
 static const char StandardSpecClassName[] = "StandardSpec";
 static const char PublicAPIClassName[] = "PublicAPI";
 
-static bool isa(llvm::Record *Def, llvm::Record *TypeClass) {
-  llvm::RecordRecTy *RecordType = Def->getType();
-  llvm::ArrayRef<llvm::Record *> Classes = RecordType->getClasses();
+static bool isa(const llvm::Record *Def, const llvm::Record *TypeClass) {
+  const llvm::RecordRecTy *RecordType = Def->getType();
+  llvm::ArrayRef<const llvm::Record *> Classes = RecordType->getClasses();
   // We want exact types. That is, we don't want the classes listed in
   // spec.td to be subclassed. Hence, we do not want the record |Def|
   // to be of more than one class type..
@@ -35,35 +35,35 @@ static bool isa(llvm::Record *Def, llvm::Record *TypeClass) {
   return Classes[0] == TypeClass;
 }
 
-bool APIIndexer::isaNamedType(llvm::Record *Def) {
+bool APIIndexer::isaNamedType(const llvm::Record *Def) {
   return isa(Def, NamedTypeClass);
 }
 
-bool APIIndexer::isaStructType(llvm::Record *Def) {
+bool APIIndexer::isaStructType(const llvm::Record *Def) {
   return isa(Def, StructClass);
 }
 
-bool APIIndexer::isaPtrType(llvm::Record *Def) {
+bool APIIndexer::isaPtrType(const llvm::Record *Def) {
   return isa(Def, PtrTypeClass);
 }
 
-bool APIIndexer::isaConstType(llvm::Record *Def) {
+bool APIIndexer::isaConstType(const llvm::Record *Def) {
   return isa(Def, ConstTypeClass);
 }
 
-bool APIIndexer::isaRestrictedPtrType(llvm::Record *Def) {
+bool APIIndexer::isaRestrictedPtrType(const llvm::Record *Def) {
   return isa(Def, RestrictedPtrTypeClass);
 }
 
-bool APIIndexer::isaStandardSpec(llvm::Record *Def) {
+bool APIIndexer::isaStandardSpec(const llvm::Record *Def) {
   return isa(Def, StandardSpecClass);
 }
 
-bool APIIndexer::isaPublicAPI(llvm::Record *Def) {
+bool APIIndexer::isaPublicAPI(const llvm::Record *Def) {
   return isa(Def, PublicAPIClass);
 }
 
-std::string APIIndexer::getTypeAsString(llvm::Record *TypeRecord) {
+std::string APIIndexer::getTypeAsString(const llvm::Record *TypeRecord) {
   if (isaNamedType(TypeRecord) || isaStructType(TypeRecord)) {
     return std::string(TypeRecord->getValueAsString("Name"));
   } else if (isaPtrType(TypeRecord)) {
@@ -79,24 +79,24 @@ std::string APIIndexer::getTypeAsString(llvm::Record *TypeRecord) {
   }
 }
 
-void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
+void APIIndexer::indexStandardSpecDef(const llvm::Record *StandardSpec) {
   auto HeaderSpecList = StandardSpec->getValueAsListOfDefs("Headers");
-  for (llvm::Record *HeaderSpec : HeaderSpecList) {
+  for (const llvm::Record *HeaderSpec : HeaderSpecList) {
     llvm::StringRef Header = HeaderSpec->getValueAsString("Name");
     if (!StdHeader.has_value() || Header == StdHeader) {
       PublicHeaders.emplace(Header);
       auto MacroSpecList = HeaderSpec->getValueAsListOfDefs("Macros");
       // TODO: Trigger a fatal error on duplicate specs.
-      for (llvm::Record *MacroSpec : MacroSpecList)
+      for (const llvm::Record *MacroSpec : MacroSpecList)
         MacroSpecMap[std::string(MacroSpec->getValueAsString("Name"))] =
             MacroSpec;
 
       auto TypeSpecList = HeaderSpec->getValueAsListOfDefs("Types");
-      for (llvm::Record *TypeSpec : TypeSpecList)
+      for (const llvm::Record *TypeSpec : TypeSpecList)
         TypeSpecMap[std::string(TypeSpec->getValueAsString("Name"))] = TypeSpec;
 
       auto FunctionSpecList = HeaderSpec->getValueAsListOfDefs("Functions");
-      for (llvm::Record *FunctionSpec : FunctionSpecList) {
+      for (const llvm::Record *FunctionSpec : FunctionSpecList) {
         auto FunctionName = std::string(FunctionSpec->getValueAsString("Name"));
         FunctionSpecMap[FunctionName] = FunctionSpec;
         FunctionToHeaderMap[FunctionName] = std::string(Header);
@@ -104,13 +104,13 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
 
       auto EnumerationSpecList =
           HeaderSpec->getValueAsListOfDefs("Enumerations");
-      for (llvm::Record *EnumerationSpec : EnumerationSpecList) {
+      for (const llvm::Record *EnumerationSpec : EnumerationSpecList) {
         EnumerationSpecMap[std::string(
             EnumerationSpec->getValueAsString("Name"))] = EnumerationSpec;
       }
 
       auto ObjectSpecList = HeaderSpec->getValueAsListOfDefs("Objects");
-      for (llvm::Record *ObjectSpec : ObjectSpecList) {
+      for (const llvm::Record *ObjectSpec : ObjectSpecList) {
         auto ObjectName = std::string(ObjectSpec->getValueAsString("Name"));
         ObjectSpecMap[ObjectName] = ObjectSpec;
         ObjectToHeaderMap[ObjectName] = std::string(Header);
@@ -119,12 +119,12 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
   }
 }
 
-void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
+void APIIndexer::indexPublicAPIDef(const llvm::Record *PublicAPI) {
   // While indexing the public API, we do not check if any of the entities
   // requested is from an included standard. Such a check is done while
   // generating the API.
   auto MacroDefList = PublicAPI->getValueAsListOfDefs("Macros");
-  for (llvm::Record *MacroDef : MacroDefList)
+  for (const llvm::Record *MacroDef : MacroDefList)
     MacroDefsMap[std::string(MacroDef->getValueAsString("Name"))] = MacroDef;
 
   auto TypeList = PublicAPI->getValueAsListOfStrings("Types");
@@ -148,7 +148,7 @@ void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
     Objects.insert(std::string(ObjectName));
 }
 
-void APIIndexer::index(llvm::RecordKeeper &Records) {
+void APIIndexer::index(const llvm::RecordKeeper &Records) {
   NamedTypeClass = Records.getClass(NamedTypeClassName);
   PtrTypeClass = Records.getClass(PtrTypeClassName);
   RestrictedPtrTypeClass = Records.getClass(RestrictedPtrTypeClassName);
@@ -159,7 +159,7 @@ void APIIndexer::index(llvm::RecordKeeper &Records) {
 
   const auto &DefsMap = Records.getDefs();
   for (auto &Pair : DefsMap) {
-    llvm::Record *Def = Pair.second.get();
+    const llvm::Record *Def = Pair.second.get();
     if (isaStandardSpec(Def))
       indexStandardSpecDef(Def);
     if (isaPublicAPI(Def)) {

@@ -799,6 +799,7 @@ namespace cwg561 { // cwg561: yes
 }
 
 // cwg562: na
+// cwg563 is in cwg563.cpp
 
 namespace cwg564 { // cwg564: yes
   extern "C++" void f(int);
@@ -1177,17 +1178,61 @@ namespace cwg590 { // cwg590: yes
   template<typename T> typename A<T>::B::C A<T>::B::C::f(A<T>::B::C) {}
 }
 
-namespace cwg591 { // cwg591: no
+namespace cwg591 { // cwg591: 20
   template<typename T> struct A {
     typedef int M;
     struct B {
       typedef void M;
       struct C;
+      struct D;
+    };
+  };
+
+  template<typename T> struct G {
+    struct B {
+      typedef int M;
+      struct C {
+        typedef void M;
+        struct D;
+      };
+    };
+  };
+
+  template<typename T> struct H {
+    template<typename U> struct B {
+      typedef int M;
+      template<typename F> struct C {
+        typedef void M;
+        struct D;
+        struct P;
+      };
     };
   };
 
   template<typename T> struct A<T>::B::C : A<T> {
-    // FIXME: Should find member of non-dependent base class A<T>.
+    M m;
+  };
+
+  template<typename T> struct G<T>::B::C::D : B {
+    M m;
+  };
+
+  template<typename T>
+  template<typename U>
+  template<typename F>
+  struct H<T>::B<U>::C<F>::D : B<U> {
+    M m;
+  };
+
+  template<typename T> struct A<T>::B::D : A<T*> {
+    M m;
+    // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
+  };
+
+  template<typename T>
+  template<typename U>
+  template<typename F>
+  struct H<T>::B<U>::C<F>::P : B<F> {
     M m;
     // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
   };

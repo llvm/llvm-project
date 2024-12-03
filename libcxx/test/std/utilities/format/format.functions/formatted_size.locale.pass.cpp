@@ -23,6 +23,7 @@
 
 #include <format>
 #include <cassert>
+#include <locale>
 #include <vector>
 
 #include "test_macros.h"

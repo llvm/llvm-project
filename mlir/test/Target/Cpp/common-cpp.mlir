@@ -5,6 +5,13 @@ emitc.include "myheader.h"
 // CHECK: #include <myheader.h>
 emitc.include <"myheader.h">
 
+// CHECK: void test_include() {
+func.func @test_include() {
+  // CHECK: #include "myheader.h"
+  emitc.include "myheader.h"
+  return
+}
+
 // CHECK: void test_foo_print() {
 func.func @test_foo_print() {
   // CHECK: [[V1:[^ ]*]] = foo::constant({0, 1});

@@ -1264,24 +1264,24 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // AVRFP32-SAME: float noundef [[A_COERCE0:%.*]], float noundef [[A_COERCE1:%.*]], float noundef [[B_COERCE0:%.*]], float noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP32-NEXT:  entry:
 // AVRFP32-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 1
-// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
-// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
+// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 1
+// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 1
 // AVRFP32-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP32-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
+// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 1
 // AVRFP32-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
+// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 1
 // AVRFP32-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
+// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 1
 // AVRFP32-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
+// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 1
 // AVRFP32-NEXT:    [[TMP4:%.*]] = call addrspace(1) float @llvm.fabs.f32(float [[B_REAL]])
 // AVRFP32-NEXT:    [[TMP5:%.*]] = call addrspace(1) float @llvm.fabs.f32(float [[B_IMAG]])
 // AVRFP32-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt float [[TMP4]], [[TMP5]]
@@ -1321,24 +1321,24 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // AVRFP64-LABEL: define dso_local void @divd(
 // AVRFP64-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 1 [[AGG_RESULT:%.*]], double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP64-NEXT:  entry:
-// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 8
-// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 8
+// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 1
+// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 1
 // AVRFP64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP64-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
+// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 1
 // AVRFP64-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
+// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 1
 // AVRFP64-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
+// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 1
 // AVRFP64-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
+// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 1
 // AVRFP64-NEXT:    [[TMP4:%.*]] = call addrspace(1) double @llvm.fabs.f64(double [[B_REAL]])
 // AVRFP64-NEXT:    [[TMP5:%.*]] = call addrspace(1) double @llvm.fabs.f64(double [[B_IMAG]])
 // AVRFP64-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP4]], [[TMP5]]
@@ -1382,7 +1382,7 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // AVRFP64-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 1
 // AVRFP64-NEXT:    ret void
 //
-// BASIC_FAST-LABEL: define dso_local { double, double } @divd(
+// BASIC_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @divd(
 // BASIC_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR1:[0-9]+]] {
 // BASIC_FAST-NEXT:  entry:
 // BASIC_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -1422,7 +1422,7 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // BASIC_FAST-NEXT:    [[TMP15:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // BASIC_FAST-NEXT:    ret { double, double } [[TMP15]]
 //
-// FULL_FAST-LABEL: define dso_local { double, double } @divd(
+// FULL_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @divd(
 // FULL_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR1:[0-9]+]] {
 // FULL_FAST-NEXT:  entry:
 // FULL_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -1444,7 +1444,7 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // FULL_FAST-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // FULL_FAST-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // FULL_FAST-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { double, double } @__divdc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { double, double } @__divdc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP4:%.*]] = extractvalue { double, double } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP5:%.*]] = extractvalue { double, double } [[CALL]], 1
 // FULL_FAST-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
@@ -1454,7 +1454,7 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // FULL_FAST-NEXT:    [[TMP6:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // FULL_FAST-NEXT:    ret { double, double } [[TMP6]]
 //
-// IMPRVD_FAST-LABEL: define dso_local { double, double } @divd(
+// IMPRVD_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @divd(
 // IMPRVD_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR2:[0-9]+]] {
 // IMPRVD_FAST-NEXT:  entry:
 // IMPRVD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -1512,7 +1512,7 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // IMPRVD_FAST-NEXT:    [[TMP26:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // IMPRVD_FAST-NEXT:    ret { double, double } [[TMP26]]
 //
-// PRMTD_FAST-LABEL: define dso_local { double, double } @divd(
+// PRMTD_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @divd(
 // PRMTD_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR1:[0-9]+]] {
 // PRMTD_FAST-NEXT:  entry:
 // PRMTD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -1862,24 +1862,24 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // AVRFP32-SAME: float noundef [[A_COERCE0:%.*]], float noundef [[A_COERCE1:%.*]], float noundef [[B_COERCE0:%.*]], float noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP32-NEXT:  entry:
 // AVRFP32-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 1
-// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
-// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
+// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 1
+// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 1
 // AVRFP32-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP32-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
+// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 1
 // AVRFP32-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
+// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 1
 // AVRFP32-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
+// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 1
 // AVRFP32-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
+// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 1
 // AVRFP32-NEXT:    [[MUL_AC:%.*]] = fmul float [[A_REAL]], [[B_REAL]]
 // AVRFP32-NEXT:    [[MUL_BD:%.*]] = fmul float [[A_IMAG]], [[B_IMAG]]
 // AVRFP32-NEXT:    [[MUL_AD:%.*]] = fmul float [[A_REAL]], [[B_IMAG]]
@@ -1896,24 +1896,24 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // AVRFP64-LABEL: define dso_local void @muld(
 // AVRFP64-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 1 [[AGG_RESULT:%.*]], double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP64-NEXT:  entry:
-// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 8
-// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 8
+// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 1
+// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 1
 // AVRFP64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP64-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
+// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 1
 // AVRFP64-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
+// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 1
 // AVRFP64-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
+// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 1
 // AVRFP64-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
+// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 1
 // AVRFP64-NEXT:    [[MUL_AC:%.*]] = fmul double [[A_REAL]], [[B_REAL]]
 // AVRFP64-NEXT:    [[MUL_BD:%.*]] = fmul double [[A_IMAG]], [[B_IMAG]]
 // AVRFP64-NEXT:    [[MUL_AD:%.*]] = fmul double [[A_REAL]], [[B_IMAG]]
@@ -1934,7 +1934,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // AVRFP64-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 1
 // AVRFP64-NEXT:    ret void
 //
-// BASIC_FAST-LABEL: define dso_local { double, double } @muld(
+// BASIC_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @muld(
 // BASIC_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR1]] {
 // BASIC_FAST-NEXT:  entry:
 // BASIC_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -1969,7 +1969,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // BASIC_FAST-NEXT:    [[TMP4:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // BASIC_FAST-NEXT:    ret { double, double } [[TMP4]]
 //
-// FULL_FAST-LABEL: define dso_local { double, double } @muld(
+// FULL_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @muld(
 // FULL_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR1]] {
 // FULL_FAST-NEXT:  entry:
 // FULL_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -2003,7 +2003,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_I]], [[MUL_I]]
 // FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // FULL_FAST:       complex_mul_libcall:
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { double, double } @__muldc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP4:%.*]] = extractvalue { double, double } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP5:%.*]] = extractvalue { double, double } [[CALL]], 1
 // FULL_FAST-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -2017,7 +2017,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[TMP6:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // FULL_FAST-NEXT:    ret { double, double } [[TMP6]]
 //
-// IMPRVD_FAST-LABEL: define dso_local { double, double } @muld(
+// IMPRVD_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @muld(
 // IMPRVD_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR2]] {
 // IMPRVD_FAST-NEXT:  entry:
 // IMPRVD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -2052,7 +2052,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // IMPRVD_FAST-NEXT:    [[TMP4:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // IMPRVD_FAST-NEXT:    ret { double, double } [[TMP4]]
 //
-// PRMTD_FAST-LABEL: define dso_local { double, double } @muld(
+// PRMTD_FAST-LABEL: define dso_local nofpclass(nan inf) { double, double } @muld(
 // PRMTD_FAST-SAME: double noundef nofpclass(nan inf) [[A_COERCE0:%.*]], double noundef nofpclass(nan inf) [[A_COERCE1:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]]) #[[ATTR1]] {
 // PRMTD_FAST-NEXT:  entry:
 // PRMTD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -2493,7 +2493,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // AVRFP64-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 1
 // AVRFP64-NEXT:    ret void
 //
-// BASIC_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @divld(
+// BASIC_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @divld(
 // BASIC_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // BASIC_FAST-NEXT:  entry:
 // BASIC_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -2523,7 +2523,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // BASIC_FAST-NEXT:    [[TMP11:%.*]] = load { x86_fp80, x86_fp80 }, ptr [[RETVAL]], align 16
 // BASIC_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[TMP11]]
 //
-// FULL_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @divld(
+// FULL_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @divld(
 // FULL_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // FULL_FAST-NEXT:  entry:
 // FULL_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -2535,7 +2535,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[B_REAL:%.*]] = load x86_fp80, ptr [[B_REALP]], align 16
 // FULL_FAST-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[B]], i32 0, i32 1
 // FULL_FAST-NEXT:    [[B_IMAG:%.*]] = load x86_fp80, ptr [[B_IMAGP]], align 16
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP1:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 1
 // FULL_FAST-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[RETVAL]], i32 0, i32 0
@@ -2545,7 +2545,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[TMP2:%.*]] = load { x86_fp80, x86_fp80 }, ptr [[RETVAL]], align 16
 // FULL_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[TMP2]]
 //
-// IMPRVD_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @divld(
+// IMPRVD_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @divld(
 // IMPRVD_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR2]] {
 // IMPRVD_FAST-NEXT:  entry:
 // IMPRVD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -2593,7 +2593,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // IMPRVD_FAST-NEXT:    [[TMP22:%.*]] = load { x86_fp80, x86_fp80 }, ptr [[RETVAL]], align 16
 // IMPRVD_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[TMP22]]
 //
-// PRMTD_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @divld(
+// PRMTD_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @divld(
 // PRMTD_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // PRMTD_FAST-NEXT:  entry:
 // PRMTD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -2979,7 +2979,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // AVRFP64-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 1
 // AVRFP64-NEXT:    ret void
 //
-// BASIC_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @mulld(
+// BASIC_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @mulld(
 // BASIC_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // BASIC_FAST-NEXT:  entry:
 // BASIC_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -3004,7 +3004,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // BASIC_FAST-NEXT:    [[TMP0:%.*]] = load { x86_fp80, x86_fp80 }, ptr [[RETVAL]], align 16
 // BASIC_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[TMP0]]
 //
-// FULL_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @mulld(
+// FULL_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @mulld(
 // FULL_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // FULL_FAST-NEXT:  entry:
 // FULL_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -3028,7 +3028,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_I]], [[MUL_I]]
 // FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // FULL_FAST:       complex_mul_libcall:
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP1:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 1
 // FULL_FAST-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -3042,7 +3042,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[TMP2:%.*]] = load { x86_fp80, x86_fp80 }, ptr [[RETVAL]], align 16
 // FULL_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[TMP2]]
 //
-// IMPRVD_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @mulld(
+// IMPRVD_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @mulld(
 // IMPRVD_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR2]] {
 // IMPRVD_FAST-NEXT:  entry:
 // IMPRVD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -3067,7 +3067,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // IMPRVD_FAST-NEXT:    [[TMP0:%.*]] = load { x86_fp80, x86_fp80 }, ptr [[RETVAL]], align 16
 // IMPRVD_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[TMP0]]
 //
-// PRMTD_FAST-LABEL: define dso_local { x86_fp80, x86_fp80 } @mulld(
+// PRMTD_FAST-LABEL: define dso_local nofpclass(nan inf) { x86_fp80, x86_fp80 } @mulld(
 // PRMTD_FAST-SAME: ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[A:%.*]], ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 [[B:%.*]]) #[[ATTR1]] {
 // PRMTD_FAST-NEXT:  entry:
 // PRMTD_FAST-NEXT:    [[RETVAL:%.*]] = alloca { x86_fp80, x86_fp80 }, align 16
@@ -3753,7 +3753,7 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
 // FULL_FAST-NEXT:    [[CONV:%.*]] = fpext float [[C_REAL]] to x86_fp80
 // FULL_FAST-NEXT:    [[CONV1:%.*]] = fpext float [[C_IMAG]] to x86_fp80
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[CONV]], x86_fp80 noundef nofpclass(nan inf) [[CONV1]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[CONV]], x86_fp80 noundef nofpclass(nan inf) [[CONV1]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP1:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 1
 // FULL_FAST-NEXT:    [[CONV2:%.*]] = fptrunc x86_fp80 [[TMP0]] to float

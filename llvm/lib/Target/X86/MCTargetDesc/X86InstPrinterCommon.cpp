@@ -168,9 +168,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPDZ128rmik: case X86::VPCMPDZ128rrik:
   case X86::VPCMPDZ256rmik: case X86::VPCMPDZ256rrik:
   case X86::VPCMPDZrmik:    case X86::VPCMPDZrrik:
-  case X86::VPCMPDZ128rmib: case X86::VPCMPDZ128rmibk:
-  case X86::VPCMPDZ256rmib: case X86::VPCMPDZ256rmibk:
-  case X86::VPCMPDZrmib:    case X86::VPCMPDZrmibk:
+  case X86::VPCMPDZ128rmbi: case X86::VPCMPDZ128rmbik:
+  case X86::VPCMPDZ256rmbi: case X86::VPCMPDZ256rmbik:
+  case X86::VPCMPDZrmbi:    case X86::VPCMPDZrmbik:
     OS << "d\t";
     break;
   case X86::VPCMPQZ128rmi:  case X86::VPCMPQZ128rri:
@@ -179,9 +179,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPQZ128rmik: case X86::VPCMPQZ128rrik:
   case X86::VPCMPQZ256rmik: case X86::VPCMPQZ256rrik:
   case X86::VPCMPQZrmik:    case X86::VPCMPQZrrik:
-  case X86::VPCMPQZ128rmib: case X86::VPCMPQZ128rmibk:
-  case X86::VPCMPQZ256rmib: case X86::VPCMPQZ256rmibk:
-  case X86::VPCMPQZrmib:    case X86::VPCMPQZrmibk:
+  case X86::VPCMPQZ128rmbi: case X86::VPCMPQZ128rmbik:
+  case X86::VPCMPQZ256rmbi: case X86::VPCMPQZ256rmbik:
+  case X86::VPCMPQZrmbi:    case X86::VPCMPQZrmbik:
     OS << "q\t";
     break;
   case X86::VPCMPUBZ128rmi:  case X86::VPCMPUBZ128rri:
@@ -198,9 +198,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPUDZ128rmik: case X86::VPCMPUDZ128rrik:
   case X86::VPCMPUDZ256rmik: case X86::VPCMPUDZ256rrik:
   case X86::VPCMPUDZrmik:    case X86::VPCMPUDZrrik:
-  case X86::VPCMPUDZ128rmib: case X86::VPCMPUDZ128rmibk:
-  case X86::VPCMPUDZ256rmib: case X86::VPCMPUDZ256rmibk:
-  case X86::VPCMPUDZrmib:    case X86::VPCMPUDZrmibk:
+  case X86::VPCMPUDZ128rmbi: case X86::VPCMPUDZ128rmbik:
+  case X86::VPCMPUDZ256rmbi: case X86::VPCMPUDZ256rmbik:
+  case X86::VPCMPUDZrmbi:    case X86::VPCMPUDZrmbik:
     OS << "ud\t";
     break;
   case X86::VPCMPUQZ128rmi:  case X86::VPCMPUQZ128rri:
@@ -209,9 +209,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPUQZ128rmik: case X86::VPCMPUQZ128rrik:
   case X86::VPCMPUQZ256rmik: case X86::VPCMPUQZ256rrik:
   case X86::VPCMPUQZrmik:    case X86::VPCMPUQZrrik:
-  case X86::VPCMPUQZ128rmib: case X86::VPCMPUQZ128rmibk:
-  case X86::VPCMPUQZ256rmib: case X86::VPCMPUQZ256rmibk:
-  case X86::VPCMPUQZrmib:    case X86::VPCMPUQZrmibk:
+  case X86::VPCMPUQZ128rmbi: case X86::VPCMPUQZ128rmbik:
+  case X86::VPCMPUQZ256rmbi: case X86::VPCMPUQZ256rmbik:
+  case X86::VPCMPUQZrmbi:    case X86::VPCMPUQZrmbik:
     OS << "uq\t";
     break;
   case X86::VPCMPUWZ128rmi:  case X86::VPCMPUWZ128rri:
@@ -308,6 +308,17 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
   case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
     OS << "sh\t";
+    break;
+  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
+  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
+  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
+  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
+  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
+  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
+  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
+  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
+  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
+    OS << "pbf16\t";
     break;
   }
 }
@@ -448,6 +459,25 @@ void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
     return;
   case X86::K6_K7:
     printRegName(OS, X86::K6);
+    return;
+  }
+  llvm_unreachable("Unknown mask pair register name");
+}
+
+void X86InstPrinterCommon::printTILEPair(const MCInst *MI, unsigned OpNo,
+                                         raw_ostream &OS) {
+  switch (MI->getOperand(OpNo).getReg()) {
+  case X86::TMM0_TMM1:
+    printRegName(OS, X86::TMM0);
+    return;
+  case X86::TMM2_TMM3:
+    printRegName(OS, X86::TMM2);
+    return;
+  case X86::TMM4_TMM5:
+    printRegName(OS, X86::TMM4);
+    return;
+  case X86::TMM6_TMM7:
+    printRegName(OS, X86::TMM6);
     return;
   }
   llvm_unreachable("Unknown mask pair register name");

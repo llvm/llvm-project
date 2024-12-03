@@ -47,16 +47,16 @@ namespace std
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
-#  include <__atomic/atomic_base.h>
+#  include <__atomic/atomic.h>
 #  include <__atomic/memory_order.h>
+#  include <__cstddef/ptrdiff_t.h>
 #  include <__memory/unique_ptr.h>
 #  include <__thread/poll_with_backoff.h>
 #  include <__thread/timed_backoff_policy.h>
 #  include <__utility/move.h>
-#  include <cstddef>
 #  include <cstdint>
 #  include <limits>
 #  include <version>
@@ -109,9 +109,9 @@ template <class _CompletionF>
 class __barrier_base {
   ptrdiff_t __expected_;
   unique_ptr<__barrier_algorithm_base, void (*)(__barrier_algorithm_base*)> __base_;
-  __atomic_base<ptrdiff_t> __expected_adjustment_;
+  atomic<ptrdiff_t> __expected_adjustment_;
   _CompletionF __completion_;
-  __atomic_base<__barrier_phase_t> __phase_;
+  atomic<__barrier_phase_t> __phase_;
 
 public:
   using arrival_token = __barrier_phase_t;
@@ -125,7 +125,7 @@ public:
         __expected_adjustment_(0),
         __completion_(std::move(__completion)),
         __phase_(0) {}
-  _LIBCPP_NODISCARD _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= __expected_, "update is greater than the expected count for the current barrier phase");
 
@@ -167,10 +167,10 @@ Two versions of this algorithm are provided:
 
 template <class _CompletionF>
 class __barrier_base {
-  __atomic_base<ptrdiff_t> __expected;
-  __atomic_base<ptrdiff_t> __arrived;
+  atomic<ptrdiff_t> __expected;
+  atomic<ptrdiff_t> __arrived;
   _CompletionF __completion;
-  __atomic_base<bool> __phase;
+  atomic<bool> __phase;
 
 public:
   using arrival_token = bool;
@@ -212,7 +212,7 @@ class __barrier_base<__empty_completion> {
   static constexpr uint64_t __phase_bit     = 1ull << 63;
   static constexpr uint64_t __arrived_mask  = (__phase_bit - 1) & ~__expected_mask;
 
-  __atomic_base<uint64_t> __phase_arrived_expected;
+  atomic<uint64_t> __phase_arrived_expected;
 
   static _LIBCPP_HIDE_FROM_ABI constexpr uint64_t __init(ptrdiff_t __count) _NOEXCEPT {
     return ((uint64_t(1u << 31) - __count) << 32) | (uint64_t(1u << 31) - __count);
@@ -277,7 +277,7 @@ public:
   barrier(barrier const&)            = delete;
   barrier& operator=(barrier const&) = delete;
 
-  _LIBCPP_NODISCARD _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update > 0, "barrier:arrive must be called with a value greater than 0");
     return __b_.arrive(__update);
   }
@@ -294,7 +294,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>

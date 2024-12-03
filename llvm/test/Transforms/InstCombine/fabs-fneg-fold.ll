@@ -137,7 +137,7 @@ define float @fabs_fneg_no_fabs(float %x) {
 define <2 x float> @fabs_fneg_splat_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @fabs_fneg_splat_v2f32(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    ret <2 x float> <float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 2.000000e+00)
 ;
   %neg = fneg <2 x float> <float -2.0, float -2.0>
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %neg)

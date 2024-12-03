@@ -462,6 +462,37 @@ Currently, Clang accepts the above example, though it may produce surprising
 results if the debugging code depends on consistent use of ``NDEBUG`` in other
 translation units.
 
+Source Files Consistency
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang may open the input files\ :sup:`1`` of a BMI during the compilation. This implies that
+when Clang consumes a BMI, all the input files need to be present in the original path
+and with the original contents.
+
+To overcome these requirements and simplify cases like distributed builds and sandboxed
+builds, users can use the ``-fmodules-embed-all-files`` flag to embed all input files
+into the BMI so that Clang does not need to open the corresponding file on disk.
+
+When the ``-fmodules-embed-all-files`` flag are enabled, Clang explicitly emits the source
+code into the BMI file, the contents of the BMI file contain a sufficiently verbose
+representation to reproduce the original source file.
+
+:sup:`1`` Input files: The source files which took part in the compilation of the BMI.
+For example:
+
+.. code-block:: c++
+
+  // M.cppm
+  module;
+  #include "foo.h"
+  export module M;
+
+  // foo.h
+  #pragma once
+  #include "bar.h"
+
+The ``M.cppm``, ``foo.h`` and ``bar.h`` are input files for the BMI of ``M.cppm``.
+
 Object definition consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -483,6 +514,13 @@ fragment is disabled by default. These checks can be enabled by specifying
 ``-Xclang -fno-skip-odr-check-in-gmf`` when compiling. If the check is enabled
 and you encounter incorrect or missing diagnostics, please report them via the
 `community issue tracker <https://github.com/llvm/llvm-project/issues/>`_.
+
+Privacy Issue
+-------------
+
+BMIs are not and should not be treated as an information hiding mechanism.
+They should always be assumed to contain all the information that was used to
+create them, in a recoverable form.
 
 ABI Impacts
 -----------

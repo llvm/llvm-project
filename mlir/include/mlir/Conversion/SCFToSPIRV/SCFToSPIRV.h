@@ -34,7 +34,7 @@ private:
 
 /// Collects a set of patterns to lower from scf.for, scf.if, and
 /// loop.terminator to CFG operations within the SPIR-V dialect.
-void populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateSCFToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                 ScfToSPIRVContext &scfToSPIRVContext,
                                 RewritePatternSet &patterns);
 } // namespace mlir

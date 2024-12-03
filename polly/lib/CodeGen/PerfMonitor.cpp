@@ -59,7 +59,7 @@ void PerfMonitor::addToGlobalConstructors(Function *Fn) {
 }
 
 Function *PerfMonitor::getRDTSCP() {
-  return Intrinsic::getDeclaration(M, Intrinsic::x86_rdtscp);
+  return Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_rdtscp);
 }
 
 PerfMonitor::PerfMonitor(const Scop &S, Module *M)

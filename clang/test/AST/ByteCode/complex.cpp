@@ -181,6 +181,9 @@ constexpr _Complex float getComplexFloat() {
 static_assert(__real(getComplexFloat()) == 1, "");
 static_assert(__imag(getComplexFloat()) == 2, "");
 
+constexpr auto GH55390 = 1 / 65536j; // both-note {{division by zero}} \
+                                     // both-error {{constexpr variable 'GH55390' must be initialized by a constant expression}}
+
 namespace CastToBool {
   constexpr _Complex int F = {0, 1};
   static_assert(F, "");
@@ -404,8 +407,7 @@ namespace ComplexConstexpr {
                                   // ref-note {{cannot access real component of null}} \
                                   // expected-note {{read of dereferenced null pointer}}
   constexpr float pi = __imag *p; // both-error {{constant expr}} \
-                                  // ref-note {{cannot access imaginary component of null}} \
-                                  // expected-note {{cannot perform pointer arithmetic on null pointer}}
+                                  // ref-note {{cannot access imaginary component of null}}
   constexpr const _Complex double *q = &test3 + 1;
   constexpr double qr = __real *q; // ref-error {{constant expr}} \
                                    // ref-note {{cannot access real component of pointer past the end}}

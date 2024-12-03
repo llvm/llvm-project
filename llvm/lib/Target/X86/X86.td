@@ -270,6 +270,22 @@ def FeatureAMXFP16     : SubtargetFeature<"amx-fp16", "HasAMXFP16", "true",
 def FeatureAMXCOMPLEX : SubtargetFeature<"amx-complex", "HasAMXCOMPLEX", "true",
                                          "Support AMX-COMPLEX instructions",
                                          [FeatureAMXTILE]>;
+def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
+                                     "Support AMX-FP8 instructions",
+                                     [FeatureAMXTILE]>;
+def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
+                                       "Support AMX-MOVRS instructions",
+                                       [FeatureAMXTILE]>;
+def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
+                                           "Support AMX amx-transpose instructions",
+                                           [FeatureAMXTILE]>;
+def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
+                                        "HasAMXAVX512", "true",
+                                        "Support AMX-AVX512 instructions",
+                                        [FeatureAMXTILE]>;
+def FeatureAMXTF32 : SubtargetFeature<"amx-tf32", "HasAMXTF32", "true",
+                                      "Support AMX-TF32 instructions",
+                                      [FeatureAMXTILE]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",
@@ -351,6 +367,8 @@ def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
+def FeatureMOVRS   : SubtargetFeature<"movrs", "HasMOVRS", "true",
+                           "Enable MOVRS", []>;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software
@@ -1137,6 +1155,33 @@ def ProcessorFeatures {
   list<SubtargetFeature> GNRDFeatures =
     !listconcat(GNRFeatures, GNRDAdditionalFeatures);
 
+  // Diamond Rapids
+  list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2_512,
+                                                  FeatureSM4,
+                                                  FeatureCMPCCXADD,
+                                                  FeatureAVXIFMA,
+                                                  FeatureAVXNECONVERT,
+                                                  FeatureAVXVNNIINT8,
+                                                  FeatureAVXVNNIINT16,
+                                                  FeatureSHA512,
+                                                  FeatureSM3,
+                                                  FeatureEGPR,
+                                                  FeatureZU,
+                                                  FeatureCCMP,
+                                                  FeaturePush2Pop2,
+                                                  FeaturePPX,
+                                                  FeatureNDD,
+                                                  FeatureNF,
+                                                  FeatureCF,
+                                                  FeatureMOVRS,
+                                                  FeatureAMXMOVRS,
+                                                  FeatureAMXAVX512,
+                                                  FeatureAMXFP8,
+                                                  FeatureAMXTF32,
+                                                  FeatureAMXTRANSPOSE];
+  list<SubtargetFeature> DMRFeatures =
+    !listconcat(GNRDFeatures, DMRAdditionalFeatures);
+
   // Atom
   list<SubtargetFeature> AtomFeatures = [FeatureX87,
                                          FeatureCX8,
@@ -1528,7 +1573,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
-
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
@@ -1549,6 +1593,17 @@ def ProcessorFeatures {
                                                   FeatureVPOPCNTDQ];
   list<SubtargetFeature> ZN4Features =
     !listconcat(ZN3Features, ZN4AdditionalFeatures);
+
+  list<SubtargetFeature> ZN5Tuning = ZN4Tuning;
+  list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureVNNI,
+                                                  FeatureMOVDIRI,
+                                                  FeatureMOVDIR64B,
+                                                  FeatureVP2INTERSECT,
+                                                  FeaturePREFETCHI,
+                                                  FeatureAVXVNNI
+                                                  ];
+  list<SubtargetFeature> ZN5Features =
+    !listconcat(ZN4Features, ZN5AdditionalFeatures);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1828,6 +1883,8 @@ foreach P = ["graniterapids-d", "graniterapids_d"] in {
 def : ProcModel<P, SapphireRapidsModel,
                 ProcessorFeatures.GNRDFeatures, ProcessorFeatures.GNRTuning>;
 }
+def : ProcModel<"diamondrapids", SapphireRapidsModel,
+                ProcessorFeatures.DMRFeatures, ProcessorFeatures.GNRTuning>;
 
 // AMD CPUs.
 
@@ -1884,11 +1941,13 @@ def : ProcModel<"bdver1", BdVer2Model, ProcessorFeatures.BdVer1Features,
 def : ProcModel<"bdver2", BdVer2Model, ProcessorFeatures.BdVer2Features,
                 ProcessorFeatures.BdVer2Tuning>;
 // Steamroller
-def : Proc<"bdver3", ProcessorFeatures.BdVer3Features,
-           ProcessorFeatures.BdVer3Tuning>;
+// NOTE: BdVer2Model is only an approx model for Steamroller.
+def : ProcModel<"bdver3", BdVer2Model, ProcessorFeatures.BdVer3Features,
+                ProcessorFeatures.BdVer3Tuning>;
 // Excavator
-def : Proc<"bdver4", ProcessorFeatures.BdVer4Features,
-           ProcessorFeatures.BdVer4Tuning>;
+// NOTE: Znver1Model is only an approx model for Excavator (with AVX2).
+def : ProcModel<"bdver4", Znver1Model, ProcessorFeatures.BdVer4Features,
+                ProcessorFeatures.BdVer4Tuning>;
 
 def : ProcModel<"znver1", Znver1Model, ProcessorFeatures.ZNFeatures,
                 ProcessorFeatures.ZNTuning>;
@@ -1897,7 +1956,9 @@ def : ProcModel<"znver2", Znver2Model, ProcessorFeatures.ZN2Features,
 def : ProcModel<"znver3", Znver3Model, ProcessorFeatures.ZN3Features,
                 ProcessorFeatures.ZN3Tuning>;
 def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
-           ProcessorFeatures.ZN4Tuning>;
+                ProcessorFeatures.ZN4Tuning>;
+def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
+                ProcessorFeatures.ZN5Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;

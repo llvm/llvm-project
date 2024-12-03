@@ -45,6 +45,16 @@ OPTIONS
 
             Use colors in output.
 
+.. option:: --error-display=<value>       
+
+            Set the level of detail and summary to display when verifying.
+            Implies :option:`--verify`. The supported values are:
+
+            `quiet`   - Only display whether errors occurred.
+            `summary` - Display only a summary of the errors found.
+            `details` - Display each error in detail but no summary.
+            `full`    - Display each error as well as a summary. [default]
+
 .. option:: -f <name>, --find=<name>
 
             Search for the exact text <name> in the accelerator tables
@@ -150,6 +160,12 @@ OPTIONS
             compile unit chains, DIE relationships graph, address
             ranges, and more.
 
+.. option:: --verify-json=<path>
+
+            Output JSON-formatted error summary to the a file specfied by
+            <path>. Implies :option:`--verify`.  The output format is described
+            in the section below (:ref:`verify-json-format`).
+
 .. option:: --version
 
             Display the version of the tool.
@@ -195,6 +211,28 @@ For aggregated values, the following keys are used:
       - `#bytes` ==> the number of bytes
       - `#variables - entry values ...` ==> the number of variables excluding
         the entry values etc.
+
+.. _verify-json-format:
+
+FORMAT OF VERIFY JSON OUTPUT
+----------------------------
+
+The format of the JSON output created by the :option:`--verify-json` is::
+
+  { 
+    "error-categories": { 
+      "<first category description>": {"count": 1234},
+      "<next category description>": {"count": 4321}
+    },
+    "error-count": 5555
+  }
+
+The following is generated if there are no errors reported::
+
+  { 
+    "error-categories": {},
+    "error-count": 0
+  }
 
 EXIT STATUS
 -----------

@@ -84,9 +84,9 @@ sum = 0.0;
 // CHECK-DAG:    store ptr @[[RED_COMB1:.+]], ptr [[TMP25]],
 // CHECK-DAG:    [[TMP26:%.*]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 6
 // CHECK-DAG:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP26]], i8 0, i64 4, i1 false)
-// CHECK-DAG:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x %struct.S], ptr [[C:%.+]], i64 0, i64 0
+// CHECK-DAG:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw [100 x %struct.S], ptr [[C:%.+]], i64 0, i64 0
 // CHECK-DAG:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, %
-// CHECK-DAG:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x %struct.S], ptr [[C]], i64 0, i64 [[LB_ADD_LEN]]
+// CHECK-DAG:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw [100 x %struct.S], ptr [[C]], i64 0, i64 [[LB_ADD_LEN]]
 // CHECK-DAG:    store ptr [[ARRAYIDX5]], ptr [[TMP28:%[^,]+]],
 // CHECK-DAG:    [[TMP28]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_4:%.+]], i32 0, i32 0
 // CHECK-DAG:    store ptr [[ARRAYIDX5]], ptr [[TMP28:%[^,]+]],
@@ -138,10 +138,10 @@ sum = 0.0;
 // CHECK-DAG:    store ptr @[[RED_COMB4:.+]], ptr [[TMP59]],
 // CHECK-DAG:    [[TMP60:%.*]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_8]], i32 0, i32 6
 // CHECK-DAG:    store i32 1, ptr [[TMP60]],
-// CHECK-DAG:    [[DOTRD_INPUT_GEP_]] = getelementptr inbounds [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
-// CHECK-DAG:    [[DOTRD_INPUT_GEP_4]] = getelementptr inbounds [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
-// CHECK-DAG:    [[DOTRD_INPUT_GEP_7]] = getelementptr inbounds [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
-// CHECK-DAG:    [[DOTRD_INPUT_GEP_8]] = getelementptr inbounds [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
+// CHECK-DAG:    [[DOTRD_INPUT_GEP_]] = getelementptr inbounds nuw [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
+// CHECK-DAG:    [[DOTRD_INPUT_GEP_4]] = getelementptr inbounds nuw [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
+// CHECK-DAG:    [[DOTRD_INPUT_GEP_7]] = getelementptr inbounds nuw [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
+// CHECK-DAG:    [[DOTRD_INPUT_GEP_8]] = getelementptr inbounds nuw [4 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64
 // CHECK:    [[TMP62:%.*]] = call ptr @__kmpc_taskred_init(i32 [[TMP0:%.+]], i32 4, ptr [[DOTRD_INPUT_]])
 // CHECK:    [[TMP63:%.*]] = load i32, ptr [[N:%.+]],
 // CHECK:    store i32 [[TMP63]], ptr [[DOTCAPTURE_EXPR_]],

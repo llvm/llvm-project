@@ -1,6 +1,8 @@
+! RUN: %flang_fc1 -fdebug-unparse -fopenmp -fopenmp-version=50 %s | \
+! RUN:   FileCheck --ignore-case %s
 
-! RUN: %flang_fc1 -fdebug-unparse -fopenmp %s | FileCheck --ignore-case %s
-! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
+! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp -fopenmp-version=50 %s | \
+! RUN:   FileCheck --check-prefix="PARSE-TREE" %s
 
 ! Check for parsing of loop directive
 
@@ -10,6 +12,16 @@ subroutine test_loop
   !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = loop
   !CHECK: !$omp loop
   !$omp loop
+  do i=1,10
+   j = j + 1
+  end do
+  !$omp end loop
+
+  !PARSE-TREE: OmpBeginLoopDirective
+  !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = loop
+  !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Bind -> OmpBindClause -> Binding = Thread
+  !CHECK: !$omp loop
+  !$omp loop bind(thread)
   do i=1,10
    j = j + 1
   end do

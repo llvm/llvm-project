@@ -147,6 +147,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  malloc
+  ../libc/newhdrgen/yaml/malloc.yaml
+  malloc.h.def
+  malloc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.malloc_macros
+)
+
+add_header_macro(
   math
   ../libc/newhdrgen/yaml/math.yaml
   math.h.def
@@ -168,6 +178,7 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
+    .llvm-libc-types.stdfix-types
 )
 
 # TODO: This should be conditional on POSIX networking being included.
@@ -190,6 +201,16 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.assert_macros
+)
+
+add_header_macro(
+  complex
+  ../libc/newhdrgen/yaml/complex.yaml
+  complex.h.def
+  complex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.complex_macros
 )
 
 add_header_macro(
@@ -234,6 +255,7 @@ add_header_macro(
     .llvm-libc-types.ENTRY
     .llvm-libc-types.struct_hsearch_data
     .llvm-libc-types.size_t
+    .llvm-libc-types.__lsearchcompare_t
 )
 
 add_header_macro(
@@ -347,6 +369,7 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__atexithandler_t
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(
@@ -592,6 +615,8 @@ add_header_macro(
     .llvm-libc-macros.sys_socket_macros
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_un
 )
@@ -742,7 +767,6 @@ if(LIBC_TARGET_OS_IS_GPU)
     gpu/rpc.h
     DEPENDS
       .llvm_libc_common_h
-      .llvm-libc-types.rpc_opcodes_t
   )
 endif()
 

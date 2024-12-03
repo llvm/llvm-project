@@ -65,7 +65,7 @@ GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
   memset(context_ptr, 0, sizeof(::WOW64_CONTEXT));
   context_ptr->ContextFlags = control_flag;
   if (!::Wow64GetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} Wow64GetThreadContext failed with error {1}",
              __FUNCTION__, error);
     return error;
@@ -78,7 +78,7 @@ static Status SetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
   if (!::Wow64SetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} Wow64SetThreadContext failed with error {1}",
              __FUNCTION__, error);
     return error;
@@ -257,9 +257,9 @@ Status NativeRegisterContextWindows_WoW64::DRRead(const uint32_t reg,
     reg_value.SetUInt32(tls_context.Dr3);
     break;
   case lldb_dr4_i386:
-    return Status("register DR4 is obsolete");
+    return Status::FromErrorString("register DR4 is obsolete");
   case lldb_dr5_i386:
-    return Status("register DR5 is obsolete");
+    return Status::FromErrorString("register DR5 is obsolete");
   case lldb_dr6_i386:
     reg_value.SetUInt32(tls_context.Dr6);
     break;
@@ -296,9 +296,9 @@ NativeRegisterContextWindows_WoW64::DRWrite(const uint32_t reg,
     tls_context.Dr3 = reg_value.GetAsUInt32();
     break;
   case lldb_dr4_i386:
-    return Status("register DR4 is obsolete");
+    return Status::FromErrorString("register DR4 is obsolete");
   case lldb_dr5_i386:
-    return Status("register DR5 is obsolete");
+    return Status::FromErrorString("register DR5 is obsolete");
   case lldb_dr6_i386:
     tls_context.Dr6 = reg_value.GetAsUInt32();
     break;
@@ -315,7 +315,7 @@ NativeRegisterContextWindows_WoW64::ReadRegister(const RegisterInfo *reg_info,
                                                  RegisterValue &reg_value) {
   Status error;
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -323,9 +323,10 @@ NativeRegisterContextWindows_WoW64::ReadRegister(const RegisterInfo *reg_info,
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
-    error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot read directly",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is an internal-only lldb "
+        "register, cannot read directly",
+        reg_info->name);
     return error;
   }
 
@@ -335,7 +336,7 @@ NativeRegisterContextWindows_WoW64::ReadRegister(const RegisterInfo *reg_info,
   if (IsDR(reg))
     return DRRead(reg, reg_value);
 
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }
 
 Status NativeRegisterContextWindows_WoW64::WriteRegister(
@@ -343,7 +344,7 @@ Status NativeRegisterContextWindows_WoW64::WriteRegister(
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -351,9 +352,10 @@ Status NativeRegisterContextWindows_WoW64::WriteRegister(
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly written.
-    error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot write directly",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is an internal-only lldb "
+        "register, cannot write directly",
+        reg_info->name);
     return error;
   }
 
@@ -363,7 +365,7 @@ Status NativeRegisterContextWindows_WoW64::WriteRegister(
   if (IsDR(reg))
     return DRWrite(reg, reg_value);
 
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }
 
 Status NativeRegisterContextWindows_WoW64::ReadAllRegisterValues(
@@ -385,14 +387,14 @@ Status NativeRegisterContextWindows_WoW64::WriteAllRegisterValues(
   Status error;
   const size_t data_size = REG_CONTEXT_SIZE;
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextWindows_WoW64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != data_size) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "data_sp contained mismatched data size, expected {0}, actual {1}",
         data_size, data_sp->GetByteSize());
     return error;
@@ -408,7 +410,7 @@ Status NativeRegisterContextWindows_WoW64::IsWatchpointHit(uint32_t wp_index,
   is_hit = false;
 
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("watchpoint index out of range");
+    return Status::FromErrorString("watchpoint index out of range");
 
   RegisterValue reg_value;
   Status error = DRRead(lldb_dr6_i386, reg_value);
@@ -444,7 +446,7 @@ Status NativeRegisterContextWindows_WoW64::IsWatchpointVacant(uint32_t wp_index,
   is_vacant = false;
 
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Status::FromErrorString("Watchpoint index out of range");
 
   RegisterValue reg_value;
   Status error = DRRead(lldb_dr7_i386, reg_value);

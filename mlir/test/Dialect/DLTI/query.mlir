@@ -1,7 +1,7 @@
 // RUN: mlir-opt -transform-interpreter -canonicalize -split-input-file -verify-diagnostics %s | FileCheck %s
 
-// expected-remark @below {{associated attr 42 : i32}}
-module attributes { test.dlti = #dlti.map<#dlti.dl_entry<"test.id", 42 : i32>>} {
+// expected-remark @below {{attr associated to "test.id" = 42 : i32}}
+module attributes { test.dlti = #dlti.map<"test.id" = 42 : i32> } {
   func.func private @f()
 }
 
@@ -10,15 +10,69 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
     %param = transform.dlti.query ["test.id"] at %module : (!transform.any_op) -> !transform.any_param
-    transform.debug.emit_param_as_remark %param, "associated attr" at %module : !transform.any_param, !transform.any_op
+    transform.debug.emit_param_as_remark %param, "attr associated to \"test.id\" =" at %module : !transform.any_param, !transform.any_op
     transform.yield
   }
 }
 
 // -----
 
-// expected-remark @below {{associated attr 42 : i32}}
-module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
+// expected-remark @below {{i32 present in set : unit}}
+module attributes { test.dlti = #dlti.map<i32 = unit> } {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
+    %param = transform.dlti.query [i32] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %param, "i32 present in set :" at %module : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-remark @below {{attr associated to i32's "width_in_bits" = 32 : i32}}
+module attributes { test.dlti = #dlti.map<i32 = #dlti.map<"width_in_bits" = 32 : i32>> } {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
+    %param = transform.dlti.query [i32,"width_in_bits"] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %param, "attr associated to i32's \"width_in_bits\" =" at %module : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-remark @below {{width in bits of i32 = 32 : i64}}
+// expected-remark @below {{width in bits of f64 = 64 : i64}}
+module attributes { test.dlti = #dlti.map<"width_in_bits" = #dlti.map<i32 = 32, f64 = 64>> } {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
+    %i32bits = transform.dlti.query ["width_in_bits",i32] at %module : (!transform.any_op) -> !transform.any_param
+    %f64bits  = transform.dlti.query ["width_in_bits",f64] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %i32bits, "width in bits of i32 =" at %module : !transform.any_param, !transform.any_op
+    transform.debug.emit_param_as_remark %f64bits, "width in bits of f64 =" at %module : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-remark @below {{attr associated to "test.id" = 42 : i32}}
+module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32> } {
   func.func private @f()
 }
 
@@ -27,32 +81,32 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
     %param = transform.dlti.query ["test.id"] at %module : (!transform.any_op) -> !transform.any_param
-    transform.debug.emit_param_as_remark %param, "associated attr" at %module : !transform.any_param, !transform.any_op
+    transform.debug.emit_param_as_remark %param, "attr associated to \"test.id\" =" at %module : !transform.any_param, !transform.any_op
     transform.yield
   }
 }
 
 // -----
 
-module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
-  // expected-remark @below {{associated attr 24 : i32}}
-  func.func private @f() attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 24 : i32>>}
+module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32> } {
+  // expected-remark @below {{attr associated to "test.id" = 24 : i32}}
+  func.func private @f() attributes { test.dlti = #dlti.dl_spec<"test.id" = 24 : i32>}
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg: !transform.any_op) {
     %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     %param = transform.dlti.query ["test.id"] at %funcs : (!transform.any_op) -> !transform.any_param
-    transform.debug.emit_param_as_remark %param, "associated attr" at %funcs : !transform.any_param, !transform.any_op
+    transform.debug.emit_param_as_remark %param, "attr associated to \"test.id\" =" at %funcs : !transform.any_param, !transform.any_op
     transform.yield
   }
 }
 
 // -----
 
-// expected-remark @below {{associated attr 42 : i32}}
-module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
-  func.func private @f() attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 24 : i32>>}
+// expected-remark @below {{attr associated to "test.id" = 42 : i32}}
+module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32> } {
+  func.func private @f() attributes { test.dlti = #dlti.dl_spec<"test.id" = 24 : i32> }
 }
 
 module attributes {transform.with_named_sequence} {
@@ -60,14 +114,14 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     %module = transform.get_parent_op %funcs : (!transform.any_op) -> !transform.any_op
     %param = transform.dlti.query ["test.id"] at %module : (!transform.any_op) -> !transform.any_param
-    transform.debug.emit_param_as_remark %param, "associated attr" at %module : !transform.any_param, !transform.any_op
+    transform.debug.emit_param_as_remark %param, "attr associated to \"test.id\" =" at %module : !transform.any_param, !transform.any_op
     transform.yield
   }
 }
 
 // -----
 
-module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
+module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32> } {
   func.func @matmul_tensors(
     %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
       -> tensor<?x?xf32> {
@@ -90,10 +144,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
+module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32> } {
   func.func @matmul_tensors(
     %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
-      -> tensor<?x?xf32> attributes {test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 24 : i32>>} {
+      -> tensor<?x?xf32> attributes {test.dlti = #dlti.dl_spec<"test.id" = 24 : i32> } {
     // expected-remark @below {{associated attr 24 : i32}}
     %0 = linalg.matmul  ins(%arg0, %arg1: tensor<?x?xf32>, tensor<?x?xf32>)
                        outs(%arg2: tensor<?x?xf32>)
@@ -115,8 +169,8 @@ module attributes {transform.with_named_sequence} {
 
 // expected-remark @below {{associated attr 42 : i32}}
 module attributes { test.dlti =
-  #dlti.target_system_spec<"CPU":
-    #dlti.target_device_spec<#dlti.dl_entry<"test.id", 42 : i32>>>} {
+  #dlti.target_system_spec<"CPU" =
+    #dlti.target_device_spec<"test.id" = 42 : i32>> } {
   func.func private @f()
 }
 
@@ -132,8 +186,8 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-module attributes { test.dlti = #dlti.target_system_spec<"CPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 42 : i32>>,
-                                                         "GPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 43 : i32>>>} {
+module attributes { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
+                                                         "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
   // expected-remark @below {{associated attr 43 : i32}}
   func.func private @f()
 }
@@ -149,10 +203,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-module attributes { test.dlti = #dlti.target_system_spec<"CPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 42 : i32>>,
-                                                         "GPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 43 : i32>>>} {
+module attributes { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
+                                                         "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
   // expected-remark @below {{associated attr 24 : i32}}
-  func.func private @f() attributes { test.dlti = #dlti.target_system_spec<"CPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 24 : i32>>> }
+  func.func private @f() attributes { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 24 : i32>> }
 }
 
 module attributes {transform.with_named_sequence} {
@@ -167,9 +221,9 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 module attributes { test.dlti = #dlti.target_system_spec<
-  "CPU": #dlti.target_device_spec<
-    #dlti.dl_entry<"cache::L1::size_in_bytes", 65536 : i32>,
-    #dlti.dl_entry<"cache::L1d::size_in_bytes", 32768 : i32>>> } {
+  "CPU" = #dlti.target_device_spec<
+    "cache::L1::size_in_bytes" = 65536 : i32,
+    "cache::L1d::size_in_bytes" = 32768 : i32>> } {
   // expected-remark @below {{L1::size_in_bytes 65536 : i32}}
   // expected-remark @below {{L1d::size_in_bytes 32768 : i32}}
   func.func private @f()
@@ -188,13 +242,13 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-#l1_size = #dlti.map<#dlti.dl_entry<"size_in_bytes", 65536 : i32>>
-#l1d_size = #dlti.map<#dlti.dl_entry<"size_in_bytes", 32768 : i32>>
+#l1_size = #dlti.map<"size_in_bytes" = 65536 : i32>
+#l1d_size = #dlti.map<"size_in_bytes" = 32768 : i32>
 module attributes { test.dlti =
-  #dlti.target_system_spec<"CPU":
-    #dlti.target_device_spec<#dlti.dl_entry<"cache",
-      #dlti.map<#dlti.dl_entry<"L1", #l1_size>,
-                #dlti.dl_entry<"L1d", #l1d_size> >>>> } {
+  #dlti.target_system_spec<"CPU" =
+    #dlti.target_device_spec<"cache" =
+      #dlti.map<"L1" = #l1_size,
+                "L1d" = #l1d_size >>> } {
   // expected-remark @below {{L1::size_in_bytes 65536 : i32}}
   // expected-remark @below {{L1d::size_in_bytes 32768 : i32}}
   func.func private @f()
@@ -214,8 +268,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 module attributes { test.dlti = #dlti.target_system_spec<
-  "CPU": #dlti.target_device_spec<
-    #dlti.dl_entry<"inner_most_tile_size", 42 : i32>>>} {
+  "CPU" = #dlti.target_device_spec<"inner_most_tile_size" = 42 : i32>> } {
   // CHECK-LABEL: func @matmul_tensors
   func.func @matmul_tensors(
     %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
@@ -247,8 +300,8 @@ module attributes {transform.with_named_sequence} {
 
 // expected-note @below {{key "NPU" has no DLTI-mapping per attr: #dlti.target_system_spec}}
 module attributes { test.dlti = #dlti.target_system_spec<
-    "CPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 42 : i32>>,
-    "GPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 43 : i32>>>} {
+    "CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
+    "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
 }
@@ -266,8 +319,8 @@ module attributes {transform.with_named_sequence} {
 
 // expected-note @below {{key "unspecified" has no DLTI-mapping per attr: #dlti.target_device_spec}}
 module attributes { test.dlti = #dlti.target_system_spec<
-    "CPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 42 : i32>>,
-    "GPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 43 : i32>>>} {
+    "CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
+    "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
 }
@@ -285,8 +338,8 @@ module attributes {transform.with_named_sequence} {
 
 // expected-note @below {{key "test.id" has no DLTI-mapping per attr: #dlti.target_system_spec}}
 module attributes { test.dlti = #dlti.target_system_spec<
-  "CPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 42 : i32>>,
-  "GPU": #dlti.target_device_spec<#dlti.dl_entry<"test.id", 43 : i32>>>} {
+  "CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
+  "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
 }
@@ -303,7 +356,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // expected-note @below {{key "CPU" has no DLTI-mapping per attr: #dlti.dl_spec}}
-module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>} {
+module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
 }
@@ -320,7 +373,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // expected-note @below {{got non-DLTI-queryable attribute upon looking up keys ["CPU"]}}
-module attributes { test.dlti = #dlti.dl_spec<#dlti.dl_entry<"CPU", 42 : i32>>} {
+module attributes { test.dlti = #dlti.dl_spec<"CPU" = 42 : i32> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
 }
@@ -330,6 +383,23 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{'transform.dlti.query' op failed to apply}}
     %param = transform.dlti.query ["CPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-note @below {{got non-DLTI-queryable attribute upon looking up keys [i32]}}
+module attributes { test.dlti = #dlti.dl_spec<i32 = 32 : i32> } {
+  // expected-error @below {{target op of failed DLTI query}}
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' op failed to apply}}
+    %param = transform.dlti.query [i32,"width_in_bits"] at %func : (!transform.any_op) -> !transform.any_param
     transform.yield
   }
 }
@@ -347,6 +417,55 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{'transform.dlti.query' op failed to apply}}
     %param = transform.dlti.query ["CPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-note @below {{key i64 has no DLTI-mapping per attr: #dlti.map<i32 = 32 : i64>}}
+module attributes { test.dlti = #dlti.map<"width_in_bits" = #dlti.map<i32 = 32>>} {
+  // expected-error @below {{target op of failed DLTI query}}
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' op failed to apply}}
+    %param = transform.dlti.query ["width_in_bits",i64] at %func : (!transform.any_op) -> !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32>} {
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' keys of wrong type: only StringAttr and TypeAttr are allowed}}
+    %param = transform.dlti.query [1] at %funcs : (!transform.any_op) -> !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { test.dlti = #dlti.map<#dlti.dl_entry<"test.id", 42 : i32>>} {
+  // expected-error @below {{target op of failed DLTI query}}
+  // expected-note @below {{no keys provided to attempt query with}}
+  func.func private @f()
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' op failed to apply}}
+    %param = transform.dlti.query [] at %func : (!transform.any_op) -> !transform.any_param
     transform.yield
   }
 }

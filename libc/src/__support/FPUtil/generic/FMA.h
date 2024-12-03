@@ -14,6 +14,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
@@ -157,7 +158,7 @@ fma(InType x, InType y, InType z) {
   }
 
   if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0))
-    return static_cast<OutType>(x * y + z);
+    return cast<OutType>(x * y + z);
 
   int x_exp = 0;
   int y_exp = 0;
@@ -198,7 +199,7 @@ fma(InType x, InType y, InType z) {
   if (LIBC_UNLIKELY(x_exp == InFPBits::MAX_BIASED_EXPONENT ||
                     y_exp == InFPBits::MAX_BIASED_EXPONENT ||
                     z_exp == InFPBits::MAX_BIASED_EXPONENT))
-    return static_cast<OutType>(x * y + z);
+    return cast<OutType>(x * y + z);
 
   // Extract mantissa and append hidden leading bits.
   InStorageType x_mant = x_bits.get_explicit_mantissa();

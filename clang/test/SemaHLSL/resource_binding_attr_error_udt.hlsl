@@ -2,23 +2,23 @@
 
 template<typename T>
 struct MyTemplatedUAV {
-  [[hlsl::resource_class(UAV)]] T x;
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
 };
 
 struct MySRV {
-  [[hlsl::resource_class(SRV)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
 };
 
 struct MySampler {
-  [[hlsl::resource_class(Sampler)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(Sampler)]] x;
 };
 
 struct MyUAV {
-  [[hlsl::resource_class(UAV)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
 };
 
 struct MyCBuffer {
-  [[hlsl::resource_class(CBuffer)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(CBuffer)]] x;
 };
 
 // Valid: f is skipped, SRVBuf is bound to t0, UAVBuf is bound to u0
@@ -106,7 +106,6 @@ struct Eg12{
   MySRV s1;
   MySRV s2;
 };
-// expected-warning@+3{{binding type 'u' only applies to types containing UAV resources}}
 // expected-warning@+2{{binding type 'u' only applies to types containing UAV resources}}
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg12 e12 : register(u9) : register(u10);
@@ -115,14 +114,22 @@ struct Eg13{
   MySRV s1;
   MySRV s2;
 };
-// expected-warning@+4{{binding type 'u' only applies to types containing UAV resources}}
 // expected-warning@+3{{binding type 'u' only applies to types containing UAV resources}}
-// expected-warning@+2{{binding type 'u' only applies to types containing UAV resources}}
+// expected-error@+2{{binding type 'u' cannot be applied more than once}}
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg13 e13 : register(u9) : register(u10) : register(u11);
+
+// expected-error@+1{{binding type 't' cannot be applied more than once}}
+Eg13 e13_2 : register(t11) : register(t12);
 
 struct Eg14{
  MyTemplatedUAV<int> r1;  
 };
 // expected-warning@+1{{binding type 't' only applies to types containing SRV resources}}
 Eg14 e14 : register(t9);
+
+struct Eg15 {
+  float f[4];
+}; 
+// expected no error
+Eg15 e15 : register(c0);

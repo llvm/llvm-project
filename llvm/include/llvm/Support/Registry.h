@@ -53,7 +53,13 @@ namespace llvm {
     Registry() = delete;
 
     friend class node;
-    static node *Head, *Tail;
+    // These must be must two separate declarations to workaround a 20 year
+    // old MSVC bug with dllexport and multiple static fields in the same
+    // declaration causing error C2487 "member of dll interface class may not
+    // be declared with dll interface".
+    // https://developercommunity.visualstudio.com/t/c2487-in-dllexport-class-with-static-members/69878
+    static node *Head;
+    static node *Tail;
 
   public:
     /// Node in linked list of entries.
@@ -76,7 +82,13 @@ namespace llvm {
     /// add a node to the executable's registry. Therefore it's not defined here
     /// to avoid it being instantiated in the plugin and is instead defined in
     /// the executable (see LLVM_INSTANTIATE_REGISTRY below).
-    static void add_node(node *N);
+    static void add_node(node *N) {
+      if (Tail)
+        Tail->Next = N;
+      else
+        Head = N;
+      Tail = N;
+    }
 
     /// Iterators for registry entries.
     ///
@@ -95,7 +107,7 @@ namespace llvm {
 
     // begin is not defined here in order to avoid usage of an undefined static
     // data member, instead it's instantiated by LLVM_INSTANTIATE_REGISTRY.
-    static iterator begin();
+    static iterator begin() { return iterator(Head); }
     static iterator end()   { return iterator(nullptr); }
 
     static iterator_range<iterator> entries() {
@@ -124,36 +136,28 @@ namespace llvm {
       }
     };
   };
+
 } // end namespace llvm
 
+#ifdef _WIN32
 /// Instantiate a registry class.
-///
-/// This provides template definitions of add_node, begin, and the Head and Tail
-/// pointers, then explicitly instantiates them. We could explicitly specialize
-/// them, instead of the two-step process of define then instantiate, but
-/// strictly speaking that's not allowed by the C++ standard (we would need to
-/// have explicit specialization declarations in all translation units where the
-/// specialization is used) so we don't.
-#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS) \
-  namespace llvm { \
-  template<typename T> typename Registry<T>::node *Registry<T>::Head = nullptr;\
-  template<typename T> typename Registry<T>::node *Registry<T>::Tail = nullptr;\
-  template<typename T> \
-  void Registry<T>::add_node(typename Registry<T>::node *N) { \
-    if (Tail) \
-      Tail->Next = N; \
-    else \
-      Head = N; \
-    Tail = N; \
-  } \
-  template<typename T> typename Registry<T>::iterator Registry<T>::begin() { \
-    return iterator(Head); \
-  } \
-  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Head; \
-  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Tail; \
-  template \
-  void Registry<REGISTRY_CLASS::type>::add_node(REGISTRY_CLASS::node*); \
-  template REGISTRY_CLASS::iterator Registry<REGISTRY_CLASS::type>::begin(); \
+#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
+  namespace llvm {                                                             \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Head = nullptr;                     \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Tail = nullptr;                     \
+  template class LLVM_ABI_EXPORT Registry<REGISTRY_CLASS::type>;               \
   }
+#else
+#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
+  namespace llvm {                                                             \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Head = nullptr;                     \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Tail = nullptr;                     \
+  template class Registry<REGISTRY_CLASS::type>;                               \
+  }
+#endif
 
 #endif // LLVM_SUPPORT_REGISTRY_H

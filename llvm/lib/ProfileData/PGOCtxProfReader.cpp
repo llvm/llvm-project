@@ -12,12 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/PGOCtxProfReader.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
@@ -42,14 +40,6 @@ PGOCtxProfContext::getOrEmplace(uint32_t Index, GlobalValue::GUID G,
     return make_error<InstrProfError>(instrprof_error::invalid_prof,
                                       "Duplicate GUID for same callsite.");
   return Iter->second;
-}
-
-void PGOCtxProfContext::getContainedGuids(
-    DenseSet<GlobalValue::GUID> &Guids) const {
-  Guids.insert(GUID);
-  for (const auto &[_, Callsite] : Callsites)
-    for (const auto &[_, Callee] : Callsite)
-      Callee.getContainedGuids(Guids);
 }
 
 Expected<BitstreamEntry> PGOCtxProfileReader::advance() {
