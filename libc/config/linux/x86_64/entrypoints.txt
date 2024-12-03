@@ -700,6 +700,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
+    libc.src.math.sinf16
     libc.src.math.sinhf16
     libc.src.math.sinpif16
     libc.src.math.sqrtf16
