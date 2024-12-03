@@ -936,9 +936,10 @@ def VOPProfileMAI_F32_V4I32_V4I32_X512     : VOPProfileMAI<VOP_V16F32_V4I32_V4I3
 def VOPProfileMAI_F32_V4I32_V4I32_X512_VCD : VOPProfileMAI<VOP_V16F32_V4I32_V4I32_V16F32,    VISrc_512_f32,  VDst_512, AVSrc_128, AVSrc_128>;
 }
 
-
 #ifdef LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
+
+#endif /* LLPC_BUILD_NPI */
 // For i32_16x16x64_i8
 def VOPProfileMAI_I32_V4I32_X128     : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    VISrc_128_f32,  VDst_128, AVSrc_128>;
@@ -947,11 +948,18 @@ def VOPProfileMAI_I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32
 def VOPProfileMAI_I32_V4I32_X16     : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    AISrc_512_b32,  ADst_512, AVSrc_128>;
 def VOPProfileMAI_I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    VISrc_512_b32,  VDst_512, AVSrc_128>;
 
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
 #endif /* LLPC_BUILD_NPI */
-class MFMATable <bit is_mac, string Name> {
+class MFMATable <bit is_mac, string Kind, string Name,
+                 string AGPROpName = NAME> {
   bit IsMac = is_mac;
   string FMAOp = Name;
+  string AGPROp = AGPROpName;
+
+  // Does this MFMA use "AGPR" or "VGPR" for srcC/vdst
+  string MFMAKind = Kind;
 }
 
 class MFMA_F8F6F4_WithSizeTable<int A, int B, Instruction ThisVariant, Instruction F8F8Variant> {
@@ -1057,12 +1065,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
                          !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                 MFMATable<0, NAME # "_e64">;
+                 MFMATable<0, "AGPR", NAME # "_e64">;
 
       let OtherPredicates = [isGFX90APlus], Mnemonic = OpName in
       def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
                                 !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                        MFMATable<0, NAME # "_vgprcd_e64">;
+                        MFMATable<0, "VGPR", NAME # "_vgprcd_e64", NAME # "_e64">;
     }
 
     if NoDstOverlap then {
@@ -1071,12 +1079,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
           Mnemonic = OpName in {
         def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
                                  !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                         MFMATable<1, NAME # "_e64">;
+                         MFMATable<1, "AGPR", NAME # "_e64", NAME # "_mac_e64">;
 
         let OtherPredicates = [isGFX90APlus] in
         def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
                                       !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                              MFMATable<1, NAME # "_vgprcd_e64">;
+                              MFMATable<1, "VGPR", NAME # "_vgprcd_e64">;
       }
     }
   } // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
@@ -1093,11 +1101,11 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
 
   def _e64 : ScaledMAIInst<OpName,
         !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, HasAbid, true>)>,
-      MFMATable<0, NAME # "_e64">;
+      MFMATable<0, "AGPR", NAME # "_e64">;
 
   def _vgprcd_e64 : ScaledMAIInst<OpName # "_vgprcd",
           !cast<MAIInst>(UnscaledOpName#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, HasAbid, true>)>,
-        MFMATable<0, NAME # "_vgprcd_e64">;
+        MFMATable<0, "VGPR", NAME # "_vgprcd_e64", NAME # "_e64">;
 
  if NoDstOverlap then {
    let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
@@ -1105,11 +1113,11 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
        Mnemonic = UnscaledOpName_ in {
      def _mac_e64 : ScaledMAIInst<OpName # "_mac",
           !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, HasAbid, true>>,
-        MFMATable<1, NAME # "_e64">;
+        MFMATable<1, "AGPR", NAME # "_e64">;
 
      def _mac_vgprcd_e64 : ScaledMAIInst<OpName # " _mac_vgprcd",
           !cast<MAIInst>(UnscaledOpName # "_mac_vgprcd_e64"), VgprMAIFrag<node, HasAbid, true>>,
-        MFMATable<1, NAME # "_vgprcd_e64">;
+        MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
     }
   }
 }
@@ -1803,13 +1811,13 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 #else /* LLPC_BUILD_NPI */
   dag Src2InlineInPat = (ins (Src2VT (WMMAVISrc Src2VT:$src2)));
   dag Src2InlineOutPat = !con(!if(IsIU, (ins), (ins (i32 8))), (ins Src2VT:$src2));
+
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, ClampPat);
   dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
 #else /* LLPC_BUILD_NPI */
-
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, ClampPat);
   dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, ClampPat);
 #endif /* LLPC_BUILD_NPI */
@@ -1822,8 +1830,13 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 #ifdef LLPC_BUILD_NPI
   dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, ClampPat);
   dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
+#else /* LLPC_BUILD_NPI */
+  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat,  ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, ClampPat);
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
 def WMMAInstInfoTable : GenericTable {
   let FilterClass = "WMMAInstInfo";
   let CppTypeName = "WMMAInstInfo";
@@ -1836,13 +1849,8 @@ def WMMAInstInfoTable : GenericTable {
 class WMMAInstInfo {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_wmma_xdl = 0;
-#else /* LLPC_BUILD_NPI */
-  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat,  ClampPat);
-  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, ClampPat);
-#endif /* LLPC_BUILD_NPI */
 }
 
-#ifdef LLPC_BUILD_NPI
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix, bit DiffVdstSrc2 = 0> {
 
   defvar WMMAConstraints2Addr = !if(DiffVdstSrc2, "@earlyclobber $vdst", "@earlyclobber $vdst,$vdst = $src2");

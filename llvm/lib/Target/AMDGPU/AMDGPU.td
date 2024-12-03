@@ -473,14 +473,12 @@ def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
   "HasCvtPkF16F32Inst",
   "true",
   "Has cvt_pk_f16_f32 instruction"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -494,15 +492,9 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureFP6BF6ConversionScaleInsts,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToF16BF16ConversionSRInsts,
-#ifdef LLPC_BUILD_NPI
    FeatureCvtPkF16F32Inst,
-#endif /* LLPC_BUILD_NPI */
    FeatureMinimum3Maximum3F32,
-#ifdef LLPC_BUILD_NPI
    FeatureMinimum3Maximum3PKF16,
-#else /* LLPC_BUILD_NPI */
-   FeatureMinimum3Maximum3PKF16
-#endif /* LLPC_BUILD_NPI */
    ]
 >;
 
@@ -3014,11 +3006,9 @@ def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionSca
 def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasCvtPkF16F32Inst : Predicate<"Subtarget->hasCvtPkF16F32Inst()">,
   AssemblerPredicate<(all_of FeatureCvtPkF16F32Inst)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasF32ToF16BF16ConversionSRInsts : Predicate<"Subtarget->hasF32ToF16BF16ConversionSRInsts()">,
   AssemblerPredicate<(all_of FeatureF32ToF16BF16ConversionSRInsts)>;
 

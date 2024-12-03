@@ -85,6 +85,8 @@ const char *getScopeName(Scope S) {
     return "default";
   case Scope::Hidden:
     return "hidden";
+  case Scope::SideEffectsOnly:
+    return "side-effects-only";
   case Scope::Local:
     return "local";
   }

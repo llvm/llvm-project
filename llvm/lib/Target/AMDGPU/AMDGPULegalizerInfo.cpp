@@ -1040,7 +1040,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
   }
 
-#if LLPC_BUILD_NPI
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
   if (ST.hasCvtPkF16F32Inst())
     FPTruncActions.legalFor(
@@ -1048,12 +1047,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   else
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   FPTruncActions.scalarize(0).lower();
-#else /* LLPC_BUILD_NPI */
-  getActionDefinitionsBuilder(G_FPTRUNC)
-    .legalFor({{S32, S64}, {S16, S32}})
-    .scalarize(0)
-    .lower();
-#endif /* LLPC_BUILD_NPI */
 
   getActionDefinitionsBuilder(G_FPEXT)
     .legalFor({{S64, S32}, {S32, S16}})

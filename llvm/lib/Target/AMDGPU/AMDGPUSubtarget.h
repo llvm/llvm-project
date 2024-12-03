@@ -58,9 +58,7 @@ protected:
   bool HasFP4ConversionScaleInsts = false;
   bool HasFP6BF6ConversionScaleInsts = false;
   bool HasF16BF16ToFP6BF6ConversionScaleInsts = false;
-#if LLPC_BUILD_NPI
   bool HasCvtPkF16F32Inst = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
 #if LLPC_BUILD_NPI
@@ -220,11 +218,11 @@ public:
   bool hasF16BF16ToFP6BF6ConversionScaleInsts() const {
     return HasF16BF16ToFP6BF6ConversionScaleInsts;
   }
-
-  bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
 #else /* LLPC_BUILD_NPI */
   bool hasF16BF16ToFP6BF6ConversionScaleInsts() const { return HasF16BF16ToFP6BF6ConversionScaleInsts; }
 #endif /* LLPC_BUILD_NPI */
+
+  bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
 
   bool hasF32ToF16BF16ConversionSRInsts() const {
     return HasF32ToF16BF16ConversionSRInsts;

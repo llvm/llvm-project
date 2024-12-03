@@ -106,11 +106,11 @@ struct MFMA_F8F6F4_Info {
   uint8_t NumRegsSrcB;
 };
 
-#if LLPC_BUILD_NPI
 struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
 
+#if LLPC_BUILD_NPI
 struct WMMAInstInfo {
   uint16_t Opcode;
   bool is_wmma_xdl;
@@ -129,8 +129,8 @@ struct WMMAInstInfo {
 #define GET_MAIInstInfoTable_DECL
 #endif /* LLPC_BUILD_NPI */
 #define GET_isMFMA_F8F6F4Table_DECL
-#if LLPC_BUILD_NPI
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
+#if LLPC_BUILD_NPI
 #define GET_WMMAInstInfoTable_DECL
 #endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"

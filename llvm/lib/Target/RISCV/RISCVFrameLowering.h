@@ -79,7 +79,8 @@ public:
   }
 
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     StackOffset Offset, bool EmitCFI, unsigned CFIIndex) const;
+                     MachineFunction &MF, StackOffset Offset,
+                     uint64_t RealStackSize, bool EmitCFI) const;
 
 protected:
   const RISCVSubtarget &STI;

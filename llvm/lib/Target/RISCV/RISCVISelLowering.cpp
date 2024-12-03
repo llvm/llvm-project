@@ -4618,51 +4618,31 @@ static int isElementRotate(int &LoSrc, int &HiSrc, ArrayRef<int> Mask) {
 // VT is the type of the vector to return, <[vscale x ]n x ty>
 // Src is the vector to deinterleave of type <[vscale x ]n*2 x ty>
 static SDValue getDeinterleaveViaVNSRL(const SDLoc &DL, MVT VT, SDValue Src,
-                                       bool EvenElts,
-                                       const RISCVSubtarget &Subtarget,
-                                       SelectionDAG &DAG) {
-  // The result is a vector of type <m x n x ty>
-  MVT ContainerVT = VT;
-  // Convert fixed vectors to scalable if needed
-  if (ContainerVT.isFixedLengthVector()) {
-    assert(Src.getSimpleValueType().isFixedLengthVector());
-    ContainerVT = getContainerForFixedLengthVector(DAG, ContainerVT, Subtarget);
-
-    // The source is a vector of type <m x n*2 x ty> (For the single source
-    // case, the high half is undefined)
-    MVT SrcContainerVT =
-        MVT::getVectorVT(ContainerVT.getVectorElementType(),
-                         ContainerVT.getVectorElementCount() * 2);
-    Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+                                       bool EvenElts, SelectionDAG &DAG) {
+  // The result is a vector of type <m x n x ty>.  The source is a vector of
+  // type <m x n*2 x ty> (For the single source case, the high half is undef)
+  if (Src.getValueType() == VT) {
+    EVT WideVT = VT.getDoubleNumVectorElementsVT();
+    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, DAG.getUNDEF(WideVT),
+                      Src, DAG.getVectorIdxConstant(0, DL));
   }
-
-  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   // Bitcast the source vector from <m x n*2 x ty> -> <m x n x ty*2>
   // This also converts FP to int.
-  unsigned EltBits = ContainerVT.getScalarSizeInBits();
-  MVT WideSrcContainerVT = MVT::getVectorVT(
-      MVT::getIntegerVT(EltBits * 2), ContainerVT.getVectorElementCount());
-  Src = DAG.getBitcast(WideSrcContainerVT, Src);
+  unsigned EltBits = VT.getScalarSizeInBits();
+  MVT WideSrcVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits * 2),
+                                   VT.getVectorElementCount());
+  Src = DAG.getBitcast(WideSrcVT, Src);
 
-  // The integer version of the container type.
-  MVT IntContainerVT = ContainerVT.changeVectorElementTypeToInteger();
+  MVT IntVT = VT.changeVectorElementTypeToInteger();
 
   // If we want even elements, then the shift amount is 0. Otherwise, shift by
   // the original element size.
   unsigned Shift = EvenElts ? 0 : EltBits;
-  SDValue SplatShift = DAG.getNode(
-      RISCVISD::VMV_V_X_VL, DL, IntContainerVT, DAG.getUNDEF(ContainerVT),
-      DAG.getConstant(Shift, DL, Subtarget.getXLenVT()), VL);
-  SDValue Res =
-      DAG.getNode(RISCVISD::VNSRL_VL, DL, IntContainerVT, Src, SplatShift,
-                  DAG.getUNDEF(IntContainerVT), TrueMask, VL);
-  // Cast back to FP if needed.
-  Res = DAG.getBitcast(ContainerVT, Res);
-
-  if (VT.isFixedLengthVector())
-    Res = convertFromScalableVector(VT, Res, DAG, Subtarget);
-  return Res;
+  SDValue Res = DAG.getNode(ISD::SRL, DL, WideSrcVT, Src,
+                            DAG.getConstant(Shift, DL, WideSrcVT));
+  Res = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Res);
+  return DAG.getBitcast(VT, Res);
 }
 
 // Lower the following shuffle to vslidedown.
@@ -5356,7 +5336,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // vnsrl to deinterleave.
   if (SDValue Src =
           isDeinterleaveShuffle(VT, ContainerVT, V1, V2, Mask, Subtarget))
-    return getDeinterleaveViaVNSRL(DL, VT, Src, Mask[0] == 0, Subtarget, DAG);
+    return getDeinterleaveViaVNSRL(DL, VT, Src, Mask[0] == 0, DAG);
 
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
@@ -6258,7 +6238,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    128 &&
+                    127 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -6284,7 +6264,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    128 &&
+                    127 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -10756,34 +10736,37 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT,
                                Op.getOperand(0), Op.getOperand(1));
 
-  // We want to operate on all lanes, so get the mask and VL and mask for it
-  auto [Mask, VL] = getDefaultScalableVLOps(ConcatVT, DL, DAG, Subtarget);
-  SDValue Passthru = DAG.getUNDEF(ConcatVT);
-
   // We can deinterleave through vnsrl.wi if the element type is smaller than
   // ELEN
   if (VecVT.getScalarSizeInBits() < Subtarget.getELen()) {
-    SDValue Even =
-        getDeinterleaveViaVNSRL(DL, VecVT, Concat, true, Subtarget, DAG);
-    SDValue Odd =
-        getDeinterleaveViaVNSRL(DL, VecVT, Concat, false, Subtarget, DAG);
+    SDValue Even = getDeinterleaveViaVNSRL(DL, VecVT, Concat, true, DAG);
+    SDValue Odd = getDeinterleaveViaVNSRL(DL, VecVT, Concat, false, DAG);
     return DAG.getMergeValues({Even, Odd}, DL);
   }
 
   // For the indices, use the same SEW to avoid an extra vsetvli
-  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
-  // Create a vector of even indices {0, 2, 4, ...}
-  SDValue EvenIdx =
-      DAG.getStepVector(DL, IdxVT, APInt(IdxVT.getScalarSizeInBits(), 2));
-  // Create a vector of odd indices {1, 3, 5, ... }
-  SDValue OddIdx =
-      DAG.getNode(ISD::ADD, DL, IdxVT, EvenIdx, DAG.getConstant(1, DL, IdxVT));
+  // TODO: If container type is larger than m1, we can consider using a splat
+  // of a constant instead of the following sequence
 
-  // Gather the even and odd elements into two separate vectors
-  SDValue EvenWide = DAG.getNode(RISCVISD::VRGATHER_VV_VL, DL, ConcatVT,
-                                 Concat, EvenIdx, Passthru, Mask, VL);
-  SDValue OddWide = DAG.getNode(RISCVISD::VRGATHER_VV_VL, DL, ConcatVT,
-                                Concat, OddIdx, Passthru, Mask, VL);
+  // Create a vector of even indices {0, 1, 2, ...}
+  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
+  SDValue StepVec = DAG.getStepVector(DL, IdxVT);
+  // 0, 1, 0, 1, 0, 1
+  SDValue ZeroOnes =
+      DAG.getNode(ISD::AND, DL, IdxVT, StepVec, DAG.getConstant(1, DL, IdxVT));
+  MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
+  SDValue EvenMask =
+      DAG.getSetCC(DL, MaskVT, ZeroOnes, DAG.getConstant(0, DL, IdxVT),
+                   ISD::CondCode::SETEQ);
+  // Have the latter be the not of the former to minimize the live range of
+  // the index vector since that might be large.
+  SDValue OddMask = DAG.getLogicalNOT(DL, EvenMask, MaskVT);
+
+  // vcompress the even and odd elements into two separate vectors
+  SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
+                                 EvenMask, DAG.getUNDEF(ConcatVT));
+  SDValue OddWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
+                                OddMask, DAG.getUNDEF(ConcatVT));
 
   // Extract the result half of the gather for even and odd
   SDValue Even = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, EvenWide,
@@ -20494,7 +20477,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VWMACC_VL)
   NODE_NAME_CASE(VWMACCU_VL)
   NODE_NAME_CASE(VWMACCSU_VL)
-  NODE_NAME_CASE(VNSRL_VL)
   NODE_NAME_CASE(SETCC_VL)
   NODE_NAME_CASE(VMERGE_VL)
   NODE_NAME_CASE(VMAND_VL)

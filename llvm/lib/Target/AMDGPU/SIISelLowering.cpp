@@ -1105,11 +1105,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasBF16ConversionInsts())
     setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
 
+#endif /* LLPC_BUILD_NPI */
   if (Subtarget->hasCvtPkF16F32Inst()) {
     setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
   }
 
-#endif /* LLPC_BUILD_NPI */
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -7752,14 +7752,14 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     // TODO: Handle strictfp
     if (Op.getOpcode() != ISD::FP_ROUND)
       return Op;
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
     SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   assert (DstVT.getScalarType() == MVT::bf16 &&
           "custom lower FP_ROUND for f16 or bf16");
   assert (Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");

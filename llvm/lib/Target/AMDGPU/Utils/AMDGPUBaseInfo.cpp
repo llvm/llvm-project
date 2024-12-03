@@ -420,32 +420,19 @@ struct VOPTrue16Info {
 };
 
 #if LLPC_BUILD_NPI
-struct DPMACCInstructionInfo {
-#else /* LLPC_BUILD_NPI */
-struct FP8DstByteSelInfo {
-#endif /* LLPC_BUILD_NPI */
-  uint16_t Opcode;
-#if LLPC_BUILD_NPI
-  bool IsDPMACCInstruction;
-#else /* LLPC_BUILD_NPI */
-  bool HasFP8DstByteSel;
-#endif /* LLPC_BUILD_NPI */
-};
-
-#if LLPC_BUILD_NPI
-struct FP8DstByteSelInfo {
 #else /* LLPC_BUILD_NPI */
 #define GET_FP8DstByteSelTable_DECL
 #define GET_FP8DstByteSelTable_IMPL
 
+#endif /* LLPC_BUILD_NPI */
 struct DPMACCInstructionInfo {
-#endif /* LLPC_BUILD_NPI */
   uint16_t Opcode;
-#if LLPC_BUILD_NPI
-  bool HasFP8DstByteSel;
-#else /* LLPC_BUILD_NPI */
   bool IsDPMACCInstruction;
-#endif /* LLPC_BUILD_NPI */
+};
+
+struct FP8DstByteSelInfo {
+  uint16_t Opcode;
+  bool HasFP8DstByteSel;
 };
 
 #define GET_DPMACCInstructionTable_DECL
@@ -493,10 +480,8 @@ struct DPMACCInstructionInfo {
 #define GET_getMFMA_F8F6F4_WithSize_DECL
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
 #define GET_isMFMA_F8F6F4Table_IMPL
-#if LLPC_BUILD_NPI
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
 
-#endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
