@@ -86,11 +86,6 @@ public:
                 ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID = 0) const;
 
-  // Find register by name, NoRegister if not found.
-  virtual MCRegister findRegisterByName(const StringRef RegName) const {
-    return MCRegister::NoRegister;
-  }
-
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(PassManagerBase &PM) const {}
 
