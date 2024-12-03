@@ -61,6 +61,10 @@ inline mlir::Type getFortranElementOrSequenceType(mlir::Type type) {
   return type;
 }
 
+/// Build the hlfir.expr type for the value held in a variable of type \p
+/// variableType.
+mlir::Type getExprType(mlir::Type variableType);
+
 /// Is this a fir.box or fir.class address type?
 inline bool isBoxAddressType(mlir::Type type) {
   type = fir::dyn_cast_ptrEleTy(type);

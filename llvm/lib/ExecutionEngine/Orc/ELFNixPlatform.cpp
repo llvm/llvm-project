@@ -197,7 +197,7 @@ public:
         8, 0);
     auto &DSOHandleSymbol = G->addDefinedSymbol(
         DSOHandleBlock, 0, *R->getInitializerSymbol(), DSOHandleBlock.getSize(),
-        jitlink::Linkage::Strong, jitlink::Scope::SideEffectsOnly, false, true);
+        jitlink::Linkage::Strong, jitlink::Scope::Default, false, true);
     DSOHandleBlock.addEdge(EdgeKind, 0, DSOHandleSymbol, 0);
 
     ENP.getObjectLinkingLayer().emit(std::move(R), std::move(G));
@@ -894,9 +894,9 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
       // to the first block.
       if (!InitSym) {
         auto &B = **InitSection.blocks().begin();
-        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
-                                      jitlink::Linkage::Strong,
-                                      jitlink::Scope::Default, false, true);
+        InitSym = &G.addDefinedSymbol(
+            B, 0, *InitSymName, B.getSize(), jitlink::Linkage::Strong,
+            jitlink::Scope::SideEffectsOnly, false, true);
       }
 
       // Add keep-alive edges to anonymous symbols in all other init blocks.
