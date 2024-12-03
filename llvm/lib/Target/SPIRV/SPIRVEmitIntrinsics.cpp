@@ -731,6 +731,14 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       if (Ty)
         break;
     }
+  } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
+      assert(ImageType->getTargetExtName() == "spirv.Image");
+      Ty = ImageType->getTypeParameter(0);
+      // TODO: Need to look at the use to see if it needs to be a vector of the
+      // type.
+    }
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
     static StringMap<unsigned> ResTypeByArg = {
         {"to_global", 0},
