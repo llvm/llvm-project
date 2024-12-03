@@ -67,3 +67,5 @@ FrontendResource::FrontendResource(GlobalVariable *GV, ResourceKind RK,
             ConstantAsMetadata::get(B.getInt32(ResIndex)),
             ConstantAsMetadata::get(B.getInt32(Space))});
 }
+
+llvm::StringRef llvm::hlsl::HLSLRootElement::getName() { return StringRef(""); }

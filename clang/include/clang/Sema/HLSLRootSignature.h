@@ -42,12 +42,14 @@ struct RSTknInfo {
 class RootSignaturParser {
 
 public:
-  RootSignaturParser(StringRef Signature) : Signature(Signature) {}
+  RootSignaturParser(HLSLRootSignatureAttr *Attr, StringRef Signature)
+      : Signature(Signature), Attr(Attr) {}
 
   void ParseRootDefinition();
 
 private:
   StringRef Signature;
+  HLSLRootSignatureAttr *Attr;
 
   RSTknInfo CurTok;
   std::string IdentifierStr;

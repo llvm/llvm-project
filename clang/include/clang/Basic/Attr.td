@@ -4314,6 +4314,10 @@ def HLSLRootSignature: Attr {
                               ErrorDiag, "'function'">;
   let LangOpts = [HLSL];
   let Documentation = [HLSLLoopHintDocs];
+  let AdditionalMembers = [{
+    public:
+      llvm::hlsl::HLSLRootElement Elements;
+    }];
 }
 
 def CapturedRecord : InheritableAttr {

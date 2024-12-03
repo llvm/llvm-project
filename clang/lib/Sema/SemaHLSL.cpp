@@ -712,9 +712,14 @@ void SemaHLSL::handleHLSLRootSignature(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Signature))
     return;
 
-  RootSignaturParser Parser(Signature);
+  HLSLRootSignatureAttr *NewAttr = ::new (getASTContext())
+      HLSLRootSignatureAttr(getASTContext(), AL, Signature);
 
+  RootSignaturParser Parser(NewAttr, Signature);
   Parser.ParseRootDefinition();
+
+  if (NewAttr)
+    D->addAttr(NewAttr);
 }
 
 void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {

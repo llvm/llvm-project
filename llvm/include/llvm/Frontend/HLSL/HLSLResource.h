@@ -44,6 +44,19 @@ public:
   uint32_t getSpace();
   MDNode *getMetadata() { return Entry; }
 };
+
+class HLSLRootElement {
+public:
+  HLSLRootElement() {}
+  StringRef getName();
+
+  ~HLSLRootElement() {}
+};
+
+class HLSLRootFlag : public HLSLRootElement {
+public:
+  std::size_t Flag = 0x111;
+};
 } // namespace hlsl
 } // namespace llvm
 
