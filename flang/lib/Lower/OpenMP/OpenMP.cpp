@@ -2042,11 +2042,10 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
   genWsloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                    wsloopClauseOps, wsloopReductionSyms);
 
-  // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, &symTable);
-  dsp.processStep1();
+                           enableDelayedPrivatizationStaging, &symTable);
+  dsp.processStep1(&wsloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -2054,7 +2053,8 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
                      loopNestClauseOps, iv);
 
   EntryBlockArgs wsloopArgs;
-  // TODO: Add private syms and vars.
+  wsloopArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.syms = wsloopReductionSyms;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
@@ -2809,6 +2809,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
             lower::genOmpAccAtomicCapture<parser::OmpAtomicCapture,
                                           parser::OmpAtomicClauseList>(
                 converter, atomicCapture, loc);
+          },
+          [&](const parser::OmpAtomicCompare &atomicCompare) {
+            mlir::Location loc = converter.genLocation(atomicCompare.source);
+            TODO(loc, "OpenMP atomic compare");
           },
       },
       atomicConstruct.u);

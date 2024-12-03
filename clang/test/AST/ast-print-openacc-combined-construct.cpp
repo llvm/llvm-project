@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-deprecated-clause-alias -ast-print %s -o - | FileCheck %s
 
+constexpr int get_value() { return 1; }
 void foo() {
   int *iPtr;
 // CHECK: #pragma acc parallel loop
@@ -169,5 +170,58 @@ void foo() {
 // CHECK: #pragma acc parallel loop no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
 #pragma acc parallel loop no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
   for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(i, array[1], array, array[1:2])
+#pragma acc parallel loop copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop copyin(i, array[1], array, array[1:2]) pcopyin(readonly: i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
+#pragma acc parallel loop copyin(i, array[1], array, array[1:2]) pcopyin(readonly:i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
+#pragma acc parallel loop copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
+#pragma acc parallel loop create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop collapse(1)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop collapse(1)
+  for(int i = 0;i<5;++i);
+// CHECK: #pragma acc serial loop collapse(force:1)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop collapse(force:1)
+  for(int i = 0;i<5;++i);
+// CHECK: #pragma acc kernels loop collapse(2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc kernels loop collapse(2)
+  for(int i = 0;i<5;++i)
+    for(int i = 0;i<5;++i);
+// CHECK: #pragma acc parallel loop collapse(force:2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop collapse(force:2)
+  for(int i = 0;i<5;++i)
+    for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc serial loop tile(1, 3, *, get_value())
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop tile(1, 3, *, get_value())
+  for(int i = 0;i<5;++i)
+    for(int i = 0;i<5;++i)
+      for(int i = 0;i<5;++i)
+        for(int i = 0;i<5;++i);
 
 }
