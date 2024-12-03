@@ -381,8 +381,10 @@ static void EndEmitFunction(raw_ostream &OS) {
 
 void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
-  assert(isUInt<32>(VecPatterns.size()) &&
-         "Using only 32 bits to encode offset into Pattern Table");
+  if (!isUInt<32>(VecPatterns.size()))
+    report_fatal_error("More patterns defined that can fit into 32-bit Pattern "
+                       "Table index encoding");
+
   assert(VecPatterns.size() == VecIncludeStrings.size() &&
          "The sizes of Pattern and include vectors should be the same");
 
