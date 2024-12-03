@@ -1146,4 +1146,11 @@ namespace BuiltinMemcpy {
                                                                                       // both-note {{source of 'memcpy' is nullptr}}
 
 
+  constexpr int simpleMove() {
+    int a = 12;
+    int b = 0;
+    __builtin_memmove(&b, &a, sizeof(a));
+    return b;
+  }
+  static_assert(simpleMove() == 12);
 }
