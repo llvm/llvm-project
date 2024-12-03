@@ -4930,6 +4930,12 @@ def HLSLClip: LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
+}
+
 // Builtins for XRay.
 def XRayCustomEvent : Builtin {
   let Spellings = ["__xray_customevent"];
