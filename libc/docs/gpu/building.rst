@@ -63,10 +63,6 @@ targeting the default host environment as well.
 Runtimes cross build
 --------------------
 
-.. note::
-  These instructions need to be updated for new headergen. They may be
-  inaccurate.
-
 For users wanting more direct control over the build process, the build steps
 can be done manually instead. This build closely follows the instructions in the
 :ref:`main documentation<full_cross_build>` but is specialized for the GPU
