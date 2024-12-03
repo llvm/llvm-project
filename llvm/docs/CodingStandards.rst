@@ -177,7 +177,7 @@ the file. The standard header looks like this:
 
 .. code-block:: c++
 
-  //===-- llvm/Instruction.h - Instruction class definition -------*- C++ -*-===//
+  //===----------------------------------------------------------------------===//
   //
   // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
   // See https://llvm.org/LICENSE.txt for license information.
@@ -191,17 +191,7 @@ the file. The standard header looks like this:
   ///
   //===----------------------------------------------------------------------===//
 
-A few things to note about this particular format: The "``-*- C++ -*-``" string
-on the first line is there to tell Emacs that the source file is a C++ file, not
-a C file (Emacs assumes ``.h`` files are C files by default).
-
-.. note::
-
-    This tag is not necessary in ``.cpp`` files.  The name of the file is also
-    on the first line, along with a very short description of the purpose of the
-    file.
-
-The next section in the file is a concise note that defines the license that the
+The first section in the file is a concise note that defines the license that the
 file is released under.  This makes it perfectly clear what terms the source
 code can be distributed under and should not be modified in any way.
 
