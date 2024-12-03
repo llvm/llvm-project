@@ -4054,17 +4054,24 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   }
 
   // Try to find an unroll count that maximizes the use of the instruction
-  // window.
-  unsigned UC = std::max(16ll / Size, 2ll);
-  unsigned BestUC = 0;
-  while (UC <= 8 && UC * Size <= 48) {
-    if ((UC * Size % 16) == 0 || (BestUC * Size % 16) < (UC * Size % 16) % 16) {
+  // window, i.e. trying to fetch as many instructions per cycle as possible.
+  unsigned MaxInstsPerLine = 16;
+  unsigned UC = 1;
+  unsigned BestUC = 1;
+  unsigned SizeWithBestUC = BestUC * Size;
+  while (UC <= 8) {
+    unsigned SizeWithUC = UC * Size;
+    if (SizeWithUC > 48)
+      break;
+    if ((SizeWithUC % MaxInstsPerLine) == 0 ||
+        (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
       BestUC = UC;
+      SizeWithBestUC = BestUC * Size;
     }
     UC++;
   }
 
-  if (BestUC == 0 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
+  if (BestUC == 1 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
         return LoadedValues.contains(SI->getOperand(0));
       }))
     return;
@@ -4090,15 +4097,21 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
-  if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
-      EnableFalkorHWPFUnrollFix)
-    getFalkorUnrollingPreferences(L, SE, UP);
-
-  if (ST->getProcFamily() == AArch64Subtarget::AppleA14 ||
-      ST->getProcFamily() == AArch64Subtarget::AppleA15 ||
-      ST->getProcFamily() == AArch64Subtarget::AppleA16 ||
-      ST->getProcFamily() == AArch64Subtarget::AppleM4)
+  // Apply subtarget-specific unrolling preferences.
+  switch (ST->getProcFamily()) {
+  case AArch64Subtarget::AppleA14:
+  case AArch64Subtarget::AppleA15:
+  case AArch64Subtarget::AppleA16:
+  case AArch64Subtarget::AppleM4:
     getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
+    break;
+  case AArch64Subtarget::Falkor:
+    if (EnableFalkorHWPFUnrollFix)
+      getFalkorUnrollingPreferences(L, SE, UP);
+    break;
+  default:
+    break;
+  }
 
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining. Don't unroll vector loops either, as they don't benefit much from
