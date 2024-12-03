@@ -651,6 +651,11 @@ bool AffineMap::isPermutation() const {
   return isProjectedPermutation();
 }
 
+bool AffineMap::isComponentWiseMonotonicallyIncreasing() const {
+  return all_of(getResults(),
+                [](auto expr) { return expr.isMonotonicallyIncreasing(); });
+}
+
 AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) const {
   SmallVector<AffineExpr, 4> exprs;
   exprs.reserve(resultPos.size());

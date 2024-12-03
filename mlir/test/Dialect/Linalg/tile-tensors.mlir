@@ -167,3 +167,35 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @non_monotonic_affine_expr
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?xf32>
+func.func @non_monotonic_affine_expr(%arg0 : tensor<?xf32>) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.dim %arg0, %c0 : tensor<?xf32>
+  %empty = tensor.empty(%0) : tensor<?xf32>
+
+  // CHECK: scf.for
+  // CHECK: %[[SIZE:[a-zA-Z0-9_]+]] = tensor.dim %[[ARG0]],
+  // CHECK: tensor.extract_slice %[[ARG0]][0] [%[[SIZE]]] [1] : tensor<?xf32> to tensor<?xf32>
+  %generic = linalg.generic
+    {indexing_maps = [affine_map<(d0) -> (d0 mod 3)>,
+                      affine_map<(d0) -> (d0)>],
+     iterator_types = ["parallel"]}
+    ins(%arg0: tensor<?xf32>)
+    outs(%empty : tensor<?xf32>) {
+    ^bb0(%in : f32, %out: f32):
+      linalg.yield %in : f32
+    } -> tensor<?xf32>
+  return %generic : tensor<?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loop = transform.structured.tile_using_for %0 tile_sizes [100] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}

@@ -239,6 +239,42 @@ bool AffineExpr::isPureAffine() const {
   llvm_unreachable("Unknown AffineExpr");
 }
 
+static bool isNonNegativeConstant(AffineExpr expr) {
+  auto constant = dyn_cast<AffineConstantExpr>(expr);
+  return constant && constant.getValue() >= 0;
+}
+
+bool AffineExpr::isMonotonicallyIncreasing() const {
+  switch (getKind()) {
+  case AffineExprKind::SymbolId:
+  case AffineExprKind::DimId:
+  case AffineExprKind::Constant:
+    return true;
+  case AffineExprKind::Add: {
+    auto op = llvm::cast<AffineBinaryOpExpr>(*this);
+    return op.getLHS().isMonotonicallyIncreasing() &&
+           op.getRHS().isMonotonicallyIncreasing();
+  }
+  case AffineExprKind::Mul: {
+    // One operand must be a non-negative constant.
+    auto op = llvm::cast<AffineBinaryOpExpr>(*this);
+    return op.getLHS().isMonotonicallyIncreasing() &&
+           op.getRHS().isMonotonicallyIncreasing() &&
+           (isNonNegativeConstant(op.getLHS()) ||
+            isNonNegativeConstant(op.getRHS()));
+  }
+  case AffineExprKind::FloorDiv:
+  case AffineExprKind::CeilDiv: {
+    auto op = llvm::cast<AffineBinaryOpExpr>(*this);
+    return op.getLHS().isMonotonicallyIncreasing() &&
+           isNonNegativeConstant(op.getRHS());
+  }
+  case AffineExprKind::Mod:
+    return false;
+  }
+  llvm_unreachable("Unknown AffineExpr");
+}
+
 // Returns the greatest known integral divisor of this affine expression.
 int64_t AffineExpr::getLargestKnownDivisor() const {
   AffineBinaryOpExpr binExpr(nullptr);
