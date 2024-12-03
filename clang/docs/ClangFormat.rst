@@ -49,7 +49,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                      supported:
                                        CSharp: .cs
                                        Java: .java
-                                       JavaScript: .mjs .js .ts
+                                       JavaScript: .js .mjs .cjs .ts
                                        Json: .json
                                        Objective-C: .m .mm
                                        Proto: .proto .protodevel

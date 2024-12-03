@@ -94,7 +94,7 @@ def main():
       # Other languages that clang-format supports
       'proto', 'protodevel',  # Protocol Buffers
       'java',  # Java
-      'mjs', 'js',  # JavaScript
+      'js', 'mjs', 'cjs',  # JavaScript
       'ts',  # TypeScript
       'cs',  # C Sharp
       'json',  # Json

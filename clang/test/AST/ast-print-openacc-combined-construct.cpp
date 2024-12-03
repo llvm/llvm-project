@@ -224,4 +224,22 @@ void foo() {
       for(int i = 0;i<5;++i)
         for(int i = 0;i<5;++i);
 
+// CHECK: #pragma acc parallel loop num_gangs(i, (int)array[2])
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop num_gangs(i, (int)array[2])
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop num_workers(i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop num_workers(i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop vector_length((int)array[1])
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop vector_length((int)array[1])
+  for(int i = 0;i<5;++i);
+
 }
