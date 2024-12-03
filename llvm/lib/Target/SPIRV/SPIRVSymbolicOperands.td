@@ -304,6 +304,7 @@ defm SPV_INTEL_global_variable_host_access : ExtensionOperand<109>;
 defm SPV_INTEL_global_variable_fpga_decorations : ExtensionOperand<110>;
 defm SPV_KHR_cooperative_matrix : ExtensionOperand<111>;
 defm SPV_EXT_arithmetic_fence : ExtensionOperand<112>;
+defm SPV_EXT_optnone : ExtensionOperand<113>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -463,6 +464,7 @@ defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shad
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
 defm ArbitraryPrecisionIntegersINTEL : CapabilityOperand<5844, 0, 0, [SPV_INTEL_arbitrary_precision_integers], [Int8, Int16]>;
 defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
+defm OptNoneEXT : CapabilityOperand<6094, 0, 0, [SPV_EXT_optnone], []>;
 defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions], []>;
 defm ExpectAssumeKHR : CapabilityOperand<5629, 0, 0, [SPV_KHR_expect_assume], []>;
 defm FunctionPointersINTEL : CapabilityOperand<5603, 0, 0, [SPV_INTEL_function_pointers], []>;
@@ -1433,6 +1435,7 @@ defm Inline : FunctionControlOperand<0x1>;
 defm DontInline : FunctionControlOperand<0x2>;
 defm Pure : FunctionControlOperand<0x4>;
 defm Const : FunctionControlOperand<0x8>;
+defm OptNoneEXT : FunctionControlOperand<0x10000>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemorySemantics enum values and at the same time

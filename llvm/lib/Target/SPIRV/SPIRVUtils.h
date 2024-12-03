@@ -129,6 +129,8 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 // Add an OpName instruction for the given target register.
 void buildOpName(Register Target, const StringRef &Name,
                  MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
