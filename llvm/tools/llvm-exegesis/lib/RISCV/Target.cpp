@@ -14,10 +14,8 @@
 #include "RISCVInstrInfo.h"
 
 // include computeAvailableFeatures and computeRequiredFeatures.
-#define GET_COMPUTE_FEATURES
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "RISCVGenInstrInfo.inc"
-#undef GET_COMPUTE_FEATURES
 
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -27,61 +25,6 @@ namespace llvm {
 namespace exegesis {
 
 namespace {
-
-class ExegesisRISCVTarget : public ExegesisTarget {
-public:
-  ExegesisRISCVTarget();
-
-  MCRegister findRegisterByName(const StringRef RegName) const override;
-
-  bool matchesArch(Triple::ArchType Arch) const override;
-
-  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
-                               const APInt &Value) const override;
-
-  unsigned getDefaultLoopCounterRegister(const Triple &) const override;
-
-  void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
-                                   MachineBasicBlock &TargetMBB,
-                                   const MCInstrInfo &MII,
-                                   unsigned LoopRegister) const override;
-
-  unsigned getScratchMemoryRegister(const Triple &TT) const override;
-
-  void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
-                          unsigned Offset) const override;
-
-  ArrayRef<unsigned> getUnavailableRegisters() const override;
-
-  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
-                                 MCOperand &AssignedValue,
-                                 const BitVector &ForbiddenRegs) const override;
-
-  std::vector<InstructionTemplate>
-  generateInstructionVariants(const Instruction &Instr,
-                              unsigned MaxConfigsPerOpcode) const override;
-};
-
-ExegesisRISCVTarget::ExegesisRISCVTarget()
-    : ExegesisTarget(ArrayRef<CpuAndPfmCounters>{},
-                     RISCV_MC::isOpcodeAvailable) {}
-
-#define GET_REGISTER_MATCHER
-#include "RISCVGenAsmMatcher.inc"
-
-MCRegister
-ExegesisRISCVTarget::findRegisterByName(const StringRef RegName) const {
-  MCRegister Reg;
-  if ((Reg = MatchRegisterName(RegName)))
-    return Reg;
-  if ((Reg = MatchRegisterAltName(RegName)))
-    return Reg;
-  return RISCV::NoRegister;
-}
-
-bool ExegesisRISCVTarget::matchesArch(Triple::ArchType Arch) const {
-  return Arch == Triple::riscv32 || Arch == Triple::riscv64;
-}
 
 // Stores constant value to a general-purpose (integer) register.
 static std::vector<MCInst> loadIntReg(const MCSubtargetInfo &STI, unsigned Reg,
@@ -154,6 +97,49 @@ static bool isVectorRegList(unsigned Reg) {
          RISCV::VRN6M1RegClass.contains(Reg) ||
          RISCV::VRN7M1RegClass.contains(Reg) ||
          RISCV::VRN8M1RegClass.contains(Reg);
+}
+
+class ExegesisRISCVTarget : public ExegesisTarget {
+public:
+  ExegesisRISCVTarget();
+
+  bool matchesArch(Triple::ArchType Arch) const override;
+
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+                               const APInt &Value) const override;
+
+  unsigned getDefaultLoopCounterRegister(const Triple &) const override;
+
+  void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
+                                   MachineBasicBlock &TargetMBB,
+                                   const MCInstrInfo &MII,
+                                   unsigned LoopRegister) const override;
+
+  unsigned getScratchMemoryRegister(const Triple &TT) const override;
+
+  void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
+                          unsigned Offset) const override;
+
+  ArrayRef<unsigned> getUnavailableRegisters() const override;
+
+  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
+                                 MCOperand &AssignedValue,
+                                 const BitVector &ForbiddenRegs) const override;
+
+  std::vector<InstructionTemplate>
+  generateInstructionVariants(const Instruction &Instr,
+                              unsigned MaxConfigsPerOpcode) const override;
+};
+
+ExegesisRISCVTarget::ExegesisRISCVTarget()
+    : ExegesisTarget(ArrayRef<CpuAndPfmCounters>{},
+                     RISCV_MC::isOpcodeAvailable) {}
+
+#define GET_REGISTER_MATCHER
+#include "RISCVGenAsmMatcher.inc"
+
+bool ExegesisRISCVTarget::matchesArch(Triple::ArchType Arch) const {
+  return Arch == Triple::riscv32 || Arch == Triple::riscv64;
 }
 
 std::vector<MCInst> ExegesisRISCVTarget::setRegTo(const MCSubtargetInfo &STI,
