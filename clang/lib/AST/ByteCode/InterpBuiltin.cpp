@@ -104,6 +104,8 @@ template <typename T>
 static void pushInteger(InterpState &S, T Val, QualType QT) {
   if constexpr (std::is_same_v<T, APInt>)
     pushInteger(S, APSInt(Val, !std::is_signed_v<T>), QT);
+  else if constexpr (std::is_same_v<T, APSInt>)
+    pushInteger(S, Val, QT);
   else
     pushInteger(S,
                 APSInt(APInt(sizeof(T) * 8, static_cast<uint64_t>(Val),
@@ -1695,32 +1697,110 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   assert(Arg.getFieldDesc()->isPrimitiveArray());
 
   unsigned ID = Func->getBuiltinID();
-  if (ID == Builtin::BI__builtin_reduce_add) {
-    QualType ElemType = Arg.getFieldDesc()->getElemQualType();
-    assert(Call->getType() == ElemType);
-    PrimType ElemT = *S.getContext().classify(ElemType);
-    unsigned NumElems = Arg.getNumElems();
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  assert(Call->getType() == ElemType);
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
 
-    INT_TYPE_SWITCH(ElemT, {
-      T Sum = Arg.atIndex(0).deref<T>();
-      unsigned BitWidth = Sum.bitWidth();
-      for (unsigned I = 1; I != NumElems; ++I) {
-        T Elem = Arg.atIndex(I).deref<T>();
-        if (T::add(Sum, Elem, BitWidth, &Sum)) {
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+    T Result = Arg.atIndex(0).deref<T>();
+    unsigned BitWidth = Result.bitWidth();
+    for (unsigned I = 1; I != NumElems; ++I) {
+      T Elem = Arg.atIndex(I).deref<T>();
+      T PrevResult = Result;
+
+      if (ID == Builtin::BI__builtin_reduce_add) {
+        if (T::add(Result, Elem, BitWidth, &Result)) {
           unsigned OverflowBits = BitWidth + 1;
-          (void)handleOverflow(
-              S, OpPC,
-              (Sum.toAPSInt(OverflowBits) + Elem.toAPSInt(OverflowBits)));
+          (void)handleOverflow(S, OpPC,
+                               (PrevResult.toAPSInt(OverflowBits) +
+                                Elem.toAPSInt(OverflowBits)));
           return false;
         }
-      }
-      pushInteger(S, Sum, Call->getType());
-    });
+      } else if (ID == Builtin::BI__builtin_reduce_mul) {
+        if (T::mul(Result, Elem, BitWidth, &Result)) {
+          unsigned OverflowBits = BitWidth * 2;
+          (void)handleOverflow(S, OpPC,
+                               (PrevResult.toAPSInt(OverflowBits) *
+                                Elem.toAPSInt(OverflowBits)));
+          return false;
+        }
 
+      } else if (ID == Builtin::BI__builtin_reduce_and) {
+        (void)T::bitAnd(Result, Elem, BitWidth, &Result);
+      } else if (ID == Builtin::BI__builtin_reduce_or) {
+        (void)T::bitOr(Result, Elem, BitWidth, &Result);
+      } else if (ID == Builtin::BI__builtin_reduce_xor) {
+        (void)T::bitXor(Result, Elem, BitWidth, &Result);
+      } else {
+        llvm_unreachable("Unhandled vector reduce builtin");
+      }
+    }
+    pushInteger(S, Result.toAPSInt(), Call->getType());
+  });
+
+  return true;
+}
+
+/// Can be called with an integer or vector as the first and only parameter.
+static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
+                                                 const InterpFrame *Frame,
+                                                 const Function *Func,
+                                                 const CallExpr *Call) {
+  assert(Call->getNumArgs() == 1);
+  if (Call->getArg(0)->getType()->isIntegerType()) {
+    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+    APSInt Val = peekToAPSInt(S.Stk, ArgT);
+    pushInteger(S, Val.popcount(), Call->getType());
+    return true;
+  }
+  // Otherwise, the argument must be a vector.
+  assert(Call->getArg(0)->getType()->isVectorType());
+  const Pointer &Arg = S.Stk.peek<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  const Pointer &Dst = S.Stk.peek<Pointer>(primSize(PT_Ptr) * 2);
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
+
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+
+  // FIXME: Reading from uninitialized vector elements?
+  for (unsigned I = 0; I != NumElems; ++I) {
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Dst.atIndex(I).deref<T>() =
+          T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+    });
+  }
+
+  return true;
+}
+static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  Pointer DestPtr = getParam<Pointer>(Frame, 0);
+  const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
+  const APSInt &Size =
+      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
+
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
+  // If the size is zero, we treat this as always being a valid no-op.
+  if (Size.isZero()) {
+    S.Stk.push<Pointer>(DestPtr);
     return true;
   }
 
-  llvm_unreachable("Unsupported vector reduce builtin");
+  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+    return false;
+
+  S.Stk.push<Pointer>(DestPtr);
+  return true;
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -2169,7 +2249,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_reduce_add:
+  case Builtin::BI__builtin_reduce_mul:
+  case Builtin::BI__builtin_reduce_and:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_xor:
     if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_elementwise_popcount:
+    if (!interp__builtin_elementwise_popcount(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_memcpy:
+    if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
       return false;
     break;
 

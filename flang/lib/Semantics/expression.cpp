@@ -392,7 +392,8 @@ void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
     auto dimUB{ToInt64(ub[dim])};
     if (dimUB && dimLB && *dimUB < *dimLB) {
       AttachDeclaration(
-          Say("Empty array dimension %d cannot be subscripted as an element or non-empty array section"_err_en_US,
+          Warn(common::UsageWarning::SubscriptedEmptyArray,
+              "Empty array dimension %d should not be subscripted as an element or non-empty array section"_err_en_US,
               dim + 1),
           arraySymbol);
       break;

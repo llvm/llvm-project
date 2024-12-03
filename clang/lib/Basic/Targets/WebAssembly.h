@@ -22,26 +22,26 @@ namespace clang {
 namespace targets {
 
 static const unsigned WebAssemblyAddrSpaceMap[] = {
-    0, // Default
-    0, // opencl_global
-    0, // opencl_local
-    0, // opencl_constant
-    0, // opencl_private
-    0, // opencl_generic
-    0, // opencl_global_device
-    0, // opencl_global_host
-    0, // cuda_device
-    0, // cuda_constant
-    0, // cuda_shared
-    0, // sycl_global
-    0, // sycl_global_device
-    0, // sycl_global_host
-    0, // sycl_local
-    0, // sycl_private
-    0, // ptr32_sptr
-    0, // ptr32_uptr
-    0, // ptr64
-    0, // hlsl_groupshared
+    0,  // Default
+    0,  // opencl_global
+    0,  // opencl_local
+    0,  // opencl_constant
+    0,  // opencl_private
+    0,  // opencl_generic
+    0,  // opencl_global_device
+    0,  // opencl_global_host
+    0,  // cuda_device
+    0,  // cuda_constant
+    0,  // cuda_shared
+    0,  // sycl_global
+    0,  // sycl_global_device
+    0,  // sycl_global_host
+    0,  // sycl_local
+    0,  // sycl_private
+    0,  // ptr32_sptr
+    0,  // ptr32_uptr
+    0,  // ptr64
+    0,  // hlsl_groupshared
     20, // wasm_funcref
 };
 

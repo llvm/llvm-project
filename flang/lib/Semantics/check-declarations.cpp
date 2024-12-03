@@ -320,8 +320,14 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.attrs().HasAny({Attr::INTENT_IN, Attr::INTENT_INOUT,
           Attr::INTENT_OUT, Attr::OPTIONAL, Attr::VALUE}) &&
       !IsDummy(symbol)) {
-    messages_.Say(
-        "Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute"_err_en_US);
+    if (context_.IsEnabled(
+            common::LanguageFeature::IgnoreIrrelevantAttributes)) {
+      context_.Warn(common::LanguageFeature::IgnoreIrrelevantAttributes,
+          "Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute"_warn_en_US);
+    } else {
+      messages_.Say(
+          "Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute"_err_en_US);
+    }
   } else if (symbol.attrs().test(Attr::VALUE)) {
     CheckValue(symbol, derived);
   }

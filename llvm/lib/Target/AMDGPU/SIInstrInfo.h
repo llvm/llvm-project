@@ -1568,6 +1568,11 @@ namespace AMDGPU {
   LLVM_READONLY
   int getMFMAEarlyClobberOp(uint16_t Opcode);
 
+  /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
+  /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
+  LLVM_READONLY
+  int getMFMASrcCVDstAGPROp(uint16_t Opcode);
+
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY
   int getVCMPXOpFromVCMP(uint16_t Opcode);
