@@ -321,6 +321,18 @@ static void collectElements(Constant *Init,
     Elements.push_back(Init);
     return;
   }
+  auto *LLVMArrayType = dyn_cast<ArrayType>(Init->getType());
+  if (isa<ConstantAggregateZero>(Init)) {
+    for (unsigned I = 0; I < LLVMArrayType->getNumElements(); ++I)
+      Elements.push_back(
+          Constant::getNullValue(LLVMArrayType->getElementType()));
+    return;
+  }
+  if (isa<UndefValue>(Init)) {
+    for (unsigned I = 0; I < LLVMArrayType->getNumElements(); ++I)
+      Elements.push_back(UndefValue::get(LLVMArrayType->getElementType()));
+    return;
+  }
 
   // Recursive case: Process each element in the array.
   if (auto *ArrayConstant = dyn_cast<ConstantArray>(Init)) {

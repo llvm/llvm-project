@@ -67,28 +67,17 @@ public:
 private:
   GlobalVariable *lookupReplacementGlobal(Value *CurrOperand);
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
-  SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
-  bool finish();
 };
 
 bool DataScalarizerVisitor::visit(Function &F) {
   assert(!GlobalMap.empty());
-  ReversePostOrderTraversal<BasicBlock *> RPOT(&F.getEntryBlock());
-  for (BasicBlock *BB : RPOT) {
-    for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
-      Instruction *I = &*II;
-      bool Done = InstVisitor::visit(I);
-      ++II;
-      if (Done && I->getType()->isVoidTy())
-        I->eraseFromParent();
-    }
+  bool MadeChange = false;
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : make_early_inc_range(RPOT)) {
+    for (Instruction &I : make_early_inc_range(*BB))
+      MadeChange |= InstVisitor::visit(I);
   }
-  return finish();
-}
-
-bool DataScalarizerVisitor::finish() {
-  RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
-  return true;
+  return MadeChange;
 }
 
 GlobalVariable *
@@ -140,7 +129,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
         Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices);
 
     GEPI.replaceAllUsesWith(NewGEP);
-    PotentiallyDeadInstrs.emplace_back(&GEPI);
+    GEPI.eraseFromParent();
   }
   return true;
 }
@@ -252,8 +241,7 @@ static bool findAndReplaceVectors(Module &M) {
                                                 /*RemoveDeadConstants=*/false,
                                                 /*IncludeSelf=*/true);
         }
-        if (isa<Instruction>(U)) {
-          Instruction *Inst = cast<Instruction>(U);
+        if (Instruction *Inst = dyn_cast<Instruction>(U)) {
           Function *F = Inst->getFunction();
           if (F)
             Impl.visit(*F);
