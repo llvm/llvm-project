@@ -304,6 +304,7 @@ defm SPV_INTEL_global_variable_host_access : ExtensionOperand<109>;
 defm SPV_INTEL_global_variable_fpga_decorations : ExtensionOperand<110>;
 defm SPV_KHR_cooperative_matrix : ExtensionOperand<111>;
 defm SPV_EXT_arithmetic_fence : ExtensionOperand<112>;
+defm SPV_EXT_optnone : ExtensionOperand<113>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -446,7 +447,7 @@ defm RayTracingNV : CapabilityOperand<5340, 0, 0, [], [Shader]>;
 defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [SPV_INTEL_subgroups], []>;
-defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [], []>;
+defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [SPV_INTEL_media_block_io], []>;
 defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationChromaINTEL : CapabilityOperand<5698, 0, 0, [], []>;
@@ -463,6 +464,7 @@ defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shad
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
 defm ArbitraryPrecisionIntegersINTEL : CapabilityOperand<5844, 0, 0, [SPV_INTEL_arbitrary_precision_integers], [Int8, Int16]>;
 defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
+defm OptNoneEXT : CapabilityOperand<6094, 0, 0, [SPV_EXT_optnone], []>;
 defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions], []>;
 defm ExpectAssumeKHR : CapabilityOperand<5629, 0, 0, [SPV_KHR_expect_assume], []>;
 defm FunctionPointersINTEL : CapabilityOperand<5603, 0, 0, [SPV_INTEL_function_pointers], []>;
@@ -1433,6 +1435,7 @@ defm Inline : FunctionControlOperand<0x1>;
 defm DontInline : FunctionControlOperand<0x2>;
 defm Pure : FunctionControlOperand<0x4>;
 defm Const : FunctionControlOperand<0x8>;
+defm OptNoneEXT : FunctionControlOperand<0x10000>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemorySemantics enum values and at the same time

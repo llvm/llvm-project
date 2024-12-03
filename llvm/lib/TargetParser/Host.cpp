@@ -815,7 +815,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Gracemont
     case 0xbe:
-      CPU = "gracement";
+      CPU = "gracemont";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
