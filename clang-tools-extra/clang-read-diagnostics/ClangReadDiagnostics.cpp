@@ -16,16 +16,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/SerializedDiagnosticReader.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/LineEditor/LineEditor.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
-#include "clang/Frontend/SerializedDiagnosticReader.h"
 
 #include <optional>
 #include <string>
@@ -54,41 +54,39 @@ public:
       auto Filename = FilenameIdx_.at(Diag.Location.FileID);
       auto Category = CategoryIdx_.at(Diag.Category);
       auto Flag = FlagIdx_.at(Diag.Flag);
-      Ret.emplace_back(DecodedDiagnostics{
-          Diag.Severity,
-          Filename,
-          Diag.Location.Line,
-          Diag.Location.Col,
-          Category,
-          Flag,
-          Diag.Message
-      });
+      Ret.emplace_back(DecodedDiagnostics{Diag.Severity, Filename,
+                                          Diag.Location.Line, Diag.Location.Col,
+                                          Category, Flag, Diag.Message});
     }
     return Ret;
   }
 
   void dump() {
     for (const auto &Diag : getDiagnostics()) {
-      llvm::dbgs() << Diag.Filename << ":" << Diag.Line << ":" << Diag.Col << ": "
-        << Diag.Message << " [Category=\'" << Diag.Category << "', flag=" << Diag.Flag << "]" << "\n";
+      llvm::dbgs() << Diag.Filename << ":" << Diag.Line << ":" << Diag.Col
+                   << ": " << Diag.Message << " [Category=\'" << Diag.Category
+                   << "', flag=" << Diag.Flag << "]" << "\n";
     }
   }
 
 protected:
-  virtual std::error_code	visitCategoryRecord(unsigned ID, StringRef Name) override {
+  virtual std::error_code visitCategoryRecord(unsigned ID,
+                                              StringRef Name) override {
     const auto &[_, Inserted] = CategoryIdx_.try_emplace(ID, Name);
     assert(Inserted && "duplicate IDs");
     return {};
   }
 
-  virtual std::error_code	visitDiagFlagRecord(unsigned ID, StringRef Name) override {
+  virtual std::error_code visitDiagFlagRecord(unsigned ID,
+                                              StringRef Name) override {
     const auto &[_, Inserted] = FlagIdx_.try_emplace(ID, Name);
     assert(Inserted && "duplicate IDs");
     return {};
   }
 
-  virtual std::error_code	visitFilenameRecord(
-      unsigned ID, unsigned Size, unsigned Timestamp, StringRef Name) override {
+  virtual std::error_code visitFilenameRecord(unsigned ID, unsigned Size,
+                                              unsigned Timestamp,
+                                              StringRef Name) override {
     const auto &[_, Inserted] = FilenameIdx_.try_emplace(ID, Name);
     assert(Inserted && "duplicate IDs");
     return {};
@@ -97,7 +95,8 @@ protected:
   virtual std::error_code
   visitDiagnosticRecord(unsigned Severity, const Location &Location,
                         unsigned Category, unsigned Flag, StringRef Message) override {
-    Diagnostics_.emplace_back(RawDiagnostic{Severity, Location, Category, Flag, Message});
+    Diagnostics_.emplace_back(
+        RawDiagnostic{Severity, Location, Category, Flag, Message});
     return {};
   }
 
