@@ -16726,26 +16726,32 @@ Semantics:
 Follows the IEEE-754 semantics for minNum, except that -0.0 < +0.0 for the purposes
 of this intrinsic. As for signaling NaNs, per the IEEE-754 semantics, if either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
-function fmin, although not all implementations have implemented these recommended behaviors.
+function `fmin`, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN or either operand is sNaN.
+NaN only if both operands are NaN or if either operand is sNaN.
 
 This behavior is more strict than the definition in C and IEEE 754, where either zero may be returned.
 To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use the nsz
 attribute on the intrinsic call.
 
-Some architectures, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have instructions that match
-these semantics exactly; thus it is quite simple for these architectures.
+If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
+and IEEE 754: the result of minnum(-0.0, +0.0) may be either -0.0 or +0.0.
+
+Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
+have instructions that match these semantics exactly; thus it is quite simple for these architectures.
+Some architectures have similiar while they are not exact equivalent. Such as x86 implements `MINPS`,
+which implements the semantics of C code `a<b?a:b`: NUM vs qNaN always return qNaN. `MINPS` can be used
+if `nsz` and `nnan` are given.
+
 
 In the real libc worlds, the bebhaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention. Such as in glibc 2.24, the Arm64 asm implemention
-has different behaviour with the generic C implemention.
+even in the same release of a single libm implemention.
 
-Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
+Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
 so arithmetic feeding into a minnum can produce inconsistent results.
-Such as `fmin(sNaN+0.0, 1.0)` can produce qNaN or 1.0 depending on whether `+0.0`
-is optimized out.
+For example, `maxnum(fadd(sNaN, 0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd`
+is folded.
 
 .. _i_maxnum:
 
@@ -16785,26 +16791,31 @@ Semantics:
 Follows the IEEE-754 semantics for minNum, except that -0.0 < +0.0 for the purposes
 of this intrinsic. As for signaling NaNs, per the IEEE-754 semantics, if either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
-function fmin, although not all implementations have implemented these recommended behaviors.
+function `fmax`, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN or either operand is sNaN.
+NaN only if both operands are NaN or if either operand is sNaN.
 
 This behavior is more strict than the definition in C and IEEE 754, where either zero may be returned.
 To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use the nsz
 attribute on the intrinsic call.
 
-Some architectures, such as ARMv8, LoongArch, MIPSr6, PowerPC/VSX, have instructions that match
-these semantics exactly; thus it is quite simple for these architectures.
+If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
+and IEEE 754: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
+
+Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
+have instructions that match these semantics exactly; thus it is quite simple for these architectures.
+Some architectures have similiar while they are not exact equivalent. Such as x86 implements `MAXPS`,
+which implements the semantics of C code `a>b?a:b`: NUM vs qNaN always return qNaN. `MAXPS` can be used
+if `nsz` and `nnan` are given.
 
 In the real libc worlds, the bebhaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention. Such as in glibc 2.24, the Arm64 asm implemention
-has different behaviour with the generic C implemention.
+even in the same release of a single libm implemention.
 
-Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
+Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
 so arithmetic feeding into a maxnum can produce inconsistent results.
-Such as `fmax(sNaN+0.0, 1.0)` can produce qNaN or 1.0 depending on whether `+0.0`
-is optimized out.
+For example, `maxnum(fadd(sNaN, 0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd`
+is folded.
 
 .. _i_minimum:
 

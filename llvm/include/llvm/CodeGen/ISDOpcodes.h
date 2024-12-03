@@ -1048,6 +1048,9 @@ enum NodeType {
   ///
   /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
   /// 2019's minimumNumber/maximumNumber.
+  ///
+  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
+  /// semantics now.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
