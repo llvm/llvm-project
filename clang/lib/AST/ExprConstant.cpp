@@ -4515,6 +4515,8 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
       }
 
       APValue Lit;
+      // Make sure we clean up the temporary created below.
+      FullExpressionRAII CleanupTemps(Info);
       if (!Evaluate(Lit, Info, CLE->getInitializer()))
         return false;
 
