@@ -338,32 +338,33 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   if (!fir::isa_trivial(eleTy))
     return std::nullopt;
 
-  // the array must have the same shape as the elemental. CSE should have
+  // The array must have the same shape as the elemental. CSE should have
   // deduplicated the fir.shape operations where they are provably the same
-  // so we just have to check for the same ssa value
-  // TODO: add more ways of getting the shape of the array
-  mlir::Value arrayShape;
-  if (match.array.getDefiningOp())
-    arrayShape =
-        mlir::TypeSwitch<mlir::Operation *, mlir::Value>(
-            match.array.getDefiningOp())
-            .Case([](hlfir::DesignateOp designate) {
-              return designate.getShape();
-            })
-            .Case([](hlfir::DeclareOp declare) { return declare.getShape(); })
-            .Default([](mlir::Operation *) { return mlir::Value{}; });
-  if (!arrayShape) {
-    LLVM_DEBUG(llvm::dbgs() << "Can't get shape of " << match.array << " at "
-                            << elemental->getLoc() << "\n");
-    return std::nullopt;
-  }
-  if (arrayShape != elemental.getShape()) {
-    // f2018 10.2.1.2 (3) requires the lhs and rhs of an assignment to be
-    // conformable unless the lhs is an allocatable array. In HLFIR we can
-    // see this from the presence or absence of the realloc attribute on
-    // hlfir.assign. If it is not a realloc assignment, we can trust that
-    // the shapes do conform
-    if (match.assign.getRealloc())
+  // so we just have to check for the same ssa value.
+  //
+  // f2018 10.2.1.2 (3) requires the lhs and rhs of an assignment to be
+  // conformable unless the lhs is an allocatable array. In HLFIR we can
+  // see this from the presence or absence of the realloc attribute on
+  // hlfir.assign. If it is not a realloc assignment, we can trust that
+  // the shapes do conform.
+  if (match.assign.getRealloc()) {
+    mlir::Value arrayShape;
+    if (match.array.getDefiningOp())
+      arrayShape =
+          mlir::TypeSwitch<mlir::Operation *, mlir::Value>(
+              match.array.getDefiningOp())
+              .Case([](hlfir::DesignateOp designate) {
+                return designate.getShape();
+              })
+              .Case([](hlfir::DeclareOp declare) { return declare.getShape(); })
+              .Default([](mlir::Operation *) { return mlir::Value{}; });
+    if (!arrayShape) {
+      // TODO: add more ways of getting the shape of the array
+      LLVM_DEBUG(llvm::dbgs() << "Can't get shape of " << match.array << " at "
+                              << elemental->getLoc() << "\n");
+      return std::nullopt;
+    }
+    if (arrayShape != elemental.getShape())
       return std::nullopt;
   }
 
