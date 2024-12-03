@@ -7,7 +7,6 @@ define i32 @redundant_memmove() {
 ; CHECK-NEXT:    [[ARRAY:%.*]] = alloca [26 x i32], align 16
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ARRAY]], i8 0, i64 104, i1 false)
 ; CHECK-NEXT:    [[ARRAY_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARRAY]], i64 4
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 16 [[ARRAY]], ptr align 4 [[ARRAY_IDX]], i64 100, i1 false)
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARRAY]], align 16
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
@@ -88,7 +87,6 @@ define i32 @redundant_memmove_different_bbs() {
 ; CHECK-NEXT:    [[ARRAY_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARRAY]], i64 4
 ; CHECK-NEXT:    br label [[USE:%.*]]
 ; CHECK:       use:
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 16 [[ARRAY]], ptr align 4 [[ARRAY_IDX]], i64 100, i1 false)
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARRAY]], align 16
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
@@ -110,7 +108,6 @@ use:                                              ; preds = %entry
 define ptr @redundant_memmove_memset_global_variable() {
 ; CHECK-LABEL: @redundant_memmove_memset_global_variable(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 @g_var, i8 0, i64 104, i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 16 @g_var, ptr align 4 getelementptr inbounds nuw (i8, ptr @g_var, i64 4), i64 100, i1 false)
 ; CHECK-NEXT:    ret ptr @g_var
 ;
   call void @llvm.memset.p0.i64(ptr align 16 @g_var, i8 0, i64 104, i1 false)
