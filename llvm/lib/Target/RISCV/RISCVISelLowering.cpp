@@ -3496,13 +3496,12 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
     return SDValue();
   SDValue Vec = SplatVal.getOperand(0);
-  // Don't perform this optimization for i1 vectors.
+  // Don't perform this optimization for i1 vectors, or if the element types are
+  // different
   // FIXME: Support i1 vectors, maybe by promoting to i8?
-  if (VT.getVectorElementType() == MVT::i1)
-    return SDValue();
-  // Additionally the element types should match
-  if (Vec.getSimpleValueType().getVectorElementType() !=
-      VT.getVectorElementType())
+  MVT EltTy = VT.getVectorElementType();
+  if (EltTy == MVT::i1 ||
+      EltTy != Vec.getSimpleValueType().getVectorElementType())
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
