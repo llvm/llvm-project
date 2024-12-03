@@ -507,37 +507,28 @@ define <8 x i1> @match_v8i8_v16i8(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask)
 define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask) {
 ; RV32-LABEL: match_nxv16i8_v32i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -64
-; RV32-NEXT:    .cfi_def_cfa_offset 64
-; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset s1, -12
-; RV32-NEXT:    .cfi_offset s2, -16
-; RV32-NEXT:    .cfi_offset s3, -20
-; RV32-NEXT:    .cfi_offset s4, -24
-; RV32-NEXT:    .cfi_offset s5, -28
-; RV32-NEXT:    .cfi_offset s6, -32
-; RV32-NEXT:    .cfi_offset s7, -36
-; RV32-NEXT:    .cfi_offset s8, -40
-; RV32-NEXT:    .cfi_offset s9, -44
-; RV32-NEXT:    .cfi_offset s10, -48
-; RV32-NEXT:    .cfi_offset s11, -52
+; RV32-NEXT:    addi sp, sp, -48
+; RV32-NEXT:    .cfi_def_cfa_offset 48
+; RV32-NEXT:    sw s0, 44(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 40(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 32(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s4, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s5, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s6, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s7, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset s0, -4
+; RV32-NEXT:    .cfi_offset s1, -8
+; RV32-NEXT:    .cfi_offset s2, -12
+; RV32-NEXT:    .cfi_offset s3, -16
+; RV32-NEXT:    .cfi_offset s4, -20
+; RV32-NEXT:    .cfi_offset s5, -24
+; RV32-NEXT:    .cfi_offset s6, -28
+; RV32-NEXT:    .cfi_offset s7, -32
+; RV32-NEXT:    .cfi_offset s8, -36
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    vslidedown.vi v12, v10, 1
 ; RV32-NEXT:    vslidedown.vi v13, v10, 2
 ; RV32-NEXT:    vslidedown.vi v14, v10, 3
@@ -593,95 +584,89 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV32-NEXT:    vmv.x.s s5, v15
 ; RV32-NEXT:    vmv.x.s s6, v16
 ; RV32-NEXT:    vmv.x.s s7, v17
-; RV32-NEXT:    vmv.x.s s8, v18
-; RV32-NEXT:    vmv.x.s s9, v19
-; RV32-NEXT:    vmv.x.s s10, v20
-; RV32-NEXT:    vmv.x.s s11, v21
-; RV32-NEXT:    vmv.x.s ra, v22
-; RV32-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; RV32-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    vsetvli s8, zero, e8, m2, ta, ma
 ; RV32-NEXT:    vmseq.vx v12, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v23
+; RV32-NEXT:    vmv.x.s a0, v18
 ; RV32-NEXT:    vmseq.vx v13, v8, s2
-; RV32-NEXT:    vmv.x.s s2, v11
-; RV32-NEXT:    vmseq.vx v11, v8, s3
-; RV32-NEXT:    vmv.x.s s3, v24
-; RV32-NEXT:    vmseq.vx v14, v8, s4
-; RV32-NEXT:    vmv.x.s s4, v10
-; RV32-NEXT:    vmseq.vx v10, v8, s5
-; RV32-NEXT:    vmor.mm v12, v12, v13
-; RV32-NEXT:    vmseq.vx v13, v8, s6
-; RV32-NEXT:    vmor.mm v11, v12, v11
-; RV32-NEXT:    vmseq.vx v12, v8, s7
-; RV32-NEXT:    vmor.mm v11, v11, v14
-; RV32-NEXT:    vmseq.vx v14, v8, s8
-; RV32-NEXT:    vmor.mm v10, v11, v10
-; RV32-NEXT:    vmseq.vx v11, v8, s9
-; RV32-NEXT:    vmor.mm v10, v10, v13
-; RV32-NEXT:    vmseq.vx v13, v8, s10
-; RV32-NEXT:    vmor.mm v10, v10, v12
-; RV32-NEXT:    vmseq.vx v12, v8, s11
-; RV32-NEXT:    vmor.mm v10, v10, v14
-; RV32-NEXT:    vmseq.vx v14, v8, ra
-; RV32-NEXT:    vmor.mm v10, v10, v11
+; RV32-NEXT:    vmv.x.s s2, v19
+; RV32-NEXT:    vmseq.vx v14, v8, s3
+; RV32-NEXT:    vmv.x.s s3, v20
+; RV32-NEXT:    vmseq.vx v15, v8, s4
+; RV32-NEXT:    vmv.x.s s4, v21
+; RV32-NEXT:    vmseq.vx v16, v8, s5
+; RV32-NEXT:    vmv.x.s s5, v22
+; RV32-NEXT:    vmseq.vx v17, v8, s6
+; RV32-NEXT:    vmv.x.s s6, v23
+; RV32-NEXT:    vmseq.vx v18, v8, s7
+; RV32-NEXT:    vmv.x.s s7, v11
 ; RV32-NEXT:    vmseq.vx v11, v8, a0
-; RV32-NEXT:    vmor.mm v10, v10, v13
-; RV32-NEXT:    vmseq.vx v13, v8, s2
-; RV32-NEXT:    vmor.mm v10, v10, v12
+; RV32-NEXT:    vmv.x.s a0, v24
+; RV32-NEXT:    vmseq.vx v19, v8, s2
+; RV32-NEXT:    vmv.x.s s2, v10
+; RV32-NEXT:    vmor.mm v10, v12, v13
+; RV32-NEXT:    vmor.mm v10, v10, v14
+; RV32-NEXT:    vmor.mm v10, v10, v15
+; RV32-NEXT:    vmor.mm v10, v10, v16
+; RV32-NEXT:    vmor.mm v10, v10, v17
 ; RV32-NEXT:    vmseq.vx v12, v8, s3
-; RV32-NEXT:    vmor.mm v10, v10, v14
-; RV32-NEXT:    vmseq.vx v14, v8, s4
+; RV32-NEXT:    vmor.mm v10, v10, v18
+; RV32-NEXT:    vmseq.vx v13, v8, s4
 ; RV32-NEXT:    vmor.mm v10, v10, v11
-; RV32-NEXT:    vmseq.vx v11, v8, a1
-; RV32-NEXT:    vmor.mm v10, v10, v13
-; RV32-NEXT:    vmseq.vx v13, v8, a2
+; RV32-NEXT:    vmseq.vx v11, v8, s5
+; RV32-NEXT:    vmor.mm v10, v10, v19
+; RV32-NEXT:    vmseq.vx v14, v8, s6
 ; RV32-NEXT:    vmor.mm v10, v10, v12
-; RV32-NEXT:    vmseq.vx v12, v8, a3
-; RV32-NEXT:    vmor.mm v10, v10, v14
-; RV32-NEXT:    vmseq.vx v14, v8, a4
+; RV32-NEXT:    vmseq.vx v12, v8, s7
+; RV32-NEXT:    vmor.mm v10, v10, v13
+; RV32-NEXT:    vmseq.vx v13, v8, a0
 ; RV32-NEXT:    vmor.mm v10, v10, v11
-; RV32-NEXT:    vmseq.vx v11, v8, a5
-; RV32-NEXT:    vmor.mm v10, v10, v13
-; RV32-NEXT:    vmseq.vx v13, v8, a6
-; RV32-NEXT:    vmor.mm v10, v10, v12
-; RV32-NEXT:    vmseq.vx v12, v8, a7
+; RV32-NEXT:    vmseq.vx v11, v8, s2
 ; RV32-NEXT:    vmor.mm v10, v10, v14
-; RV32-NEXT:    vmseq.vx v14, v8, t0
-; RV32-NEXT:    vmor.mm v10, v10, v11
-; RV32-NEXT:    vmseq.vx v11, v8, t1
-; RV32-NEXT:    vmor.mm v10, v10, v13
-; RV32-NEXT:    vmseq.vx v13, v8, t2
+; RV32-NEXT:    vmseq.vx v14, v8, a1
 ; RV32-NEXT:    vmor.mm v10, v10, v12
-; RV32-NEXT:    vmseq.vx v12, v8, t3
+; RV32-NEXT:    vmseq.vx v12, v8, a2
+; RV32-NEXT:    vmor.mm v10, v10, v13
+; RV32-NEXT:    vmseq.vx v13, v8, a3
+; RV32-NEXT:    vmor.mm v10, v10, v11
+; RV32-NEXT:    vmseq.vx v11, v8, a4
 ; RV32-NEXT:    vmor.mm v10, v10, v14
-; RV32-NEXT:    vmseq.vx v14, v8, t4
-; RV32-NEXT:    vmor.mm v10, v10, v11
-; RV32-NEXT:    vmseq.vx v11, v8, t5
-; RV32-NEXT:    vmor.mm v10, v10, v13
-; RV32-NEXT:    vmseq.vx v13, v8, t6
+; RV32-NEXT:    vmseq.vx v14, v8, a5
 ; RV32-NEXT:    vmor.mm v10, v10, v12
-; RV32-NEXT:    vmseq.vx v12, v8, s0
+; RV32-NEXT:    vmseq.vx v12, v8, a6
+; RV32-NEXT:    vmor.mm v10, v10, v13
+; RV32-NEXT:    vmseq.vx v13, v8, a7
+; RV32-NEXT:    vmor.mm v10, v10, v11
+; RV32-NEXT:    vmseq.vx v11, v8, t0
 ; RV32-NEXT:    vmor.mm v10, v10, v14
-; RV32-NEXT:    vmor.mm v10, v10, v11
-; RV32-NEXT:    vmor.mm v10, v10, v13
+; RV32-NEXT:    vmseq.vx v14, v8, t1
 ; RV32-NEXT:    vmor.mm v10, v10, v12
+; RV32-NEXT:    vmseq.vx v12, v8, t2
+; RV32-NEXT:    vmor.mm v10, v10, v13
+; RV32-NEXT:    vmseq.vx v13, v8, t3
+; RV32-NEXT:    vmor.mm v10, v10, v11
+; RV32-NEXT:    vmseq.vx v11, v8, t4
+; RV32-NEXT:    vmor.mm v10, v10, v14
+; RV32-NEXT:    vmseq.vx v14, v8, t5
+; RV32-NEXT:    vmor.mm v10, v10, v12
+; RV32-NEXT:    vmseq.vx v12, v8, t6
+; RV32-NEXT:    vmor.mm v10, v10, v13
+; RV32-NEXT:    vmseq.vx v13, v8, s0
+; RV32-NEXT:    vmor.mm v10, v10, v11
+; RV32-NEXT:    vmor.mm v10, v10, v14
+; RV32-NEXT:    vmor.mm v10, v10, v12
+; RV32-NEXT:    vmor.mm v10, v10, v13
 ; RV32-NEXT:    vmseq.vx v11, v8, s1
 ; RV32-NEXT:    vmor.mm v8, v10, v11
 ; RV32-NEXT:    vmand.mm v0, v8, v0
-; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    lw s0, 44(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 40(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 36(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 32(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s4, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s5, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s6, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s7, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s8, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    .cfi_restore s2
@@ -691,46 +676,34 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV32-NEXT:    .cfi_restore s6
 ; RV32-NEXT:    .cfi_restore s7
 ; RV32-NEXT:    .cfi_restore s8
-; RV32-NEXT:    .cfi_restore s9
-; RV32-NEXT:    .cfi_restore s10
-; RV32-NEXT:    .cfi_restore s11
-; RV32-NEXT:    addi sp, sp, 64
+; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: match_nxv16i8_v32i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -112
-; RV64-NEXT:    .cfi_def_cfa_offset 112
-; RV64-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset s1, -24
-; RV64-NEXT:    .cfi_offset s2, -32
-; RV64-NEXT:    .cfi_offset s3, -40
-; RV64-NEXT:    .cfi_offset s4, -48
-; RV64-NEXT:    .cfi_offset s5, -56
-; RV64-NEXT:    .cfi_offset s6, -64
-; RV64-NEXT:    .cfi_offset s7, -72
-; RV64-NEXT:    .cfi_offset s8, -80
-; RV64-NEXT:    .cfi_offset s9, -88
-; RV64-NEXT:    .cfi_offset s10, -96
-; RV64-NEXT:    .cfi_offset s11, -104
+; RV64-NEXT:    addi sp, sp, -80
+; RV64-NEXT:    .cfi_def_cfa_offset 80
+; RV64-NEXT:    sd s0, 72(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s2, 56(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s3, 48(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s4, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s5, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s6, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s7, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s8, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset s0, -8
+; RV64-NEXT:    .cfi_offset s1, -16
+; RV64-NEXT:    .cfi_offset s2, -24
+; RV64-NEXT:    .cfi_offset s3, -32
+; RV64-NEXT:    .cfi_offset s4, -40
+; RV64-NEXT:    .cfi_offset s5, -48
+; RV64-NEXT:    .cfi_offset s6, -56
+; RV64-NEXT:    .cfi_offset s7, -64
+; RV64-NEXT:    .cfi_offset s8, -72
 ; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    vslidedown.vi v12, v10, 1
 ; RV64-NEXT:    vslidedown.vi v13, v10, 2
 ; RV64-NEXT:    vslidedown.vi v14, v10, 3
@@ -786,95 +759,89 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV64-NEXT:    vmv.x.s s5, v15
 ; RV64-NEXT:    vmv.x.s s6, v16
 ; RV64-NEXT:    vmv.x.s s7, v17
-; RV64-NEXT:    vmv.x.s s8, v18
-; RV64-NEXT:    vmv.x.s s9, v19
-; RV64-NEXT:    vmv.x.s s10, v20
-; RV64-NEXT:    vmv.x.s s11, v21
-; RV64-NEXT:    vmv.x.s ra, v22
-; RV64-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; RV64-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    vsetvli s8, zero, e8, m2, ta, ma
 ; RV64-NEXT:    vmseq.vx v12, v8, a0
-; RV64-NEXT:    vmv.x.s a0, v23
+; RV64-NEXT:    vmv.x.s a0, v18
 ; RV64-NEXT:    vmseq.vx v13, v8, s2
-; RV64-NEXT:    vmv.x.s s2, v11
-; RV64-NEXT:    vmseq.vx v11, v8, s3
-; RV64-NEXT:    vmv.x.s s3, v24
-; RV64-NEXT:    vmseq.vx v14, v8, s4
-; RV64-NEXT:    vmv.x.s s4, v10
-; RV64-NEXT:    vmseq.vx v10, v8, s5
-; RV64-NEXT:    vmor.mm v12, v12, v13
-; RV64-NEXT:    vmseq.vx v13, v8, s6
-; RV64-NEXT:    vmor.mm v11, v12, v11
-; RV64-NEXT:    vmseq.vx v12, v8, s7
-; RV64-NEXT:    vmor.mm v11, v11, v14
-; RV64-NEXT:    vmseq.vx v14, v8, s8
-; RV64-NEXT:    vmor.mm v10, v11, v10
-; RV64-NEXT:    vmseq.vx v11, v8, s9
-; RV64-NEXT:    vmor.mm v10, v10, v13
-; RV64-NEXT:    vmseq.vx v13, v8, s10
-; RV64-NEXT:    vmor.mm v10, v10, v12
-; RV64-NEXT:    vmseq.vx v12, v8, s11
-; RV64-NEXT:    vmor.mm v10, v10, v14
-; RV64-NEXT:    vmseq.vx v14, v8, ra
-; RV64-NEXT:    vmor.mm v10, v10, v11
+; RV64-NEXT:    vmv.x.s s2, v19
+; RV64-NEXT:    vmseq.vx v14, v8, s3
+; RV64-NEXT:    vmv.x.s s3, v20
+; RV64-NEXT:    vmseq.vx v15, v8, s4
+; RV64-NEXT:    vmv.x.s s4, v21
+; RV64-NEXT:    vmseq.vx v16, v8, s5
+; RV64-NEXT:    vmv.x.s s5, v22
+; RV64-NEXT:    vmseq.vx v17, v8, s6
+; RV64-NEXT:    vmv.x.s s6, v23
+; RV64-NEXT:    vmseq.vx v18, v8, s7
+; RV64-NEXT:    vmv.x.s s7, v11
 ; RV64-NEXT:    vmseq.vx v11, v8, a0
-; RV64-NEXT:    vmor.mm v10, v10, v13
-; RV64-NEXT:    vmseq.vx v13, v8, s2
-; RV64-NEXT:    vmor.mm v10, v10, v12
+; RV64-NEXT:    vmv.x.s a0, v24
+; RV64-NEXT:    vmseq.vx v19, v8, s2
+; RV64-NEXT:    vmv.x.s s2, v10
+; RV64-NEXT:    vmor.mm v10, v12, v13
+; RV64-NEXT:    vmor.mm v10, v10, v14
+; RV64-NEXT:    vmor.mm v10, v10, v15
+; RV64-NEXT:    vmor.mm v10, v10, v16
+; RV64-NEXT:    vmor.mm v10, v10, v17
 ; RV64-NEXT:    vmseq.vx v12, v8, s3
-; RV64-NEXT:    vmor.mm v10, v10, v14
-; RV64-NEXT:    vmseq.vx v14, v8, s4
+; RV64-NEXT:    vmor.mm v10, v10, v18
+; RV64-NEXT:    vmseq.vx v13, v8, s4
 ; RV64-NEXT:    vmor.mm v10, v10, v11
-; RV64-NEXT:    vmseq.vx v11, v8, a1
-; RV64-NEXT:    vmor.mm v10, v10, v13
-; RV64-NEXT:    vmseq.vx v13, v8, a2
+; RV64-NEXT:    vmseq.vx v11, v8, s5
+; RV64-NEXT:    vmor.mm v10, v10, v19
+; RV64-NEXT:    vmseq.vx v14, v8, s6
 ; RV64-NEXT:    vmor.mm v10, v10, v12
-; RV64-NEXT:    vmseq.vx v12, v8, a3
-; RV64-NEXT:    vmor.mm v10, v10, v14
-; RV64-NEXT:    vmseq.vx v14, v8, a4
+; RV64-NEXT:    vmseq.vx v12, v8, s7
+; RV64-NEXT:    vmor.mm v10, v10, v13
+; RV64-NEXT:    vmseq.vx v13, v8, a0
 ; RV64-NEXT:    vmor.mm v10, v10, v11
-; RV64-NEXT:    vmseq.vx v11, v8, a5
-; RV64-NEXT:    vmor.mm v10, v10, v13
-; RV64-NEXT:    vmseq.vx v13, v8, a6
-; RV64-NEXT:    vmor.mm v10, v10, v12
-; RV64-NEXT:    vmseq.vx v12, v8, a7
+; RV64-NEXT:    vmseq.vx v11, v8, s2
 ; RV64-NEXT:    vmor.mm v10, v10, v14
-; RV64-NEXT:    vmseq.vx v14, v8, t0
-; RV64-NEXT:    vmor.mm v10, v10, v11
-; RV64-NEXT:    vmseq.vx v11, v8, t1
-; RV64-NEXT:    vmor.mm v10, v10, v13
-; RV64-NEXT:    vmseq.vx v13, v8, t2
+; RV64-NEXT:    vmseq.vx v14, v8, a1
 ; RV64-NEXT:    vmor.mm v10, v10, v12
-; RV64-NEXT:    vmseq.vx v12, v8, t3
+; RV64-NEXT:    vmseq.vx v12, v8, a2
+; RV64-NEXT:    vmor.mm v10, v10, v13
+; RV64-NEXT:    vmseq.vx v13, v8, a3
+; RV64-NEXT:    vmor.mm v10, v10, v11
+; RV64-NEXT:    vmseq.vx v11, v8, a4
 ; RV64-NEXT:    vmor.mm v10, v10, v14
-; RV64-NEXT:    vmseq.vx v14, v8, t4
-; RV64-NEXT:    vmor.mm v10, v10, v11
-; RV64-NEXT:    vmseq.vx v11, v8, t5
-; RV64-NEXT:    vmor.mm v10, v10, v13
-; RV64-NEXT:    vmseq.vx v13, v8, t6
+; RV64-NEXT:    vmseq.vx v14, v8, a5
 ; RV64-NEXT:    vmor.mm v10, v10, v12
-; RV64-NEXT:    vmseq.vx v12, v8, s0
+; RV64-NEXT:    vmseq.vx v12, v8, a6
+; RV64-NEXT:    vmor.mm v10, v10, v13
+; RV64-NEXT:    vmseq.vx v13, v8, a7
+; RV64-NEXT:    vmor.mm v10, v10, v11
+; RV64-NEXT:    vmseq.vx v11, v8, t0
 ; RV64-NEXT:    vmor.mm v10, v10, v14
-; RV64-NEXT:    vmor.mm v10, v10, v11
-; RV64-NEXT:    vmor.mm v10, v10, v13
+; RV64-NEXT:    vmseq.vx v14, v8, t1
 ; RV64-NEXT:    vmor.mm v10, v10, v12
+; RV64-NEXT:    vmseq.vx v12, v8, t2
+; RV64-NEXT:    vmor.mm v10, v10, v13
+; RV64-NEXT:    vmseq.vx v13, v8, t3
+; RV64-NEXT:    vmor.mm v10, v10, v11
+; RV64-NEXT:    vmseq.vx v11, v8, t4
+; RV64-NEXT:    vmor.mm v10, v10, v14
+; RV64-NEXT:    vmseq.vx v14, v8, t5
+; RV64-NEXT:    vmor.mm v10, v10, v12
+; RV64-NEXT:    vmseq.vx v12, v8, t6
+; RV64-NEXT:    vmor.mm v10, v10, v13
+; RV64-NEXT:    vmseq.vx v13, v8, s0
+; RV64-NEXT:    vmor.mm v10, v10, v11
+; RV64-NEXT:    vmor.mm v10, v10, v14
+; RV64-NEXT:    vmor.mm v10, v10, v12
+; RV64-NEXT:    vmor.mm v10, v10, v13
 ; RV64-NEXT:    vmseq.vx v11, v8, s1
 ; RV64-NEXT:    vmor.mm v8, v10, v11
 ; RV64-NEXT:    vmand.mm v0, v8, v0
-; RV64-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    ld s0, 72(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s2, 56(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s3, 48(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s4, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s5, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s6, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s7, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s8, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    .cfi_restore s2
@@ -884,10 +851,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV64-NEXT:    .cfi_restore s6
 ; RV64-NEXT:    .cfi_restore s7
 ; RV64-NEXT:    .cfi_restore s8
-; RV64-NEXT:    .cfi_restore s9
-; RV64-NEXT:    .cfi_restore s10
-; RV64-NEXT:    .cfi_restore s11
-; RV64-NEXT:    addi sp, sp, 112
+; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask)
@@ -897,34 +861,24 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) {
 ; RV32-LABEL: match_v16i8_v32i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -64
-; RV32-NEXT:    .cfi_def_cfa_offset 64
-; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset s1, -12
-; RV32-NEXT:    .cfi_offset s2, -16
-; RV32-NEXT:    .cfi_offset s3, -20
-; RV32-NEXT:    .cfi_offset s4, -24
-; RV32-NEXT:    .cfi_offset s5, -28
-; RV32-NEXT:    .cfi_offset s6, -32
-; RV32-NEXT:    .cfi_offset s7, -36
-; RV32-NEXT:    .cfi_offset s8, -40
-; RV32-NEXT:    .cfi_offset s9, -44
-; RV32-NEXT:    .cfi_offset s10, -48
-; RV32-NEXT:    .cfi_offset s11, -52
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    sw s0, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s5, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s6, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s7, 0(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset s0, -4
+; RV32-NEXT:    .cfi_offset s1, -8
+; RV32-NEXT:    .cfi_offset s2, -12
+; RV32-NEXT:    .cfi_offset s3, -16
+; RV32-NEXT:    .cfi_offset s4, -20
+; RV32-NEXT:    .cfi_offset s5, -24
+; RV32-NEXT:    .cfi_offset s6, -28
+; RV32-NEXT:    .cfi_offset s7, -32
 ; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    vslidedown.vi v9, v10, 1
@@ -982,93 +936,87 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV32-NEXT:    vmv.x.s s5, v14
 ; RV32-NEXT:    vmv.x.s s6, v15
 ; RV32-NEXT:    vmv.x.s s7, v16
-; RV32-NEXT:    vmv.x.s s8, v17
-; RV32-NEXT:    vmv.x.s s9, v18
-; RV32-NEXT:    vmv.x.s s10, v19
-; RV32-NEXT:    vmv.x.s s11, v20
-; RV32-NEXT:    vmv.x.s ra, v21
 ; RV32-NEXT:    vmseq.vx v9, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v22
+; RV32-NEXT:    vmv.x.s a0, v17
 ; RV32-NEXT:    vmseq.vx v12, v8, s2
-; RV32-NEXT:    vmv.x.s s2, v11
-; RV32-NEXT:    vmseq.vx v11, v8, s3
-; RV32-NEXT:    vmv.x.s s3, v23
-; RV32-NEXT:    vmseq.vx v13, v8, s4
-; RV32-NEXT:    vmv.x.s s4, v10
-; RV32-NEXT:    vmseq.vx v10, v8, s5
+; RV32-NEXT:    vmv.x.s s2, v18
+; RV32-NEXT:    vmseq.vx v13, v8, s3
+; RV32-NEXT:    vmv.x.s s3, v19
+; RV32-NEXT:    vmseq.vx v14, v8, s4
+; RV32-NEXT:    vmv.x.s s4, v20
+; RV32-NEXT:    vmseq.vx v15, v8, s5
+; RV32-NEXT:    vmv.x.s s5, v21
+; RV32-NEXT:    vmseq.vx v16, v8, s6
+; RV32-NEXT:    vmv.x.s s6, v22
+; RV32-NEXT:    vmseq.vx v17, v8, s7
+; RV32-NEXT:    vmv.x.s s7, v11
+; RV32-NEXT:    vmseq.vx v11, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v23
+; RV32-NEXT:    vmseq.vx v18, v8, s2
+; RV32-NEXT:    vmv.x.s s2, v10
 ; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmseq.vx v12, v8, s6
-; RV32-NEXT:    vmor.mm v9, v9, v11
-; RV32-NEXT:    vmseq.vx v11, v8, s7
 ; RV32-NEXT:    vmor.mm v9, v9, v13
-; RV32-NEXT:    vmseq.vx v13, v8, s8
-; RV32-NEXT:    vmor.mm v9, v9, v10
-; RV32-NEXT:    vmseq.vx v10, v8, s9
-; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmseq.vx v12, v8, s10
+; RV32-NEXT:    vmor.mm v9, v9, v14
+; RV32-NEXT:    vmor.mm v9, v9, v15
+; RV32-NEXT:    vmor.mm v9, v9, v16
+; RV32-NEXT:    vmseq.vx v10, v8, s3
+; RV32-NEXT:    vmor.mm v9, v9, v17
+; RV32-NEXT:    vmseq.vx v12, v8, s4
 ; RV32-NEXT:    vmor.mm v9, v9, v11
-; RV32-NEXT:    vmseq.vx v11, v8, s11
+; RV32-NEXT:    vmseq.vx v11, v8, s5
+; RV32-NEXT:    vmor.mm v9, v9, v18
+; RV32-NEXT:    vmseq.vx v13, v8, s6
+; RV32-NEXT:    vmor.mm v9, v9, v10
+; RV32-NEXT:    vmseq.vx v10, v8, s7
+; RV32-NEXT:    vmor.mm v9, v9, v12
+; RV32-NEXT:    vmseq.vx v12, v8, a0
+; RV32-NEXT:    vmor.mm v9, v9, v11
+; RV32-NEXT:    vmseq.vx v11, v8, s2
 ; RV32-NEXT:    vmor.mm v9, v9, v13
-; RV32-NEXT:    vmseq.vx v13, v8, ra
+; RV32-NEXT:    vmseq.vx v13, v8, a1
 ; RV32-NEXT:    vmor.mm v9, v9, v10
-; RV32-NEXT:    vmseq.vx v10, v8, a0
+; RV32-NEXT:    vmseq.vx v10, v8, a2
 ; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmseq.vx v12, v8, s2
+; RV32-NEXT:    vmseq.vx v12, v8, a3
 ; RV32-NEXT:    vmor.mm v9, v9, v11
-; RV32-NEXT:    vmseq.vx v11, v8, s3
+; RV32-NEXT:    vmseq.vx v11, v8, a4
 ; RV32-NEXT:    vmor.mm v9, v9, v13
-; RV32-NEXT:    vmseq.vx v13, v8, s4
+; RV32-NEXT:    vmseq.vx v13, v8, a5
 ; RV32-NEXT:    vmor.mm v9, v9, v10
-; RV32-NEXT:    vmseq.vx v10, v8, a1
+; RV32-NEXT:    vmseq.vx v10, v8, a6
 ; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmseq.vx v12, v8, a2
+; RV32-NEXT:    vmseq.vx v12, v8, a7
 ; RV32-NEXT:    vmor.mm v9, v9, v11
-; RV32-NEXT:    vmseq.vx v11, v8, a3
+; RV32-NEXT:    vmseq.vx v11, v8, t0
 ; RV32-NEXT:    vmor.mm v9, v9, v13
-; RV32-NEXT:    vmseq.vx v13, v8, a4
+; RV32-NEXT:    vmseq.vx v13, v8, t1
 ; RV32-NEXT:    vmor.mm v9, v9, v10
-; RV32-NEXT:    vmseq.vx v10, v8, a5
+; RV32-NEXT:    vmseq.vx v10, v8, t2
 ; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmseq.vx v12, v8, a6
+; RV32-NEXT:    vmseq.vx v12, v8, t3
 ; RV32-NEXT:    vmor.mm v9, v9, v11
-; RV32-NEXT:    vmseq.vx v11, v8, a7
+; RV32-NEXT:    vmseq.vx v11, v8, t4
 ; RV32-NEXT:    vmor.mm v9, v9, v13
-; RV32-NEXT:    vmseq.vx v13, v8, t0
+; RV32-NEXT:    vmseq.vx v13, v8, t5
 ; RV32-NEXT:    vmor.mm v9, v9, v10
-; RV32-NEXT:    vmseq.vx v10, v8, t1
+; RV32-NEXT:    vmseq.vx v10, v8, t6
 ; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmseq.vx v12, v8, t2
+; RV32-NEXT:    vmseq.vx v12, v8, s0
 ; RV32-NEXT:    vmor.mm v9, v9, v11
-; RV32-NEXT:    vmseq.vx v11, v8, t3
-; RV32-NEXT:    vmor.mm v9, v9, v13
-; RV32-NEXT:    vmseq.vx v13, v8, t4
-; RV32-NEXT:    vmor.mm v9, v9, v10
-; RV32-NEXT:    vmseq.vx v10, v8, t5
-; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmseq.vx v12, v8, t6
-; RV32-NEXT:    vmor.mm v9, v9, v11
-; RV32-NEXT:    vmseq.vx v11, v8, s0
 ; RV32-NEXT:    vmor.mm v9, v9, v13
 ; RV32-NEXT:    vmor.mm v9, v9, v10
 ; RV32-NEXT:    vmor.mm v9, v9, v12
-; RV32-NEXT:    vmor.mm v9, v9, v11
 ; RV32-NEXT:    vmseq.vx v8, v8, s1
 ; RV32-NEXT:    vmor.mm v8, v9, v8
 ; RV32-NEXT:    vmand.mm v0, v8, v0
-; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s5, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s6, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s7, 0(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    .cfi_restore s2
@@ -1077,44 +1025,30 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV32-NEXT:    .cfi_restore s5
 ; RV32-NEXT:    .cfi_restore s6
 ; RV32-NEXT:    .cfi_restore s7
-; RV32-NEXT:    .cfi_restore s8
-; RV32-NEXT:    .cfi_restore s9
-; RV32-NEXT:    .cfi_restore s10
-; RV32-NEXT:    .cfi_restore s11
-; RV32-NEXT:    addi sp, sp, 64
+; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: match_v16i8_v32i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -112
-; RV64-NEXT:    .cfi_def_cfa_offset 112
-; RV64-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset s1, -24
-; RV64-NEXT:    .cfi_offset s2, -32
-; RV64-NEXT:    .cfi_offset s3, -40
-; RV64-NEXT:    .cfi_offset s4, -48
-; RV64-NEXT:    .cfi_offset s5, -56
-; RV64-NEXT:    .cfi_offset s6, -64
-; RV64-NEXT:    .cfi_offset s7, -72
-; RV64-NEXT:    .cfi_offset s8, -80
-; RV64-NEXT:    .cfi_offset s9, -88
-; RV64-NEXT:    .cfi_offset s10, -96
-; RV64-NEXT:    .cfi_offset s11, -104
+; RV64-NEXT:    addi sp, sp, -64
+; RV64-NEXT:    .cfi_def_cfa_offset 64
+; RV64-NEXT:    sd s0, 56(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 48(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s2, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s3, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s4, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s5, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s6, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s7, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset s0, -8
+; RV64-NEXT:    .cfi_offset s1, -16
+; RV64-NEXT:    .cfi_offset s2, -24
+; RV64-NEXT:    .cfi_offset s3, -32
+; RV64-NEXT:    .cfi_offset s4, -40
+; RV64-NEXT:    .cfi_offset s5, -48
+; RV64-NEXT:    .cfi_offset s6, -56
+; RV64-NEXT:    .cfi_offset s7, -64
 ; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v10
 ; RV64-NEXT:    vslidedown.vi v9, v10, 1
@@ -1172,93 +1106,87 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV64-NEXT:    vmv.x.s s5, v14
 ; RV64-NEXT:    vmv.x.s s6, v15
 ; RV64-NEXT:    vmv.x.s s7, v16
-; RV64-NEXT:    vmv.x.s s8, v17
-; RV64-NEXT:    vmv.x.s s9, v18
-; RV64-NEXT:    vmv.x.s s10, v19
-; RV64-NEXT:    vmv.x.s s11, v20
-; RV64-NEXT:    vmv.x.s ra, v21
 ; RV64-NEXT:    vmseq.vx v9, v8, a0
-; RV64-NEXT:    vmv.x.s a0, v22
+; RV64-NEXT:    vmv.x.s a0, v17
 ; RV64-NEXT:    vmseq.vx v12, v8, s2
-; RV64-NEXT:    vmv.x.s s2, v11
-; RV64-NEXT:    vmseq.vx v11, v8, s3
-; RV64-NEXT:    vmv.x.s s3, v23
-; RV64-NEXT:    vmseq.vx v13, v8, s4
-; RV64-NEXT:    vmv.x.s s4, v10
-; RV64-NEXT:    vmseq.vx v10, v8, s5
+; RV64-NEXT:    vmv.x.s s2, v18
+; RV64-NEXT:    vmseq.vx v13, v8, s3
+; RV64-NEXT:    vmv.x.s s3, v19
+; RV64-NEXT:    vmseq.vx v14, v8, s4
+; RV64-NEXT:    vmv.x.s s4, v20
+; RV64-NEXT:    vmseq.vx v15, v8, s5
+; RV64-NEXT:    vmv.x.s s5, v21
+; RV64-NEXT:    vmseq.vx v16, v8, s6
+; RV64-NEXT:    vmv.x.s s6, v22
+; RV64-NEXT:    vmseq.vx v17, v8, s7
+; RV64-NEXT:    vmv.x.s s7, v11
+; RV64-NEXT:    vmseq.vx v11, v8, a0
+; RV64-NEXT:    vmv.x.s a0, v23
+; RV64-NEXT:    vmseq.vx v18, v8, s2
+; RV64-NEXT:    vmv.x.s s2, v10
 ; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmseq.vx v12, v8, s6
-; RV64-NEXT:    vmor.mm v9, v9, v11
-; RV64-NEXT:    vmseq.vx v11, v8, s7
 ; RV64-NEXT:    vmor.mm v9, v9, v13
-; RV64-NEXT:    vmseq.vx v13, v8, s8
-; RV64-NEXT:    vmor.mm v9, v9, v10
-; RV64-NEXT:    vmseq.vx v10, v8, s9
-; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmseq.vx v12, v8, s10
+; RV64-NEXT:    vmor.mm v9, v9, v14
+; RV64-NEXT:    vmor.mm v9, v9, v15
+; RV64-NEXT:    vmor.mm v9, v9, v16
+; RV64-NEXT:    vmseq.vx v10, v8, s3
+; RV64-NEXT:    vmor.mm v9, v9, v17
+; RV64-NEXT:    vmseq.vx v12, v8, s4
 ; RV64-NEXT:    vmor.mm v9, v9, v11
-; RV64-NEXT:    vmseq.vx v11, v8, s11
+; RV64-NEXT:    vmseq.vx v11, v8, s5
+; RV64-NEXT:    vmor.mm v9, v9, v18
+; RV64-NEXT:    vmseq.vx v13, v8, s6
+; RV64-NEXT:    vmor.mm v9, v9, v10
+; RV64-NEXT:    vmseq.vx v10, v8, s7
+; RV64-NEXT:    vmor.mm v9, v9, v12
+; RV64-NEXT:    vmseq.vx v12, v8, a0
+; RV64-NEXT:    vmor.mm v9, v9, v11
+; RV64-NEXT:    vmseq.vx v11, v8, s2
 ; RV64-NEXT:    vmor.mm v9, v9, v13
-; RV64-NEXT:    vmseq.vx v13, v8, ra
+; RV64-NEXT:    vmseq.vx v13, v8, a1
 ; RV64-NEXT:    vmor.mm v9, v9, v10
-; RV64-NEXT:    vmseq.vx v10, v8, a0
+; RV64-NEXT:    vmseq.vx v10, v8, a2
 ; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmseq.vx v12, v8, s2
+; RV64-NEXT:    vmseq.vx v12, v8, a3
 ; RV64-NEXT:    vmor.mm v9, v9, v11
-; RV64-NEXT:    vmseq.vx v11, v8, s3
+; RV64-NEXT:    vmseq.vx v11, v8, a4
 ; RV64-NEXT:    vmor.mm v9, v9, v13
-; RV64-NEXT:    vmseq.vx v13, v8, s4
+; RV64-NEXT:    vmseq.vx v13, v8, a5
 ; RV64-NEXT:    vmor.mm v9, v9, v10
-; RV64-NEXT:    vmseq.vx v10, v8, a1
+; RV64-NEXT:    vmseq.vx v10, v8, a6
 ; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmseq.vx v12, v8, a2
+; RV64-NEXT:    vmseq.vx v12, v8, a7
 ; RV64-NEXT:    vmor.mm v9, v9, v11
-; RV64-NEXT:    vmseq.vx v11, v8, a3
+; RV64-NEXT:    vmseq.vx v11, v8, t0
 ; RV64-NEXT:    vmor.mm v9, v9, v13
-; RV64-NEXT:    vmseq.vx v13, v8, a4
+; RV64-NEXT:    vmseq.vx v13, v8, t1
 ; RV64-NEXT:    vmor.mm v9, v9, v10
-; RV64-NEXT:    vmseq.vx v10, v8, a5
+; RV64-NEXT:    vmseq.vx v10, v8, t2
 ; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmseq.vx v12, v8, a6
+; RV64-NEXT:    vmseq.vx v12, v8, t3
 ; RV64-NEXT:    vmor.mm v9, v9, v11
-; RV64-NEXT:    vmseq.vx v11, v8, a7
+; RV64-NEXT:    vmseq.vx v11, v8, t4
 ; RV64-NEXT:    vmor.mm v9, v9, v13
-; RV64-NEXT:    vmseq.vx v13, v8, t0
+; RV64-NEXT:    vmseq.vx v13, v8, t5
 ; RV64-NEXT:    vmor.mm v9, v9, v10
-; RV64-NEXT:    vmseq.vx v10, v8, t1
+; RV64-NEXT:    vmseq.vx v10, v8, t6
 ; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmseq.vx v12, v8, t2
+; RV64-NEXT:    vmseq.vx v12, v8, s0
 ; RV64-NEXT:    vmor.mm v9, v9, v11
-; RV64-NEXT:    vmseq.vx v11, v8, t3
-; RV64-NEXT:    vmor.mm v9, v9, v13
-; RV64-NEXT:    vmseq.vx v13, v8, t4
-; RV64-NEXT:    vmor.mm v9, v9, v10
-; RV64-NEXT:    vmseq.vx v10, v8, t5
-; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmseq.vx v12, v8, t6
-; RV64-NEXT:    vmor.mm v9, v9, v11
-; RV64-NEXT:    vmseq.vx v11, v8, s0
 ; RV64-NEXT:    vmor.mm v9, v9, v13
 ; RV64-NEXT:    vmor.mm v9, v9, v10
 ; RV64-NEXT:    vmor.mm v9, v9, v12
-; RV64-NEXT:    vmor.mm v9, v9, v11
 ; RV64-NEXT:    vmseq.vx v8, v8, s1
 ; RV64-NEXT:    vmor.mm v8, v9, v8
 ; RV64-NEXT:    vmand.mm v0, v8, v0
-; RV64-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    ld s0, 56(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 48(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s2, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s3, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s4, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s5, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s6, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s7, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    .cfi_restore s2
@@ -1267,11 +1195,7 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV64-NEXT:    .cfi_restore s5
 ; RV64-NEXT:    .cfi_restore s6
 ; RV64-NEXT:    .cfi_restore s7
-; RV64-NEXT:    .cfi_restore s8
-; RV64-NEXT:    .cfi_restore s9
-; RV64-NEXT:    .cfi_restore s10
-; RV64-NEXT:    .cfi_restore s11
-; RV64-NEXT:    addi sp, sp, 112
+; RV64-NEXT:    addi sp, sp, 64
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask)
