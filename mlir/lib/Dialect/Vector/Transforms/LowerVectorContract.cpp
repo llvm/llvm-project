@@ -80,19 +80,25 @@ static AffineMap adjustMap(AffineMap map, int64_t index,
   return AffineMap::get(map.getNumDims() - 1, 0, results, ctx);
 }
 
-Value promoteToElementType(Location loc, RewriterBase &rewriter, Value v,
-                           Type dstElementType) {
-  Type elementType = v.getType();
-  auto vecType = dyn_cast<VectorType>(elementType);
-  if (vecType)
-    elementType = vecType.getElementType();
+static Value promoteToElementType(Location loc, RewriterBase &rewriter, Value v,
+                                  Type dstElementType) {
+  Type elementType = getElementTypeOrSelf(v.getType());
   if (elementType == dstElementType)
     return v;
+
+  // vector.contract only allows extension on operands.
+  assert(elementType.getIntOrFloatBitWidth() <=
+             dstElementType.getIntOrFloatBitWidth() &&
+         "vector.contract does not allow truncation of operands");
+
   Type promotedType = dstElementType;
-  if (vecType)
+  if (auto vecType = dyn_cast<VectorType>(v.getType()))
     promotedType = vecType.clone(promotedType);
+
   if (isa<FloatType>(dstElementType))
     return rewriter.create<arith::ExtFOp>(loc, promotedType, v);
+  // For integer types, vector.contract only supports signless integer types
+  // and promotion happens via sign extension.
   return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
 }
 
