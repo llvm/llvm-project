@@ -393,10 +393,13 @@ const char *getLinkageName(Linkage L);
 /// Defines the scope in which this symbol should be visible:
 ///   Default -- Visible in the public interface of the linkage unit.
 ///   Hidden -- Visible within the linkage unit, but not exported from it.
+///   SideEffectsOnly -- Like hidden, but symbol can only be looked up once
+///                      to trigger materialization of the containing graph.
 ///   Local -- Visible only within the LinkGraph.
 enum class Scope : uint8_t {
   Default,
   Hidden,
+  SideEffectsOnly,
   Local
 };
 
