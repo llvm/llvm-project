@@ -1,6 +1,6 @@
 ; This test verifies that global variables are hashed based on their initial contents,
 ; allowing them to be merged even if they appear different due to their names.
-; Now they become identical functions that can be merged without creating a paramter.
+; Now they become identical functions that can be merged without creating a parameter.
 
 ; RUN: rm -rf %t && split-file %s %t
 
