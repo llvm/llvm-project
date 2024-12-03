@@ -825,27 +825,13 @@ Holds make(const parser::OmpClause::Holds &inp,
 If make(const parser::OmpClause::If &inp,
         semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpIfClause
-  using wrapped = parser::OmpIfClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::DirectiveNameModifier, llvm::omp::Directive,
-      // clang-format off
-      MS(Parallel,         OMPD_parallel)
-      MS(Simd,             OMPD_simd)
-      MS(Target,           OMPD_target)
-      MS(TargetData,       OMPD_target_data)
-      MS(TargetEnterData,  OMPD_target_enter_data)
-      MS(TargetExitData,   OMPD_target_exit_data)
-      MS(TargetUpdate,     OMPD_target_update)
-      MS(Task,             OMPD_task)
-      MS(Taskloop,         OMPD_taskloop)
-      MS(Teams,            OMPD_teams)
-      // clang-format on
-  );
-  auto &t0 = std::get<std::optional<wrapped::DirectiveNameModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(mods);
   auto &t1 = std::get<parser::ScalarLogicalExpr>(inp.v.t);
-  return If{{/*DirectiveNameModifier=*/maybeApply(convert, t0),
-             /*IfExpression=*/makeExpr(t1, semaCtx)}};
+  return If{
+      {/*DirectiveNameModifier=*/maybeApplyToV([](auto &&s) { return s; }, m0),
+       /*IfExpression=*/makeExpr(t1, semaCtx)}};
 }
 
 // Inbranch: empty
@@ -889,20 +875,20 @@ IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
 Lastprivate make(const parser::OmpClause::Lastprivate &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpLastprivateClause
-  using wrapped = parser::OmpLastprivateClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpLastprivateClause::LastprivateModifier,
+      convert, parser::OmpLastprivateModifier::Value,
       Lastprivate::LastprivateModifier,
       // clang-format off
       MS(Conditional, Conditional)
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<wrapped::LastprivateModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpLastprivateModifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  return Lastprivate{{/*LastprivateModifier=*/maybeApply(convert, t0),
+  return Lastprivate{{/*LastprivateModifier=*/maybeApplyToV(convert, m0),
                       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
