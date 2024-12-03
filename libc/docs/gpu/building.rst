@@ -78,7 +78,7 @@ compiler. These tools must all be up-to-date with the libc source.
   $> HOST_CXX_COMPILER=<C++ compiler for the host> # For example "clang++"
   $> cmake ../llvm                            \
      -G Ninja                                 \
-     -DLLVM_ENABLE_PROJECTS="clang;libc"      \
+     -DLLVM_ENABLE_PROJECTS="clang"           \
      -DCMAKE_C_COMPILER=$HOST_C_COMPILER      \
      -DCMAKE_CXX_COMPILER=$HOST_CXX_COMPILER  \
      -DLLVM_LIBC_FULL_BUILD=ON                \
