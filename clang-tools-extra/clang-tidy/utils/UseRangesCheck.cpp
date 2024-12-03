@@ -28,6 +28,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <iostream>
 #include <optional>
 #include <string>
 
@@ -173,21 +174,21 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
   for (unsigned Index : Sorted) {
     const Expr *Arg = Call.getArg(Index);
     if (Commas[Index]) {
-      if (Index >= Commas.size()) {
-        Diag << FixItHint::CreateRemoval(Arg->getSourceRange());
-      } else {
+      if (Index + 1 < Call.getNumArgs()) {
         // Remove the next comma
         Commas[Index + 1] = true;
+        const Expr *NextArg = Call.getArg(Index + 1);
         Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            {Arg->getBeginLoc(),
-             Lexer::getLocForEndOfToken(
-                 Arg->getEndLoc(), 0, Ctx.getSourceManager(), Ctx.getLangOpts())
-                 .getLocWithOffset(1)}));
+            {Arg->getBeginLoc(), NextArg->getBeginLoc().getLocWithOffset(-1)}));
+      } else {
+        Diag << FixItHint::CreateRemoval(Arg->getSourceRange());
       }
     } else {
-      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-          Arg->getBeginLoc().getLocWithOffset(-1), Arg->getEndLoc()));
+      // At this point we know Index > 0 because `Commas[0] = true` earlier
       Commas[Index] = true;
+      const Expr *PrevArg = Call.getArg(Index - 1);
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+          PrevArg->getEndLoc().getLocWithOffset(1), Arg->getEndLoc()));
     }
   }
 }
