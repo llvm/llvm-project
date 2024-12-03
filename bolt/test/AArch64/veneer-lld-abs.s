@@ -24,6 +24,9 @@ near_function:
   ret
 .size near_function, .-near_function
 
+## Force relocations against .text.
+.reloc 0, R_AARCH64_NONE
+
 .section ".mytext", "ax"
 .balign 4
 
@@ -42,7 +45,7 @@ __AArch64AbsLongThunk_far_function:
 .size __AArch64AbsLongThunk_far_function, .-__AArch64AbsLongThunk_far_function
 
 ## If a callee is closer than 256MB away, LLD may generate a thunk with a direct
-## jump to the callee. Note, that the name might still include "AbSLong".
+## jump to the callee. Note, that the name might still include "AbsLong".
 .global __AArch64AbsLongThunk_near_function
 .type __AArch64AbsLongThunk_near_function, %function
 __AArch64AbsLongThunk_near_function:
