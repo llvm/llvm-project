@@ -52,6 +52,12 @@ code bases.
   `migrate to Vulkan <https://developer.android.com/guide/topics/renderscript/migrate>`_
   or other options.
 
+- Clang now emits distinct type-based alias analysis tags for incompatible
+  pointers by default, enabling more powerful alias analysis when accessing
+  pointer types. This change may silently change code behavior for code
+  containing strict-aliasing violations. The new default behavior can be
+  disabled using ``-fno-pointer-tbaa``.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -239,10 +245,6 @@ C++ Language Changes
 
 - The builtin type alias ``__builtin_common_type`` has been added to improve the
   performance of ``std::common_type``.
-
-- Clang now emits distinct type-based alias analysis tags for incompatible
-  pointers by default, enabling more powerful alias analysis when accessing
-  pointer types. The new default behavior can be disabled using ``-fno-pointer-tbaa``.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
