@@ -2197,8 +2197,7 @@ define i1 @icmp_ashr_and_overshift(i8 %X) {
 
 define i1 @icmp_and_ashr_neg_and_legal(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_neg_and_legal(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ashr = ashr i8 %x, 4
