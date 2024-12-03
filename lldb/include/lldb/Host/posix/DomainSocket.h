@@ -10,6 +10,8 @@
 #define LLDB_HOST_POSIX_DOMAINSOCKET_H
 
 #include "lldb/Host/Socket.h"
+#include <string>
+#include <vector>
 
 namespace lldb_private {
 class DomainSocket : public Socket {
@@ -27,7 +29,7 @@ public:
 
   std::string GetRemoteConnectionURI() const override;
 
-  std::string GetListeningConnectionURI() const override;
+  std::vector<std::string> GetListeningConnectionURI() const override;
 
 protected:
   DomainSocket(SocketProtocol protocol);

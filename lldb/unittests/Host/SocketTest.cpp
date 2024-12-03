@@ -63,8 +63,9 @@ TEST_P(SocketTest, DecodeHostAndPort) {
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:65535"),
                        llvm::HasValue(Socket::HostAndPort{"*", 65535}));
 
-  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("[::1]:12345"),
-                       llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("[::1]:12345"),
+      llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345"),
@@ -74,8 +75,7 @@ TEST_P(SocketTest, DecodeHostAndPort) {
 #if LLDB_ENABLE_POSIX
 TEST_P(SocketTest, DomainListenConnectAccept) {
   llvm::SmallString<64> Path;
-  std::error_code EC =
-      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Path, "test");
 
@@ -105,8 +105,9 @@ TEST_P(SocketTest, DomainListenGetListeningConnectionURI) {
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   ASSERT_TRUE(listen_socket_up->IsValid());
 
-  ASSERT_EQ(listen_socket_up->GetListeningConnectionURI(),
-            llvm::formatv("unix-connect://{0}", Path).str());
+  const auto &URIs = listen_socket_up->GetListeningConnectionURI();
+  ASSERT_EQ(URIs.size(), 1u);
+  ASSERT_EQ(URIs[0], llvm::formatv("unix-connect://{0}", Path).str());
 }
 
 TEST_P(SocketTest, DomainMainLoopAccept) {
@@ -260,15 +261,13 @@ TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
   llvm::Expected<std::unique_ptr<TCPSocket>> sock = Socket::TcpListen(addr);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_TRUE(sock.get()->IsValid());
-  std::string uri = sock.get()->GetListeningConnectionURI();
 
-  // Ensure the URI is not "".
-  EXPECT_FALSE(uri.empty());
-  EXPECT_NE(uri, addr);
-  EXPECT_EQ(uri,
-            llvm::formatv("connection://[{0}]:{1}", GetParam().localhost_ip,
-                          sock->get()->GetLocalPortNumber())
-                .str());
+  for (const auto &URI : sock.get()->GetListeningConnectionURI()) {
+    EXPECT_EQ(URI,
+              llvm::formatv("connection://[{0}]:{1}", GetParam().localhost_ip,
+                            sock->get()->GetLocalPortNumber())
+                  .str());
+  }
 }
 
 TEST_P(SocketTest, TCPGetConnectURI) {
@@ -300,8 +299,7 @@ TEST_P(SocketTest, UDPGetConnectURI) {
 #if LLDB_ENABLE_POSIX
 TEST_P(SocketTest, DomainGetConnectURI) {
   llvm::SmallString<64> domain_path;
-  std::error_code EC = llvm::sys::fs::createUniqueDirectory(
-      "DomainListenConnectAccept", domain_path);
+  std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(domain_path, "test");
 

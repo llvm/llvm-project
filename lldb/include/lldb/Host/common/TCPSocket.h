@@ -13,6 +13,8 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
 #include <map>
+#include <string>
+#include <vector>
 
 namespace lldb_private {
 class TCPSocket : public Socket {
@@ -52,7 +54,7 @@ public:
 
   std::string GetRemoteConnectionURI() const override;
 
-  std::string GetListeningConnectionURI() const override;
+  std::vector<std::string> GetListeningConnectionURI() const override;
 
 private:
   TCPSocket(NativeSocket socket, const TCPSocket &listen_socket);
