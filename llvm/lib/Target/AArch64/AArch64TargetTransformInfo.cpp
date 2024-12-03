@@ -4031,8 +4031,6 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (L->getHeader() != L->getLoopLatch() || Size > 8)
     return;
 
-  SmallPtrSet<const SCEV *, 8> LoadPtrs;
-  SmallPtrSet<const SCEV *, 8> StorePtrs;
   SmallPtrSet<Value *, 8> LoadedValues;
   SmallVector<StoreInst *> Stores;
   for (auto *BB : L->blocks()) {
@@ -4043,13 +4041,10 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       const SCEV *PtrSCEV = SE.getSCEV(Ptr);
       if (SE.isLoopInvariant(PtrSCEV, L))
         continue;
-      if (isa<LoadInst>(&I)) {
-        LoadPtrs.insert(PtrSCEV);
+      if (isa<LoadInst>(&I))
         LoadedValues.insert(&I);
-      } else {
+      else
         Stores.push_back(cast<StoreInst>(&I));
-        StorePtrs.insert(PtrSCEV);
-      }
     }
   }
 
