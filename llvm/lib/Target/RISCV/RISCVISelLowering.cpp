@@ -1544,6 +1544,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // corresponding branch. This information is used in CGP/SelectOpt to decide
   // when to convert selects into branches.
   PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
+
+  MaxStoresPerMemsetOptSize = Subtarget.getMaxStoresPerMemset(/*OptSize=*/true);
+  MaxStoresPerMemset = Subtarget.getMaxStoresPerMemset(/*OptSize=*/false);
+
+  MaxGluedStoresPerMemcpy = Subtarget.getMaxGluedStoresPerMemcpy();
+  MaxStoresPerMemcpyOptSize = Subtarget.getMaxStoresPerMemcpy(/*OptSize=*/true);
+  MaxStoresPerMemcpy = Subtarget.getMaxStoresPerMemcpy(/*OptSize=*/false);
+
+  MaxStoresPerMemmoveOptSize =
+      Subtarget.getMaxStoresPerMemmove(/*OptSize=*/true);
+  MaxStoresPerMemmove = Subtarget.getMaxStoresPerMemmove(/*OptSize=*/false);
+
+  MaxLoadsPerMemcmpOptSize = Subtarget.getMaxLoadsPerMemcmp(/*OptSize=*/true);
+  MaxLoadsPerMemcmp = Subtarget.getMaxLoadsPerMemcmp(/*OptSize=*/false);
 }
 
 EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,

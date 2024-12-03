@@ -53,6 +53,19 @@ struct RISCVTuneInfo {
 
   // Tail duplication threshold at -O3.
   unsigned TailDupAggressiveThreshold;
+
+  unsigned MaxStoresPerMemsetOptSize;
+  unsigned MaxStoresPerMemset;
+
+  unsigned MaxGluedStoresPerMemcpy;
+  unsigned MaxStoresPerMemcpyOptSize;
+  unsigned MaxStoresPerMemcpy;
+
+  unsigned MaxStoresPerMemmoveOptSize;
+  unsigned MaxStoresPerMemmove;
+
+  unsigned MaxLoadsPerMemcmpOptSize;
+  unsigned MaxLoadsPerMemcmp;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -323,6 +336,30 @@ public:
 
   unsigned getTailDupAggressiveThreshold() const {
     return TuneInfo->TailDupAggressiveThreshold;
+  }
+
+  unsigned getMaxStoresPerMemset(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemsetOptSize
+                   : TuneInfo->MaxStoresPerMemset;
+  }
+
+  unsigned getMaxGluedStoresPerMemcpy() const {
+    return TuneInfo->MaxGluedStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemcpy(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemcpyOptSize
+                   : TuneInfo->MaxStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemmove(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemmoveOptSize
+                   : TuneInfo->MaxStoresPerMemmove;
+  }
+
+  unsigned getMaxLoadsPerMemcmp(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxLoadsPerMemcmpOptSize
+                   : TuneInfo->MaxLoadsPerMemcmp;
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
