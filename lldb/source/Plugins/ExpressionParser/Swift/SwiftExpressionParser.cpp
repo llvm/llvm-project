@@ -1492,10 +1492,11 @@ bool SwiftExpressionParser::Complete(CompletionRequest &request, unsigned line,
 /// system.
 static bool
 RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
-                                         SwiftASTManipulator &manipulator) {
+                                         SwiftASTManipulator &manipulator,
+                                         swift::ASTContext &ast_ctx) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  swift::Mangle::ASTMangler mangler;
+  swift::Mangle::ASTMangler mangler(ast_ctx);
   auto *entrypoint_decl = manipulator.GetEntrypointDecl();
   if (!entrypoint_decl) {
     LLDB_LOG(log, "[RedirectCallFromSinkToTrampolineFunction] Could not set "
@@ -2072,16 +2073,18 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     LLDB_LOG(log, "Generated IR module:\n{0}", s);
   }
 
-  if (m_options.GetBindGenericTypes() == lldb::eDontBind &&
-      !RedirectCallFromSinkToTrampolineFunction(
-          *m_module.get(), *parsed_expr->code_manipulator.get())) {
-    diagnostic_manager.Printf(
-        eSeverityError,
-        "couldn't setup call to the trampoline function. Please enable the "
-        "expression log by running \"log enable lldb "
-        "expr\", then run the failing expression again, and file a "
-        "bugreport with the log output.");
-    return ParseResult::unrecoverable_error;
+  if (ThreadSafeASTContext ast_ctx = m_swift_ast_ctx.GetASTContext()) {
+    if (m_options.GetBindGenericTypes() == lldb::eDontBind &&
+        !RedirectCallFromSinkToTrampolineFunction(
+            *m_module.get(), *parsed_expr->code_manipulator.get(), **ast_ctx)) {
+      diagnostic_manager.Printf(
+          eSeverityError,
+          "couldn't setup call to the trampoline function. Please enable the "
+          "expression log by running \"log enable lldb "
+          "expr\", then run the failing expression again, and file a "
+          "bugreport with the log output.");
+      return ParseResult::unrecoverable_error;
+    }
   }
 
   if (log) {

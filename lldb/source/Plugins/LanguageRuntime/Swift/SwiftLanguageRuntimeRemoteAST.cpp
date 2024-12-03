@@ -297,9 +297,12 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
     if (target_swift_type->hasArchetype())
       target_swift_type = target_swift_type->mapTypeOutOfContext().getPointer();
 
-    // Replace opaque types with their underlying types when possible.
-    swift::Mangle::ASTMangler mangler(true);
+    ThreadSafeASTContext ast_ctx = swift_ast_ctx->GetASTContext();
+    if (!ast_ctx)
+      return base_type;
 
+    // Replace opaque types with their underlying types when possible.
+    swift::Mangle::ASTMangler mangler(**ast_ctx, true);
     // Rewrite all dynamic self types to their static self types.
     target_swift_type =
         target_swift_type.transformRec([](swift::TypeBase *type)
