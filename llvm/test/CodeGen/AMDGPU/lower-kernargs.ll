@@ -4,6 +4,8 @@
 
 target datalayout = "A5"
 
+declare void @llvm.fake.use(...)
+
 define amdgpu_kernel void @kern_noargs() {
 ; GCN-LABEL: @kern_noargs(
 ; GCN-NEXT:    ret void
@@ -260,17 +262,17 @@ define amdgpu_kernel void @kern_range_noundef_i32(i32 noundef range(i32 0, 8) %a
 ; HSA-NEXT:    [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 16, !range [[RNG2:![0-9]+]], !invariant.load [[META1]], !noundef [[META1]]
-; HSA-NEXT:    store volatile i32 [[ARG0_LOAD]], ptr addrspace(1) poison, align 4
+; HSA-NEXT:    call void (...) @llvm.fake.use(i32 [[ARG0_LOAD]])
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_range_noundef_i32(
 ; MESA-NEXT:    [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_RANGE_NOUNDEF_I32_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 4, !range [[RNG2:![0-9]+]], !invariant.load [[META1]], !noundef [[META1]]
-; MESA-NEXT:    store volatile i32 [[ARG0_LOAD]], ptr addrspace(1) poison, align 4
+; MESA-NEXT:    call void (...) @llvm.fake.use(i32 [[ARG0_LOAD]])
 ; MESA-NEXT:    ret void
 ;
-  store volatile i32 %arg0, ptr addrspace(1) poison
+  call void (...) @llvm.fake.use(i32 %arg0)
   ret void
 }
 
@@ -1728,6 +1730,105 @@ define amdgpu_kernel void @byref_constant_i32_arg_offset0(ptr addrspace(4) byref
   ret void
 }
 
+define amdgpu_kernel void @noundef_f32(float noundef %arg0) {
+; HSA-LABEL: @noundef_f32(
+; HSA-NEXT:    [[NOUNDEF_F32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_F32_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load float, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !noundef [[META1]]
+; HSA-NEXT:    call void (...) @llvm.fake.use(float [[ARG0_LOAD]])
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @noundef_f32(
+; MESA-NEXT:    [[NOUNDEF_F32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_F32_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load float, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !noundef [[META1]]
+; MESA-NEXT:    call void (...) @llvm.fake.use(float [[ARG0_LOAD]])
+; MESA-NEXT:    ret void
+;
+  call void (...) @llvm.fake.use(float %arg0)
+  ret void
+}
+
+define amdgpu_kernel void @noundef_f16(half noundef %arg0) {
+; HSA-LABEL: @noundef_f16(
+; HSA-NEXT:    [[NOUNDEF_F16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_F16_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META1]], !noundef [[META1]]
+; HSA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = bitcast i16 [[TMP2]] to half
+; HSA-NEXT:    call void (...) @llvm.fake.use(half [[ARG0_LOAD]])
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @noundef_f16(
+; MESA-NEXT:    [[NOUNDEF_F16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_F16_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 4, !invariant.load [[META1]], !noundef [[META1]]
+; MESA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = bitcast i16 [[TMP2]] to half
+; MESA-NEXT:    call void (...) @llvm.fake.use(half [[ARG0_LOAD]])
+; MESA-NEXT:    ret void
+;
+  call void (...) @llvm.fake.use(half %arg0)
+  ret void
+}
+
+define amdgpu_kernel void @noundef_v2i32(<2 x i32> noundef %arg0) {
+; HSA-LABEL: @noundef_v2i32(
+; HSA-NEXT:    [[NOUNDEF_V2I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_V2I32_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load <2 x i32>, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !noundef [[META1]]
+; HSA-NEXT:    call void (...) @llvm.fake.use(<2 x i32> [[ARG0_LOAD]])
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @noundef_v2i32(
+; MESA-NEXT:    [[NOUNDEF_V2I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_V2I32_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load <2 x i32>, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !noundef [[META1]]
+; MESA-NEXT:    call void (...) @llvm.fake.use(<2 x i32> [[ARG0_LOAD]])
+; MESA-NEXT:    ret void
+;
+  call void (...) @llvm.fake.use(<2 x i32> %arg0)
+  ret void
+}
+
+define amdgpu_kernel void @noundef_p0(ptr noundef %arg0) {
+; HSA-LABEL: @noundef_p0(
+; HSA-NEXT:    [[NOUNDEF_P0_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_P0_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load ptr, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !noundef [[META1]]
+; HSA-NEXT:    call void (...) @llvm.fake.use(ptr [[ARG0_LOAD]])
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @noundef_p0(
+; MESA-NEXT:    [[NOUNDEF_P0_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_P0_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load ptr, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !noundef [[META1]]
+; MESA-NEXT:    call void (...) @llvm.fake.use(ptr [[ARG0_LOAD]])
+; MESA-NEXT:    ret void
+;
+  call void (...) @llvm.fake.use(ptr %arg0)
+  ret void
+}
+
+define amdgpu_kernel void @noundef_v2p0(<2 x ptr> noundef %arg0) {
+; HSA-LABEL: @noundef_v2p0(
+; HSA-NEXT:    [[NOUNDEF_V2P0_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_V2P0_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 16, !invariant.load [[META1]], !noundef [[META1]]
+; HSA-NEXT:    call void (...) @llvm.fake.use(<2 x ptr> [[ARG0_LOAD]])
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @noundef_v2p0(
+; MESA-NEXT:    [[NOUNDEF_V2P0_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_V2P0_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[ARG0_KERNARG_OFFSET]], align 4, !invariant.load [[META1]], !noundef [[META1]]
+; MESA-NEXT:    call void (...) @llvm.fake.use(<2 x ptr> [[ARG0_LOAD]])
+; MESA-NEXT:    ret void
+;
+  call void (...) @llvm.fake.use(<2 x ptr> %arg0)
+  ret void
+}
+
 attributes #0 = { nounwind "target-cpu"="kaveri" }
 attributes #1 = { nounwind "target-cpu"="kaveri" "amdgpu-implicitarg-num-bytes"="40" }
 attributes #2 = { nounwind "target-cpu"="tahiti" }
@@ -1736,15 +1837,17 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
-; HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
-; HSA: attributes #[[ATTR1:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
-; HSA: attributes #[[ATTR2:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
-; HSA: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+; HSA: attributes #[[ATTR1:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
+; HSA: attributes #[[ATTR2:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
+; HSA: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
+; HSA: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; MESA: attributes #[[ATTR0:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
-; MESA: attributes #[[ATTR1:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
-; MESA: attributes #[[ATTR2:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
-; MESA: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; MESA: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+; MESA: attributes #[[ATTR1:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
+; MESA: attributes #[[ATTR2:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
+; MESA: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
+; MESA: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; HSA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ; HSA: [[META1]] = !{}
