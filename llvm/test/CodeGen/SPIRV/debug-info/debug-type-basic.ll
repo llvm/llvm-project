@@ -1,3 +1,6 @@
+; Issue #118011
+; XFAIL: *
+
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
@@ -7,7 +10,7 @@
 ; CHECK-MIR-DAG: [[type_i32:%[0-9]+\:type]] = OpTypeInt 32, 0
 ; CHECK-MIR-DAG: [[encoding_signedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 5
 ; CHECK-MIR-DAG: [[encoding_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 3
-; CHECK-MIR-DAG: [[flag_zero:%[0-9]+\:iid\(s32\)]] = OpConstantNull [[type_i32]]
+; CHECK-MIR-DAG: [[flag_zero:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 0
 ; CHECK-MIR-DAG: [[str_bool:%[0-9]+\:id\(s32\)]] = OpString 1819242338, 0
 ; CHECK-MIR-DAG: [[size_8bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 8
 ; CHECK-MIR-DAG: [[encoding_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 2
@@ -60,7 +63,7 @@
 ; CHECK-SPIRV-DAG: [[type_int16:%[0-9]+]] = OpTypeInt 16 0
 ; CHECK-SPIRV-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: [[encoding_signedchar:%[0-9]+]] = OpConstant [[type_int32]] 5
-; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstantNull [[type_int32]]
+; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0
 ; CHECK-SPIRV-DAG: [[encoding_float:%[0-9]+]] = OpConstant [[type_int32]] 3
 ; CHECK-SPIRV-DAG: [[size_8bit:%[0-9]+]] = OpConstant [[type_int32]] 8
 ; CHECK-SPIRV-DAG: [[encoding_boolean:%[0-9]+]] = OpConstant [[type_int32]] 2

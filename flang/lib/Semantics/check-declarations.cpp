@@ -320,8 +320,14 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.attrs().HasAny({Attr::INTENT_IN, Attr::INTENT_INOUT,
           Attr::INTENT_OUT, Attr::OPTIONAL, Attr::VALUE}) &&
       !IsDummy(symbol)) {
-    messages_.Say(
-        "Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute"_err_en_US);
+    if (context_.IsEnabled(
+            common::LanguageFeature::IgnoreIrrelevantAttributes)) {
+      context_.Warn(common::LanguageFeature::IgnoreIrrelevantAttributes,
+          "Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute"_warn_en_US);
+    } else {
+      messages_.Say(
+          "Only a dummy argument may have an INTENT, VALUE, or OPTIONAL attribute"_err_en_US);
+    }
   } else if (symbol.attrs().test(Attr::VALUE)) {
     CheckValue(symbol, derived);
   }
@@ -1110,7 +1116,8 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
       if (proc->init() && *proc->init()) {
         // C1519 - must be nonelemental external or module procedure,
         // or an unrestricted specific intrinsic function.
-        const Symbol &ultimate{(*proc->init())->GetUltimate()};
+        const Symbol &local{DEREF(*proc->init())};
+        const Symbol &ultimate{local.GetUltimate()};
         bool checkTarget{true};
         if (ultimate.attrs().test(Attr::INTRINSIC)) {
           if (auto intrinsic{context_.intrinsics().IsSpecificIntrinsicFunction(
@@ -1123,11 +1130,12 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
                 ultimate.name(), symbol.name());
             checkTarget = false;
           }
-        } else if ((!ultimate.attrs().test(Attr::EXTERNAL) &&
-                       ultimate.owner().kind() != Scope::Kind::Module) ||
+        } else if (!(ultimate.attrs().test(Attr::EXTERNAL) ||
+                       ultimate.owner().kind() == Scope::Kind::Module ||
+                       ultimate.owner().IsTopLevel()) ||
             IsDummy(ultimate) || IsPointer(ultimate)) {
-          context_.Say("Procedure pointer '%s' initializer '%s' is neither "
-                       "an external nor a module procedure"_err_en_US,
+          context_.Say(
+              "Procedure pointer '%s' initializer '%s' is neither an external nor a module procedure"_err_en_US,
               symbol.name(), ultimate.name());
           checkTarget = false;
         } else if (IsElementalProcedure(ultimate)) {

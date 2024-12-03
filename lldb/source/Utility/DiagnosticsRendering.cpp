@@ -132,23 +132,16 @@ void RenderDiagnosticDetails(Stream &stream,
   stream << '\n';
 
   // Reverse the order within groups of diagnostics that are on the same column.
-  auto group = [](const std::vector<DiagnosticDetail> &details) {
-    uint16_t column = 0;
-    std::vector<DiagnosticDetail> result, group;
-    for (auto &d : details) {
-      if (d.source_location->column == column) {
-        group.push_back(d);
-        continue;
-      }
-      result.insert(result.end(), group.rbegin(), group.rend());
-      group.clear();
-      column = d.source_location->column;
-      group.push_back(d);
+  auto group = [](std::vector<DiagnosticDetail> &details) {
+    for (auto it = details.begin(), end = details.end(); it != end;) {
+      auto eq_end = std::find_if(it, end, [&](const DiagnosticDetail &d) {
+        return d.source_location->column != it->source_location->column;
+      });
+      std::reverse(it, eq_end);
+      it = eq_end;
     }
-    result.insert(result.end(), group.rbegin(), group.rend());
-    return result;
   };
-  remaining_details = group(remaining_details);
+  group(remaining_details);
 
   // Work through each detail in reverse order using the vector/stack.
   bool did_print = false;
