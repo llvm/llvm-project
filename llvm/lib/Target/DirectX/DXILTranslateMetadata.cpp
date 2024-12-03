@@ -306,8 +306,11 @@ static void translateBranchMetadata(Module &M) {
       auto *HlslControlFlowMD =
           BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
 
-      if (!HlslControlFlowMD || HlslControlFlowMD->getNumOperands() < 2)
+      if (!HlslControlFlowMD)
         continue;
+
+      assert(HlslControlFlowMD->getNumOperands() == 2 &&
+             "invalid operands for hlsl.controlflow.hint");
 
       MDBuilder MDHelper(M.getContext());
       auto *Op1 =

@@ -1208,15 +1208,21 @@ public:
     Instruction *BBTerminatorInst = Builder->GetInsertBlock()->getTerminator();
 
     MDNode *MDNode = BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
-    if (MDNode)
+
+    ConstantInt *BranchHint = llvm::ConstantInt::get(Builder->getInt32Ty(), 0);
+
+    if (MDNode) {
       assert(MDNode->getNumOperands() == 2 &&
              "invalid metadata hlsl.controlflow.hint");
+      BranchHint = mdconst::extract<ConstantInt>(MDNode->getOperand(1));
 
-    Value *MDNodeValue = MetadataAsValue::get(Builder->getContext(), MDNode);
+      assert(BranchHint && "invalid metadata value for hlsl.controlflow.hint");
+    }
 
-    llvm::SmallVector<llvm::Value *, 2> Args = {MergeAddress, MDNodeValue};
+    llvm::SmallVector<llvm::Value *, 2> Args = {MergeAddress, BranchHint};
 
-    Builder->CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+    Builder->CreateIntrinsic(Intrinsic::spv_selection_merge,
+                             {MergeAddress->getType()}, {Args});
   }
 };
 } // namespace llvm
