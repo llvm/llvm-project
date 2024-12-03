@@ -653,9 +653,6 @@ protected:
   /// All lexical blocks contained in this function.
   Block m_block;
 
-  /// List of address ranges belonging to the function.
-  AddressRanges m_ranges;
-
   /// The function address range that covers the widest range needed to contain
   /// all blocks. DEPRECATED: do not use this field in new code as the range may
   /// include addresses belonging to other functions.
