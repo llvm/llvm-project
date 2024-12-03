@@ -53,6 +53,13 @@ std::string toCOFFString(const COFFLinkerContext &ctx,
   return maybeDemangleSymbol(ctx, b.getName());
 }
 
+const COFFSyncStream &
+coff::operator<<(const COFFSyncStream &s,
+                 const llvm::object::Archive::Symbol *sym) {
+  s << maybeDemangleSymbol(s.ctx, sym->getName());
+  return s;
+}
+
 namespace coff {
 
 void Symbol::computeName() {
