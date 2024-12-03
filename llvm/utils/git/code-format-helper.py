@@ -319,7 +319,7 @@ class UndefGetFormatHelper(FormatHelper):
 
     @property
     def instructions(self) -> str:
-        return " ".join(self.cmd)
+        return " ".join(f"'{c}'" for c in self.cmd)
 
     def filter_changed_files(self, changed_files: List[str]) -> List[str]:
         filtered_files = []
@@ -343,11 +343,10 @@ class UndefGetFormatHelper(FormatHelper):
             cmd.append(args.end_rev)
 
         cmd += files
+        self.cmd = cmd
 
         if args.verbose:
-            cmd_str = " ".join(f"'{c}'" for c in cmd)
-            print(f"Running: {cmd_str}")
-        self.cmd = cmd
+            print(f"Running: {self.instructions}")
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sys.stdout.write(proc.stderr.decode("utf-8"))
         stdout = proc.stdout.decode("utf-8")
