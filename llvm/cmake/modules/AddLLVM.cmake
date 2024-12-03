@@ -636,8 +636,11 @@ function(llvm_add_library name)
   endif()
 
   if(EMSCRIPTEN)
+    # Emscripten's support for dynamic linking is limited
+    # so force all libraries to be statically linked.
     set(ARG_MODULE FALSE)
     set(ARG_SHARED FALSE)
+    set(ARG_STATIC TRUE)
   endif()
 
   if(ARG_MODULE)
