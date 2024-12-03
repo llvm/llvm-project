@@ -15,9 +15,9 @@ directories::
         - examples
         - fuzzing
         - hdr
+        - hdrgen
         - include
         - lib
-        - newhdrgen
         - src
         - startup
         - test
@@ -89,13 +89,13 @@ The ``lib`` directory
 This directory contains a ``CMakeLists.txt`` file listing the targets for the
 public libraries ``libc.a``, ``libm.a`` etc.
 
-The ``newhdrgen`` directory
+The ``hdrgen`` directory
 ---------------------------
 
 This directory contains the sources and specifications for the types, macros
 and entrypoint functions. These definitions are organized in the ``yaml``
 subdirectory and match the organization of the ``*.h.def`` files. This folder
-also contains the python sources for new headergen, which is what generates the
+also contains the python sources for headergen, which is what generates the
 headers.
 
 The ``src`` directory
