@@ -817,3 +817,8 @@ static_assert(__builtin_elementwise_popcount(~0U) == 8 * sizeof(int));
 static_assert(__builtin_elementwise_popcount(0L) == 0);
 static_assert(__builtin_elementwise_popcount(0xF0F0L) == 8);
 static_assert(__builtin_elementwise_popcount(~0LL) == 8 * sizeof(long long));
+
+static_assert(__builtin_elementwise_bitreverse(0x12345678) == 0x1E6A2C48);
+static_assert(__builtin_elementwise_bitreverse(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_bitreverse((vector4char){1, 2, 4, 8})) == (LITTLE_END ? 0x10204080 : 0x80402010));
+static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_bitreverse((vector4short){1, 2, 4, 8})) == (LITTLE_END ? 0x1000200040008000 : 0x8000400020001000));
