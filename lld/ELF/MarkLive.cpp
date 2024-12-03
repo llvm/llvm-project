@@ -209,8 +209,13 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
     return;
   sec->partition = sec->partition ? 1 : partition;
 
-  if (parent)
+  if (parent) {
     whyLive.try_emplace(LiveOffset{sec, offset}, *parent);
+    // Offset zero is treated as a stand-in for the section itself. The parent
+    // is both a specific reason that an offset within this section is alive and
+    // a generic reason the section itself is alive.
+    whyLive.try_emplace(LiveOffset{sec, 0}, *parent);
+  }
 
   // Add input section to the queue.
   if (InputSection *s = dyn_cast<InputSection>(sec))
