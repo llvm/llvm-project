@@ -850,6 +850,12 @@ def OpSubgroupImageBlockReadINTEL: Op<5577, (outs ID:$res), (ins TYPE:$type, ID:
 def OpSubgroupImageBlockWriteINTEL: Op<5578, (outs), (ins ID:$image, ID:$coordinate, ID:$data),
                   "OpSubgroupImageBlockWriteINTEL $image $coordinate $data">;
 
+// SPV_INTEL_media_block_io
+def OpSubgroupImageMediaBlockReadINTEL: Op<5580, (outs ID:$res), (ins TYPE:$type, ID:$image, ID:$coordinate, ID:$width, ID:$height),
+                  "$res = OpSubgroupImageMediaBlockReadINTEL $type $image $coordinate $width $height">;
+def OpSubgroupImageMediaBlockWriteINTEL: Op<5581, (outs), (ins ID:$image, ID:$coordinate, ID:$width, ID:$height, ID:$data),
+                  "OpSubgroupImageMediaBlockWriteINTEL $image $coordinate $width $height $data">;
+
 // - SPV_KHR_uniform_group_instructions
 def OpGroupIMulKHR: Op<6401, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
                   "$res = OpGroupIMulKHR $type $scope $groupOp $value">;

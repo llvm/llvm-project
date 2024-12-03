@@ -7,10 +7,14 @@
 // RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
 // RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
 
-extern "C" {
-  typedef decltype(sizeof(int)) size_t;
-  extern size_t wcslen(const wchar_t *p);
-}
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define LITTLE_END 1
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define LITTLE_END 0
+#else
+#error "huh?"
+#endif
+
 
 namespace strcmp {
   constexpr char kFoobar[6] = {'f','o','o','b','a','r'};
@@ -89,14 +93,6 @@ constexpr const char *a = "foo\0quux";
   constexpr char d[] = { 'f', 'o', 'o' }; // no nul terminator.
   constexpr int bad = __builtin_strlen(d); // both-error {{constant expression}} \
                                            // both-note {{one-past-the-end}}
-
-  constexpr int wn = __builtin_wcslen(L"hello");
-  static_assert(wn == 5);
-  constexpr int wm = wcslen(L"hello"); // both-error {{constant expression}} \
-                                       // both-note {{non-constexpr function 'wcslen' cannot be used in a constant expression}}
-
-  int arr[3]; // both-note {{here}}
-  int wk = arr[wcslen(L"hello")]; // both-warning {{array index 5}}
 }
 
 namespace nan {
@@ -1140,6 +1136,10 @@ namespace ElementwisePopcount {
   static_assert(__builtin_elementwise_popcount(0L) == 0);
   static_assert(__builtin_elementwise_popcount(0xF0F0L) == 8);
   static_assert(__builtin_elementwise_popcount(~0LL) == 8 * sizeof(long long));
+
+#if __INT_WIDTH__ == 32
+  static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_popcount((vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x01020101 : 0x01010201));
+#endif
 }
 
 namespace BuiltinMemcpy {
@@ -1157,6 +1157,10 @@ namespace BuiltinMemcpy {
   static_assert(__builtin_memcpy(null_incomplete, null_incomplete, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
                                                                                       // both-note {{source of 'memcpy' is nullptr}}
 
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_memcpy(&global, null, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                   // both-note {{source of 'memcpy' is nullptr}}
 
   constexpr int simpleMove() {
     int a = 12;

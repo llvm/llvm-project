@@ -550,7 +550,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
-    unsigned Op = RecurrenceDescriptor::getOpcode(RK);
+    unsigned Op = RdxDesc.getOpcode();
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
       Op = Instruction::Or;
 
@@ -2130,8 +2130,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
           createOrderedReduction(State.Builder, RdxDesc, NewVecOp, PrevInChain);
     else
       NewRed = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), PrevInChain,
-          NewVecOp);
+          (Instruction::BinaryOps)RdxDesc.getOpcode(), PrevInChain, NewVecOp);
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else {
@@ -2142,7 +2141,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
                                    NewRed, PrevInChain);
     else
       NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
+          (Instruction::BinaryOps)RdxDesc.getOpcode(), NewRed, PrevInChain);
   }
   State.set(this, NextInChain, /*IsScalar*/ true);
 }
@@ -2179,8 +2178,8 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
     else
-      NewRed = Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, Prev);
+      NewRed = Builder.CreateBinOp((Instruction::BinaryOps)RdxDesc.getOpcode(),
+                                   NewRed, Prev);
   }
   State.set(this, NewRed, /*IsScalar*/ true);
 }
