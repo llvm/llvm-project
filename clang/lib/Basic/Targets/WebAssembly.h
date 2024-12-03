@@ -42,7 +42,6 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // ptr32_uptr
     0,  // ptr64
     0,  // hlsl_groupshared
-    0,  // hlsl_private
     20, // wasm_funcref
 };
 
@@ -56,6 +55,8 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
 
   bool HasAtomics = false;
   bool HasBulkMemory = false;
+  bool HasBulkMemoryOpt = false;
+  bool HasCallIndirectOverlong = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;

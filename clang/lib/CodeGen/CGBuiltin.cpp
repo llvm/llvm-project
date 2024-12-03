@@ -19060,6 +19060,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_resource_getpointer: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+
+    // TODO: Map to an hlsl_device address space.
+    llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
+
+    return Builder.CreateIntrinsic(RetTy, Intrinsic::dx_resource_getpointer,
+                                   ArrayRef<Value *>{HandleOp, IndexOp});
+  }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
@@ -19726,6 +19736,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
@@ -19751,6 +19763,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       IID = Intrinsic::amdgcn_ds_read_tr6_b96;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16:
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
       IID = Intrinsic::amdgcn_ds_read_tr16_b64;
       break;
     }

@@ -48,6 +48,48 @@ define float @sqrt_f32(float %a) nounwind {
   ret float %1
 }
 
+define float @powi_f32(float %a, i32 %b) nounwind {
+; RV32IF-LABEL: powi_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi sp, sp, -16
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    call __powisf2
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: powi_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    sext.w a0, a0
+; RV64IF-NEXT:    call __powisf2
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
+;
+; RV32I-LABEL: powi_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call __powisf2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: powi_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    call __powisf2
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.powi.f32.i32(float %a, i32 %b)
+  ret float %1
+}
+
 define float @sin_f32(float %a) nounwind {
 ; RV32IF-LABEL: sin_f32:
 ; RV32IF:       # %bb.0:
@@ -1406,6 +1448,48 @@ define float @tan_f32(float %a) nounwind {
 ; RV64I-NEXT:    ret
   %1 = call float @llvm.tan.f32(float %a)
   ret float %1
+}
+
+define float @ldexp_float(float %x, i32 %y) nounwind {
+; RV32IF-LABEL: ldexp_float:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi sp, sp, -16
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    call ldexpf
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: ldexp_float:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    sext.w a0, a0
+; RV64IF-NEXT:    call ldexpf
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
+;
+; RV32I-LABEL: ldexp_float:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call ldexpf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: ldexp_float:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    call ldexpf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %z = call float @llvm.ldexp.f32.i32(float %x, i32 %y)
+  ret float %z
 }
 
 define float @asin_f32(float %a) nounwind {
