@@ -1618,7 +1618,6 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
     if (!MF)
       continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
-    //MachineIRBuilder MIRBuilder(*MF);
     for (auto &MBB : *MF) {
       if (!MBB.hasName() || MBB.empty())
         continue;

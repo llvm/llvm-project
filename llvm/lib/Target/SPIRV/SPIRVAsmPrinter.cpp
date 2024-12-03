@@ -45,7 +45,7 @@ using namespace llvm;
 namespace {
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
-  SmallPtrSet<const MachineBasicBlock*, 8> LabeledMBB;
+  SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
 
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
