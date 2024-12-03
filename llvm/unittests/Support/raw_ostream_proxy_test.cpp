@@ -171,7 +171,9 @@ TEST(raw_ostream_proxyTest, ColorMode) {
     raw_ostream_proxy ProxyOS(DestOS);
     ProxyOS.enable_colors(true);
 
-    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false, ColorMode::Disable) << "test";
+    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false,
+              ColorMode::Disable)
+        << "test";
     EXPECT_EQ("", Dest);
     ProxyOS.flush();
     EXPECT_EQ("test", Dest);
@@ -184,7 +186,9 @@ TEST(raw_ostream_proxyTest, ColorMode) {
     raw_ostream_proxy ProxyOS(DestOS);
     ProxyOS.enable_colors(true);
 
-    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false, ColorMode::Auto) << "test";
+    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false,
+              ColorMode::Auto)
+        << "test";
     EXPECT_EQ("", Dest);
     ProxyOS.flush();
     EXPECT_EQ("\x1B[0;1;31mtest\x1B[0m", Dest);
@@ -197,7 +201,9 @@ TEST(raw_ostream_proxyTest, ColorMode) {
     raw_ostream_proxy ProxyOS(DestOS);
     ProxyOS.enable_colors(true);
 
-    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false, ColorMode::Enable) << "test";
+    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false,
+              ColorMode::Enable)
+        << "test";
     EXPECT_EQ("", Dest);
     ProxyOS.flush();
     EXPECT_EQ("\x1B[0;1;31mtest\x1B[0m", Dest);
