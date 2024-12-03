@@ -3875,3 +3875,40 @@ def int_aarch64_sve_famin_u : AdvSIMD_Pred2VectorArg_Intrinsic;
 // Neon absolute maximum and minimum
 def int_aarch64_neon_famax :  AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_neon_famin :  AdvSIMD_2VectorArg_Intrinsic;
+
+//
+// FP8 intrinsics
+
+let TargetPrefix = "aarch64" in {
+
+class SME_FP8_ZA_LANE_VGx1 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty,
+                               llvm_i32_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<3>>]>;
+
+class SME_FP8_ZA_LANE_VGx2 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty,
+                               llvm_i32_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<4>>]>;
+
+class SME_FP8_ZA_LANE_VGx4 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty,
+                               llvm_i32_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<6>>]>;
+
+ // Double-vector groups (F8F16)
+ def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x1 : SME_FP8_ZA_LANE_VGx1;
+ def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2 : SME_FP8_ZA_LANE_VGx2;
+ def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4 : SME_FP8_ZA_LANE_VGx4;
+
+ // Quad-vector groups (F8F32)
+ def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1 : SME_FP8_ZA_LANE_VGx1;
+ def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2 : SME_FP8_ZA_LANE_VGx2;
+ def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4 : SME_FP8_ZA_LANE_VGx4;
+}
