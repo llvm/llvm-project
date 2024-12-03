@@ -111,9 +111,16 @@ static cl::opt<int> MaxLdStGlue("ldstmemcpy-glue-max",
        cl::desc("Number limit for gluing ld/st of memcpy."),
        cl::Hidden, cl::init(0));
 
+static cl::opt<unsigned>
+    MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
+             cl::desc("DAG combiner limit number of steps when searching DAG "
+                      "for predecessor nodes"));
+
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
 }
+
+unsigned SelectionDAG::getHasPredecessorMaxSteps() { return MaxSteps; }
 
 //===----------------------------------------------------------------------===//
 //                              ConstantFPSDNode Class
@@ -2487,11 +2494,15 @@ static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
     if (Op.getNode() != FPNode)
       Worklist.push_back(Op.getNode());
 
+  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   while (!Worklist.empty()) {
     const SDNode *Node = Worklist.pop_back_val();
     auto [_, Inserted] = Visited.insert(Node);
     if (!Inserted)
       continue;
+
+    if (MaxSteps > 0 && Visited.size() >= MaxSteps)
+      return false;
 
     // Reached the FPNode (would result in a cycle).
     // OR Reached CALLSEQ_START (would result in nested call sequences).
@@ -2511,7 +2522,8 @@ static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
 
   // True if we're outside a call sequence and don't have the FPNode as a
   // predecessor. No cycles or nested call sequences possible.
-  return !SDNode::hasPredecessorHelper(FPNode, Visited, DeferredNodes);
+  return !SDNode::hasPredecessorHelper(FPNode, Visited, DeferredNodes,
+                                       MaxSteps);
 }
 
 bool SelectionDAG::expandMultipleResultFPLibCall(
@@ -2542,7 +2554,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
-  SDValue StoresInChain{};
+  SDValue StoresInChain;
   SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
   for (SDNode *User : Node->uses()) {
     if (!ISD::isNormalStore(User))
