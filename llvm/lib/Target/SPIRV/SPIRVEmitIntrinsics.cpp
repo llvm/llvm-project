@@ -1713,9 +1713,12 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
   TrackConstants = false;
   Type *PtrTy = I.getType();
   auto *NewI =
-      ArraySize ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
-                                    {PtrTy, ArraySize->getType()}, {ArraySize})
-                : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
+      ArraySize
+          ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
+                              {PtrTy, ArraySize->getType()},
+                              {ArraySize, B.getInt8(I.getAlign().value())})
+          : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy},
+                              {B.getInt8(I.getAlign().value())});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
