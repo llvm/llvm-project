@@ -63,9 +63,9 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   }
 
   int rounding = fputil::quick_get_round();
-  
-  // Exhaustive tests show that for |x| <= 0x1.f4p-11, 1ULP rounding errors occur.
-  // To fix this, the following apply:
+
+  // Exhaustive tests show that for |x| <= 0x1.f4p-11, 1ULP rounding errors
+  // occur. To fix this, the following apply:
   if (LIBC_UNLIKELY(x_abs <= 0x13d0)) {
     // When x >= 0, and rounding upward, sin(x) == x.
     if (LIBC_UNLIKELY(x_abs == 0U))
