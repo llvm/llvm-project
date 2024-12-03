@@ -2810,28 +2810,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_selection_merge: {
 
-    auto SelectionControl = SPIRV::SelectionControl::None;
-    auto LastOp = I.getOperand(I.getNumExplicitOperands() - 1);
+    int64_t SelectionControl = SPIRV::SelectionControl::None;
+    auto LastOp = I.getOperand(I.getNumOperands() - 1);
 
-    assert((LastOp.isMBB() || LastOp.isMetadata()) &&
-           "Invalid type for last Machine Operand");
-
-    if (LastOp.isMetadata()) {
-      const MDNode *MDOp = LastOp.getMetadata();
-      if (MDOp->getNumOperands() == 2) {
-        if (ConstantInt *BranchHint =
-                mdconst::extract<ConstantInt>(MDOp->getOperand(1))) {
-          if (BranchHint->equalsInt(2))
-            SelectionControl = SPIRV::SelectionControl::Flatten;
-          else if (BranchHint->equalsInt(1))
-            SelectionControl = SPIRV::SelectionControl::DontFlatten;
-          else
-            llvm_unreachable("Invalid value for SelectionControl");
-        } else {
-          llvm_unreachable("Invalid value for SelectionControl");
-        }
-      }
-    }
+    auto BranchHint = LastOp.getImm();
+    if (BranchHint == 2)
+      SelectionControl = SPIRV::SelectionControl::Flatten;
+    else if (BranchHint == 1)
+      SelectionControl = SPIRV::SelectionControl::DontFlatten;
 
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));
