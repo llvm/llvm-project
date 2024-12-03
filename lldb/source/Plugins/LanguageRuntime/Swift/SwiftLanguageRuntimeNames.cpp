@@ -361,23 +361,13 @@ private:
 
 /// Given a thread that is stopped at the start of swift_task_switch, create a
 /// thread plan that runs to the address of the resume function.
-static ThreadPlanSP CreateRunThroughTaskSwitchThreadPlan(Thread &thread) {
-  // The signature for `swift_task_switch` is as follows:
-  //   SWIFT_CC(swiftasync)
-  //   void swift_task_switch(
-  //     SWIFT_ASYNC_CONTEXT AsyncContext *resumeContext,
-  //     TaskContinuationFunction *resumeFunction,
-  //     ExecutorRef newExecutor);
-  //
-  // The async context given as the first argument is not passed using the
-  // calling convention's first register, it's passed in the platform's async
-  // context register. This means the `resumeFunction` parameter uses the
-  // first ABI register (ex: x86-64: rdi, arm64: x0).
+static ThreadPlanSP
+CreateRunThroughTaskSwitchThreadPlan(Thread &thread,
+                                     unsigned resume_fn_generic_regnum) {
   RegisterContextSP reg_ctx =
       thread.GetStackFrameAtIndex(0)->GetRegisterContext();
-  constexpr unsigned resume_fn_regnum = LLDB_REGNUM_GENERIC_ARG1;
   unsigned resume_fn_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      RegisterKind::eRegisterKindGeneric, resume_fn_regnum);
+      RegisterKind::eRegisterKindGeneric, resume_fn_generic_regnum);
   uint64_t resume_fn_ptr = reg_ctx->ReadRegisterAsUnsigned(resume_fn_reg, 0);
   if (!resume_fn_ptr)
     return {};
@@ -395,6 +385,41 @@ static ThreadPlanSP CreateRunThroughTaskSwitchThreadPlan(Thread &thread) {
 
   return std::make_shared<ThreadPlanRunToAddressOnAsyncCtx>(
       thread, resume_fn_ptr, async_ctx);
+}
+
+/// Creates a thread plan to step over swift runtime functions that can trigger
+/// a task switch, like `async_task_switch` or `swift_asyncLet_get`.
+static ThreadPlanSP
+CreateRunThroughTaskSwitchingTrampolines(Thread &thread,
+                                         StringRef trampoline_name) {
+  // The signature for `swift_task_switch` is as follows:
+  //   SWIFT_CC(swiftasync)
+  //   void swift_task_switch(
+  //     SWIFT_ASYNC_CONTEXT AsyncContext *resumeContext,
+  //     TaskContinuationFunction *resumeFunction,
+  //     ExecutorRef newExecutor);
+  //
+  // The async context given as the first argument is not passed using the
+  // calling convention's first register, it's passed in the platform's async
+  // context register. This means the `resumeFunction` parameter uses the
+  // first ABI register (ex: x86-64: rdi, arm64: x0).
+  if (trampoline_name == "swift_task_switch")
+    return CreateRunThroughTaskSwitchThreadPlan(thread,
+                                                LLDB_REGNUM_GENERIC_ARG1);
+  // The signature for `swift_asyncLet_get` and `swift_asyncLet_finish` are the
+  // same. Like `task_switch`, the async context (first argument) uses the async
+  // context register, and not the arg1 register; as such, the continuation
+  // funclet can be found in arg3.
+  //
+  // swift_asyncLet_get(SWIFT_ASYNC_CONTEXT AsyncContext *,
+  //                         AsyncLet *,
+  //                         void *,
+  //                         TaskContinuationFunction *,
+  if (trampoline_name == "swift_asyncLet_get" ||
+      trampoline_name == "swift_asyncLet_finish")
+    return CreateRunThroughTaskSwitchThreadPlan(thread,
+                                                LLDB_REGNUM_GENERIC_ARG3);
+  return nullptr;
 }
 
 static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
@@ -429,8 +454,9 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   Mangled &mangled_symbol_name = symbol->GetMangled();
   const char *symbol_name = mangled_symbol_name.GetMangledName().AsCString();
 
-  if (mangled_symbol_name.GetDemangledName() == "swift_task_switch")
-    return CreateRunThroughTaskSwitchThreadPlan(thread);
+  if (ThreadPlanSP thread_plan = CreateRunThroughTaskSwitchingTrampolines(
+          thread, mangled_symbol_name.GetDemangledName()))
+    return thread_plan;
 
   ThunkKind thunk_kind = GetThunkKind(symbol);
   ThunkAction thunk_action = GetThunkAction(thunk_kind);
