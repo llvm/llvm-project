@@ -1317,7 +1317,7 @@ void PDBLinker::printStats() {
     printLargeInputTypeRecs("IPI", tMerger.ipiCounts, tMerger.getIDTable());
   }
 
-  message(buffer);
+  Msg(ctx) << buffer;
 }
 
 void PDBLinker::addNatvisFiles() {

@@ -922,7 +922,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
     std::string msg = "Command line:";
     for (const char *s : expandedArgv)
       msg += " " + std::string(s);
-    message(msg);
+    Msg(ctx) << msg;
   }
 
   // Save the command line after response file expansion so we can write it to

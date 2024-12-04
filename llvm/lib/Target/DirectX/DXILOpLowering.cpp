@@ -106,17 +106,43 @@ public:
     return false;
   }
 
-  [[nodiscard]]
-  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  struct IntrinArgSelect {
+    enum class Type {
+#define DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(name) name,
+#include "DXILOperation.inc"
+    };
+    Type Type;
+    int Value;
+  };
+
+  [[nodiscard]] bool
+  replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
+                        ArrayRef<IntrinArgSelect> ArgSelects) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
+           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
       OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
-      } else
+      SmallVector<Value *> Args;
+      if (ArgSelects.size()) {
+        for (const IntrinArgSelect &A : ArgSelects) {
+          switch (A.Type) {
+          case IntrinArgSelect::Type::Index:
+            Args.push_back(CI->getArgOperand(A.Value));
+            break;
+          case IntrinArgSelect::Type::I8:
+            Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
+            break;
+          case IntrinArgSelect::Type::I32:
+            Args.push_back(OpBuilder.getIRB().getInt32(A.Value));
+            break;
+          }
+        }
+      } else if (IsVectorArgExpansion) {
+        Args = argVectorFlatten(CI, OpBuilder.getIRB());
+      } else {
         Args.append(CI->arg_begin(), CI->arg_end());
+      }
 
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
@@ -542,23 +568,47 @@ public:
         return make_error<StringError>(
             "typedBufferStore data must be a vector of 4 elements",
             inconvertibleErrorCode());
-      Value *Data0 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
-      Value *Data1 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
-      Value *Data2 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
-      Value *Data3 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
 
-      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
-                                  Data1,  Data2,  Data3,  Mask};
+      // Since we're post-scalarizer, we likely have a vector that's constructed
+      // solely for the argument of the store. If so, just use the scalar values
+      // from before they're inserted into the temporary.
+      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI) {
+        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+        if (!IndexOp)
+          break;
+        size_t IndexVal = IndexOp->getZExtValue();
+        assert(IndexVal < 4 && "Too many elements for buffer store");
+        DataElements[IndexVal] = IEI->getOperand(1);
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      }
+
+      // If for some reason we weren't able to forward the arguments from the
+      // scalarizer artifact, then we need to actually extract elements from the
+      // vector.
+      for (int I = 0, E = 4; I != E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] =
+              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+
+      std::array<Value *, 8> Args{
+          Handle,          Index0,          Index1,          DataElements[0],
+          DataElements[1], DataElements[2], DataElements[3], Mask};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
+      // Clean up any leftover `insertelement`s
+      IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI && IEI->use_empty()) {
+        InsertElementInst *Tmp = IEI;
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        Tmp->eraseFromParent();
+      }
+
       return Error::success();
     });
   }
@@ -641,9 +691,10 @@ public:
       switch (ID) {
       default:
         continue;
-#define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
+#define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
-    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
+    HasErrors |= replaceFunctionWithOp(                                        \
+        F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:

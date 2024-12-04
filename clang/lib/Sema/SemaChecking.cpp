@@ -3240,8 +3240,14 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
                                  unsigned ArgIdx) {
     if (!Attr)
       return;
+
     Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
     for (int CapturingParamIdx : Attr->params()) {
+      // lifetime_capture_by(this) case is handled in the lifetimebound expr
+      // initialization codepath.
+      if (CapturingParamIdx == LifetimeCaptureByAttr::THIS &&
+          isa<CXXConstructorDecl>(FD))
+        continue;
       Expr *Capturing = const_cast<Expr *>(GetArgAt(CapturingParamIdx));
       CapturingEntity CE{Capturing};
       // Ensure that 'Captured' outlives the 'Capturing' entity.

@@ -798,7 +798,7 @@ def warn_cstruct_memaccess : Warning<
 def warn_cxxstruct_memaccess : Warning<
   "first argument in call to "
   "%0 is a pointer to non-trivially copyable type %1">,
-  InGroup<NonTrivialMemaccess>;
+  InGroup<NonTrivialMemcall>;
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
 def err_non_trivial_c_union_in_invalid_context : Error<
@@ -5445,6 +5445,10 @@ def note_dependent_function_template_spec_discard_reason : Note<
   "candidate ignored: %select{not a function template|"
   "not a member of the enclosing %select{class template|"
   "namespace; did you mean to explicitly qualify the specialization?}1}0">;
+def warn_invalid_specialization : Warning<
+  "%0 cannot be specialized%select{|: %2}1">,
+  DefaultError, InGroup<DiagGroup<"invalid-specialization">>;
+def note_marked_here : Note<"marked %0 here">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<
@@ -12729,19 +12733,19 @@ def err_acc_size_expr_value
           "OpenACC 'tile' clause size expression must be %select{an asterisk "
           "or a constant expression|positive integer value, evaluated to %1}0">;
 def err_acc_invalid_in_loop
-    : Error<"%select{OpenACC '%2' construct|while loop|do loop}0 cannot appear "
-            "in intervening code of a 'loop' with a '%1' clause">;
+    : Error<"%select{OpenACC '%3' construct|while loop|do loop}0 cannot appear "
+            "in intervening code of a '%1' with a '%2' clause">;
 def note_acc_active_clause_here
     : Note<"active '%0' clause defined here">;
 def err_acc_clause_multiple_loops
-    : Error<"more than one for-loop in a loop associated with OpenACC 'loop' "
-            "construct with a '%select{collapse|tile}0' clause">;
+    : Error<"more than one for-loop in a loop associated with OpenACC '%0' "
+            "construct with a '%1' clause">;
 def err_acc_insufficient_loops
     : Error<"'%0' clause specifies a loop count greater than the number "
             "of available loops">;
 def err_acc_intervening_code
     : Error<"inner loops must be tightly nested inside a '%0' clause on "
-            "a 'loop' construct">;
+            "a '%1' construct">;
 def err_acc_gang_multiple_elt
     : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
             "'num'|'dim'|'static'}0 argument">;

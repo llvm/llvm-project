@@ -12,6 +12,8 @@
 #include "Allocator.h"
 #include "Configuration.h"
 #include "DeviceTypes.h"
+#include "Shared/RPCOpcodes.h"
+#include "shared/rpc.h"
 
 #include "Debug.h"
 
@@ -110,6 +112,12 @@ void *indirectCallLookup(void *HstPtr) {
   return HstPtr;
 }
 
+/// The openmp client instance used to communicate with the server.
+/// FIXME: This is marked as 'retain' so that it is not removed via
+/// `-mlink-builtin-bitcode`
+[[gnu::visibility("protected"), gnu::weak,
+  gnu::retain]] rpc::Client Client asm("__llvm_rpc_client");
+
 } // namespace impl
 } // namespace ompx
 
@@ -155,6 +163,20 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   default:
     return;
   }
+}
+
+unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
+  rpc::Client::Port Port = ompx::impl::Client.open<OFFLOAD_HOST_CALL>();
+  Port.send_n(data, size);
+  Port.send([=](rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = reinterpret_cast<uintptr_t>(fn);
+  });
+  unsigned long long Ret;
+  Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+    Ret = static_cast<unsigned long long>(Buffer->data[0]);
+  });
+  Port.close();
+  return Ret;
 }
 }
 

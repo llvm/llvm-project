@@ -46,6 +46,31 @@ if.end:
   ret i1 %cmp.i
 }
 
+define i1 @test2_or(double %x, i1 %cond) {
+; CHECK-LABEL: define i1 @test2_or(
+; CHECK-SAME: double [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[X]], 0x3EB0C6F7A0000000
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[COND]]
+; CHECK-NEXT:    br i1 [[OR]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = fcmp olt double %x, 0x3EB0C6F7A0000000
+  %or = or i1 %cmp, %cond
+  br i1 %or, label %if.then, label %if.end
+
+if.then:
+  ret i1 false
+
+if.end:
+  %cmp.i = fcmp oeq double %x, 0.000000e+00
+  ret i1 %cmp.i
+}
+
 define i1 @test3(float %x) {
 ; CHECK-LABEL: define i1 @test3(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -240,7 +265,6 @@ if.else:
   ret i1 false
 }
 
-; TODO: handle and/or conditions
 define i1 @test11_and(float %x, i1 %cond2) {
 ; CHECK-LABEL: define i1 @test11_and(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
@@ -248,8 +272,7 @@ define i1 @test11_and(float %x, i1 %cond2) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[COND2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET1:%.*]] = fcmp oeq float [[X]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -264,7 +287,6 @@ if.else:
   ret i1 false
 }
 
-; TODO: handle and/or conditions
 define i1 @test12_or(float %x, i1 %cond2) {
 ; CHECK-LABEL: define i1 @test12_or(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
@@ -275,7 +297,7 @@ define i1 @test12_or(float %x, i1 %cond2) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 783)
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 780)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:

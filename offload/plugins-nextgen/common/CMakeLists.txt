@@ -23,14 +23,15 @@ endif()
 
 # Include the RPC server from the `libc` project if availible.
 include(FindLibcCommonUtils)
+target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
-	target_link_libraries(PluginCommon PRIVATE llvmlibc_rpc_server llvm-libc-common-utilities)
+	target_link_libraries(PluginCommon PRIVATE llvmlibc_rpc_server)
 	target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
 elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   find_library(llvmlibc_rpc_server NAMES llvmlibc_rpc_server
                PATHS ${LIBOMPTARGET_LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
   if(llvmlibc_rpc_server)
-    target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server} llvm-libc-common-utilities)
+    target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server})
 		target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
   endif()
 endif()

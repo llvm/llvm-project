@@ -155,9 +155,9 @@ void OutputSection::commitSection(InputSection *isec) {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
       ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
-                     << isec << ": 0x" << utohexstr(isec->flags)
+                     << isec << ": 0x" << utohexstr(isec->flags, true)
                      << "\n>>> output section " << name << ": 0x"
-                     << utohexstr(flags);
+                     << utohexstr(flags, true);
   }
 
   isec->parent = this;

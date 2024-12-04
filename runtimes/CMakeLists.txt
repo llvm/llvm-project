@@ -349,7 +349,7 @@ endif()
 
 # If the user requested 'compile_commands.json' we merge the generated JSON from
 # the created directories.
-if(CMAKE_EXPORT_COMPILE_COMMANDS)
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT ("${LLVM_BINARY_DIR}" STREQUAL "${CMAKE_BINARY_DIR}"))
   # Make a dependency so that we don't error if the file gets deleted somehow.
   add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/compile_commands.json
                      COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/compile_commands.json)

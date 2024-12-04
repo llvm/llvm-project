@@ -467,6 +467,8 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr4_b64_v2i32, "V2iV2i*3", "nc", "gfx950
 TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr6_b96_v3i32, "V3iV3i*3", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr8_b64_v2i32, "V2iV2i*3", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr16_b64_v4i16, "V4sV4s*3", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr16_b64_v4f16, "V4hV4h*3", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr16_b64_v4bf16, "V4yV4y*3", "nc", "gfx950-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_ashr_pk_i8_i32, "UsUiUiUi", "nc", "ashr-pk-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ashr_pk_u8_i32, "UsUiUiUi", "nc", "ashr-pk-insts")
