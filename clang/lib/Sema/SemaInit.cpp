@@ -752,8 +752,9 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         return;
 
       // We do not want to aggressively set the hadError flag and cutoff
-      // parsing. Try to recover when in-class-initializer is a RecoveryExpr.
-      if (isa_and_nonnull<RecoveryExpr>(Field->getInClassInitializer())) {
+      // parsing. Try to recover when in-class-initializer had errors.
+      if (Field->getInClassInitializer() &&
+          Field->getInClassInitializer()->containsErrors()) {
         if (Init < NumInits)
           ILE->setInit(Init, Field->getInClassInitializer());
         else
