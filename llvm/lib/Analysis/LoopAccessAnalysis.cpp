@@ -1566,10 +1566,10 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
   unsigned IdxWidth = DL.getIndexSizeInBits(ASA);
 
   APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
-  const Value *PtrA1 =
-      PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
-  const Value *PtrB1 =
-      PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
+  const Value *PtrA1 = PtrA->stripAndAccumulateConstantOffsets(
+      DL, OffsetA, /*AllowNonInbounds=*/true);
+  const Value *PtrB1 = PtrB->stripAndAccumulateConstantOffsets(
+      DL, OffsetB, /*AllowNonInbounds=*/true);
 
   int Val;
   if (PtrA1 == PtrB1) {
