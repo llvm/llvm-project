@@ -772,7 +772,7 @@ public:
           if (Fortran::semantics::IsPointer(sym.GetUltimate())) {
             // Establish the pointer descriptors. The rank and type code/size
             // at least must be set properly for later inquiry of the pointer
-            // to work, and new pointers are always given diassociated status
+            // to work, and new pointers are always given disassociated status
             // by flang for safety, even if this is not required by the
             // language.
             auto empty = fir::factory::createUnallocatedBox(
