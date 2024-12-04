@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "../builtins/assembly.h"
-#include "../sanitizer_common/sanitizer_asm.h"
 
 	.text
 	.p2align 2

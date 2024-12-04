@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../sanitizer_common/sanitizer_asm.h"
+
 .macro SAVE_ARG_REGISTERS
 	// Push argument registers to stack
 	addi	sp, sp, -112
