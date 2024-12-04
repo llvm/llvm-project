@@ -14,7 +14,9 @@
 #include "src/time/time_func.h"
 
 namespace LIBC_NAMESPACE_DECL {
-LLVM_LIBC_FUNCTION(time_t, time, (time_t *tp)) {
+// avoid inconsitent clang-format behavior
+using time_ptr_t = time_t *;
+LLVM_LIBC_FUNCTION(time_t, time, (time_ptr_t tp)) {
   struct timespec ts;
   auto result = internal::clock_gettime(CLOCK_REALTIME, &ts);
   if (!result.has_value()) {
