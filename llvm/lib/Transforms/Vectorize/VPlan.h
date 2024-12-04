@@ -2287,10 +2287,16 @@ class VPWidenPHIRecipe : public VPSingleDefRecipe {
   /// List of incoming blocks. Only used in the VPlan native path.
   SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
+  /// Name to use for the generated IR instruction for the widened IV.
+  std::string Name;
+
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi) {
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
+                   const Twine &Name = "vec.phi")
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi,
+                          Phi->getDebugLoc()),
+        Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }
