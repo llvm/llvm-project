@@ -266,9 +266,13 @@ private:
   selectGlobalSAddr(MachineOperand &Root) const;
 #if LLPC_BUILD_NPI
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrCPol(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectGlobalSAddrGLC(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
 #endif /* LLPC_BUILD_NPI */
 
   InstructionSelector::ComplexRendererFns

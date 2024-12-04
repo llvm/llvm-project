@@ -2035,6 +2035,22 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrCPol(SDNode *N, SDValue Addr,
+                                               SDValue &SAddr, SDValue &VOffset,
+                                               SDValue &Offset,
+                                               SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset))
+    return false;
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 1) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(
+      (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddrGLC(SDNode *N,
                                               SDValue Addr,
                                               SDValue &SAddr,
@@ -2054,14 +2070,37 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffset(SDNode *N,
                                                     SDValue Addr,
                                                     SDValue &SAddr,
                                                     SDValue &VOffset,
-                                                    SDValue &Offset,
                                                     SDValue &CPol) const {
   bool ScaleOffset;
-  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset, false))
+  SDValue DummyOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, DummyOffset, ScaleOffset,
+                         false))
     return false;
 
-  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
-                                   SDLoc(), MVT::i32);
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 1) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(
+      (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetM0(SDNode *N,
+                                                      SDValue Addr,
+                                                      SDValue &SAddr,
+                                                      SDValue &VOffset,
+                                                      SDValue &CPol) const {
+  bool ScaleOffset;
+  SDValue DummyOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, DummyOffset, ScaleOffset,
+                         false))
+    return false;
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 2) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(
+      (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | PassedCPol, SDLoc(), MVT::i32);
   return true;
 }
 

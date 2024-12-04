@@ -1114,7 +1114,8 @@ AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasValueType,
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(
     pointee,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
-                                    PointerType, ReferenceType));
+                                    PointerType, ReferenceType,
+                                    ObjCObjectPointerType));
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
     ompExecutableDirective;

@@ -170,12 +170,16 @@ private:
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
+  bool SelectGlobalSAddrCPol(SDNode *N, SDValue Addr, SDValue &SAddr,
+                             SDValue &VOffset, SDValue &Offset,
+                             SDValue &CPol) const;
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
-                                  SDValue &VOffset, SDValue &Offset,
-                                  SDValue &CPol) const;
+                                  SDValue &VOffset, SDValue &CPol) const;
+  bool SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                    SDValue &VOffset, SDValue &CPol) const;
 #else /* LLPC_BUILD_NPI */
                          SDValue &VOffset, SDValue &Offset) const;
 #endif /* LLPC_BUILD_NPI */

@@ -136,12 +136,18 @@ def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
 #ifdef LLPC_BUILD_NPI
+def gi_global_saddr_cpol :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrCPol">,
+    GIComplexPatternEquiv<GlobalSAddrCPol>;
 def gi_global_saddr_glc :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
     GIComplexPatternEquiv<GlobalSAddrGLC>;
 def gi_global_saddr_no_ioffset :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffset">,
     GIComplexPatternEquiv<GlobalSAddrNoIOffset>;
+def gi_global_saddr_no_ioffset_m0 :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetM0">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffsetM0>;
 #endif /* LLPC_BUILD_NPI */
 
 def gi_mubuf_scratch_offset :
