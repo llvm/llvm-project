@@ -142,12 +142,12 @@ func.func @sum_box_unknown_extent2(%arg0: !fir.box<!fir.array<?x3xcomplex<f64>>>
 // CHECK:         }
 
 // expr with unknown extent
-func.func @sum_expr_unkwnonw_extent1(%arg0: !hlfir.expr<?x3xf32>) {
+func.func @sum_expr_unknown_extent1(%arg0: !hlfir.expr<?x3xf32>) {
   %cst = arith.constant 1 : i32
   %res = hlfir.sum %arg0 dim %cst : (!hlfir.expr<?x3xf32>, i32) -> !hlfir.expr<3xf32>
   return
 }
-// CHECK-LABEL:   func.func @sum_expr_unkwnonw_extent1(
+// CHECK-LABEL:   func.func @sum_expr_unknown_extent1(
 // CHECK-SAME:                                         %[[VAL_0:.*]]: !hlfir.expr<?x3xf32>) {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_2:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
@@ -168,12 +168,12 @@ func.func @sum_expr_unkwnonw_extent1(%arg0: !hlfir.expr<?x3xf32>) {
 // CHECK:           return
 // CHECK:         }
 
-func.func @sum_expr_unkwnonw_extent2(%arg0: !hlfir.expr<?x3xf32>) {
+func.func @sum_expr_unknown_extent2(%arg0: !hlfir.expr<?x3xf32>) {
   %cst = arith.constant 2 : i32
   %res = hlfir.sum %arg0 dim %cst : (!hlfir.expr<?x3xf32>, i32) -> !hlfir.expr<?xf32>
   return
 }
-// CHECK-LABEL:   func.func @sum_expr_unkwnonw_extent2(
+// CHECK-LABEL:   func.func @sum_expr_unknown_extent2(
 // CHECK-SAME:                                         %[[VAL_0:.*]]: !hlfir.expr<?x3xf32>) {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
