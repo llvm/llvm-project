@@ -305,6 +305,10 @@ CPU revision    : 0
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CarmelProcCpuInfo), "carmel");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x10"),
+            "olympus");
+
   // Snapdragon mixed implementer quirk
   const std::string Snapdragon865ProcCPUInfo = R"(
 processor       : 0
