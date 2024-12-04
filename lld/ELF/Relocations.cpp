@@ -896,31 +896,37 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    RelType gotRel = ctx.target->gotRel;
-    if (sym.hasFlag(NEEDS_GOT_AUTH)) {
-      assert(ctx.arg.emachine == EM_AARCH64);
-      gotRel = R_AARCH64_AUTH_GLOB_DAT;
-    }
-    ctx.mainPart->relaDyn->addReloc({gotRel, ctx.in.got.get(), off,
+    ctx.mainPart->relaDyn->addReloc({ctx.target->gotRel, ctx.in.got.get(), off,
                                      DynamicReloc::AgainstSymbol, sym, 0,
                                      R_ABS});
     return;
   }
 
   // Otherwise, the value is either a link-time constant or the load base
-  // plus a constant. Signed GOT requires dynamic relocation.
-  if (sym.hasFlag(NEEDS_GOT_AUTH)) {
-    ctx.in.got->getPartition(ctx).relaDyn->addReloc(
-        {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off,
-         DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
-    return;
-  }
-
+  // plus a constant.
   if (!ctx.arg.isPic || isAbsolute(sym))
     ctx.in.got->addConstant({R_ABS, ctx.target->symbolicRel, off, 0, &sym});
   else
     addRelativeReloc(ctx, *ctx.in.got, off, sym, 0, R_ABS,
                      ctx.target->symbolicRel);
+}
+
+static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
+  ctx.in.got->addEntry(sym);
+  uint64_t off = sym.getGotOffset(ctx);
+
+  // If preemptible, emit a GLOB_DAT relocation.
+  if (sym.isPreemptible) {
+    ctx.mainPart->relaDyn->addReloc({R_AARCH64_AUTH_GLOB_DAT, ctx.in.got.get(),
+                                     off, DynamicReloc::AgainstSymbol, sym, 0,
+                                     R_ABS});
+    return;
+  }
+
+  // Signed GOT requires dynamic relocation.
+  ctx.in.got->getPartition(ctx).relaDyn->addReloc(
+      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off,
+       DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -1797,8 +1803,12 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     sym.allocateAux(ctx);
 
-    if (flags & NEEDS_GOT)
-      addGotEntry(ctx, sym);
+    if (flags & NEEDS_GOT) {
+      if (flags & NEEDS_GOT_AUTH)
+        addGotAuthEntry(ctx, sym);
+      else
+        addGotEntry(ctx, sym);
+    }
     if (flags & NEEDS_PLT)
       addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                   ctx.target->pltRel, sym);
