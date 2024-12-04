@@ -40,7 +40,7 @@ export float TestConsume() {
 }
 
 // CHECK: define noundef float @_Z11TestConsumev()
-// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.bufferUpdateCounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %1, i8 1)
+// CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.bufferUpdateCounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %1, i8 -1)
 // CHECK-DXIL: %[[RESPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %0, i32 %[[INDEX]])
 // CHECK-DXIL: %[[VALUE:.*]] = load float, ptr %[[RESPTR]], align 4
 // CHECK-DXIL: ret float %[[VALUE]]
