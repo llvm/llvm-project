@@ -515,8 +515,8 @@ public:
                             VPReplicateRecipe *RepRecipe, const VPLane &Lane,
                             VPTransformState &State);
 
-  /// Fix the widened PHIs in \p Plan.
-  void fixWidenedPHIs(VPTransformState &State);
+  /// Fix the non-induction PHIs in \p Plan.
+  void fixNonInductionPHIs(VPTransformState &State);
 
   /// Returns the original loop trip count.
   Value *getTripCount() const { return TripCount; }
@@ -2977,8 +2977,8 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
 }
 
 void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
-  // Fix widened PHIs by setting up the PHI operands.
-  fixWidenedPHIs(State);
+  // Fix widened non-induction PHIs by setting up the PHI operands.
+  fixNonInductionPHIs(State);
 
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
@@ -3115,7 +3115,7 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
   } while (Changed);
 }
 
-void InnerLoopVectorizer::fixWidenedPHIs(VPTransformState &State) {
+void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
   auto Iter = vp_depth_first_deep(Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &P : VPBB->phis()) {
