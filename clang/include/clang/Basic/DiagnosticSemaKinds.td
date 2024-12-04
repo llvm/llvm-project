@@ -10269,6 +10269,11 @@ def warn_depr_array_comparison : Warning<
   "to compare array addresses, use unary '+' to decay operands to pointers">,
   InGroup<DeprecatedArrayCompare>;
 
+def warn_array_comparison : Warning<
+  "comparison between two arrays compare their addresses and will be deprecated in c++20; "
+  "to compare array addresses, use unary '+' to decay operands to pointers">,
+  InGroup<DiagGroup<"array-compare">>;
+
 def warn_stringcompare : Warning<
   "result of comparison against %select{a string literal|@encode}0 is "
   "unspecified (use an explicit string comparison function instead)">,

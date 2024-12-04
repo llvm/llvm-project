@@ -244,6 +244,19 @@ static Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   return CGF.Builder.CreateBitCast(BitVec, ResultType);
 }
 
+/// Helper for the read/write/add/inc X18 builtins: read the X18 register and
+/// return it as an i8 pointer.
+Value *readX18AsPtr(CodeGenFunction &CGF) {
+  LLVMContext &Context = CGF.CGM.getLLVMContext();
+  llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
+  llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+  llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+  llvm::Function *F =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::read_register, {CGF.Int64Ty});
+  llvm::Value *X18 = CGF.Builder.CreateCall(F, Metadata);
+  return CGF.Builder.CreateIntToPtr(X18, CGF.Int8PtrTy);
+}
+
 /// getBuiltinLibFunction - Given a builtin id for a function like
 /// "__builtin_fabsf", return a Function* for "fabsf".
 llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
@@ -11836,21 +11849,18 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__writex18word ||
       BuiltinID == AArch64::BI__writex18dword ||
       BuiltinID == AArch64::BI__writex18qword) {
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
+    Value *DataArg = EmitScalarExpr(E->getArg(1));
+
     // Read x18 as i8*
-    LLVMContext &Context = CGM.getLLVMContext();
-    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
-    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
-    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
-    llvm::Value *X18 = Builder.CreateCall(F, Metadata);
-    X18 = Builder.CreateIntToPtr(X18, Int8PtrTy);
+    llvm::Value *X18 = readX18AsPtr(*this);
 
     // Store val at x18 + offset
-    Value *Offset = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int64Ty);
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
     Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    StoreInst *Store = Builder.CreateAlignedStore(Val, Ptr, CharUnits::One());
+    StoreInst *Store =
+        Builder.CreateAlignedStore(DataArg, Ptr, CharUnits::One());
     return Store;
   }
 
@@ -11858,23 +11868,72 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__readx18word ||
       BuiltinID == AArch64::BI__readx18dword ||
       BuiltinID == AArch64::BI__readx18qword) {
-    llvm::Type *IntTy = ConvertType(E->getType());
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
 
     // Read x18 as i8*
-    LLVMContext &Context = CGM.getLLVMContext();
-    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
-    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
-    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
-    llvm::Value *X18 = Builder.CreateCall(F, Metadata);
-    X18 = Builder.CreateIntToPtr(X18, Int8PtrTy);
+    llvm::Value *X18 = readX18AsPtr(*this);
 
     // Load x18 + offset
-    Value *Offset = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int64Ty);
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
     Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
+    llvm::Type *IntTy = ConvertType(E->getType());
     LoadInst *Load = Builder.CreateAlignedLoad(IntTy, Ptr, CharUnits::One());
     return Load;
+  }
+
+  if (BuiltinID == AArch64::BI__addx18byte ||
+      BuiltinID == AArch64::BI__addx18word ||
+      BuiltinID == AArch64::BI__addx18dword ||
+      BuiltinID == AArch64::BI__addx18qword ||
+      BuiltinID == AArch64::BI__incx18byte ||
+      BuiltinID == AArch64::BI__incx18word ||
+      BuiltinID == AArch64::BI__incx18dword ||
+      BuiltinID == AArch64::BI__incx18qword) {
+    llvm::Type *IntTy;
+    bool isIncrement;
+    switch (BuiltinID) {
+    case AArch64::BI__incx18byte:
+      IntTy = Int8Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18word:
+      IntTy = Int16Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18dword:
+      IntTy = Int32Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18qword:
+      IntTy = Int64Ty;
+      isIncrement = true;
+      break;
+    default:
+      IntTy = ConvertType(E->getArg(1)->getType());
+      isIncrement = false;
+      break;
+    }
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
+    Value *ValToAdd =
+        isIncrement ? ConstantInt::get(IntTy, 1) : EmitScalarExpr(E->getArg(1));
+
+    // Read x18 as i8*
+    llvm::Value *X18 = readX18AsPtr(*this);
+
+    // Load x18 + offset
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
+    Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
+    LoadInst *Load = Builder.CreateAlignedLoad(IntTy, Ptr, CharUnits::One());
+
+    // Add values
+    Value *AddResult = Builder.CreateAdd(Load, ValToAdd);
+
+    // Store val at x18 + offset
+    StoreInst *Store =
+        Builder.CreateAlignedStore(AddResult, Ptr, CharUnits::One());
+    return Store;
   }
 
   if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
