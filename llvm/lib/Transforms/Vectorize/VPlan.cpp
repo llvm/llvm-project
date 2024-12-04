@@ -1070,10 +1070,9 @@ void VPlan::execute(VPTransformState *State) {
     }
 
     auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-    bool NeedsScalar =
-        isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
-        (isa<VPReductionPHIRecipe>(PhiR) &&
-         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
+                       (isa<VPReductionPHIRecipe>(PhiR) &&
+                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     Value *Phi = State->get(PhiR, NeedsScalar);
     Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
     cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);

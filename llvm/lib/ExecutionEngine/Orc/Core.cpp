@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <condition_variable>
 #include <future>
@@ -3311,7 +3312,7 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
           continue;
         }
 
-        // If we get here thene Dep is Emitted. We need to look up its defining
+        // If we get here then Dep is Emitted. We need to look up its defining
         // EDU and add this EDU to the defining EDU's list of users (this means
         // creating an EDUInfos entry if the defining EDU doesn't have one
         // already).
@@ -3320,8 +3321,6 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
         auto &DepMI = DepJD->MaterializingInfos[SymbolStringPtr(Dep)];
         assert(DepMI.DefiningEDU &&
                "Emitted symbol does not have a defining EDU");
-        assert(!DepMI.DefiningEDU->Dependencies.empty() &&
-               "Emitted symbol has empty dependencies (should be ready)");
         assert(DepMI.DependantEDUs.empty() &&
                "Already-emitted symbol has dependant EDUs?");
         auto &DepEDUInfo = EDUInfos[DepMI.DefiningEDU.get()];

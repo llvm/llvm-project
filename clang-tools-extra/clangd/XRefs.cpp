@@ -1702,6 +1702,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
+  // FIXME: Populate HI.detail the way we do in symbolToHierarchyItem?
   HI.kind = SK;
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
@@ -1753,6 +1754,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   }
   HierarchyItem HI;
   HI.name = std::string(S.Name);
+  HI.detail = (S.Scope + S.Name).str();
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
@@ -2315,6 +2317,65 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   llvm::sort(Results, [](const CallHierarchyIncomingCall &A,
                          const CallHierarchyIncomingCall &B) {
     return A.from.name < B.from.name;
+  });
+  return Results;
+}
+
+std::vector<CallHierarchyOutgoingCall>
+outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+  std::vector<CallHierarchyOutgoingCall> Results;
+  if (!Index || Item.data.empty())
+    return Results;
+  auto ID = SymbolID::fromStr(Item.data);
+  if (!ID) {
+    elog("outgoingCalls failed to find symbol: {0}", ID.takeError());
+    return Results;
+  }
+  // In this function, we find outgoing calls based on the index only.
+  ContainedRefsRequest Request;
+  Request.ID = *ID;
+  // Initially store the ranges in a map keyed by SymbolID of the callee.
+  // This allows us to group different calls to the same function
+  // into the same CallHierarchyOutgoingCall.
+  llvm::DenseMap<SymbolID, std::vector<Range>> CallsOut;
+  // We can populate the ranges based on a refs request only. As we do so, we
+  // also accumulate the callee IDs into a lookup request.
+  LookupRequest CallsOutLookup;
+  Index->containedRefs(Request, [&](const auto &R) {
+    auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
+    if (!Loc) {
+      elog("outgoingCalls failed to convert location: {0}", Loc.takeError());
+      return;
+    }
+    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Range>{}).first;
+    It->second.push_back(Loc->range);
+
+    CallsOutLookup.IDs.insert(R.Symbol);
+  });
+  // Perform the lookup request and combine its results with CallsOut to
+  // get complete CallHierarchyOutgoingCall objects.
+  Index->lookup(CallsOutLookup, [&](const Symbol &Callee) {
+    // The containedRefs request should only return symbols which are
+    // function-like, i.e. symbols for which references to them can be "calls".
+    using SK = index::SymbolKind;
+    auto Kind = Callee.SymInfo.Kind;
+    assert(Kind == SK::Function || Kind == SK::InstanceMethod ||
+           Kind == SK::ClassMethod || Kind == SK::StaticMethod ||
+           Kind == SK::Constructor || Kind == SK::Destructor ||
+           Kind == SK::ConversionFunction);
+    (void)Kind;
+    (void)SK::Function;
+
+    auto It = CallsOut.find(Callee.ID);
+    assert(It != CallsOut.end());
+    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file()))
+      Results.push_back(
+          CallHierarchyOutgoingCall{std::move(*CHI), std::move(It->second)});
+  });
+  // Sort results by name of the callee.
+  llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,
+                         const CallHierarchyOutgoingCall &B) {
+    return A.to.name < B.to.name;
   });
   return Results;
 }

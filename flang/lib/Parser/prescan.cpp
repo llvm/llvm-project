@@ -234,7 +234,7 @@ void Prescanner::Statement() {
             directiveSentinel_ = newLineClass.sentinel;
             disableSourceContinuation_ = false;
           } else {
-            disableSourceContinuation_ =
+            disableSourceContinuation_ = !replaced->empty() &&
                 newLineClass.kind != LineClassification::Kind::Source;
           }
         }

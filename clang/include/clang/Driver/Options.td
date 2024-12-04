@@ -1786,12 +1786,12 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
-def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">, 
+def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
-def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">, 
+def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<directory>">,
-    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">; 
+    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -5092,6 +5092,10 @@ def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
+def mbulk_memory_opt : Flag<["-"], "mbulk-memory-opt">, Group<m_wasm_Features_Group>;
+def mno_bulk_memory_opt : Flag<["-"], "mno-bulk-memory-opt">, Group<m_wasm_Features_Group>;
+def mcall_indirect_overlong : Flag<["-"], "mcall-indirect-overlong">, Group<m_wasm_Features_Group>;
+def mno_call_indirect_overlong : Flag<["-"], "mno-call-indirect-overlong">, Group<m_wasm_Features_Group>;
 def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
 def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Group>;

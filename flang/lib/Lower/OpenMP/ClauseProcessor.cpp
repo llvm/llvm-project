@@ -81,12 +81,8 @@ genAllocateClause(lower::AbstractConverter &converter,
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  using SimpleModifier = Allocate::AllocatorSimpleModifier;
   using ComplexModifier = Allocate::AllocatorComplexModifier;
-  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
-    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
-    allocatorOperands.append(objects.size(), operand);
-  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+  if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
