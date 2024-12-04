@@ -477,7 +477,7 @@ MachOPlatform::MachOPlatform(
     : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
       ObjLinkingLayer(ObjLinkingLayer),
       BuildMachOHeaderMU(std::move(BuildMachOHeaderMU)) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
 
@@ -1001,9 +1001,9 @@ Error MachOPlatform::MachOPlatformPlugin::preserveImportantSections(
       // to the first block.
       if (!InitSym) {
         auto &B = **InitSection->blocks().begin();
-        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
-                                      jitlink::Linkage::Strong,
-                                      jitlink::Scope::Default, false, true);
+        InitSym = &G.addDefinedSymbol(
+            B, 0, *InitSymName, B.getSize(), jitlink::Linkage::Strong,
+            jitlink::Scope::SideEffectsOnly, false, true);
       }
 
       // Add keep-alive edges to anonymous symbols in all other init blocks.

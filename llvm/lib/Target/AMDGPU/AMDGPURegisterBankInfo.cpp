@@ -4543,6 +4543,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pk_bf8_f32:
     case Intrinsic::amdgcn_cvt_sr_fp8_f32:
     case Intrinsic::amdgcn_cvt_sr_bf8_f32:
+    case Intrinsic::amdgcn_cvt_sr_bf16_f32:
+    case Intrinsic::amdgcn_cvt_sr_f16_f32:
     case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_f16:
     case Intrinsic::amdgcn_cvt_scalef32_pk32_bf6_f16:
     case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_bf16:
@@ -4578,6 +4580,18 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_fp8_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_fp8_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_fp8_f32:
     case Intrinsic::amdgcn_ashr_pk_i8_i32:
     case Intrinsic::amdgcn_ashr_pk_u8_i32:
     case Intrinsic::amdgcn_cvt_scalef32_2xpk16_fp6_f32:
@@ -4923,6 +4937,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
+      break;
+    }
+    case Intrinsic::amdgcn_bitop3: {
+      unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+      OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
       break;
     }
     case Intrinsic::amdgcn_s_quadmask:

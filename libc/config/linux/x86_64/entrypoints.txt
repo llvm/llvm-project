@@ -252,6 +252,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munmap
     libc.src.sys.mman.remap_file_pages
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.process_mrelease
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
 
@@ -699,6 +700,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
+    libc.src.math.sinf16
     libc.src.math.sinhf16
     libc.src.math.sinpif16
     libc.src.math.sqrtf16
@@ -1082,6 +1084,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.time
+    libc.src.time.timespec_get
 
     # locale.h entrypoints
     libc.src.locale.localeconv

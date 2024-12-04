@@ -798,7 +798,7 @@ def warn_cstruct_memaccess : Warning<
 def warn_cxxstruct_memaccess : Warning<
   "first argument in call to "
   "%0 is a pointer to non-trivially copyable type %1">,
-  InGroup<NonTrivialMemaccess>;
+  InGroup<NonTrivialMemcall>;
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
 def err_non_trivial_c_union_in_invalid_context : Error<
@@ -5445,6 +5445,10 @@ def note_dependent_function_template_spec_discard_reason : Note<
   "candidate ignored: %select{not a function template|"
   "not a member of the enclosing %select{class template|"
   "namespace; did you mean to explicitly qualify the specialization?}1}0">;
+def warn_invalid_specialization : Warning<
+  "%0 cannot be specialized%select{|: %2}1">,
+  DefaultError, InGroup<DiagGroup<"invalid-specialization">>;
+def note_marked_here : Note<"marked %0 here">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<
@@ -6270,7 +6274,7 @@ def err_typecheck_invalid_restrict_invalid_pointee : Error<
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<
-  "zero-length arrays are not permitted in %select{C++|SYCL device code}0">;
+  "zero-length arrays are not permitted in %select{C++|SYCL device code|HIP device code}0">;
 def err_array_size_non_int : Error<"size of array has non-integer type %0">;
 def err_init_element_not_constant : Error<
   "initializer element is not a compile-time constant">;
@@ -6417,7 +6421,7 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
-  "consider making the bitfield type %select{unsigned|signed}0">;
+  "consider making the bit-field type %select{unsigned|signed}0">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,
@@ -6670,14 +6674,15 @@ def warn_counted_by_attr_elt_type_unknown_size :
 // __builtin_counted_by_ref diagnostics:
 def err_builtin_counted_by_ref_must_be_flex_array_member : Error<
   "'__builtin_counted_by_ref' argument must reference a flexible array member">;
-def err_builtin_counted_by_ref_cannot_leak_reference : Error<
-  "value returned by '__builtin_counted_by_ref' cannot be assigned to a "
-  "variable, have its address taken, or passed into or returned from a function">;
-def err_builtin_counted_by_ref_invalid_lhs_use : Error<
-  "value returned by '__builtin_counted_by_ref' cannot be used in "
-  "%select{an array subscript|a binary}0 expression">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
+
+def err_builtin_counted_by_ref_cannot_leak_reference : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
+  "variable|passed into a function|returned from a function}0">;
+def err_builtin_counted_by_ref_invalid_use : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be used in "
+  "%select{an array subscript|a binary}0 expression">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -12728,19 +12733,19 @@ def err_acc_size_expr_value
           "OpenACC 'tile' clause size expression must be %select{an asterisk "
           "or a constant expression|positive integer value, evaluated to %1}0">;
 def err_acc_invalid_in_loop
-    : Error<"%select{OpenACC '%2' construct|while loop|do loop}0 cannot appear "
-            "in intervening code of a 'loop' with a '%1' clause">;
+    : Error<"%select{OpenACC '%3' construct|while loop|do loop}0 cannot appear "
+            "in intervening code of a '%1' with a '%2' clause">;
 def note_acc_active_clause_here
     : Note<"active '%0' clause defined here">;
 def err_acc_clause_multiple_loops
-    : Error<"more than one for-loop in a loop associated with OpenACC 'loop' "
-            "construct with a '%select{collapse|tile}0' clause">;
+    : Error<"more than one for-loop in a loop associated with OpenACC '%0' "
+            "construct with a '%1' clause">;
 def err_acc_insufficient_loops
     : Error<"'%0' clause specifies a loop count greater than the number "
             "of available loops">;
 def err_acc_intervening_code
     : Error<"inner loops must be tightly nested inside a '%0' clause on "
-            "a 'loop' construct">;
+            "a '%1' construct">;
 def err_acc_gang_multiple_elt
     : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
             "'num'|'dim'|'static'}0 argument">;
@@ -12787,5 +12792,5 @@ def err_acc_loop_not_monotonic
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
-def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;
+def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 } // end of sema component.

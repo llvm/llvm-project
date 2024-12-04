@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 #define LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 
-#include "utils/gpu/server/llvmlibc_rpc_server.h"
-
 #include "include/llvm-libc-types/test_rpc_opcodes_t.h"
 
 #include "shared/rpc.h"
@@ -170,20 +168,20 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
     port->recv([&](rpc::Buffer *, uint32_t) {});
     break;
   }
-  case RPC_MALLOC: {
+  case LIBC_MALLOC: {
     port->recv_and_send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(alloc(buffer->data[0]));
     });
     break;
   }
-  case RPC_FREE: {
+  case LIBC_FREE: {
     port->recv([&](rpc::Buffer *buffer, uint32_t) {
       free(reinterpret_cast<void *>(buffer->data[0]));
     });
     break;
   }
   default:
-    status = libc_handle_rpc_port(&*port, num_lanes);
+    status = handle_libc_opcodes(*port, num_lanes);
     break;
   }
 

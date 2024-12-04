@@ -740,6 +740,7 @@ libc_support_library(
     hdrs = ["src/__support/integer_literals.h"],
     deps = [
         ":__support_cpp_limits",
+        ":__support_ctype_utils",
         ":__support_uint128",
     ],
 )
@@ -772,6 +773,7 @@ libc_support_library(
         ":__support_cpp_span",
         ":__support_cpp_string_view",
         ":__support_cpp_type_traits",
+        ":__support_ctype_utils",
     ],
 )
 
@@ -4450,6 +4452,7 @@ libc_support_library(
         ":__support_cpp_limits",
         ":__support_cpp_span",
         ":__support_cpp_string_view",
+        ":__support_ctype_utils",
         ":__support_float_to_string",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",

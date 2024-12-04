@@ -520,11 +520,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(ST.hasStdExtD(), {{s32, s64}})
       .legalFor(ST.hasStdExtZfh(), {{s16, s32}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}});
+      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}})
+      .libcallFor({{s32, s64}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
       .legalFor(ST.hasStdExtZfh(), {{s32, s16}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}});
+      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}})
+      .libcallFor({{s64, s32}});
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -573,6 +575,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
                                G_INTRINSIC_ROUNDEVEN})
       .libcallFor({s32, s64});
+
+  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
+                               G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
+                               G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
+                               G_FTANH})
+      .libcallFor({s32, s64});
+  getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
+      .libcallFor({{s32, s32}, {s64, s32}});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 

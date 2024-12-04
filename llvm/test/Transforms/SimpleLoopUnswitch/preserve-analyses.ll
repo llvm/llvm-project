@@ -1,4 +1,4 @@
-; RUN: opt -passes=simple-loop-unswitch -verify-loop-info -verify-dom-info -verify-memoryssa -disable-output < %s
+; RUN: opt -passes="loop-mssa(simple-loop-unswitch)" -verify-loop-info -verify-dom-info -verify-memoryssa -disable-output < %s
 
 ; Loop unswitch should be able to unswitch these loops and
 ; preserve LCSSA and LoopSimplify forms.
@@ -74,13 +74,13 @@ bb10:                                             ; preds = %bb8, %bb
 ; This is a simplified form of ineqn from above. It triggers some
 ; different cases in the loop-unswitch code.
 
-define void @simplified_ineqn() nounwind readonly {
+define void @simplified_ineqn(i1 %arg) nounwind readonly {
 entry:
   br label %bb8.outer
 
 bb8.outer:                                        ; preds = %bb6, %bb2, %entry
   %x = phi i32 [ 0, %entry ], [ 0, %bb6 ], [ 1, %bb2 ] ; <i32> [#uses=1]
-  br i1 undef, label %return, label %bb2
+  br i1 %arg, label %return, label %bb2
 
 bb2:                                              ; preds = %bb
   switch i32 %x, label %bb6 [
@@ -88,7 +88,7 @@ bb2:                                              ; preds = %bb
   ]
 
 bb6:                                              ; preds = %bb2
-  br i1 undef, label %bb8.outer, label %bb2
+  br i1 %arg, label %bb8.outer, label %bb2
 
 return:                                             ; preds = %bb8, %bb
   ret void
@@ -97,17 +97,17 @@ return:                                             ; preds = %bb8, %bb
 ; This function requires special handling to preserve LCSSA form.
 ; PR4934
 
-define void @pnp_check_irq() nounwind noredzone {
+define void @pnp_check_irq(i1 %arg) nounwind noredzone {
 entry:
   %conv56 = trunc i64 undef to i32                ; <i32> [#uses=1]
   br label %while.cond.i
 
 while.cond.i:                                     ; preds = %while.cond.i.backedge, %entry
   %call.i25 = call ptr @pci_get_device() nounwind noredzone ; <ptr> [#uses=2]
-  br i1 undef, label %if.then65, label %while.body.i
+  br i1 %arg, label %if.then65, label %while.body.i
 
 while.body.i:                                     ; preds = %while.cond.i
-  br i1 undef, label %if.then31.i.i, label %while.cond.i.backedge
+  br i1 %arg, label %if.then31.i.i, label %while.cond.i.backedge
 
 while.cond.i.backedge:                            ; preds = %if.then31.i.i, %while.body.i
   br label %while.cond.i
