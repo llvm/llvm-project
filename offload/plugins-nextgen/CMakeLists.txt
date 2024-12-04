@@ -2,6 +2,8 @@
 set(common_dir ${CMAKE_CURRENT_SOURCE_DIR}/common)
 add_subdirectory(common)
 function(add_target_library target_name lib_name)
+  cmake_parse_arguments(ARG "" "" "LINK_COMPONENTS" ${ARGN})
+
   add_llvm_library(${target_name} STATIC
     LINK_COMPONENTS
       AggressiveInstCombine
@@ -27,6 +29,7 @@ function(add_target_library target_name lib_name)
       TargetParser
       TransformUtils
       Vectorize
+      ${ARG_LINK_COMPONENTS}
 
     NO_INSTALL_RPATH
     BUILDTREE_ONLY
