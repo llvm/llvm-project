@@ -5334,17 +5334,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // Recognize if one half is actually undef; the matching above will
     // otherwise reuse the even stream for the undef one.  This improves
     // spread(2) shuffles.
-    bool EvenIsUndef = true, OddIsUndef = true;
-    for (unsigned i = 0; i < Mask.size(); i++) {
-      if (i % 2 == 0)
-        EvenIsUndef &= (Mask[i] == -1);
-      else
-        OddIsUndef &= (Mask[i] == -1);
-    }
+    bool LaneIsUndef[2] = { true, true};
+    for (unsigned i = 0; i < Mask.size(); i++)
+      LaneIsUndef[i % 2] &= (Mask[i] == -1);
 
     int Size = Mask.size();
     SDValue EvenV, OddV;
-    if (EvenIsUndef) {
+    if (LaneIsUndef[0]) {
       EvenV = DAG.getUNDEF(HalfVT);
     } else {
       assert(EvenSrc >= 0 && "Undef source?");
@@ -5353,7 +5349,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                           DAG.getVectorIdxConstant(EvenSrc % Size, DL));
     }
 
-    if (OddIsUndef) {
+    if (LaneIsUndef[1]) {
       OddV = DAG.getUNDEF(HalfVT);
     } else {
       assert(OddSrc >= 0 && "Undef source?");
