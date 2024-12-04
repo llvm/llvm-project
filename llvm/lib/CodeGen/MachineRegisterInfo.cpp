@@ -659,3 +659,11 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   }
   return false;
 }
+
+bool MachineRegisterInfo::isArtificialRegUnit(unsigned Unit) const {
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root)
+    if (TRI->isArtificial(*Root))
+      return true;
+  return false;
+}
