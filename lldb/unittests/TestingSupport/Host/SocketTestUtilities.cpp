@@ -116,6 +116,24 @@ bool lldb_private::HostSupportsIPv6() {
   return CheckIPSupport("IPv6", "[::1]:0");
 }
 
+bool lldb_private::HostSupportsLocalhostToIPv4() {
+  if (!HostSupportsIPv4())
+    return false;
+
+  auto addresses = SocketAddress::GetAddressInfo("localhost", nullptr, AF_INET,
+                                                 SOCK_STREAM, IPPROTO_TCP);
+  return !addresses.empty();
+}
+
+bool lldb_private::HostSupportsLocalhostToIPv6() {
+  if (!HostSupportsIPv6())
+    return false;
+
+  auto addresses = SocketAddress::GetAddressInfo("localhost", nullptr, AF_INET6,
+                                                 SOCK_STREAM, IPPROTO_TCP);
+  return !addresses.empty();
+}
+
 llvm::Expected<std::string> lldb_private::GetLocalhostIP() {
   if (HostSupportsIPv4())
     return "127.0.0.1";
