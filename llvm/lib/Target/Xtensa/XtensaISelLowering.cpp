@@ -335,8 +335,8 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
 
       // Transform the arguments stored on
       // physical registers into virtual ones
-      unsigned Register = MF.addLiveIn(VA.getLocReg(), &Xtensa::ARRegClass);
-      SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Register, RegVT);
+      Register Reg = MF.addLiveIn(VA.getLocReg(), &Xtensa::ARRegClass);
+      SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
       // If this is an 8 or 16-bit value, it has been passed promoted
       // to 32 bits.  Insert an assert[sz]ext to capture this, then
@@ -382,8 +382,8 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
   }
 
   if (IsVarArg) {
-    ArrayRef<MCPhysReg> ArgRegs = ArrayRef(IntRegs);
-    unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
+    unsigned Idx = CCInfo.getFirstUnallocated(IntRegs);
+    unsigned ArgRegsNum = std::size(IntRegs);
     const TargetRegisterClass *RC = &Xtensa::ARRegClass;
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -402,11 +402,11 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
 
     // If all registers are allocated, then all varargs must be passed on the
     // stack and we don't need to save any argregs.
-    if (ArgRegs.size() == Idx) {
+    if (ArgRegsNum == Idx) {
       VaArgOffset = CCInfo.getStackSize();
       VarArgsSaveSize = 0;
     } else {
-      VarArgsSaveSize = RegSize * (ArgRegs.size() - Idx);
+      VarArgsSaveSize = RegSize * (ArgRegsNum - Idx);
       VaArgOffset = -VarArgsSaveSize;
 
       // Record the frame index of the first variable argument
@@ -416,9 +416,9 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
 
       // Copy the integer registers that may have been used for passing varargs
       // to the vararg save area.
-      for (unsigned I = Idx; I < ArgRegs.size(); ++I, VaArgOffset += RegSize) {
+      for (unsigned I = Idx; I < ArgRegsNum; ++I, VaArgOffset += RegSize) {
         const Register Reg = RegInfo.createVirtualRegister(RC);
-        RegInfo.addLiveIn(ArgRegs[I], Reg);
+        RegInfo.addLiveIn(IntRegs[I], Reg);
 
         SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegTy);
         FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
