@@ -34,7 +34,7 @@ Currently, the element type of a matrix is only permitted to be one of the
 following types:
 
 * an integer type (as in C23 6.2.5p22), but excluding enumerated types, ``bool``,
-  and ``_BitInt``s whose width is not a power of 2;
+  and ``_BitInt`` types whose width is not a power of 2;
 * the standard floating types ``float`` or ``double``;
 * a half-precision floating point type, if one is supported on the target.
 
