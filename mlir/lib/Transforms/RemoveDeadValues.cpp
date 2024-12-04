@@ -172,8 +172,7 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 /// iff it has no memory effects and none of its results are live.
 ///
 /// It is assumed that `op` is simple. Here, a simple op is one which isn't a
-/// symbol op, a symbol-user op, a region branch op, a branch op, a region
-/// branch terminator op, or return-like.
+/// symbol op, or a symbol-user op.
 static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), la))
     return;
