@@ -1726,7 +1726,7 @@ foreach n = [1, 2, 4, 8] in {
   def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs vrc:$vd),
                            (ins vrc:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
                    VMVRSched<n> {
-    let Uses = [];
+    let Uses = [VTYPE];
     let vm = 1;
   }
 }

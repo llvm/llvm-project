@@ -416,7 +416,7 @@ struct IndexedMemProfRecord {
   // the last entry in the list with the same function GUID.
   llvm::SmallVector<CallStackId> CallSiteIds;
 
-  void clear() { AllocSites.clear(); }
+  void clear() { *this = IndexedMemProfRecord(); }
 
   void merge(const IndexedMemProfRecord &Other) {
     // TODO: Filter out duplicates which may occur if multiple memprof

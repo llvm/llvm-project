@@ -327,7 +327,8 @@ void SymbolTable::loadMinGWSymbols() {
         // If it's lazy or already defined, hook it up as weak alias.
         if (l->isLazy() || isa<Defined>(l)) {
           if (ctx.config.warnStdcallFixup)
-            warn("Resolving " + origName + " by linking to " + newName);
+            Warn(ctx) << "Resolving " << origName << " by linking to "
+                      << newName;
           else
             log("Resolving " + origName + " by linking to " + newName);
           undef->setWeakAlias(l);
@@ -379,9 +380,9 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
         toString(cast<DefinedRegular>(imp)->file));
     impSize = sizeof(DefinedRegular);
   } else {
-    warn("unable to automatically import " + name + " from " + imp->getName() +
-         " from " + toString(cast<DefinedRegular>(imp)->file) +
-         "; unexpected symbol type");
+    Warn(ctx) << "unable to automatically import " << name << " from "
+              << imp->getName() << " from " << cast<DefinedRegular>(imp)->file
+              << "; unexpected symbol type";
     return false;
   }
   sym->replaceKeepingName(imp, impSize);
@@ -412,7 +413,7 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
 /// objFiles and bitcodeFiles (if not nullptr) are used to report where
 /// undefined symbols are referenced.
 static void reportProblemSymbols(
-    const COFFLinkerContext &ctx, const SmallPtrSetImpl<Symbol *> &undefs,
+    COFFLinkerContext &ctx, const SmallPtrSetImpl<Symbol *> &undefs,
     const DenseMap<Symbol *, Symbol *> *localImports, bool needBitcodeFiles) {
   // Return early if there is nothing to report (which should be
   // the common case).
@@ -425,8 +426,9 @@ static void reportProblemSymbols(
                   ctx.config.forceUnresolved);
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
-        warn("<root>: locally defined symbol imported: " + toString(ctx, *imp) +
-             " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
+        Warn(ctx) << "<root>: locally defined symbol imported: "
+                  << toString(ctx, *imp) << " (defined in "
+                  << toString(imp->getFile()) << ") [LNK4217]";
   }
 
   std::vector<UndefinedDiag> undefDiags;
@@ -447,9 +449,9 @@ static void reportProblemSymbols(
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
-          warn(toString(file) +
-               ": locally defined symbol imported: " + toString(ctx, *imp) +
-               " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
+          Warn(ctx) << file << ": locally defined symbol imported: "
+                    << toString(ctx, *imp) << " (defined in " << imp->getFile()
+                    << ") [LNK4217]";
     }
   };
 
@@ -814,7 +816,7 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                           existing->getName());
 
   if (ctx.config.forceMultiple)
-    warn(msg);
+    Warn(ctx) << msg;
   else
     error(msg);
 }
