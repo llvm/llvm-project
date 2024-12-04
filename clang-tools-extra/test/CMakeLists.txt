@@ -30,7 +30,7 @@ configure_lit_site_cfg(
 set(CLANG_TOOLS_TEST_DEPS
   # For the clang-doc tests that emit bitcode files.
   llvm-bcanalyzer
-
+  clang
   # Individual tools we test.
   clang-apply-replacements
   clang-change-namespace
@@ -38,6 +38,7 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-include-fixer
   clang-move
   clang-query
+  clang-read-diagnostics
   clang-reorder-fields
   find-all-symbols
   modularize
