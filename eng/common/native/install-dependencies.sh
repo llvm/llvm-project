@@ -48,7 +48,7 @@ case "$os" in
 brew "cmake"
 brew "icu4c"
 brew "openssl@3"
-brew "pkg-config"
+brew "pkgconf"
 brew "python3"
 brew "pigz"
 EOF
