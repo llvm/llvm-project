@@ -807,4 +807,38 @@ HeapProfileRecords:
   EXPECT_THAT(Record.CallSiteIds,
               ElementsAre(hashCallStack(CS3), hashCallStack(CS4)));
 }
+
+TEST(MemProf, YAMLWriterFrame) {
+  Frame F(12, 34, 56, true);
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  llvm::yaml::Output Yout(OS);
+  Yout << F;
+  EXPECT_EQ(Out, R"YAML(---
+{ Function: 12, LineOffset: 34, Column: 56, Inline: true }
+...
+)YAML");
+}
+
+TEST(MemProf, YAMLWriterMIB) {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 111;
+  MIB.TotalSize = 222;
+  MIB.TotalLifetime = 333;
+  MIB.TotalLifetimeAccessDensity = 444;
+  PortableMemInfoBlock PMIB(MIB, llvm::memprof::getHotColdSchema());
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  llvm::yaml::Output Yout(OS);
+  Yout << PMIB;
+  EXPECT_EQ(Out, R"YAML(---
+AllocCount:      111
+TotalSize:       222
+TotalLifetime:   333
+TotalLifetimeAccessDensity: 444
+...
+)YAML");
+}
 } // namespace
