@@ -1,6 +1,0 @@
-VERS1.0 {
-global:
-  ol*;
-local:
-  *;
-};

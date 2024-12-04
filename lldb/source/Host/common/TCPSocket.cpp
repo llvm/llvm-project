@@ -115,6 +115,14 @@ std::string TCPSocket::GetRemoteConnectionURI() const {
   return "";
 }
 
+std::vector<std::string> TCPSocket::GetListeningConnectionURI() const {
+  std::vector<std::string> URIs;
+  for (const auto &[fd, addr] : m_listen_sockets)
+    URIs.emplace_back(llvm::formatv("connection://[{0}]:{1}",
+                                    addr.GetIPAddress(), addr.GetPort()));
+  return URIs;
+}
+
 Status TCPSocket::CreateSocket(int domain) {
   Status error;
   if (IsValid())

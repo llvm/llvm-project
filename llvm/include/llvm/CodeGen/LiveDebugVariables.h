@@ -21,7 +21,10 @@
 #define LLVM_CODEGEN_LIVEDEBUGVARIABLES_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 
 namespace llvm {
 
@@ -29,15 +32,15 @@ template <typename T> class ArrayRef;
 class LiveIntervals;
 class VirtRegMap;
 
-class LiveDebugVariables : public MachineFunctionPass {
-  void *pImpl = nullptr;
+class LiveDebugVariables {
 
 public:
-  static char ID; // Pass identification, replacement for typeid
-
+  class LDVImpl;
   LiveDebugVariables();
-  ~LiveDebugVariables() override;
+  ~LiveDebugVariables();
+  LiveDebugVariables(LiveDebugVariables &&);
 
+  void analyze(MachineFunction &MF, LiveIntervals *LIS);
   /// splitRegister - Move any user variables in OldReg to the live ranges in
   /// NewRegs where they are live. Mark the values as unavailable where no new
   /// register is live.
@@ -49,12 +52,39 @@ public:
   /// @param VRM Rename virtual registers according to map.
   void emitDebugValues(VirtRegMap *VRM);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// dump - Print data structures to dbgs().
   void dump() const;
+#endif
+
+  void print(raw_ostream &OS) const;
+
+  void releaseMemory();
+
+  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &Inv);
 
 private:
+  std::unique_ptr<LDVImpl> PImpl;
+};
+
+class LiveDebugVariablesWrapperLegacy : public MachineFunctionPass {
+  std::unique_ptr<LiveDebugVariables> Impl;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  LiveDebugVariablesWrapperLegacy();
+
   bool runOnMachineFunction(MachineFunction &) override;
-  void releaseMemory() override;
+
+  LiveDebugVariables &getLDV() { return *Impl; }
+  const LiveDebugVariables &getLDV() const { return *Impl; }
+
+  void releaseMemory() override {
+    if (Impl)
+      Impl->releaseMemory();
+  }
   void getAnalysisUsage(AnalysisUsage &) const override;
 
   MachineFunctionProperties getSetProperties() const override {
@@ -63,6 +93,32 @@ private:
   }
 };
 
+class LiveDebugVariablesAnalysis
+    : public AnalysisInfoMixin<LiveDebugVariablesAnalysis> {
+  friend AnalysisInfoMixin<LiveDebugVariablesAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = LiveDebugVariables;
+
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::TracksDebugUserValues);
+  }
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+class LiveDebugVariablesPrinterPass
+    : public PassInfoMixin<LiveDebugVariablesPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  LiveDebugVariablesPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_LIVEDEBUGVARIABLES_H
