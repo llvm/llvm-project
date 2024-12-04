@@ -35,7 +35,7 @@ protected:
   }
 };
 
-TEST_P(SocketTest, DecodeHostAndPort) {
+TEST_F(SocketTest, DecodeHostAndPort) {
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("localhost:1138"),
                        llvm::HasValue(Socket::HostAndPort{"localhost", 1138}));
 
@@ -63,9 +63,8 @@ TEST_P(SocketTest, DecodeHostAndPort) {
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:65535"),
                        llvm::HasValue(Socket::HostAndPort{"*", 65535}));
 
-  EXPECT_THAT_EXPECTED(
-      Socket::DecodeHostAndPort("[::1]:12345"),
-      llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("[::1]:12345"),
+                       llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345"),
@@ -73,9 +72,10 @@ TEST_P(SocketTest, DecodeHostAndPort) {
 }
 
 #if LLDB_ENABLE_POSIX
-TEST_P(SocketTest, DomainListenConnectAccept) {
+TEST_F(SocketTest, DomainListenConnectAccept) {
   llvm::SmallString<64> Path;
-  std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Path, "test");
 
@@ -88,7 +88,7 @@ TEST_P(SocketTest, DomainListenConnectAccept) {
   CreateDomainConnectedSockets(Path, &socket_a_up, &socket_b_up);
 }
 
-TEST_P(SocketTest, DomainListenGetListeningConnectionURI) {
+TEST_F(SocketTest, DomainListenGetListeningConnectionURI) {
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -110,7 +110,7 @@ TEST_P(SocketTest, DomainListenGetListeningConnectionURI) {
       testing::ElementsAre(llvm::formatv("unix-connect://{0}", Path).str()));
 }
 
-TEST_P(SocketTest, DomainMainLoopAccept) {
+TEST_F(SocketTest, DomainMainLoopAccept) {
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -270,6 +270,25 @@ TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
                                .str()));
 }
 
+TEST_F(SocketTest, TCPListen0MultiListenerGetListeningConnectionURI) {
+  if (!HostSupportsIPv6() || !HostSupportsIPv4())
+    return;
+
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock =
+      Socket::TcpListen("localhost:0", 5);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_TRUE(sock.get()->IsValid());
+
+  EXPECT_THAT(sock.get()->GetListeningConnectionURI(),
+              testing::UnorderedElementsAre(
+                  llvm::formatv("connection://[::1]:{0}",
+                                sock->get()->GetLocalPortNumber())
+                      .str(),
+                  llvm::formatv("connection://[127.0.0.1]:{0}",
+                                sock->get()->GetLocalPortNumber())
+                      .str()));
+}
+
 TEST_P(SocketTest, TCPGetConnectURI) {
   std::unique_ptr<TCPSocket> socket_a_up;
   std::unique_ptr<TCPSocket> socket_b_up;
@@ -297,10 +316,10 @@ TEST_P(SocketTest, UDPGetConnectURI) {
 }
 
 #if LLDB_ENABLE_POSIX
-TEST_P(SocketTest, DomainGetConnectURI) {
+TEST_F(SocketTest, DomainGetConnectURI) {
   llvm::SmallString<64> domain_path;
-  std::error_code EC =
-      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
+  std::error_code EC = llvm::sys::fs::createUniqueDirectory(
+      "DomainListenConnectAccept", domain_path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(domain_path, "test");
 
@@ -325,7 +344,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(SocketTestParams{/*is_ipv6=*/false,
                                      /*localhost_ip=*/"127.0.0.1"},
                     SocketTestParams{/*is_ipv6=*/true, /*localhost_ip=*/"::1"}),
-    // Prints "SocketTests/SocketTest.DecodeHostAndPort/ipv4" etc. in test logs.
+    // Prints "SocketTests/SocketTest.TCPGetAddress/ipv4" etc. in test logs.
     [](const testing::TestParamInfo<SocketTestParams> &info) {
       return info.param.is_ipv6 ? "ipv6" : "ipv4";
     });
