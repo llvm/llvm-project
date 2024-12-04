@@ -9,7 +9,6 @@ struct B {
   struct : public A {
     int z = 3;
   };
-  A a;
 } b;
 
 int main(int argc, char **argv) {
