@@ -507,7 +507,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lowerFor({s32, s64, s128});
 
   getActionDefinitionsBuilder(G_FREM)
-      .libcallFor({s32, s64, s128})
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128})
       .minScalar(0, s32)
       .scalarize(0);
 
