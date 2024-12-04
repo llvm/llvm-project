@@ -997,7 +997,7 @@ clang-format
   ``Never``, and ``true`` to ``Always``.
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 - Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
-- Adds ``off-line`` and ``off-next-line`` options to the ``clang-format`` directive
+- Adds ``off-line`` and ``off-next-line`` options to the ``clang-format`` directive.
 
 libclang
 --------
