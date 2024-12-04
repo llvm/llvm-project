@@ -11,6 +11,7 @@
 import argparse
 import os
 import re
+import shlex
 import subprocess
 import sys
 from typing import List, Optional
@@ -319,7 +320,7 @@ class UndefGetFormatHelper(FormatHelper):
 
     @property
     def instructions(self) -> str:
-        return " ".join(f"'{c}'" for c in self.cmd)
+        return " ".join(shlex.quote(c) for c in self.cmd)
 
     def filter_changed_files(self, changed_files: List[str]) -> List[str]:
         filtered_files = []
@@ -332,11 +333,30 @@ class UndefGetFormatHelper(FormatHelper):
     def has_tool(self) -> bool:
         return True
 
+    def pr_comment_text_for_diff(self, diff: str) -> str:
+        return f"""
+:warning: {self.name} found issues in your code. :warning:
+
+<details>
+<summary>
+You can test this locally with the following command:
+</summary>
+
+``````````bash
+{self.instructions}
+``````````
+
+</details>
+
+{diff}
+"""
+
     def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
         files = self.filter_changed_files(changed_files)
 
-        regex = '([^a-zA-Z0-9#_-]undef[^a-zA-Z0-9_-]|UndefValue::get)'
-        cmd = ['git', 'diff', '-U0', '--pickaxe-regex', '-S', regex]
+        # Use git to find files that have had a change in the number of undefs
+        regex = "([^a-zA-Z0-9#_-]undef[^a-zA-Z0-9_-]|UndefValue::get)"
+        cmd = ["git", "diff", "-U0", "--pickaxe-regex", "-S", regex]
 
         if args.start_rev and args.end_rev:
             cmd.append(args.start_rev)
@@ -347,47 +367,54 @@ class UndefGetFormatHelper(FormatHelper):
 
         if args.verbose:
             print(f"Running: {self.instructions}")
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        sys.stdout.write(proc.stderr.decode("utf-8"))
-        stdout = proc.stdout.decode("utf-8")
+
+        proc = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8"
+        )
+        sys.stdout.write(proc.stderr)
+        stdout = proc.stdout
 
         files = []
-        for file in re.split('^diff --git ', stdout, 0, re.MULTILINE):
-            if re.search('^[+].*'+regex, file, re.MULTILINE):
-                files.append(re.match('a/([^ ]+)', file.splitlines()[0])[1])
+        # Split the diff so we have one array entry per file.
+        # Each file is prefixed like:
+        # diff --git a/file b/file
+        for file in re.split("^diff --git ", stdout, 0, re.MULTILINE):
+            # search for additions of undef
+            if re.search("^[+].*" + regex, file, re.MULTILINE):
+                files.append(re.match("a/([^ ]+)", file.splitlines()[0])[1])
 
-        if files:
-            files = '\n'.join(files)
-            report = f'''
+        if not files:
+            return None
+
+        files = "\n".join(" - " + f for f in files)
+        report = f"""
 The following files introduce new uses of undef:
 {files}
 
-Undef is now deprecated and should only be used in the rare cases where no
-replacement is possible. For example, load of uninitialized memory yields undef.
-You should use poison values for placeholders instead.
+Undef is now deprecated and should only be used in the rare cases where no replacement is possible. For example, a load of uninitialized memory yields `undef`. You should use `poison` values for placeholders instead.
 
-In tests, avoid using undef and having tests that trigger undefined behavior.
-If you need a value with some unimportant value, you can add a new argument
-to the function and use that instead.
+In tests, avoid using `undef` and having tests that trigger undefined behavior. If you need an operand with some unimportant value, you can add a new argument to the function and use that instead.
 
 For example, this is considered a bad practice:
+```llvm
 define void @fn() {{
   ...
   br i1 undef, ...
 }}
+```
 
-Use the following instead:
+Please use the following instead:
+```llvm
 define void @fn(i1 %cond) {{
   ...
   br i1 %cond, ...
 }}
-'''
-            if args.verbose:
-                print(f"error: {self.name} failed")
-                print(report)
-            return report
-        else:
-            return None
+```
+"""
+        if args.verbose:
+            print(f"error: {self.name} failed")
+            print(report)
+        return report
 
 
 ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper())
