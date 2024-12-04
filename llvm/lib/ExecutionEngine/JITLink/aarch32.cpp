@@ -859,7 +859,7 @@ bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
       StubsSection = &G.createSection(getSectionName(),
                                       orc::MemProt::Read | orc::MemProt::Exec);
     LLVM_DEBUG({
-      dbgs() << "    Created stub entry for " << *Target.getName() << " in "
+      dbgs() << "    Created stub entry for " << Target.getName() << " in "
              << StubsSection->getName() << "\n";
     });
     Slot->B = &createStubPrev7(G, *StubsSection, Target);
@@ -910,7 +910,7 @@ bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
 
     LLVM_DEBUG({
       dbgs() << "    Created " << (MakeThumb ? "Thumb" : "Arm") << " entry for "
-             << *Target.getName() << " in " << StubsSection->getName() << ": "
+             << Target.getName() << " in " << StubsSection->getName() << ": "
              << *StubSymbol << "\n";
     });
   }
