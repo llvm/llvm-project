@@ -167,11 +167,9 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
   Error notifyResolved(jitlink::LinkGraph &G) override {
     for (auto *Symbol : G.defined_symbols()) {
       SymbolInfo Info{Symbol->getAddress().getValue(), Symbol->getSize()};
-      auto Name = Symbol->getName();
-      std::string NameStr("");
-      if (Name)
-        NameStr = (*Name).str();
-      Linker.Symtab.insert({NameStr, Info});
+      auto Name =
+        Symbol->hasName() ? (*Symbol->getName()).str() : std::string();
+      Linker.Symtab.insert({std::move(Name), Info});
     }
 
     return Error::success();
