@@ -67,6 +67,16 @@ public:
       if (Parent)
         *this = Subscription(); // Unsubscribe.
     }
+    Subscription(const Subscription &other)
+        : Parent(other.Parent), ListenerID(other.ListenerID) {}
+    Subscription &operator=(const Subscription &other) {
+      std::lock_guard<std::recursive_mutex> Lock(Parent->ListenersMu);
+      if (this != &other) {
+        Parent = other.Parent;
+        ListenerID = other.ListenerID;
+      }
+      return *this;
+    }
   };
 
   // Adds a listener that will observe all future events until the returned
