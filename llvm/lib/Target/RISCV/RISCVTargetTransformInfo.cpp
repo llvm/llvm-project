@@ -1035,21 +1035,41 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
-  case Intrinsic::fabs:
+  case Intrinsic::fabs: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      // lui a0, 8
+      // addi a0, a0, -1
+      // vsetvli a1, zero, e16, m1, ta, ma
+      // vand.vx v8, v8, a0
+      // f16 with zvfhmin and bf16 with zvfhbmin
+      if (LT.second.getVectorElementType() == MVT::bf16 ||
+          (LT.second.getVectorElementType() == MVT::f16 &&
+           !ST->hasVInstructionsF16()))
+        return LT.first * getRISCVInstructionCost(RISCV::VAND_VX, LT.second,
+                                                  CostKind) +
+               2;
+      else
+        return LT.first *
+               getRISCVInstructionCost(RISCV::VFSGNJX_VV, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    // TODO: add f16/bf16, bf16 with zvfbfmin && f16 with zvfhmin
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      unsigned Op;
-      switch (ICA.getID()) {
-      case Intrinsic::fabs:
-        Op = RISCV::VFSGNJX_VV;
-        break;
-      case Intrinsic::sqrt:
-        Op = RISCV::VFSQRT_V;
-        break;
-      }
-      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+      SmallVector<unsigned, 3> Opcodes;
+      // f16 with zvfhmin and bf16 with zvfbfmin
+      if (LT.second.getVectorElementType() == MVT::bf16 &&
+          ST->hasVInstructionsBF16Minimal())
+        Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
+                   RISCV::VFNCVTBF16_F_F_W};
+      else if (LT.second.getVectorElementType() == MVT::f16 &&
+               !ST->hasVInstructionsF16())
+        Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
+      else
+        Opcodes = {RISCV::VFSQRT_V};
+      return LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
     }
     break;
   }

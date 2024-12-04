@@ -5,14 +5,14 @@
 define void @fabs() {
 ; CHECK-LABEL: 'fabs'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call bfloat @llvm.fabs.bf16(bfloat undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = call <16 x bfloat> @llvm.fabs.v16bf16(<16 x bfloat> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 2 x bfloat> @llvm.fabs.nxv2bf16(<vscale x 2 x bfloat> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <vscale x 4 x bfloat> @llvm.fabs.nxv4bf16(<vscale x 4 x bfloat> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = call <vscale x 8 x bfloat> @llvm.fabs.nxv8bf16(<vscale x 8 x bfloat> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = call <vscale x 16 x bfloat> @llvm.fabs.nxv16bf16(<vscale x 16 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %2 = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = call <16 x bfloat> @llvm.fabs.v16bf16(<16 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %6 = call <vscale x 2 x bfloat> @llvm.fabs.nxv2bf16(<vscale x 2 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %7 = call <vscale x 4 x bfloat> @llvm.fabs.nxv4bf16(<vscale x 4 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = call <vscale x 8 x bfloat> @llvm.fabs.nxv8bf16(<vscale x 8 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %9 = call <vscale x 16 x bfloat> @llvm.fabs.nxv16bf16(<vscale x 16 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = call float @llvm.fabs.f32(float undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef)
@@ -66,17 +66,29 @@ define void @fabs() {
 }
 
 define void @fabs_f16() {
-; CHECK-LABEL: 'fabs_f16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call half @llvm.fabs.f16(half undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x half> @llvm.fabs.v2f16(<2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x half> @llvm.fabs.v4f16(<4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x half> @llvm.fabs.v8f16(<8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = call <16 x half> @llvm.fabs.v16f16(<16 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 2 x half> @llvm.fabs.nxv2f16(<vscale x 2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <vscale x 4 x half> @llvm.fabs.nxv4f16(<vscale x 4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = call <vscale x 16 x half> @llvm.fabs.nxv16f16(<vscale x 16 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; ZVFH-LABEL: 'fabs_f16'
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call half @llvm.fabs.f16(half undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x half> @llvm.fabs.v2f16(<2 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x half> @llvm.fabs.v4f16(<4 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x half> @llvm.fabs.v8f16(<8 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = call <16 x half> @llvm.fabs.v16f16(<16 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 2 x half> @llvm.fabs.nxv2f16(<vscale x 2 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <vscale x 4 x half> @llvm.fabs.nxv4f16(<vscale x 4 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = call <vscale x 16 x half> @llvm.fabs.nxv16f16(<vscale x 16 x half> undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; ZVFHMIN-LABEL: 'fabs_f16'
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call half @llvm.fabs.f16(half undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %2 = call <2 x half> @llvm.fabs.v2f16(<2 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = call <4 x half> @llvm.fabs.v4f16(<4 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = call <8 x half> @llvm.fabs.v8f16(<8 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = call <16 x half> @llvm.fabs.v16f16(<16 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %6 = call <vscale x 2 x half> @llvm.fabs.nxv2f16(<vscale x 2 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %7 = call <vscale x 4 x half> @llvm.fabs.nxv4f16(<vscale x 4 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %9 = call <vscale x 16 x half> @llvm.fabs.nxv16f16(<vscale x 16 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call half @llvm.fabs.f16(half undef)
   call <2 x half> @llvm.fabs.v2f16(<2 x half> undef)
