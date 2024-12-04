@@ -14,7 +14,8 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNSCHEDSTRATEGY_H
 
 #include "GCNRegPressure.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
@@ -421,27 +422,42 @@ public:
 
 class PreRARematStage : public GCNSchedStage {
 private:
-  // Each region at MinOccupancy will have their own list of trivially
-  // rematerializable instructions we can remat to reduce RP. The list maps an
-  // instruction to the position we should remat before, usually the MI using
-  // the rematerializable instruction.
-  MapVector<unsigned, MapVector<MachineInstr *, MachineInstr *>>
-      RematerializableInsts;
+  /// A trivially rematerializable VGPR-defining instruction along with
+  /// pre-computed information to help update the scheduler's status when we
+  /// rematerialize it.
+  struct RematInstruction {
+    /// Trivially rematerializable instruction.
+    MachineInstr *RematMI;
+    /// Region containing the rematerializable instruction.
+    unsigned DefRegion;
+    /// Single use of the rematerializable instruction's defined register,
+    /// located in a different block.
+    MachineInstr *UseMI;
+    /// Set of regions in which the rematerializable instruction's defined
+    /// register is a live-in.
+    SmallDenseSet<unsigned, 4> LiveInRegions;
 
-  // Map a trivially rematerializable def to a list of regions at MinOccupancy
-  // that has the defined reg as a live-in.
-  DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
+    RematInstruction(MachineInstr *RematMI, unsigned DefRegion,
+                     MachineInstr *UseMI)
+        : RematMI(RematMI), DefRegion(DefRegion), UseMI(UseMI) {}
+  };
 
-  // Collect all trivially rematerializable VGPR instructions with a single def
-  // and single use outside the defining block into RematerializableInsts.
-  void collectRematerializableInstructions();
+  /// List of eligible rematerializable instructions to sink to increase
+  /// occupancy, in function instruction order.
+  std::vector<RematInstruction> RematInstructions;
 
+  /// Collect all trivially rematerializable VGPR instructions with a single def
+  /// and single use outside the defining block into RematerializableInsts.
+  bool collectRematerializableInstructions();
+
+  /// Whether the MI is trivially rematerializable and does not have eany
+  /// virtual register use.
   bool isTriviallyReMaterializable(const MachineInstr &MI);
 
-  // TODO: Should also attempt to reduce RP of SGPRs and AGPRs
-  // Attempt to reduce RP of VGPR by sinking trivially rematerializable
-  // instructions. Returns true if we were able to sink instruction(s).
-  bool sinkTriviallyRematInsts(const GCNSubtarget &ST,
+  /// TODO: Should also attempt to reduce RP of SGPRs and AGPRs
+  /// Sinks all instructions in RematInstructions to increase function
+  /// occupancy. Modified regions are tagged for rescheduling.
+  void sinkTriviallyRematInsts(const GCNSubtarget &ST,
                                const TargetInstrInfo *TII);
 
 public:

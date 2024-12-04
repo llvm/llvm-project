@@ -1185,6 +1185,19 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
   return std::min(std::max(TotalNumVGPRs / RoundedRegs, 1u), MaxWaves);
 }
 
+unsigned getNumVGPRsToIncreaseWavesPerEU(const MCSubtargetInfo *STI,
+                                         unsigned NumVGPRs) {
+  unsigned Granule = getVGPRAllocGranule(STI);
+  unsigned MaxWaves = getMaxWavesPerEU(STI);
+  unsigned TotalNumVGPRs = getTotalNumVGPRs(STI);
+
+  unsigned NumWaves =
+      getNumWavesPerEUWithNumVGPRs(NumVGPRs, Granule, MaxWaves, TotalNumVGPRs);
+  if (NumWaves == MaxWaves)
+    return 0;
+  return NumVGPRs - alignDown(TotalNumVGPRs / (NumWaves + 1), Granule);
+}
+
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   AMDGPUSubtarget::Generation Gen) {
   if (Gen >= AMDGPUSubtarget::GFX10)
