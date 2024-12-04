@@ -52,9 +52,10 @@ public:
   }
   void set_areSubnormalsFlushedToZero(bool yes = true);
 
-  // Check if a given real kind, any real kind, or all real kinds have
-  // flushing control.
-  bool hasSubnormalFlushingControl(int kind, bool any = false) const;
+  // Check if a given real kind has flushing control.
+  bool hasSubnormalFlushingControl(int kind) const;
+  // Check if any or all real kinds have flushing control.
+  bool hasSubnormalFlushingControl(bool any = false) const;
   void set_hasSubnormalFlushingControl(int kind, bool yes = true);
 
   Rounding roundingMode() const { return roundingMode_; }

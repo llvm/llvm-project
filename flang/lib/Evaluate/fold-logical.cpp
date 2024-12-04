@@ -891,9 +891,15 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         IeeeFeature::Subnormal)};
   } else if (name == "__builtin_ieee_support_underflow_control") {
     // Setting kind=0 checks subnormal flushing control across all type kinds.
-    int kind{args[0] ? args[0]->GetType().value().kind() : 0};
-    return Expr<T>{
-        context.targetCharacteristics().hasSubnormalFlushingControl(kind)};
+    if (args[0]) {
+      return Expr<T>{
+          context.targetCharacteristics().hasSubnormalFlushingControl(
+              args[0]->GetType().value().kind())};
+    } else {
+      return Expr<T>{
+          context.targetCharacteristics().hasSubnormalFlushingControl(
+              /*any=*/false)};
+    }
   }
   return Expr<T>{std::move(funcRef)};
 }

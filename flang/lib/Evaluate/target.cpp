@@ -108,25 +108,22 @@ void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
   areSubnormalsFlushedToZero_ = yes;
 }
 
-// Check if the target has subnormal flushing control for:
-//  - a given real kind (kind != 0)
-//  - any real kind (kind == 0 && any == true)
-//  - all real kinds (kind == 0 && any == false)
-bool TargetCharacteristics::hasSubnormalFlushingControl(
-    int kind, bool any) const {
-  CHECK(kind >= 0 && kind <= maxKind);
-  if (kind == 0) {
-    for (int kind{1}; kind <= maxKind; ++kind) {
-      if (CanSupportType(TypeCategory::Real, kind) &&
-          hasSubnormalFlushingControl_[kind] == any) {
-        return any;
-      }
+// Check if a given real kind has flushing control.
+bool TargetCharacteristics::hasSubnormalFlushingControl(int kind) const {
+  CHECK(kind > 0 && kind <= maxKind);
+  CHECK(CanSupportType(TypeCategory::Real, kind));
+  return hasSubnormalFlushingControl_[kind];
+}
+
+// Check if any or all real kinds have flushing control.
+bool TargetCharacteristics::hasSubnormalFlushingControl(bool any) const {
+  for (int kind{1}; kind <= maxKind; ++kind) {
+    if (CanSupportType(TypeCategory::Real, kind) &&
+        hasSubnormalFlushingControl_[kind] == any) {
+      return any;
     }
-    return !any;
-  } else {
-    CHECK(CanSupportType(TypeCategory::Real, kind));
-    return hasSubnormalFlushingControl_[kind];
   }
+  return !any;
 }
 
 void TargetCharacteristics::set_hasSubnormalFlushingControl(

@@ -5240,7 +5240,7 @@ private:
     }
     if ((funit.mayModifyUnderflowMode) &&
         (bridge.getTargetCharacteristics().hasSubnormalFlushingControl(
-            0, /*any=*/true))) {
+            /*any=*/true))) {
       // F18 Clause 17.5p2: In a procedure [...], the processor shall not
       // change the underflow mode on entry, and on return shall ensure that
       // the underflow mode is the same as it was on entry.
