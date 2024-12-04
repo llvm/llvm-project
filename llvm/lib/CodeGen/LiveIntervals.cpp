@@ -730,7 +730,16 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     // Find the regunit intervals for the assigned register. They may overlap
     // the virtual register live range, cancelling any kills.
     RU.clear();
-    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LaneBitmask ArtificialLanes = LaneBitmask::getNone();
+    for (MCRegUnitMaskIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
+      auto [Unit, Bitmask] = *UI;
+      // Record lane mask for all artificial RegUnits for this physreg.
+      for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
+        if (TRI->isArtificial(*Root)) {
+          ArtificialLanes |= Bitmask;
+          break;
+        }
+      }
       const LiveRange &RURange = getRegUnit(Unit);
       if (RURange.empty())
         continue;
@@ -770,9 +779,6 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
       if (MRI->subRegLivenessEnabled()) {
         // When reading a partial undefined value we must not add a kill flag.
         // The regalloc might have used the undef lane for something else.
-        // If the register consists of a single allocatable subreg, then
-        // we can assume the other (undef) lanes cannot be used.
-        //
         // Example:
         //     %1 = ...                  ; R32: %1
         //     %2:high16 = ...           ; R64: %2
@@ -783,9 +789,13 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         // are actually never written by %2. After assignment the <kill>
         // flag at the read instruction is invalid.
         LaneBitmask DefinedLanesMask;
-        if (LI.hasSubRanges() && TRI->getNumAllocatableSubRegs(PhysReg) > 1) {
+        if (LI.hasSubRanges()) {
           // Compute a mask of lanes that are defined.
-          DefinedLanesMask = LaneBitmask::getNone();
+          // Artificial regunits are not independently allocatable so the
+          // register allocator cannot have used them to represent any other
+          // values. That's why we mark them as 'defined' here, as this
+          // otherwise prevents kill flags from being added.
+          DefinedLanesMask = ArtificialLanes;
           for (const LiveInterval::SubRange &SR : LI.subranges())
             for (const LiveRange::Segment &Segment : SR.segments) {
               if (Segment.start >= RI->end)

@@ -745,15 +745,6 @@ public:
     return reverseComposeSubRegIndexLaneMaskImpl(IdxA, LaneMask);
   }
 
-  /// Returns the number of allocatable sub registers for R, which is the
-  /// number of register units that are not artificial and part of an
-  /// allocatable register class. For a register like D0_D1, which consists of
-  /// D0 and D1, this function would return '2'. For an architecture where
-  /// D0=S0_S1 and D1=S2_S3, this would return '4' for S0, S1, S2, S3.
-  unsigned getNumAllocatableSubRegs(MCPhysReg R) const {
-    return getNumAllocatableSubRegsImpl(R);
-  }
-
   /// Debugging helper: dump register in human readable form to dbgs() stream.
   static void dumpReg(Register Reg, unsigned SubRegIndex = 0,
                       const TargetRegisterInfo *TRI = nullptr);
@@ -780,10 +771,6 @@ protected:
 
   virtual LaneBitmask reverseComposeSubRegIndexLaneMaskImpl(unsigned,
                                                             LaneBitmask) const {
-    llvm_unreachable("Target has no sub-registers");
-  }
-
-  virtual unsigned getNumAllocatableSubRegsImpl(MCPhysReg) const {
     llvm_unreachable("Target has no sub-registers");
   }
 
