@@ -6404,8 +6404,8 @@ ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
 }
 
 bool LoongArchTargetLowering::shouldSignExtendTypeInLibCall(
-    EVT Type, bool IsSigned) const {
-  if (Subtarget.is64Bit() && Type == MVT::i32)
+    Type *Ty, bool IsSigned) const {
+  if (Subtarget.is64Bit() && Ty->isIntegerTy(32))
     return true;
 
   return IsSigned;

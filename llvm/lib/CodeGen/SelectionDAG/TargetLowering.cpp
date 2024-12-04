@@ -159,8 +159,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
     SDValue NewOp = Ops[i];
     Entry.Node = NewOp;
     Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Entry.IsSExt = shouldSignExtendTypeInLibCall(NewOp.getValueType(),
-                                                 CallOptions.IsSigned);
+    Entry.IsSExt =
+        shouldSignExtendTypeInLibCall(Entry.Ty, CallOptions.IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
 
     if (CallOptions.IsSoften &&
@@ -177,7 +177,7 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
-  bool signExtend = shouldSignExtendTypeInLibCall(RetVT, CallOptions.IsSigned);
+  bool signExtend = shouldSignExtendTypeInLibCall(RetTy, CallOptions.IsSigned);
   bool zeroExtend = !signExtend;
 
   if (CallOptions.IsSoften &&
