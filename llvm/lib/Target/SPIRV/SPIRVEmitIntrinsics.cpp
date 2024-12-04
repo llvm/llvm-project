@@ -77,8 +77,7 @@ class SPIRVEmitIntrinsics
   SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // map of function declarations to <pointer arg index => element type>
-  DenseMap<const Function *, SmallVector<std::pair<unsigned, Type *>>>
-      FDeclPtrTys;
+  DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
 
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
@@ -2176,8 +2175,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
-  DenseMap<Function *, DenseMap<unsigned, Type *>> FDeclPtrTys;
-
   processParamTypesByFunHeader(CurrF, B);
 
   // StoreInst's operand type can be changed during the next transformations,
@@ -2202,28 +2199,31 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     Worklist.push_back(&I);
 
   // Apply types parsed from demangled function declarations.
-  for (auto &I : Worklist) {
-    CallInst *CI = dyn_cast<CallInst>(I);
-    if (!CI || !CI->getCalledFunction())
-      continue;
-    auto It = FDeclPtrTys.find(CI->getCalledFunction());
-    if (It == FDeclPtrTys.end())
-      continue;
-    unsigned Sz = CI->arg_size();
-    for (auto [Idx, ElemTy] : It->second)
-      if (Idx < Sz) {
+  for (auto It : FDeclPtrTys) {
+    Function *F = It.first;
+    for (auto *U : F->users()) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != F)
+        continue;
+      unsigned Sz = CI->arg_size();
+      for (auto [Idx, ElemTy] : It.second) {
+        if (Idx >= Sz)
+          continue;
         Value *Arg = CI->getArgOperand(Idx);
         GR->addDeducedElementType(Arg, ElemTy);
-        if (CallInst *Ref = dyn_cast<CallInst>(Arg))
-          if (Function *RefF = Ref->getCalledFunction();
-              RefF && isPointerTy(RefF->getReturnType()) &&
-              !GR->findDeducedElementType(RefF)) {
-            GR->addDeducedElementType(RefF, ElemTy);
-            GR->addReturnType(RefF, TypedPointerType::get(
-                                        ElemTy, getPointerAddressSpace(
-                                                    RefF->getReturnType())));
-          }
+        CallInst *Ref = dyn_cast<CallInst>(Arg);
+        if (!Ref)
+          continue;
+        Function *RefF = Ref->getCalledFunction();
+        if (!RefF || !isPointerTy(RefF->getReturnType()) ||
+            GR->findDeducedElementType(RefF))
+          continue;
+        GR->addDeducedElementType(RefF, ElemTy);
+        GR->addReturnType(
+            RefF, TypedPointerType::get(
+                      ElemTy, getPointerAddressSpace(RefF->getReturnType())));
       }
+    }
   }
 
   // Pass forward: use operand to deduce instructions result.
