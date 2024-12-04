@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetObjectFile.h"
+#include "AArch64MachineModuleInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
@@ -32,7 +33,7 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
 void AArch64_ELFTargetObjectFile::emitPersonalityValueImpl(
     MCStreamer &Streamer, const DataLayout &DL, const MCSymbol *Sym,
     const MachineModuleInfo *MMI) const {
-  if (!MMI->getObjFileInfo<MachineModuleInfoELF>().hasSignedPersonality()) {
+  if (!MMI->getObjFileInfo<AArch64MachineModuleInfo>().hasSignedPersonality()) {
     TargetLoweringObjectFileELF::emitPersonalityValueImpl(Streamer, DL, Sym,
                                                           MMI);
     return;

@@ -61,13 +61,3 @@ MachineModuleInfoImpl::ExprStubListTy MachineModuleInfoImpl::getSortedExprStubs(
   ExprStubs.clear();
   return List;
 }
-
-MachineModuleInfoELF::MachineModuleInfoELF(const MachineModuleInfo &MMI) {
-  const Module *M = MMI.getModule();
-  const auto *Flag = mdconst::extract_or_null<ConstantInt>(
-      M->getModuleFlag("ptrauth-sign-personality"));
-  if (Flag && Flag->getZExtValue() == 1)
-    HasSignedPersonality = true;
-  else
-    HasSignedPersonality = false;
-}
