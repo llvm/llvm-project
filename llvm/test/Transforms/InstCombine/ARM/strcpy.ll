@@ -16,7 +16,7 @@ define arm_aapcscc void @test_simplify1() {
 
 
   call arm_aapcscc ptr @strcpy(ptr @a, ptr @hello)
-; CHECK: @llvm.memcpy.p0.p0.i32
+; CHECK: @llvm.memcpy.p0.p0.i64
   ret void
 }
 
@@ -43,7 +43,7 @@ define arm_aapcs_vfpcc void @test_simplify1_vfp() {
 
 
   call arm_aapcs_vfpcc ptr @strcpy(ptr @a, ptr @hello)
-; CHECK: @llvm.memcpy.p0.p0.i32
+; CHECK: @llvm.memcpy.p0.p0.i64
   ret void
 }
 

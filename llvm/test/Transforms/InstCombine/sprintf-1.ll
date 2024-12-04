@@ -26,7 +26,7 @@ declare i32 @sprintf(ptr, ptr, ...)
 
 define void @test_simplify1(ptr %dst) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i32 13, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i64 13, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @hello_world)
@@ -113,7 +113,7 @@ define i32 @test_simplify7(ptr %dst, ptr %str) {
 ; Check sprintf(dst, "%s", str) -> llvm.memcpy(dest, str, strlen(str) + 1, 1).
 define i32 @test_simplify8(ptr %dst) {
 ; CHECK-LABEL: @test_simplify8(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i32 13, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(13) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(13) @hello_world, i64 13, i1 false)
 ; CHECK-NEXT:    ret i32 12
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr @hello_world)

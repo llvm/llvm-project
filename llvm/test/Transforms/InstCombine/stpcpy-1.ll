@@ -34,7 +34,7 @@ define ptr @test_simplify2() {
 
 define void @test_simplify3(ptr %dst) {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(6) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i64 6, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call ptr @stpcpy(ptr dereferenceable(80) %dst, ptr @hello)

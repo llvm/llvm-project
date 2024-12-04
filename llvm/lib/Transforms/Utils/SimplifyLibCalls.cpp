@@ -3364,7 +3364,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     FormatStr = FormatStr.drop_back();
     Value *GV = B.CreateGlobalString(
         FormatStr, "str",
-        CI->getArgOperand(1)->getType()->getPointerAddressSpace());
+        CI->getArgOperand(0)->getType()->getPointerAddressSpace());
     return copyFlags(*CI, emitPutS(GV, B, TLI));
   }
 
