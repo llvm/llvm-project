@@ -18479,9 +18479,10 @@ static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI,
     // are mutable in the sense that user can change their value - they are
     // private instances of the captured declarations.
     const Capture &Cap = CSI->getCapture(Var);
-    // C++ [dcl.fct]p7:
-    //   [When] adding cv-qualifications on top of the function type [...] the
-    //   cv-qualifiers are ignored.
+    // C++ [expr.prim.lambda]p10:
+    //   The type of such a data member is [...] an lvalue reference to the
+    //   referenced function type if the entity is a reference to a function.
+    //   [...]
     if (Cap.isCopyCapture() && !DeclRefType->isFunctionType() &&
         !(isa<LambdaScopeInfo>(CSI) &&
           !cast<LambdaScopeInfo>(CSI)->lambdaCaptureShouldBeConst()) &&
@@ -18792,9 +18793,10 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     //   parameter-declaration-clause is not followed by mutable.
     DeclRefType = CaptureType.getNonReferenceType();
     bool Const = LSI->lambdaCaptureShouldBeConst();
-    // C++ [dcl.fct]p7:
-    //   [When] adding cv-qualifications on top of the function type [...] the
-    //   cv-qualifiers are ignored.
+    // C++ [expr.prim.lambda]p10:
+    //   The type of such a data member is [...] an lvalue reference to the
+    //   referenced function type if the entity is a reference to a function.
+    //   [...]
     if (Const && !CaptureType->isReferenceType() &&
         !DeclRefType->isFunctionType())
       DeclRefType.addConst();
