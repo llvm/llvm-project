@@ -2292,7 +2292,7 @@ public:
   virtual void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const {}
 
   /// Returns true if arguments should be sign-extended in lib calls.
-  virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
+  virtual bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const {
     return IsSigned;
   }
 
