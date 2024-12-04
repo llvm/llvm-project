@@ -2,9 +2,11 @@ import * as path from "path";
 import * as util from "util";
 import * as vscode from "vscode";
 
-import { LLDBDapDescriptorFactory } from "./debug-adapter-factory";
+import {
+  LLDBDapDescriptorFactory,
+  isExecutable,
+} from "./debug-adapter-factory";
 import { DisposableContext } from "./disposable-context";
-import { LLDBDapOptions } from "./types";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -28,8 +30,7 @@ export class LLDBDapExtension extends DisposableContext {
             .get<string>("executable-path");
 
           if (dapPath) {
-            const fileUri = vscode.Uri.file(dapPath);
-            if (await LLDBDapDescriptorFactory.isValidFile(fileUri)) {
+            if (await isExecutable(dapPath)) {
               return;
             }
           }

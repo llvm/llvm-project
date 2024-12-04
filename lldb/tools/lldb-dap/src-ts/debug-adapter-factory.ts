@@ -1,8 +1,91 @@
 import * as path from "path";
 import * as util from "util";
 import * as vscode from "vscode";
+import * as child_process from "child_process";
+import * as fs from "node:fs/promises";
 
-import { LLDBDapOptions } from "./types";
+export async function isExecutable(path: string): Promise<Boolean> {
+  try {
+    await fs.access(path, fs.constants.X_OK);
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+async function findWithXcrun(executable: string): Promise<string | undefined> {
+  if (process.platform === "darwin") {
+    try {
+      const exec = util.promisify(child_process.execFile);
+      let { stdout, stderr } = await exec("/usr/bin/xcrun", [
+        "-find",
+        executable,
+      ]);
+      if (stdout) {
+        return stdout.toString().trimEnd();
+      }
+    } catch (error) {}
+  }
+  return undefined;
+}
+
+async function findInPath(executable: string): Promise<string | undefined> {
+  const env_path =
+    process.platform === "win32" ? process.env["Path"] : process.env["PATH"];
+  if (!env_path) {
+    return undefined;
+  }
+
+  const paths = env_path.split(path.delimiter);
+  for (const p of paths) {
+    const exe_path = path.join(p, executable);
+    if (await isExecutable(exe_path)) {
+      return exe_path;
+    }
+  }
+  return undefined;
+}
+
+async function findDAPExecutable(): Promise<string | undefined> {
+  const executable = process.platform === "win32" ? "lldb-dap.exe" : "lldb-dap";
+
+  // Prefer lldb-dap from Xcode on Darwin.
+  const xcrun_dap = findWithXcrun(executable);
+  if (xcrun_dap) {
+    return xcrun_dap;
+  }
+
+  // Find lldb-dap in the user's path.
+  const path_dap = findInPath(executable);
+  if (path_dap) {
+    return path_dap;
+  }
+
+  return undefined;
+}
+
+async function getDAPExecutable(
+  session: vscode.DebugSession,
+): Promise<string | undefined> {
+  const config = vscode.workspace.getConfiguration(
+    "lldb-dap",
+    session.workspaceFolder,
+  );
+
+  // Prefer the explicitly specified path in the extension's configuration.
+  const configPath = config.get<string>("executable-path");
+  if (configPath && configPath.length !== 0) {
+    return configPath;
+  }
+
+  // Try finding the lldb-dap binary.
+  const foundPath = await findDAPExecutable();
+  if (foundPath) {
+    return foundPath;
+  }
+
+  return undefined;
+}
 
 /**
  * This class defines a factory used to find the lldb-dap binary to use
@@ -11,82 +94,6 @@ import { LLDBDapOptions } from "./types";
 export class LLDBDapDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory
 {
-  static async isValidFile(pathUri: vscode.Uri): Promise<Boolean> {
-    try {
-      const fileStats = await vscode.workspace.fs.stat(pathUri);
-      if (!(fileStats.type & vscode.FileType.File)) {
-        return false;
-      }
-    } catch (err) {
-      return false;
-    }
-    return true;
-  }
-
-  static async findDAPExecutable(): Promise<string | undefined> {
-    let executable = "lldb-dap";
-    if (process.platform === "win32") {
-      executable = "lldb-dap.exe";
-    }
-
-    // Prefer lldb-dap from Xcode on Darwin.
-    if (process.platform === "darwin") {
-      try {
-        const exec = util.promisify(require("child_process").execFile);
-        let { stdout, stderr } = await exec("/usr/bin/xcrun", [
-          "-find",
-          executable,
-        ]);
-        if (stdout) {
-          return stdout.toString().trimEnd();
-        }
-      } catch (error) {}
-    }
-
-    // Find lldb-dap in the user's path.
-    let env_path =
-      process.env["PATH"] ||
-      (process.platform === "win32" ? process.env["Path"] : null);
-    if (!env_path) {
-      return undefined;
-    }
-
-    const paths = env_path.split(path.delimiter);
-    for (const p of paths) {
-      const exe_path = path.join(p, executable);
-      if (
-        await LLDBDapDescriptorFactory.isValidFile(vscode.Uri.file(exe_path))
-      ) {
-        return exe_path;
-      }
-    }
-
-    return undefined;
-  }
-
-  static async getDAPExecutable(
-    session: vscode.DebugSession,
-  ): Promise<string | undefined> {
-    const config = vscode.workspace.getConfiguration(
-      "lldb-dap",
-      session.workspaceFolder,
-    );
-
-    // Prefer the explicitly specified path in the extension's configuration.
-    const configPath = config.get<string>("executable-path");
-    if (configPath && configPath.length !== 0) {
-      return configPath;
-    }
-
-    // Try finding the lldb-dap binary.
-    const foundPath = await LLDBDapDescriptorFactory.findDAPExecutable();
-    if (foundPath) {
-      return foundPath;
-    }
-
-    return undefined;
-  }
-
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined,
@@ -103,7 +110,7 @@ export class LLDBDapDescriptorFactory
     }
     const configEnvironment =
       config.get<{ [key: string]: string }>("environment") || {};
-    const dapPath = await LLDBDapDescriptorFactory.getDAPExecutable(session);
+    const dapPath = await getDAPExecutable(session);
     const dbgOptions = {
       env: {
         ...executable?.options?.env,
@@ -112,16 +119,14 @@ export class LLDBDapDescriptorFactory
       },
     };
     if (dapPath) {
-      const fileUri = vscode.Uri.file(dapPath);
-      if (!(await LLDBDapDescriptorFactory.isValidFile(fileUri))) {
-        LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(fileUri.path);
+      if (!(await isExecutable(dapPath))) {
+        LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath);
         return undefined;
       }
       return new vscode.DebugAdapterExecutable(dapPath, [], dbgOptions);
     } else if (executable) {
-      const fileUri = vscode.Uri.file(executable.command);
-      if (!(await LLDBDapDescriptorFactory.isValidFile(fileUri))) {
-        LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(fileUri.path);
+      if (!(await isExecutable(executable.command))) {
+        LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(executable.command);
         return undefined;
       }
       return new vscode.DebugAdapterExecutable(
