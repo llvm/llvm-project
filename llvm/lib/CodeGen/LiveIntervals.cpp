@@ -730,7 +730,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     // Find the regunit intervals for the assigned register. They may overlap
     // the virtual register live range, cancelling any kills.
     RU.clear();
-    LaneBitmask ArtificialLanes = LaneBitmask::getNone();
+    LaneBitmask ArtificialLanes;
     for (MCRegUnitMaskIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
       auto [Unit, Bitmask] = *UI;
       // Record lane mask for all artificial RegUnits for this physreg.
