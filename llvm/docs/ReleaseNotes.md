@@ -105,6 +105,8 @@ Changes to the LLVM IR
 
 * Operand bundle values can now be metadata strings.
 
+* Fast math flags are now permitted on `fptrunc` and `fpext`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
