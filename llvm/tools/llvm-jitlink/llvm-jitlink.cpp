@@ -365,7 +365,7 @@ static raw_ostream &
 operator<<(raw_ostream &OS, const Session::SymbolInfoMap &SIM) {
   OS << "Symbols:\n";
   for (auto &SKV : SIM)
-    OS << "  \"" << *(SKV.first) << "\" " << SKV.second << "\n";
+    OS << "  \"" << SKV.first << "\" " << SKV.second << "\n";
   return OS;
 }
 
