@@ -517,7 +517,10 @@ void ReplaceSystemMalloc() {
 #define INTERCEPT_UCRT_FUNCTION(func)                                  \
   if (!INTERCEPT_FUNCTION_DLLIMPORT(                                   \
           "ucrtbase.dll", "api-ms-win-core-heap-l1-1-0.dll", func)) {  \
-    VPrintf(2, "Failed to intercept ucrtbase.dll import %s\n", #func); \
+    if (!INTERCEPT_FUNCTION_DLLIMPORT(                                 \
+            "ucrtbase.dll", "kernel32.dll", func)) {                   \
+      VPrintf(2, "Failed to intercept ucrtbase.dll import %s\n", #func); \
+    } \
   }
     INTERCEPT_UCRT_FUNCTION(HeapAlloc);
     INTERCEPT_UCRT_FUNCTION(HeapFree);
