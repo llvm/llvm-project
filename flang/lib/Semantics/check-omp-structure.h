@@ -152,8 +152,8 @@ private:
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
   void CheckMultListItems();
-  void CheckStructureComponent(const parser::OmpObjectList &objects,
-      llvm::omp::Clause clauseId);
+  void CheckStructureComponent(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
@@ -224,8 +224,8 @@ private:
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
-  void CheckReductionObjects(const parser::OmpObjectList &objects,
-      llvm::omp::Clause clauseId);
+  void CheckReductionObjects(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool CheckReductionOperators(const parser::OmpClause::Reduction &);
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
