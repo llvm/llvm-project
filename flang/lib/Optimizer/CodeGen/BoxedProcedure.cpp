@@ -104,6 +104,8 @@ public:
       return needsConversion(unwrapRefType(ty));
     if (auto t = mlir::dyn_cast<SequenceType>(ty))
       return needsConversion(unwrapSequenceType(ty));
+    if (auto t = mlir::dyn_cast<TypeDescType>(ty))
+      return needsConversion(t.getOfTy());
     return false;
   }
 
@@ -167,6 +169,9 @@ public:
       }
       rec.finalize(ps, cs);
       return rec;
+    });
+    addConversion([&](TypeDescType ty) {
+      return TypeDescType::get(convertType(ty.getOfTy()));
     });
     addArgumentMaterialization(materializeProcedure);
     addSourceMaterialization(materializeProcedure);
