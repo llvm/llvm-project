@@ -6,6 +6,14 @@ name:            g_abd_su
 body: |
   bb.0:
 
+    %2:_(p0) = G_IMPLICIT_DEF
+    %3:_(p0) = G_IMPLICIT_DEF
+    %4:_(s1) = G_ABDS %2, %3
+
+    %12:_(s64) = G_IMPLICIT_DEF
+    %13:_(s64) = G_IMPLICIT_DEF
+    %14:_(p0) = G_ABDS %12, %13
+
     %23:_(<2 x s32>) = G_IMPLICIT_DEF
     %24:_(<2 x s32>) = G_IMPLICIT_DEF
     ; CHECK: Generic vector abds/abdu must preserve number of lanes
