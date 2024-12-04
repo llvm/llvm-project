@@ -126,7 +126,8 @@ bool GEPOperator::accumulateConstantOffset(
     APInt &Offset, function_ref<bool(Value &, APInt &)> ExternalAnalysis) {
   // Fast path for canonical getelementptr i8 form.
   if (SourceType->isIntegerTy(8) && !ExternalAnalysis) {
-    if (auto *CI = dyn_cast<ConstantInt>(Index.front())) {
+    auto *CI = dyn_cast<ConstantInt>(Index.front());
+    if (CI && CI->getType()->isIntegerTy()) {
       Offset += CI->getValue().sextOrTrunc(Offset.getBitWidth());
       return true;
     }
@@ -165,7 +166,8 @@ bool GEPOperator::accumulateConstantOffset(
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();
     // Handle ConstantInt if possible.
-    if (auto ConstOffset = dyn_cast<ConstantInt>(V)) {
+    auto *ConstOffset = dyn_cast<ConstantInt>(V);
+    if (ConstOffset && ConstOffset->getType()->isIntegerTy()) {
       if (ConstOffset->isZero())
         continue;
       // if the type is scalable and the constant is not zero (vscale * n * 0 =
@@ -226,7 +228,8 @@ bool GEPOperator::collectOffset(
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();
     // Handle ConstantInt if possible.
-    if (auto ConstOffset = dyn_cast<ConstantInt>(V)) {
+    auto *ConstOffset = dyn_cast<ConstantInt>(V);
+    if (ConstOffset && ConstOffset->getType()->isIntegerTy()) {
       if (ConstOffset->isZero())
         continue;
       // If the type is scalable and the constant is not zero (vscale * n * 0 =
