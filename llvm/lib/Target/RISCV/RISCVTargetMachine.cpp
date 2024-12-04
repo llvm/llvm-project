@@ -51,10 +51,6 @@ static cl::opt<cl::boolOrDefault>
     EnableGlobalMerge("riscv-enable-global-merge", cl::Hidden,
                       cl::desc("Enable the global merge pass"));
 
-static cl::opt<bool> DisableGlobalMergeExternalGlobals(
-    "riscv-disable-global-merge-external-globals", cl::Hidden, cl::init(false),
-    cl::desc("Disable global merging of external globals"));
-
 static cl::opt<bool>
     EnableMachineCombiner("riscv-enable-machine-combiner",
                           cl::desc("Enable the machine combiner pass"),
@@ -480,8 +476,7 @@ bool RISCVPassConfig::addPreISel() {
     // Investigating and addressing both items are TODO.
     addPass(createGlobalMergePass(TM, /* MaxOffset */ 2047,
                                   /* OnlyOptimizeForSize */ false,
-                                  /* MergeExternalByDefault */
-                                  !DisableGlobalMergeExternalGlobals));
+                                  /* MergeExternalByDefault */ true));
   }
 
   return false;
