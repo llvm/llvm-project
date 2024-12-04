@@ -354,124 +354,95 @@ Sections:
 ## Check that note entries and their `Desc` fields are aligned according to the
 ## specified section alignment.
 
-# RUN: yaml2obj --docnum=17 %s -o - | \
+# RUN: yaml2obj --docnum=17 -D ELFCLASS=64 %s -o - | \
 # RUN:   llvm-readobj --sections --section-data --notes - | \
-# RUN:   FileCheck %s --check-prefix=TEST1718
+# RUN:   FileCheck %s --check-prefix=TEST17
 
-# RUN: yaml2obj --docnum=18 %s -o - | \
+# RUN: yaml2obj --docnum=17 -D ELFCLASS=32 %s -o - | \
 # RUN:   llvm-readobj --sections --section-data --notes - | \
-# RUN:   FileCheck %s --check-prefix=TEST1718
+# RUN:   FileCheck %s --check-prefix=TEST17
 
-# TEST1718:      Name: .note.foo4
-# TEST1718:      SectionData (
-# TEST1718-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
-# TEST1718-NEXT:   0010: 00000000 01020000 00000000 03000000  |................|
-# TEST1718-NEXT:   0020: 02000000 03040500 04000000 00000000  |................|
-# TEST1718-NEXT:   0030: 03000000 474E5500                    |....GNU.|
-# TEST1718-NEXT: )
-# TEST1718:      Name: .note.foo8
-# TEST1718:      SectionData (
-# TEST1718-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
-# TEST1718-NEXT:   0010: 00000000 00000000 01020000 00000000  |................|
-# TEST1718-NEXT:   0020: 00000000 03000000 02000000 00000000  |................|
-# TEST1718-NEXT:   0030: 03040500 00000000 04000000 00000000  |................|
-# TEST1718-NEXT:   0040: 03000000 474E5500                    |....GNU.|
-# TEST1718-NEXT: )
-# TEST1718:      NoteSections [
-# TEST1718-NEXT:   NoteSection {
-# TEST1718-NEXT:     Name: .note.foo4
-# TEST1718-NEXT:     Offset:
-# TEST1718-NEXT:     Size:
-# TEST1718-NEXT:     Notes [
-# TEST1718-NEXT:       {
-# TEST1718-NEXT:         Owner: ABCD
-# TEST1718-NEXT:         Data size: 0x2
-# TEST1718-NEXT:         Type: NT_VERSION (version)
-# TEST1718-NEXT:         Description data (
-# TEST1718-NEXT:           0000: 0102                                 |..|
-# TEST1718-NEXT:         )
-# TEST1718-NEXT:       }
-# TEST1718-NEXT:       {
-# TEST1718-NEXT:         Owner: 
-# TEST1718-NEXT:         Data size: 0x3
-# TEST1718-NEXT:         Type: NT_ARCH (architecture)
-# TEST1718-NEXT:         Description data (
-# TEST1718-NEXT:           0000: 030405                               |...|
-# TEST1718-NEXT:         )
-# TEST1718-NEXT:       }
-# TEST1718-NEXT:       {
-# TEST1718-NEXT:         Owner: GNU
-# TEST1718-NEXT:         Data size: 0x0
-# TEST1718-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
-# TEST1718-NEXT:         Build ID: 
-# TEST1718-NEXT:       }
-# TEST1718-NEXT:     ]
-# TEST1718-NEXT:   }
-# TEST1718-NEXT:   NoteSection {
-# TEST1718-NEXT:     Name: .note.foo8
-# TEST1718-NEXT:     Offset:
-# TEST1718-NEXT:     Size:
-# TEST1718-NEXT:     Notes [
-# TEST1718-NEXT:       {
-# TEST1718-NEXT:         Owner: ABCD
-# TEST1718-NEXT:         Data size: 0x2
-# TEST1718-NEXT:         Type: NT_VERSION (version)
-# TEST1718-NEXT:         Description data (
-# TEST1718-NEXT:           0000: 0102                                 |..|
-# TEST1718-NEXT:         )
-# TEST1718-NEXT:       }
-# TEST1718-NEXT:       {
-# TEST1718-NEXT:         Owner: 
-# TEST1718-NEXT:         Data size: 0x3
-# TEST1718-NEXT:         Type: NT_ARCH (architecture)
-# TEST1718-NEXT:         Description data (
-# TEST1718-NEXT:           0000: 030405                               |...|
-# TEST1718-NEXT:         )
-# TEST1718-NEXT:       }
-# TEST1718-NEXT:       {
-# TEST1718-NEXT:         Owner: GNU
-# TEST1718-NEXT:         Data size: 0x0
-# TEST1718-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
-# TEST1718-NEXT:         Build ID: 
-# TEST1718-NEXT:       }
-# TEST1718-NEXT:     ]
-# TEST1718-NEXT:   }
-# TEST1718-NEXT: ]
+# TEST17:      Name: .note.foo4
+# TEST17:      SectionData (
+# TEST17-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST17-NEXT:   0010: 00000000 01020000 00000000 03000000  |................|
+# TEST17-NEXT:   0020: 02000000 03040500 04000000 00000000  |................|
+# TEST17-NEXT:   0030: 03000000 474E5500                    |....GNU.|
+# TEST17-NEXT: )
+# TEST17:      Name: .note.foo8
+# TEST17:      SectionData (
+# TEST17-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST17-NEXT:   0010: 00000000 00000000 01020000 00000000  |................|
+# TEST17-NEXT:   0020: 00000000 03000000 02000000 00000000  |................|
+# TEST17-NEXT:   0030: 03040500 00000000 04000000 00000000  |................|
+# TEST17-NEXT:   0040: 03000000 474E5500                    |....GNU.|
+# TEST17-NEXT: )
+# TEST17:      NoteSections [
+# TEST17-NEXT:   NoteSection {
+# TEST17-NEXT:     Name: .note.foo4
+# TEST17-NEXT:     Offset:
+# TEST17-NEXT:     Size:
+# TEST17-NEXT:     Notes [
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: ABCD
+# TEST17-NEXT:         Data size: 0x2
+# TEST17-NEXT:         Type: NT_VERSION (version)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 0102                                 |..|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: 
+# TEST17-NEXT:         Data size: 0x3
+# TEST17-NEXT:         Type: NT_ARCH (architecture)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 030405                               |...|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: GNU
+# TEST17-NEXT:         Data size: 0x0
+# TEST17-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# TEST17-NEXT:         Build ID: 
+# TEST17-NEXT:       }
+# TEST17-NEXT:     ]
+# TEST17-NEXT:   }
+# TEST17-NEXT:   NoteSection {
+# TEST17-NEXT:     Name: .note.foo8
+# TEST17-NEXT:     Offset:
+# TEST17-NEXT:     Size:
+# TEST17-NEXT:     Notes [
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: ABCD
+# TEST17-NEXT:         Data size: 0x2
+# TEST17-NEXT:         Type: NT_VERSION (version)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 0102                                 |..|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: 
+# TEST17-NEXT:         Data size: 0x3
+# TEST17-NEXT:         Type: NT_ARCH (architecture)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 030405                               |...|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: GNU
+# TEST17-NEXT:         Data size: 0x0
+# TEST17-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# TEST17-NEXT:         Build ID: 
+# TEST17-NEXT:       }
+# TEST17-NEXT:     ]
+# TEST17-NEXT:   }
+# TEST17-NEXT: ]
 
 --- !ELF
 FileHeader:
-  Class: ELFCLASS64
+  Class: ELFCLASS[[ELFCLASS]]
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
-Sections:
-  - Name:         .note.foo4
-    Type:         SHT_NOTE
-    AddressAlign: 4
-    Notes:
-      - Name: ABCD
-        Type: NT_VERSION
-        Desc: 0102
-      - Type: NT_ARCH
-        Desc: 030405
-      - Name: GNU
-        Type: NT_GNU_BUILD_ID
-  - Name:        .note.foo8
-    Type:         SHT_NOTE
-    AddressAlign: 8
-    Notes:
-      - Name: ABCD
-        Type: NT_VERSION
-        Desc: 0102
-      - Type: NT_ARCH
-        Desc: 030405
-      - Name: GNU
-        Type: NT_GNU_BUILD_ID
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS32
-  Data:  ELFDATA2LSB
-  Type:  ET_REL
 Sections:
   - Name:         .note.foo4
     Type:         SHT_NOTE
