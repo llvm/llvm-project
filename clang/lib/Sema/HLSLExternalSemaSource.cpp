@@ -572,7 +572,8 @@ public:
     return *this;
   }
 
-  template <typename TLHS, typename TRHS> BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS) {
+  template <typename TLHS, typename TRHS>
+  BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS) {
     Expr *LHSExpr = convertPlaceholder(LHS);
     Expr *RHSExpr = convertPlaceholder(RHS);
     Stmt *AssignStmt = BinaryOperator::Create(
@@ -585,10 +586,11 @@ public:
 
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr) {
     Expr *PtrExpr = convertPlaceholder(Ptr);
-    Expr *Deref = UnaryOperator::Create(
-        DeclBuilder.SemaRef.getASTContext(), PtrExpr, UO_Deref, PtrExpr->getType()->getPointeeType(),
-        VK_PRValue, OK_Ordinary, SourceLocation(),
-        /*CanOverflow=*/false, FPOptionsOverride());
+    Expr *Deref =
+        UnaryOperator::Create(DeclBuilder.SemaRef.getASTContext(), PtrExpr,
+                              UO_Deref, PtrExpr->getType()->getPointeeType(),
+                              VK_PRValue, OK_Ordinary, SourceLocation(),
+                              /*CanOverflow=*/false, FPOptionsOverride());
     StmtsList.push_back(Deref);
     return *this;
   }
