@@ -56,7 +56,7 @@ class Documentation {
   // specify a replacement attribute.
   DocDeprecated Deprecated;
 
-  // When set, specifies a label that can be used to reference the documentation
+  // When set, specifies a label that can be used to reference the documentation.
   string Label = "";
 }
 
