@@ -123,7 +123,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
      << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
      << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
      << (Sym.isLive() ? "live" : "dead") << "  -   "
-     << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>");
+     << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>");
   return OS;
 }
 
@@ -135,7 +135,7 @@ void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
 
   auto &TargetSym = E.getTarget();
   if (TargetSym.hasName())
-    OS << *TargetSym.getName();
+    OS << TargetSym.getName();
   else {
     auto &TargetBlock = TargetSym.getBlock();
     auto &TargetSec = TargetBlock.getSection();
@@ -349,7 +349,7 @@ void LinkGraph::dump(raw_ostream &OS) {
             OS << formatv("-{0:x8}", -E.getAddend());
           OS << ", kind = " << getEdgeKindName(E.getKind()) << ", target = ";
           if (E.getTarget().hasName())
-            OS << *E.getTarget().getName();
+            OS << E.getTarget().getName();
           else
             OS << "addressable@"
                << formatv("{0:x16}", E.getTarget().getAddress()) << "+"
@@ -420,7 +420,7 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     ErrStream << "In graph " << G.getName() << ", section " << Sec.getName()
               << ": relocation target ";
     if (E.getTarget().hasName()) {
-      ErrStream << "\"" << *E.getTarget().getName() << "\"";
+      ErrStream << "\"" << E.getTarget().getName() << "\"";
     } else
       ErrStream << E.getTarget().getBlock().getSection().getName() << " + "
                 << formatv("{0:x}", E.getOffset());
@@ -437,7 +437,7 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
         BestSymbolForBlock = Sym;
 
     if (BestSymbolForBlock)
-      ErrStream << *BestSymbolForBlock->getName() << ", ";
+      ErrStream << BestSymbolForBlock->getName() << ", ";
     else
       ErrStream << "<anonymous block> @ ";
 
