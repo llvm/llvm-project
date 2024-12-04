@@ -2172,6 +2172,27 @@ func.func @partial_cancel_linearize_delinearize_not_fully_permuted(%arg0: index,
 
 // -----
 
+// Ensure we don't get SSA errors when creating new `affine.delinearize` operations.
+// CHECK-LABEL: func @cancel_linearize_delinearize_placement
+// CHECK-SAME: (%[[ARG0:.+]]: index)
+// CHECK: %[[C0:.+]] = arith.constant 0 : index
+// CHECK: %[[NEW_DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (8, 32) : index, index
+// CHECK-NEXT: %[[DELIN_PART:.+]]:2 = affine.delinearize_index %[[NEW_DELIN]]#1 into (8, 4) : index, index
+// CHECK-NEXT: %[[L1:.+]] = affine.linearize_index disjoint [%[[DELIN_PART]]#1, %[[NEW_DELIN]]#0, %[[C0]], %[[C0]]] by (4, 8, 4, 8)
+// CHECK-NEXT: %[[L2:.+]] = affine.linearize_index disjoint [%[[NEW_DELIN]]#1, %[[C0]], %[[C0]]] by (32, 8, 4)
+// CHECK-NEXT: %[[L3:.+]] = affine.linearize_index disjoint [%[[DELIN_PART]]#0, %[[NEW_DELIN]]#0, %[[C0]], %[[C0]]] by (8, 8, 4, 4)
+// CHECK-NEXT: return %[[L1]], %[[L2]], %[[L3]]
+func.func @cancel_linearize_delinearize_placement(%arg0: index) -> (index, index, index) {
+  %c0 = arith.constant 0 : index
+  %0:3 = affine.delinearize_index %arg0 into (8, 8, 4) : index, index, index
+  %1 = affine.linearize_index disjoint [%0#2, %0#0, %c0, %c0] by (4, 8, 4, 8) : index
+  %2 = affine.linearize_index disjoint [%0#1, %0#2, %c0, %c0] by (8, 4, 8, 4) : index
+  %3 = affine.linearize_index disjoint [%0#1, %0#0, %c0, %c0] by (8, 8, 4, 4) : index
+  return %1, %2, %3 : index, index, index
+}
+
+// -----
+
 // Won't cancel because the linearize and delinearize are using a different basis
 // CHECK-LABEL: func @no_cancel_linearize_delinearize_different_basis(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,

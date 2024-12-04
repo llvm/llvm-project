@@ -5199,7 +5199,11 @@ public:
       return rewriter.notifyMatchFailure(
           linearizeOp, "no run of delinearize outputs to deal with");
 
-    SmallVector<std::tuple<Value, Value>> delinearizeReplacements;
+    // Record all the delinearize replacements so we can do them after creating
+    // the new linearization operation, since the new operation might use
+    // outputs of something we're replacing.
+    SmallVector<SmallVector<Value>> delinearizeReplacements;
+
     SmallVector<Value> newIndex;
     newIndex.reserve(numLinArgs);
     SmallVector<OpFoldResult> newBasis;
@@ -5212,18 +5216,26 @@ public:
       // Update here so we don't forget this during early continues
       prevMatchEnd = m.linStart + m.length;
 
+      PatternRewriter::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(m.delinearize);
+
+      ArrayRef<OpFoldResult> basisToMerge =
+          linBasisRef.slice(m.linStart, m.length);
       // We use the slice from the linearize's basis above because of the
       // "bounds inferred from `disjoint`" case above.
       OpFoldResult newSize =
-          computeProduct(linearizeOp.getLoc(), rewriter,
-                         linBasisRef.slice(m.linStart, m.length));
+          computeProduct(linearizeOp.getLoc(), rewriter, basisToMerge);
 
       // Trivial case where we can just skip past the delinearize all together
       if (m.length == m.delinearize.getNumResults()) {
         newIndex.push_back(m.delinearize.getLinearIndex());
         newBasis.push_back(newSize);
+        // Pad out set of replacements so we don't do anything with this one.
+        delinearizeReplacements.push_back(SmallVector<Value>());
         continue;
       }
+
+      SmallVector<Value> newDelinResults;
       SmallVector<OpFoldResult> newDelinBasis = m.delinearize.getPaddedBasis();
       newDelinBasis.erase(newDelinBasis.begin() + m.delinStart,
                           newDelinBasis.begin() + m.delinStart + m.length);
@@ -5232,22 +5244,25 @@ public:
           m.delinearize.getLoc(), m.delinearize.getLinearIndex(),
           newDelinBasis);
 
+      // Since there may be other uses of the indices we just merged together,
+      // create a residual affine.delinearize_index that delinearizes the
+      // merged output into its component parts.
+      Value combinedElem = newDelinearize.getResult(m.delinStart);
+      auto residualDelinearize = rewriter.create<AffineDelinearizeIndexOp>(
+          m.delinearize.getLoc(), combinedElem, basisToMerge);
+
       // Swap all the uses of the unaffected delinearize outputs to the new
       // delinearization so that the old code can be removed if this
       // linearize_index is the only user of the merged results.
+      llvm::append_range(newDelinResults,
+                         newDelinearize.getResults().take_front(m.delinStart));
+      llvm::append_range(newDelinResults, residualDelinearize.getResults());
       llvm::append_range(
-          delinearizeReplacements,
-          llvm::zip_equal(
-              m.delinearize.getResults().take_front(m.delinStart),
-              newDelinearize.getResults().take_front(m.delinStart)));
-      llvm::append_range(
-          delinearizeReplacements,
-          llvm::zip_equal(
-              m.delinearize.getResults().drop_front(m.delinStart + m.length),
-              newDelinearize.getResults().drop_front(m.delinStart + 1)));
+          newDelinResults,
+          newDelinearize.getResults().drop_front(m.delinStart + 1));
 
-      Value newLinArg = newDelinearize.getResult(m.delinStart);
-      newIndex.push_back(newLinArg);
+      delinearizeReplacements.push_back(newDelinResults);
+      newIndex.push_back(combinedElem);
       newBasis.push_back(newSize);
     }
     llvm::append_range(newIndex, multiIndex.drop_front(prevMatchEnd));
@@ -5255,8 +5270,13 @@ public:
     rewriter.replaceOpWithNewOp<AffineLinearizeIndexOp>(
         linearizeOp, newIndex, newBasis, linearizeOp.getDisjoint());
 
-    for (auto [from, to] : delinearizeReplacements)
-      rewriter.replaceAllUsesWith(from, to);
+    for (auto [m, newResults] :
+         llvm::zip_equal(matches, delinearizeReplacements)) {
+      if (newResults.empty())
+        continue;
+      rewriter.replaceOp(m.delinearize, newResults);
+    }
+
     return success();
   }
 };
