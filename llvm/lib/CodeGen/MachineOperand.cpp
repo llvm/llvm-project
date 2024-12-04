@@ -911,7 +911,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   case MachineOperand::MO_GlobalAddress:
     if (const auto *GV = getGlobal())
       getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
-    else
+    else // Invalid, but may appear in debugging scenarios.
       OS << "globaladdress(null)";
 
     printOperandOffset(OS, getOffset());
