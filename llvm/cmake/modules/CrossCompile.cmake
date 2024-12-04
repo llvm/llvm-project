@@ -69,8 +69,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
   endforeach()
 
-  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND NOT LIBC_HDRGEN_EXE)
-    set(libc_flags -DLLVM_LIBC_FULL_BUILD=ON -DLIBC_HDRGEN_ONLY=ON)
+  if("libc" IN_LIST LLVM_ENABLE_PROJECTS)
+    set(libc_flags -DLLVM_LIBC_FULL_BUILD=ON)
     if(MSVC)
       # Due to some issues mentioned in llvm/projects/CMakeLists.txt, libc build is disabled by
       # default in the cross target when building with MSVC compatible compilers on Windows. Add
