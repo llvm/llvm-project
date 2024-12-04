@@ -1023,6 +1023,12 @@ struct IndexedMemProfData {
 
   // A map to hold call stack id to call stacks.
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStacks;
+
+  FrameId addFrame(const Frame &F) {
+    const FrameId Id = F.hash();
+    Frames.try_emplace(Id, F);
+    return Id;
+  }
 };
 
 struct FrameStat {
