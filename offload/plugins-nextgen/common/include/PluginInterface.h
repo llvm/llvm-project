@@ -1580,9 +1580,6 @@ protected:
   std::deque<ResourceRef> ResourcePool;
 };
 
-/// A static check on whether or not we support RPC in libomptarget.
-bool libomptargetSupportsRPC();
-
 } // namespace plugin
 } // namespace target
 } // namespace omp

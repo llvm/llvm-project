@@ -198,6 +198,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   setOperationAction(ISD::UADDO, RegVT, Custom);
 
+  // On P10, the default lowering generates better code using the
+  // setbc instruction.
+  if (!Subtarget.hasP10Vector())
+    setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
@@ -12041,6 +12046,27 @@ SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
   return Res;
 }
 
+SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  SDValue Sub = DAG.getNode(ISD::SUB, dl, MVT::i32, LHS, RHS);
+
+  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, MVT::i32, RHS, LHS);
+  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, MVT::i32, Sub, LHS);
+
+  SDValue And = DAG.getNode(ISD::AND, dl, MVT::i32, Xor1, Xor2);
+
+  SDValue Overflow = DAG.getNode(ISD::SRL, dl, MVT::i32, And,
+                                 DAG.getConstant(31, dl, MVT::i32));
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+
+  return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12063,6 +12089,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::SSUBO:
+    return LowerSSUBO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
@@ -18800,7 +18828,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   SDValue Callee =
       DAG.getExternalSymbol(LibCallName, TLI.getPointerTy(DAG.getDataLayout()));
-  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, false);
+  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, false);
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
   for (const SDValue &N : Op->op_values()) {
@@ -18808,7 +18836,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = N;
     Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, SignExtend);
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, SignExtend);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }

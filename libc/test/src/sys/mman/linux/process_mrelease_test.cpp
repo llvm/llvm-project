@@ -60,6 +60,8 @@ TEST(LlvmLibcProcessMReleaseTest, ErrorNotKilled) {
 
     EXPECT_THAT(LIBC_NAMESPACE::process_mrelease(pidfd, 0), Fails(EINVAL));
 
+    LIBC_NAMESPACE::kill(child_pid, SIGKILL);
+
     LIBC_NAMESPACE::close(pidfd);
   }
 }

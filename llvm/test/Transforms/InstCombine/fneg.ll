@@ -1099,7 +1099,7 @@ define float @test_fneg_select_constant_var_multiuse(i1 %cond, float %x) {
 
 define float @test_fneg_select_maxnum(float %x) {
 ; CHECK-LABEL: @test_fneg_select_maxnum(
-; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[SEL1:%.*]] = call nsz float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SEL1]]
 ; CHECK-NEXT:    ret float [[NEG]]
 ;

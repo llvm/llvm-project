@@ -2328,6 +2328,12 @@ class AsmCondBranchRI<string mnemonic, bits<12> opcode>
   : InstRIc<opcode, (outs), (ins imm32zx4:$M1, brtarget16:$RI2),
             mnemonic#"\t$M1, $RI2", []>;
 
+class NeverCondBranchRI<string mnemonic, bits<12> opcode>
+  : InstRIc<opcode, (outs), (ins brtarget16:$RI2),
+            mnemonic#"\t$RI2", []> {
+  let M1 = 0;
+}
+
 class FixedCondBranchRI<CondVariant V, string mnemonic, bits<12> opcode,
                         SDPatternOperator operator = null_frag>
   : InstRIc<opcode, (outs), (ins brtarget16:$RI2),
@@ -2347,6 +2353,12 @@ class AsmCondBranchRIL<string mnemonic, bits<12> opcode>
   : InstRILc<opcode, (outs), (ins imm32zx4:$M1, brtarget32:$RI2),
              mnemonic#"\t$M1, $RI2", []>;
 
+class NeverCondBranchRIL<string mnemonic, bits<12> opcode>
+  : InstRILc<opcode, (outs), (ins brtarget32:$RI2),
+             mnemonic#"\t$RI2", []> {
+  let M1 = 0;
+}
+
 class FixedCondBranchRIL<CondVariant V, string mnemonic, bits<12> opcode>
   : InstRILc<opcode, (outs), (ins brtarget32:$RI2),
              !subst("#", V.suffix, mnemonic)#"\t$RI2", []> {
@@ -2365,10 +2377,16 @@ class AsmCondBranchRR<string mnemonic, bits<8> opcode>
   : InstRR<opcode, (outs), (ins imm32zx4:$R1, GR64:$R2),
            mnemonic#"\t$R1, $R2", []>;
 
-class NeverCondBranchRR<string mnemonic, bits<8> opcode>
-  : InstRR<opcode, (outs), (ins GR64:$R2),
-           mnemonic#"\t$R2", []> {
-  let R1 = 0;
+multiclass NeverCondBranchRR<string mnemonic, bits<8> opcode> {
+  // For the no-op (always false) branch, the target is optional.
+  def "" : InstRR<opcode, (outs), (ins GR64:$R2),
+                  mnemonic#"\t$R2", []> {
+             let R1 = 0;
+           }
+  def Opt : InstRR<opcode, (outs), (ins), mnemonic, []> {
+              let R1 = 0;
+              let R2 = 0;
+            }
 }
 
 class FixedCondBranchRR<CondVariant V, string mnemonic, bits<8> opcode,
@@ -2392,11 +2410,19 @@ class AsmCondBranchRX<string mnemonic, bits<8> opcode>
             (ins imm32zx4:$M1, (bdxaddr12only $B2, $D2, $X2):$XBD2),
             mnemonic#"\t$M1, $XBD2", []>;
 
-class NeverCondBranchRX<string mnemonic, bits<8> opcode> 
-  : InstRXb<opcode, (outs),
-            (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
-            mnemonic#"\t$XBD2", []> {
-  let M1 = 0;
+multiclass NeverCondBranchRX<string mnemonic, bits<8> opcode> {
+  // For the no-op (always false) branch, the target is optional.
+  def "" : InstRXb<opcode, (outs),
+                  (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                  mnemonic#"\t$XBD2", []> {
+             let M1 = 0;
+           }
+  def Opt : InstRXb<opcode, (outs), (ins), mnemonic, []> {
+              let M1 = 0;
+              let B2 = 0;
+              let D2 = 0;
+              let X2 = 0;
+            }
 }
 
 class FixedCondBranchRX<CondVariant V, string mnemonic, bits<8> opcode>
