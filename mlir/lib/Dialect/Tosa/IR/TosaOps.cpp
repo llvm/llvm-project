@@ -321,17 +321,13 @@ static LogicalResult verifyConvOp(T op) {
            << weightEType << " and " << weightZpEType;
   }
 
-  int64_t inputZpVal;
-  if (op.getInputZeroPoint(inputZpVal).succeeded() &&
-      op.verifyInputZeroPoint(inputZpVal).failed())
-    return op.emitOpError(
-        "input zero point must be zero for non-int8 integer types");
+  FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+  if (succeeded(maybeIZp) && op.verifyInputZeroPoint(*maybeIZp).failed())
+    return failure();
 
-  int64_t weightZpVal;
-  if (op.getWeightZeroPoint(weightZpVal).succeeded() &&
-      op.verifyWeightZeroPoint(weightZpVal).failed())
-    return op.emitOpError(
-        "weight zero point must be zero for non-int8 integer types");
+  FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+  if (succeeded(maybeWZp) && op.verifyWeightZeroPoint(*maybeWZp).failed())
+    return failure();
 
   return success();
 }
@@ -455,18 +451,10 @@ LogicalResult tosa::ArgMaxOp::verify() {
 }
 
 LogicalResult tosa::AvgPool2dOp::verify() {
-  auto inputType = llvm::cast<ShapedType>(getInput().getType());
-
-  auto inputETy = inputType.getElementType();
-  auto resultETy = llvm::cast<ShapedType>(getType()).getElementType();
-
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy))
-    inputETy = quantType.getStorageType();
-
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(resultETy))
-    resultETy = quantType.getStorageType();
+  const Type inputETy = getStorageElementTypeOrSelf(getInput().getType());
+  const Type resultETy = getStorageElementTypeOrSelf(getOutput().getType());
+  const Type inputZpETy = getStorageElementTypeOrSelf(getInputZp().getType());
+  const Type outputZpETy = getStorageElementTypeOrSelf(getOutputZp().getType());
 
   auto accType = getAccType();
   if (llvm::isa<IntegerType>(inputETy) && !accType.isInteger(32))
@@ -480,6 +468,24 @@ LogicalResult tosa::AvgPool2dOp::verify() {
 
   if (inputETy.isF32() && !accType.isF32())
     return emitOpError("accumulator type for f32 tensor is not f32");
+
+  if (inputETy != inputZpETy)
+    return emitOpError("expect both input and its zero point are the same "
+                       "element type, got ")
+           << inputETy << " and " << inputZpETy;
+
+  if (resultETy != outputZpETy)
+    return emitOpError("expect both output and its zero point are the same "
+                       "element type, got ")
+           << resultETy << " and " << outputZpETy;
+
+  FailureOr<int64_t> maybeIZp = getInputZeroPoint();
+  if (succeeded(maybeIZp) && verifyInputZeroPoint(*maybeIZp).failed())
+    return failure();
+
+  FailureOr<int64_t> maybeOZp = getOutputZeroPoint();
+  if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
+    return failure();
 
   if ((inputETy.isF32() && resultETy.isF32()) ||
       (inputETy.isF16() && resultETy.isF16()) ||
@@ -629,27 +635,48 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
 }
 
 /// Both the tosa.avg_pool2d and unary ops use the same
-/// UnaruOpQuantizationAttr but avg_pool operator has its own builder as it
+/// UnaryOpQuantizationAttr but avg_pool operator has its own builder as it
 /// has additional parameters not part of the unary ops.
 static void
 buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                               Type outputType, Value input,
                               DenseArrayAttr kernel, DenseArrayAttr stride,
                               DenseArrayAttr pad, TypeAttr accType) {
-  result.addOperands(input);
+  const Location loc{result.location};
+  int64_t inputZp{0};
+  int64_t outputZp{0};
+
+  if (auto quantAttr =
+          buildUnaryOpQuantizationAttr(builder, input, outputType)) {
+    inputZp = quantAttr.getInputZp();
+    outputZp = quantAttr.getOutputZp();
+  }
+  const std::optional<Value> inputZpOp =
+      createZeroPointTensor(builder, loc, input.getType(), inputZp);
+  if (!inputZpOp) {
+    (void)emitError(
+        loc,
+        "Failed to create input zero point tensor for quantized AVG_POOL2D op");
+  }
+  const std::optional<Value> outputZpOp =
+      createZeroPointTensor(builder, loc, outputType, outputZp);
+  if (!outputZpOp) {
+    (void)emitError(loc, "Failed to create output zero point tensor for "
+                         "quantized AVG_POOL2D op");
+  }
+
+  if (inputZpOp && outputZpOp) {
+    result.addOperands({input, inputZpOp.value(), outputZpOp.value()});
+  } else {
+    // failed to create one or more zero points above: just add input as
+    // operands this will trigger error in building the op because of missing
+    // zero points
+    result.addOperands({input});
+  }
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
   result.addAttribute("pad", pad);
   result.addAttribute("acc_type", accType);
-  auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
-  if (quantAttr) {
-    result.addAttribute("input_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getInputZp())));
-    result.addAttribute("output_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getOutputZp())));
-  }
   result.types.push_back(outputType);
 }
 
@@ -1471,77 +1498,68 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
   return mlir::success();
 }
 
+// return failure if val is not a constant
+// set zp to -1 if val is non-zero float or  val is not integer nor float
+// otherwise set zp to val's constant value
 template <typename T>
-static LogicalResult getZeroPoint(T op, Value val, int64_t &zp) {
+static FailureOr<int64_t> getZeroPoint(T op, Value val) {
   ElementsAttr zpAttr;
   if (!matchPattern(val, m_Constant(&zpAttr))) {
     return failure();
   }
 
   Type zpElemType = zpAttr.getElementType();
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(zpElemType)) {
-    zp = quantType.getZeroPoint();
-    return success();
-  }
 
   if (llvm::isa<FloatType>(zpElemType)) {
-    if (!zpAttr.getValues<APFloat>()[0].isZero())
-      return op.emitOpError(
-          "non-zero zero point is not allowed for float types");
-    zp = 0;
-    return success();
+    if (zpAttr.getValues<APFloat>()[0].isZero()) {
+      return 0;
+    }
+    // return non-zero value to trigger error check
+    return -1;
   }
 
   if (llvm::isa<IntegerType>(zpElemType)) {
-    zp = zpAttr.getValues<APInt>()[0].getSExtValue();
-    return success();
+    return zpAttr.getValues<APInt>()[0].getSExtValue();
   }
 
-  return op.emitOpError("zero point is not allowed for unsupported types");
+  // return non-zero value to trigger error check
+  return -1;
 }
 
 template <typename T>
-static LogicalResult verifyZeroPoint(T op, Value val, int64_t &zp) {
-  // TODO clean it up when the entire zero point (attribute -> input tensor
-  // type) change is done. Remaining Matmul, Rescale, Negate, and AvgPool2D.
-  if constexpr (!std::is_same_v<T, Conv2DOp> && !std::is_same_v<T, Conv3DOp> &&
-                !std::is_same_v<T, DepthwiseConv2DOp> &&
-                !std::is_same_v<T, TransposeConv2DOp>)
-    return failure();
-
+static LogicalResult verifyZeroPoint(T op, Value val, const int64_t &zp,
+                                     const std::string &operand) {
   Type zpElemType = getElementTypeOrSelf(val);
 
-  if (!zpElemType.isIntOrFloat())
-    return op.emitOpError("zero point is not integer or float typss");
-
-  if (!zpElemType.isInteger(8) && zp != 0)
-    return op.emitOpError("zero point must be zero for non-int8 integer types");
-
-  if (zp < -128 || zp > 127)
-    return failure();
+  if (!zpElemType.isInteger(8) && zp != 0) {
+    // convert operand to lower case for error message
+    std::string lower = operand;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    return op.emitOpError()
+           << lower << " zero point must be zero for non-int8 integer types";
+  }
 
   return success();
 }
 
-#define ZERO_POINT_HELPER(OP)                                                  \
-  LogicalResult tosa::OP::getInputZeroPoint(int64_t &zp) {                     \
-    return getZeroPoint(*this, getInputZp(), zp);                              \
+#define ZERO_POINT_HELPER(OP, OPERAND_NAME)                                    \
+  FailureOr<int64_t> tosa::OP::get##OPERAND_NAME##ZeroPoint() {                \
+    return getZeroPoint(*this, get##OPERAND_NAME##Zp());                       \
   }                                                                            \
-  LogicalResult tosa::OP::getWeightZeroPoint(int64_t &zp) {                    \
-    return getZeroPoint(*this, getWeightZp(), zp);                             \
-  }                                                                            \
-  LogicalResult tosa::OP::verifyInputZeroPoint(int64_t zp) {                   \
-    return verifyZeroPoint(*this, getInputZp(), zp);                           \
-  }                                                                            \
-  LogicalResult tosa::OP::verifyWeightZeroPoint(int64_t zp) {                  \
-    return verifyZeroPoint(*this, getWeightZp(), zp);                          \
+  LogicalResult tosa::OP::verify##OPERAND_NAME##ZeroPoint(int64_t zp) {        \
+    return verifyZeroPoint(*this, get##OPERAND_NAME##Zp(), zp, #OPERAND_NAME); \
   }
 
-ZERO_POINT_HELPER(Conv2DOp)
-ZERO_POINT_HELPER(Conv3DOp)
-ZERO_POINT_HELPER(DepthwiseConv2DOp)
-ZERO_POINT_HELPER(TransposeConv2DOp)
+ZERO_POINT_HELPER(Conv2DOp, Input)
+ZERO_POINT_HELPER(Conv2DOp, Weight)
+ZERO_POINT_HELPER(Conv3DOp, Input)
+ZERO_POINT_HELPER(Conv3DOp, Weight)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Input)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Weight)
+ZERO_POINT_HELPER(TransposeConv2DOp, Input)
+ZERO_POINT_HELPER(TransposeConv2DOp, Weight)
+ZERO_POINT_HELPER(AvgPool2dOp, Input)
+ZERO_POINT_HELPER(AvgPool2dOp, Output)
 #undef ZERO_POINT_HELPER
 
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
