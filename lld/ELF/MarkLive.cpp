@@ -382,7 +382,7 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       enqueue(sec.nextInSectionGroup, std::nullopt, &sec);
   }
 
-  printWhyLive(ctx.symtab->find("foo"));
+  printWhyLive(ctx.symtab->find("bar"));
 }
 
 // Move the sections for some symbols to the main partition, specifically ifuncs
