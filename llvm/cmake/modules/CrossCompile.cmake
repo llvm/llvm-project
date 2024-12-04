@@ -78,6 +78,9 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
       list(APPEND libc_flags -DLLVM_FORCE_BUILD_RUNTIME=ON)
     endif()
   endif()
+  if(LLVM_LIBC_GPU_BUILD)
+    list(APPEND libc_flags -DLLVM_LIBC_GPU_BUILD=ON)
+  endif()
 
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
