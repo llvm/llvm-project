@@ -9,7 +9,15 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/TableGen/Record.h"
+#include <cstddef>
+#include <cstdint>
+#include <utility>
 
 namespace {
 class AArch64ELFStreamer;
@@ -83,20 +91,33 @@ public:
   virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
+  /// Build attributes implementation
+  virtual void emitSubsection(unsigned Vendor, unsigned IsMandatory, unsigned ParameterType) {}
+  virtual void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value, bool Override) {}
+
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
 };
 
 class AArch64TargetELFStreamer : public AArch64TargetStreamer {
 private:
+  StringRef CurrentVendor;
   AArch64ELFStreamer &getStreamer();
+
+  MCSection *AttributeSection = nullptr;
+  SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
+
+  /// Build attributes implementation
+  void emitSubsection(unsigned Vendor, unsigned IsMandatory, unsigned ParameterType) override;
+  void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value, bool Override) override;
 
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
   void finish() override;
 
 public:
-  AArch64TargetELFStreamer(MCStreamer &S) : AArch64TargetStreamer(S) {}
+  AArch64TargetELFStreamer(MCStreamer &S)
+    : AArch64TargetStreamer(S), CurrentVendor("aeabi") {}
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {

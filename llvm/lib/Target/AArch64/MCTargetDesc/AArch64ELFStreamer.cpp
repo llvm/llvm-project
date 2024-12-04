@@ -34,6 +34,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -47,6 +48,8 @@ class AArch64ELFStreamer;
 
 class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   formatted_raw_ostream &OS;
+  std::string VendorTag;
+  bool IsVerboseAsm;
 
   void emitInst(uint32_t Inst) override;
 
@@ -150,13 +153,80 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.seh_save_any_reg_px\tq" << Reg << ", " << Offset << "\n";
   }
 
+  void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value, bool Override) override {
+    // AArch64 build attributes for assembly attribute form:
+    // .aeabi_attribute tag, value
+
+    switch(Vendor) {
+      default: llvm_unreachable("unknown AArch64 build attributes subsection name");
+
+      case ARMBuildAttrs::AEBI_FEATURE_AND_BITS:
+        switch(Tag) {
+          default: llvm_unreachable("unknown tag for the feature-and-bits subsection");
+          case ARMBuildAttrs::Tag_Feature_BTI:
+            OS << "\t.aeabi_attribute\t" << "Tag_Feature_BTI" << ", " << Value;
+            break;
+          case ARMBuildAttrs::Tag_Feature_GCS:
+            OS << "\t.aeabi_attribute\t" << "Tag_Feature_GCS" << ", " << Value;
+            break;
+          case ARMBuildAttrs::Tag_Feature_PAC:
+            OS << "\t.aeabi_attribute\t" << "Tag_Feature_PAC" << ", " << Value;
+            break;
+        }
+        break;
+
+      case ARMBuildAttrs::AEBI_PAUTHABI:
+        switch(Tag) {
+          default: llvm_unreachable("unknown tag for the feature-and-bits subsection");
+          case ARMBuildAttrs::Tag_PAuth_Platform:
+            OS << "\t.aeabi_attribute\t" << "Tag_PAuth_Platform" << ", " << Value;
+            break;
+          case ARMBuildAttrs::Tag_PAuth_Schema:
+            OS << "\t.aeabi_attribute\t" << "Tag_PAuth_Schema" << ", " << Value;
+            break;
+        break;
+        }
+    }
+    OS << "\n";
+  }
+
+  void emitSubsection(unsigned SubsectionName, unsigned Optional, unsigned ParameterType) override {
+    // The AArch64 build attributes assembly subsection header format:
+    // ".aeabi_subsection name, optional, parameter type"
+    // optional: required (0) optional (1)
+    // parameter type: uleb128 or ULEB128 (0) ntbs or NTBS (1)
+
+    assert((Optional == 0 || Optional == 1) && "unsupported parameter for Optional");
+    assert((ParameterType == 0 || ParameterType == 1) && "unsupported parameter for ParameterType");
+
+    StringRef OptionalStr = Optional ? "optional" : "required";
+    StringRef ParameterStr = ParameterType ? "NTBS" : "ULEB128";
+
+    switch(SubsectionName) {
+      default: llvm_unreachable("unknown AArch64 build attributes subsection name");
+
+      case ARMBuildAttrs::AEBI_FEATURE_AND_BITS:
+        assert(Optional == 1 && "subsection .aeabi-feature-and-bits should be marked as optional and not as mandatory");
+        assert(ParameterType == 0 && "subsection .aeabi-feature-and-bits should be marked as uleb128 and not as ntbs");
+        OS << "\t.aeabi_subsection\t" << ".aeabi-feature-and-bits" << ", " << OptionalStr << ", " << ParameterStr;
+        break;
+
+      case ARMBuildAttrs::AEBI_PAUTHABI:
+        assert(Optional == 0 && "subsection .aeabi-pauthabi should be marked as mandatory and not as optional");
+        assert(ParameterType == 0 && "subsection .aeabi-pauthabi should be marked as uleb128 and not as ntbs");
+        OS << "\t.aeabi_subsection\t" << ".aeabi-pauthabi" << ", " << OptionalStr << ", " << ParameterStr;
+        break;
+    }
+    OS << "\n";
+  }
+
 public:
   AArch64TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 };
 
 AArch64TargetAsmStreamer::AArch64TargetAsmStreamer(MCStreamer &S,
                                                    formatted_raw_ostream &OS)
-  : AArch64TargetStreamer(S), OS(OS) {}
+  : AArch64TargetStreamer(S), OS(OS), VendorTag("eabi"), IsVerboseAsm(S.isVerboseAsm()) {}
 
 void AArch64TargetAsmStreamer::emitInst(uint32_t Inst) {
   OS << "\t.inst\t0x" << Twine::utohexstr(Inst) << "\n";
@@ -296,6 +366,53 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
   return static_cast<AArch64ELFStreamer &>(Streamer);
 }
 
+void AArch64TargetELFStreamer::emitSubsection(unsigned Vendor, unsigned IsMandatory, unsigned ParameterType) {
+  StringRef VendorAsStr = ARMBuildAttrs::vendorToStr(Vendor);
+
+  // If exists, return.
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (SubSection.Vendor == VendorAsStr) {
+      llvm_unreachable("AArch64 build attributes subsection already exists");
+      return;
+    }
+  }
+  // else, add the subsection
+  MCELFStreamer::AttributeSubSection AttSubSection;
+  AttSubSection.Vendor = VendorAsStr;
+  AttSubSection.IsMandatory = IsMandatory;
+  AttSubSection.ParameterType = ParameterType;
+  AttributeSubSections.push_back(AttSubSection);
+}
+
+void AArch64TargetELFStreamer::emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value, bool Override) {
+  StringRef VendorAsStr = ARMBuildAttrs::vendorToStr(Vendor);
+
+  if (AttributeSubSections.size() == 0) {
+    llvm_unreachable("Attribute can not be added unless the required AArch64 build attributes subsection exists");
+    return;
+  }
+
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (SubSection.Vendor == VendorAsStr) {
+      for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
+        if (Item.Tag == Tag) {
+          if (!Override) {
+            llvm_unreachable("Attribute exists but override is set to false");
+            return;
+          }
+        }
+      }
+      MCELFStreamer::AttributeItem AttItem;
+      AttItem.Type = AttItem.NumericAttribute;
+      AttItem.Tag = Tag;
+      AttItem.IntValue = Value;
+      SubSection.Content.push_back(AttItem);
+      return;
+    }
+  }
+  llvm_unreachable("Attribute can not be added unless the required AArch64 build attributes subsection exists");
+}
+
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
   getStreamer().emitInst(Inst);
 }
@@ -310,6 +427,9 @@ void AArch64TargetELFStreamer::finish() {
   AArch64ELFStreamer &S = getStreamer();
   MCContext &Ctx = S.getContext();
   auto &Asm = S.getAssembler();
+
+  S.emitAttributesSection(AttributeSection, ".ARM.attributes",
+                          ELF::SHT_AARCH64_ATTRIBUTES, AttributeSubSections);
 
   // If ImplicitMapSyms is specified, ensure that text sections end with
   // the A64 state while non-text sections end with the data state. When

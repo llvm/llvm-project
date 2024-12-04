@@ -330,7 +330,7 @@ private:
 
   void emitAttribute(uint32_t Attribute, uint32_t Value) override {
     getStreamer().setAttributeItem(Attribute, Value,
-                                   /*OverwriteExisting=*/true);
+                                   /*OverwriteExisting=*/true, getStreamer().Contents);
   }
 };
 

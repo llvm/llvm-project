@@ -54,6 +54,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -177,6 +178,9 @@ public:
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
+
+  // Emit Build Attributes
+  void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform, uint64_t PAuthABIVersion, AArch64TargetStreamer* TS);
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
@@ -310,36 +314,51 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (!TT.isOSBinFormatELF())
     return;
 
-  // Assemble feature flags that may require creation of a note section.
-  unsigned Flags = 0;
+  // For emitting build attributes and .note.gnu.property section
+  auto *TS = static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+  // Assemble feature flags that may require creation of build attributes and a note section.
+  unsigned BAFlags = 0;
+  unsigned GNUFlags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("branch-target-enforcement")))
-    if (!BTE->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+          M.getModuleFlag("branch-target-enforcement"))) {
+    if (!BTE->isZero()) {
+      BAFlags |= ARMBuildAttrs::PauthabiTagsFlag::Feature_BTI_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    }
+  }
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("guarded-control-stack")))
-    if (!GCS->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+          M.getModuleFlag("guarded-control-stack"))) {
+    if (!GCS->isZero()) {
+      BAFlags |= ARMBuildAttrs::PauthabiTagsFlag::Feature_GCS_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+    }
+  }
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("sign-return-address")))
-    if (!Sign->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+          M.getModuleFlag("sign-return-address"))) {
+    if (!Sign->isZero()) {
+      BAFlags |= ARMBuildAttrs::PauthabiTagsFlag::Feature_PAC_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+    }
+  }
 
   uint64_t PAuthABIPlatform = -1;
   if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-platform")))
+          M.getModuleFlag("aarch64-elf-pauthabi-platform"))) {
     PAuthABIPlatform = PAP->getZExtValue();
+  }
+
   uint64_t PAuthABIVersion = -1;
   if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-version")))
+          M.getModuleFlag("aarch64-elf-pauthabi-version"))) {
     PAuthABIVersion = PAV->getZExtValue();
+  }
 
+  // Emit AArch64 Build Attributes
+  emitAttributes(BAFlags, PAuthABIPlatform, PAuthABIVersion, TS);
   // Emit a .note.gnu.property section with the flags.
-  auto *TS =
-      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitNoteSection(Flags, PAuthABIPlatform, PAuthABIVersion);
+  TS->emitNoteSection(GNUFlags, PAuthABIPlatform, PAuthABIVersion);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
@@ -410,6 +429,29 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
+}
+
+void AArch64AsmPrinter::emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform, uint64_t PAuthABIVersion, AArch64TargetStreamer* TS) {
+
+  PAuthABIPlatform = (PAuthABIPlatform == uint64_t(-1)) ? 0 : PAuthABIPlatform;
+  PAuthABIVersion = (PAuthABIVersion == uint64_t(-1)) ? 0 : PAuthABIVersion;
+
+  if(PAuthABIPlatform || PAuthABIVersion) {
+    TS->emitSubsection(ARMBuildAttrs::AEBI_PAUTHABI, 0, 0);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI, ARMBuildAttrs::Tag_PAuth_Platform, PAuthABIPlatform, false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI, ARMBuildAttrs::Tag_PAuth_Schema, PAuthABIVersion, false);
+  }
+
+  unsigned BTIValue = (Flags & ARMBuildAttrs::Feature_BTI_Flag) ? 1 : 0;
+  unsigned PACValue = (Flags & ARMBuildAttrs::Feature_PAC_Flag) ? 1 : 0;
+  unsigned GCSValue = (Flags & ARMBuildAttrs::Feature_GCS_Flag) ? 1 : 0;
+
+  if(BTIValue || PACValue || GCSValue) {
+    TS->emitSubsection(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, 1, 0);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, ARMBuildAttrs::Tag_Feature_BTI, BTIValue, false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, ARMBuildAttrs::Tag_Feature_PAC, PACValue, false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, ARMBuildAttrs::Tag_Feature_GCS, GCSValue, false);
+  }
 }
 
 // Emit the following code for Intrinsic::{xray_customevent,xray_typedevent}

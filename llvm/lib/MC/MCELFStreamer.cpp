@@ -638,9 +638,9 @@ void MCELFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 }
 
 void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
-                                     bool OverwriteExisting) {
+                                     bool OverwriteExisting, SmallVector<AttributeItem, 64> &Attributes) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute, Attributes)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::NumericAttribute;
@@ -655,9 +655,9 @@ void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
 }
 
 void MCELFStreamer::setAttributeItem(unsigned Attribute, StringRef Value,
-                                     bool OverwriteExisting) {
+                                     bool OverwriteExisting, SmallVector<AttributeItem, 64> &Attributes) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute, Attributes)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::TextAttribute;
@@ -673,9 +673,9 @@ void MCELFStreamer::setAttributeItem(unsigned Attribute, StringRef Value,
 
 void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
                                       StringRef StringValue,
-                                      bool OverwriteExisting) {
+                                      bool OverwriteExisting, SmallVector<AttributeItem, 64> &Attributes) {
   // Look for existing attribute item
-  if (AttributeItem *Item = getAttributeItem(Attribute)) {
+  if (AttributeItem *Item = getAttributeItem(Attribute, Attributes)) {
     if (!OverwriteExisting)
       return;
     Item->Type = AttributeItem::NumericAndTextAttributes;
@@ -691,15 +691,15 @@ void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
 }
 
 MCELFStreamer::AttributeItem *
-MCELFStreamer::getAttributeItem(unsigned Attribute) {
-  for (AttributeItem &Item : Contents)
+MCELFStreamer::getAttributeItem(unsigned Attribute, SmallVector<AttributeItem, 64> &Attributes) {
+  for (AttributeItem &Item : Attributes)
     if (Item.Tag == Attribute)
       return &Item;
   return nullptr;
 }
 
 size_t
-MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) {
+MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) const {
   size_t Result = 0;
   for (const AttributeItem &Item : AttrsVec) {
     switch (Item.Type) {
@@ -783,6 +783,64 @@ void MCELFStreamer::createAttributesSection(
   }
 
   AttrsVec.clear();
+}
+
+void MCELFStreamer::createAttributesSection(MCSection *&AttributeSection,
+  const Twine &Section, unsigned Type, SmallVector<AttributeSubSection, 64> &SubSectionVec) {
+// <format-version: 'A'>
+// [ <uint32: subsection-length> NTBS: vendor-name
+//   <bytes: vendor-data>
+// ]*
+// vendor-data expends to:
+// <uint8: optional> <uint8: parameter type> <attribute>*
+  if (SubSectionVec.size() == 0) {
+    return;
+  }
+
+  // Switch section to AttributeSection or get/create the section.
+  if (AttributeSection) {
+    switchSection(AttributeSection);
+  } else {
+    AttributeSection = getContext().getELFSection(Section, Type, 0);
+    switchSection(AttributeSection);
+
+    // Format version
+    emitInt8(0x41);
+  }
+
+  for (AttributeSubSection &SubSection : SubSectionVec) {
+    // subsection-length + vendor-name + '\0'
+    const size_t VendorHeaderSize = 4 + SubSection.Vendor.size() + 1;
+    // optional + parameter-type
+    const size_t VendorParameters = 1 + 1;
+    const size_t ContentsSize = calculateContentSize(SubSection.Content);
+
+    emitInt32(VendorHeaderSize + VendorParameters + ContentsSize);
+    emitBytes(SubSection.Vendor);
+    emitInt8(SubSection.IsMandatory);
+    emitInt8(SubSection.ParameterType);
+
+    for (AttributeItem &Item : SubSection.Content) {
+      emitULEB128IntValue(Item.Tag);
+      switch (Item.Type) {
+        default:
+          llvm_unreachable("Invalid attribute type");
+        case AttributeItem::NumericAttribute:
+          emitULEB128IntValue(Item.IntValue);
+          break;
+        case AttributeItem::TextAttribute:
+          emitBytes(Item.StringValue);
+          emitInt8(0); // '\0'
+          break;
+        case AttributeItem::NumericAndTextAttributes:
+          emitULEB128IntValue(Item.IntValue);
+          emitBytes(Item.StringValue);
+          emitInt8(0); // '\0'
+          break;
+      }
+    }
+  }
+  SubSectionVec.clear();
 }
 
 MCStreamer *llvm::createELFStreamer(MCContext &Context,
