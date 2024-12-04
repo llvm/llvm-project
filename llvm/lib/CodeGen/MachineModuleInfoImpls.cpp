@@ -14,8 +14,6 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
