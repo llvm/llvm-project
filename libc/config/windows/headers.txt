@@ -8,7 +8,6 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.float
     libc.include.inttypes
     libc.include.limits
-    libc.include.link
     libc.include.locale
     libc.include.malloc
     libc.include.math
