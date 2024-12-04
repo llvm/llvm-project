@@ -626,13 +626,14 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
     return ParseResult::retry_no_bind_generic_params;
   }
 
-  if (stack_frame) {
+  auto ts = m_swift_ast_ctx->GetTypeSystemSwiftTypeRef();
+  if (ts && stack_frame) {
     // Extract the generic signature of the context.
     ConstString func_name =
         stack_frame->GetSymbolContext(lldb::eSymbolContextFunction)
             .GetFunctionName(Mangled::ePreferMangled);
     m_generic_signature = SwiftLanguageRuntime::GetGenericSignature(
-        func_name.GetStringRef(), m_swift_ast_ctx->GetTypeSystemSwiftTypeRef());
+        func_name.GetStringRef(), *ts);
   }
 
   if (m_options.GetBindGenericTypes() == lldb::eDontBind &&

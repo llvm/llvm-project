@@ -44,14 +44,15 @@ public:
 
 struct SwiftASTContextTester : public SwiftASTContext {
   #ifndef NDEBUG
-    SwiftASTContextTester() : SwiftASTContext() {}
-  #endif
+  SwiftASTContextTester()
+      : SwiftASTContext(), m_typeref_typesystem(new TypeSystemSwiftTypeRef()) {}
+#endif
 
-  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
+  TypeSystemSwiftTypeRefSP GetTypeSystemSwiftTypeRef() override {
     return m_typeref_typesystem;
   }
 
-  TypeSystemSwiftTypeRef m_typeref_typesystem;
+  TypeSystemSwiftTypeRefSP m_typeref_typesystem;
 };
 
 TEST_F(TestSwiftASTContext, IsNonTriviallyManagedReferenceType) {

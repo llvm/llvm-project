@@ -56,10 +56,13 @@ static llvm::Expected<std::string> TransformPackType(
   if (!tss)
     return llvm::createStringError(llvm::errc::not_supported,
                                    "unexpected typesystem");
-  auto &ts = tss->GetTypeSystemSwiftTypeRef();
+  auto ts = tss->GetTypeSystemSwiftTypeRef();
+  if (!ts)
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "no typeref typesystem");
   using namespace swift::Demangle;
   Demangler dem;
-  NodePointer node = ts.GetCanonicalDemangleTree(
+  NodePointer node = ts->GetCanonicalDemangleTree(
       dem, type.GetMangledTypeName().GetStringRef());
 
   node = TypeSystemSwiftTypeRef::Transform(dem, node, [](NodePointer n) {
@@ -73,7 +76,7 @@ static llvm::Expected<std::string> TransformPackType(
   });
 
   bool error = false;
-  ConstString type_name = ts.RemangleAsType(dem, node).GetMangledTypeName();
+  ConstString type_name = ts->RemangleAsType(dem, node).GetMangledTypeName();
   swift::Demangle::DemangleOptions options;
   options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
   options.DisplayStdlibModule = false;

@@ -34,6 +34,7 @@ class TypeSystemSwift;
 class TypeSystemSwiftTypeRef;
 class TypeSystemSwiftTypeRefForExpressions;
 typedef std::shared_ptr<TypeSystemSwift> TypeSystemSwiftSP;
+typedef std::shared_ptr<TypeSystemSwiftTypeRef> TypeSystemSwiftTypeRefSP;
 typedef std::shared_ptr<TypeSystemSwiftTypeRefForExpressions>
     TypeSystemSwiftTypeRefForExpressionsSP;
 typedef std::shared_ptr<SwiftASTContext> SwiftASTContextSP;
@@ -127,8 +128,9 @@ public:
   static LanguageSet GetSupportedLanguagesForTypes();
   virtual SwiftASTContextSP
   GetSwiftASTContext(const SymbolContext &sc) const = 0;
-  virtual TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() = 0;
-  virtual const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const = 0;
+  virtual TypeSystemSwiftTypeRefSP GetTypeSystemSwiftTypeRef() = 0;
+  virtual std::shared_ptr<const TypeSystemSwiftTypeRef>
+  GetTypeSystemSwiftTypeRef() const = 0;
   virtual void SetTriple(const SymbolContext &sc,
                          const llvm::Triple triple) = 0;
   virtual void ClearModuleDependentCaches() = 0;

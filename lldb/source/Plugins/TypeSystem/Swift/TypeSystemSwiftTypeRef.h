@@ -75,9 +75,13 @@ public:
   /// Return SwiftASTContext, iff one has already been created.
   virtual SwiftASTContextSP
   GetSwiftASTContextOrNull(const SymbolContext &sc) const;
-  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
-  const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
-    return *this;
+  TypeSystemSwiftTypeRefSP GetTypeSystemSwiftTypeRef() override {
+    return std::static_pointer_cast<TypeSystemSwiftTypeRef>(shared_from_this());
+  }
+  std::shared_ptr<const TypeSystemSwiftTypeRef>
+  GetTypeSystemSwiftTypeRef() const override {
+    return std::static_pointer_cast<const TypeSystemSwiftTypeRef>(
+        shared_from_this());
   }
   SwiftDWARFImporterForClangTypes &GetSwiftDWARFImporterForClangTypes();
   ClangNameImporter *GetNameImporter() const;

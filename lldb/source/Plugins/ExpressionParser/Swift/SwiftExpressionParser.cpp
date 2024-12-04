@@ -1118,14 +1118,16 @@ AddArchetypeTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
   if (!runtime)
     return llvm::createStringError("no runtime");
 
-  auto &typeref_typesystem = swift_ast_context.GetTypeSystemSwiftTypeRef();
+  auto typeref_typesystem = swift_ast_context.GetTypeSystemSwiftTypeRef();
+  if (!typeref_typesystem)
+    return llvm::createStringError("no typeref typesystem");
 
   // Skip this for variadic generic functions.
   ConstString func_name =
       stack_frame.GetSymbolContext(lldb::eSymbolContextFunction)
           .GetFunctionName(Mangled::ePreferMangled);
   if (auto signature = SwiftLanguageRuntime::GetGenericSignature(
-          func_name.GetStringRef(), typeref_typesystem))
+          func_name.GetStringRef(), *typeref_typesystem))
     if (signature->pack_expansions.size())
       return llvm::createStringError("[AddArchetypeTypeAliases] Variadic "
                                      "generic functions are not supported.");
@@ -1180,7 +1182,7 @@ AddArchetypeTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     MetadataPointerInfo &info = pair.getSecond();
 
     auto dependent_type =
-        typeref_typesystem.CreateGenericTypeParamType(info.depth, info.index);
+        typeref_typesystem->CreateGenericTypeParamType(info.depth, info.index);
     auto bound_type =
         runtime->BindGenericTypeParameters(stack_frame, dependent_type);
     if (!bound_type) {
