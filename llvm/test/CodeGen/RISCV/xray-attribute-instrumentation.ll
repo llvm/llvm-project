@@ -5,15 +5,15 @@ define i32 @foo() nounwind "function-instrument"="xray-always" {
 ; CHECK:                        .p2align 2
 ; CHECK-LABEL:                  .Lxray_sled_0:
 ; CHECK-NEXT:                   j .Ltmp0
-; CHECK-COUNT-25:               nop
-; CHECK-RISCV64-COUNT-8:        nop
+; CHECK-COUNT-21:               nop
+; CHECK-RISCV64-COUNT-12:       nop
 ; CHECK-LABEL:                  .Ltmp0:
   ret i32 0
 ; CHECK:                        .p2align 2
 ; CHECK-LABEL:                  .Lxray_sled_1:
 ; CHECK-NEXT:                   j .Ltmp1
-; CHECK-COUNT-25:               nop
-; CHECK-RISCV64-COUNT-8:        nop
+; CHECK-COUNT-21:               nop
+; CHECK-RISCV64-COUNT-12:       nop
 ; CHECK-LABEL:                  .Ltmp1:
 ; CHECK-NEXT:                   ret
 }

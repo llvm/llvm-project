@@ -501,19 +501,19 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
   // .Lxray_sled_N
   //   ALIGN
   //   J .tmpN
-  //   25 or 33 C.NOP instructions
+  //   21 or 33 C.NOP instructions
   // .tmpN
 
   // The following variable holds the count of the number of NOPs to be patched
   // in for XRay instrumentation during compilation.
-  // Note that RV64 and RV32 each has a sled of 68 and 52 bytes, respectively.
+  // Note that RV64 and RV32 each has a sled of 68 and 44 bytes, respectively.
   // Assuming we're using JAL to jump to .tmpN, then we only need
-  // (68 - 4)/2 = 32 NOPs for RV64 and (52 - 4)/2 = 24 for RV32. However, there
+  // (68 - 4)/2 = 32 NOPs for RV64 and (44 - 4)/2 = 20 for RV32. However, there
   // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
   const uint8_t NoopsInSledCount =
       MI->getParent()->getParent()->getSubtarget<RISCVSubtarget>().is64Bit()
           ? 33
-          : 25;
+          : 21;
 
   OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);

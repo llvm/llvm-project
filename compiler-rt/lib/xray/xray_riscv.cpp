@@ -54,7 +54,7 @@ static inline uint32_t encodeITypeInstruction(uint32_t Opcode, uint32_t Rs1,
 
 static inline uint32_t encodeSTypeInstruction(uint32_t Opcode, uint32_t Rs1,
                                               uint32_t Rs2, uint32_t Imm) {
-  uint32_t ImmMSB = (Imm & 0xfe0) << 25;
+  uint32_t ImmMSB = (Imm & 0xfe0) << 20;
   uint32_t ImmLSB = (Imm & 0x01f) << 7;
   return ImmMSB | Rs2 << 20 | Rs1 << 15 | ImmLSB | Opcode;
 }
@@ -66,10 +66,10 @@ static inline uint32_t encodeUTypeInstruction(uint32_t Opcode, uint32_t Rd,
 
 static inline uint32_t encodeJTypeInstruction(uint32_t Opcode, uint32_t Rd,
                                               uint32_t Imm) {
-  uint32_t ImmMSB = (Imm & 0x100000) << 31;
-  uint32_t ImmLSB = (Imm & 0x7fe) << 21;
-  uint32_t Imm11 = (Imm & 0x800) << 20;
-  uint32_t Imm1912 = (Imm & 0xff000) << 12;
+  uint32_t ImmMSB = (Imm & 0x100000) << 11;
+  uint32_t ImmLSB = (Imm & 0x7fe) << 20;
+  uint32_t Imm11 = (Imm & 0x800) << 9;
+  uint32_t Imm1912 = (Imm & 0xff000);
   return ImmMSB | ImmLSB | Imm11 | Imm1912 | Rd << 7 | Opcode;
 }
 
@@ -91,24 +91,22 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
   //
   // xray_sled_n (32-bit):
   //    addi sp, sp, -16                                ;create stack frame
-  //    sw ra, 12(sp)                                   ;save return address
-  //    sw t1, 8(sp)                                    ;save register t1
-  //    sw a0, 4(sp)                                    ;save register a0
+  //    sw ra, 12(sp)                                    ;save return address
+  //    sw a0, 8(sp)                                    ;save register a0
   //    lui ra, %hi(__xray_FunctionEntry/Exit)
   //    addi ra, ra, %lo(__xray_FunctionEntry/Exit)
   //    lui a0, %hi(function_id)
   //    addi a0, a0, %lo(function_id)                   ;pass function id
   //    jalr ra                                         ;call Tracing hook
-  //    lw a0, 4(sp)                                    ;restore register a0
-  //    lw t1, 8(sp)                                    ;restore register t1
-  //    lw ra, 12(sp)                                   ;restore return address
+  //    lw a0, 8(sp)                                    ;restore register a0
+  //    lw ra, 12(sp)                                    ;restore return address
   //    addi sp, sp, 16                                 ;delete stack frame
   //
   // xray_sled_n (64-bit):
   //    addi sp, sp, -32                                ;create stack frame
   //    sd ra, 24(sp)                                   ;save return address
-  //    sd t1, 16(sp)                                   ;save register t1
-  //    sd a0, 8(sp)                                    ;save register a0
+  //    sd a0, 16(sp)                                   ;save register a0
+  //    sd t1, 8(sp)                                    ;save register t1
   //    lui t1, %highest(__xray_FunctionEntry/Exit)
   //    addi t1, t1, %higher(__xray_FunctionEntry/Exit)
   //    slli t1, t1, 32
@@ -118,8 +116,8 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
   //    lui a0, %hi(function_id)
   //    addi a0, a0, %lo(function_id)                   ;pass function id
   //    jalr ra                                         ;call Tracing hook
-  //    ld a0, 8(sp)                                    ;restore register a0
-  //    ld t1, 16(sp)                                   ;restore register t1
+  //    ld t1, 8(sp)                                    ;restore register t1
+  //    ld a0, 16(sp)                                   ;restore register a0
   //    ld ra, 24(sp)                                   ;restore return address
   //    addi sp, sp, 32                                 ;delete stack frame
   //
@@ -129,7 +127,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
   // latter is ready.
   //
   // When |Enable|==false, we set back the first instruction in the sled to be
-  //   J 52 bytes (rv32)
+  //   J 44 bytes (rv32)
   //   J 68 bytes (rv64)
 
   uint32_t *Address = reinterpret_cast<uint32_t *>(Sled.address());
@@ -170,11 +168,11 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
     Address[Idx++] = encodeSTypeInstruction(StoreOp, RegNum::RN_SP,
                                             RegNum::RN_RA, 3 * XLenBytes);
     Address[Idx++] = encodeSTypeInstruction(StoreOp, RegNum::RN_SP,
-                                            RegNum::RN_T1, 2 * XLenBytes);
-    Address[Idx++] = encodeSTypeInstruction(StoreOp, RegNum::RN_SP,
-                                            RegNum::RN_A0, XLenBytes);
+                                            RegNum::RN_A0, 2 * XLenBytes);
 
 #if __riscv_xlen == 64
+    Address[Idx++] = encodeSTypeInstruction(StoreOp, RegNum::RN_SP,
+                                            RegNum::RN_T1, XLenBytes);
     Address[Idx++] = encodeUTypeInstruction(PatchOpcodes::PO_LUI, RegNum::RN_T1,
                                             HighestTracingHookAddr);
     Address[Idx++] =
@@ -198,10 +196,12 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
     Address[Idx++] = encodeITypeInstruction(PatchOpcodes::PO_JALR,
                                             RegNum::RN_RA, RegNum::RN_RA, 0);
 
+#if __riscv_xlen == 64
     Address[Idx++] =
-        encodeITypeInstruction(LoadOp, RegNum::RN_SP, RegNum::RN_A0, XLenBytes);
+        encodeITypeInstruction(LoadOp, RegNum::RN_SP, RegNum::RN_T1, XLenBytes);
+#endif
     Address[Idx++] = encodeITypeInstruction(LoadOp, RegNum::RN_SP,
-                                            RegNum::RN_T1, 2 * XLenBytes);
+                                            RegNum::RN_A0, 2 * XLenBytes);
     Address[Idx++] = encodeITypeInstruction(LoadOp, RegNum::RN_SP,
                                             RegNum::RN_RA, 3 * XLenBytes);
     Address[Idx++] = encodeITypeInstruction(
@@ -222,7 +222,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
         68); // jump encodes an offset of 68
 #elif __riscv_xlen == 32
         PatchOpcodes::PO_J, RegNum::RN_X0,
-        52); // jump encodes an offset of 52
+        44); // jump encodes an offset of 44
 #endif
     std::atomic_store_explicit(
         reinterpret_cast<std::atomic<uint32_t> *>(Address), CreateBranch,

@@ -32,7 +32,7 @@ ASM_SYMBOL(__xray_FunctionEntry):
 	// If we reach here, we are tracing an event
 	// a0 already contains function id
 	// a1 = 0 means we are tracing an entry event
-	mv	a1, x0
+	li	a1, 0
 	jalr	a2
 
 1:
@@ -59,7 +59,7 @@ ASM_SYMBOL(__xray_FunctionExit):
 	// If we reach here, we are tracing an event
 	// a0 already contains function id
 	// a1 = 1 means we are tracing an exit event
-	addi	a1, x0, 1
+	li	a1, 1
 	jalr	a2
 
 1:
@@ -86,7 +86,7 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 	// If we reach here, we are tracing an event
 	// a0 already contains function id
 	// a1 = 2 means we are tracing a tail exit event
-	addi	a1, x0, 2
+	li	a1, 2
 	jalr	a2
 
 1:

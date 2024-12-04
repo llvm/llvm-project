@@ -238,7 +238,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     case Triple::ArchType::riscv64: {
       // For the architectures which don't have a single return instruction
       InstrumentationOptions op;
-      // RISC-V support patching tail calls.
+      // RISC-V supports patching tail calls.
       op.HandleTailcall = MF.getTarget().getTargetTriple().isRISCV();
       op.HandleAllReturns = true;
       prependRetWithPatchableExit(MF, TII, op);
