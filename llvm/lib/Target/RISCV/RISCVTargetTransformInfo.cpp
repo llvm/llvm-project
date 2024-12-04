@@ -2005,18 +2005,29 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   }
 
   // When the vector needs to split into multiple register groups and the index
-  // exceeds single vector register group, we need to extract the element via
-  // stack.
-  if (Opcode == Instruction::ExtractElement && LT.first > 1 &&
-      ((Index == -1U) || (Index > LT.second.getVectorMinNumElements() &&
+  // exceeds single vector register group, we need to insert/extract the element
+  // via stack.
+  if (LT.first > 1 &&
+      ((Index == -1U) || (Index >= LT.second.getVectorMinNumElements() &&
                           LT.second.isScalableVector()))) {
     Type *ScalarType = Val->getScalarType();
     Align VecAlign = DL.getPrefTypeAlign(Val);
     Align SclAlign = DL.getPrefTypeAlign(ScalarType);
+
     // Store all split vectors into stack and load the target element.
-    return LT.first *
-               getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
-           getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
+    if (Opcode == Instruction::ExtractElement)
+      return LT.first * getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
+                                        CostKind) +
+             getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
+                             CostKind);
+
+    // Store all split vectors into stack and store the target element and load
+    // vectors back.
+    return LT.first * (getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
+                                       CostKind) +
+                       getMemoryOpCost(Instruction::Load, Val, VecAlign, 0,
+                                       CostKind)) +
+           getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
                            CostKind);
   }
 
