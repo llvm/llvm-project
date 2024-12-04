@@ -2363,6 +2363,8 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
            Kind == SK::ClassMethod || Kind == SK::StaticMethod ||
            Kind == SK::Constructor || Kind == SK::Destructor ||
            Kind == SK::ConversionFunction);
+    (void)Kind;
+    (void)SK::Function;
 
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
