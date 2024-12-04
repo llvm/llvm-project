@@ -262,8 +262,8 @@ def UIMM16 : SDNodeXForm<imm, [{
 
 // Truncate an immediate to a 32-bit signed quantity.
 def SIMM32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int32_t(N->getZExtValue()), SDLoc(N),
-                                   MVT::i64);
+  return CurDAG->getSignedTargetConstant(int32_t(N->getZExtValue()), SDLoc(N),
+                                         MVT::i64);
 }]>;
 
 // Negate and then truncate an immediate to a 32-bit unsigned quantity.
