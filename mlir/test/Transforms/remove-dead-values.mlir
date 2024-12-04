@@ -35,8 +35,9 @@ func.func @acceptable_ir_has_cleanable_loop_of_conditional_and_branch_op(%arg0: 
   %non_live = arith.constant 0 : i32
   // CHECK-NOT: arith.constant
   cf.br ^bb1(%non_live : i32)
+  // CHECK: cf.br ^[[BB1:bb[0-9]+]]
 ^bb1(%non_live_1 : i32):
-  // CHECK: ^[[BB1:bb[0-9]+]]:
+  // CHECK: ^[[BB1]]:
   %non_live_5 = arith.constant 1 : i32
   cf.br ^bb3(%non_live_1, %non_live_5 : i32, i32)
   // CHECK: cf.br ^[[BB3:bb[0-9]+]]
