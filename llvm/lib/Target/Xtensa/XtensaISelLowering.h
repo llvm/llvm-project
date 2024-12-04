@@ -74,9 +74,6 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-  /// Returns the size of the platform's va_list object.
-  unsigned getVaListSizeInBits(const DataLayout &DL) const override;
-
   const char *getTargetNodeName(unsigned Opcode) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>

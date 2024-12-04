@@ -43,12 +43,12 @@ public:
   unsigned getVarArgsFirstGPR() const { return VarArgsFirstGPR; }
   void setVarArgsFirstGPR(unsigned GPR) { VarArgsFirstGPR = GPR; }
 
-  int getVarArgsStackOffset() const { return VarArgsStackOffset; }
-  void setVarArgsStackOffset(int Offset) { VarArgsStackOffset = Offset; }
+  int getVarArgsOnStackFrameIndex() const { return VarArgsStackOffset; }
+  void setVarArgsOnStackFrameIndex(int Offset) { VarArgsStackOffset = Offset; }
 
   // Get and set the frame index of the first stack vararg.
-  unsigned getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
-  void setVarArgsFrameIndex(unsigned FI) { VarArgsFrameIndex = FI; }
+  unsigned getVarArgsInRegsFrameIndex() const { return VarArgsFrameIndex; }
+  void setVarArgsInRegsFrameIndex(unsigned FI) { VarArgsFrameIndex = FI; }
 };
 
 } // namespace llvm
