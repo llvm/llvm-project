@@ -241,7 +241,7 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
   LLVM_DEBUG({
     dbgs() << "Externals after applying lookup result:\n";
     for (auto *Sym : G->external_symbols()) {
-      dbgs() << "  " << *Sym->getName() << ": "
+      dbgs() << "  " << Sym->getName() << ": "
              << formatv("{0:x16}", Sym->getAddress().getValue());
       switch (Sym->getLinkage()) {
       case Linkage::Strong:
