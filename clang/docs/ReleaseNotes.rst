@@ -761,6 +761,7 @@ Bug Fixes to C++ Support
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
 - Fixed expression transformation for ``[[assume(...)]]``, allowing using pack indexing expressions within the
   assumption if they also occur inside of a dependent lambda. (#GH114787)
+- Lambdas now capture function types without considering top-level const qualifiers. (#GH84961)
 - Clang now uses valid deduced type locations when diagnosing functions with trailing return type
   missing placeholder return type. (#GH78694)
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
@@ -935,9 +936,15 @@ and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
 and [Non-trapping float-to-int Conversions] language features, which are
 [widely implemented in engines].
 
+A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
+the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
+-mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
+and -mextended-const.
+
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
 [widely implemented in engines]: https://webassembly.org/features/
+[here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
 AVR Support
 ^^^^^^^^^^^

@@ -377,3 +377,8 @@ func.func @kernel(%arg0: memref<18xf32>) {
 
 // CHECK: func.func private @no_block_func_declaration()
 func.func private @no_block_func_declaration() -> ()
+
+// -----
+
+// CHECK: llvm.func @no_block_external_func()
+llvm.func @no_block_external_func() attributes {sym_visibility = "private"}
