@@ -419,12 +419,12 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
       if (!S.CanonicalWeakDefs.count(*Sym->getName()) ||
           S.CanonicalWeakDefs[*Sym->getName()] != G.getName()) {
         LLVM_DEBUG({
-          dbgs() << "  Externalizing weak symbol " << *Sym->getName() << "\n";
+          dbgs() << "  Externalizing weak symbol " << Sym->getName() << "\n";
         });
         DefinitionsToRemove.push_back(Sym);
       } else {
         LLVM_DEBUG({
-          dbgs() << "  Making weak symbol " << *Sym->getName() << " strong\n";
+          dbgs() << "  Making weak symbol " << Sym->getName() << " strong\n";
         });
         if (S.HarnessExternals.count(*Sym->getName()))
           Sym->setScope(Scope::Default);
@@ -433,12 +433,12 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
         Sym->setLinkage(Linkage::Strong);
       }
     } else if (S.HarnessExternals.count(*Sym->getName())) {
-      LLVM_DEBUG(dbgs() << "  Promoting " << *Sym->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "  Promoting " << Sym->getName() << "\n");
       Sym->setScope(Scope::Default);
       Sym->setLive(true);
       continue;
     } else if (S.HarnessDefinitions.count(*Sym->getName())) {
-      LLVM_DEBUG(dbgs() << "  Externalizing " << *Sym->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "  Externalizing " << Sym->getName() << "\n");
       DefinitionsToRemove.push_back(Sym);
     }
   }
