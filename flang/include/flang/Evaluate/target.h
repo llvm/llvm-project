@@ -52,6 +52,12 @@ public:
   }
   void set_areSubnormalsFlushedToZero(bool yes = true);
 
+  // Check if a given real kind has flushing control.
+  bool hasSubnormalFlushingControl(int kind) const;
+  // Check if any or all real kinds have flushing control.
+  bool hasSubnormalFlushingControl(bool any = false) const;
+  void set_hasSubnormalFlushingControl(int kind, bool yes = true);
+
   Rounding roundingMode() const { return roundingMode_; }
   void set_roundingMode(Rounding);
 
@@ -111,13 +117,14 @@ public:
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
 private:
-  static constexpr int maxKind{32};
-  std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind]{};
-  std::uint8_t align_[common::TypeCategory_enumSize][maxKind]{};
+  static constexpr int maxKind{16};
+  std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind + 1]{};
+  std::uint8_t align_[common::TypeCategory_enumSize][maxKind + 1]{};
   bool isBigEndian_{false};
   bool isPPC_{false};
   bool isOSWindows_{false};
   bool areSubnormalsFlushedToZero_{false};
+  bool hasSubnormalFlushingControl_[maxKind + 1]{};
   Rounding roundingMode_{defaultRounding};
   std::size_t procedurePointerByteSize_{8};
   std::size_t procedurePointerAlignment_{8};
