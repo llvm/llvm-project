@@ -91,109 +91,104 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 
 .. code-block:: c++
 
-class JsonSerializer : public Serializer {
-public:
-  json::Object *getOutputObject() { return object.get(); }
+  class JsonSerializer : public Serializer {
+  public:
+      json::Object *getOutputObject() { return object.get(); }
 
-  llvm::Error start() override {
-    if (started)
-      return createStringError("Serializer already in use");
-    started = true;
-    object = std::make_unique<json::Object>();
-    return Error::success();
-  }
-
-  void writeBool(StringRef KeyName, bool Value) override {
-    writeHelper(KeyName, Value);
-  }
-
-  void writeInt32(StringRef KeyName, int Value) override {
-    writeHelper(KeyName, Value);
-  }
-
-  void writeSizeT(StringRef KeyName, size_t Value) override {
-    writeHelper(KeyName, Value);
-  }
-  void writeString(StringRef KeyName, StringRef Value) override {
-    writeHelper(KeyName, Value);
-  }
-
-  void writeKeyValueMap(StringRef KeyName,
-                        std::map<std::string, std::string> Value) override {
-    json::Object Inner;
-    for (auto kv : Value) {
-      Inner.try_emplace(kv.first, kv.second);
+    llvm::Error start() override {
+      if (started)
+        return createStringError("Serializer already in use");
+      started = true;
+      object = std::make_unique<json::Object>();
+      return Error::success();
     }
-    writeHelper(KeyName, json::Value(std::move(Inner)));
-  }
 
-  llvm::Error finish() override {
-    if (!started)
-      return createStringError("Serializer not currently in use");
-    started = false;
-    return Error::success();
-  }
+    void writeBool(StringRef KeyName, bool Value) override {
+      writeHelper(KeyName, Value);
+    }
 
-private:
-  template <typename T> void writeHelper(StringRef Name, T Value) {
-    assert(started && "serializer not started");
-    object->try_emplace(Name, Value);
-  }
-  bool started = false;
-  std::unique_ptr<json::Object> object;
-};		
+    void writeInt32(StringRef KeyName, int Value) override {
+      writeHelper(KeyName, Value);
+    }
+
+    void writeSizeT(StringRef KeyName, size_t Value) override {
+      writeHelper(KeyName, Value);
+    }
+    void writeString(StringRef KeyName, StringRef Value) override {
+      writeHelper(KeyName, Value);
+    }
+
+    void writeKeyValueMap(StringRef KeyName,
+                          std::map<std::string, std::string> Value) override {
+      json::Object Inner;
+      for (auto kv : Value) {
+        Inner.try_emplace(kv.first, kv.second);
+      }
+      writeHelper(KeyName, json::Value(std::move(Inner)));
+    }
+
+    llvm::Error finish() override {
+      if (!started)
+        return createStringError("Serializer not currently in use");
+      started = false;
+      return Error::success();
+    }
+
+  private:
+    template <typename T> void writeHelper(StringRef Name, T Value) {
+      assert(started && "serializer not started");
+      object->try_emplace(Name, Value);
+    }
+    bool started = false;
+    std::unique_ptr<json::Object> object;
+  };
+   
+   // This defines a custom TelemetryInfo that has an addition Msg field.
+  struct MyTelemetryInfo : public telemetry::TelemetryInfo {
+    std::string Msg;
+
+    Error serialize(Serializer& serializer) const override {
+      TelemetryInfo::serialize(serializer);
+      serializer.writeString("MyMsg", Msg);
+    }
+      
+    // Note: implement getKind() and classof() to support dyn_cast operations.
+  };
     
-// This defines a custom TelemetryInfo that has an addition Msg field.
-struct MyTelemetryInfo : public telemetry::TelemetryInfo {
-  std::string Msg;
+  class MyManager : public telemery::Manager {
+  public:
+  static std::unique_ptr<MyManager> createInstatnce(telemetry::Config* config) {
+    // If Telemetry is not enabled, then just return null;
+    if (!config->EnableTelemetry) return nullptr;
 
-  Error serialize(Serializer& serializer) const override {
-    TelemetryInfo::serialize(serializer);
-    serializer.writeString("MyMsg", Msg);
+    return std::make_unique<MyManager>();
+  }
+  MyManager() = default;
+
+  Error dispatch(TelemetryInfo* Entry) const override {
+    Entry->SessionId = SessionId;
+    emitToAllDestinations(Entry);
   }
       
-  // Note: implement getKind() and classof() to support dyn_cast operations.
-};
+  void addDestination(std::unique_ptr<Destination> dest) override {
+    destinations.push_back(std::move(dest));
+  }
+      
+  // You can also define additional instrumentation points.
+  void logAdditionalPoint(TelemetryInfo* Entry) {
+    // .... code here
+  }
+  
+  private:
+    void emitToAllDestinations(const TelemetryInfo* Entry) {
+      for (Destination* Dest : Destinations)
+        Dest->receiveEntry(Entry);
+      }
+    }
     
-class MyManager : public telemery::Manager {
-public:
-static std::unique_ptr<MyManager> createInstatnce(telemetry::Config* config) {
-  // If Telemetry is not enabled, then just return null;
-  if (!config->EnableTelemetry) return nullptr;
-
-  return std::make_unique<MyManager>();
-}
-MyManager() = default;
-
-Error dispatch(TelemetryInfo* Entry) const override {
-  Entry->SessionId = SessionId;
-  emitToAllDestinations(Entry);
-}
-
-Error logStartup(MyTelemetryInfo* Entry) {
-  // Optionally add additional field
-  Entry->Msg = "CustomMsg";
-  return dispatch(Entry);
-
-}
-      
-void addDestination(std::unique_ptr<Destination> dest) override {
-  destinations.push_back(std::move(dest));
-}
-      
-// You can also define additional instrumentation points.
-void logAdditionalPoint(TelemetryInfo* Entry) {
-// .... code here
-}
-private:
-void emitToAllDestinations(const TelemetryInfo* Entry) {
-// Note: could do this in parallel, if needed.
-for (Destination* Dest : Destinations)
-Dest->receiveEntry(Entry);
-}
-std::vector<Destination> Destinations;
-const std::string SessionId;
-};
+    std::vector<Destination> Destinations;
+    const std::string SessionId;
+  };
     
 2) Use the library in your tool.
 
