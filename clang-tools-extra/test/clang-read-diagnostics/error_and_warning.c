@@ -1,4 +1,4 @@
-// RUN: %clang %s -serialize-diagnostics %s.diag || true
+// RUN: not %clang %s -serialize-diagnostics %s.diag
 // RUN: clang-read-diagnostics %s.diag 2>&1 | FileCheck %s
 // RUN: rm %s.diag
 
