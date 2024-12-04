@@ -20,8 +20,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Debug.h"
@@ -306,9 +306,9 @@ unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
 
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
- 
+
   std::vector<const Record *> ProcessorAliasList =
-    Records.getAllDerivedDefinitionsIfDefined("ProcessorAlias");
+      Records.getAllDerivedDefinitionsIfDefined("ProcessorAlias");
 
   SmallVector<StringRef> Names;
   Names.reserve(ProcessorList.size() + ProcessorAliasList.size());
@@ -324,7 +324,8 @@ unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
   }
 
   llvm::sort(Names);
-  llvm::interleave(Names, OS, [&](StringRef Name) { OS << '"' << Name << '"'; }, ",\n");
+  llvm::interleave(
+      Names, OS, [&](StringRef Name) { OS << '"' << Name << '"'; }, ",\n");
 
   // End processor name table.
   OS << "};\n";
@@ -2054,7 +2055,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (NumNames)
     OS << Target << "Names, ";
   else
-    OS  << "{}, ";
+    OS << "{}, ";
   if (NumFeatures)
     OS << Target << "FeatureKV, ";
   else

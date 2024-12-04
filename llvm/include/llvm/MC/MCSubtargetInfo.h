@@ -96,8 +96,7 @@ class MCSubtargetInfo {
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                  StringRef FS,
-                  ArrayRef<StringRef> PN,
+                  StringRef FS, ArrayRef<StringRef> PN,
                   ArrayRef<SubtargetFeatureKV> PF,
                   ArrayRef<SubtargetSubTypeKV> PD,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,

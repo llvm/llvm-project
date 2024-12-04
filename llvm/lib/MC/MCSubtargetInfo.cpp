@@ -110,7 +110,7 @@ static void Help(ArrayRef<StringRef> CPUNames,
   }
 
   // Determine the length of the longest CPU and Feature entries.
-  unsigned MaxCPULen  = getLongestEntryLength(CPUNames);
+  unsigned MaxCPULen = getLongestEntryLength(CPUNames);
   unsigned MaxFeatLen = getLongestEntryLength(FeatTable);
 
   // Print the CPU table.
@@ -118,8 +118,8 @@ static void Help(ArrayRef<StringRef> CPUNames,
   for (auto &CPUName : CPUNames) {
     if (CPUName == "apple-latest")
       continue;
-    errs() << format("  %-*s - Select the %s processor.\n", MaxCPULen, CPUName.str().c_str(),
-                     CPUName.str().c_str());
+    errs() << format("  %-*s - Select the %s processor.\n", MaxCPULen,
+                     CPUName.str().c_str(), CPUName.str().c_str());
   }
   errs() << '\n';
 
@@ -160,8 +160,8 @@ static void cpuHelp(ArrayRef<StringRef> CPUNames) {
   PrintOnce = true;
 }
 
-static FeatureBitset getFeatures(MCSubtargetInfo &STI,
-                                 StringRef CPU, StringRef TuneCPU, StringRef FS,
+static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
+                                 StringRef TuneCPU, StringRef FS,
                                  ArrayRef<StringRef> ProcNames,
                                  ArrayRef<SubtargetSubTypeKV> ProcDesc,
                                  ArrayRef<SubtargetFeatureKV> ProcFeatures) {
@@ -222,7 +222,8 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI,
 
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
                                           StringRef FS) {
-  FeatureBits = getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
+  FeatureBits =
+      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
   FeatureString = std::string(FS);
 
   if (!TuneCPU.empty())
@@ -233,20 +234,17 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
 
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
                                          StringRef FS) {
-  FeatureBits = getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
+  FeatureBits =
+      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
   FeatureString = std::string(FS);
 }
 
-MCSubtargetInfo::MCSubtargetInfo(const Triple &TT, StringRef C, StringRef TC,
-                                 StringRef FS,
-                                 ArrayRef<StringRef> PN,
-                                 ArrayRef<SubtargetFeatureKV> PF,
-                                 ArrayRef<SubtargetSubTypeKV> PD,
-                                 const MCWriteProcResEntry *WPR,
-                                 const MCWriteLatencyEntry *WL,
-                                 const MCReadAdvanceEntry *RA,
-                                 const InstrStage *IS, const unsigned *OC,
-                                 const unsigned *FP)
+MCSubtargetInfo::MCSubtargetInfo(
+    const Triple &TT, StringRef C, StringRef TC, StringRef FS,
+    ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
+    ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
+    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
       ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
       WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
