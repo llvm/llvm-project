@@ -87,7 +87,7 @@ How to implement and interact with the API
 
 To use Telemetry in your tool, you need to provide a concrete implementation of the ``Manager`` class and ``Destination``.
 
-1) Define a custom ``Serializer``, ``Manager`` and ``Destination``
+1) Define a custom ``Serializer``, ``Manager``, ``Destination`` and optionally a subclass of ``TelemetryInfo``
 
 .. code-block:: c++
 
@@ -142,19 +142,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     bool started = false;
     std::unique_ptr<json::Object> object;
   };
-   
-   // This defines a custom TelemetryInfo that has an addition Msg field.
-  struct MyTelemetryInfo : public telemetry::TelemetryInfo {
-    std::string Msg;
-
-    Error serialize(Serializer& serializer) const override {
-      TelemetryInfo::serialize(serializer);
-      serializer.writeString("MyMsg", Msg);
-    }
-      
-    // Note: implement getKind() and classof() to support dyn_cast operations.
-  };
-    
+       
   class MyManager : public telemery::Manager {
   public:
   static std::unique_ptr<MyManager> createInstatnce(telemetry::Config* config) {
@@ -173,8 +161,14 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   void addDestination(std::unique_ptr<Destination> dest) override {
     destinations.push_back(std::move(dest));
   }
-      
+  
   // You can also define additional instrumentation points.
+  void logStartup(TelemetryInfo* Entry) {
+    // Add some additional data to entry.
+    Entry->Msg = "Some message";
+    dispatch(Entry);
+  }
+  
   void logAdditionalPoint(TelemetryInfo* Entry) {
     // .... code here
   }
@@ -189,6 +183,40 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     std::vector<Destination> Destinations;
     const std::string SessionId;
   };
+
+  class MyDestination : public telemetry::Destination {
+  public:
+    Error receiveEntry(const TelemetryInfo* Entry) override {
+      if (Error err = serializer.start()) {
+        return err;
+      }
+      Entry->serialize(serializer);
+      if (Error err = serializer.finish()) {
+        return err;
+      }
+
+      json::Object copied = *serializer.getOutputObject();
+      // Send the `copied` object to wherever.
+      return Error::success();
+    }
+    
+  };
+
+  // This defines a custom TelemetryInfo that has an addition Msg field.
+  struct MyTelemetryInfo : public telemetry::TelemetryInfo {
+    std::chrono::time_point<std::chrono::steady_clock> Start;
+    std::chrono::time_point<std::chrono::steady_clock> End;
+    
+    std::string Msg;
+    
+    Error serialize(Serializer& serializer) const override {
+      TelemetryInfo::serialize(serializer);
+      serializer.writeString("MyMsg", Msg);
+    }
+      
+    // Note: implement getKind() and classof() to support dyn_cast operations.
+  };
+
     
 2) Use the library in your tool.
 
@@ -210,7 +238,8 @@ Logging the tool init-process:
   auto EndTime = std::chrono::time_point<std::chrono::steady_clock>::now();
   MyTelemetryInfo Entry;
 
-  Entry.Stats = {StartTime, EndTime};
+  Entry.Start = StartTime;
+  Entry.End = EndTime;
   Manager->logStartup("MyTool", &Entry);
 
 Similar code can be used for logging the tool's exit.
