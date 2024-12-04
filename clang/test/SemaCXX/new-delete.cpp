@@ -540,6 +540,13 @@ namespace PR10504 {
   void f(A *x) { delete x; } // expected-warning {{delete called on 'PR10504::A' that is abstract but has non-virtual destructor}}
 }
 
+#if __cplusplus >= 201103L
+enum GH99278_1 {
+    zero = decltype(delete static_cast<GH99278_1*>(nullptr), 0){}
+    // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+};
+#endif
+
 struct PlacementArg {};
 inline void *operator new[](size_t, const PlacementArg &) throw () {
   return 0;
