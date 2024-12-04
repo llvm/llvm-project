@@ -56,10 +56,32 @@
 #include <optional>
 #include <tuple>
 
+using namespace lld;
+using namespace lld::coff;
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
 using namespace llvm::sys;
+
+COFFSyncStream::COFFSyncStream(COFFLinkerContext &ctx, DiagLevel level)
+    : SyncStream(ctx.e, level), ctx(ctx) {}
+
+COFFSyncStream coff::Log(COFFLinkerContext &ctx) {
+  return {ctx, DiagLevel::Log};
+}
+COFFSyncStream coff::Msg(COFFLinkerContext &ctx) {
+  return {ctx, DiagLevel::Msg};
+}
+COFFSyncStream coff::Warn(COFFLinkerContext &ctx) {
+  return {ctx, DiagLevel::Warn};
+}
+COFFSyncStream coff::Err(COFFLinkerContext &ctx) {
+  return {ctx, DiagLevel::Err};
+}
+COFFSyncStream coff::Fatal(COFFLinkerContext &ctx) {
+  return {ctx, DiagLevel::Fatal};
+}
+uint64_t coff::errCount(COFFLinkerContext &ctx) { return ctx.e.errorCount; }
 
 namespace lld::coff {
 
@@ -75,7 +97,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
   ctx->driver.linkerMain(args);
 
-  return errorCount() == 0;
+  return errCount(*ctx) == 0;
 }
 
 // Parse options of the form "old;new".
@@ -212,7 +234,8 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     ctx.symtab.addFile(make<PDBInputFile>(ctx, mbref));
     break;
   case file_magic::coff_cl_gl_object:
-    error(filename + ": is not a native COFF file. Recompile without /GL");
+    Err(ctx) << filename
+             << ": is not a native COFF file. Recompile without /GL";
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
@@ -302,7 +325,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   obj->parentName = parentName;
   ctx.symtab.addFile(obj);
-  log("Loaded " + toString(obj) + " for " + symName);
+  Log(ctx) << "Loaded " << obj << " for " << symName;
 }
 
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
@@ -310,9 +333,9 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         StringRef parentName) {
 
   auto reportBufferError = [=](Error &&e, StringRef childName) {
-    fatal("could not get the buffer for the member defining symbol " +
-          toCOFFString(ctx, sym) + ": " + parentName + "(" + childName +
-          "): " + toString(std::move(e)));
+    Fatal(ctx) << "could not get the buffer for the member defining symbol "
+               << &sym << ": " << parentName << "(" << childName
+               << "): " << std::move(e);
   };
 
   if (!c.getParent()->isThin()) {
@@ -361,7 +384,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   if (s.empty())
     return;
 
-  log("Directives: " + toString(file) + ": " + s);
+  Log(ctx) << "Directives: " << file << ": " << s;
 
   ArgParser parser(ctx);
   // .drectve is always tokenized using Windows shell rules.
@@ -414,7 +437,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       break;
     case OPT_entry:
       if (!arg->getValue()[0])
-        fatal("missing entry point symbol name");
+        Fatal(ctx) << "missing entry point symbol name";
       ctx.config.entry = addUndefined(mangle(arg->getValue()), true);
       break;
     case OPT_failifmismatch:
@@ -779,7 +802,7 @@ StringRef LinkerDriver::findDefaultEntry() {
     if (findUnderscoreMangle("wWinMain")) {
       if (!findUnderscoreMangle("WinMain"))
         return mangle("wWinMainCRTStartup");
-      warn("found both wWinMain and WinMain; using latter");
+      Warn(ctx) << "found both wWinMain and WinMain; using latter";
     }
     return mangle("WinMainCRTStartup");
   }
@@ -2200,7 +2223,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
-  if (errorCount())
+  if (errCount(ctx))
     return;
 
   std::set<sys::fs::UniqueID> wholeArchives;
@@ -2279,7 +2302,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       stream << "  " << path << "\n";
     }
 
-    message(buffer);
+    Msg(ctx) << buffer;
   }
 
   // Process files specified as /defaultlib. These must be processed after
