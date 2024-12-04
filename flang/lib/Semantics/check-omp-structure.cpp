@@ -2486,16 +2486,27 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
     const parser::OmpAtomicClauseList *leftHandClauseList,
     const parser::OmpAtomicClauseList *rightHandClauseList) {
   int numMemoryOrderClause = 0;
+  int numFailClause = 0;
   auto checkForValidMemoryOrderClause =
       [&](const parser::OmpAtomicClauseList *clauseList) {
         for (const auto &clause : clauseList->v) {
-          if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
-            numMemoryOrderClause++;
-            if (numMemoryOrderClause > 1) {
+          if (std::get_if<parser::OmpFailClause>(&clause.u)) {
+            numFailClause++;
+            if (numFailClause > 1) {
               context_.Say(clause.source,
-                  "More than one memory order clause not allowed on "
+                  "More than one fail clause not allowed on "
                   "OpenMP Atomic construct"_err_en_US);
               return;
+            }
+          } else {
+            if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
+              numMemoryOrderClause++;
+              if (numMemoryOrderClause > 1) {
+                context_.Say(clause.source,
+                    "More than one memory order clause not allowed on "
+                    "OpenMP Atomic construct"_err_en_US);
+                return;
+              }
             }
           }
         }

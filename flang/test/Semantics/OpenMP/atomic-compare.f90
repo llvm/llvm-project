@@ -35,6 +35,14 @@
   if (b .eq. a) b = c
   !$omp end atomic
 
+  !$omp atomic hint(1) acq_rel compare fail(release)
+  if (c .eq. a) a = b
+  !$omp end atomic
+
+  !$omp atomic compare fail(release)
+  if (c .eq. a) a = b
+  !$omp end atomic
+
   ! Check for error conditions:
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
@@ -74,6 +82,11 @@
   !ERROR: At most one RELAXED clause can appear on the COMPARE directive
   !$omp atomic relaxed compare relaxed
   if (b .eq. c) b = a
+
+  !ERROR: More than one fail clause not allowed on OpenMP Atomic construct
+  !$omp atomic fail(release) compare fail(release)
+  if (c .eq. a) a = b
+  !$omp end atomic
 
   !$omp end parallel
 end
