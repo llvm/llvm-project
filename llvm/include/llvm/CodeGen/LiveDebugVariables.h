@@ -81,7 +81,10 @@ public:
   LiveDebugVariables &getLDV() { return *Impl; }
   const LiveDebugVariables &getLDV() const { return *Impl; }
 
-  void releaseMemory() override { Impl->releaseMemory(); }
+  void releaseMemory() override {
+    if (Impl)
+      Impl->releaseMemory();
+  }
   void getAnalysisUsage(AnalysisUsage &) const override;
 
   MachineFunctionProperties getSetProperties() const override {
@@ -97,6 +100,12 @@ class LiveDebugVariablesAnalysis
 
 public:
   using Result = LiveDebugVariables;
+
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::TracksDebugUserValues);
+  }
+
   Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 

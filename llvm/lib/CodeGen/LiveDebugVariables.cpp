@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -1323,6 +1324,8 @@ AnalysisKey LiveDebugVariablesAnalysis::Key;
 LiveDebugVariables
 LiveDebugVariablesAnalysis::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
   auto *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
   LiveDebugVariables LDV;
   LDV.analyze(MF, LIS);
