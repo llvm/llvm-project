@@ -91,7 +91,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
   //
   // xray_sled_n (32-bit):
   //    addi sp, sp, -16                                ;create stack frame
-  //    sw ra, 12(sp)                                    ;save return address
+  //    sw ra, 12(sp)                                   ;save return address
   //    sw a0, 8(sp)                                    ;save register a0
   //    lui ra, %hi(__xray_FunctionEntry/Exit)
   //    addi ra, ra, %lo(__xray_FunctionEntry/Exit)
@@ -99,7 +99,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
   //    addi a0, a0, %lo(function_id)                   ;pass function id
   //    jalr ra                                         ;call Tracing hook
   //    lw a0, 8(sp)                                    ;restore register a0
-  //    lw ra, 12(sp)                                    ;restore return address
+  //    lw ra, 12(sp)                                   ;restore return address
   //    addi sp, sp, 16                                 ;delete stack frame
   //
   // xray_sled_n (64-bit):
