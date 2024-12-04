@@ -480,7 +480,15 @@ class LowerMatrixIntrinsics {
   /// the result value of the instruction, with the only exceptions being store
   /// instructions and the matrix_column_major_store intrinsics. For those, the
   /// shape information indicates that those instructions should be lowered
-  /// using shape information as well.
+  /// using shape information as well. Note that extra care is needed when
+  /// erasing or RAUW'ing a value that is present in ShapeMap. If the
+  /// replacement is also a matrix operation, use
+  /// updateShapeAndReplaceAllUsesWith to make sure the replacement is added to
+  /// ShapeMap.  We don't use ValueMap, as there are also cases where we do not
+  /// want to add shape information for a replacement instruction. When directly
+  /// erasing a value with an entry in ShapeMap, use
+  /// eraseFromParentAndRemoveFromShapeMap to make sure ShapeMap is also updated
+  /// accordingly.
   DenseMap<Value *, ShapeInfo> ShapeMap;
 
   /// List of instructions to remove. While lowering, we are not replacing all
@@ -743,6 +751,8 @@ public:
     return Operation(T0, Shape0.t(), T1, Shape1.t());
   }
 
+  /// Erase \p Inst from both ShapeMap (if an entry exists) and erase \p Inst
+  /// itself.
   void eraseFromParentAndRemoveFromShapeMap(Instruction *Inst) {
     auto Iter = ShapeMap.find(Inst);
     if (Iter != ShapeMap.end())
@@ -763,6 +773,8 @@ public:
     eraseFromParentAndRemoveFromShapeMap(Inst);
   }
 
+  /// Add a new entry to ShapeMap for \p New with \p Old's shape info, erase the
+  /// entry for \p Old and replace all uses of \p Old with \p New.
   void updateShapeAndReplaceAllUsesWith(Instruction &Old, Value *New) {
     // We need to remove Old from the ShapeMap otherwise RAUW will replace it
     // with New. We should only add New it it supportsShapeInfo so we insert
