@@ -231,28 +231,35 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec,
 }
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
-  std::string out = toString(*s) + " from " + toString(s->file);
-  int indent = 2;
-  LiveObject cur = s;
-  while (true) {
-    auto it = whyLive.find(cur);
-    if (it == whyLive.end())
-      if (auto *d = dyn_cast<Defined>(s))
-        if (auto *s = dyn_cast<InputSectionBase>(d->section))
-          it = whyLive.find(LiveObject{s});
-    assert(it != whyLive.end() &&
-           "all live objects should have a tracked reason for being live");
-    if (!it->second)
-      break;
-    cur = *it->second;
-    out += "\n" + std::string(indent, ' ');
-    if (std::holds_alternative<Symbol *>(cur)) {
-      auto *s = std::get<Symbol *>(cur);
+  std::string out;
+  int indent = 0;
+  for (std::optional<LiveObject> cur = s; cur; indent += 2) {
+    if (indent)
+      out += "\n" + std::string(indent, ' ');
+    if (std::holds_alternative<Symbol *>(*cur)) {
+      auto *s = std::get<Symbol *>(*cur);
       out += toString(*s) + " from " + toString(s->file);
     } else {
-      auto *s = std::get<InputSectionBase *>(cur);
+      auto *s = std::get<InputSectionBase *>(*cur);
       // TODO: Fancy formatting
       out += toString(s);
+    }
+
+    auto it = whyLive.find(*cur);
+    if (it != whyLive.end()) {
+      // If there is a specific reason this object is live, report it.
+      if (!it->second)
+        break;
+      cur = *it->second;
+    } else {
+      // This object is live merely by being a member of its parent section, so
+      // report the parent.
+      InputSectionBase *parent = nullptr;
+      if (auto *d = dyn_cast<Defined>(s))
+        parent = dyn_cast<InputSectionBase>(d->section);
+      assert(parent &&
+             "all live objects should have a tracked reason for being live");
+      cur = LiveObject{parent};
     }
   }
   message(out);
