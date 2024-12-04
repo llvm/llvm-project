@@ -1694,7 +1694,8 @@ RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {
   // unrelocated globals with RELR relocations when
   // --pack-relative-relocs=android+relr is enabled. Work around this by placing
   // IRELATIVE in .rela.plt.
-  return ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt : *ctx.mainPart->relaDyn;
+  return ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt
+                                      : *ctx.mainPart->relaDyn;
 }
 
 static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {

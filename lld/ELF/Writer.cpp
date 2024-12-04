@@ -847,7 +847,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   // .rela_iplt_{start,end} mark the start and the end of the section containing
   // IRELATIVE relocations.
   if (ctx.sym.relaIpltStart) {
-    auto &dyn =  getIRelativeSection(ctx);
+    auto &dyn = getIRelativeSection(ctx);
     if (dyn.isNeeded()) {
       ctx.sym.relaIpltStart->section = &dyn;
       ctx.sym.relaIpltEnd->section = &dyn;
