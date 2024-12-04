@@ -670,8 +670,9 @@ void Writer::finalizeAddresses() {
     }
     if (rangesOk) {
       if (pass > 0)
-        log("Added " + Twine(numChunks - origNumChunks) + " thunks with " +
-            "margin " + Twine(margin) + " in " + Twine(pass) + " passes");
+        Log(ctx) << "Added " << Twine(numChunks - origNumChunks)
+                 << " thunks with " << "margin " << Twine(margin) << " in "
+                 << Twine(pass) << " passes";
       return;
     }
 
@@ -1116,7 +1117,7 @@ void Writer::createSections() {
       // special case for all architectures.
       outChars = data | r;
 
-      log("Processing section " + pSec->name + " -> " + name);
+      Log(ctx) << "Processing section " << pSec->name << " -> " << name;
 
       sortCRTSectionChunks(pSec->chunks);
     }
@@ -2221,7 +2222,8 @@ void Writer::createRuntimePseudoRelocs() {
   }
 
   if (!rels.empty()) {
-    log("Writing " + Twine(rels.size()) + " runtime pseudo relocations");
+    Log(ctx) << "Writing " << Twine(rels.size())
+             << " runtime pseudo relocations";
     const char *symbolName = "_pei386_runtime_relocator";
     Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
     if (!relocator)
@@ -2496,8 +2498,8 @@ void Writer::sortCRTSectionChunks(std::vector<Chunk *> &chunks) {
   if (ctx.config.verbose) {
     for (auto &c : chunks) {
       auto sc = dyn_cast<SectionChunk>(c);
-      log("  " + sc->file->mb.getBufferIdentifier().str() +
-          ", SectionID: " + Twine(sc->getSectionNumber()));
+      Log(ctx) << "  " << sc->file->mb.getBufferIdentifier().str()
+               << ", SectionID: " << Twine(sc->getSectionNumber());
     }
   }
 }

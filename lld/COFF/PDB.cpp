@@ -569,7 +569,8 @@ void PDBLinker::writeSymbolRecord(SectionChunk *debugChunk,
   // Re-map all the type index references.
   TpiSource *source = debugChunk->file->debugTypesObj;
   if (!source->remapTypesInSymbolRecord(recordBytes)) {
-    log("ignoring unknown symbol record with kind 0x" + utohexstr(sym.kind()));
+    Log(ctx) << "ignoring unknown symbol record with kind 0x"
+             << utohexstr(sym.kind());
     replaceWithSkipRecord(recordBytes);
   }
 
