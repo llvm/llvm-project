@@ -22784,7 +22784,7 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   // extractelt (op X, C), IndexC --> op (extractelt X, IndexC), C'
   // extractelt (op C, X), IndexC --> op C', (extractelt X, IndexC)
   if (Opc == ISD::SETCC) {
-    EVT OpVT = Op0->getValueType(0).getVectorElementType();
+    EVT OpVT = Op0.getValueType().getVectorElementType();
     Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op0, Index);
     Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op1, Index);
     return DAG.getSetCC(DL, ResVT, Op0, Op1,
