@@ -3567,6 +3567,15 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
   unsigned Size = getRegSizeInBits(*SRC);
+
+  switch (SRC->getID()) {
+  default:
+    break;
+  case AMDGPU::VS_32_Lo256RegClassID:
+  case AMDGPU::VS_64_Lo256RegClassID:
+    return getAlignedLo256VGPRClassForBitWidth(Size);
+  }
+
   const TargetRegisterClass *VRC = getVGPRClassForBitWidth(Size);
   assert(VRC && "Invalid register class size");
   return VRC;

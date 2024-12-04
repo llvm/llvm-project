@@ -2701,6 +2701,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_64RegClassID:
   case AMDGPU::AV_64_Align2RegClassID:
   case AMDGPU::VReg_64_Lo256_Align2RegClassID:
+  case AMDGPU::VS_64_Lo256RegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
@@ -3327,7 +3328,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
        SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
     // LD_SCALE operands ignore MSB.
     if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1210)
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1210 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1210)
       return {};
     return { VOPOps, nullptr };
   }

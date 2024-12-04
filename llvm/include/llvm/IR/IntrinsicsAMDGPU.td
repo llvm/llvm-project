@@ -3854,7 +3854,7 @@ class AMDGPUWmmaIntrinsicModsC_MatrixFMT<LLVMType AB, LLVMType CD> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD> :
+class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD, LLVMType scale_ty> :
   Intrinsic<
     [CD], // %D
     [
@@ -3865,9 +3865,9 @@ class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD> :
       llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
       LLVMMatchType<0>, // %C
       llvm_i32_ty,      // matrix_a_scale
-      llvm_i32_ty,      // matrix a scale exponential
+      scale_ty,         // matrix a scale exponential
       llvm_i32_ty,      // matrix_b_scale
-      llvm_i32_ty,      // matrix b scale exponential
+      scale_ty,         // matrix b scale exponential
       llvm_i1_ty,       // matrix_a_reuse
       llvm_i1_ty,       // matrix_b_reuse
     ],
@@ -3895,7 +3895,8 @@ def int_amdgcn_wmma_f16_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint
 def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_i32_16x16x128_iu4     : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4  : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty, llvm_i32_ty>;
+def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty, llvm_i64_ty>;
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
