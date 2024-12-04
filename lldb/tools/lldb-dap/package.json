@@ -44,7 +44,7 @@
     "format": "npx prettier './src-ts/' --write",
     "package": "vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",
-    "vscode-uninstall": "code --uninstall-extension llvm.lldb-dap",
+    "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
   },
   "contributes": {

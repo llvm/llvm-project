@@ -70,6 +70,11 @@ std::string lld::toString(const coff::InputFile *file) {
       .str();
 }
 
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s,
+                                       const InputFile *f) {
+  return s << toString(f);
+}
+
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
@@ -201,7 +206,7 @@ void ObjFile::initializeECThunks() {
       case Arm64ECThunkType::GuestExit:
         break;
       default:
-        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+        Warn(ctx) << "Ignoring unknown EC thunk type " << entry->type;
       }
     }
   }

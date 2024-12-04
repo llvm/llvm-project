@@ -134,16 +134,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
 #pragma acc parallel loop auto bind(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'vector_length' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented}}
 #pragma acc parallel loop auto vector_length(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented}}
 #pragma acc parallel loop auto num_gangs(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_workers' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented}}
 #pragma acc parallel loop auto num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
@@ -261,16 +255,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
 #pragma acc parallel loop bind(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'vector_length' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented}}
 #pragma acc parallel loop vector_length(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented}}
 #pragma acc parallel loop num_gangs(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_workers' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented}}
 #pragma acc parallel loop num_workers(1) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
@@ -389,16 +377,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
 #pragma acc parallel loop independent bind(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'vector_length' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented}}
 #pragma acc parallel loop independent vector_length(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented}}
 #pragma acc parallel loop independent num_gangs(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_workers' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented}}
 #pragma acc parallel loop independent num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
@@ -516,16 +498,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
 #pragma acc parallel loop bind(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'vector_length' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented}}
 #pragma acc parallel loop vector_length(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented}}
 #pragma acc parallel loop num_gangs(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_workers' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented}}
 #pragma acc parallel loop num_workers(1) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
@@ -650,16 +626,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
 #pragma acc parallel loop seq bind(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'vector_length' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented}}
 #pragma acc parallel loop seq vector_length(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented}}
 #pragma acc parallel loop seq num_gangs(1)
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_workers' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented}}
 #pragma acc parallel loop seq num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
@@ -783,16 +753,10 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
 #pragma acc parallel loop bind(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'vector_length' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented}}
 #pragma acc parallel loop vector_length(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented}}
 #pragma acc parallel loop num_gangs(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+1{{OpenACC 'num_workers' clause is not valid on 'parallel loop' directive}}
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented}}
 #pragma acc parallel loop num_workers(1) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}

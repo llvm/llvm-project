@@ -1791,6 +1791,7 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       Dst.atIndex(I).deref<T>() =
           T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+      Dst.atIndex(I).initialize();
     });
   }
 
@@ -1812,9 +1813,6 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 
   bool Move = (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove);
 
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
-    return false;
-
   // If the size is zero, we treat this as always being a valid no-op.
   if (Size.isZero()) {
     S.Stk.push<Pointer>(DestPtr);
@@ -1828,6 +1826,10 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
         << DiagPtr.toDiagnosticString(S.getASTContext());
     return false;
   }
+
+  // As a last resort, reject dummy pointers.
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
 
   if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
     return false;
