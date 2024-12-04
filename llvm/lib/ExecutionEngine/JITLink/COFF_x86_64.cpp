@@ -194,7 +194,7 @@ class COFFLinkGraphLowering_x86_64 {
 public:
   COFFLinkGraphLowering_x86_64(std::shared_ptr<orc::SymbolStringPool> SSP)
       : SSP(std::move(SSP)) {
-    imageBaseName = this->SSP->intern("__ImageBase");
+    ImageBaseName = this->SSP->intern("__ImageBase");
   }
   // Lowers COFF x86_64 specific edges to generic x86_64 edges.
   Error lowerCOFFRelocationEdges(LinkGraph &G, JITLinkContext &Ctx) {
@@ -237,7 +237,10 @@ public:
   }
 
 private:
-  orc::SymbolStringPtr & getImageBaseSymbolName() { return this->imageBaseName; }
+  const orc::SymbolStringPtr & getImageBaseSymbolName() const {
+    return this->ImageBaseName;
+  }
+
   orc::ExecutorAddr getSectionStart(Section &Sec) {
     if (!SectionStartCache.count(&Sec)) {
       SectionRange Range(Sec);
@@ -278,7 +281,7 @@ private:
   DenseMap<Section *, orc::ExecutorAddr> SectionStartCache;
   orc::ExecutorAddr ImageBase;
   std::shared_ptr<orc::SymbolStringPool> SSP;
-  orc::SymbolStringPtr imageBaseName = nullptr;
+  orc::SymbolStringPtr ImageBaseName = nullptr;
 };
 
 Error lowerEdges_COFF_x86_64(LinkGraph &G, JITLinkContext *Ctx) {
