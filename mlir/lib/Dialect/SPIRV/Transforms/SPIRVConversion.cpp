@@ -292,6 +292,7 @@ convertScalarType(const spirv::TargetEnv &targetEnv,
 }
 
 /// Converts a sub-byte integer `type` to i32 regardless of target environment.
+/// Returns a nullptr for unsupported integer types, including sup-byte types.
 ///
 /// Note that we don't recognize sub-byte types in `spirv::ScalarType` and use
 /// the above given that these sub-byte types are not supported at all in
