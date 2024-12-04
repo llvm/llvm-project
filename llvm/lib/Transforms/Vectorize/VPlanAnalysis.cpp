@@ -236,14 +236,13 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
                 VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe,
-                VPScalarPHIRecipe, VPWidenIntOrFpInductionPHIRecipe>(
-              [this](const auto *R) {
-                // Handle header phi recipes, except VPWidenIntOrFpInduction
-                // which needs special handling due it being possibly truncated.
-                // TODO: consider inferring/caching type of siblings, e.g.,
-                // backedge value, here and in cases below.
-                return inferScalarType(R->getStartValue());
-              })
+                VPScalarPHIRecipe>([this](const auto *R) {
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
+            // which needs special handling due it being possibly truncated.
+            // TODO: consider inferring/caching type of siblings, e.g.,
+            // backedge value, here and in cases below.
+            return inferScalarType(R->getStartValue());
+          })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe,
                 VPStepVectorRecipe>(
               [](const auto *R) { return R->getScalarType(); })

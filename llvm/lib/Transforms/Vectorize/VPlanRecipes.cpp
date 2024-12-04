@@ -1709,27 +1709,6 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
                            : ConstantFP::get(Ty, C);
 }
 
-void VPWidenIntOrFpInductionPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-
-  Value *Start = State.get(getOperand(0));
-  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, "vec.ind");
-  Phi->addIncoming(Start, VectorPH);
-  Phi->setDebugLoc(getDebugLoc());
-  State.set(this, Phi);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenIntOrFpInductionPHIRecipe::print(raw_ostream &O,
-                                             const Twine &Indent,
-                                             VPSlotTracker &SlotTracker) const {
-  O << Indent;
-  printAsOperand(O, SlotTracker);
-  O << " = WIDEN-INDUCTION-PHI ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
@@ -3507,13 +3486,10 @@ VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  assert(EnableVPlanNativePath &&
-         "Non-native vplans are not expected to have VPWidenPHIRecipes.");
-
   State.setDebugLocFrom(getDebugLoc());
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
-  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, "vec.phi");
+  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
   State.set(this, VecPhi);
 }
 
@@ -3522,7 +3498,7 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-PHI ";
 
-  auto *OriginalPhi = cast<PHINode>(getUnderlyingValue());
+  auto *OriginalPhi = cast<Instruction>(getUnderlyingValue());
   // Unless all incoming values are modeled in VPlan  print the original PHI
   // directly.
   // TODO: Remove once all VPWidenPHIRecipe instances keep all relevant incoming

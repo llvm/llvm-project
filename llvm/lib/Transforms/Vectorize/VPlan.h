@@ -1895,39 +1895,6 @@ public:
   }
 };
 
-/// A recipe to generate the PHI of a widened IV, expanded from
-/// VPWidenIntOrFpInductionRecipe.
-class VPWidenIntOrFpInductionPHIRecipe : public VPHeaderPHIRecipe {
-  Instruction *IV;
-
-public:
-  VPWidenIntOrFpInductionPHIRecipe(Instruction *IV, VPValue *Start, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionPHISC, IV, Start, DL),
-        IV(IV) {
-    assert((isa<PHINode>(IV) || isa<TruncInst>(IV)) &&
-           "Expected either an induction phi-node or a truncate of it!");
-  }
-
-  ~VPWidenIntOrFpInductionPHIRecipe() override = default;
-
-  VPWidenIntOrFpInductionPHIRecipe *clone() override {
-    auto *R =
-        new VPWidenIntOrFpInductionPHIRecipe(IV, getOperand(0), getDebugLoc());
-    R->addOperand(getBackedgeValue());
-    return R;
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionPHISC)
-
-  void execute(VPTransformState &State) override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
                                       public VPUnrollPartAccessor<3> {
   bool IsScalarAfterVectorization;
@@ -2017,11 +1984,16 @@ public:
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
+  /// Name to use for the generated IR instruction for the widened phi.
+  std::string Name;
+
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
-  /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
+  /// debug location \p DL..
+  VPWidenPHIRecipe(Instruction *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
+                   const Twine &Name = "vec.phi")
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
+        Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }

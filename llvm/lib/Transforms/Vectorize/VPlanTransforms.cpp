@@ -2095,7 +2095,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 
   // Create the widened phi of the vector IV.
   auto *WidePHI =
-      new VPWidenIntOrFpInductionPHIRecipe(IV, Init, WidenIVR->getDebugLoc());
+      new VPWidenPHIRecipe(IV, nullptr, WidenIVR->getDebugLoc(), "vec.ind");
+  WidePHI->addOperand(Init);
   WidePHI->insertBefore(WidenIVR);
 
   // Create the backedge value for the vector IV.
