@@ -70,6 +70,11 @@ std::string lld::toString(const coff::InputFile *file) {
       .str();
 }
 
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s,
+                                       const InputFile *f) {
+  return s << toString(f);
+}
+
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
@@ -201,7 +206,7 @@ void ObjFile::initializeECThunks() {
       case Arm64ECThunkType::GuestExit:
         break;
       default:
-        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+        Warn(ctx) << "Ignoring unknown EC thunk type " << entry->type;
       }
     }
   }
@@ -513,8 +518,8 @@ void ObjFile::initializeSymbols() {
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
       StringRef name = check(coffObj->getSymbolName(sym));
-      log("comdat section " + name +
-          " without leader and unassociated, discarding");
+      Log(ctx) << "comdat section " << name
+               << " without leader and unassociated, discarding";
       continue;
     }
     symbols[i] = createRegular(sym);
@@ -534,7 +539,22 @@ void ObjFile::initializeSymbols() {
 
 Symbol *ObjFile::createUndefined(COFFSymbolRef sym, bool overrideLazy) {
   StringRef name = check(coffObj->getSymbolName(sym));
-  return ctx.symtab.addUndefined(name, this, overrideLazy);
+  Symbol *s = ctx.symtab.addUndefined(name, this, overrideLazy);
+
+  // Add an anti-dependency alias for undefined AMD64 symbols on the ARM64EC
+  // target.
+  if (isArm64EC(ctx.config.machine) && getMachineType() == AMD64) {
+    auto u = dyn_cast<Undefined>(s);
+    if (u && !u->weakAlias) {
+      if (std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name)) {
+        Symbol *m = ctx.symtab.addUndefined(saver().save(*mangledName), this,
+                                            /*overrideLazy=*/false);
+        u->setWeakAlias(m, /*antiDep=*/true);
+      }
+    }
+  }
+  return s;
 }
 
 static const coff_aux_section_definition *findSectionDef(COFFObjectFile *obj,
@@ -600,10 +620,9 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    log(("conflicting comdat type for " + toString(ctx, *leader) + ": " +
-         Twine((int)leaderSelection) + " in " + toString(leader->getFile()) +
-         " and " + Twine((int)selection) + " in " + toString(this))
-            .str());
+    Log(ctx) << "conflicting comdat type for " << toString(ctx, *leader) << ": "
+             << (int)leaderSelection << " in " << leader->getFile() << " and "
+             << (int)selection << " in " << this;
     ctx.symtab.reportDuplicate(leader, this);
     return;
   }
@@ -1264,7 +1283,8 @@ void BitcodeFile::parseLazy() {
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
-  switch (Triple(obj->getTargetTriple()).getArch()) {
+  Triple t(obj->getTargetTriple());
+  switch (t.getArch()) {
   case Triple::x86_64:
     return AMD64;
   case Triple::x86:
@@ -1273,7 +1293,7 @@ MachineTypes BitcodeFile::getMachineType() const {
   case Triple::thumb:
     return ARMNT;
   case Triple::aarch64:
-    return ARM64;
+    return t.isWindowsArm64EC() ? ARM64EC : ARM64;
   default:
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }

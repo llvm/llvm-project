@@ -1525,18 +1525,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
+    if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
     DINode::DIFlags Flags = (Record.size() > 6)
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
+    uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags)),
+                         Record[4], Record[5], NumExtraInhabitants, Flags)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1599,7 +1600,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 22)
+    if (Record.size() < 16 || Record.size() > 24)
       return error("Invalid record");
 
     // If we have a UUID and this is not a forward declaration, lookup the
@@ -1617,6 +1618,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Alignment value is too large");
     uint32_t AlignInBits = Record[8];
     uint64_t OffsetInBits = 0;
+    uint32_t NumExtraInhabitants = (Record.size() > 22) ? Record[22] : 0;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     Metadata *Elements = nullptr;
     unsigned RuntimeLang = Record[12];
@@ -1628,6 +1630,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Allocated = nullptr;
     Metadata *Rank = nullptr;
     Metadata *Annotations = nullptr;
+    Metadata *Specification = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported as
@@ -1676,14 +1679,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Record.size() > 21) {
         Annotations = getMDOrNull(Record[21]);
       }
+      if (Record.size() > 23) {
+        Specification = getMDOrNull(Record[23]);
+      }
     }
     DICompositeType *CT = nullptr;
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
-          SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-          VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
-          Allocated, Rank, Annotations);
+          SizeInBits, AlignInBits, OffsetInBits, Specification,
+          NumExtraInhabitants, Flags, Elements, RuntimeLang, VTableHolder,
+          TemplateParams, Discriminator, DataLocation, Associated, Allocated,
+          Rank, Annotations);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
@@ -1692,7 +1699,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
                             Identifier, Discriminator, DataLocation, Associated,
-                            Allocated, Rank, Annotations));
+                            Allocated, Rank, Annotations, Specification,
+                            NumExtraInhabitants));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

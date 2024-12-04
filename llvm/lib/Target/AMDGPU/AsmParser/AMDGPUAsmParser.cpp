@@ -14,7 +14,6 @@
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
-#include "SIRegisterInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -172,6 +171,7 @@ public:
     ImmTyWaitVAVDst,
     ImmTyWaitVMVSrc,
     ImmTyByteSel,
+    ImmTyBitOp3,
   };
 
   // Immediate operand kind.
@@ -336,6 +336,10 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
   }
 
+  bool isPackedFP32InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::v2f32);
+  }
+
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
            isRegClass(AMDGPU::VReg_64RegClassID) ||
@@ -411,6 +415,7 @@ public:
   bool isOpSelHi() const { return isImmTy(ImmTyOpSelHi); }
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
+  bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1139,6 +1144,7 @@ public:
     case ImmTyWaitVAVDst: OS << "WaitVAVDst"; break;
     case ImmTyWaitVMVSrc: OS << "WaitVMVSrc"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
+    case ImmTyBitOp3: OS << "BitOp3"; break;
     }
     // clang-format on
   }
@@ -1914,6 +1920,9 @@ public:
   ParseStatus parseEndpgm(OperandVector &Operands);
 
   ParseStatus parseVOPD(OperandVector &Operands);
+
+  ParseStatus parseBitOp3(OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultBitOp3() const;
 };
 
 } // end anonymous namespace
@@ -4186,6 +4195,38 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
 
   if ((Desc.TSFlags & SIInstrFlags::IsMAI) == 0)
     return true;
+
+  int BlgpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
+  if (BlgpIdx != -1) {
+    if (const MFMA_F8F6F4_Info *Info = AMDGPU::isMFMA_F8F6F4(Opc)) {
+      int CbszIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
+
+      unsigned CBSZ = Inst.getOperand(CbszIdx).getImm();
+      unsigned BLGP = Inst.getOperand(BlgpIdx).getImm();
+
+      // Validate the correct register size was used for the floating point
+      // format operands
+
+      bool Success = true;
+      if (Info->NumRegsSrcA != mfmaScaleF8F6F4FormatToNumRegs(CBSZ)) {
+        int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+        Error(getRegLoc(mc2PseudoReg(Inst.getOperand(Src0Idx).getReg()),
+                        Operands),
+              "wrong register tuple size for cbsz value " + Twine(CBSZ));
+        Success = false;
+      }
+
+      if (Info->NumRegsSrcB != mfmaScaleF8F6F4FormatToNumRegs(BLGP)) {
+        int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+        Error(getRegLoc(mc2PseudoReg(Inst.getOperand(Src1Idx).getReg()),
+                        Operands),
+              "wrong register tuple size for blgp value " + Twine(BLGP));
+        Success = false;
+      }
+
+      return Success;
+    }
+  }
 
   const int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
   if (Src2Idx == -1)
@@ -8819,7 +8860,9 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 
   const bool IsPacked = (Desc.TSFlags & SIInstrFlags::IsPacked) != 0;
 
-  if (Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
+  if (Opc == AMDGPU::V_CVT_SCALEF32_PK_FP4_F16_vi ||
+      Opc == AMDGPU::V_CVT_SCALEF32_PK_FP4_BF16_vi ||
+      Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx12 ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12) {
@@ -8838,8 +8881,12 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12)) {
-    assert(!IsPacked);
     Inst.addOperand(Inst.getOperand(0));
+  }
+
+  int BitOp3Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::bitop3);
+  if (BitOp3Idx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyBitOp3);
   }
 
   // FIXME: This is messy. Parse the modifiers as if it was a normal VOP3
@@ -9748,6 +9795,20 @@ ParseStatus AMDGPUAsmParser::parseEndpgm(OperandVector &Operands) {
 }
 
 bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
+
+//===----------------------------------------------------------------------===//
+// BITOP3
+//===----------------------------------------------------------------------===//
+
+ParseStatus AMDGPUAsmParser::parseBitOp3(OperandVector &Operands) {
+  ParseStatus Res =
+      parseIntWithPrefix("bitop3", Operands, AMDGPUOperand::ImmTyBitOp3);
+  return Res;
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBitOp3() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyBitOp3);
+}
 
 //===----------------------------------------------------------------------===//
 // Split Barrier

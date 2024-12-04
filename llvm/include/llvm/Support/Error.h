@@ -1129,10 +1129,15 @@ inline bool errorToBool(Error Err) {
 /// function.
 class ErrorAsOutParameter {
 public:
+
   ErrorAsOutParameter(Error *Err) : Err(Err) {
     // Raise the checked bit if Err is success.
     if (Err)
       (void)!!*Err;
+  }
+
+  ErrorAsOutParameter(Error &Err) : Err(&Err) {
+    (void)!!Err;
   }
 
   ~ErrorAsOutParameter() {

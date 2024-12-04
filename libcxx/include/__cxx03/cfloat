@@ -69,9 +69,9 @@ Macros:
     LDBL_TRUE_MIN       // C11
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <float.h>
+#include <__cxx03/float.h>
 
 #ifndef _LIBCPP_FLOAT_H
 #   error <cfloat> tried including <float.h> but didn't find libc++'s <float.h> header. \

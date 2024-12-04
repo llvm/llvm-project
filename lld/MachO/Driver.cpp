@@ -1326,21 +1326,39 @@ static void codegenDataGenerate() {
   TimeTraceScope timeScope("Generating codegen data");
 
   OutlinedHashTreeRecord globalOutlineRecord;
-  for (ConcatInputSection *isec : inputSections)
-    if (isec->getSegName() == segment_names::data &&
-        isec->getName() == section_names::outlinedHashTree) {
+  StableFunctionMapRecord globalMergeRecord;
+  for (ConcatInputSection *isec : inputSections) {
+    if (isec->getSegName() != segment_names::data)
+      continue;
+    if (isec->getName() == section_names::outlinedHashTree) {
       // Read outlined hash tree from each section.
       OutlinedHashTreeRecord localOutlineRecord;
+      // Use a pointer to allow modification by the function.
       auto *data = isec->data.data();
       localOutlineRecord.deserialize(data);
 
       // Merge it to the global hash tree.
       globalOutlineRecord.merge(localOutlineRecord);
     }
+    if (isec->getName() == section_names::functionMap) {
+      // Read stable functions from each section.
+      StableFunctionMapRecord localMergeRecord;
+      // Use a pointer to allow modification by the function.
+      auto *data = isec->data.data();
+      localMergeRecord.deserialize(data);
+
+      // Merge it to the global function map.
+      globalMergeRecord.merge(localMergeRecord);
+    }
+  }
+
+  globalMergeRecord.finalize();
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
     Writer.addRecord(globalOutlineRecord);
+  if (!globalMergeRecord.empty())
+    Writer.addRecord(globalMergeRecord);
 
   std::error_code EC;
   auto fileName = config->codegenDataGeneratePath;
@@ -1510,6 +1528,17 @@ static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
   return vals;
 }
 
+static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_allowable_client)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+  }
+  return vals;
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1549,7 +1578,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
 
   MachOOptTable parser;
-  InputArgList args = parser.parse(argsArr.slice(1));
+  InputArgList args = parser.parse(*ctx, argsArr.slice(1));
 
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
                                  "(use --error-limit=0 to see all errors)";
@@ -1557,11 +1586,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/true);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/true);
     return true;
   }
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/false);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/false);
     return true;
   }
   if (args.hasArg(OPT_version)) {
@@ -1723,6 +1752,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->umbrella = arg->getValue();
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
+  config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
@@ -1753,6 +1783,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->warnDuplicateRpath =
       args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
   config->runtimePaths = getRuntimePaths(args);
+  config->allowableClients = getAllowableClients(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -1862,6 +1893,15 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   } else if (config->outputType == MH_DYLIB) {
     config->installName = config->finalOutput;
   }
+
+  auto getClientName = [&]() {
+    StringRef cn = path::filename(config->finalOutput);
+    cn.consume_front("lib");
+    auto firstDotOrUnderscore = cn.find_first_of("._");
+    cn = cn.take_front(firstDotOrUnderscore);
+    return cn;
+  };
+  config->clientName = args.getLastArgValue(OPT_client_name, getClientName());
 
   if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
     if (config->outputType != MH_DYLIB)
@@ -2022,17 +2062,17 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       shouldAdhocSignByDefault(config->arch(), config->platform()));
 
   if (args.hasArg(OPT_v)) {
-    message(getLLDVersion(), lld::errs());
+    message(getLLDVersion(), ctx->e.errs());
     message(StringRef("Library search paths:") +
                 (config->librarySearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->librarySearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
     message(StringRef("Framework search paths:") +
                 (config->frameworkSearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->frameworkSearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
   }
 
   config->progName = argsArr[0];
@@ -2082,6 +2122,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(arg->getValue(), arg->getSpelling());
       config->mllvmOpts.emplace_back(arg->getValue());
     }
+
+    config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
     createSyntheticSections();
     createSyntheticSymbols();

@@ -172,7 +172,7 @@ void LinkerDriver::parseMerge(StringRef s) {
   if (!inserted) {
     StringRef existing = pair.first->second;
     if (existing != to)
-      warn(s + ": already merged into " + existing);
+      Warn(ctx) << s << ": already merged into " << existing;
   }
 }
 
@@ -741,12 +741,12 @@ void LinkerDriver::fixupExports() {
       continue;
     }
     if (existing->source == e.source) {
-      warn(Twine("duplicate ") + exportSourceName(existing->source) +
-           " option: " + e.name);
+      Warn(ctx) << "duplicate " << exportSourceName(existing->source)
+                << " option: " << e.name;
     } else {
-      warn("duplicate export: " + e.name +
-           Twine(" first seen in " + exportSourceName(existing->source) +
-                 Twine(", now in " + exportSourceName(e.source))));
+      Warn(ctx) << "duplicate export: " << e.name << " first seen in "
+                << exportSourceName(existing->source) << ", now in "
+                << exportSourceName(e.source);
     }
   }
   ctx.config.exports = std::move(v);
@@ -822,7 +822,7 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 
   for (const auto &dupeDiag : duplicates)
     if (ctx.config.forceMultipleRes)
-      warn(dupeDiag);
+      Warn(ctx) << dupeDiag;
     else
       error(dupeDiag);
 
@@ -858,21 +858,22 @@ COFFOptTable::COFFOptTable() : GenericOptTable(infoTable, true) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(opt::InputArgList &args) {
+static void handleColorDiagnostics(COFFLinkerContext &ctx,
+                                   opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    ctx.e.errs().enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    ctx.e.errs().enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      ctx.e.errs().enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      ctx.e.errs().enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -921,7 +922,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
     std::string msg = "Command line:";
     for (const char *s : expandedArgv)
       msg += " " + std::string(s);
-    message(msg);
+    Msg(ctx) << msg;
   }
 
   // Save the command line after response file expansion so we can write it to
@@ -934,24 +935,25 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   }
 
   // Handle /WX early since it converts missing argument warnings to errors.
-  errorHandler().fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
+  ctx.e.fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);
 
   if (missingCount)
     fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
 
-  handleColorDiagnostics(args);
+  handleColorDiagnostics(ctx, args);
 
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
     if (ctx.optTable.findNearest(arg->getAsString(args), nearest) > 1)
-      warn("ignoring unknown argument '" + arg->getAsString(args) + "'");
+      Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
+                << "'";
     else
-      warn("ignoring unknown argument '" + arg->getAsString(args) +
-           "', did you mean '" + nearest + "'");
+      Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
+                << "', did you mean '" << nearest << "'";
   }
 
   if (args.hasArg(OPT_lib))
-    warn("ignoring /lib since it's not the first argument");
+    Warn(ctx) << "ignoring /lib since it's not the first argument";
 
   return args;
 }
@@ -993,7 +995,7 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
   if (missingCount)
     fatal(Twine(result.args.getArgString(missingIndex)) + ": missing argument");
   for (auto *arg : result.args.filtered(OPT_UNKNOWN))
-    warn("ignoring unknown argument: " + arg->getAsString(result.args));
+    Warn(ctx) << "ignoring unknown argument: " << arg->getAsString(result.args);
   return result;
 }
 
@@ -1019,7 +1021,7 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void LinkerDriver::printHelp(const char *argv0) {
-  ctx.optTable.printHelp(lld::outs(),
+  ctx.optTable.printHelp(ctx.e.outs(),
                          (std::string(argv0) + " [options] file...").c_str(),
                          "LLVM Linker", false);
 }

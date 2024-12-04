@@ -163,7 +163,7 @@ private:
 
 } // end anonymous namespace
 
-/// ParseDirectiveSymbolAttribute
+/// parseDirectiveSymbolAttribute
 ///  ::= { ".local", ".weak", ... } [ identifier ( , identifier )* ]
 bool ELFAsmParser::parseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
   MCSymbolAttr Attr = StringSwitch<MCSymbolAttr>(Directive)
@@ -746,7 +746,7 @@ static MCSymbolAttr MCAttrForString(StringRef Type) {
           .Default(MCSA_Invalid);
 }
 
-/// ParseDirectiveELFType
+/// parseDirectiveELFType
 ///  ::= .type identifier , STT_<TYPE_IN_UPPER_CASE>
 ///  ::= .type identifier , #attribute
 ///  ::= .type identifier , @attribute
@@ -803,7 +803,7 @@ bool ELFAsmParser::parseDirectiveType(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveIdent
+/// parseDirectiveIdent
 ///  ::= .ident string
 bool ELFAsmParser::parseDirectiveIdent(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::String))
@@ -821,7 +821,7 @@ bool ELFAsmParser::parseDirectiveIdent(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveSymver
+/// parseDirectiveSymver
 ///  ::= .symver foo, bar2@zed
 bool ELFAsmParser::parseDirectiveSymver(StringRef, SMLoc) {
   StringRef OriginalName, Name, Action;
@@ -858,7 +858,7 @@ bool ELFAsmParser::parseDirectiveSymver(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveVersion
+/// parseDirectiveVersion
 ///  ::= .version string
 bool ELFAsmParser::parseDirectiveVersion(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::String))
@@ -882,7 +882,7 @@ bool ELFAsmParser::parseDirectiveVersion(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveWeakref
+/// parseDirectiveWeakref
 ///  ::= .weakref foo, bar
 bool ELFAsmParser::parseDirectiveWeakref(StringRef, SMLoc) {
   // FIXME: Share code with the other alias building directives.

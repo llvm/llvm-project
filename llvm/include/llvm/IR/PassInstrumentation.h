@@ -182,7 +182,7 @@ private:
       BeforeNonSkippedPassCallbacks;
   /// These are run on passes that have just run.
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
-  /// These are run passes that have just run on invalidated IR.
+  /// These are run on passes that have just run on invalidated IR.
   SmallVector<llvm::unique_function<AfterPassInvalidatedFunc>, 4>
       AfterPassInvalidatedCallbacks;
   /// These are run on analyses that are about to be run.

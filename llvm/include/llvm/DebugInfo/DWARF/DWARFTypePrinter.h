@@ -69,6 +69,7 @@ private:
     case dwarf::DW_TAG_union_type:
     case dwarf::DW_TAG_namespace:
     case dwarf::DW_TAG_enumeration_type:
+    case dwarf::DW_TAG_typedef:
       return true;
     default:
       break;

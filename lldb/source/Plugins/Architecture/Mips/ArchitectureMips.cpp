@@ -150,7 +150,7 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
 
   // Create Disassembler Instance
   lldb::DisassemblerSP disasm_sp(
-    Disassembler::FindPlugin(m_arch, nullptr, nullptr));
+      Disassembler::FindPlugin(m_arch, nullptr, nullptr, nullptr, nullptr));
 
   InstructionList instruction_list;
   InstructionSP prev_insn;

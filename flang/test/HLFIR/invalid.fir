@@ -1314,3 +1314,37 @@ func.func @end_associate_with_alloc_comp(%var: !hlfir.expr<?x!fir.type<_QMtypesT
   hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
   return
 }
+
+// -----
+
+func.func @bad_eval_in_mem_1() {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+// expected-error@+1 {{'hlfir.eval_in_mem' op result #0 must be The type of an array, character, or derived type Fortran expression, but got '!fir.array<10xf32>'}}
+  %2 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !fir.array<10xf32> {
+  ^bb0(%arg0: !fir.ref<!fir.array<10xf32>>):
+  }
+  return
+}
+
+// -----
+
+func.func @bad_eval_in_mem_2() {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
+  // expected-error@+1 {{'hlfir.eval_in_mem' op `shape` rank must match the result rank}}
+  %2 = hlfir.eval_in_mem shape %1 : (!fir.shape<2>) -> !hlfir.expr<10xf32> {
+  ^bb0(%arg0: !fir.ref<!fir.array<10xf32>>):
+  }
+  return
+}
+
+// -----
+
+func.func @bad_eval_in_mem_3() {
+  // expected-error@+1 {{'hlfir.eval_in_mem' op must be provided one length parameter when the result is a character}}
+  %1 = hlfir.eval_in_mem  : () -> !hlfir.expr<!fir.char<1,?>> {
+  ^bb0(%arg0: !fir.ref<!fir.char<1,?>>):
+  }
+  return
+}

@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
 #define _LIBCPP___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
