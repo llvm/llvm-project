@@ -28,6 +28,7 @@ struct Bits {
   size_t getOffsetInByte() const { return N % 8; }
   bool isFullByte() const { return N % 8 == 0; }
   bool nonZero() const { return N != 0; }
+  bool isZero() const { return N == 0; }
 
   Bits operator-(Bits Other) { return Bits(N - Other.N); }
   Bits operator+(Bits Other) { return Bits(N + Other.N); }
