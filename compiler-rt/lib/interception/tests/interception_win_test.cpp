@@ -797,6 +797,41 @@ TEST(Interception, EmptyExportTable) {
   EXPECT_EQ(0U, FunPtr);
 }
 
+const struct InstructionSizeData {
+  size_t size;  // hold instruction size or 0 for failure,
+                // e.g. on control instructions
+  u8 instr[16];
+  size_t rel_offset;
+  const char *comment;
+} data[] = {
+    /* sorted list */
+    {1, {0x50}, 0, "50 : push eax / rax"},
+};
+
+std::string dumpInstruction(unsigned arrayIndex,
+                            const InstructionSizeData &data) {
+  std::stringstream ret;
+  ret << "  with arrayIndex=" << arrayIndex << " {";
+  for (size_t i = 0; i < data.size; i++) {
+    if (i > 0)
+      ret << ", ";
+    ret << "0x" << std::setfill('0') << std::setw(2) << std::right << std::hex
+        << (int)data.instr[i];
+  }
+  ret << "} " << data.comment;
+  return ret.str();
+}
+
+TEST(Interception, GetInstructionSize) {
+  for (unsigned i = 0; i < sizeof(data) / sizeof(*data); i++) {
+    size_t rel_offset = ~0L;
+    size_t size = __interception::TestOnlyGetInstructionSize(
+        (uptr)data[i].instr, &rel_offset);
+    EXPECT_EQ(data[i].size, size) << dumpInstruction(i, data[i]);
+    EXPECT_EQ(data[i].rel_offset, rel_offset) << dumpInstruction(i, data[i]);
+  }
+}
+
 }  // namespace __interception
 
 #    endif  // !SANITIZER_WINDOWS_ARM64

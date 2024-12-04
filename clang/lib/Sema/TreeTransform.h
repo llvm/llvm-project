@@ -14454,7 +14454,7 @@ TreeTransform<Derived>::TransformExprRequirement(concepts::ExprRequirement *Req)
                                                Req->getNoexceptLoc(),
                                                std::move(*TransRetReq));
   return getDerived().RebuildExprRequirement(
-      TransExpr.get<concepts::Requirement::SubstitutionDiagnostic *>(),
+      cast<concepts::Requirement::SubstitutionDiagnostic *>(TransExpr),
       Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
 }
 

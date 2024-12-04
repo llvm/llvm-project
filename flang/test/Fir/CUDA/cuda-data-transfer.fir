@@ -553,4 +553,27 @@ func.func @_QPsrc_cst() {
 // CHECK: %[[CONV:.*]] = fir.convert %[[ALLOCA]] : (!fir.ref<f32>) -> !fir.llvm_ptr<i8>
 // CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %[[CONV]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
 
+func.func @_QPchecksums(%arg0: !fir.box<!fir.array<?xf64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QFchecksumsEa"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> !fir.box<!fir.array<?xf64>>
+  %2 = fir.rebox %1 : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
+  %3 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFchecksumsEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %4 = fir.load %3 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  %6 = arith.cmpi sgt, %5, %c0 : index
+  %7 = arith.select %6, %5, %c0 : index
+  %8 = fir.alloca !fir.array<?xf64>, %7 {bindc_name = "hosttmp", uniq_name = "_QFchecksumsEhosttmp"}
+  %9 = fir.shape %7 : (index) -> !fir.shape<1>
+  %10 = fir.declare %8(%9) {uniq_name = "_QFchecksumsEhosttmp"} : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf64>>
+  %11 = fir.embox %10(%9) : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf64>>
+  cuf.data_transfer %2 to %10, %9 : !fir.shape<1> {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QPchecksums
+// CHECK: %[[DST:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: %[[SRC:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+
 } // end of module

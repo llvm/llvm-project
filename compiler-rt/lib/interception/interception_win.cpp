@@ -544,6 +544,10 @@ static const u8 kPrologueWithShortJump2[] = {
 
 // Returns 0 on error.
 static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
+  if (rel_offset) {
+    *rel_offset = 0;
+  }
+
 #if SANITIZER_ARM64
   // An ARM64 instruction is 4 bytes long.
   return 4;
@@ -631,7 +635,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 2;
 
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
-    case 0x25FF:  // FF 25 XX XX XX XX : jmp [XXXXXXXX]
+    case 0x25FF:  // FF 25 XX YY ZZ WW : jmp dword ptr ds:[WWZZYYXX]
       return 0;
   }
 
@@ -868,7 +872,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x75FF:  // FF 75 XX : push dword ptr [ebp + XX]
       return 3;
     case 0xC1F7:  // F7 C1 XX YY ZZ WW : test ecx, WWZZYYXX
-    case 0x25FF:  // FF 25 XX YY ZZ WW : jmp dword ptr ds:[WWZZYYXX]
       return 6;
     case 0x3D83:  // 83 3D XX YY ZZ WW TT : cmp TT, WWZZYYXX
       return 7;
@@ -909,6 +912,10 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   if (::IsDebuggerPresent())
     __debugbreak();
   return 0;
+}
+
+size_t TestOnlyGetInstructionSize(uptr address, size_t *rel_offset) {
+  return GetInstructionSize(address, rel_offset);
 }
 
 // Returns 0 on error.

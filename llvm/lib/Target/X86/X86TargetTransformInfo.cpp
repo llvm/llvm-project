@@ -1775,7 +1775,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   }
 
   // For 2-input shuffles, we must account for splitting the 2 inputs into many.
-  if (Kind == TTI::SK_PermuteTwoSrc && LT.first != 1) {
+  if (Kind == TTI::SK_PermuteTwoSrc && !IsInLaneShuffle && LT.first != 1) {
     // We assume that source and destination have the same vector type.
     InstructionCost NumOfDests = LT.first;
     InstructionCost NumOfShufflesPerDest = LT.first * 2 - 1;
@@ -4854,10 +4854,9 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
          RegisterFileMoveCost;
 }
 
-InstructionCost
-X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
-                                     bool Insert, bool Extract,
-                                     TTI::TargetCostKind CostKind) {
+InstructionCost X86TTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
@@ -5148,7 +5147,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // Type legalization can't handle structs
   if (TLI->getValueType(DL, Src, true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind);
+                                  CostKind, OpInfo, I);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
@@ -5160,7 +5159,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // Add a cost for constant load to vector.
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
-                            /*AddressSpace=*/0, CostKind);
+                            /*AddressSpace=*/0, CostKind, OpInfo);
 
   // Handle the simple case of non-vectors.
   // NOTE: this assumes that legalization never creates vector from scalars!
@@ -5190,7 +5189,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (XMMBits % EltTyBits != 0)
     // Vector size must be a multiple of the element size. I.e. no padding.
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind);
+                                  CostKind, OpInfo, I);
   const int NumEltPerXMM = XMMBits / EltTyBits;
 
   auto *XMMVecTy = FixedVectorType::get(EltTy, NumEltPerXMM);
@@ -5201,7 +5200,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     if ((8 * CurrOpSizeBytes) % EltTyBits != 0)
       // Vector size must be a multiple of the element size. I.e. no padding.
       return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                    CostKind);
+                                    CostKind, OpInfo, I);
     int CurrNumEltPerOp = (8 * CurrOpSizeBytes) / EltTyBits;
 
     assert(CurrOpSizeBytes > 0 && CurrNumEltPerOp > 0 && "How'd we get here?");

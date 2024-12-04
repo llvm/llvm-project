@@ -448,8 +448,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     QualType SubExprTy = SubExpr->getType();
     std::optional<PrimType> FromT = classify(SubExprTy);
-    // Casts from integer to vectors in C.
-    if (FromT && CE->getType()->isVectorType())
+    // Casts from integer/vector to vector.
+    if (CE->getType()->isVectorType())
       return this->emitBuiltinBitCast(CE);
 
     std::optional<PrimType> ToT = classify(CE->getType());
@@ -1000,7 +1000,10 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
     if (!visitAsPointer(RHS, *RT) || !visitAsPointer(LHS, *LT))
       return false;
 
-    return this->emitSubPtr(classifyPrim(E->getType()), E);
+    PrimType IntT = classifyPrim(E->getType());
+    if (!this->emitSubPtr(IntT, E))
+      return false;
+    return DiscardResult ? this->emitPop(IntT, E) : true;
   }
 
   PrimType OffsetType;
@@ -5911,6 +5914,9 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     return this->discard(SubExpr);
 
   auto UnaryOp = E->getOpcode();
+  if (UnaryOp == UO_Extension)
+    return this->delegate(SubExpr);
+
   if (UnaryOp != UO_Plus && UnaryOp != UO_Minus && UnaryOp != UO_LNot &&
       UnaryOp != UO_Not && UnaryOp != UO_AddrOf)
     return this->emitInvalid(E);
@@ -6502,7 +6508,7 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   // we later assume it to be one (i.e. a PT_Ptr). However,
   // we call this function for other utility methods where
   // a bitcast might be useful, so convert it to a PT_Ptr in that case.
-  if (SubExpr->isGLValue()) {
+  if (SubExpr->isGLValue() || FromType->isVectorType()) {
     if (!this->visit(SubExpr))
       return false;
   } else if (std::optional<PrimType> FromT = classify(SubExpr)) {
@@ -6514,6 +6520,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
       return false;
     if (!this->emitGetPtrLocal(TempOffset, E))
       return false;
+  } else {
+    return false;
   }
 
   if (!ToT || ToT == PT_Ptr) {

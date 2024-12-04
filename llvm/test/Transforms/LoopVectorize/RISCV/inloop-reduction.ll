@@ -146,8 +146,8 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP9:%.*]] = sext <vscale x 4 x i16> [[VP_OP_LOAD]] to <vscale x 4 x i32>
 ; IF-EVL-OUTLOOP-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> [[TMP9]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP10]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[VP_OP]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP5]])
-; IF-EVL-OUTLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP5]], [[EVL_BASED_IV]]
-; IF-EVL-OUTLOOP-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP4]]
+; IF-EVL-OUTLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP5]], [[EVL_BASED_IV]]
+; IF-EVL-OUTLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP4]]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL-OUTLOOP:       middle.block:
@@ -203,8 +203,8 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; IF-EVL-INLOOP-NEXT:    [[TMP9:%.*]] = sext <vscale x 8 x i16> [[VP_OP_LOAD]] to <vscale x 8 x i32>
 ; IF-EVL-INLOOP-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vp.reduce.add.nxv8i32(i32 0, <vscale x 8 x i32> [[TMP9]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-INLOOP-NEXT:    [[TMP11]] = add i32 [[TMP10]], [[VEC_PHI]]
-; IF-EVL-INLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP5]], [[EVL_BASED_IV]]
-; IF-EVL-INLOOP-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP4]]
+; IF-EVL-INLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP5]], [[EVL_BASED_IV]]
+; IF-EVL-INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP4]]
 ; IF-EVL-INLOOP-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-INLOOP-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL-INLOOP:       middle.block:

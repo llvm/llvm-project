@@ -1528,6 +1528,17 @@ static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
   return vals;
 }
 
+static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_allowable_client)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+  }
+  return vals;
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1772,6 +1783,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->warnDuplicateRpath =
       args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
   config->runtimePaths = getRuntimePaths(args);
+  config->allowableClients = getAllowableClients(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(

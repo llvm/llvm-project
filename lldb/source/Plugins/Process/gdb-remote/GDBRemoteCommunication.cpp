@@ -1216,16 +1216,11 @@ void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
 llvm::Error
 GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
                                        GDBRemoteCommunication &server) {
-  const bool child_processes_inherit = false;
   const int backlog = 5;
-  TCPSocket listen_socket(true, child_processes_inherit);
+  TCPSocket listen_socket(true);
   if (llvm::Error error =
           listen_socket.Listen("localhost:0", backlog).ToError())
     return error;
-
-  Socket *accept_socket = nullptr;
-  std::future<Status> accept_status = std::async(
-      std::launch::async, [&] { return listen_socket.Accept(accept_socket); });
 
   llvm::SmallString<32> remote_addr;
   llvm::raw_svector_ostream(remote_addr)
@@ -1238,10 +1233,15 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Unable to connect: %s", status.AsCString());
 
-  client.SetConnection(std::move(conn_up));
-  if (llvm::Error error = accept_status.get().ToError())
-    return error;
+  // The connection was already established above, so a short timeout is
+  // sufficient.
+  Socket *accept_socket = nullptr;
+  if (Status accept_status =
+          listen_socket.Accept(std::chrono::seconds(1), accept_socket);
+      accept_status.Fail())
+    return accept_status.takeError();
 
+  client.SetConnection(std::move(conn_up));
   server.SetConnection(
       std::make_unique<ConnectionFileDescriptor>(accept_socket));
   return llvm::Error::success();

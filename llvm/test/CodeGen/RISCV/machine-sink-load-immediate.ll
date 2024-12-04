@@ -184,13 +184,13 @@ declare i32 @toupper()
 define signext i32 @overlap_live_ranges(ptr %arg, i32 signext %arg1) {
 ; CHECK-LABEL: overlap_live_ranges:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    li a3, 1
-; CHECK-NEXT:    li a2, 13
-; CHECK-NEXT:    bne a1, a3, .LBB1_2
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    bne a1, a2, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %bb2
-; CHECK-NEXT:    lw a2, 4(a0)
-; CHECK-NEXT:  .LBB1_2: # %bb5
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    lw a0, 4(a0)
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    li a0, 13
 ; CHECK-NEXT:    ret
 bb:
   %i = icmp eq i32 %arg1, 1
@@ -308,34 +308,37 @@ define signext i32 @branch_dispatch(i8 %a) {
 ; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    andi a0, a0, 255
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    li s0, 13
-; CHECK-NEXT:    beq a0, a1, .LBB3_8
+; CHECK-NEXT:    beq a0, a1, .LBB3_7
 ; CHECK-NEXT:  # %bb.1: # %case.1
 ; CHECK-NEXT:    li a1, 12
-; CHECK-NEXT:    li s0, 53
 ; CHECK-NEXT:    beq a0, a1, .LBB3_8
 ; CHECK-NEXT:  # %bb.2: # %case.2
 ; CHECK-NEXT:    li a1, 70
-; CHECK-NEXT:    li s0, 33
-; CHECK-NEXT:    beq a0, a1, .LBB3_8
+; CHECK-NEXT:    beq a0, a1, .LBB3_9
 ; CHECK-NEXT:  # %bb.3: # %case.3
 ; CHECK-NEXT:    li a1, 234
 ; CHECK-NEXT:    li s0, 23
-; CHECK-NEXT:    beq a0, a1, .LBB3_8
+; CHECK-NEXT:    beq a0, a1, .LBB3_10
 ; CHECK-NEXT:  # %bb.4: # %case.4
-; CHECK-NEXT:    beqz a0, .LBB3_7
+; CHECK-NEXT:    beqz a0, .LBB3_11
 ; CHECK-NEXT:  # %bb.5: # %case.5
 ; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    bne a0, a1, .LBB3_10
+; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    li s0, 54
-; CHECK-NEXT:    beq a0, a1, .LBB3_8
-; CHECK-NEXT:  # %bb.6: # %case.default
-; CHECK-NEXT:    li s0, 23
-; CHECK-NEXT:    j .LBB3_8
+; CHECK-NEXT:    j .LBB3_10
 ; CHECK-NEXT:  .LBB3_7:
-; CHECK-NEXT:    li s0, 644
-; CHECK-NEXT:  .LBB3_8: # %merge
+; CHECK-NEXT:    li s0, 13
+; CHECK-NEXT:    j .LBB3_10
+; CHECK-NEXT:  .LBB3_8:
+; CHECK-NEXT:    li s0, 53
+; CHECK-NEXT:    j .LBB3_10
+; CHECK-NEXT:  .LBB3_9:
+; CHECK-NEXT:    li s0, 33
+; CHECK-NEXT:  .LBB3_10: # %merge
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call use
 ; CHECK-NEXT:    mv a0, s0
@@ -346,6 +349,10 @@ define signext i32 @branch_dispatch(i8 %a) {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB3_11:
+; CHECK-NEXT:    .cfi_restore_state
+; CHECK-NEXT:    li s0, 644
+; CHECK-NEXT:    j .LBB3_10
 case.0:
   %c0 = icmp ne i8 %a, 32
   br i1 %c0, label %case.1, label %merge

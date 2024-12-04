@@ -99,8 +99,11 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
 
 int X86_64::getTlsGdRelaxSkip(RelType type) const {
   // TLSDESC relocations are processed separately. See relaxTlsGdToLe below.
-  return type == R_X86_64_GOTPC32_TLSDESC || type == R_X86_64_TLSDESC_CALL ? 1
-                                                                           : 2;
+  return type == R_X86_64_GOTPC32_TLSDESC ||
+                 type == R_X86_64_CODE_4_GOTPC32_TLSDESC ||
+                 type == R_X86_64_TLSDESC_CALL
+             ? 1
+             : 2;
 }
 
 // Opcodes for the different X86_64 jmp instructions.
@@ -390,12 +393,14 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_GOT64:
     return R_GOTPLT;
   case R_X86_64_GOTPC32_TLSDESC:
+  case R_X86_64_CODE_4_GOTPC32_TLSDESC:
     return R_TLSDESC_PC;
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
@@ -486,18 +491,26 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     // The original code used a pc relative relocation and so we have to
     // compensate for the -4 in had in the addend.
     write32le(loc + 8, val + 4);
-  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC) {
+  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
+             rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      Err(ctx) << getErrorLoc(ctx, loc - 3)
-               << "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG";
+      Err(ctx) << getErrorLoc(ctx, (rel.type == R_X86_64_GOTPC32_TLSDESC)
+                                       ? loc - 3
+                                       : loc - 4)
+               << "R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC "
+                  "must be used in leaq x@tlsdesc(%rip), %REG";
       return;
     }
-    loc[-3] = 0x48 | ((loc[-3] >> 2) & 1);
+    if (rel.type == R_X86_64_GOTPC32_TLSDESC) {
+      loc[-3] = 0x48 | ((loc[-3] >> 2) & 1);
+    } else {
+      loc[-3] = (loc[-3] & ~0x44) | ((loc[-3] & 0x44) >> 2);
+    }
     loc[-2] = 0xc7;
     loc[-1] = 0xc0 | ((loc[-1] >> 3) & 7);
+
     write32le(loc, val + 4);
   } else {
     // Convert call *x@tlsdesc(%REG) to xchg ax, ax.
@@ -527,14 +540,16 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     // Both code sequences are PC relatives, but since we are moving the
     // constant forward by 8 bytes we have to subtract the value by 8.
     write32le(loc + 8, val - 8);
-  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC) {
+  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
+             rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq x@gottpoff(%rip), %REG.
-    assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      Err(ctx) << getErrorLoc(ctx, loc - 3)
-               << "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG";
+      Err(ctx) << getErrorLoc(ctx, (rel.type == R_X86_64_GOTPC32_TLSDESC)
+                                       ? loc - 3
+                                       : loc - 4)
+               << "R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC "
+                  "must be used in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-2] = 0x8b;
@@ -547,44 +562,69 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-// In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
-// R_X86_64_TPOFF32 so that it does not use GOT.
+// In some conditions, R_X86_64_GOTTPOFF/R_X86_64_CODE_4_GOTTPOFF relocation can
+// be optimized to R_X86_64_TPOFF32 so that it does not use GOT.
 void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
   uint8_t *inst = loc - 3;
   uint8_t reg = loc[-1] >> 3;
   uint8_t *regSlot = loc - 1;
 
-  // Note that ADD with RSP or R12 is converted to ADD instead of LEA
-  // because LEA with these registers needs 4 bytes to encode and thus
-  // wouldn't fit the space.
+  if (rel.type == R_X86_64_GOTTPOFF) {
+    // Note that ADD with RSP or R12 is converted to ADD instead of LEA
+    // because LEA with these registers needs 4 bytes to encode and thus
+    // wouldn't fit the space.
 
-  if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
-    // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
-    memcpy(inst, "\x48\x81\xc4", 3);
-  } else if (memcmp(inst, "\x4c\x03\x25", 3) == 0) {
-    // "addq foo@gottpoff(%rip),%r12" -> "addq $foo,%r12"
-    memcpy(inst, "\x49\x81\xc4", 3);
-  } else if (memcmp(inst, "\x4c\x03", 2) == 0) {
-    // "addq foo@gottpoff(%rip),%r[8-15]" -> "leaq foo(%r[8-15]),%r[8-15]"
-    memcpy(inst, "\x4d\x8d", 2);
-    *regSlot = 0x80 | (reg << 3) | reg;
-  } else if (memcmp(inst, "\x48\x03", 2) == 0) {
-    // "addq foo@gottpoff(%rip),%reg -> "leaq foo(%reg),%reg"
-    memcpy(inst, "\x48\x8d", 2);
-    *regSlot = 0x80 | (reg << 3) | reg;
-  } else if (memcmp(inst, "\x4c\x8b", 2) == 0) {
-    // "movq foo@gottpoff(%rip),%r[8-15]" -> "movq $foo,%r[8-15]"
-    memcpy(inst, "\x49\xc7", 2);
+    if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
+      // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
+      memcpy(inst, "\x48\x81\xc4", 3);
+    } else if (memcmp(inst, "\x4c\x03\x25", 3) == 0) {
+      // "addq foo@gottpoff(%rip),%r12" -> "addq $foo,%r12"
+      memcpy(inst, "\x49\x81\xc4", 3);
+    } else if (memcmp(inst, "\x4c\x03", 2) == 0) {
+      // "addq foo@gottpoff(%rip),%r[8-15]" -> "leaq foo(%r[8-15]),%r[8-15]"
+      memcpy(inst, "\x4d\x8d", 2);
+      *regSlot = 0x80 | (reg << 3) | reg;
+    } else if (memcmp(inst, "\x48\x03", 2) == 0) {
+      // "addq foo@gottpoff(%rip),%reg -> "leaq foo(%reg),%reg"
+      memcpy(inst, "\x48\x8d", 2);
+      *regSlot = 0x80 | (reg << 3) | reg;
+    } else if (memcmp(inst, "\x4c\x8b", 2) == 0) {
+      // "movq foo@gottpoff(%rip),%r[8-15]" -> "movq $foo,%r[8-15]"
+      memcpy(inst, "\x49\xc7", 2);
+      *regSlot = 0xc0 | reg;
+    } else if (memcmp(inst, "\x48\x8b", 2) == 0) {
+      // "movq foo@gottpoff(%rip),%reg" -> "movq $foo,%reg"
+      memcpy(inst, "\x48\xc7", 2);
+      *regSlot = 0xc0 | reg;
+    } else {
+      Err(ctx)
+          << getErrorLoc(ctx, loc - 3)
+          << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
+    }
+  } else if (rel.type == R_X86_64_CODE_4_GOTTPOFF) {
+    if (loc[-4] != 0xd5) {
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "Invalid prefix with R_X86_64_CODE_4_GOTTPOFF!";
+      return;
+    }
+    const uint8_t rex = loc[-3];
+    loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
     *regSlot = 0xc0 | reg;
-  } else if (memcmp(inst, "\x48\x8b", 2) == 0) {
-    // "movq foo@gottpoff(%rip),%reg" -> "movq $foo,%reg"
-    memcpy(inst, "\x48\xc7", 2);
-    *regSlot = 0xc0 | reg;
+
+    if (loc[-2] == 0x8b) {
+      // "movq foo@gottpoff(%rip),%r[16-31]" -> "movq $foo,%r[16-31]"
+      loc[-2] = 0xc7;
+    } else if (loc[-2] == 0x03) {
+      // "addq foo@gottpoff(%rip),%r[16-31]" -> "addq $foo,%r[16-31]"
+      loc[-2] = 0x81;
+    } else {
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ "
+                  "instructions only";
+    }
   } else {
-    ErrAlways(ctx)
-        << getErrorLoc(ctx, loc - 3)
-        << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
+    llvm_unreachable("Unsupported relocation type!");
   }
 
   // The original code used a PC relative relocation.
@@ -741,6 +781,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:
   case R_X86_64_TLSLD:
@@ -830,6 +871,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
     break;
   case R_X86_64_GOTPC32_TLSDESC:
+  case R_X86_64_CODE_4_GOTPC32_TLSDESC:
   case R_X86_64_TLSDESC_CALL:
   case R_X86_64_TLSGD:
     if (rel.expr == R_RELAX_TLS_GD_TO_LE) {
@@ -850,6 +892,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
     break;
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
     if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
       relaxTlsIeToLe(loc, rel, val);
     } else {

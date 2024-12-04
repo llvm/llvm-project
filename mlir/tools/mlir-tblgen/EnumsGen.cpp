@@ -101,6 +101,27 @@ struct FieldParser<{0}, {0}> {{
     return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
   }
 };
+
+/// Support for std::optional, useful in attribute/type definition where the enum is
+/// used as:
+///
+///    let parameters = (ins OptionalParameter<"std::optional<TheEnumName>">:$value);
+template<>
+struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
+  template <typename ParserT>
+  static FailureOr<std::optional<{0}>> parse(ParserT &parser) {{
+    // Parse the keyword/string containing the enum.
+    std::string enumKeyword;
+    auto loc = parser.getCurrentLocation();
+    if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+      return std::optional<{0}>{{};
+
+    // Symbolize the keyword.
+    if (::std::optional<{0}> attr = {1}::symbolizeEnum<{0}>(enumKeyword))
+      return attr;
+    return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
+  }
+};
 } // namespace mlir
 
 namespace llvm {

@@ -353,7 +353,7 @@ def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
-    IsolatedFromAbove
+    IsolatedFromAbove, AffineScope
   ]> {
   let summary = "Function executable on a GPU";
 

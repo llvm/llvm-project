@@ -105,6 +105,8 @@ Changes to the LLVM IR
 
 * Operand bundle values can now be metadata strings.
 
+* Fast math flags are now permitted on `fptrunc` and `fpext`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -211,7 +213,12 @@ Changes to the RISC-V Backend
 * `f` and `cf` inline assembly constraints, when using F-/D-/H-in-X extensions,
   will use the relevant GPR rather than FPR. This makes inline assembly portable
   between e.g. F and Zfinx code.
-
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicsr` (CSR)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisls` (Scaled Load Store)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
+  extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -221,9 +228,15 @@ and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
 and [Non-trapping float-to-int Conversions] language features, which are
 [widely implemented in engines].
 
+A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
+the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
+-mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
+and -mextended-const.
+
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
 [widely implemented in engines]: https://webassembly.org/features/
+[here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
 Changes to the Windows Target
 -----------------------------

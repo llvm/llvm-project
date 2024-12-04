@@ -1506,29 +1506,29 @@ vzeroupper
 # CHECK-NEXT:  1      1     0.25                        vpminuw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpminuw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vpmovmskb	%xmm0, %ecx
-# CHECK-NEXT:  1      1     0.50                        vpmovsxbd	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovsxbd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovsxbd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovsxbq	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovsxbq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovsxbq	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovsxbw	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovsxbw	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovsxbw	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovsxdq	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovsxdq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovsxdq	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovsxwd	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovsxwd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovsxwd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovsxwq	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovsxwq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovsxwq	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovzxbd	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovzxbd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovzxbd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovzxbq	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovzxbq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovzxbq	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovzxbw	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovzxbw	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovzxbw	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovzxdq	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovzxdq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovzxdq	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovzxwd	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovzxwd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovzxwd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpmovzxwq	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpmovzxwq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpmovzxwq	(%rax), %xmm2
 # CHECK-NEXT:  1      3     0.50                        vpmuldq	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   vpmuldq	(%rax), %xmm1, %xmm2

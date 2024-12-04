@@ -1503,8 +1503,8 @@ using OptimizeCopyFn =
 
 /// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
-struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
-  GeneralizePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
+struct DecomposePadOpPattern : public OpRewritePattern<tensor::PadOp> {
+  DecomposePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<tensor::PadOp>(context, benefit) {}
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override;
@@ -1687,6 +1687,10 @@ void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 /// tensor.pad, linalg.transpose, tensor.{insert|extract}_slice. Require all
 /// outer dims to be unit.
 void populateDecomposePackUnpackPatterns(RewritePatternSet &patterns);
+
+/// Populates patterns to decompose tensor.pad into e.g.
+/// tensor.empty, linalg.fill, tensor.insert_slice.
+void populateDecomposePadPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.

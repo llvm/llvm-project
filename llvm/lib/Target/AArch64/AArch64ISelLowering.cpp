@@ -4901,13 +4901,14 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), dl, {F32, MVT::Other},
                                 {Op.getOperand(0), In});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
-          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
                        DAG.getNode(Op.getOpcode(), dl, F32, In),
-                       DAG.getIntPtrConstant(0, dl));
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   }
 
   uint64_t VTSize = VT.getFixedSizeInBits();
@@ -4919,9 +4920,9 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       In = DAG.getNode(Opc, dl, {CastVT, MVT::Other},
                        {Op.getOperand(0), In});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
-          {In.getValue(1), In.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
+                         {In.getValue(1), In.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     In = DAG.getNode(Opc, dl, CastVT, In);
     return DAG.getNode(ISD::FP_ROUND, dl, VT, In,
@@ -4969,13 +4970,14 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), dl, {PromoteVT, MVT::Other},
                                 {Op.getOperand(0), SrcVal});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
-          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
                        DAG.getNode(Op.getOpcode(), dl, PromoteVT, SrcVal),
-                       DAG.getIntPtrConstant(0, dl));
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   };
 
   if (Op.getValueType() == MVT::bf16) {
@@ -5067,12 +5069,13 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
           DAG.getNode(ISD::OR, DL, MVT::i64, RoundedBits, NeedsAdjustment);
       SDValue Adjusted = DAG.getNode(ISD::BITCAST, DL, MVT::f64, AdjustedBits);
       return IsStrict
-                 ? DAG.getNode(ISD::STRICT_FP_ROUND, DL,
-                               {Op.getValueType(), MVT::Other},
-                               {Rounded.getValue(1), Adjusted,
-                                DAG.getIntPtrConstant(0, DL)})
+                 ? DAG.getNode(
+                       ISD::STRICT_FP_ROUND, DL,
+                       {Op.getValueType(), MVT::Other},
+                       {Rounded.getValue(1), Adjusted,
+                        DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)})
                  : DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), Adjusted,
-                               DAG.getIntPtrConstant(0, DL, true));
+                               DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
   }
 
@@ -7109,7 +7112,7 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), FScale, Zero);
   if (X.getValueType() != XScalarTy)
     Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
-                        DAG.getIntPtrConstant(1, SDLoc(Op)));
+                        DAG.getIntPtrConstant(1, SDLoc(Op), /*isTarget=*/true));
   return Final;
 }
 

@@ -1896,6 +1896,18 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
     }
 
+    if (VT.isRISCVVectorTuple()) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      return NodeMap[V] = DAG.getNode(
+                 ISD::BITCAST, getCurSDLoc(), VT,
+                 DAG.getNode(
+                     ISD::SPLAT_VECTOR, getCurSDLoc(),
+                     EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                                      VT.getSizeInBits().getKnownMinValue() / 8,
+                                      true),
+                     DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
@@ -7532,7 +7544,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
 
   case Intrinsic::expect:
-    // Just replace __builtin_expect(exp, c) with EXP.
+  case Intrinsic::expect_with_probability:
+    // Just replace __builtin_expect(exp, c) and
+    // __builtin_expect_with_probability(exp, c, p) with EXP.
     setValue(&I, getValue(I.getArgOperand(0)));
     return;
 
