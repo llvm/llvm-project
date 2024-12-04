@@ -76,6 +76,10 @@ class SPIRVEmitIntrinsics
   DenseSet<Instruction *> AggrStores;
   SPIRV::InstructionSet::InstructionSet InstrSet;
 
+  // map of function declarations to <pointer arg index => element type>
+  DenseMap<const Function *, SmallVector<std::pair<unsigned, Type *>>>
+      FDeclPtrTys;
+
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
   unsigned TodoTypeSz = 0;
@@ -184,6 +188,10 @@ class SPIRVEmitIntrinsics
   void deduceOperandElementTypeFunctionPointer(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
       Type *&KnownElemTy, bool IsPostprocessing);
+  bool deduceOperandElementTypeFunctionRet(
+      Instruction *I, SmallPtrSet<Instruction *, 4> *UncompleteRets,
+      const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
+      Type *&KnownElemTy, Value *Op, Function *F);
 
   CallInst *buildSpvPtrcast(Function *F, Value *Op, Type *ElemTy);
   void replaceUsesOfWithSpvPtrcast(Value *Op, Type *ElemTy, Instruction *I,
@@ -205,6 +213,7 @@ class SPIRVEmitIntrinsics
   bool runOnFunction(Function &F);
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
+  void parseFunDeclarations(Module &M);
 
 public:
   static char ID;
@@ -957,6 +966,47 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
       IsNewFTy ? FunctionType::get(RetTy, ArgTys, FTy->isVarArg()) : FTy;
 }
 
+bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
+    Instruction *I, SmallPtrSet<Instruction *, 4> *UncompleteRets,
+    const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
+    Type *&KnownElemTy, Value *Op, Function *F) {
+  KnownElemTy = GR->findDeducedElementType(F);
+  if (KnownElemTy)
+    return false;
+  if (Type *OpElemTy = GR->findDeducedElementType(Op)) {
+    GR->addDeducedElementType(F, OpElemTy);
+    GR->addReturnType(
+        F, TypedPointerType::get(OpElemTy,
+                                 getPointerAddressSpace(F->getReturnType())));
+    // non-recursive update of types in function uses
+    DenseSet<std::pair<Value *, Value *>> VisitedSubst{std::make_pair(I, Op)};
+    for (User *U : F->users()) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != F)
+        continue;
+      if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(CI)) {
+        if (Type *PrevElemTy = GR->findDeducedElementType(CI)) {
+          updateAssignType(AssignCI, CI, PoisonValue::get(OpElemTy));
+          propagateElemType(CI, PrevElemTy, VisitedSubst);
+        }
+      }
+    }
+    // Non-recursive update of types in the function uncomplete returns.
+    // This may happen just once per a function, the latch is a pair of
+    // findDeducedElementType(F) / addDeducedElementType(F, ...).
+    // With or without the latch it is a non-recursive call due to
+    // UncompleteRets set to nullptr in this call.
+    if (UncompleteRets)
+      for (Instruction *UncompleteRetI : *UncompleteRets)
+        deduceOperandElementType(UncompleteRetI, nullptr, AskOps,
+                                 IsPostprocessing);
+  } else if (UncompleteRets) {
+    UncompleteRets->insert(I);
+  }
+  TypeValidated.insert(I);
+  return true;
+}
+
 // If the Instruction has Pointer operands with unresolved types, this function
 // tries to deduce them. If the Instruction has Pointer operands with known
 // types which differ from expected, this function tries to insert a bitcast to
@@ -1039,46 +1089,15 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
         Ops.push_back(std::make_pair(Op, i));
     }
   } else if (auto *Ref = dyn_cast<ReturnInst>(I)) {
-    Type *RetTy = CurrF->getReturnType();
-    if (!isPointerTy(RetTy))
+    if (!isPointerTy(CurrF->getReturnType()))
       return;
     Value *Op = Ref->getReturnValue();
     if (!Op)
       return;
-    if (!(KnownElemTy = GR->findDeducedElementType(CurrF))) {
-      if (Type *OpElemTy = GR->findDeducedElementType(Op)) {
-        GR->addDeducedElementType(CurrF, OpElemTy);
-        GR->addReturnType(CurrF, TypedPointerType::get(
-                                     OpElemTy, getPointerAddressSpace(RetTy)));
-        // non-recursive update of types in function uses
-        DenseSet<std::pair<Value *, Value *>> VisitedSubst{
-            std::make_pair(I, Op)};
-        for (User *U : CurrF->users()) {
-          CallInst *CI = dyn_cast<CallInst>(U);
-          if (!CI || CI->getCalledFunction() != CurrF)
-            continue;
-          if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(CI)) {
-            if (Type *PrevElemTy = GR->findDeducedElementType(CI)) {
-              updateAssignType(AssignCI, CI, PoisonValue::get(OpElemTy));
-              propagateElemType(CI, PrevElemTy, VisitedSubst);
-            }
-          }
-        }
-        // Non-recursive update of types in the function uncomplete returns.
-        // This may happen just once per a function, the latch is a pair of
-        // findDeducedElementType(F) / addDeducedElementType(F, ...).
-        // With or without the latch it is a non-recursive call due to
-        // UncompleteRets set to nullptr in this call.
-        if (UncompleteRets)
-          for (Instruction *UncompleteRetI : *UncompleteRets)
-            deduceOperandElementType(UncompleteRetI, nullptr, AskOps,
-                                     IsPostprocessing);
-      } else if (UncompleteRets) {
-        UncompleteRets->insert(I);
-      }
-      TypeValidated.insert(I);
+    if (deduceOperandElementTypeFunctionRet(I, UncompleteRets, AskOps,
+                                            IsPostprocessing, KnownElemTy, Op,
+                                            CurrF))
       return;
-    }
     Uncomplete = isTodoType(CurrF);
     Ops.push_back(std::make_pair(Op, 0));
   } else if (auto *Ref = dyn_cast<ICmpInst>(I)) {
@@ -2157,6 +2176,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
+  DenseMap<Function *, DenseMap<unsigned, Type *>> FDeclPtrTys;
+
   processParamTypesByFunHeader(CurrF, B);
 
   // StoreInst's operand type can be changed during the next transformations,
@@ -2179,6 +2200,31 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   SmallVector<Instruction *> Worklist;
   for (auto &I : instructions(Func))
     Worklist.push_back(&I);
+
+  // Apply types parsed from demangled function declarations.
+  for (auto &I : Worklist) {
+    CallInst *CI = dyn_cast<CallInst>(I);
+    if (!CI || !CI->getCalledFunction())
+      continue;
+    auto It = FDeclPtrTys.find(CI->getCalledFunction());
+    if (It == FDeclPtrTys.end())
+      continue;
+    unsigned Sz = CI->arg_size();
+    for (auto [Idx, ElemTy] : It->second)
+      if (Idx < Sz) {
+        Value *Arg = CI->getArgOperand(Idx);
+        GR->addDeducedElementType(Arg, ElemTy);
+        if (CallInst *Ref = dyn_cast<CallInst>(Arg))
+          if (Function *RefF = Ref->getCalledFunction();
+              RefF && isPointerTy(RefF->getReturnType()) &&
+              !GR->findDeducedElementType(RefF)) {
+            GR->addDeducedElementType(RefF, ElemTy);
+            GR->addReturnType(RefF, TypedPointerType::get(
+                                        ElemTy, getPointerAddressSpace(
+                                                    RefF->getReturnType())));
+          }
+      }
+  }
 
   // Pass forward: use operand to deduce instructions result.
   for (auto &I : Worklist) {
@@ -2287,8 +2333,43 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
   return SzTodo > TodoTypeSz;
 }
 
+// Parse and store argument types of function declarations where needed.
+void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
+  for (auto &F : M) {
+    if (!F.isDeclaration() || F.isIntrinsic())
+      continue;
+    // get the demangled name
+    std::string DemangledName = getOclOrSpirvBuiltinDemangledName(F.getName());
+    if (DemangledName.empty())
+      continue;
+    // find pointer arguments
+    SmallVector<unsigned> Idxs;
+    for (unsigned OpIdx = 0; OpIdx < F.arg_size(); ++OpIdx)
+      if (isPointerTy(F.getArg(OpIdx)->getType()))
+        Idxs.push_back(OpIdx);
+    if (!Idxs.size())
+      continue;
+    // parse function arguments
+    LLVMContext &Ctx = F.getContext();
+    SmallVector<StringRef, 10> TypeStrs;
+    SPIRV::parseBuiltinTypeStr(TypeStrs, DemangledName, Ctx);
+    if (!TypeStrs.size())
+      continue;
+    // find type info for pointer arguments
+    for (unsigned Idx : Idxs) {
+      if (Idx >= TypeStrs.size())
+        continue;
+      if (Type *ElemTy =
+              SPIRV::parseBuiltinCallArgumentType(TypeStrs[Idx].trim(), Ctx))
+        FDeclPtrTys[&F].push_back(std::make_pair(Idx, ElemTy));
+    }
+  }
+}
+
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
+
+  parseFunDeclarations(M);
 
   TodoType.clear();
   for (auto &F : M)
