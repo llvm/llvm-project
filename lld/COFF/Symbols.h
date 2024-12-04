@@ -35,6 +35,9 @@ class InputFile;
 class ObjFile;
 class SymbolTable;
 
+const COFFSyncStream &operator<<(const COFFSyncStream &,
+                                 const llvm::object::Archive::Symbol *);
+
 // The base class for real symbol classes.
 class Symbol {
 public:
