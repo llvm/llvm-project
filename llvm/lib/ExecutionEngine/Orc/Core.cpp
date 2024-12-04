@@ -38,10 +38,6 @@ char LookupTask::ID = 0;
 RegisterDependenciesFunction NoDependenciesToRegister =
     RegisterDependenciesFunction();
 
-raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtrBase &Sym) {
-  return (OS << Sym.S->first());
-}
-
 void MaterializationUnit::anchor() {}
 
 ResourceTracker::ResourceTracker(JITDylibSP JD) {
