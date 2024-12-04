@@ -141,10 +141,17 @@ public:
       // If the mask is present and is a scalar, then we'd better load its value
       // outside of the reduction loop making the loop unswitching easier.
       // Maybe it is worth hoisting it from the elemental operation as well.
+      mlir::Value isPresentPred, maskValue;
       if (mask) {
-        hlfir::Entity maskValue{mask};
-        if (maskValue.isScalar())
-          mask = hlfir::loadTrivialScalar(loc, builder, maskValue);
+        if (mlir::isa<fir::BaseBoxType>(mask.getType())) {
+          // MASK represented by a box might be dynamically optional,
+          // so we have to check for its presence before accessing it.
+          isPresentPred =
+              builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), mask);
+        }
+
+        if (hlfir::Entity{mask}.isScalar())
+          maskValue = genMaskValue(loc, builder, mask, isPresentPred, {});
       }
 
       // NOTE: the outer elemental operation may be lowered into
@@ -171,12 +178,10 @@ public:
       if (mask) {
         // Make the reduction value update conditional on the value
         // of the mask.
-        hlfir::Entity maskValue{mask};
-        if (!maskValue.isScalar()) {
+        if (!maskValue) {
           // If the mask is an array, use the elemental and the loop indices
           // to address the proper mask element.
-          maskValue = hlfir::getElementAt(loc, builder, maskValue, indices);
-          maskValue = hlfir::loadTrivialScalar(loc, builder, maskValue);
+          maskValue = genMaskValue(loc, builder, mask, isPresentPred, indices);
         }
         mlir::Value isUnmasked =
             builder.create<fir::ConvertOp>(loc, builder.getI1Type(), maskValue);
@@ -272,6 +277,51 @@ private:
       return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
 
     llvm_unreachable("unsupported SUM reduction type");
+  }
+
+  static mlir::Value genMaskValue(mlir::Location loc,
+                                  fir::FirOpBuilder &builder, mlir::Value mask,
+                                  mlir::Value isPresentPred,
+                                  mlir::ValueRange indices) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    fir::IfOp ifOp;
+    mlir::Type maskType =
+        hlfir::getFortranElementType(fir::unwrapPassByRefType(mask.getType()));
+    if (isPresentPred) {
+      ifOp = builder.create<fir::IfOp>(loc, maskType, isPresentPred,
+                                       /*withElseRegion=*/true);
+
+      // Use 'true', if the mask is not present.
+      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      mlir::Value trueValue = builder.createBool(loc, true);
+      trueValue = builder.createConvert(loc, maskType, trueValue);
+      builder.create<fir::ResultOp>(loc, trueValue);
+
+      // Load the mask value, if the mask is present.
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    }
+
+    hlfir::Entity maskVar{mask};
+    if (maskVar.isScalar()) {
+      if (mlir::isa<fir::BaseBoxType>(mask.getType())) {
+        // MASK may be a boxed scalar.
+        mlir::Value addr = hlfir::genVariableRawAddress(loc, builder, maskVar);
+        mask = builder.create<fir::LoadOp>(loc, hlfir::Entity{addr});
+      } else {
+        mask = hlfir::loadTrivialScalar(loc, builder, maskVar);
+      }
+    } else {
+      // Load from the mask array.
+      assert(!indices.empty() && "no indices for addressing the mask array");
+      maskVar = hlfir::getElementAt(loc, builder, maskVar, indices);
+      mask = hlfir::loadTrivialScalar(loc, builder, maskVar);
+    }
+
+    if (!isPresentPred)
+      return mask;
+
+    builder.create<fir::ResultOp>(loc, mask);
+    return ifOp.getResult(0);
   }
 };
 
