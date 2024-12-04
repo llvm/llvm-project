@@ -1781,8 +1781,11 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT)
+    if (flags & NEEDS_GOT) {
+      assert(!(flags & NEEDS_GOT_AUTH) &&
+             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
       addGotEntry(ctx, sym);
+    }
   } else if (flags & NEEDS_GOT) {
     // Redirect GOT accesses to point to the Igot.
     sym.gotInIgot = true;
