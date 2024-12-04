@@ -221,7 +221,6 @@ public:
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
       BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
-      mlir::Dialect *firDialect = context->getLoadedDialect("fir");
       getModule().walk([&](mlir::Operation *op) {
         bool opIsValid = true;
         typeConverter.setLocation(op->getLoc());
@@ -367,23 +366,23 @@ public:
                 index, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
             opIsValid = false;
           }
-        } else if (op->getDialect() == firDialect) {
+        } else {
           rewriter.startOpModification(op);
+          // Convert the operands if needed
           for (auto i : llvm::enumerate(op->getResultTypes()))
             if (typeConverter.needsConversion(i.value())) {
               auto toTy = typeConverter.convertType(i.value());
               op->getResult(i.index()).setType(toTy);
             }
+
+          // Convert the type attributes if needed
+          for (const mlir::NamedAttribute &attr : op->getAttrDictionary())
+            if (auto tyAttr = llvm::dyn_cast<mlir::TypeAttr>(attr.getValue()))
+              if (typeConverter.needsConversion(tyAttr.getValue())) {
+                auto toTy = typeConverter.convertType(tyAttr.getValue());
+                op->setAttr(attr.getName(), mlir::TypeAttr::get(toTy));
+              }
           rewriter.finalizeOpModification(op);
-        } else if (auto privateOp =
-                       mlir::dyn_cast<mlir::omp::PrivateClauseOp>(op)) {
-          mlir::Type dataTy = privateOp.getType();
-          if (typeConverter.needsConversion(dataTy)) {
-            auto toTy = typeConverter.convertType(dataTy);
-            rewriter.startOpModification(privateOp);
-            privateOp.setType(toTy);
-            rewriter.finalizeOpModification(privateOp);
-          }
         }
         // Ensure block arguments are updated if needed.
         if (opIsValid && op->getNumRegions() != 0) {
