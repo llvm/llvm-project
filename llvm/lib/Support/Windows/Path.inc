@@ -1387,12 +1387,31 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   Path16.push_back(0);
   Path16.push_back(0);
 
-  SHFILEOPSTRUCTW shfos = {};
-  shfos.wFunc = FO_DELETE;
-  shfos.pFrom = Path16.data();
-  shfos.fFlags = FOF_NO_UI;
+  HRESULT HR = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+  if (SUCCEEDED(HR)) {
+    IFileOperation *FileOp;
+    HR = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL,
+                          IID_PPV_ARGS(&FileOp));
+    if (SUCCEEDED(HR)) {
+      HR = FileOp->SetOperationFlags(FOF_NO_UI | FOFX_NOCOPYHOOKS);
+      if (SUCCEEDED(HR)) {
+        IShellItem *ShItem = NULL;
+        HR = SHCreateItemFromParsingName(Path16.data(), NULL,
+                                         IID_PPV_ARGS(&ShItem));
+        if (SUCCEEDED(HR)) {
+          HR = FileOp->DeleteItem(ShItem, NULL);
+          ShItem->Release();
+        }
+        if (SUCCEEDED(HR)) {
+          HR = FileOp->PerformOperations();
+        }
+      }
+      FileOp->Release();
+    }
+  }
+  CoUninitialize();
 
-  int result = ::SHFileOperationW(&shfos);
+  int result = FAILED(HR) ? HRESULT_CODE(HR) : 0;
   if (result != 0 && !IgnoreErrors)
     return mapWindowsError(result);
   return std::error_code();
