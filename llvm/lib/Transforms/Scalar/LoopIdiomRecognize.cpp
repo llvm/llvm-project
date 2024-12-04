@@ -132,6 +132,11 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableMemsetPatternIntrinsic(
+    "loop-idiom-enable-memset-pattern-intrinsic",
+    cl::desc("Enable use of the memset_pattern intrinsic."), cl::init(false),
+    cl::Hidden);
+
 namespace {
 
 class LoopIdiomRecognize {
@@ -306,7 +311,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
   HasMemcpy = TLI->has(LibFunc_memcpy);
 
-  if (HasMemset || HasMemsetPattern || HasMemcpy)
+  if (HasMemset || HasMemsetPattern || EnableMemsetPatternIntrinsic ||
+      HasMemcpy)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))
       return runOnCountableLoop();
 
@@ -463,8 +469,10 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     // It looks like we can use SplatValue.
     return LegalStoreKind::Memset;
   }
-  if (!UnorderedAtomic && HasMemsetPattern && !DisableLIRP::Memset &&
-      // Don't create memset_pattern16s with address spaces.
+  if (!UnorderedAtomic && (HasMemsetPattern || EnableMemsetPatternIntrinsic) &&
+      !DisableLIRP::Memset &&
+      // Don't create memset_pattern16s / memset.pattern intrinsics with
+      // address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&
       getMemSetPatternValue(StoredVal, DL)) {
     // It looks like we can use PatternValue!
@@ -1064,53 +1072,101 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     return Changed;
 
   // Okay, everything looks good, insert the memset.
+  // MemsetArg is the number of bytes for the memset and memset_pattern16
+  // libcalls, and the number of pattern repetitions if the memset.pattern
+  // intrinsic is being used.
+  Value *MemsetArg;
+  std::optional<int64_t> BytesWritten = std::nullopt;
 
-  const SCEV *NumBytesS =
-      getNumBytes(BECount, IntIdxTy, StoreSizeSCEV, CurLoop, DL, SE);
+  if (PatternValue && EnableMemsetPatternIntrinsic) {
+    const SCEV *TripCountS =
+        SE->getTripCountFromExitCount(BECount, IntIdxTy, CurLoop);
+    if (!Expander.isSafeToExpand(TripCountS))
+      return Changed;
+    const SCEVConstant *ConstStoreSize = dyn_cast<SCEVConstant>(StoreSizeSCEV);
+    if (!ConstStoreSize)
+      return Changed;
 
-  // TODO: ideally we should still be able to generate memset if SCEV expander
-  // is taught to generate the dependencies at the latest point.
-  if (!Expander.isSafeToExpand(NumBytesS))
-    return Changed;
+    MemsetArg = Expander.expandCodeFor(TripCountS, IntIdxTy,
+                                       Preheader->getTerminator());
+    if (auto CI = dyn_cast<ConstantInt>(MemsetArg))
+      BytesWritten =
+          CI->getZExtValue() * ConstStoreSize->getValue()->getZExtValue();
+  } else {
+    const SCEV *NumBytesS =
+        getNumBytes(BECount, IntIdxTy, StoreSizeSCEV, CurLoop, DL, SE);
 
-  Value *NumBytes =
-      Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
+    // TODO: ideally we should still be able to generate memset if SCEV expander
+    // is taught to generate the dependencies at the latest point.
+    if (!Expander.isSafeToExpand(NumBytesS))
+      return Changed;
+    MemsetArg =
+        Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
+    if (auto CI = dyn_cast<ConstantInt>(MemsetArg))
+      BytesWritten = CI->getZExtValue();
+  }
+  assert(MemsetArg && "MemsetArg should have been set");
 
-  if (!SplatValue && !isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16))
+  if (!SplatValue && !(isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16) ||
+                       EnableMemsetPatternIntrinsic))
     return Changed;
 
   AAMDNodes AATags = TheStore->getAAMetadata();
   for (Instruction *Store : Stores)
     AATags = AATags.merge(Store->getAAMetadata());
-  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-    AATags = AATags.extendTo(CI->getZExtValue());
+  if (BytesWritten)
+    AATags = AATags.extendTo(BytesWritten.value());
   else
     AATags = AATags.extendTo(-1);
 
   CallInst *NewCall;
   if (SplatValue) {
     NewCall = Builder.CreateMemSet(
-        BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
+        BasePtr, SplatValue, MemsetArg, MaybeAlign(StoreAlignment),
         /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
   } else {
-    assert (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
-    // Everything is emitted in default address space
-    Type *Int8PtrTy = DestInt8PtrTy;
+    assert(isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16) ||
+           EnableMemsetPatternIntrinsic);
+    if (EnableMemsetPatternIntrinsic) {
+      // Everything is emitted in default address space
 
-    StringRef FuncName = "memset_pattern16";
-    FunctionCallee MSP = getOrInsertLibFunc(M, *TLI, LibFunc_memset_pattern16,
-                            Builder.getVoidTy(), Int8PtrTy, Int8PtrTy, IntIdxTy);
-    inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
+      assert(isa<SCEVConstant>(StoreSizeSCEV) &&
+             "Expected constant store size");
+      llvm::Type *IntType = Builder.getIntNTy(
+          cast<SCEVConstant>(StoreSizeSCEV)->getValue()->getZExtValue() * 8);
 
-    // Otherwise we should form a memset_pattern16.  PatternValue is known to be
-    // an constant array of 16-bytes.  Plop the value into a mergable global.
-    GlobalVariable *GV = new GlobalVariable(*M, PatternValue->getType(), true,
-                                            GlobalValue::PrivateLinkage,
-                                            PatternValue, ".memset_pattern");
-    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global); // Ok to merge these.
-    GV->setAlignment(Align(16));
-    Value *PatternPtr = GV;
-    NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
+      llvm::Value *BitcastedValue = Builder.CreateBitCast(StoredVal, IntType);
+
+      // (Optional) Use the bitcasted value for further operations
+
+      // Create the call to the intrinsic
+      NewCall =
+          Builder.CreateIntrinsic(Intrinsic::experimental_memset_pattern,
+                                  {DestInt8PtrTy, IntType, IntIdxTy},
+                                  {BasePtr, BitcastedValue, MemsetArg,
+                                   ConstantInt::getFalse(M->getContext())});
+    } else {
+      // Everything is emitted in default address space
+      Type *Int8PtrTy = DestInt8PtrTy;
+
+      StringRef FuncName = "memset_pattern16";
+      FunctionCallee MSP = getOrInsertLibFunc(M, *TLI, LibFunc_memset_pattern16,
+                                              Builder.getVoidTy(), Int8PtrTy,
+                                              Int8PtrTy, IntIdxTy);
+      inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
+
+      // Otherwise we should form a memset_pattern16.  PatternValue is known to
+      // be an constant array of 16-bytes.  Plop the value into a mergable
+      // global.
+      GlobalVariable *GV = new GlobalVariable(*M, PatternValue->getType(), true,
+                                              GlobalValue::PrivateLinkage,
+                                              PatternValue, ".memset_pattern");
+      GV->setUnnamedAddr(
+          GlobalValue::UnnamedAddr::Global); // Ok to merge these.
+      GV->setAlignment(Align(16));
+      Value *PatternPtr = GV;
+      NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, MemsetArg});
+    }
 
     // Set the TBAA info if present.
     if (AATags.TBAA)
