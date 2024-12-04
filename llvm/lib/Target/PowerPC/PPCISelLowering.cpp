@@ -2703,7 +2703,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)N->getAsZExtVal();
+  Imm = (int64_t)cast<ConstantSDNode>(N)->getSExtValue();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -2925,7 +2925,7 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
   if (N.getOpcode() == ISD::ADD) {
     if (!isIntS34Immediate(N.getOperand(1), Imm))
       return false;
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
@@ -2946,12 +2946,12 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
       Base = N.getOperand(0);
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     return true;
   }
 
   if (isIntS34Immediate(N, Imm)) { // If the address is a 34-bit const.
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
     return true;
   }
