@@ -118,10 +118,11 @@ public:
 class Manager {
 public:
   // Dispatch Telemetry data to the Destination(s).
-  // This is non-const because the Manager may add or remove
+  // The argument is non-const because the Manager may add or remove
   // data from the entry.
   virtual Error dispatch(TelemetryInfo *Entry) = 0;
 
+  // Register a Destination.
   virtual void addDestination(std::unique_ptr<Destination> Destination) = 0;
 };
 

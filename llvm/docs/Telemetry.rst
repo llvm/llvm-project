@@ -242,7 +242,7 @@ Logging the tool init-process:
 
   Entry.Start = StartTime;
   Entry.End = EndTime;
-  Manager->logStartup("MyTool", &Entry);
+  Manager->logStartup(&Entry);
 
 Similar code can be used for logging the tool's exit.
 
