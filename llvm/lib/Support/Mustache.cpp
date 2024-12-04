@@ -168,6 +168,15 @@ private:
 };
 
 // syntax wrapper for arena allocator for ASTNodes
+
+auto CreateRootNode =
+    [](void *Node, llvm::BumpPtrAllocator &Alloc,
+       llvm::StringMap<ASTNode *> &Partials, llvm::StringMap<Lambda> &Lambdas,
+       llvm::StringMap<SectionLambda> &SectionLambdas,
+       llvm::DenseMap<char, std::string> &Escapes) -> ASTNode * {
+  return new (Node) ASTNode(Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+};
+
 auto CreateNode = [](void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
                      llvm::BumpPtrAllocator &Alloc,
                      llvm::StringMap<ASTNode *> &Partials,
@@ -477,7 +486,7 @@ ASTNode *Parser::parse(llvm::BumpPtrAllocator &Alloc,
   CurrentPtr = 0;
   void *Root = Allocator.Allocate(sizeof(ASTNode), alignof(ASTNode));
   ASTNode *RootNode =
-      new (Root) ASTNode(Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+      CreateRootNode(Root, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
   parseMustache(RootNode, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
   return RootNode;
 }
