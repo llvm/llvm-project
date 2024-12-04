@@ -420,6 +420,12 @@ public:
       : GCNSchedStage(StageID, DAG) {}
 };
 
+/// Attempts to increase function occupancy with respect to VGPR usage by one by
+/// sinking trivially rematerializable instructions to their use. When the stage
+/// estimates increasing occupancy is possible, as few instructions as possible
+/// are rematerialized to reduce potential negative effects on function latency.
+///
+/// TODO: We should extend this to work on SGPRs and AGPRs as well.
 class PreRARematStage : public GCNSchedStage {
 private:
   /// A trivially rematerializable VGPR-defining instruction along with
@@ -442,22 +448,20 @@ private:
         : RematMI(RematMI), DefRegion(DefRegion), UseMI(UseMI) {}
   };
 
-  /// List of eligible rematerializable instructions to sink to increase
-  /// occupancy, in function instruction order.
-  std::vector<RematInstruction> RematInstructions;
+  /// Determines whether we can increase function occupancy by 1 through
+  /// rematerialization. If we can, returns true and fill \p RematInstructions
+  /// with a list of rematerializable instructions whose sinking would result in
+  /// increased occupancy; returns false otherwise.
+  bool canIncreaseOccupancy(std::vector<RematInstruction> &RematInstructions);
 
-  /// Collect all trivially rematerializable VGPR instructions with a single def
-  /// and single use outside the defining block into RematerializableInsts.
-  bool collectRematerializableInstructions();
-
-  /// Whether the MI is trivially rematerializable and does not have eany
+  /// Whether the MI is trivially rematerializable and does not have any
   /// virtual register use.
   bool isTriviallyReMaterializable(const MachineInstr &MI);
 
-  /// TODO: Should also attempt to reduce RP of SGPRs and AGPRs
-  /// Sinks all instructions in RematInstructions to increase function
+  /// Sinks all instructions in \p RematInstructions to increase function
   /// occupancy. Modified regions are tagged for rescheduling.
-  void sinkTriviallyRematInsts(const GCNSubtarget &ST,
+  void sinkTriviallyRematInsts(ArrayRef<RematInstruction> RematInstructions,
+                               const GCNSubtarget &ST,
                                const TargetInstrInfo *TII);
 
 public:
