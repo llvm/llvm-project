@@ -443,7 +443,7 @@ void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
   // CHECK-NEXT: call i32 @llvm.bitreverse.i32(i32 [[IA1]])
   b = __builtin_elementwise_bitreverse(int_as_one);
 
-  // CHECK:   call i32 @llvm.bitreverse.i32(i32 -10)
+  // CHECK:      store i32 1879048191, ptr @b, align 4
   b = __builtin_elementwise_bitreverse(-10);
 
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2

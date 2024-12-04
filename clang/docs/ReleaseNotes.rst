@@ -310,6 +310,9 @@ Resolutions to C++ Defect Reports
   by default.
   (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
+- Fix name lookup for a dependent base class that is the current instantiation.
+  (`CWG591: When a dependent base class is the current instantiation <https://cplusplus.github.io/CWG/issues/591.html>`_).
+
 C Language Changes
 ------------------
 
@@ -404,6 +407,7 @@ Non-comprehensive list of changes in this release
 - ``__builtin_reduce_and`` function can now be used in constant expressions.
 - ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
 - ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
+- ``__builtin_elementwise_bitreverse`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -763,6 +767,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
+- Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
+  captures at the end of a full expression. (#GH115931)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -811,6 +817,8 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+
+- Bump the default code object version to 6.
 
 - Initial support for gfx950
 
@@ -929,9 +937,15 @@ and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
 and [Non-trapping float-to-int Conversions] language features, which are
 [widely implemented in engines].
 
+A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
+the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
+-mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
+and -mextended-const.
+
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
 [widely implemented in engines]: https://webassembly.org/features/
+[here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
 AVR Support
 ^^^^^^^^^^^
@@ -965,7 +979,13 @@ AST Matchers
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
 
+- Improved the performance of the ``getExpansionLocOfMacro`` by tracking already processed macros during recursion.
+
 - Add ``exportDecl`` matcher to match export declaration.
+
+- Ensure ``hasType`` and ``hasDeclaration`` match Objective-C interface declarations.
+
+- Ensure ``pointee`` matches Objective-C pointer types.
 
 clang-format
 ------------

@@ -763,6 +763,10 @@ let SubtargetPredicate = isGFX9Plus, True16Predicate = NotHasTrue16BitInsts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_e64>;
 } // End SubtargetPredicate = isGFX9Plus, True16Predicate = NotHasTrue16BitInsts
+let True16Predicate = UseRealTrue16Insts in {
+  def : OpSelBinOpClampPat<saddsat, V_ADD_I16_t16_e64>;
+  def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_t16_e64>;
+} // End True16Predicate = UseRealTrue16Insts
 let True16Predicate = UseFakeTrue16Insts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_fake16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_fake16_e64>;
@@ -1143,6 +1147,21 @@ let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0 in {
   defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_bf6_f32>;
 }
 
+let SubtargetPredicate = HasCvtPkF16F32Inst in {
+  let ReadsModeReg = 0 in {
+    defm V_CVT_PK_F16_F32 : VOP3Inst<"v_cvt_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32>>;
+  }
+
+  def : GCNPat<(v2f16 (fpround v2f32:$src)),
+               (V_CVT_PK_F16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+  def : GCNPat<(v2f16 (fpround v2f64:$src)),
+               (V_CVT_PK_F16_F32_e64 0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub0_sub1)),
+                                     0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub2_sub3)))>;
+  def : GCNPat<(v2f16 (build_vector (f16 (fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                                    (f16 (fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
+               (V_CVT_PK_F16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+}
+
 class Cvt_Scale_FP4FP8BF8ToF16F32_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
     (DstTy (node i32:$src0, f32:$src1, timm:$index)),
     (inst (SrcAndDstSelToOpSelXForm_0_0 $index), $src0, (SrcAndDstSelToOpSelXForm_1_0 $index), $src1)
@@ -1437,6 +1456,23 @@ let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
   defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_i8_i32>;
   defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_u8_i32>;
 } // End SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1
+
+class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
+    (i16 (or (i16 (shl (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))))), (i16 8))),
+             (i16 (and (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))), (i16 255))))),
+    (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
+>;
+
+class AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
+    (i16 (or (i16 (shl (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))))), (i16 8))),
+             (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))))),
+    (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
+>;
+
+let SubtargetPredicate = HasAshrPkInsts in {
+  def : AshrPkI8Pat<V_ASHR_PK_I8_I32_e64, -128, 127>;
+  def : AshrPkU8Pat<V_ASHR_PK_U8_I32_e64, 0, 255>;
+}
 
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
@@ -2270,6 +2306,9 @@ defm V_CVT_SR_BF16_F32: VOP3OpSel_Real_gfx9 <0x2a7>;
 
 defm V_ASHR_PK_I8_I32 : VOP3OpSel_Real_gfx9 <0x265>;
 defm V_ASHR_PK_U8_I32 : VOP3OpSel_Real_gfx9 <0x266>;
+let OtherPredicates = [HasCvtPkF16F32Inst] in {
+defm V_CVT_PK_F16_F32 : VOP3_Real_gfx9<0x267, "v_cvt_pk_f16_f32">;
+}
 
 defm V_CVT_SCALEF32_2XPK16_FP6_F32 : VOP3_Real_gfx9<0x252, "v_cvt_scalef32_2xpk16_fp6_f32">;
 defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3_Real_gfx9<0x253, "v_cvt_scalef32_2xpk16_bf6_f32">;

@@ -129,6 +129,8 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 // Add an OpName instruction for the given target register.
 void buildOpName(Register Target, const StringRef &Name,
                  MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -170,8 +172,12 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 6;
   case SPIRV::StorageClass::Input:
     return 7;
+  case SPIRV::StorageClass::Output:
+    return 8;
   case SPIRV::StorageClass::CodeSectionINTEL:
     return 9;
+  case SPIRV::StorageClass::Private:
+    return 10;
   default:
     report_fatal_error("Unable to get address space id");
   }
