@@ -5175,8 +5175,7 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         return false;
 
       // Indexed variants of Mul exist for i16 and i32 element types only.
-      auto ElemVT = MVT::getVT(Ty->getElementType(), /*HandleUnknown=*/true);
-      return (ElemVT == MVT::i16 || ElemVT == MVT::i32);
+      return Ty->getScalarSizeInBits() == 16 || Ty->getScalarSizeInBits() == 32;
     };
 
     int NumZExts = 0, NumSExts = 0;
