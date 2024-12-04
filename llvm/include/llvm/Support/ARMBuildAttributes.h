@@ -21,9 +21,57 @@
 #include "llvm/Support/ELFAttributes.h"
 
 namespace llvm {
+class StringRef;
+
 namespace ARMBuildAttrs {
 
 const TagNameMap &getARMAttributeTags();
+
+/// AArch64 build attributes vendors (=subsection name)
+enum Vendor : unsigned {
+  AEBI_FEATURE_AND_BITS = 0,
+  AEBI_PAUTHABI = 1
+};
+
+inline StringRef vendorToStr(unsigned Vendor) {
+  switch(Vendor) {
+    default:
+      llvm_unreachable("unknown AArch64 vendor name");
+      return "";
+    case AEBI_FEATURE_AND_BITS:
+      return "aeabi-feature-and-bits";
+    case AEBI_PAUTHABI:
+      return "aeabi-pauthabi";
+  }
+}
+
+enum SubsectionMandatory : unsigned {
+  OPTIONAL = 0,
+  REQUIRED = 1
+};
+
+enum SubsectionType : unsigned {
+  ULEB128 = 0,
+  NTBS = 1
+};
+
+enum FeatureAndBitsTags : unsigned {
+  Tag_PAuth_Platform = 1,
+  Tag_PAuth_Schema = 2
+};
+
+enum PauthabiTags : unsigned {
+  Tag_Feature_BTI = 0,
+  Tag_Feature_PAC = 1,
+  Tag_Feature_GCS = 2
+};
+
+enum PauthabiTagsFlag : unsigned {
+  Feature_BTI_Flag = 1 << 0,
+  Feature_PAC_Flag = 1 << 1,
+  Feature_GCS_Flag = 1 << 2
+};
+/// ---
 
 enum SpecialAttr {
   // This is for the .cpu asm attr. It translates into one or more
@@ -86,6 +134,21 @@ enum AttrType : unsigned {
   nodefaults = 64,           // deprecated (ABI r2.09)
   T2EE_use = 66,             // deprecated (ABI r2.09)
   MPextension_use_old = 70   // recoded to MPextension_use (ABI r2.08)
+};
+
+enum AVAttr {
+  AV_cpp_exceptions         = 6,
+  AV_eba                    = 16
+};
+
+StringRef AttrTypeAsString(StringRef Vendor, unsigned Attr, bool HasTagPrefix = true);
+StringRef AttrTypeAsString(AttrType Attr, bool HasTagPrefix = true);
+StringRef AttrTypeAsString(AVAttr Attr, bool HasTagPrefix = true);
+int AttrTypeFromString(StringRef Vendor, StringRef Tag);
+
+// Magic numbers for .ARM.attributes
+enum AttrMagic {
+  Format_Version  = 0x41
 };
 
 // Legal Values for CPU_arch, (=6), uleb128

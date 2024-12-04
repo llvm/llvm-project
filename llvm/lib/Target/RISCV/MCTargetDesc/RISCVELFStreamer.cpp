@@ -57,19 +57,19 @@ void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
 
 void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
-  getStreamer().setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true);
+  getStreamer().setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true, getStreamer().Contents);
 }
 
 void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
                                                StringRef String) {
-  getStreamer().setAttributeItem(Attribute, String, /*OverwriteExisting=*/true);
+  getStreamer().setAttributeItem(Attribute, String, /*OverwriteExisting=*/true, getStreamer().Contents);
 }
 
 void RISCVTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
                                                   unsigned IntValue,
                                                   StringRef StringValue) {
   getStreamer().setAttributeItems(Attribute, IntValue, StringValue,
-                                  /*OverwriteExisting=*/true);
+                                  /*OverwriteExisting=*/true, getStreamer().Contents);
 }
 
 void RISCVTargetELFStreamer::finishAttributeSection() {

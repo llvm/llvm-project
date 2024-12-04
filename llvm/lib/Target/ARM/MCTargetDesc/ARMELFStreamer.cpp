@@ -793,20 +793,20 @@ void ARMTargetELFStreamer::switchVendor(StringRef Vendor) {
 
 void ARMTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   getStreamer().setAttributeItem(Attribute, Value,
-                                 /* OverwriteExisting= */ true);
+                                 /* OverwriteExisting= */ true, getStreamer().Contents);
 }
 
 void ARMTargetELFStreamer::emitTextAttribute(unsigned Attribute,
                                              StringRef Value) {
   getStreamer().setAttributeItem(Attribute, Value,
-                                 /* OverwriteExisting= */ true);
+                                 /* OverwriteExisting= */ true, getStreamer().Contents);
 }
 
 void ARMTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
                                                 unsigned IntValue,
                                                 StringRef StringValue) {
   getStreamer().setAttributeItems(Attribute, IntValue, StringValue,
-                                  /* OverwriteExisting= */ true);
+                                  /* OverwriteExisting= */ true, getStreamer().Contents);
 }
 
 void ARMTargetELFStreamer::emitArch(ARM::ArchKind Value) {
@@ -821,16 +821,16 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   using namespace ARMBuildAttrs;
   ARMELFStreamer &S = getStreamer();
 
-  S.setAttributeItem(CPU_name, ARM::getCPUAttr(Arch), false);
+  S.setAttributeItem(CPU_name, ARM::getCPUAttr(Arch), false, getStreamer().Contents);
 
   if (EmittedArch == ARM::ArchKind::INVALID)
-    S.setAttributeItem(CPU_arch, ARM::getArchAttr(Arch), false);
+    S.setAttributeItem(CPU_arch, ARM::getArchAttr(Arch), false, getStreamer().Contents);
   else
-    S.setAttributeItem(CPU_arch, ARM::getArchAttr(EmittedArch), false);
+    S.setAttributeItem(CPU_arch, ARM::getArchAttr(EmittedArch), false, getStreamer().Contents);
 
   switch (Arch) {
   case ARM::ArchKind::ARMV4:
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV4T:
@@ -838,42 +838,42 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::XSCALE:
   case ARM::ArchKind::ARMV5TE:
   case ARM::ArchKind::ARMV6:
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, Allowed, false);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, Allowed, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV6T2:
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false,getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV6K:
   case ARM::ArchKind::ARMV6KZ:
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, Allowed, false);
-    S.setAttributeItem(Virtualization_use, AllowTZ, false);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(Virtualization_use, AllowTZ, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV6M:
-    S.setAttributeItem(THUMB_ISA_use, Allowed, false);
+    S.setAttributeItem(THUMB_ISA_use, Allowed, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV7A:
-    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
+    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false, getStreamer().Contents);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV7R:
-    S.setAttributeItem(CPU_arch_profile, RealTimeProfile, false);
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
+    S.setAttributeItem(CPU_arch_profile, RealTimeProfile, false, getStreamer().Contents);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV7EM:
   case ARM::ArchKind::ARMV7M:
-    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
+    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV8A:
@@ -893,29 +893,29 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
   case ARM::ArchKind::ARMV9_6A:
-    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
-    S.setAttributeItem(MPextension_use, Allowed, false);
-    S.setAttributeItem(Virtualization_use, AllowTZVirtualization, false);
+    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false, getStreamer().Contents);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
+    S.setAttributeItem(MPextension_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(Virtualization_use, AllowTZVirtualization, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV8MBaseline:
   case ARM::ArchKind::ARMV8MMainline:
-    S.setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false);
-    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false, getStreamer().Contents);
+    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::IWMMXT:
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, Allowed, false);
-    S.setAttributeItem(WMMX_arch, AllowWMMXv1, false);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(WMMX_arch, AllowWMMXv1, false, getStreamer().Contents);
     break;
 
   case ARM::ArchKind::IWMMXT2:
-    S.setAttributeItem(ARM_ISA_use, Allowed, false);
-    S.setAttributeItem(THUMB_ISA_use, Allowed, false);
-    S.setAttributeItem(WMMX_arch, AllowWMMXv2, false);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(WMMX_arch, AllowWMMXv2, false, getStreamer().Contents);
     break;
 
   default:
@@ -933,47 +933,47 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   case ARM::FK_VFP:
   case ARM::FK_VFPV2:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv2,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_VFPV3:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_VFPV3_FP16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     S.setAttributeItem(ARMBuildAttrs::FP_HP_extension, ARMBuildAttrs::AllowHPFP,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_VFPV3_D16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3B,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_VFPV3_D16_FP16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3B,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     S.setAttributeItem(ARMBuildAttrs::FP_HP_extension, ARMBuildAttrs::AllowHPFP,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_VFPV3XD:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3B,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
   case ARM::FK_VFPV3XD_FP16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3B,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     S.setAttributeItem(ARMBuildAttrs::FP_HP_extension, ARMBuildAttrs::AllowHPFP,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_VFPV4:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv4A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   // ABI_HardFP_use is handled in ARMAsmPrinter, so _SP_D16 is treated the same
@@ -981,12 +981,12 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   case ARM::FK_FPV4_SP_D16:
   case ARM::FK_VFPV4_D16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv4B,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_FP_ARMV8:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   // FPV5_D16 is identical to FP_ARMV8 except for the number of D registers, so
@@ -998,39 +998,39 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
   case ARM::FK_FP_ARMV8_FULLFP16_D16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8B,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_NEON:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     S.setAttributeItem(ARMBuildAttrs::Advanced_SIMD_arch,
                        ARMBuildAttrs::AllowNeon,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_NEON_FP16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv3A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     S.setAttributeItem(ARMBuildAttrs::Advanced_SIMD_arch,
                        ARMBuildAttrs::AllowNeon,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     S.setAttributeItem(ARMBuildAttrs::FP_HP_extension, ARMBuildAttrs::AllowHPFP,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_NEON_VFPV4:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPv4A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     S.setAttributeItem(ARMBuildAttrs::Advanced_SIMD_arch,
                        ARMBuildAttrs::AllowNeon2,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     break;
 
   case ARM::FK_NEON_FP_ARMV8:
   case ARM::FK_CRYPTO_NEON_FP_ARMV8:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8A,
-                       /* OverwriteExisting= */ false);
+                       /* OverwriteExisting= */ false, getStreamer().Contents);
     // 'Advanced_SIMD_arch' must be emitted not here, but within
     // ARMAsmPrinter::emitAttributes(), depending on hasV8Ops() and hasV8_1a()
     break;
