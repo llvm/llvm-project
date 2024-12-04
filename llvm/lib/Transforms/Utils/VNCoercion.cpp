@@ -248,6 +248,11 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   ConstantInt *SizeCst = dyn_cast<ConstantInt>(MI->getLength());
   if (!SizeCst)
     return -1;
+  // If this is a pointer type that's larger than the largest integer that we
+  // support, then ignore it.
+  if (LoadTy->isPointerTy() &&
+      DL.getTypeSizeInBits(LoadTy) > DL.getLargestLegalIntTypeSizeInBits())
+    return -1;
   uint64_t MemSizeInBits = SizeCst->getZExtValue() * 8;
 
   // If this is memset, we just need to see if the offset is valid in the size
