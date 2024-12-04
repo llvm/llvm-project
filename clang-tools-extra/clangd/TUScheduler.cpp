@@ -1330,7 +1330,6 @@ void ASTWorker::startTask(llvm::StringRef Name,
                           std::optional<UpdateType> Update,
                           TUScheduler::ASTActionInvalidation Invalidation) {
   if (RunSync) {
-    std::lock_guard<std::mutex> Lock(Mutex);
     assert(!Done && "running a task after stop()");
     runTask(Name, Task);
     return;
