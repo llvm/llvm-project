@@ -162,6 +162,12 @@ def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
     Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
+def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
+    HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
+def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
+    Alias<!cast<Separate>(load_pass_plugins)>,
+    HelpText<"Load passes from plugin library">, Group<grp_lld>;
 def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
 def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
     Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
@@ -870,8 +876,7 @@ def sub_umbrella : Separate<["-"], "sub_umbrella">,
     Group<grp_rare>;
 def allowable_client : Separate<["-"], "allowable_client">,
     MetaVarName<"<name>">,
-    HelpText<"Specify <name> of a dylib or framework that is allowed to link to this dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specify <name> of a dylib, framework, or executable that is allowed to link to this dylib">,
     Group<grp_rare>;
 def client_name : Separate<["-"], "client_name">,
     MetaVarName<"<name>">,

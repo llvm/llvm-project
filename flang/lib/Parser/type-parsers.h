@@ -72,6 +72,7 @@ constexpr Parser<LanguageBindingSpec> languageBindingSpec; // R808, R1528
 constexpr Parser<EntityDecl> entityDecl; // R803
 constexpr Parser<CoarraySpec> coarraySpec; // R809
 constexpr Parser<ArraySpec> arraySpec; // R815
+constexpr Parser<ComponentArraySpec> componentArraySpec;
 constexpr Parser<ExplicitShapeSpec> explicitShapeSpec; // R816
 constexpr Parser<DeferredShapeSpecList> deferredShapeSpecList; // R820
 constexpr Parser<AssumedImpliedSpec> assumedImpliedSpec; // R821

@@ -248,7 +248,7 @@ class InductiveRangeCheckElimination {
 
   // Returns true if it is profitable to do a transform basing on estimation of
   // number of iterations.
-  bool isProfitableToTransform(const Loop &L, LoopStructure &LS);
+  bool isProfitableToTransform(const Loop &L);
 
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
@@ -938,14 +938,12 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   return getLoopPassPreservedAnalyses();
 }
 
-bool
-InductiveRangeCheckElimination::isProfitableToTransform(const Loop &L,
-                                                        LoopStructure &LS) {
+bool InductiveRangeCheckElimination::isProfitableToTransform(const Loop &L) {
   if (SkipProfitabilityChecks)
     return true;
   if (GetBFI) {
     BlockFrequencyInfo &BFI = (*GetBFI)();
-    uint64_t hFreq = BFI.getBlockFreq(LS.Header).getFrequency();
+    uint64_t hFreq = BFI.getBlockFreq(L.getHeader()).getFrequency();
     uint64_t phFreq = BFI.getBlockFreq(L.getLoopPreheader()).getFrequency();
     if (phFreq != 0 && hFreq != 0 && (hFreq / phFreq < MinRuntimeIterations)) {
       LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
@@ -958,8 +956,17 @@ InductiveRangeCheckElimination::isProfitableToTransform(const Loop &L,
 
   if (!BPI)
     return true;
+
+  auto *Latch = L.getLoopLatch();
+  if (!Latch)
+    return true;
+  auto *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
+  if (!LatchBr)
+    return true;
+  auto LatchBrExitIdx = LatchBr->getSuccessor(0) == L.getHeader() ? 1 : 0;
+
   BranchProbability ExitProbability =
-      BPI->getEdgeProbability(LS.Latch, LS.LatchBrExitIdx);
+      BPI->getEdgeProbability(Latch, LatchBrExitIdx);
   if (ExitProbability > BranchProbability(1, MinRuntimeIterations)) {
     LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
                       << "the exit probability is too big " << ExitProbability
@@ -981,6 +988,9 @@ bool InductiveRangeCheckElimination::run(
     LLVM_DEBUG(dbgs() << "irce: loop has no preheader, leaving\n");
     return false;
   }
+
+  if (!isProfitableToTransform(*L))
+    return false;
 
   LLVMContext &Context = Preheader->getContext();
   SmallVector<InductiveRangeCheck, 16> RangeChecks;
@@ -1017,8 +1027,6 @@ bool InductiveRangeCheckElimination::run(
     return Changed;
   }
   LoopStructure LS = *MaybeLoopStructure;
-  if (!isProfitableToTransform(*L, LS))
-    return Changed;
   const SCEVAddRecExpr *IndVar =
       cast<SCEVAddRecExpr>(SE.getMinusSCEV(SE.getSCEV(LS.IndVarBase), SE.getSCEV(LS.IndVarStep)));
 

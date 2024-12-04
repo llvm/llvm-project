@@ -85,7 +85,9 @@ def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+def loongarch_div_w : SDNode<"LoongArchISD::DIV_W", SDT_LoongArchIntBinOpW>;
 def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
+def loongarch_mod_w : SDNode<"LoongArchISD::MOD_W", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
@@ -719,9 +721,9 @@ class AM_3R<bits<32> op>
 }
 
 class AMCAS_3R<bits<32> op>
-    : Fmt3R<op, (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
+    : Fmt3R<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
             "$rd, $rk, $rj"> {
-  let Constraints = "@earlyclobber $rd_wb, $rd_wb = $rd";
+  let Constraints = "@earlyclobber $dst, $dst = $rd";
   let IsAMCAS = 1;
 }
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 1,
@@ -1156,10 +1158,12 @@ def : PatGprGpr<sub, SUB_D>;
 def : PatGprGpr<sdiv, DIV_D>;
 def : PatGprGpr_32<sdiv, DIV_W>;
 def : PatGprGpr<udiv, DIV_DU>;
+def : PatGprGpr<loongarch_div_w, DIV_W>;
 def : PatGprGpr<loongarch_div_wu, DIV_WU>;
 def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr_32<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_DU>;
+def : PatGprGpr<loongarch_mod_w, MOD_W>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<shiftop<rotr>, ROTR_D>;
 def : PatGprGpr<shiftopw<loongarch_rotr_w>, ROTR_W>;
@@ -2105,7 +2109,6 @@ multiclass binary_atomic_op_bh<string inst, string op> {
 }
 
 let Predicates = [ HasLAM_BH, IsLA64 ] in {
-  
 defm : binary_atomic_op_bh<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_bh<"AMADD", "atomic_load_add">;
 def : Pat<(atomic_load_sub_i8_monotonic GPR:$rj, GPR:$rk),
@@ -2119,9 +2122,27 @@ def : Pat<(atomic_load_sub_i16 GPR:$rj, GPR:$rk),
           (AMADD__DB_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
 } // Predicates = [ IsLA64, HasLAM_BH ]
 
+let Predicates = [ HasLAMCAS, IsLA64 ] in {
+def : Pat<(atomic_cmp_swap_i8_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS_B GPR:$cmp, GPR:$new, GPR:$addr)>;
+def : Pat<(atomic_cmp_swap_i16_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS_H GPR:$cmp, GPR:$new, GPR:$addr)>;
+def : Pat<(atomic_cmp_swap_i32_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS_W GPR:$cmp, GPR:$new, GPR:$addr)>;
+def : Pat<(atomic_cmp_swap_i64_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS_D GPR:$cmp, GPR:$new, GPR:$addr)>;
+
+def : Pat<(atomic_cmp_swap_i8 GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS__DB_B GPR:$cmp, GPR:$new, GPR:$addr)>;
+def : Pat<(atomic_cmp_swap_i16 GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS__DB_H GPR:$cmp, GPR:$new, GPR:$addr)>;
+def : Pat<(atomic_cmp_swap_i32 GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS__DB_W GPR:$cmp, GPR:$new, GPR:$addr)>;
+def : Pat<(atomic_cmp_swap_i64 GPR:$addr, GPR:$cmp, GPR:$new),
+          (AMCAS__DB_D GPR:$cmp, GPR:$new, GPR:$addr)>;
+}
 
 let Predicates = [IsLA64] in {
-
 defm : binary_atomic_op_wd<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_wd<"AMADD", "atomic_load_add">;
 defm : binary_atomic_op_wd<"AMAND", "atomic_load_and">;

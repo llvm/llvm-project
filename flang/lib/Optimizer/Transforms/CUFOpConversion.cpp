@@ -155,8 +155,12 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   auto fTy = func.getFunctionType();
 
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  mlir::Value sourceLine;
+  if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>)
+    sourceLine = fir::factory::locationToLineNo(
+        builder, loc, op.getSource() ? fTy.getInput(6) : fTy.getInput(5));
+  else
+    sourceLine = fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
 
   mlir::Value hasStat = op.getHasStat() ? builder.createBool(loc, true)
                                         : builder.createBool(loc, false);
@@ -168,8 +172,30 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
     mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
     errmsg = builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
   }
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-      builder, loc, fTy, op.getBox(), hasStat, errmsg, sourceFile, sourceLine)};
+  llvm::SmallVector<mlir::Value> args;
+  if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>) {
+    if (op.getSource()) {
+      mlir::Value stream =
+          op.getStream()
+              ? op.getStream()
+              : builder.createIntegerConstant(loc, fTy.getInput(2), -1);
+      args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
+                                           op.getSource(), stream, hasStat,
+                                           errmsg, sourceFile, sourceLine);
+    } else {
+      mlir::Value stream =
+          op.getStream()
+              ? op.getStream()
+              : builder.createIntegerConstant(loc, fTy.getInput(1), -1);
+      args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
+                                           stream, hasStat, errmsg, sourceFile,
+                                           sourceLine);
+    }
+  } else {
+    args =
+        fir::runtime::createArguments(builder, loc, fTy, op.getBox(), hasStat,
+                                      errmsg, sourceFile, sourceLine);
+  }
   auto callOp = builder.create<fir::CallOp>(loc, func, args);
   rewriter.replaceOp(op, callOp);
   return mlir::success();
@@ -182,14 +208,6 @@ struct CUFAllocateOpConversion
   mlir::LogicalResult
   matchAndRewrite(cuf::AllocateOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    // TODO: Allocation with source will need a new entry point in the runtime.
-    if (op.getSource())
-      return mlir::failure();
-
-    // TODO: Allocation using different stream.
-    if (op.getStream())
-      return mlir::failure();
-
     // TODO: Pinned is a reference to a logical value that can be set to true
     // when pinned allocation succeed. This will require a new entry point.
     if (op.getPinned())
@@ -202,18 +220,26 @@ struct CUFAllocateOpConversion
     if (hasDoubleDescriptors(op)) {
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.
-      mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
-              loc, builder);
-      return convertOpToCall(op, rewriter, func);
+      mlir::func::FuncOp func;
+      if (op.getSource())
+        func = fir::runtime::getRuntimeFunc<mkRTKey(
+            CUFAllocatableAllocateSourceSync)>(loc, builder);
+      else
+        func =
+            fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSync)>(
+                loc, builder);
+      return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
     }
 
-    // Allocation for local descriptor falls back on the standard runtime
-    // AllocatableAllocate as the dedicated allocator is set in the descriptor
-    // before the call.
-    mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc,
-                                                                   builder);
+    mlir::func::FuncOp func;
+    if (op.getSource())
+      func =
+          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSource)>(
+              loc, builder);
+    else
+      func = fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
+          loc, builder);
+
     return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
   }
 };
@@ -236,7 +262,7 @@ struct CUFDeallocateOpConversion
       mlir::func::FuncOp func =
           fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
               loc, builder);
-      return convertOpToCall(op, rewriter, func);
+      return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
     }
 
     // Deallocation for local descriptor falls back on the standard runtime
@@ -642,6 +668,16 @@ struct CUFDataTransferOpConversion
       return mlir::success();
     }
 
+    auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
+      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
+        // Materialize the box to memory to be able to call the runtime.
+        mlir::Value box = builder.createTemporary(loc, val.getType());
+        builder.create<fir::StoreOp>(loc, val, box);
+        return box;
+      }
+      return val;
+    };
+
     // Conversion of data transfer involving at least one descriptor.
     if (mlir::isa<fir::BaseBoxType>(dstTy)) {
       // Transfer to a descriptor.
@@ -659,15 +695,7 @@ struct CUFDataTransferOpConversion
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
               loc, builder);
       }
-      auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
-        if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
-          // Materialize the box to memory to be able to call the runtime.
-          mlir::Value box = builder.createTemporary(loc, val.getType());
-          builder.create<fir::StoreOp>(loc, val, box);
-          return box;
-        }
-        return val;
-      };
+
       src = materializeBoxIfNeeded(src);
       dst = materializeBoxIfNeeded(dst);
 
@@ -682,6 +710,7 @@ struct CUFDataTransferOpConversion
     } else {
       // Transfer from a descriptor.
       mlir::Value dst = emboxDst(rewriter, op, symtab);
+      mlir::Value src = materializeBoxIfNeeded(op.getSrc());
 
       mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
           CUFDataTransferDescDescNoRealloc)>(loc, builder);
@@ -690,9 +719,8 @@ struct CUFDataTransferOpConversion
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-      llvm::SmallVector<mlir::Value> args{
-          fir::runtime::createArguments(builder, loc, fTy, dst, op.getSrc(),
-                                        modeValue, sourceFile, sourceLine)};
+      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+          builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
     }

@@ -333,8 +333,7 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version3),
-    cl::values(clEnumValN(memprof::Version1, "1", "version 1"),
-               clEnumValN(memprof::Version2, "2", "version 2"),
+    cl::values(clEnumValN(memprof::Version2, "2", "version 2"),
                clEnumValN(memprof::Version3, "3", "version 3")));
 
 cl::opt<bool> MemProfFullSchema(
@@ -2968,8 +2967,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
   OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
-  if (IsIR)
+  if (IsIR) {
     OS << "  entry_first = " << Reader->instrEntryBBEnabled();
+    OS << "  instrument_loop_entries = " << Reader->instrLoopEntriesEnabled();
+  }
   OS << "\n";
   if (ShowAllFunctions || !FuncNameFilter.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";

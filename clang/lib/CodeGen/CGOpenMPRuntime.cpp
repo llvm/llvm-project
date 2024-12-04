@@ -4666,7 +4666,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                                CGF.getContext().VoidPtrTy);
   }
   enum { NoSchedule = 0, Grainsize = 1, NumTasks = 2 };
-  llvm::Value *TaskArgs[] = {
+  llvm::SmallVector<llvm::Value *, 12> TaskArgs{
       UpLoc,
       ThreadID,
       Result.NewTask,
@@ -4683,12 +4683,18 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
       Data.Schedule.getPointer()
           ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
                                       /*isSigned=*/false)
-          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
-      Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                             Result.TaskDupFn, CGF.VoidPtrTy)
-                       : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
+          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0)};
+  if (Data.HasModifier)
+    TaskArgs.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 1));
+
+  TaskArgs.push_back(Result.TaskDupFn
+                         ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                               Result.TaskDupFn, CGF.VoidPtrTy)
+                         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_taskloop),
+                          CGM.getModule(), Data.HasModifier
+                                               ? OMPRTL___kmpc_taskloop_5
+                                               : OMPRTL___kmpc_taskloop),
                       TaskArgs);
 }
 

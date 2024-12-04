@@ -209,7 +209,7 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
-Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
+static Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   assert((E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
           E->getArg(1)->getType()->hasUnsignedIntegerRepresentation()) &&
          "asdouble operands types mismatch");
@@ -242,6 +242,19 @@ Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   Value *BitVec = CGF.Builder.CreateShuffleVector(OpLowBits, OpHighBits, Mask);
 
   return CGF.Builder.CreateBitCast(BitVec, ResultType);
+}
+
+/// Helper for the read/write/add/inc X18 builtins: read the X18 register and
+/// return it as an i8 pointer.
+Value *readX18AsPtr(CodeGenFunction &CGF) {
+  LLVMContext &Context = CGF.CGM.getLLVMContext();
+  llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
+  llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+  llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+  llvm::Function *F =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::read_register, {CGF.Int64Ty});
+  llvm::Value *X18 = CGF.Builder.CreateCall(F, Metadata);
+  return CGF.Builder.CreateIntToPtr(X18, CGF.Int8PtrTy);
 }
 
 /// getBuiltinLibFunction - Given a builtin id for a function like
@@ -746,6 +759,18 @@ static Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF,
     Args.push_back(CGF.EmitScalarExpr(E->getArg(I)));
   Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
   return CGF.Builder.CreateCall(F, Args, Name);
+}
+
+// Emit an intrinsic that has 4 operands of the same type as its result.
+static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                    unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
+  llvm::Value *Src3 = CGF.EmitScalarExpr(E->getArg(3));
+
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2, Src3});
 }
 
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.
@@ -10847,6 +10872,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   else if (TypeFlags.isUndef())
     return UndefValue::get(Ty);
   else if (Builtin->LLVMIntrinsic != 0) {
+    // Emit set FPMR for intrinsics that require it
+    if (TypeFlags.setsFPMR())
+      Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_set_fpmr),
+                         Ops.pop_back_val());
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);
 
@@ -11820,21 +11849,18 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__writex18word ||
       BuiltinID == AArch64::BI__writex18dword ||
       BuiltinID == AArch64::BI__writex18qword) {
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
+    Value *DataArg = EmitScalarExpr(E->getArg(1));
+
     // Read x18 as i8*
-    LLVMContext &Context = CGM.getLLVMContext();
-    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
-    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
-    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
-    llvm::Value *X18 = Builder.CreateCall(F, Metadata);
-    X18 = Builder.CreateIntToPtr(X18, Int8PtrTy);
+    llvm::Value *X18 = readX18AsPtr(*this);
 
     // Store val at x18 + offset
-    Value *Offset = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int64Ty);
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
     Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    StoreInst *Store = Builder.CreateAlignedStore(Val, Ptr, CharUnits::One());
+    StoreInst *Store =
+        Builder.CreateAlignedStore(DataArg, Ptr, CharUnits::One());
     return Store;
   }
 
@@ -11842,23 +11868,72 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__readx18word ||
       BuiltinID == AArch64::BI__readx18dword ||
       BuiltinID == AArch64::BI__readx18qword) {
-    llvm::Type *IntTy = ConvertType(E->getType());
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
 
     // Read x18 as i8*
-    LLVMContext &Context = CGM.getLLVMContext();
-    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
-    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
-    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
-    llvm::Value *X18 = Builder.CreateCall(F, Metadata);
-    X18 = Builder.CreateIntToPtr(X18, Int8PtrTy);
+    llvm::Value *X18 = readX18AsPtr(*this);
 
     // Load x18 + offset
-    Value *Offset = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int64Ty);
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
     Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
+    llvm::Type *IntTy = ConvertType(E->getType());
     LoadInst *Load = Builder.CreateAlignedLoad(IntTy, Ptr, CharUnits::One());
     return Load;
+  }
+
+  if (BuiltinID == AArch64::BI__addx18byte ||
+      BuiltinID == AArch64::BI__addx18word ||
+      BuiltinID == AArch64::BI__addx18dword ||
+      BuiltinID == AArch64::BI__addx18qword ||
+      BuiltinID == AArch64::BI__incx18byte ||
+      BuiltinID == AArch64::BI__incx18word ||
+      BuiltinID == AArch64::BI__incx18dword ||
+      BuiltinID == AArch64::BI__incx18qword) {
+    llvm::Type *IntTy;
+    bool isIncrement;
+    switch (BuiltinID) {
+    case AArch64::BI__incx18byte:
+      IntTy = Int8Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18word:
+      IntTy = Int16Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18dword:
+      IntTy = Int32Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18qword:
+      IntTy = Int64Ty;
+      isIncrement = true;
+      break;
+    default:
+      IntTy = ConvertType(E->getArg(1)->getType());
+      isIncrement = false;
+      break;
+    }
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
+    Value *ValToAdd =
+        isIncrement ? ConstantInt::get(IntTy, 1) : EmitScalarExpr(E->getArg(1));
+
+    // Read x18 as i8*
+    llvm::Value *X18 = readX18AsPtr(*this);
+
+    // Load x18 + offset
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
+    Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
+    LoadInst *Load = Builder.CreateAlignedLoad(IntTy, Ptr, CharUnits::One());
+
+    // Add values
+    Value *AddResult = Builder.CreateAdd(Load, ValToAdd);
+
+    // Store val at x18 + offset
+    StoreInst *Store =
+        Builder.CreateAlignedStore(AddResult, Ptr, CharUnits::One());
+    return Store;
   }
 
   if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
@@ -19028,7 +19103,7 @@ static Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getUDotIntrinsic();
 }
 
-Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
+static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   if (QT->hasSignedIntegerRepresentation()) {
     return RT.getFirstBitSHighIntrinsic();
   }
@@ -19044,6 +19119,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_resource_getpointer: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+
+    // TODO: Map to an hlsl_device address space.
+    llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
+
+    return Builder.CreateIntrinsic(RetTy, Intrinsic::dx_resource_getpointer,
+                                   ArrayRef<Value *>{HandleOp, IndexOp});
+  }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
@@ -19409,6 +19494,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.radians");
   }
+  case Builtin::BI__builtin_hlsl_buffer_update_counter: {
+    Value *ResHandle = EmitScalarExpr(E->getArg(0));
+    Value *Offset = EmitScalarExpr(E->getArg(1));
+    Value *OffsetI8 = Builder.CreateIntCast(Offset, Int8Ty, true);
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Offset->getType(),
+        CGM.getHLSLRuntime().getBufferUpdateCounterIntrinsic(),
+        ArrayRef<Value *>{ResHandle, OffsetI8}, nullptr);
+  }
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
 
     assert((E->getArg(0)->getType()->hasFloatingRepresentation() &&
@@ -19421,6 +19515,12 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            "clip operands types mismatch");
     return handleHlslClip(E, this);
+  case Builtin::BI__builtin_hlsl_group_memory_barrier_with_group_sync: {
+    Intrinsic::ID ID =
+        CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
   }
   return nullptr;
 }
@@ -19697,8 +19797,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4bf16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16: {
-
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
@@ -19712,6 +19817,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
       IID = Intrinsic::amdgcn_global_load_tr_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+      IID = Intrinsic::amdgcn_ds_read_tr4_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+      IID = Intrinsic::amdgcn_ds_read_tr8_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+      IID = Intrinsic::amdgcn_ds_read_tr6_b96;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16:
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
+      IID = Intrinsic::amdgcn_ds_read_tr16_b64;
       break;
     }
     llvm::Type *LoadTy = ConvertType(E->getType());
@@ -20200,6 +20319,35 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::amdgcn_s_sendmsg_rtn, {ResultType});
     return Builder.CreateCall(F, {Arg});
   }
+  case AMDGPU::BI__builtin_amdgcn_permlane16_swap:
+  case AMDGPU::BI__builtin_amdgcn_permlane32_swap: {
+    // Because builtin types are limited, and the intrinsic uses a struct/pair
+    // output, marshal the pair-of-i32 to <2 x i32>.
+    Value *VDstOld = EmitScalarExpr(E->getArg(0));
+    Value *VSrcOld = EmitScalarExpr(E->getArg(1));
+    Value *FI = EmitScalarExpr(E->getArg(2));
+    Value *BoundCtrl = EmitScalarExpr(E->getArg(3));
+    Function *F =
+        CGM.getIntrinsic(BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16_swap
+                             ? Intrinsic::amdgcn_permlane16_swap
+                             : Intrinsic::amdgcn_permlane32_swap);
+    llvm::CallInst *Call =
+        Builder.CreateCall(F, {VDstOld, VSrcOld, FI, BoundCtrl});
+
+    llvm::Value *Elt0 = Builder.CreateExtractValue(Call, 0);
+    llvm::Value *Elt1 = Builder.CreateExtractValue(Call, 1);
+
+    llvm::Type *ResultType = ConvertType(E->getType());
+
+    llvm::Value *Insert0 = Builder.CreateInsertElement(
+        llvm::PoisonValue::get(ResultType), Elt0, UINT64_C(0));
+    llvm::Value *AsVector =
+        Builder.CreateInsertElement(Insert0, Elt1, UINT64_C(1));
+    return AsVector;
+  }
+  case AMDGPU::BI__builtin_amdgcn_bitop3_b32:
+  case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
+    return emitQuaternaryBuiltin(*this, E, Intrinsic::amdgcn_bitop3);
   case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
     return emitBuiltinWithOneOverloadedType<4>(
         *this, E, Intrinsic::amdgcn_make_buffer_rsrc);
