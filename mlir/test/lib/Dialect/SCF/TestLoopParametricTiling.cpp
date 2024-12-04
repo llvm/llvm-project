@@ -41,7 +41,9 @@ public:
 
   void runOnOperation() override {
     if (sizes.empty()) {
-      emitError(UnknownLoc::get(getContext()), "missing `" + getArgument() + "` pass-option for outer loop sizes");
+      emitError(
+          UnknownLoc::get(&getContext()),
+          "missing `test-outer-loop-sizes` pass-option for outer loop sizes");
       signalPassFailure();
       return;
     }
