@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
 
 gpu.module @testmod {
