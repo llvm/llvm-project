@@ -649,8 +649,10 @@ func.func @negative_transpose_store_scalable_via_za__bad_source_shape(%vec: vect
 
 // -----
 
-// From: https://github.com/llvm/llvm-project/issues/118449 (check we don't crash).
-func.func @vector_mask_empty(%m0: vector<16x2xi1>, %arg1: vector<16x16xf32>) -> vector<16x16xf32> {
-  %0 = vector.mask %m0 { vector.yield %arg1 : vector<16x16xf32> } : vector<16x2xi1> -> vector<16x16xf32>
+// From: https://github.com/llvm/llvm-project/issues/118449.
+// Check -arm-sme-vector-legalization does not crash when it encounters a `vector.mask` that
+// does not contain a maskable op.
+func.func @vector_mask_without_maskable_op(%mask: vector<16x2xi1>, %vec: vector<16x16xf32>) -> vector<16x16xf32> {
+  %0 = vector.mask %mask { vector.yield %vec : vector<16x16xf32> } : vector<16x2xi1> -> vector<16x16xf32>
   return %0 : vector<16x16xf32>
 }
