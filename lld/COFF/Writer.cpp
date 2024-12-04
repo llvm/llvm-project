@@ -1313,7 +1313,7 @@ void Writer::createExportTable() {
     // Allow using a custom built export table from input object files, instead
     // of having the linker synthesize the tables.
     if (ctx.config.hadExplicitExports)
-      warn("literal .edata sections override exports");
+      Warn(ctx) << "literal .edata sections override exports";
   } else if (!ctx.config.exports.empty()) {
     for (Chunk *c : edata.chunks)
       edataSec->addChunk(c);
@@ -1325,7 +1325,7 @@ void Writer::createExportTable() {
   // Warn on exported deleting destructor.
   for (auto e : ctx.config.exports)
     if (e.sym && e.sym->getName().starts_with("??_G"))
-      warn("export of deleting dtor: " + toString(ctx, *e.sym));
+      Warn(ctx) << "export of deleting dtor: " << toString(ctx, *e.sym);
 }
 
 void Writer::removeUnusedSections() {
@@ -1457,9 +1457,10 @@ void Writer::createSymbolAndStringTable() {
     if ((sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
     if (ctx.config.warnLongSectionNames) {
-      warn("section name " + sec->name +
-           " is longer than 8 characters and will use a non-standard string "
-           "table");
+      Warn(ctx)
+          << "section name " << sec->name
+          << " is longer than 8 characters and will use a non-standard string "
+             "table";
     }
     sec->setStringTableOff(addEntryToStringTable(sec->name));
   }
@@ -2086,8 +2087,8 @@ void Writer::getSymbolsFromSections(ObjFile *file,
     // Validate that the contents look like symbol table indices.
     ArrayRef<uint8_t> data = c->getContents();
     if (data.size() % 4 != 0) {
-      warn("ignoring " + c->getSectionName() +
-           " symbol table index section in object " + toString(file));
+      Warn(ctx) << "ignoring " << c->getSectionName()
+                << " symbol table index section in object " << file;
       continue;
     }
 
@@ -2098,8 +2099,8 @@ void Writer::getSymbolsFromSections(ObjFile *file,
     ArrayRef<Symbol *> objSymbols = file->getSymbols();
     for (uint32_t symIndex : symIndices) {
       if (symIndex >= objSymbols.size()) {
-        warn("ignoring invalid symbol table index in section " +
-             c->getSectionName() + " in object " + toString(file));
+        Warn(ctx) << "ignoring invalid symbol table index in section "
+                  << c->getSectionName() << " in object " << file;
         continue;
       }
       if (Symbol *s = objSymbols[symIndex]) {
@@ -2606,7 +2607,8 @@ void Writer::prepareLoadConfig() {
   auto *b = cast_if_present<DefinedRegular>(sym);
   if (!b) {
     if (ctx.config.guardCF != GuardCFLevel::Off)
-      warn("Control Flow Guard is enabled but '_load_config_used' is missing");
+      Warn(ctx)
+          << "Control Flow Guard is enabled but '_load_config_used' is missing";
     return;
   }
 
@@ -2616,13 +2618,13 @@ void Writer::prepareLoadConfig() {
   uint8_t *symBuf = secBuf + (b->getRVA() - sec->getRVA());
   uint32_t expectedAlign = ctx.config.is64() ? 8 : 4;
   if (b->getChunk()->getAlignment() < expectedAlign)
-    warn("'_load_config_used' is misaligned (expected alignment to be " +
-         Twine(expectedAlign) + " bytes, got " +
-         Twine(b->getChunk()->getAlignment()) + " instead)");
+    Warn(ctx) << "'_load_config_used' is misaligned (expected alignment to be "
+              << expectedAlign << " bytes, got "
+              << b->getChunk()->getAlignment() << " instead)";
   else if (!isAligned(Align(expectedAlign), b->getRVA()))
-    warn("'_load_config_used' is misaligned (RVA is 0x" +
-         Twine::utohexstr(b->getRVA()) + " not aligned to " +
-         Twine(expectedAlign) + " bytes)");
+    Warn(ctx) << "'_load_config_used' is misaligned (RVA is 0x"
+              << Twine::utohexstr(b->getRVA()) << " not aligned to "
+              << expectedAlign << " bytes)";
 
   if (ctx.config.is64())
     prepareLoadConfig(reinterpret_cast<coff_load_configuration64 *>(symBuf));
