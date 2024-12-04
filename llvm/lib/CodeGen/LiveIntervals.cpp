@@ -734,7 +734,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     for (MCRegUnitMaskIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
       auto [Unit, Bitmask] = *UI;
       // Record lane mask for all artificial RegUnits for this physreg.
-      if (MRI->isArtificialRegUnit(Unit))
+      if (TRI->isArtificialRegUnit(Unit))
         ArtificialLanes |= Bitmask;
       const LiveRange &RURange = getRegUnit(Unit);
       if (RURange.empty())

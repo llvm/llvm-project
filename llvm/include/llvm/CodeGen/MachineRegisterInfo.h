@@ -980,12 +980,6 @@ public:
   /// expected.
   bool isReservedRegUnit(unsigned Unit) const;
 
-  /// Returns true when the given register unit is considered artificial.
-  ///
-  /// Register units are considered artificial when at least one of the
-  /// root registers is artificial.
-  bool isArtificialRegUnit(unsigned Unit) const;
-
   /// isAllocatable - Returns true when PhysReg belongs to an allocatable
   /// register class and it hasn't been reserved.
   ///
