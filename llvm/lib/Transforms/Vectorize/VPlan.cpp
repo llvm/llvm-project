@@ -821,16 +821,16 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPlan::VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry,
-             VPIRBasicBlock *ScalarHeader)
-    : VPlan(Preheader, TC, ScalarHeader) {
-  VPBlockUtils::connectBlocks(Preheader, Entry);
+VPlan::VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
+             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
+    : VPlan(OriginalPreheader, TC, ScalarHeader) {
+  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
 }
 
-VPlan::VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry,
-             VPIRBasicBlock *ScalarHeader)
-    : VPlan(Preheader, ScalarHeader) {
-  VPBlockUtils::connectBlocks(Preheader, Entry);
+VPlan::VPlan(VPBasicBlock *OriginalPreheader,
+             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
+    : VPlan(OriginalPreheader, ScalarHeader) {
+  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
 }
 
 VPlan::~VPlan() {
@@ -1187,6 +1187,7 @@ std::string VPlan::getName() const {
 }
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
+  // TODO: Cache if possible.
   for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
     if (auto *R = dyn_cast<VPRegionBlock>(B))
       return R;
@@ -1198,6 +1199,16 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
     if (auto *R = dyn_cast<VPRegionBlock>(B))
       return R;
   return nullptr;
+}
+
+VPBasicBlock *VPlan::getScalarPreheader() const {
+  auto *MiddleVPBB =
+      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+  auto *LastSucc = MiddleVPBB->getSuccessors().back();
+  // If scalar preheader is connected to VPlan, it is the last successor of
+  // MiddleVPBB. If this last successor is a VPIRBasicBlock, it is the Exit
+  // block rather than the scalar preheader.
+  return isa<VPIRBasicBlock>(LastSucc) ? nullptr : cast<VPBasicBlock>(LastSucc);
 }
 
 LLVM_DUMP_METHOD
@@ -1290,15 +1301,6 @@ VPlan *VPlan::duplicate() {
          "TripCount must have been added to Old2NewVPValues");
   NewPlan->TripCount = Old2NewVPValues[TripCount];
   return NewPlan;
-}
-
-VPBasicBlock *VPlan::getScalarPreheader() {
-  auto *MiddleVPBB =
-      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
-  auto *LastSucc = MiddleVPBB->getSuccessors().back();
-  // Order is strict: if the last successor is VPIRBasicBlock, it must be the
-  // single exit.
-  return isa<VPIRBasicBlock>(LastSucc) ? nullptr : cast<VPBasicBlock>(LastSucc);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

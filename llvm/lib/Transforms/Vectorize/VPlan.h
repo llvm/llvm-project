@@ -621,6 +621,12 @@ public:
   /// Remove all the successors of this block.
   void clearSuccessors() { Successors.clear(); }
 
+  /// Swap successors of the block. The block must have exactly 2 successors.
+  void swapSuccessors() {
+    assert(Successors.size() == 2 && "must have 2 successors to swap");
+    std::swap(Successors[0], Successors[1]);
+  }
+
   /// The method which generates the output IR that correspond to this
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
@@ -3814,14 +3820,15 @@ public:
   }
 
   /// Constructor variants that take disconnected preheader and entry blocks,
-  /// connecting them as part of construction. Only used to reduce the need of
-  /// code changes during transition.
-  VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry,
-        VPIRBasicBlock *ScalarHeader);
-  VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry,
+  /// connecting them as part of construction.
+  /// FIXME: Only used to reduce the need of code changes during transition.
+  VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
+        VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader);
+  VPlan(VPBasicBlock *OriginalPreheader, VPBasicBlock *EntryVectorPreHeader,
         VPIRBasicBlock *ScalarHeader);
 
-  /// Construct a VPlan with \p Entry to the plan.
+  /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
+  /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
       : Entry(Entry), ScalarHeader(ScalarHeader) {
     Entry->setPlan(this);
@@ -3883,9 +3890,7 @@ public:
   }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
-  VPBasicBlock *getScalarPreheader() const {
-    return cast<VPBasicBlock>(ScalarHeader->getSinglePredecessor());
-  }
+  VPBasicBlock *getScalarPreheader() const;
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
   VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
@@ -4020,14 +4025,14 @@ public:
   }
 
   /// \return The block corresponding to the original preheader.
+  /// FIXME: There's no separate preheader any longer and Entry now serves the
+  /// same purpose as the original preheader. Remove after transition.
   VPBasicBlock *getPreheader() { return Entry; }
   const VPBasicBlock *getPreheader() const { return Entry; }
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
-
-  VPBasicBlock *getScalarPreheader();
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

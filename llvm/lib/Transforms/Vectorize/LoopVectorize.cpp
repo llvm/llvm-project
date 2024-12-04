@@ -2428,30 +2428,24 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   return VectorTripCount;
 }
 
-/// Helper to connect both the vector and scalar preheaders to the Plan's
-/// entry. This is used when adjusting \p Plan during skeleton
-/// creation, i.e. adjusting the plan after introducing an initial runtime
-/// check.
-/// TODO: Connect scalar preheader during initial VPlan construction.
-static void connectScalarPreheaderAsBypassInVPlan(VPlan &Plan) {
-  VPBlockBase *VectorPH = Plan.getVectorPreheader();
-  VPBlockBase *ScalarPH = Plan.getScalarPreheader();
-  VPBlockBase *Entry = Plan.getEntry();
-  VPBlockUtils::connectBlocks(Entry, ScalarPH);
-  std::swap(Entry->getSuccessors()[0], Entry->getSuccessors()[1]);
-}
-
 /// Introduces a new VPIRBasicBlock for \p CheckIRBB to \p Plan between the
-/// vector preheader and its predecessor, also connecting to the scalar
-/// preheader.
+/// vector preheader and its predecessor, also connecting the new block to the
+/// scalar preheader.
 static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
+
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
-  assert(PreVectorPH->getSuccessors()[0] == ScalarPH && "Unexpected successor");
-  VPIRBasicBlock *CheckVPIRBB = VPIRBasicBlock::fromBasicBlock(CheckIRBB);
-  VPBlockUtils::connectBlocks(CheckVPIRBB, ScalarPH);
-  VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckVPIRBB);
+  if (PreVectorPH->getNumSuccessors() != 1) {
+    assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
+    assert(PreVectorPH->getSuccessors()[0] == ScalarPH &&
+           "Unexpected successor");
+    VPIRBasicBlock *CheckVPIRBB = VPIRBasicBlock::fromBasicBlock(CheckIRBB);
+    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckVPIRBB);
+    PreVectorPH = CheckVPIRBB;
+  }
+  VPBlockUtils::connectBlocks(PreVectorPH, ScalarPH);
+  PreVectorPH->swapSuccessors();
 }
 
 void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
@@ -2536,7 +2530,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(TCCheckBlock);
 
   // TODO: Wrap LoopVectorPreHeader in VPIRBasicBlock here.
-  connectScalarPreheaderAsBypassInVPlan(Plan);
+  introduceCheckBlockInVPlan(Plan, nullptr);
 }
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
@@ -7919,13 +7913,8 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
-  // Connect the vector preheader to the scalar preheader when creating the trip
-  // count for the epilogue loop. Otherwise there is already a runtime check and
-  // connection to the scalar preheader, so we introduce it as new check block.
-  if (ForEpilogue)
-    connectScalarPreheaderAsBypassInVPlan(Plan);
-  else
-    introduceCheckBlockInVPlan(Plan, TCCheckBlock);
+  // Connect TCCheckblock to the VPlan.
+  introduceCheckBlockInVPlan(Plan, TCCheckBlock);
   return TCCheckBlock;
 }
 
@@ -8071,14 +8060,15 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
   LoopBypassBlocks.push_back(Insert);
 
-  // A new entry block has been created for the epilogue VPlan. Hook it in.
+  // A new entry block has been created for the epilogue VPlan. Hook it in, as
+  // otherwise we would try to modify the entry to the main vector loop.
   VPIRBasicBlock *NewEntry = VPIRBasicBlock::fromBasicBlock(Insert);
   VPBasicBlock *OldEntry = Plan.getEntry();
   VPBlockUtils::reassociateBlocks(OldEntry, NewEntry);
   Plan.setEntry(NewEntry);
   delete OldEntry;
 
-  connectScalarPreheaderAsBypassInVPlan(Plan);
+  introduceCheckBlockInVPlan(Plan, nullptr);
   return Insert;
 }
 
