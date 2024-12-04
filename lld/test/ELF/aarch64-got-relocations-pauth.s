@@ -15,8 +15,8 @@
 # RUN: llvm-readelf -r -S -x .got -s local | FileCheck %s --check-prefix=LOCAL
 
 # EXTERNAL:      Offset            Info             Type                    Symbol's Value   Symbol's Name + Addend
-# EXTERNAL-NEXT: 0000000000020380  000000010000e201 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 bar + 0
-# EXTERNAL-NEXT: 0000000000020388  000000020000e201 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 zed + 0
+# EXTERNAL-NEXT: 0000000000020380  0000000100000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 bar + 0
+# EXTERNAL-NEXT: 0000000000020388  0000000200000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 zed + 0
 
 ## Symbol's values for bar and zed are equal since they contain no content (see Inputs/shared.s)
 # LOCAL:         Offset            Info             Type                    Symbol's Value   Symbol's Name + Addend
