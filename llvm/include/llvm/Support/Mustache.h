@@ -75,9 +75,7 @@ using Accessor = SmallVector<std::string>;
 using Lambda = std::function<llvm::json::Value()>;
 using SectionLambda = std::function<llvm::json::Value(std::string)>;
 
-namespace {
 class ASTNode;
-} // namespace
 
 // A Template represents the container for the AST and the partials
 // and Lambdas that are registered with it.
