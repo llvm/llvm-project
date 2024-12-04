@@ -13,4 +13,5 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.limits
 )
