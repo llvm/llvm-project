@@ -316,7 +316,8 @@ struct __forward_begin_node {
 };
 
 template <class _Tp, class _VoidPtr>
-using __begin_node_of = __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
+using __begin_node_of _LIBCPP_NODEBUG =
+    __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
 
 template <class _Tp, class _VoidPtr>
 struct __forward_list_node : public __begin_node_of<_Tp, _VoidPtr> {

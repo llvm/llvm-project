@@ -41,9 +41,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Owner, class _KeyContainer, class _MappedContainer, bool _Const>
 struct __key_value_iterator {
 private:
-  using __key_iterator    = ranges::iterator_t<const _KeyContainer>;
-  using __mapped_iterator = ranges::iterator_t<__maybe_const<_Const, _MappedContainer>>;
-  using __reference       = _If<_Const, typename _Owner::const_reference, typename _Owner::reference>;
+  using __key_iterator _LIBCPP_NODEBUG    = ranges::iterator_t<const _KeyContainer>;
+  using __mapped_iterator _LIBCPP_NODEBUG = ranges::iterator_t<__maybe_const<_Const, _MappedContainer>>;
+  using __reference _LIBCPP_NODEBUG       = _If<_Const, typename _Owner::const_reference, typename _Owner::reference>;
 
   struct __arrow_proxy {
     __reference __ref_;

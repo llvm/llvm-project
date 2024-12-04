@@ -25,10 +25,10 @@ struct remove_pointer {
 
 #  ifdef _LIBCPP_COMPILER_GCC
 template <class _Tp>
-using __remove_pointer_t = typename remove_pointer<_Tp>::type;
+using __remove_pointer_t _LIBCPP_NODEBUG = typename remove_pointer<_Tp>::type;
 #  else
 template <class _Tp>
-using __remove_pointer_t = __remove_pointer(_Tp);
+using __remove_pointer_t _LIBCPP_NODEBUG = __remove_pointer(_Tp);
 #  endif
 #else
 // clang-format off

@@ -357,7 +357,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __choose_index_type() {
 }
 
 template <size_t _NumAlts>
-using __variant_index_t = decltype(std::__choose_index_type<_NumAlts>());
+using __variant_index_t _LIBCPP_NODEBUG = decltype(std::__choose_index_type<_NumAlts>());
 
 template <class _IndexType>
 constexpr _IndexType __variant_npos = static_cast<_IndexType>(-1);
@@ -658,8 +658,8 @@ private:
 
 template <size_t _Index, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS __alt {
-  using __value_type              = _Tp;
-  static constexpr size_t __index = _Index;
+  using __value_type _LIBCPP_NODEBUG = _Tp;
+  static constexpr size_t __index    = _Index;
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit constexpr __alt(in_place_t, _Args&&... __args)
@@ -713,7 +713,7 @@ _LIBCPP_VARIANT_UNION(_Trait::_Unavailable, _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTE
 template <_Trait _DestructibleTrait, class... _Types>
 class _LIBCPP_TEMPLATE_VIS __base {
 public:
-  using __index_t = __variant_index_t<sizeof...(_Types)>;
+  using __index_t _LIBCPP_NODEBUG = __variant_index_t<sizeof...(_Types)>;
 
   _LIBCPP_HIDE_FROM_ABI explicit constexpr __base(__valueless_t __tag) noexcept
       : __data(__tag), __index(__variant_npos<__index_t>) {}
@@ -753,8 +753,8 @@ class _LIBCPP_TEMPLATE_VIS __dtor;
       template <class... _Types>                                                                                       \
       class _LIBCPP_TEMPLATE_VIS __dtor<__traits<_Types...>, destructible_trait>                                       \
           : public __base<destructible_trait, _Types...> {                                                             \
-        using __base_type = __base<destructible_trait, _Types...>;                                                     \
-        using __index_t   = typename __base_type::__index_t;                                                           \
+        using __base_type _LIBCPP_NODEBUG = __base<destructible_trait, _Types...>;                                     \
+        using __index_t _LIBCPP_NODEBUG   = typename __base_type::__index_t;                                           \
                                                                                                                        \
       public:                                                                                                          \
         using __base_type::__base_type;                                                                                \
@@ -799,7 +799,7 @@ _LIBCPP_VARIANT_DESTRUCTOR(_Trait::_Unavailable,
 
 template <class _Traits>
 class _LIBCPP_TEMPLATE_VIS __ctor : public __dtor<_Traits> {
-  using __base_type = __dtor<_Traits>;
+  using __base_type _LIBCPP_NODEBUG = __dtor<_Traits>;
 
 public:
   using __base_type::__base_type;
@@ -831,7 +831,7 @@ class _LIBCPP_TEMPLATE_VIS __move_constructor;
       template <class... _Types>                                                                                       \
       class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>, move_constructible_trait>                     \
           : public __ctor<__traits<_Types...>> {                                                                       \
-        using __base_type = __ctor<__traits<_Types...>>;                                                               \
+        using __base_type _LIBCPP_NODEBUG = __ctor<__traits<_Types...>>;                                               \
                                                                                                                        \
       public:                                                                                                          \
         using __base_type::__base_type;                                                                                \
@@ -869,7 +869,7 @@ class _LIBCPP_TEMPLATE_VIS __copy_constructor;
       template <class... _Types>                                                                                       \
       class _LIBCPP_TEMPLATE_VIS __copy_constructor<__traits<_Types...>, copy_constructible_trait>                     \
           : public __move_constructor<__traits<_Types...>> {                                                           \
-        using __base_type = __move_constructor<__traits<_Types...>>;                                                   \
+        using __base_type _LIBCPP_NODEBUG = __move_constructor<__traits<_Types...>>;                                   \
                                                                                                                        \
       public:                                                                                                          \
         using __base_type::__base_type;                                                                                \
@@ -899,7 +899,7 @@ _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
 
 template <class _Traits>
 class _LIBCPP_TEMPLATE_VIS __assignment : public __copy_constructor<_Traits> {
-  using __base_type = __copy_constructor<_Traits>;
+  using __base_type _LIBCPP_NODEBUG = __copy_constructor<_Traits>;
 
 public:
   using __base_type::__base_type;
@@ -958,7 +958,7 @@ class _LIBCPP_TEMPLATE_VIS __move_assignment;
       template <class... _Types>                                                                                       \
       class _LIBCPP_TEMPLATE_VIS __move_assignment<__traits<_Types...>, move_assignable_trait>                         \
           : public __assignment<__traits<_Types...>> {                                                                 \
-        using __base_type = __assignment<__traits<_Types...>>;                                                         \
+        using __base_type _LIBCPP_NODEBUG = __assignment<__traits<_Types...>>;                                         \
                                                                                                                        \
       public:                                                                                                          \
         using __base_type::__base_type;                                                                                \
@@ -997,7 +997,7 @@ class _LIBCPP_TEMPLATE_VIS __copy_assignment;
       template <class... _Types>                                                                                       \
       class _LIBCPP_TEMPLATE_VIS __copy_assignment<__traits<_Types...>, copy_assignable_trait>                         \
           : public __move_assignment<__traits<_Types...>> {                                                            \
-        using __base_type = __move_assignment<__traits<_Types...>>;                                                    \
+        using __base_type _LIBCPP_NODEBUG = __move_assignment<__traits<_Types...>>;                                    \
                                                                                                                        \
       public:                                                                                                          \
         using __base_type::__base_type;                                                                                \
@@ -1030,7 +1030,7 @@ _LIBCPP_VARIANT_COPY_ASSIGNMENT(_Trait::_Unavailable,
 
 template <class... _Types>
 class _LIBCPP_TEMPLATE_VIS __impl : public __copy_assignment<__traits<_Types...>> {
-  using __base_type = __copy_assignment<__traits<_Types...>>;
+  using __base_type _LIBCPP_NODEBUG = __copy_assignment<__traits<_Types...>>;
 
 public:
   using __base_type::__base_type; // get in_place_index_t constructor & friends
@@ -1097,7 +1097,7 @@ private:
 
 struct __no_narrowing_check {
   template <class _Dest, class _Source>
-  using _Apply = __type_identity<_Dest>;
+  using _Apply _LIBCPP_NODEBUG = __type_identity<_Dest>;
 };
 
 struct __narrowing_check {
@@ -1138,7 +1138,7 @@ using _MakeOverloads _LIBCPP_NODEBUG =
     typename __make_overloads_imp< __make_indices_imp<sizeof...(_Types), 0> >::template _Apply<_Types...>;
 
 template <class _Tp, class... _Types>
-using __best_match_t = typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;
+using __best_match_t _LIBCPP_NODEBUG = typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;
 
 } // namespace __variant_detail
 
@@ -1170,10 +1170,10 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES variant
 
   static_assert(__all<!is_void_v<_Types>...>::value, "variant can not have a void type as an alternative.");
 
-  using __first_type = variant_alternative_t<0, variant>;
+  using __first_type _LIBCPP_NODEBUG = variant_alternative_t<0, variant>;
 
 public:
-  using __trivially_relocatable =
+  using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
 
   template <bool _Dummy                                                                               = true,

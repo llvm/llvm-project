@@ -95,7 +95,7 @@ It looks different from literature pseudocode for two main reasons:
 
 */
 
-using __barrier_phase_t = uint8_t;
+using __barrier_phase_t _LIBCPP_NODEBUG = uint8_t;
 
 class __barrier_algorithm_base;
 

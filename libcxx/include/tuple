@@ -552,7 +552,8 @@ class _LIBCPP_TEMPLATE_VIS tuple {
   get(const tuple<_Up...>&&) _NOEXCEPT;
 
 public:
-  using __trivially_relocatable = __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 

@@ -353,8 +353,8 @@ struct __optional_destruct_base<_Tp, true> {
 
 template <class _Tp, bool = is_reference<_Tp>::value>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
-  using __base     = __optional_destruct_base<_Tp>;
-  using value_type = _Tp;
+  using __base _LIBCPP_NODEBUG = __optional_destruct_base<_Tp>;
+  using value_type             = _Tp;
   using __base::__base;
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__engaged_; }
@@ -396,8 +396,8 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
 // to ensure we can make the change in an ABI-compatible manner.
 template <class _Tp>
 struct __optional_storage_base<_Tp, true> {
-  using value_type = _Tp;
-  using __raw_type = remove_reference_t<_Tp>;
+  using value_type                 = _Tp;
+  using __raw_type _LIBCPP_NODEBUG = remove_reference_t<_Tp>;
   __raw_type* __value_;
 
   template <class _Up>
@@ -555,11 +555,11 @@ struct __optional_move_assign_base<_Tp, false> : __optional_copy_assign_base<_Tp
 };
 
 template <class _Tp>
-using __optional_sfinae_ctor_base_t =
+using __optional_sfinae_ctor_base_t _LIBCPP_NODEBUG =
     __sfinae_ctor_base< is_copy_constructible<_Tp>::value, is_move_constructible<_Tp>::value >;
 
 template <class _Tp>
-using __optional_sfinae_assign_base_t =
+using __optional_sfinae_assign_base_t _LIBCPP_NODEBUG =
     __sfinae_assign_base< (is_copy_constructible<_Tp>::value && is_copy_assignable<_Tp>::value),
                           (is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value) >;
 
@@ -583,12 +583,13 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES optional
     : private __optional_move_assign_base<_Tp>,
       private __optional_sfinae_ctor_base_t<_Tp>,
       private __optional_sfinae_assign_base_t<_Tp> {
-  using __base = __optional_move_assign_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __optional_move_assign_base<_Tp>;
 
 public:
   using value_type = _Tp;
 
-  using __trivially_relocatable = conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
 
 private:
   // Disable the reference extension using this static assert.
@@ -613,7 +614,7 @@ private:
     }
   };
   template <class _Up>
-  using _CheckOptionalArgsCtor =
+  using _CheckOptionalArgsCtor _LIBCPP_NODEBUG =
       _If< _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value && _IsNotSame<__remove_cvref_t<_Up>, optional>::value &&
                (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
            _CheckOptionalArgsConstructor,
@@ -621,7 +622,7 @@ private:
   template <class _QualUp>
   struct _CheckOptionalLikeConstructor {
     template <class _Up, class _Opt = optional<_Up>>
-    using __check_constructible_from_opt =
+    using __check_constructible_from_opt _LIBCPP_NODEBUG =
         _Or< is_constructible<_Tp, _Opt&>,
              is_constructible<_Tp, _Opt const&>,
              is_constructible<_Tp, _Opt&&>,
@@ -631,7 +632,7 @@ private:
              is_convertible<_Opt&&, _Tp>,
              is_convertible<_Opt const&&, _Tp> >;
     template <class _Up, class _Opt = optional<_Up>>
-    using __check_assignable_from_opt =
+    using __check_assignable_from_opt _LIBCPP_NODEBUG =
         _Or< is_assignable<_Tp&, _Opt&>,
              is_assignable<_Tp&, _Opt const&>,
              is_assignable<_Tp&, _Opt&&>,
@@ -655,12 +656,12 @@ private:
   };
 
   template <class _Up, class _QualUp>
-  using _CheckOptionalLikeCtor =
+  using _CheckOptionalLikeCtor _LIBCPP_NODEBUG =
       _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp> >::value,
            _CheckOptionalLikeConstructor<_QualUp>,
            __check_tuple_constructor_fail >;
   template <class _Up, class _QualUp>
-  using _CheckOptionalLikeAssign =
+  using _CheckOptionalLikeAssign _LIBCPP_NODEBUG =
       _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>, is_assignable<_Tp&, _QualUp> >::value,
            _CheckOptionalLikeConstructor<_QualUp>,
            __check_tuple_constructor_fail >;

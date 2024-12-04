@@ -24,7 +24,7 @@ struct remove_reference {
 };
 
 template <class _Tp>
-using __libcpp_remove_reference_t = __remove_reference_t(_Tp);
+using __libcpp_remove_reference_t _LIBCPP_NODEBUG = __remove_reference_t(_Tp);
 #elif __has_builtin(__remove_reference)
 template <class _Tp>
 struct remove_reference {
