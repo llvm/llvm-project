@@ -211,6 +211,7 @@ def DeprecatedWritableStr : DiagGroup<"deprecated-writable-strings",
                                       [CXX11CompatDeprecatedWritableStr]>;
 def DeprecatedPragma : DiagGroup<"deprecated-pragma">;
 def DeprecatedType : DiagGroup<"deprecated-type">;
+def DeprecatedMissingCommaVariadicParam : DiagGroup<"deprecated-missing-comma-variadic-parameter">;
 // FIXME: Why is DeprecatedImplementations not in this group?
 def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedArrayCompare,
@@ -235,7 +236,8 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedType,
                                           DeprecatedVolatile,
                                           DeprecatedWritableStr,
-                                          DeprecatedRedundantConstexprStaticDef
+                                          DeprecatedRedundantConstexprStaticDef,
+                                          DeprecatedMissingCommaVariadicParam
                                           ]>,
                  DiagCategory<"Deprecations">;
 
@@ -453,6 +455,7 @@ def ShiftOpParentheses: DiagGroup<"shift-op-parentheses">;
 def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
 def DanglingAssignment: DiagGroup<"dangling-assignment">;
 def DanglingAssignmentGsl : DiagGroup<"dangling-assignment-gsl">;
+def DanglingCapture : DiagGroup<"dangling-capture">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
@@ -462,6 +465,7 @@ def ReturnStackAddress : DiagGroup<"return-stack-address">;
 def : DiagGroup<"return-local-addr", [ReturnStackAddress]>;
 def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingAssignmentGsl,
+                                      DanglingCapture,
                                       DanglingField,
                                       DanglingInitializerList,
                                       DanglingGsl,
@@ -681,7 +685,8 @@ def SizeofArrayDecay : DiagGroup<"sizeof-array-decay">;
 def SizeofPointerMemaccess : DiagGroup<"sizeof-pointer-memaccess">;
 def MemsetTransposedArgs : DiagGroup<"memset-transposed-args">;
 def DynamicClassMemaccess : DiagGroup<"dynamic-class-memaccess">;
-def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess">;
+def NonTrivialMemcall : DiagGroup<"nontrivial-memcall">;
+def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess", [NonTrivialMemcall]>;
 def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
 def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
   [SizeofPointerMemaccess, DynamicClassMemaccess,
@@ -1587,4 +1592,3 @@ def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-stor
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
-

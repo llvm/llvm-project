@@ -278,16 +278,17 @@ def SPIRV_DeviceTypeAttr : SPIRV_I32EnumAttr<
 def SPIRV_V_AMD         : I32EnumAttrCase<"AMD", 0>;
 def SPIRV_V_Apple       : I32EnumAttrCase<"Apple", 1>;
 def SPIRV_V_ARM         : I32EnumAttrCase<"ARM", 2>;
-def SPIRV_V_Imagination : I32EnumAttrCase<"Imagination", 3>;
-def SPIRV_V_Intel       : I32EnumAttrCase<"Intel", 4>;
-def SPIRV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 5>;
-def SPIRV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 6>;
-def SPIRV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 7>;
+def SPIRV_V_Broadcom    : I32EnumAttrCase<"Broadcom", 3>;
+def SPIRV_V_Imagination : I32EnumAttrCase<"Imagination", 4>;
+def SPIRV_V_Intel       : I32EnumAttrCase<"Intel", 5>;
+def SPIRV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 6>;
+def SPIRV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 7>;
+def SPIRV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 8>;
 def SPIRV_V_Unknown     : I32EnumAttrCase<"Unknown", 0xffffffff>;
 
 def SPIRV_VendorAttr : SPIRV_I32EnumAttr<
   "Vendor", "recognized SPIR-V vendor strings", "vendor", [
-    SPIRV_V_AMD, SPIRV_V_Apple, SPIRV_V_ARM, SPIRV_V_Imagination,
+    SPIRV_V_AMD, SPIRV_V_Apple, SPIRV_V_ARM, SPIRV_V_Broadcom, SPIRV_V_Imagination,
     SPIRV_V_Intel, SPIRV_V_NVIDIA, SPIRV_V_Qualcomm, SPIRV_V_SwiftShader,
     SPIRV_V_Unknown
   ]>;

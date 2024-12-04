@@ -473,17 +473,35 @@ entry:
 ; Can't match the m8 result type as the source would have to be m16 which
 ; isn't a legal type.
 define void @vnsrl_0_i32_single_src_m8(ptr %in, ptr %out) {
-; CHECK-LABEL: vnsrl_0_i32_single_src_m8:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vid.v v16
-; CHECK-NEXT:    vadd.vv v16, v16, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v24, v8, v16
-; CHECK-NEXT:    vse32.v v24, (a1)
-; CHECK-NEXT:    ret
+; V-LABEL: vnsrl_0_i32_single_src_m8:
+; V:       # %bb.0: # %entry
+; V-NEXT:    li a2, 64
+; V-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; V-NEXT:    vle32.v v8, (a0)
+; V-NEXT:    lui a0, 341
+; V-NEXT:    addiw a0, a0, 1365
+; V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; V-NEXT:    vmv.s.x v16, a0
+; V-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; V-NEXT:    vcompress.vm v24, v8, v16
+; V-NEXT:    vse32.v v24, (a1)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_i32_single_src_m8:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    li a2, 64
+; ZVE32F-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; ZVE32F-NEXT:    vmv.v.i v16, 0
+; ZVE32F-NEXT:    lui a0, 341
+; ZVE32F-NEXT:    addi a0, a0, 1365
+; ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; ZVE32F-NEXT:    vmv.s.x v16, a0
+; ZVE32F-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZVE32F-NEXT:    vcompress.vm v24, v8, v16
+; ZVE32F-NEXT:    vse32.v v24, (a1)
+; ZVE32F-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
   %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

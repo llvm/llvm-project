@@ -9,7 +9,7 @@
 #define _AS999 __attribute__((address_space(999)))
 
 void *p1(void _AS1 *p) { return p; }
-void *p2(void _AS2 *p) { return p; }
+void *p2(void _AS2 *p) { return p; } // expected-error {{returning '_AS2 void *' from a function with result type 'void *' changes address space of pointer}}
 void *p3(void _AS3 *p) { return p; }
 void *p4(void _AS4 *p) { return p; }
 void *p5(void _AS5 *p) { return p; }

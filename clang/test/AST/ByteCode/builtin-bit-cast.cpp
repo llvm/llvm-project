@@ -145,6 +145,28 @@ namespace Fail {
                                                 // both-note {{initializer of 'a' is not a constant expression}}
 }
 
+namespace ToPtr {
+  struct S {
+    const int *p = nullptr;
+  };
+  struct P {
+    const int *p; // both-note {{invalid type 'const int *' is a member of 'ToPtr::P'}}
+  };
+  constexpr P p = __builtin_bit_cast(P, S{}); // both-error {{must be initialized by a constant expression}} \
+                                              // both-note {{bit_cast to a pointer type is not allowed in a constant expression}}
+}
+
+namespace Invalid {
+  struct S {
+    int a;
+  };
+  constexpr S s = S{1/0}; // both-error {{must be initialized by a constant expression}} \
+                          // both-note {{division by zero}} \
+                          // both-note {{declared here}}
+  constexpr S s2 = __builtin_bit_cast(S, s); // both-error {{must be initialized by a constant expression}} \
+                                             // both-note {{initializer of 's' is not a constant expression}}
+}
+
 namespace NullPtr {
   constexpr nullptr_t N = __builtin_bit_cast(nullptr_t, (intptr_t)1u);
   static_assert(N == nullptr);

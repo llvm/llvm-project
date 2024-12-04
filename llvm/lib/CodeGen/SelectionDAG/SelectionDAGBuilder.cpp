@@ -7532,7 +7532,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
 
   case Intrinsic::expect:
-    // Just replace __builtin_expect(exp, c) with EXP.
+  case Intrinsic::expect_with_probability:
+    // Just replace __builtin_expect(exp, c) and
+    // __builtin_expect_with_probability(exp, c, p) with EXP.
     setValue(&I, getValue(I.getArgOperand(0)));
     return;
 

@@ -73,6 +73,8 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Added completion for C++20 keywords.
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -154,6 +156,10 @@ Changes in existing checks
   <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
   crashes from invalid code.
 
+- Improved :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
+  branch clones by now detecting duplicate inner and outer if statements.
+
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
@@ -161,6 +167,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-dangling-handle
   <clang-tidy/checks/bugprone/dangling-handle>` check to treat `std::span` as a
   handle class.
+
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` by fixing false positives
+  when a consteval function with throw statements.
 
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
@@ -173,7 +183,9 @@ Changes in existing checks
 - Improved :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check to
   diagnose potential dangling references when returning a ``const &`` parameter
-  by using the conditional operator ``cond ? var1 : var2``.
+  by using the conditional operator ``cond ? var1 : var2`` and no longer giving
+  false positives for functions which contain lambda and ignore parameters
+  with ``[[clang::lifetimebound]]`` attribute.
   
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
@@ -203,6 +215,10 @@ Changes in existing checks
   fix false positive that floating point variable is only used in increment
   expression.
 
+- Improved :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
+  <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check to
+  avoid false positives when detecting a templated class with inheritance.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers.
@@ -220,9 +236,21 @@ Changes in existing checks
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
 
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check by extending the
+  checker to detect floating point and integer literals in redundant
+  expressions.
+
 - Improved :doc:`misc-unconventional-assign-operator
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
   false positive for C++23 deducing this.
+
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static``
+  keyword before type qualifiers such as ``const`` and ``volatile`` and fix
+  false positives for function declaration without body and fix false positives
+  for C++20 export declarations and fix false positives for global scoped
+  overloaded ``operator new`` and ``operator delete``.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
@@ -232,10 +260,6 @@ Changes in existing checks
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
   using loop variable in initializer of lambda capture.
-
-- Improved :doc:`misc-use-internal-linkage
-  <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
-  before type qualifiers such as ``const`` and ``volatile``.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
@@ -251,8 +275,9 @@ Changes in existing checks
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
 
 - Improved :doc:`modernize-use-starts-ends-with
-  <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two cases
-  that can be replaced with ``ends_with``
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two new
+  cases from ``rfind`` and ``compare`` to ``ends_with``, and one new case from
+  ``substr`` to ``starts_with``, and a small adjustment to the  diagnostic message.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing

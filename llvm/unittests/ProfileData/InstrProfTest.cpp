@@ -25,8 +25,10 @@
 #include <optional>
 
 using namespace llvm;
+using ::llvm::memprof::LineLocation;
 using ::testing::EndsWith;
 using ::testing::IsSubsetOf;
+using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
@@ -392,21 +394,6 @@ MemInfoBlock makePartialMIB() {
   return MIB;
 }
 
-IndexedMemProfRecord makeRecord(
-    std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
-        AllocFrames,
-    std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
-        CallSiteFrames,
-    const MemInfoBlock &Block = makeFullMIB()) {
-  llvm::memprof::IndexedMemProfRecord MR;
-  for (const auto &Frames : AllocFrames)
-    MR.AllocSites.emplace_back(Frames, llvm::memprof::hashCallStack(Frames),
-                               Block);
-  for (const auto &Frames : CallSiteFrames)
-    MR.CallSites.push_back(Frames);
-  return MR;
-}
-
 IndexedMemProfRecord
 makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
              std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
@@ -452,48 +439,6 @@ MATCHER_P(EqualsRecord, Want, "") {
       return PrintAndFail();
   }
   return true;
-}
-
-TEST_F(InstrProfTest, test_memprof_v0) {
-  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
-                    Succeeded());
-
-  const IndexedMemProfRecord IndexedMR = makeRecord(
-      /*AllocFrames=*/
-      {
-          {0, 1},
-          {2, 3},
-      },
-      /*CallSiteFrames=*/{
-          {4, 5},
-      });
-
-  memprof::IndexedMemProfData MemProfData;
-  MemProfData.Frames = getFrameMapping();
-  MemProfData.Records.try_emplace(0x9999, IndexedMR);
-  Writer.addMemProfData(MemProfData, Err);
-
-  auto Profile = Writer.writeBuffer();
-  readProfile(std::move(Profile));
-
-  auto RecordOr = Reader->getMemProfRecord(0x9999);
-  ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
-  const memprof::MemProfRecord &Record = RecordOr.get();
-
-  std::optional<memprof::FrameId> LastUnmappedFrameId;
-  auto IdToFrameCallback = [&](const memprof::FrameId Id) {
-    auto Iter = MemProfData.Frames.find(Id);
-    if (Iter == MemProfData.Frames.end()) {
-      LastUnmappedFrameId = Id;
-      return memprof::Frame(0, 0, 0, false);
-    }
-    return Iter->second;
-  };
-
-  const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
-      << "could not map frame id: " << *LastUnmappedFrameId;
-  EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
 TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
@@ -620,47 +565,31 @@ TEST_F(InstrProfTest, test_caller_callee_pairs) {
   auto It = Pairs.find(0x123);
   ASSERT_NE(It, Pairs.end());
   ASSERT_THAT(It->second, SizeIs(2));
-  EXPECT_THAT(It->second[0], testing::Pair(testing::FieldsAre(1U, 2U), 0x234U));
-  EXPECT_THAT(It->second[1], testing::Pair(testing::FieldsAre(5U, 6U), 0x345U));
+  EXPECT_THAT(It->second[0], Pair(LineLocation(1, 2), 0x234U));
+  EXPECT_THAT(It->second[1], Pair(LineLocation(5, 6), 0x345U));
 
   It = Pairs.find(0x234);
   ASSERT_NE(It, Pairs.end());
   ASSERT_THAT(It->second, SizeIs(1));
-  EXPECT_THAT(It->second[0], testing::Pair(testing::FieldsAre(3U, 4U), 0U));
+  EXPECT_THAT(It->second[0], Pair(LineLocation(3, 4), 0U));
 
   It = Pairs.find(0x345);
   ASSERT_NE(It, Pairs.end());
   ASSERT_THAT(It->second, SizeIs(1));
-  EXPECT_THAT(It->second[0], testing::Pair(testing::FieldsAre(7U, 8U), 0U));
+  EXPECT_THAT(It->second[0], Pair(LineLocation(7, 8), 0U));
 }
 
 TEST_F(InstrProfTest, test_memprof_getrecord_error) {
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecord(
-      /*AllocFrames=*/
-      {
-          {0, 1},
-          {2, 3},
-      },
-      /*CallSiteFrames=*/{
-          {4, 5},
-      });
-  // We skip adding the frame mappings here unlike the test_memprof unit test
-  // above to exercise the failure path when getMemProfRecord is invoked.
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
-
+  Writer.setMemProfVersionRequested(memprof::Version3);
+  // Generate an empty profile.
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  // Missing frames give a hash_mismatch error.
-  auto RecordOr = Reader->getMemProfRecord(0x9999);
-  ASSERT_TRUE(
-      ErrorEquals(instrprof_error::hash_mismatch, RecordOr.takeError()));
-
   // Missing functions give a unknown_function error.
-  RecordOr = Reader->getMemProfRecord(0x1111);
+  auto RecordOr = Reader->getMemProfRecord(0x1111);
   ASSERT_TRUE(
       ErrorEquals(instrprof_error::unknown_function, RecordOr.takeError()));
 }

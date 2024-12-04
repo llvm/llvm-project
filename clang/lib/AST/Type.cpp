@@ -4031,12 +4031,12 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
 
 PackIndexingType::PackIndexingType(const ASTContext &Context,
                                    QualType Canonical, QualType Pattern,
-                                   Expr *IndexExpr, bool ExpandsToEmptyPack,
+                                   Expr *IndexExpr, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
       Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()), ExpandsToEmptyPack(ExpandsToEmptyPack) {
+      Size(Expansions.size()), FullySubstituted(FullySubstituted) {
 
   std::uninitialized_copy(Expansions.begin(), Expansions.end(),
                           getTrailingObjects<QualType>());
@@ -4081,10 +4081,10 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                const ASTContext &Context, QualType Pattern,
-                               Expr *E, bool ExpandsToEmptyPack) {
+                               Expr *E, bool FullySubstituted) {
   Pattern.Profile(ID);
   E->Profile(ID, Context, true);
-  ID.AddBoolean(ExpandsToEmptyPack);
+  ID.AddBoolean(FullySubstituted);
 }
 
 UnaryTransformType::UnaryTransformType(QualType BaseType,
@@ -4723,7 +4723,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   case Type::Pipe:
     return computeTypeLinkageInfo(cast<PipeType>(T)->getElementType());
   case Type::HLSLAttributedResource:
-    llvm_unreachable("not yet implemented");
+    return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
+                                      ->getContainedType()
+                                      ->getCanonicalTypeInternal());
   }
 
   llvm_unreachable("unhandled type class");

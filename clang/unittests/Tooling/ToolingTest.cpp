@@ -384,7 +384,8 @@ struct CommandLineExtractorTest : public ::testing::Test {
 public:
   CommandLineExtractorTest()
       : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
-        Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions)),
+        Diags(CompilerInstance::createDiagnostics(*InMemoryFS,
+                                                  new DiagnosticOptions)),
         Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
                "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
 

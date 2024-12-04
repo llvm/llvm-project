@@ -29,6 +29,14 @@ def FeatureBulkMemory :
       SubtargetFeature<"bulk-memory", "HasBulkMemory", "true",
                        "Enable bulk memory operations">;
 
+def FeatureBulkMemoryOpt :
+      SubtargetFeature<"bulk-memory-opt", "HasBulkMemoryOpt", "true",
+                       "Enable bulk memory optimization operations">;
+
+def FeatureCallIndirectOverlong :
+      SubtargetFeature<"call-indirect-overlong", "HasCallIndirectOverlong", "true",
+                       "Enable overlong encoding for call_indirect immediates">;
+
 def FeatureExceptionHandling :
       SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",
                        "Enable Wasm exception handling">;
@@ -114,15 +122,16 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // consideration given to available support in relevant engines and tools, and
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
-                      [FeatureBulkMemory, FeatureMultivalue,
+                      [FeatureBulkMemory, FeatureBulkMemoryOpt,
+                       FeatureCallIndirectOverlong, FeatureMultivalue,
                        FeatureMutableGlobals, FeatureNontrappingFPToInt,
                        FeatureReferenceTypes, FeatureSignExt]>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
-                      [FeatureAtomics, FeatureBulkMemory,
-                       FeatureExceptionHandling, FeatureExtendedConst,
-                       FeatureFP16, FeatureMultiMemory,
+                      [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
+                       FeatureCallIndirectOverlong, FeatureExceptionHandling,
+                       FeatureExtendedConst, FeatureFP16, FeatureMultiMemory,
                        FeatureMultivalue, FeatureMutableGlobals,
                        FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
                        FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,

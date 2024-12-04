@@ -10,11 +10,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
   }
 
-  gpu.module @cuda_device_mod [#nvvm.target] {
+  gpu.module @cuda_device_mod {
   }
 }
 
-// CHECK: gpu.module @cuda_device_mod [#nvvm.target] 
+// CHECK: gpu.module @cuda_device_mod
 
 // CHECK: llvm.func internal @__cudaFortranConstructor() {
 // CHECK-DAG: %[[MODULE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr

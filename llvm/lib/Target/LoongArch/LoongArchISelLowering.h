@@ -44,6 +44,8 @@ enum NodeType : unsigned {
   ROTR_W,
 
   // unsigned 32-bit integer division
+  DIV_W,
+  MOD_W,
   DIV_WU,
   MOD_WU,
 
@@ -192,6 +194,7 @@ public:
   bool hasAndNot(SDValue Y) const override;
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
                                       Value *AlignedAddr, Value *Incr,

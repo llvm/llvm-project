@@ -3033,7 +3033,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             if (!MOP.getReg().isPhysical())
               continue;
 
-            if (llvm::is_contained(TRI->subregs(MOP.getReg()), Reg))
+            if (MOP.getReg() != Reg &&
+                all_of(TRI->regunits(Reg), [&](const MCRegUnit RegUnit) {
+                  return llvm::is_contained(TRI->regunits(MOP.getReg()),
+                                            RegUnit);
+                }))
               Bad = false;
           }
         }

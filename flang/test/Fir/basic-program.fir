@@ -120,6 +120,8 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
 // PASSES-NEXT: TargetRewrite
 // PASSES-NEXT: CompilerGeneratedNamesConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:  FunctionAttr
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
 // PASSES-NEXT: LLVMIRLoweringPass

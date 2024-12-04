@@ -54,7 +54,8 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
     // if the op has no loops.
     return linalgOp.getNumLoops() == 0;
   }
-  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+  return inversePermutation(concatAffineMaps(
+             indexingMaps, linalgOp.getContext())) != AffineMap();
 }
 
 //===----------------------------------------------------------------------===//

@@ -117,7 +117,7 @@ public:
     assert(!isMemDepNodeCandidate(I) && "Expected Non-Mem instruction, ");
   }
   DGNode(const DGNode &Other) = delete;
-  virtual ~DGNode() = default;
+  virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
   unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
   void decrUnscheduledSuccs() {
@@ -292,6 +292,7 @@ private:
 
   Context *Ctx = nullptr;
   std::optional<Context::CallbackID> CreateInstrCB;
+  std::optional<Context::CallbackID> EraseInstrCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -334,6 +335,12 @@ private:
     // TODO: Update the dependencies for the new node.
     // TODO: Update the MemDGNode chain to include the new node if needed.
   }
+  /// Called by the callbacks when instruction \p I is about to get deleted.
+  void notifyEraseInstr(Instruction *I) {
+    InstrToNodeMap.erase(I);
+    // TODO: Update the dependencies.
+    // TODO: Update the MemDGNode chain to remove the node if needed.
+  }
 
 public:
   /// This constructor also registers callbacks.
@@ -341,10 +348,14 @@ public:
       : Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
+    EraseInstrCB = Ctx.registerEraseInstrCallback(
+        [this](Instruction *I) { notifyEraseInstr(I); });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
       Ctx->unregisterCreateInstrCallback(*CreateInstrCB);
+    if (EraseInstrCB)
+      Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
   }
 
   DGNode *getNode(Instruction *I) const {

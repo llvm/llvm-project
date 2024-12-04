@@ -1587,7 +1587,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     if (auto *actualTypeDecl = typeDecl.dyn_cast<TypeDecl *>())
       type = Context.getTypeDeclType(actualTypeDecl);
     else
-      type = Context.getObjCInterfaceType(typeDecl.get<ObjCInterfaceDecl *>());
+      type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
     TypeSourceInfo *parsedTSInfo = Context.getTrivialTypeSourceInfo(type, loc);
     ParsedType parsedType = SemaRef.CreateParsedType(type, parsedTSInfo);
     DS.SetTypeSpecType(DeclSpec::TST_typename, loc, prevSpec, diagID,

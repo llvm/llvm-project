@@ -421,6 +421,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);
+
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
         if (MAI.getSkipEmission(&MI))
@@ -630,6 +631,15 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
   addAvailableCaps({Capability::Shader, Capability::Linkage, Capability::Int8,
                     Capability::Int16});
 
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    addAvailableCaps({Capability::GroupNonUniform,
+                      Capability::GroupNonUniformVote,
+                      Capability::GroupNonUniformArithmetic,
+                      Capability::GroupNonUniformBallot,
+                      Capability::GroupNonUniformClustered,
+                      Capability::GroupNonUniformShuffle,
+                      Capability::GroupNonUniformShuffleRelative});
+
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
                       Capability::DotProductInput4x8Bit,
@@ -676,14 +686,6 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 1)) &&
       ST.isAtLeastOpenCLVer(VersionTuple(2, 2)))
     addAvailableCaps({Capability::SubgroupDispatch, Capability::PipeStorage});
-  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-    addAvailableCaps({Capability::GroupNonUniform,
-                      Capability::GroupNonUniformVote,
-                      Capability::GroupNonUniformArithmetic,
-                      Capability::GroupNonUniformBallot,
-                      Capability::GroupNonUniformClustered,
-                      Capability::GroupNonUniformShuffle,
-                      Capability::GroupNonUniformShuffleRelative});
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 4)))
     addAvailableCaps({Capability::DenormPreserve, Capability::DenormFlushToZero,
                       Capability::SignedZeroInfNanPreserve,
@@ -1028,21 +1030,27 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   Reqs.addCapability(SPIRV::Capability::DotProduct);
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  const MachineInstr *InstrPtr = &MI;
-  assert(MI.getOperand(1).isReg() && "Unexpected operand in dot");
+  assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
+  // We do not consider what the previous instruction is. This is just used
+  // to get the input register and to check the type.
+  const MachineInstr *Input = MRI.getVRegDef(MI.getOperand(2).getReg());
+  assert(Input->getOperand(1).isReg() && "Unexpected operand in dot input");
+  Register InputReg = Input->getOperand(1).getReg();
 
-  Register TypeReg = InstrPtr->getOperand(1).getReg();
-  SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
+  SPIRVType *TypeDef = MRI.getVRegDef(InputReg);
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
   } else if (TypeDef->getOpcode() == SPIRV::OpTypeVector) {
     SPIRVType *ScalarTypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
-    auto Capability = ScalarTypeDef->getOperand(1).getImm() == 8
-                          ? SPIRV::Capability::DotProductInput4x8Bit
-                          : SPIRV::Capability::DotProductInputAll;
-    Reqs.addCapability(Capability);
+    if (ScalarTypeDef->getOperand(1).getImm() == 8) {
+      assert(TypeDef->getOperand(2).getImm() == 4 &&
+             "Dot operand of 8-bit integer type requires 4 components");
+      Reqs.addCapability(SPIRV::Capability::DotProductInput4x8Bit);
+    } else {
+      Reqs.addCapability(SPIRV::Capability::DotProductInputAll);
+    }
   }
 }
 
@@ -1313,6 +1321,13 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::SubgroupImageBlockIOINTEL);
     }
     break;
+  case SPIRV::OpSubgroupImageMediaBlockReadINTEL:
+  case SPIRV::OpSubgroupImageMediaBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_media_block_io)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_media_block_io);
+      Reqs.addCapability(SPIRV::Capability::SubgroupImageMediaBlockIOINTEL);
+    }
+    break;
   case SPIRV::OpAssumeTrueKHR:
   case SPIRV::OpExpectKHR:
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
@@ -1534,11 +1549,14 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::VecTypeHint, ST);
 
-    if (F.hasOptNone() &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
-      // Output OpCapability OptNoneINTEL.
-      MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
-      MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+    if (F.hasOptNone()) {
+      if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
+      } else if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+      }
     }
   }
 }
@@ -1599,6 +1617,27 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
   }
 }
 
+static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
+                        MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
+                        SPIRV::ModuleAnalysisInfo &MAI) {
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    for (auto &MBB : *MF) {
+      if (!MBB.hasName() || MBB.empty())
+        continue;
+      // Emit basic block names.
+      Register Reg = MRI.createGenericVirtualRegister(LLT::scalar(64));
+      MRI.setRegClass(Reg, &SPIRV::IDRegClass);
+      buildOpName(Reg, MBB.getName(), *std::prev(MBB.end()), TII);
+      Register GlobalReg = MAI.getOrCreateMBBRegister(MBB);
+      MAI.setRegisterAlias(MF, Reg, GlobalReg);
+    }
+  }
+}
+
 struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1617,6 +1656,7 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   setBaseInfo(M);
 
+  addMBBNames(M, *TII, MMI, *ST, MAI);
   addDecorations(M, *TII, MMI, *ST, MAI);
 
   collectReqs(M, MAI, MMI, *ST);

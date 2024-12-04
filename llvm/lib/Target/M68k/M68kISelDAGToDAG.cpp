@@ -289,17 +289,17 @@ private:
 
   /// Return a target constant with the specified value of type i8.
   inline SDValue getI8Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i8);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i8);
   }
 
   /// Return a target constant with the specified value of type i8.
   inline SDValue getI16Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i16);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i16);
   }
 
   /// Return a target constant with the specified value, of type i32.
   inline SDValue getI32Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
   }
 
   /// Return a reference to the TargetInstrInfo, casted to the target-specific

@@ -17,8 +17,6 @@
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -87,6 +85,8 @@ const char *getScopeName(Scope S) {
     return "default";
   case Scope::Hidden:
     return "hidden";
+  case Scope::SideEffectsOnly:
+    return "side-effects-only";
   case Scope::Local:
     return "local";
   }
