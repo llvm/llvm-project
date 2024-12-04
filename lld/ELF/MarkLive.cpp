@@ -239,7 +239,8 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
     auto it = whyLive.find(cur);
     if (it == whyLive.end())
       if (auto *d = dyn_cast<Defined>(s))
-        it = whyLive.find(LiveObject{d->section});
+        if (auto *s = dyn_cast<InputSectionBase>(d->section))
+          it = whyLive.find(LiveObject{s});
     if (it == whyLive.end())
       break;
     cur = it->second;
