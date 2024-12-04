@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <condition_variable>
 #include <future>
@@ -36,6 +37,10 @@ char LookupTask::ID = 0;
 
 RegisterDependenciesFunction NoDependenciesToRegister =
     RegisterDependenciesFunction();
+
+raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtrBase &Sym) {
+  return (OS << Sym.S->first());
+}
 
 void MaterializationUnit::anchor() {}
 

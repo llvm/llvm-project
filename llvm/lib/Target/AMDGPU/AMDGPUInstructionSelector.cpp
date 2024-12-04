@@ -4992,12 +4992,22 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
                     HighBits)
                 .addImm(RemainderOffset);
 
+            if (NeedIOffset)
+              return {{
+                  [=](MachineInstrBuilder &MIB) {
+                    MIB.addReg(PtrBase);
+                  }, // saddr
+                  [=](MachineInstrBuilder &MIB) {
+                    MIB.addReg(HighBits);
+                  }, // voffset
+                  [=](MachineInstrBuilder &MIB) { MIB.addImm(SplitImmOffset); },
+                  [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
+              }};
             return {{
                 [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrBase); }, // saddr
                 [=](MachineInstrBuilder &MIB) {
                   MIB.addReg(HighBits);
                 }, // voffset
-                [=](MachineInstrBuilder &MIB) { MIB.addImm(SplitImmOffset); },
                 [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
             }};
           }
@@ -5034,14 +5044,25 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
       if (Register VOffset =
               matchExtendFromS32OrS32(PtrBaseOffset,
                                       Subtarget->hasSignedGVSOffset())) {
+        if (NeedIOffset)
+          return {{[=](MachineInstrBuilder &MIB) { // saddr
+                     MIB.addReg(SAddr);
+                   },
+                   [=](MachineInstrBuilder &MIB) { // voffset
+                     MIB.addReg(VOffset);
+                   },
+                   [=](MachineInstrBuilder &MIB) { // offset
+                     MIB.addImm(ImmOffset);
+                   },
+                   [=](MachineInstrBuilder &MIB) { // cpol
+                     MIB.addImm(CPolBits |
+                                (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
+                   }}};
         return {{[=](MachineInstrBuilder &MIB) { // saddr
                    MIB.addReg(SAddr);
                  },
                  [=](MachineInstrBuilder &MIB) { // voffset
                    MIB.addReg(VOffset);
-                 },
-                 [=](MachineInstrBuilder &MIB) { // offset
-                   MIB.addImm(ImmOffset);
                  },
                  [=](MachineInstrBuilder &MIB) { // cpol
                    MIB.addImm(CPolBits |
@@ -5066,10 +5087,16 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
   BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32), VOffset)
       .addImm(0);
 
+  if (NeedIOffset)
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(AddrDef->Reg); }, // saddr
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },      // voffset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); },    // offset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); }      // cpol
+    }};
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(AddrDef->Reg); }, // saddr
       [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },      // voffset
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); },    // offset
       [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); }      // cpol
   }};
 }
@@ -5080,6 +5107,16 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrCPol(MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
 }
@@ -5087,7 +5124,23 @@ AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
     MachineOperand &Root) const {
-  return selectGlobalSAddr(Root, 0, 0);
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol, false);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoIOffsetM0(
+    MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 2).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol, false);
 }
 
 InstructionSelector::ComplexRendererFns
