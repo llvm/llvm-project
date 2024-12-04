@@ -199,6 +199,7 @@ private:
 /// This keeps the state for logging, and sets up and holds the provider.
 /// The legacy pass itself used to keep the logging state and provider,
 /// so this extraction helps the NPM analysis to reuse the logic.
+/// TODO: Coalesce this with the NPM analysis when legacy PM is removed.
 class RegAllocEvictionAdvisorProvider {
 public:
   enum class AdvisorMode : int { Default, Release, Development };
