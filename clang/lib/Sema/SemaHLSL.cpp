@@ -1865,18 +1865,18 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   return false;
 }
 
-static bool CheckNotScalarType(Sema *S, CallExpr *TheCall, QualType Scalar,
-                               unsigned ArgIndex) {
+static bool CheckNotBoolType(Sema *S, CallExpr *TheCall, unsigned ArgIndex) {
+  QualType BoolType = S->getASTContext().BoolTy;
   assert(TheCall->getNumArgs() >= ArgIndex);
   QualType ArgType = TheCall->getArg(ArgIndex)->getType();
   auto *VTy = ArgType->getAs<VectorType>();
-  // is the scalar or vector<scalar>
-  if (S->Context.hasSameUnqualifiedType(ArgType, Scalar) ||
+  // is the bool or vector<bool>
+  if (S->Context.hasSameUnqualifiedType(ArgType, BoolType) ||
       (VTy &&
-       S->Context.hasSameUnqualifiedType(VTy->getElementType(), Scalar))) {
+       S->Context.hasSameUnqualifiedType(VTy->getElementType(), BoolType))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
             diag::err_typecheck_expect_scalar_or_vector_not_type)
-        << ArgType << Scalar;
+        << ArgType << BoolType;
     return true;
   }
   return false;
@@ -2179,7 +2179,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // Ensure input expr type is a scalar/vector and the same as the return type
     if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
       return true;
-    if (CheckNotScalarType(&SemaRef, TheCall, getASTContext().BoolTy, 0))
+    if (CheckNotBoolType(&SemaRef, TheCall, 0))
       return true;
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();

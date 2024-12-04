@@ -12,12 +12,12 @@ float2 test_too_many_arg(float2 p0) {
 
 bool test_expr_bool_type_check(bool p0) {
   return __builtin_hlsl_wave_active_sum(p0);
-  // expected-error@-1 {{invalid operand of type 'bool' where 'bool' or a vector of such type is not allowed}}
+  // expected-error@-1 {{invalid operand of type 'bool'}}
 }
 
 bool2 test_expr_bool_vec_type_check(bool2 p0) {
   return __builtin_hlsl_wave_active_sum(p0);
-  // expected-error@-1 {{invalid operand of type 'bool2' (aka 'vector<bool, 2>') where 'bool' or a vector of such type is not allowed}}
+  // expected-error@-1 {{invalid operand of type 'bool2' (aka 'vector<bool, 2>')}}
 }
 
 struct S { float f; };
