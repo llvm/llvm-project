@@ -1348,6 +1348,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::riscv64:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
+  case llvm::Triple::xtensa:
     return false;
   }
 }

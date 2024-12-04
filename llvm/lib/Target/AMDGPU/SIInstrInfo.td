@@ -3211,6 +3211,15 @@ def getMFMAEarlyClobberOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
+// Map from an mfma using VGPRs to one using AGPRs.
+def getMFMASrcCVDstAGPROp : InstrMapping {
+  let FilterClass = "MFMATable";
+  let RowFields = ["AGPROp"];
+  let ColFields = ["MFMAKind"];
+  let KeyCol = ["VGPR"];
+  let ValueCols = [["AGPR"]];
+}
+
 // Maps an v_cmp instruction to its v_cmpx equivalent.
 def getVCMPXOpFromVCMP : InstrMapping {
   let FilterClass = "VCMPVCMPXTable";
