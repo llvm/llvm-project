@@ -77,7 +77,6 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; INTERLEAVE-4:       vec.epilog.ph:
 ; INTERLEAVE-4-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; INTERLEAVE-4-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; INTERLEAVE-4-NEXT:    [[N_MOD_VF9:%.*]] = urem i64 [[N]], 8
 ; INTERLEAVE-4-NEXT:    [[N_VEC10:%.*]] = sub i64 [[N]], [[N_MOD_VF9]]
 ; INTERLEAVE-4-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
@@ -86,7 +85,7 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-NEXT:    [[BROADCAST_SPLAT17:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT16]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; INTERLEAVE-4-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; INTERLEAVE-4:       vec.epilog.vector.body:
-; INTERLEAVE-4-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; INTERLEAVE-4-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP34:%.*]] = add i64 [[INDEX12]], 0
 ; INTERLEAVE-4-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP34]]
 ; INTERLEAVE-4-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP35]], i32 0
@@ -172,8 +171,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
 ; INTERLEAVE-2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; INTERLEAVE-2:       vec.epilog.ph:
-; INTERLEAVE-2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; INTERLEAVE-2-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; INTERLEAVE-2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; INTERLEAVE-2-NEXT:    [[N_MOD_VF7:%.*]] = urem i64 [[N]], 8
 ; INTERLEAVE-2-NEXT:    [[N_VEC8:%.*]] = sub i64 [[N]], [[N_MOD_VF7]]
 ; INTERLEAVE-2-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
@@ -182,7 +181,7 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-2-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT14]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; INTERLEAVE-2-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; INTERLEAVE-2:       vec.epilog.vector.body:
-; INTERLEAVE-2-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT16:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; INTERLEAVE-2-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT16:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX10]], 0
 ; INTERLEAVE-2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP18]]
 ; INTERLEAVE-2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i32 0

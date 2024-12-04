@@ -236,13 +236,13 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[P2]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x i32>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[DEST:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[WIDE_LOAD2]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[WIDE_LOAD3]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    store i32 [[TMP18]], ptr [[TMP15]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -253,7 +253,7 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i32> [[WIDE_LOAD2]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i32> [[WIDE_LOAD3]], i32 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
@@ -266,11 +266,11 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IND:%.*]] = phi i8 [ [[IND_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[GEP_IND:%.*]] = phi i64 [ [[GEP_IND_NEXT:%.*]], [[FOR_INC]] ], [ [[BC_RESUME_VAL5]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[GEP_IND:%.*]] = phi i64 [ [[GEP_IND_NEXT:%.*]], [[FOR_INC]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[GEP_IND]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DOWORK:%.*]] = icmp ne i32 [[TMP26]], 0

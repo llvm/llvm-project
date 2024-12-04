@@ -96,12 +96,12 @@ define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32
 ; VF-TWO-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 2
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; VF-TWO-CHECK:       vec.epilog.ph:
-; VF-TWO-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; VF-TWO-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; VF-TWO-CHECK-NEXT:    [[N_MOD_VF17:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 2
 ; VF-TWO-CHECK-NEXT:    [[N_VEC18:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF17]]
 ; VF-TWO-CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; VF-TWO-CHECK:       vec.epilog.vector.body:
-; VF-TWO-CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT23:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; VF-TWO-CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT23:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; VF-TWO-CHECK-NEXT:    [[TMP65:%.*]] = add i64 [[INDEX20]], 0
 ; VF-TWO-CHECK-NEXT:    [[TMP66:%.*]] = getelementptr inbounds float, ptr [[BB]], i64 [[TMP65]]
 ; VF-TWO-CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds float, ptr [[TMP66]], i32 0
@@ -228,12 +228,12 @@ define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32
 ; VF-FOUR-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 4
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; VF-FOUR-CHECK:       vec.epilog.ph:
-; VF-FOUR-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; VF-FOUR-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF17:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; VF-FOUR-CHECK-NEXT:    [[N_VEC18:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF17]]
 ; VF-FOUR-CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; VF-FOUR-CHECK:       vec.epilog.vector.body:
-; VF-FOUR-CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT23:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; VF-FOUR-CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT23:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; VF-FOUR-CHECK-NEXT:    [[TMP65:%.*]] = add i64 [[INDEX20]], 0
 ; VF-FOUR-CHECK-NEXT:    [[TMP66:%.*]] = getelementptr inbounds float, ptr [[BB]], i64 [[TMP65]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds float, ptr [[TMP66]], i32 0

@@ -1492,7 +1492,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP40:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP41:%.*]], [[VECTOR_BODY]] ]
+; UNROLL-NO-IC-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP41:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x double> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[TMP31:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 200
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
@@ -1504,21 +1504,21 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 1200
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 1400
 ; UNROLL-NO-IC-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; UNROLL-NO-IC-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
-; UNROLL-NO-IC-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
-; UNROLL-NO-IC-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP4]]
-; UNROLL-NO-IC-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP5]]
-; UNROLL-NO-IC-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP6]]
-; UNROLL-NO-IC-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]
+; UNROLL-NO-IC-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; UNROLL-NO-IC-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
+; UNROLL-NO-IC-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
+; UNROLL-NO-IC-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP4]]
+; UNROLL-NO-IC-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP5]]
+; UNROLL-NO-IC-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP6]]
+; UNROLL-NO-IC-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP]], i64 [[IDXPROM]]
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP2]], i64 [[IDXPROM]]
-; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP3]], i64 [[IDXPROM]]
-; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP4]], i64 [[IDXPROM]]
-; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP5]], i64 [[IDXPROM]]
-; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP6]], i64 [[IDXPROM]]
-; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP7]], i64 [[IDXPROM]]
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP8]], i64 [[IDXPROM]]
+; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP3]], i64 [[IDXPROM]]
+; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP4]], i64 [[IDXPROM]]
+; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP5]], i64 [[IDXPROM]]
+; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP6]], i64 [[IDXPROM]]
+; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP7]], i64 [[IDXPROM]]
+; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP8]], i64 [[IDXPROM]]
+; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP9]], i64 [[IDXPROM]]
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = load double, ptr [[TMP8]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = load double, ptr [[TMP9]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = load double, ptr [[TMP10]], align 8
@@ -1544,7 +1544,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-IC-NEXT:    [[TMP38:%.*]] = zext <4 x i1> [[TMP36]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP39:%.*]] = zext <4 x i1> [[TMP37]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP40]] = add <4 x i32> [[VEC_PHI]], [[TMP38]]
-; UNROLL-NO-IC-NEXT:    [[TMP41]] = add <4 x i32> [[VEC_PHI1]], [[TMP39]]
+; UNROLL-NO-IC-NEXT:    [[TMP41]] = add <4 x i32> [[VEC_PHI2]], [[TMP39]]
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[TMP42:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10240
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP42]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
@@ -1554,7 +1554,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[B]], [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i32 [ 10240, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 10240, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP43]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP27]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1563,7 +1563,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-IC-NEXT:    ret i32 [[A_1_LCSSA]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[B_ADDR_012:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD_PTR:%.*]], [[FOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[I_011:%.*]] = phi i32 [ [[BC_RESUME_VAL9]], [[SCALAR_PH]] ], [ [[INC1:%.*]], [[FOR_BODY]] ]
+; UNROLL-NO-IC-NEXT:    [[I_011:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[INC1:%.*]], [[FOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[A_010:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_1]], [[FOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[J_ADDR_09:%.*]] = phi double [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP44:%.*]], [[FOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[B_ADDR_012]], i64 [[IDXPROM]]
@@ -1587,15 +1587,15 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-VF:       vector.body:
 ; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-VF-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
+; UNROLL-NO-VF-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi double [ [[J:%.*]], [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 200
 ; UNROLL-NO-VF-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 200
 ; UNROLL-NO-VF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; UNROLL-NO-VF-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; UNROLL-NO-VF-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
 ; UNROLL-NO-VF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP]], i64 [[IDXPROM]]
-; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP2]], i64 [[IDXPROM]]
+; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP3]], i64 [[IDXPROM]]
 ; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP2]], align 8
 ; UNROLL-NO-VF-NEXT:    [[TMP5]] = load double, ptr [[TMP3]], align 8
 ; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = fmul double [[VECTOR_RECUR]], [[TMP4]]
@@ -1605,7 +1605,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-VF-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP8]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP9]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP12]] = add i32 [[VEC_PHI]], [[TMP10]]
-; UNROLL-NO-VF-NEXT:    [[TMP13]] = add i32 [[VEC_PHI1]], [[TMP11]]
+; UNROLL-NO-VF-NEXT:    [[TMP13]] = add i32 [[VEC_PHI2]], [[TMP11]]
 ; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10240
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
@@ -1614,7 +1614,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[B]], [[ENTRY:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ 10240, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 10240, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1623,7 +1623,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-VF-NEXT:    ret i32 [[A_1_LCSSA]]
 ; UNROLL-NO-VF:       for.body:
 ; UNROLL-NO-VF-NEXT:    [[B_ADDR_012:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD_PTR:%.*]], [[FOR_BODY]] ]
-; UNROLL-NO-VF-NEXT:    [[I_011:%.*]] = phi i32 [ [[BC_RESUME_VAL3]], [[SCALAR_PH]] ], [ [[INC1:%.*]], [[FOR_BODY]] ]
+; UNROLL-NO-VF-NEXT:    [[I_011:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[INC1:%.*]], [[FOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[A_010:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_1]], [[FOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[J_ADDR_09:%.*]] = phi double [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP15:%.*]], [[FOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[B_ADDR_012]], i64 [[IDXPROM]]
@@ -1655,13 +1655,13 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; SINK-AFTER-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 400
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 600
 ; SINK-AFTER-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; SINK-AFTER-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
-; SINK-AFTER-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
-; SINK-AFTER-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
+; SINK-AFTER-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
+; SINK-AFTER-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
+; SINK-AFTER-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
 ; SINK-AFTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP]], i64 [[IDXPROM]]
-; SINK-AFTER-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP1]], i64 [[IDXPROM]]
-; SINK-AFTER-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP2]], i64 [[IDXPROM]]
-; SINK-AFTER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP3]], i64 [[IDXPROM]]
+; SINK-AFTER-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP2]], i64 [[IDXPROM]]
+; SINK-AFTER-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP3]], i64 [[IDXPROM]]
+; SINK-AFTER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[NEXT_GEP4]], i64 [[IDXPROM]]
 ; SINK-AFTER-NEXT:    [[TMP8:%.*]] = load double, ptr [[TMP4]], align 8
 ; SINK-AFTER-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP5]], align 8
 ; SINK-AFTER-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP6]], align 8
@@ -3158,7 +3158,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29]]
 ; UNROLL-NO-IC:       scalar.ph:
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL30:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP75]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[BB2:%.*]]
@@ -3167,7 +3167,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    ret i32 [[VAR]]
 ; UNROLL-NO-IC:       bb2:
 ; UNROLL-NO-IC-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL30]], [[SCALAR_PH]] ]
+; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; UNROLL-NO-IC-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
 ; UNROLL-NO-IC-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; UNROLL-NO-IC-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[IV]]
@@ -3242,7 +3242,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29]]
 ; UNROLL-NO-VF:       scalar.ph:
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[BB2:%.*]]
@@ -3251,7 +3251,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    ret i32 [[VAR]]
 ; UNROLL-NO-VF:       bb2:
 ; UNROLL-NO-VF-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL7]], [[SCALAR_PH]] ]
+; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; UNROLL-NO-VF-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
 ; UNROLL-NO-VF-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; UNROLL-NO-VF-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[IV]]
@@ -3366,7 +3366,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29]]
 ; SINK-AFTER:       scalar.ph:
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB:%.*]] ]
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
+; SINK-AFTER-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP39]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    br label [[BB2:%.*]]
@@ -3375,7 +3375,7 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-NEXT:    ret i32 [[VAR]]
 ; SINK-AFTER:       bb2:
 ; SINK-AFTER-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR8:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL13]], [[SCALAR_PH]] ]
+; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BB2]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; SINK-AFTER-NEXT:    [[VAR4:%.*]] = phi i32 [ [[VAR7:%.*]], [[BB2]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
 ; SINK-AFTER-NEXT:    [[VAR5:%.*]] = phi i32 [ [[VAR6]], [[BB2]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; SINK-AFTER-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[IV]]
