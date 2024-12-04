@@ -1168,7 +1168,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     // Mask this broadcasting xfer_read here rather than relying on the generic
     // path (the generic path assumes identity masking map, which wouldn't be
     // valid here).
-    SmallVector<int64_t> readMaskShape{1};
+    SmallVector<int64_t> readMaskShape = {1};
     auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
     auto allTrue = rewriter.create<vector::ConstantMaskOp>(
         loc, readMaskType, vector::ConstantMaskKind::AllTrue);
