@@ -515,7 +515,7 @@ public:
                             VPReplicateRecipe *RepRecipe, const VPLane &Lane,
                             VPTransformState &State);
 
-  /// Fix the non-induction PHIs in \p Plan.
+  /// Fix the widened PHIs in \p Plan.
   void fixWidenedPHIs(VPTransformState &State);
 
   /// Returns the original loop trip count.
