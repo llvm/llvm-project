@@ -282,7 +282,7 @@ public:
             else if (triple.isPPC64())
               thunkSize = 48;
             else if (triple.isAArch64())
-               thunkSize = 36;
+              thunkSize = 36;
             mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
             auto buffer = builder.create<AllocaOp>(loc, buffTy);
             mlir::Value closure =
