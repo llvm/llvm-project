@@ -51,6 +51,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_INTEL_subgroups},
         {"SPV_INTEL_media_block_io",
          SPIRV::Extension::Extension::SPV_INTEL_media_block_io},
+        {"SPV_INTEL_joint_matrix",
+         SPIRV::Extension::Extension::SPV_INTEL_joint_matrix},
         {"SPV_KHR_uniform_group_instructions",
          SPIRV::Extension::Extension::SPV_KHR_uniform_group_instructions},
         {"SPV_KHR_no_integer_wrap_decoration",
