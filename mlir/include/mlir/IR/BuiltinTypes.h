@@ -424,6 +424,7 @@ public:
 class FixedVectorType : public VectorType {
 public:
   using VectorType::VectorType;
+
   static bool classof(Type type) {
     auto vecTy = llvm::dyn_cast<VectorType>(type);
     if (!vecTy)
