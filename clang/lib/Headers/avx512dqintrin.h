@@ -167,6 +167,8 @@ _mm512_maskz_mullo_epi64(__mmask8 __U, __m512i __A, __m512i __B) {
                                              (__v8di)_mm512_setzero_si512());
 }
 
+#pragma float_control(push)
+#pragma float_control(precise, on)
 static __inline__ __m512d __DEFAULT_FN_ATTRS512
 _mm512_xor_pd(__m512d __A, __m512d __B) {
   return (__m512d)((__v8du)__A ^ (__v8du)__B);
@@ -318,6 +320,7 @@ _mm512_maskz_andnot_ps(__mmask16 __U, __m512 __A, __m512 __B) {
                                              (__v16sf)_mm512_andnot_ps(__A, __B),
                                              (__v16sf)_mm512_setzero_ps());
 }
+#pragma float_control(pop)
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_cvtpd_epi64 (__m512d __A) {

@@ -542,6 +542,8 @@ _mm256_rcp_ps(__m256 __a)
 /// \returns A 256-bit vector of [8 x float] containing the rounded down values.
 #define _mm256_floor_ps(V) _mm256_round_ps((V), _MM_FROUND_FLOOR)
 
+#pragma float_control(push)
+#pragma float_control(precise, on)
 /* Logical */
 /// Performs a bitwise AND of two 256-bit vectors of [4 x double].
 ///
@@ -692,6 +694,7 @@ _mm256_xor_ps(__m256 __a, __m256 __b)
 {
   return (__m256)((__v8su)__a ^ (__v8su)__b);
 }
+#pragma float_control(pop)
 
 /* Horizontal arithmetic */
 /// Horizontally adds the adjacent pairs of values contained in two
