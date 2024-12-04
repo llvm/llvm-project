@@ -661,7 +661,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM2.addPass(IndVarSimplifyPass());
 
   {
-    ExtraSimpleLoopUnswitchPassManager ExtraPasses;
+    ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch> ExtraPasses;
     ExtraPasses.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
                                                OptimizationLevel::O3));
     LPM2.addPass(std::move(ExtraPasses));
@@ -1308,7 +1308,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
 
   if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
-    ExtraPassManager<ShouldRunExtraVectorPasses> ExtraPasses;
+    ExtraFunctionPassManager<ShouldRunExtraVectorPasses> ExtraPasses;
     // At higher optimization levels, try to clean up any runtime overlap and
     // alignment checks inserted by the vectorizer. We want to track correlated
     // runtime checks for two inner loops in the same outer loop, fold any

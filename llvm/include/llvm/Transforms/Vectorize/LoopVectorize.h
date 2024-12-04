@@ -170,7 +170,7 @@ void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
 
-/// A marker analyss to determine if extra passes should be run after loop
+/// A marker analysis to determine if extra passes should be run after loop
 /// vectorization.
 struct ShouldRunExtraVectorPasses
     : public ShouldRunExtraPasses<ShouldRunExtraVectorPasses>,
