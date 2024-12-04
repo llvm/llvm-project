@@ -201,8 +201,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     // Ask IR to do the conversion now that #elts line up.
     C = ConstantExpr::getBitCast(C, SrcIVTy);
     assert((isa<ConstantVector>(C) || // FIXME: Remove ConstantVector.
-            isa<ConstantDataVector>(C) || isa<ConstantInt>(C) ||
-            isa<ConstantFP>(C)) &&
+            isa<ConstantDataVector>(C) || isa<ConstantInt>(C)) &&
            "Constant folding cannot fail for plain fp->int bitcast!");
   }
 
