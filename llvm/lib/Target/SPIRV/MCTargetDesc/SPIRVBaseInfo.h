@@ -210,12 +210,12 @@ namespace Opcode {
 namespace CooperativeMatrixLayout {
 #define GET_CooperativeMatrixLayout_DECL
 #include "SPIRVGenTables.inc"
-} // namespace Opcode
+} // namespace CooperativeMatrixLayout
 
 namespace CooperativeMatrixOperands {
 #define GET_CooperativeMatrixOperands_DECL
 #include "SPIRVGenTables.inc"
-} // namespace Opcode
+} // namespace CooperativeMatrixOperands
 
 struct ExtendedBuiltin {
   StringRef Name;

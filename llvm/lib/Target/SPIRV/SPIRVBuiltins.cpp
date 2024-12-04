@@ -1974,42 +1974,41 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
                Opcode != SPIRV::OpCooperativeMatrixPrefetchINTEL;
   unsigned ArgSz = Call->Arguments.size();
   unsigned LiteralIdx = 0;
-  switch(Opcode) {
-    // Memory operand is optional and is literal.
-    case SPIRV::OpCooperativeMatrixLoadKHR:
-      LiteralIdx = ArgSz > 3 ? 3 : 0;
-      break;
-    case SPIRV::OpCooperativeMatrixStoreKHR:
-      LiteralIdx = ArgSz > 4 ? 4 : 0;
-      break;
-    case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
-      LiteralIdx = ArgSz > 7 ? 7 : 0;
-      break;
-    case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
-      LiteralIdx = ArgSz > 8 ? 8 : 0;
-      break;
-    // Cooperative Matrix Operands operand is optional and is literal.
-    case SPIRV::OpCooperativeMatrixMulAddKHR:
-      LiteralIdx = ArgSz > 3 ? 3 : 0;
-      break;
+  switch (Opcode) {
+  // Memory operand is optional and is literal.
+  case SPIRV::OpCooperativeMatrixLoadKHR:
+    LiteralIdx = ArgSz > 3 ? 3 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixStoreKHR:
+    LiteralIdx = ArgSz > 4 ? 4 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+    LiteralIdx = ArgSz > 7 ? 7 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+    LiteralIdx = ArgSz > 8 ? 8 : 0;
+    break;
+  // Cooperative Matrix Operands operand is optional and is literal.
+  case SPIRV::OpCooperativeMatrixMulAddKHR:
+    LiteralIdx = ArgSz > 3 ? 3 : 0;
+    break;
   };
 
   SmallVector<uint32_t, 1> ImmArgs;
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (Opcode == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
-    const uint32_t CacheLevel =
-        getConstFromIntrinsic(Call->Arguments[3], MRI);
+    const uint32_t CacheLevel = getConstFromIntrinsic(Call->Arguments[3], MRI);
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpCooperativeMatrixPrefetchINTEL)
-        .addUse(Call->Arguments[0])   // pointer
-        .addUse(Call->Arguments[1])   // rows
-        .addUse(Call->Arguments[2])   // columns
-        .addImm(CacheLevel)           // cache level
-        .addUse(Call->Arguments[4]);  // memory layout
+                   .addUse(Call->Arguments[0])  // pointer
+                   .addUse(Call->Arguments[1])  // rows
+                   .addUse(Call->Arguments[2])  // columns
+                   .addImm(CacheLevel)          // cache level
+                   .addUse(Call->Arguments[4]); // memory layout
     if (ArgSz > 5)
       MIB.addUse(Call->Arguments[5]); // stride
     if (ArgSz > 6) {
       const uint32_t MemOp = getConstFromIntrinsic(Call->Arguments[6], MRI);
-      MIB.addImm(MemOp);              // memory operand
+      MIB.addImm(MemOp); // memory operand
     }
     return true;
   }

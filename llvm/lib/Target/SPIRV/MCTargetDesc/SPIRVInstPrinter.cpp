@@ -220,12 +220,13 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           const unsigned MulAddOp = MI->getOperand(FirstVariableIndex).getImm();
           if (MulAddOp == 0) {
             printSymbolicOperand<
-              OperandCategory::CooperativeMatrixOperandsOperand>(
-                  MI, FirstVariableIndex, OS);
+                OperandCategory::CooperativeMatrixOperandsOperand>(
+                MI, FirstVariableIndex, OS);
           } else {
             std::string Buffer;
             for (unsigned Mask = 0x1;
-                 Mask != SPIRV::CooperativeMatrixOperands::MatrixResultBFloat16ComponentsINTEL;
+                 Mask != SPIRV::CooperativeMatrixOperands::
+                             MatrixResultBFloat16ComponentsINTEL;
                  Mask <<= 1) {
               if (MulAddOp & Mask) {
                 if (!Buffer.empty())
