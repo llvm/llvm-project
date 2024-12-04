@@ -69,7 +69,7 @@ enum class DuplicateHandling {
 /// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
-  FileSymbols(IndexContents IdxContents, bool SupportContainedRefs);
+  FileSymbols(IndexContents IdxContents);
   /// Updates all slabs associated with the \p Key.
   /// If either is nullptr, corresponding data for \p Key will be removed.
   /// If CountReferences is true, \p Refs will be used for counting references
@@ -91,7 +91,6 @@ public:
 
 private:
   IndexContents IdxContents;
-  bool SupportContainedRefs;
 
   struct RefSlabAndCountReferences {
     std::shared_ptr<RefSlab> Slab;
@@ -109,7 +108,7 @@ private:
 /// FIXME: Expose an interface to remove files that are closed.
 class FileIndex : public MergedIndex {
 public:
-  FileIndex(bool SupportContainedRefs);
+  FileIndex();
 
   /// Update preamble symbols of file \p Path with all declarations in \p AST
   /// and macros in \p PP.
