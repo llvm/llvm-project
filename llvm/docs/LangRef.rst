@@ -16723,20 +16723,20 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE-754 semantics for minNum, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the IEEE-754 semantics, if either operand
+Follows the semantics of minNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the minNum semantics, if either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
 function `fmin`, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or if either operand is sNaN.
 
-This behavior is more strict than the definition in C and IEEE 754, where either zero may be returned.
-To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use the nsz
-attribute on the intrinsic call.
+This behavior is stricter than minNum in IEEE-754-2008, where either zero may be returned.
+To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use
+the nsz attribute.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
-and IEEE 754: the result of minnum(-0.0, +0.0) may be either -0.0 or +0.0.
+and IEEE-754-2008: the result of minnum(-0.0, +0.0) may be either -0.0 or +0.0.
 
 Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
@@ -16788,20 +16788,20 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE-754 semantics for minNum, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the IEEE-754 semantics, if either operand
+Follows the semantics of maxNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the maxNum semantics, if either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
 function `fmax`, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or if either operand is sNaN.
 
-This behavior is more strict than the definition in C and IEEE 754, where either zero may be returned.
-To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use the nsz
-attribute on the intrinsic call.
+This behavior is stricter than maxNum in IEEE-754-2008, where either zero may be returned.
+To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use
+the nsz attribute.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
-and IEEE 754: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
+and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
 
 Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
@@ -21998,7 +21998,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754 minNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754-2008 minNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -22047,7 +22047,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754 maxNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754-2008 maxNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -28091,7 +28091,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for maxNum.
+This function follows the IEEE-754-2008 semantics for maxNum.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
@@ -28123,7 +28123,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for minNum.
+This function follows the IEEE-754-2008 semantics for minNum.
 
 
 '``llvm.experimental.constrained.maximum``' Intrinsic
