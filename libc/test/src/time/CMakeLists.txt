@@ -158,7 +158,7 @@ add_libc_unittest(
     time_test.cpp
   DEPENDS
     libc.src.time.time
-    libc.src.__support.time.windows.clock_gettime
+    libc.src.__support.time.clock_gettime
     libc.src.errno.errno
 )
 
