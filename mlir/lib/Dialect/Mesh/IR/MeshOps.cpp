@@ -194,6 +194,12 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
                        const SplitAxes &splitAxes, OutShape &outShape,
                        ArrayRef<int64_t> shardedDimsOffsets = {},
                        ArrayRef<int64_t> haloSizes = {}) {
+  // 0d tensors cannot be sharded and must get replicated
+  if (inShape.empty()) {
+    assert(outShape.empty());
+    return;
+  }
+
   std::copy(llvm::adl_begin(inShape), llvm::adl_end(inShape),
             llvm::adl_begin(outShape));
 
@@ -318,7 +324,12 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
   Value operandValue = operand.get();
   Operation *operandSrcOp = operandValue.getDefiningOp();
   bool isBlockArg = !operandSrcOp;
-  if(!isBlockArg && operandSrcOp->hasTrait<OpTrait::ConstantLike>()) {
+  {
+    auto opType = dyn_cast<mlir::RankedTensorType>(operandValue.getType());
+    assert(!opType || opType.getRank() > 0 || isFullReplication(sharding));
+  }
+  if (!isa<RankedTensorType>(operandValue.getType()) && operandSrcOp &&
+      operandSrcOp->hasTrait<OpTrait::ConstantLike>()) {
     return;
   }
 
@@ -711,13 +722,15 @@ bool MeshSharding::operator!=(const MeshSharding &rhs) const {
   return !(*this == rhs);
 }
 
+MeshSharding::MeshSharding(::mlir::FlatSymbolRefAttr mesh_) : mesh(mesh_) {}
+
 MeshSharding::MeshSharding(Value rhs) {
   auto shardingOp = mlir::dyn_cast<ShardingOp>(rhs.getDefiningOp());
   assert(shardingOp && "expected sharding op");
   auto splitAxes = shardingOp.getSplitAxes().getAxes();
   auto partialAxes = shardingOp.getPartialAxes().value_or(ArrayRef<MeshAxis>());
   if(splitAxes.empty() && partialAxes.empty()) {
-    *this = MeshSharding();
+    *this = MeshSharding(shardingOp.getMeshAttr());
     return;
   }
   *this = get(shardingOp.getMeshAttr(), splitAxes, partialAxes,
@@ -736,12 +749,11 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
                                ArrayRef<int64_t> static_sharded_dims_offsets_,
                                ArrayRef<Value> dynamic_halo_sizes_,
                                ArrayRef<Value> dynamic_sharded_dims_offsets_) {
+  MeshSharding res(mesh_);
   if(split_axes_.empty() && partial_axes_.empty()) {
-    return MeshSharding();
+    return res;
   }
 
-  MeshSharding res;
-  res.mesh = mesh_;
   res.split_axes.resize(split_axes_.size());
   for (auto [i, axis] : llvm::enumerate(split_axes_)) {
     res.split_axes[i] =

@@ -51,7 +51,7 @@ private:
   SmallVector<Value> dynamic_sharded_dims_offsets;
 
 public:
-  MeshSharding() = default;
+  MeshSharding(::mlir::FlatSymbolRefAttr mesh_ = nullptr);
   MeshSharding(Value rhs);
   static MeshSharding get(::mlir::FlatSymbolRefAttr mesh_,
                           ArrayRef<MeshAxesAttr> split_axes_,
