@@ -7,7 +7,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
             return self.GetDynamicValue (eDynamicCanRunTarget)
 
         class children_access(object):
-            '''A helper object that will lazily hand out thread for a process when supplied an index.'''
+            '''A helper object that will lazily hand out child values when supplied an index or name.'''
 
             def __init__(self, sbvalue):
                 self.sbvalue = sbvalue
@@ -23,6 +23,8 @@ STRING_EXTENSION_OUTSIDE(SBValue)
                     if -count <= key < count:
                         key %= count
                         return self.sbvalue.GetChildAtIndex(key)
+                elif isinstance(key, str):
+                    return self.sbvalue.GetChildMemberWithName(key)
                 return None
 
         def get_child_access_object(self):
@@ -49,7 +51,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
             return self.GetNumChildren()
 
         children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
-        child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
+        child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index or by name.''')
         name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
         type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
         size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
