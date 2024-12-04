@@ -1,4 +1,4 @@
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_cooperative_matrix %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; CHECK-ERROR: LLVM ERROR: OpCooperativeMatrixPrefetchINTEL instruction requires the following SPIR-V extension: SPV_INTEL_joint_matrix
 
