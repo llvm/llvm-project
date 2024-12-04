@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 
 namespace clang {
 using namespace ast_matchers;
@@ -116,10 +115,14 @@ AST_MATCHER_P(Stmt, canResolveToExpr, const Stmt *, Inner) {
   return canExprResolveTo(Exp, Target);
 }
 
+// use class member to store data can reduce stack usage to avoid stack overflow
+// when recursive call.
 class ExprPointeeResolve {
   const Expr *T;
 
   bool resolveExpr(const Expr *E) {
+    if (E == nullptr)
+      return false;
     if (E == T)
       return true;
 
