@@ -627,6 +627,31 @@ bool CodeExtractor::isEligible() const {
         return false;
     }
   }
+  // stacksave as input implies stackrestore in the outlined function
+  // This can confuse prologue epilogue insertion phase
+  // stacksave's uses must not cross outlined function
+  for (BasicBlock *BB : Blocks) {
+    for (Instruction &II : *BB) {
+      if (IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(&II)) {
+        if (Intrin->getIntrinsicID() == Intrinsic::stacksave) {
+          for (User *U : Intrin->users())
+            if (!definedInRegion(Blocks, U)) {
+              return false; // stack-restore outside outlined region
+            }
+        }
+      }
+      for (auto &OI : II.operands()) {
+        Value *V = OI;
+        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(V)) {
+          if (II->getIntrinsicID() == Intrinsic::stacksave) {
+            if (definedInCaller(Blocks, V)) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
   return true;
 }
 
