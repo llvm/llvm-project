@@ -239,7 +239,7 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
     if (Sym->isFileRecord())
       LLVM_DEBUG({
         dbgs() << "    " << SymIndex << ": Skipping FileRecord symbol \""
-               << *InternedSymbolName << "\" in "
+               << InternedSymbolName << "\" in "
                << getCOFFSectionName(SectionIndex, Sec, *Sym)
                << " (index: " << SectionIndex << ") \n";
       });
@@ -261,7 +261,7 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
         LLVM_DEBUG({
           dbgs() << "    " << SymIndex
                  << ": Creating defined graph symbol for COFF symbol \""
-                 << *InternedSymbolName << "\" in "
+                 << InternedSymbolName << "\" in "
                  << getCOFFSectionName(SectionIndex, Sec, *Sym)
                  << " (index: " << SectionIndex << ") \n";
           dbgs() << "      " << *GSym << "\n";
@@ -388,7 +388,7 @@ Symbol *COFFLinkGraphBuilder::createExternalSymbol(
   LLVM_DEBUG({
     dbgs() << "    " << SymIndex
            << ": Creating external graph symbol for COFF symbol \""
-           << *Sym->getName() << "\" in "
+           << Sym->getName() << "\" in "
            << getCOFFSectionName(Symbol.getSectionNumber(), Section, Symbol)
            << " (index: " << Symbol.getSectionNumber() << ") \n";
   });
@@ -501,7 +501,7 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
       dbgs() << "    " << SymIndex
              << ": Skipping graph symbol since section was not created for "
                 "COFF symbol \""
-             << *SymbolName << "\" in section " << Symbol.getSectionNumber()
+             << SymbolName << "\" in section " << Symbol.getSectionNumber()
              << "\n";
     });
     return nullptr;
@@ -632,7 +632,7 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
   LLVM_DEBUG({
     dbgs() << "    " << SymIndex
            << ": Exporting COMDAT graph symbol for COFF symbol \""
-           << *SymbolName << "\" in section " << Symbol.getSectionNumber()
+           << SymbolName << "\" in section " << Symbol.getSectionNumber()
            << "\n";
     dbgs() << "      " << *GSym << "\n";
   });
