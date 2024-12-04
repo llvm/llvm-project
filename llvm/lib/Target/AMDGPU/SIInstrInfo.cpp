@@ -7472,11 +7472,9 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   case AMDGPU::S_MINIMUM_F16:
   case AMDGPU::S_MAXIMUM_F16: {
     const DebugLoc &DL = Inst.getDebugLoc();
-    Register NewDst;
-    if (ST.useRealTrue16Insts())
-      NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-    else
-      NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    Register NewDst = MRI.createVirtualRegister(ST.useRealTrue16Insts()
+                                                    ? &AMDGPU::VGPR_16RegClass
+                                                    : &AMDGPU::VGPR_32RegClass);
     MachineInstr *NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
                                  .addImm(0) // src0_modifiers
                                  .add(Inst.getOperand(1))
