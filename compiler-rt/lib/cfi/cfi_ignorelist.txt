@@ -15,3 +15,7 @@ src:*xstddef
 # This ctor is used by std::make_shared and needs to cast to uninitialized T*
 # in order to call std::allocator_traits<T>::construct.
 fun:_ZNSt23_Sp_counted_ptr_inplace*
+
+# std::make_shared use __aligned_buffer as storage, and cast to 
+# uninitialized T* (libstdc++)
+fun:*__aligned_buffer*
