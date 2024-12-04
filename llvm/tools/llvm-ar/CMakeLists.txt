@@ -19,6 +19,8 @@ add_llvm_tool(llvm-ar
   GENERATE_DRIVER
   )
 
+setup_host_tool(llvm-ar LLVM_AR llvm_ar_exe llvm_ar_target)
+
 add_llvm_tool_symlink(llvm-ranlib llvm-ar)
 add_llvm_tool_symlink(llvm-lib llvm-ar)
 add_llvm_tool_symlink(llvm-dlltool llvm-ar)
