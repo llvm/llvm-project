@@ -321,8 +321,21 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
   assert(!Dest.hasExternalWeakLinkage());
   assert(Dest.hasExternalLinkage() && Src.hasExternalLinkage() &&
          "Unexpected linkage type!");
-  return emitError("Linking globals named '" + Src.getName() +
-                   "': symbol multiply defined!");
+
+  std::string message = ("Linking globals named '" + Src.getName() +
+                      "': symbol multiply defined!").str();
+  if (auto SrcParent = Src.getParent(); SrcParent != nullptr) {
+    message += " (source: ";
+    message += SrcParent->getName();
+    message += ")";
+  }
+
+  if (auto DestParent = Dest.getParent(); DestParent != nullptr) {
+    message += " (dest: ";
+    message += DestParent->getName();
+    message += ")";
+  }
+  return emitError(message);
 }
 
 bool ModuleLinker::linkIfNeeded(GlobalValue &GV,
