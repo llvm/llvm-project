@@ -1451,6 +1451,9 @@ void addInstrRequirements(const MachineInstr &MI,
     const int64_t CoopOperands = MI.getOperand(MulAddMaxSize - 1).getImm();
     if (CoopOperands &
         SPIRV::CooperativeMatrixOperands::MatrixAAndBTF32ComponentsINTEL) {
+      report_fatal_error("MatrixAAndBTF32ComponentsINTEL type interpretation "
+                         "require the following SPIR-V extension: "
+                         "SPV_INTEL_joint_matrix", false);
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
       Reqs.addCapability(
           SPIRV::Capability::CooperativeMatrixTF32ComponentTypeINTEL);
@@ -1461,6 +1464,9 @@ void addInstrRequirements(const MachineInstr &MI,
             SPIRV::CooperativeMatrixOperands::MatrixCBFloat16ComponentsINTEL ||
         CoopOperands & SPIRV::CooperativeMatrixOperands::
                            MatrixResultBFloat16ComponentsINTEL) {
+      report_fatal_error("***BF16ComponentsINTEL type interpretations require "
+                         "the following SPIR-V extension: "
+                         "SPV_INTEL_joint_matrix", false);
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
       Reqs.addCapability(
           SPIRV::Capability::CooperativeMatrixBFloat16ComponentTypeINTEL);
@@ -1480,7 +1486,7 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
 
-    // Check Layout operand in case if it's not a standart one and add the
+    // Check Layout operand in case if it's not a standard one and add the
     // appropriate capability.
     std::unordered_map<unsigned, unsigned> LayoutToInstMap = {
         {SPIRV::OpCooperativeMatrixLoadKHR, 3},
@@ -1512,11 +1518,24 @@ void addInstrRequirements(const MachineInstr &MI,
         OpCode == SPIRV::OpCooperativeMatrixStoreKHR)
       break;
 
-    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
-      report_fatal_error("OpCooperativeMatrix[Load/Store]CheckedINTEL "
-                         "instructions require the following SPIR-V extension: "
-                         "SPV_INTEL_joint_matrix",
-                         false);
+    std::string InstName;
+    switch(OpCode) {
+      case SPIRV::OpCooperativeMatrixPrefetchINTEL:
+        InstName = "OpCooperativeMatrixPrefetchINTEL";
+        break;
+      case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+        InstName = "OpCooperativeMatrixLoadCheckedINTEL";
+        break;
+      case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+        InstName = "OpCooperativeMatrixStoreCheckedINTEL";
+        break;
+    }
+
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix)) {
+      const std::string ErrorMsg = InstName + " instruction requires the "
+        "following SPIR-V extension: SPV_INTEL_joint_matrix";
+      report_fatal_error(ErrorMsg.c_str(), false);
+    }
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
     if (OpCode == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
       Reqs.addCapability(SPIRV::Capability::CooperativeMatrixPrefetchINTEL);
@@ -1528,9 +1547,9 @@ void addInstrRequirements(const MachineInstr &MI,
   }
   case SPIRV::OpCooperativeMatrixConstructCheckedINTEL:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
-      report_fatal_error("OpCooperativeMatrixConstructCheckedINTEL"
-                         " instructions require the following SPIR-V extension:"
-                         " SPV_INTEL_joint_matrix",
+      report_fatal_error("OpCooperativeMatrixConstructCheckedINTEL "
+                         "instructions require the following SPIR-V extension: "
+                         "SPV_INTEL_joint_matrix",
                          false);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
     Reqs.addCapability(
