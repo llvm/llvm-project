@@ -31,7 +31,7 @@
 #include <gpuintrin.h>
 
 #ifdef __device__
-__device__ int foo() { return __gpu_thread_id_x(); }
+__device__ int foo() { return _gpu_thread_id_x(); }
 #else
 // CUDA-LABEL: define dso_local i32 @foo(
 // CUDA-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -71,6 +71,6 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 // C89-NEXT:    [[TMP0:%.*]] = call noundef {{.*}}i32 @llvm.amdgcn.workitem.id.x()
 // C89-NEXT:    ret i32 [[TMP0]]
 //
-int foo() { return __gpu_thread_id_x(); }
+int foo() { return _gpu_thread_id_x(); }
 #pragma omp declare target to(foo)
 #endif

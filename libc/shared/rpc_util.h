@@ -172,14 +172,14 @@ RPC_INLINE constexpr bool is_process_gpu() {
 /// Wait for all lanes in the group to complete.
 RPC_INLINE void sync_lane(uint64_t lane_mask) {
 #ifdef RPC_TARGET_IS_GPU
-  return __gpu_sync_lane(lane_mask);
+  return _gpu_sync_lane(lane_mask);
 #endif
 }
 
 /// Copies the value from the first active thread to the rest.
 RPC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
 #ifdef RPC_TARGET_IS_GPU
-  return __gpu_read_first_lane_u32(lane_mask, x);
+  return _gpu_read_first_lane_u32(lane_mask, x);
 #else
   return x;
 #endif
@@ -188,7 +188,7 @@ RPC_INLINE uint32_t broadcast_value(uint64_t lane_mask, uint32_t x) {
 /// Returns the number lanes that participate in the RPC interface.
 RPC_INLINE uint32_t get_num_lanes() {
 #ifdef RPC_TARGET_IS_GPU
-  return __gpu_num_lanes();
+  return _gpu_num_lanes();
 #else
   return 1;
 #endif
@@ -197,7 +197,7 @@ RPC_INLINE uint32_t get_num_lanes() {
 /// Returns the id of the thread inside of an AMD wavefront executing together.
 RPC_INLINE uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
-  return __gpu_lane_mask();
+  return _gpu_lane_mask();
 #else
   return 1;
 #endif
@@ -206,7 +206,7 @@ RPC_INLINE uint64_t get_lane_mask() {
 /// Returns the id of the thread inside of an AMD wavefront executing together.
 RPC_INLINE uint32_t get_lane_id() {
 #ifdef RPC_TARGET_IS_GPU
-  return __gpu_lane_id();
+  return _gpu_lane_id();
 #else
   return 0;
 #endif
@@ -215,7 +215,7 @@ RPC_INLINE uint32_t get_lane_id() {
 /// Conditional that is only true for a single thread in a lane.
 RPC_INLINE bool is_first_lane(uint64_t lane_mask) {
 #ifdef RPC_TARGET_IS_GPU
-  return __gpu_is_first_in_lane(lane_mask);
+  return _gpu_is_first_in_lane(lane_mask);
 #else
   return true;
 #endif
@@ -224,7 +224,7 @@ RPC_INLINE bool is_first_lane(uint64_t lane_mask) {
 /// Returns a bitmask of threads in the current lane for which \p x is true.
 RPC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
 #ifdef RPC_TARGET_IS_GPU
-  return __gpu_ballot(lane_mask, x);
+  return _gpu_ballot(lane_mask, x);
 #else
   return x;
 #endif
