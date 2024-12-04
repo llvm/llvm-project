@@ -17,25 +17,17 @@ add_header(
     __llvm-libc-common.h
 )
 
+# TODO: Can we simplify this macro expansion?
+# https://github.com/llvm/llvm-project/issues/117254
 macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
-  if (LIBC_USE_NEW_HEADER_GEN)
-    add_gen_header2(
-      ${TARGET_NAME}
-      YAML_FILE ${YAML_FILE}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  else()
-    add_gen_header(
-      ${TARGET_NAME}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  endif()
+  add_gen_header(
+    ${TARGET_NAME}
+    YAML_FILE ${YAML_FILE}
+    DEF_FILE ${DEF_FILE}
+    GEN_HDR ${GEN_HDR}
+    ${DEPENDS}
+    ${ARGN}
+  )
 endmacro()
 
 add_header_macro(
@@ -178,6 +170,7 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
+    .llvm-libc-types.stdfix-types
 )
 
 # TODO: This should be conditional on POSIX networking being included.
@@ -254,6 +247,7 @@ add_header_macro(
     .llvm-libc-types.ENTRY
     .llvm-libc-types.struct_hsearch_data
     .llvm-libc-types.size_t
+    .llvm-libc-types.__lsearchcompare_t
 )
 
 add_header_macro(
@@ -765,7 +759,6 @@ if(LIBC_TARGET_OS_IS_GPU)
     gpu/rpc.h
     DEPENDS
       .llvm_libc_common_h
-      .llvm-libc-types.rpc_opcodes_t
   )
 endif()
 

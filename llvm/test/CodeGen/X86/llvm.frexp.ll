@@ -325,27 +325,28 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32:
 ; WIN32:       # %bb.0:
+; WIN32-NEXT:    pushl %edi
 ; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $44, %esp
+; WIN32-NEXT:    subl $60, %esp
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    leal 24(%esi), %eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
-; WIN32-NEXT:    leal 20(%esi), %eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
-; WIN32-NEXT:    leal 16(%esi), %eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
-; WIN32-NEXT:    leal 28(%esi), %eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
@@ -360,13 +361,22 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    movl %edi, 28(%esi)
+; WIN32-NEXT:    movl %edx, 24(%esi)
+; WIN32-NEXT:    movl %ecx, 20(%esi)
+; WIN32-NEXT:    movl %eax, 16(%esi)
 ; WIN32-NEXT:    fstps 12(%esi)
 ; WIN32-NEXT:    fstps 8(%esi)
 ; WIN32-NEXT:    fstps 4(%esi)
 ; WIN32-NEXT:    fstps (%esi)
 ; WIN32-NEXT:    movl %esi, %eax
-; WIN32-NEXT:    addl $44, %esp
+; WIN32-NEXT:    addl $60, %esp
 ; WIN32-NEXT:    popl %esi
+; WIN32-NEXT:    popl %edi
 ; WIN32-NEXT:    retl
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
   ret { <4 x float>, <4 x i32> } %result
@@ -489,35 +499,46 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
 ; WIN32:       # %bb.0:
+; WIN32-NEXT:    pushl %edi
 ; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $12, %esp
+; WIN32-NEXT:    subl $28, %esp
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    leal 8(%esi), %eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    leal 4(%esi), %eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    leal 12(%esi), %eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    movl %edi, 12(%esi)
+; WIN32-NEXT:    movl %edx, 8(%esi)
+; WIN32-NEXT:    movl %ecx, 4(%esi)
+; WIN32-NEXT:    movl %eax, (%esi)
 ; WIN32-NEXT:    movl %esi, %eax
-; WIN32-NEXT:    addl $12, %esp
+; WIN32-NEXT:    addl $28, %esp
 ; WIN32-NEXT:    popl %esi
+; WIN32-NEXT:    popl %edi
 ; WIN32-NEXT:    retl
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
   %result.1 = extractvalue { <4 x float>, <4 x i32> } %result, 1

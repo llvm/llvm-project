@@ -50,52 +50,27 @@ set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-
-add_subdirectory(newhdrgen)
-
-
-if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
-  if(NOT LIBC_HDRGEN_EXE)
-    # We need to set up hdrgen first since other targets depend on it.
-    add_subdirectory(utils/LibcTableGenUtil)
-    add_subdirectory(utils/HdrGen)
-    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
-    # PARENT_SCOPE which get lost until saved in the cache.
-    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
-    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
-  else()
-    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
-  endif()
-endif()
 # We will build the GPU utilities if we are not doing a runtimes build.
 option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
-if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
-  add_subdirectory(utils/gpu)
-endif()
-
-option(LIBC_USE_NEW_HEADER_GEN "Generate header files using new headergen instead of the old one" ON)
-
-set(NEED_LIBC_HDRGEN FALSE)
-if(NOT LLVM_RUNTIMES_BUILD)
-  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
-    set(NEED_LIBC_HDRGEN TRUE)
-  else()
-    foreach(_name ${LLVM_RUNTIME_TARGETS})
-      if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-        set(NEED_LIBC_HDRGEN TRUE)
-        break()
+if(LIBC_BUILD_GPU_LOADER OR NOT LLVM_RUNTIMES_BUILD)
+  foreach(_name ${LLVM_RUNTIME_TARGETS})
+    if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+      if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
+        set(LIBC_NEED_LOADER_UTILS TRUE)
       endif()
-    endforeach()
+    endif()
+  endforeach()
+  if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
+     "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
+    set(LIBC_NEED_LOADER_UTILS TRUE)
+  endif()
+  if(LIBC_NEED_LOADER_UTILS)
+    add_subdirectory(utils/gpu)
+    return()
   endif()
 endif()
-option(LIBC_HDRGEN_ONLY "Only build the 'libc-hdrgen' executable" OFF)
-if(LIBC_HDRGEN_ONLY OR NEED_LIBC_HDRGEN)
-  # When libc is build as part of the runtimes/bootstrap build's CMake run, we
-  # only need to build the host tools to build the libc. So, we just do enough
-  # to build libc-hdrgen and return.
-  return()
-endif()
-unset(NEED_LIBC_HDRGEN)
+
+add_subdirectory(newhdrgen)
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
@@ -248,10 +223,17 @@ foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
   load_libc_config(${config_path}/config.json ${cmd_line_conf})
 endforeach()
 
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(LIBC_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBC_LIBDIR_SUBDIR)
+    string(APPEND LIBC_TARGET_SUBDIR /${LIBC_LIBDIR_SUBDIR})
+  endif()
+endif()
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))
   set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBC_TARGET_SUBDIR})
 else()
   if(NOT LIBC_ENABLE_USE_BY_CLANG)
     set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -277,8 +259,7 @@ endif()
 if(LIBC_TARGET_TRIPLE)
   set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
 elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-  set(LIBC_INSTALL_LIBRARY_DIR
-      lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_SUBDIR})
 else()
   set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX})
 endif()
@@ -405,6 +386,12 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
+
+if(MSVC AND NOT MSYS)
+  set(libc_opt_high_flag "/O2")
+else()
+  set(libc_opt_high_flag "-O3")
+endif()
 
 add_subdirectory(include)
 add_subdirectory(config)

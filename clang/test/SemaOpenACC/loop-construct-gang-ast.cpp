@@ -53,8 +53,8 @@ void NormalUses() {
 #pragma acc loop gang(static:Val)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} kernels
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: kernels
   // CHECK-NEXT: gang clause num
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1
   // CHECK-NEXT: gang clause static
@@ -76,8 +76,8 @@ void NormalUses() {
 #pragma acc loop gang(num:1) gang(static:Val)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: gang clause dim static
   // CHECK-NEXT: ConstantExpr{{.*}} 'int'
   // CHECK-NEXT: value: Int 1
@@ -100,8 +100,8 @@ void NormalUses() {
 #pragma acc loop gang(dim:1, static:Val)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Val' 'int'
@@ -121,8 +121,8 @@ void NormalUses() {
 #pragma acc loop gang(static:Val)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: OpenACCAsteriskSizeExpr
   // CHECK-NEXT: ForStmt
@@ -141,8 +141,8 @@ void NormalUses() {
 #pragma acc loop gang(static:*)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: gang clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -224,8 +224,8 @@ void TemplateUses(T Val) {
 #pragma acc loop gang(static:*)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: gang clause dim
   // CHECK-NEXT: DeclRefExpr{{.*}}'unsigned int' NonTypeTemplateParm{{.*}} 'One' 'unsigned int'
   // CHECK-NEXT: gang clause static
@@ -246,8 +246,8 @@ void TemplateUses(T Val) {
 #pragma acc loop gang(dim:One) gang(static:Val)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: gang clause dim static
   // CHECK-NEXT: DeclRefExpr{{.*}}'unsigned int' NonTypeTemplateParm{{.*}} 'One' 'unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 'Val' 'T'
@@ -267,8 +267,8 @@ void TemplateUses(T Val) {
 #pragma acc loop gang(dim:One, static:Val)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 'Val' 'T'
   // CHECK-NEXT: ForStmt
@@ -287,8 +287,8 @@ void TemplateUses(T Val) {
 #pragma acc loop gang(static:Val)
   for(int i = 0; i < 5; ++i);
 
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: gang clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -367,8 +367,8 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: gang clause dim
   // CHECK-NEXT: ConstantExpr{{.*}} 'unsigned int'
   // CHECK-NEXT: value: Int 1
@@ -391,8 +391,8 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} parallel
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: gang clause dim static
   // CHECK-NEXT: ConstantExpr{{.*}} 'unsigned int'
   // CHECK-NEXT: value: Int 1
@@ -414,8 +414,8 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 'Val' 'int'
@@ -432,8 +432,8 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}} serial
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: serial
   // CHECK-NEXT: gang clause
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt

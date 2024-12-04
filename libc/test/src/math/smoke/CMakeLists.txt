@@ -50,6 +50,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinf16
+)
+
+add_fp_unittest(
   sinpif_test
   SUITE
     libc-math-smoke-tests
@@ -3524,8 +3535,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmaf
     libc.src.__support.macros.properties.types
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(

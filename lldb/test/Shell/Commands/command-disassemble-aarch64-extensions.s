@@ -55,7 +55,7 @@ fn:
   mrs x2, ssbs                          // AEK_SSBS
   abs z31.h, p7/m, z31.h                // AEK_SVE
   sqdmlslbt z0.d, z1.s, z31.s           // AEK_SVE2
-  aesd z0.b, z0.b, z31.b                // AEK_SVEAES
+  aesd z0.b, z0.b, z31.b                // AEK_SVE2AES
   bdep z0.b, z1.b, z31.b                // AEK_SVE2BITPERM
   rax1 z0.d, z0.d, z0.d                 // AEK_SVE2SHA3
   sm4e z0.s, z0.s, z0.s                 // AEK_SVE2SM4

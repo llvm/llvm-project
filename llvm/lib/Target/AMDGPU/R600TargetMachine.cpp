@@ -93,7 +93,7 @@ R600TargetMachine::getTargetTransformInfo(const Function &F) const {
 namespace {
 class R600PassConfig final : public AMDGPUPassConfig {
 public:
-  R600PassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
+  R600PassConfig(TargetMachine &TM, PassManagerBase &PM)
       : AMDGPUPassConfig(TM, PM) {}
 
   ScheduleDAGInstrs *

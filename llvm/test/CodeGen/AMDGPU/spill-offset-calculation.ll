@@ -9,7 +9,7 @@
 define amdgpu_kernel void @test_inst_offset_kernel() {
 ; MUBUF-LABEL: test_inst_offset_kernel:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 s0, s0, s15
+; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
@@ -24,8 +24,8 @@ define amdgpu_kernel void @test_inst_offset_kernel() {
 ;
 ; FLATSCR-LABEL: test_inst_offset_kernel:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 offset:4 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -61,7 +61,7 @@ entry:
 define amdgpu_kernel void @test_sgpr_offset_kernel() {
 ; MUBUF-LABEL: test_sgpr_offset_kernel:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 s0, s0, s15
+; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
@@ -77,8 +77,8 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() {
 ;
 ; FLATSCR-LABEL: test_sgpr_offset_kernel:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -193,7 +193,7 @@ entry:
 define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() #3 {
 ; MUBUF-LABEL: test_sgpr_offset_function_scavenge_fail_kernel:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 s0, s0, s15
+; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
@@ -215,8 +215,8 @@ define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() #3 {
 ;
 ; FLATSCR-LABEL: test_sgpr_offset_function_scavenge_fail_kernel:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s8, 0
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
@@ -275,7 +275,7 @@ entry:
 define amdgpu_kernel void @test_sgpr_offset_subregs_kernel() {
 ; MUBUF-LABEL: test_sgpr_offset_subregs_kernel:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 s0, s0, s15
+; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
@@ -298,8 +298,8 @@ define amdgpu_kernel void @test_sgpr_offset_subregs_kernel() {
 ;
 ; FLATSCR-LABEL: test_sgpr_offset_subregs_kernel:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -341,7 +341,7 @@ entry:
 define amdgpu_kernel void @test_inst_offset_subregs_kernel() {
 ; MUBUF-LABEL: test_inst_offset_subregs_kernel:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 s0, s0, s15
+; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:12 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
@@ -365,8 +365,8 @@ define amdgpu_kernel void @test_inst_offset_subregs_kernel() {
 ;
 ; FLATSCR-LABEL: test_inst_offset_subregs_kernel:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 offset:12 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)

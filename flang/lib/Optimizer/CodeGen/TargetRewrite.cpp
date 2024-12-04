@@ -403,7 +403,6 @@ public:
       unsigned index = e.index();
       llvm::TypeSwitch<mlir::Type>(ty)
           .template Case<fir::BoxCharType>([&](fir::BoxCharType boxTy) {
-            bool sret;
             if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
               if (noCharacterConversion) {
                 newInTyAndAttrs.push_back(
@@ -411,17 +410,14 @@ public:
                 newOpers.push_back(oper);
                 return;
               }
-              sret = callOp.getCallee() &&
-                     functionArgIsSRet(
-                         index, getModule().lookupSymbol<mlir::func::FuncOp>(
-                                    *callOp.getCallee()));
             } else {
-              // TODO: dispatch case; how do we put arguments on a call?
-              // We cannot put both an sret and the dispatch object first.
-              sret = false;
-              TODO(loc, "dispatch + sret not supported yet");
+              // TODO: dispatch case; it used to be a to-do because of sret,
+              // but is not tested and maybe should be removed. This pass is
+              // anyway ran after lowering fir.dispatch in flang, so maybe that
+              // should just be a requirement of the pass.
+              TODO(loc, "ABI of fir.dispatch with character arguments");
             }
-            auto m = specifics->boxcharArgumentType(boxTy.getEleTy(), sret);
+            auto m = specifics->boxcharArgumentType(boxTy.getEleTy());
             auto unbox = rewriter->create<fir::UnboxCharOp>(
                 loc, std::get<mlir::Type>(m[0]), std::get<mlir::Type>(m[1]),
                 oper);
@@ -846,24 +842,16 @@ public:
               // Convert a CHARACTER argument type. This can involve separating
               // the pointer and the LEN into two arguments and moving the LEN
               // argument to the end of the arg list.
-              bool sret = functionArgIsSRet(index, func);
-              for (auto e : llvm::enumerate(specifics->boxcharArgumentType(
-                       boxTy.getEleTy(), sret))) {
-                auto &tup = e.value();
-                auto index = e.index();
+              for (auto &tup :
+                   specifics->boxcharArgumentType(boxTy.getEleTy())) {
                 auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
                 auto argTy = std::get<mlir::Type>(tup);
                 if (attr.isAppend()) {
                   trailingTys.push_back(argTy);
                 } else {
-                  if (sret) {
-                    fixups.emplace_back(FixupTy::Codes::CharPair,
-                                        newInTyAndAttrs.size(), index);
-                  } else {
-                    fixups.emplace_back(FixupTy::Codes::Trailing,
-                                        newInTyAndAttrs.size(),
-                                        trailingTys.size());
-                  }
+                  fixups.emplace_back(FixupTy::Codes::Trailing,
+                                      newInTyAndAttrs.size(),
+                                      trailingTys.size());
                   newInTyAndAttrs.push_back(tup);
                 }
               }
@@ -1110,12 +1098,6 @@ public:
     for (auto &fixup : fixups)
       if (fixup.finalizer)
         (*fixup.finalizer)(func);
-  }
-
-  inline bool functionArgIsSRet(unsigned index, mlir::func::FuncOp func) {
-    if (auto attr = func.getArgAttrOfType<mlir::TypeAttr>(index, "llvm.sret"))
-      return true;
-    return false;
   }
 
   template <typename Ty, typename FIXUPS>

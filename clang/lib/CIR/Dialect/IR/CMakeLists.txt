@@ -3,6 +3,9 @@ add_clang_library(MLIRCIR
   CIRDialect.cpp
   CIRTypes.cpp
 
+  DEPENDS
+  MLIRCIROpsIncGen
+
   LINK_LIBS PUBLIC
   MLIRIR
   )

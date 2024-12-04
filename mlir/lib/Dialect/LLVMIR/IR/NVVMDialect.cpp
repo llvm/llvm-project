@@ -75,20 +75,30 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
-LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  if (getCoordinates().empty() || getCoordinates().size() > 5)
-    return emitError("expects coordinates between 1 to 5 dimension");
+// This verifier is shared across:
+// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load) and
+// CpAsyncBulkTensorPrefetchOp (TMA Prefetch) Ops.
+static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
+                                                     size_t numIm2ColOffsets,
+                                                     Location loc) {
+  if (tensorDims < 1 || tensorDims > 5)
+    return emitError(loc, "expects coordinates between 1 to 5 dimension");
 
-  // Check for im2col mode
-  if (!getIm2colOffsets().empty()) {
-    if (getCoordinates().size() < 3)
+  if (numIm2ColOffsets) {
+    if (tensorDims < 3)
       return emitError(
+          loc,
           "to use im2col mode, the tensor has to be at least 3-dimensional");
-    if (getCoordinates().size() != (getIm2colOffsets().size() + 2))
+    if (tensorDims != (numIm2ColOffsets + 2))
       return emitError(
-          "im2col offsets must be 2 less than number of coordinates");
+          loc, "im2col offsets must be 2 less than number of coordinates");
   }
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
+                                         getIm2colOffsets().size(), getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
@@ -106,6 +116,11 @@ LogicalResult CpAsyncOp::verify() {
   if (getModifier() == LoadCacheModifierKind::CG && getSize() != 16)
     return emitError("CG cache modifier is only support for 16 bytes copy.");
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
+                                         getIm2colOffsets().size(), getLoc());
 }
 
 // Given the element type of an operand and whether or not it is an accumulator,
@@ -1055,6 +1070,30 @@ LogicalResult NVVM::BarrierOp::verify() {
   return success();
 }
 
+llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
+                                                                bool isIm2Col) {
+  switch (tensorDims) {
+  case 1:
+    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d;
+  case 2:
+    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d;
+  case 3:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d;
+  case 4:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d;
+  case 5:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d;
+  default:
+    llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorPrefetchOp.");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
@@ -1087,18 +1126,22 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
                              << "' attribute attached to unexpected op";
     }
   }
-  // If maxntid and reqntid exist, it must be an array with max 3 dim
+  // If maxntid / reqntid / cluster_dim exist, it must be an array with max 3
+  // dim
   if (attrName == NVVMDialect::getMaxntidAttrName() ||
-      attrName == NVVMDialect::getReqntidAttrName()) {
+      attrName == NVVMDialect::getReqntidAttrName() ||
+      attrName == NVVMDialect::getClusterDimAttrName()) {
     auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
     if (!values || values.empty() || values.size() > 3)
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
   }
-  // If minctasm and maxnreg exist, it must be an integer attribute
+  // If minctasm / maxnreg / cluster_max_blocks exist, it must be an integer
+  // attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
-      attrName == NVVMDialect::getMaxnregAttrName()) {
+      attrName == NVVMDialect::getMaxnregAttrName() ||
+      attrName == NVVMDialect::getClusterMaxBlocksAttrName()) {
     if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";

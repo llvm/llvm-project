@@ -1,7 +1,7 @@
 // RUN: tco %s | FileCheck %s
 
 // CHECK-LINE: define void @f1
-// CHECK: (ptr %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
+// CHECK: (ptr nocapture %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f1(%a : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
   %s = fir.shape_shift %o, %n, %p, %m : (index, index, index, index) -> !fir.shapeshift<2>
@@ -23,7 +23,7 @@ func.func @f1(%a : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : i
 }
 
 // CHECK-LINE: define void @f2
-// CHECK: (ptr %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
+// CHECK: (ptr nocapture %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f2(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
   %s = fir.shape_shift %o, %n, %p, %m : (index, index, index, index) -> !fir.shapeshift<2>
@@ -47,7 +47,7 @@ func.func @f2(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
 }
 
 // CHECK-LINE: define void @f3
-// CHECK: (ptr %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
+// CHECK: (ptr nocapture %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f3(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
   %s = fir.shape_shift %o, %n, %p, %m : (index, index, index, index) -> !fir.shapeshift<2>
@@ -72,7 +72,7 @@ func.func @f3(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
 }
 
 // CHECK-LINE: define void @f4
-// CHECK: (ptr %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
+// CHECK: (ptr nocapture %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f4(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
   %s = fir.shape_shift %o, %n, %p, %m : (index, index, index, index) -> !fir.shapeshift<2>
@@ -165,7 +165,7 @@ func.func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
 // Non contiguous array with lower bounds (x = y(100), with y(4:))
 // Test array_coor offset computation.
 // CHECK-LABEL:  define void @f7(
-// CHECK: ptr %[[X:[^,]*]], ptr %[[Y:.*]])
+// CHECK: ptr nocapture %[[X:[^,]*]], ptr %[[Y:.*]])
 func.func @f7(%arg0: !fir.ref<f32>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %c4 = arith.constant 4 : index
   %c100 = arith.constant 100 : index
@@ -181,7 +181,7 @@ func.func @f7(%arg0: !fir.ref<f32>, %arg1: !fir.box<!fir.array<?xf32>>) {
 
 // Test A(:, :)%x reference codegen with A constant shape.
 // CHECK-LABEL:  define void @f8(
-// CHECK-SAME: ptr %[[A:.*]], i32 %[[I:.*]])
+// CHECK-SAME: ptr nocapture %[[A:.*]], i32 %[[I:.*]])
 func.func @f8(%a : !fir.ref<!fir.array<2x2x!fir.type<t{i:i32}>>>, %i : i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -198,7 +198,7 @@ func.func @f8(%a : !fir.ref<!fir.array<2x2x!fir.type<t{i:i32}>>>, %i : i32) {
 
 // Test casts in in array_coor offset computation when type parameters are not i64
 // CHECK-LABEL: define ptr @f9(
-// CHECK-SAME: i32 %[[I:.*]], i64 %{{.*}}, i64 %{{.*}}, ptr %[[C:.*]])
+// CHECK-SAME: i32 %[[I:.*]], i64 %{{.*}}, i64 %{{.*}}, ptr nocapture %[[C:.*]])
 func.func @f9(%i: i32, %e : i64, %j: i64, %c: !fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>> {
   %s = fir.shape %e, %e : (i64, i64) -> !fir.shape<2>
   // CHECK: %[[CAST:.*]] = sext i32 %[[I]] to i64

@@ -291,6 +291,12 @@ static const OmpDirectiveSet workShareSet{
 };
 
 //===----------------------------------------------------------------------===//
+// Directive sets for parent directives that do allow/not allow a construct
+//===----------------------------------------------------------------------===//
+
+static const OmpDirectiveSet scanParentAllowedSet{allDoSet | allSimdSet};
+
+//===----------------------------------------------------------------------===//
 // Directive sets for allowed/not allowed nested directives
 //===----------------------------------------------------------------------===//
 

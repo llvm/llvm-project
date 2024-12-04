@@ -16,7 +16,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 
 
 ;define fastcc void @bar() {
-define void @bar() {
+define void @bar(i1 %arg) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr undef, i64 0, i32 1, i32 0
@@ -32,16 +32,16 @@ define void @bar() {
 ; CHECK-NEXT:    store double [[I7]], ptr [[I1]], align 8
 ; CHECK-NEXT:    [[I10]] = load double, ptr [[I3]], align 8
 ; CHECK-NEXT:    [[TMP0]] = load <2 x double>, ptr [[I2]], align 8
-; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB11:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
 ; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr [[I4]], align 8
-; CHECK-NEXT:    br i1 undef, label [[BB13:%.*]], label [[BB14:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB13:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    br label [[BB14]]
 ; CHECK:       bb14:
-; CHECK-NEXT:    br i1 undef, label [[BB15:%.*]], label [[BB16]]
+; CHECK-NEXT:    br i1 %arg, label [[BB15:%.*]], label [[BB16]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb16:
@@ -51,7 +51,7 @@ define void @bar() {
 ; CHECK-NEXT:      i32 103, label [[BB6]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb17:
-; CHECK-NEXT:    br i1 undef, label [[BB6]], label [[BB18:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB6]], label [[BB18:%.*]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    unreachable
 ;
@@ -71,7 +71,7 @@ bb6:                                              ; preds = %bb17, %bb16, %bb16,
   store double %i7, ptr %i1, align 8
   %i9 = load double, ptr %i2, align 8
   %i10 = load double, ptr %i3, align 8
-  br i1 undef, label %bb11, label %bb12
+  br i1 %arg, label %bb11, label %bb12
 
 bb11:                                             ; preds = %bb6
   ret void
@@ -79,13 +79,13 @@ bb11:                                             ; preds = %bb6
 bb12:                                             ; preds = %bb6
   store double %i9, ptr %i4, align 8
   store double %i10, ptr %i5, align 8
-  br i1 undef, label %bb13, label %bb14
+  br i1 %arg, label %bb13, label %bb14
 
 bb13:                                             ; preds = %bb12
   br label %bb14
 
 bb14:                                             ; preds = %bb13, %bb12
-  br i1 undef, label %bb15, label %bb16
+  br i1 %arg, label %bb15, label %bb16
 
 bb15:                                             ; preds = %bb14
   unreachable
@@ -97,7 +97,7 @@ bb16:                                             ; preds = %bb14
   ]
 
 bb17:                                             ; preds = %bb16
-  br i1 undef, label %bb6, label %bb18
+  br i1 %arg, label %bb6, label %bb18
 
 bb18:                                             ; preds = %bb17
   unreachable
