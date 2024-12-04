@@ -70,14 +70,15 @@ DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
 }
 
 DWARFVerifier::DieRangeInfo::die_range_info_iterator
-DWARFVerifier::DieRangeInfo::insert(const DieRangeInfo &RI) {
+DWARFVerifier::DieRangeInfo::insert(const DieRangeInfo &RI,
+                                    bool AllowDuplicates) {
   if (RI.Ranges.empty())
     return Children.end();
 
   auto End = Children.end();
   auto Iter = Children.begin();
   while (Iter != End) {
-    if (Iter->intersects(RI))
+    if (Iter->intersects(RI, AllowDuplicates))
       return Iter;
     ++Iter;
   }
@@ -109,12 +110,16 @@ bool DWARFVerifier::DieRangeInfo::contains(const DieRangeInfo &RHS) const {
   return false;
 }
 
-bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS) const {
+bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS,
+                                             bool AllowDuplicates) const {
   auto I1 = Ranges.begin(), E1 = Ranges.end();
   auto I2 = RHS.Ranges.begin(), E2 = RHS.Ranges.end();
   while (I1 != E1 && I2 != E2) {
-    if (I1->intersects(*I2))
-      return true;
+    if (I1->intersects(*I2)) {
+      bool IsDuplicate = *I1 == *I2;
+      if (!AllowDuplicates || !IsDuplicate)
+        return true;
+    }
     if (I1->LowPC < I2->LowPC)
       ++I1;
     else
@@ -146,11 +151,13 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   if (Version >= 5) {
     UnitType = DebugInfoData.getU8(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
-    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset) : DebugInfoData.getU32(Offset);
+    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset)
+                               : DebugInfoData.getU32(Offset);
     ValidType = dwarf::isUnitType(UnitType);
   } else {
     UnitType = 0;
-    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset) : DebugInfoData.getU32(Offset);
+    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset)
+                               : DebugInfoData.getU32(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
   }
 
@@ -412,7 +419,7 @@ unsigned DWARFVerifier::verifyUnits(const DWARFUnitVector &Units) {
   unsigned Index = 1;
   for (const auto &Unit : Units) {
     OS << "Verifying unit: " << Index << " / " << Units.getNumUnits();
-    if (const char* Name = Unit->getUnitDIE(true).getShortName())
+    if (const char *Name = Unit->getUnitDIE(true).getShortName())
       OS << ", \"" << Name << '\"';
     OS << '\n';
     OS.flush();
@@ -531,14 +538,12 @@ bool DWARFVerifier::handleDebugInfo() {
   unsigned NumErrors = 0;
 
   OS << "Verifying .debug_info Unit Header Chain...\n";
-  DObj.forEachInfoSections([&](const DWARFSection &S) {
-    NumErrors += verifyUnitSection(S);
-  });
+  DObj.forEachInfoSections(
+      [&](const DWARFSection &S) { NumErrors += verifyUnitSection(S); });
 
   OS << "Verifying .debug_types Unit Header Chain...\n";
-  DObj.forEachTypesSections([&](const DWARFSection &S) {
-    NumErrors += verifyUnitSection(S);
-  });
+  DObj.forEachTypesSections(
+      [&](const DWARFSection &S) { NumErrors += verifyUnitSection(S); });
 
   OS << "Verifying non-dwo Units...\n";
   NumErrors += verifyUnits(DCtx.getNormalUnitsVector());
@@ -622,22 +627,16 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   }
 
   // Verify that children don't intersect.
-  const auto IntersectingChild = ParentRI.insert(RI);
+  bool AllowDuplicates = Die.getTag() == DW_TAG_subprogram;
+  const auto IntersectingChild = ParentRI.insert(RI, AllowDuplicates);
   if (IntersectingChild != ParentRI.Children.end()) {
-    auto &IR = IntersectingChild->Ranges;
-    // Overlapping DW_TAG_subprogram can happen and are valid when multiple
-    // functions are merged via ICF. See --keep-icf-stabs in LLD.
-    bool isMergedFunc = (Die.getTag() == DW_TAG_subprogram) &&
-                        (IR.size() == 1) && (IR == RI.Ranges);
-    if (!isMergedFunc) {
-      if (IntersectingChild->Ranges != ParentRI.Children.end()->Ranges) {
-        ++NumErrors;
-        ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {
-          error() << "DIEs have overlapping address ranges:";
-          dump(Die);
-          dump(IntersectingChild->Die) << '\n';
-        });
-      }
+    if (IntersectingChild->Ranges != ParentRI.Children.end()->Ranges) {
+      ++NumErrors;
+      ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {
+        error() << "DIEs have overlapping address ranges:";
+        dump(Die);
+        dump(IntersectingChild->Die) << '\n';
+      });
     }
   }
 
@@ -923,8 +922,7 @@ unsigned DWARFVerifier::verifyDebugInfoReferences(
     return DWARFDie();
   };
   unsigned NumErrors = 0;
-  for (const std::pair<const uint64_t, std::set<uint64_t>> &Pair :
-       References) {
+  for (const std::pair<const uint64_t, std::set<uint64_t>> &Pair : References) {
     if (GetDIEForOffset(Pair.first))
       continue;
     ++NumErrors;
@@ -2126,7 +2124,8 @@ bool DWARFVerifier::verifyDebugStrOffsets(
       });
       Success = false;
     }
-    for (uint64_t Index = 0; C && C.tell() + OffsetByteSize <= NextUnit; ++Index) {
+    for (uint64_t Index = 0; C && C.tell() + OffsetByteSize <= NextUnit;
+         ++Index) {
       uint64_t OffOff = C.tell();
       uint64_t StrOff = DA.getAddress(C);
       // check StrOff refers to the start of a string

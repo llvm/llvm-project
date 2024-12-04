@@ -77,17 +77,22 @@ public:
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an
-    /// iterator to the overlapping range info.
+    /// iterator to the overlapping range info. If AllowDuplicates is true and
+    /// RI is an already existing range, the duplicate range will not be added
+    /// but the returned iterator will point to end().
     ///
     /// This is used for finding overlapping children of the same DIE.
-    die_range_info_iterator insert(const DieRangeInfo &RI);
+    die_range_info_iterator insert(const DieRangeInfo &RI,
+                                   bool AllowDuplicates = false);
 
     /// Return true if ranges in this object contains all ranges within RHS.
     bool contains(const DieRangeInfo &RHS) const;
 
     /// Return true if any range in this object intersects with any range in
-    /// RHS.
-    bool intersects(const DieRangeInfo &RHS) const;
+    /// RHS. If AllowDuplicates is true, identical ranges are not considered to
+    /// be overlapping.
+    bool intersects(const DieRangeInfo &RHS,
+                    bool AllowDuplicates = false) const;
   };
 
 private:

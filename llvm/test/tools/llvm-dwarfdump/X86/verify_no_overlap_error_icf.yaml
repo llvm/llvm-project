@@ -1,531 +1,131 @@
-# This test verifies that if two DW_TAG_subprogram's have a single identical
-# address range they are not flagged by dwarfdump as being invalid (having
-# overlapping address ranges).
-# This is a valid case that can happen when ICF merges multiple functions
-# together. See --keep-icf-stabs in LLD.
-#
-# The DWARF looks like:
-# 0x0000002e:   DW_TAG_subprogram
-#                 DW_AT_low_pc  (0x00000001000002f0)
-#                 DW_AT_high_pc (0x00000001000002fc)
-#                 DW_AT_name  ("function1")
-#                 DW_AT_decl_file ("/tmp/out/my_code.cpp")
-#                 [...]
-#
-# 0x00000071:   DW_TAG_subprogram
-#                 DW_AT_low_pc  (0x00000001000002f0)
-#                 DW_AT_high_pc (0x00000001000002fc)
-#                 DW_AT_name  ("function2")
-#                 DW_AT_decl_file ("/tmp/out/my_code.cpp")
-#                 [...]
-#
+//--- comments.txt
 
-# RUN: yaml2obj %s | llvm-dwarfdump --error-display=details --verify - | FileCheck %s
+# This test verifies several scenarios with DW_TAG_subprogram address ranges:
+# 1. Two subprograms can have identical ranges (shown with foo2 and foo3 having same low_pc/high_pc)
+#    This is valid and can happen when ICF (Identical Code Folding) merges functions.
+# 2. Two subprograms can have overlapping ranges when using DW_AT_ranges
+#    (shown with func1_with_ranges and func2_with_ranges sharing range 0x5000-0x6000)
+#    This is also valid and can occur with -fbasic-block-sections=all
+# 3. The test also verifies that non-identical overlapping ranges are correctly flagged as errors:
+#    - When modifying just the first range's high offset from 0x6000 to 0x5999, it creates an invalid subrange overlap
+#    - When modifying just the first instance of DW_AT_high_pc 0x77 to 0x66, it creates an invalid function overlap
+# The test ensures llvm-dwarfdump --verify correctly validates these cases by:
+#  a) Accepting valid identical overlapping ranges
+#  b) Rejecting invalid non-identical overlapping ranges
+
+# Need to use split-file in order for `sed` calls below to work correctly
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/test.yaml | llvm-dwarfdump --error-display=details --verify - | FileCheck %s
 # CHECK: No errors.
 
+# RUN: sed '0,/HighOffset: 0x6000/{s//HighOffset: 0x5999/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-RANGES
+# CHECK-RANGES: error: DIEs have overlapping address ranges
 
-## YAML below was generating using this shell script:
-# #!/bin/bash
-# set -ex
-#
-# TOOLCHAIN_DIR="Debug/bin"
-# SCRIPT_DIR="$(cd "$(dirname "$0")"; pwd)"
-# OUT_DIR="$SCRIPT_DIR/out"
-# mkdir -p $OUT_DIR
-#
-# cd $SCRIPT_DIR
-#
-# cat > "$OUT_DIR/my_code.cpp" << EOF
-# #define ATTRIB extern "C" __attribute__((noinline))
-#
-# ATTRIB int function1(int a) {
-#     int b = a * 4;
-#     int result = b + 4;
-#     return result;
-# }
-#
-# ATTRIB int function2(int a) {
-#     int b = a * 4;
-#     int result = b + 4;
-#     return result;
-# }
-#
-# int main() {
-#     return function1(1) + function2(2);
-# }
-# EOF
-#
-# "$TOOLCHAIN_DIR/clang++" --target=arm64-apple-macos11 -c -g -O3 "$OUT_DIR/my_code.cpp" -o "$OUT_DIR/my_code.o" \
-#                          -gmlt -fno-unwind-tables -fno-exceptions
-# "$TOOLCHAIN_DIR/ld64.lld" -arch arm64  -platform_version macos 11.0.0 11.0.0 -o "$OUT_DIR/my_bin_icf.exe" \
-#                           "$OUT_DIR/my_code.o" -dead_strip --icf=all --keep-icf-stabs
-#
-# $TOOLCHAIN_DIR/dsymutil --flat "$OUT_DIR/my_bin_icf.exe" -o "$OUT_DIR/my_bin_icf.dSYM" --verify-dwarf=none
-# $TOOLCHAIN_DIR/obj2yaml  "$OUT_DIR/my_bin_icf.dSYM"   > $OUT_DIR/my_bin_icf.dSYM.yaml
+# RUN: sed '0,/Value:  0x77/{s/Value:  0x77/Value:  0x66/}' %t/test.yaml | yaml2obj | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --check-prefix=CHECK-HIGH-PC
+# CHECK-HIGH-PC: error: DIEs have overlapping address ranges
 
-
-
---- !mach-o
+//--- test.yaml
+--- !ELF
 FileHeader:
-  magic:           0xFEEDFACF
-  cputype:         0x100000C
-  cpusubtype:      0x0
-  filetype:        0xA
-  ncmds:           7
-  sizeofcmds:      1240
-  flags:           0x0
-  reserved:        0x0
-LoadCommands:
-  - cmd:             LC_UUID
-    cmdsize:         24
-    uuid:            4C4C449C-5555-3144-A108-0F6123B3CB8A
-  - cmd:             LC_BUILD_VERSION
-    cmdsize:         24
-    platform:        1
-    minos:           720896
-    sdk:             720896
-    ntools:          0
-  - cmd:             LC_SYMTAB
-    cmdsize:         24
-    symoff:          4096
-    nsyms:           4
-    stroff:          4160
-    strsize:         50
-  - cmd:             LC_SEGMENT_64
-    cmdsize:         72
-    segname:         __PAGEZERO
-    vmaddr:          0
-    vmsize:          4294967296
-    fileoff:         0
-    filesize:        0
-    maxprot:         0
-    initprot:        0
-    nsects:          0
-    flags:           0
-  - cmd:             LC_SEGMENT_64
-    cmdsize:         152
-    segname:         __TEXT
-    vmaddr:          4294967296
-    vmsize:          16384
-    fileoff:         0
-    filesize:        0
-    maxprot:         5
-    initprot:        5
-    nsects:          1
-    flags:           0
-    Sections:
-      - sectname:        __text
-        segname:         __TEXT
-        addr:            0x1000002A0
-        size:            60
-        offset:          0x0
-        align:           2
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x80000400
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-        content:         CFFAEDFE0C000001000000000A00000007000000D804000000000000000000001B000000180000004C4C449C55553144A1080F6123B3CB8A32000000
-  - cmd:             LC_SEGMENT_64
-    cmdsize:         72
-    segname:         __LINKEDIT
-    vmaddr:          4294983680
-    vmsize:          4096
-    fileoff:         4096
-    filesize:        114
-    maxprot:         1
-    initprot:        1
-    nsects:          0
-    flags:           0
-  - cmd:             LC_SEGMENT_64
-    cmdsize:         872
-    segname:         __DWARF
-    vmaddr:          4294987776
-    vmsize:          4096
-    fileoff:         8192
-    filesize:        871
-    maxprot:         7
-    initprot:        3
-    nsects:          10
-    flags:           0
-    Sections:
-      - sectname:        __debug_line
-        segname:         __DWARF
-        addr:            0x100005000
-        size:            123
-        offset:          0x2000
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-      - sectname:        __debug_aranges
-        segname:         __DWARF
-        addr:            0x10000507B
-        size:            48
-        offset:          0x207B
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-      - sectname:        __debug_info
-        segname:         __DWARF
-        addr:            0x1000050AB
-        size:            125
-        offset:          0x20AB
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-      - sectname:        __debug_frame
-        segname:         __DWARF
-        addr:            0x100005128
-        size:            112
-        offset:          0x2128
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-        content:         14000000FFFFFFFF0400080001781E0C1F000000000000001400000000000000A0020000010000000C000000000000001400000000000000A0020000010000000C000000000000002400000000000000AC0200000100000030000000000000004C0C1D109E019D029303940400000000
-      - sectname:        __debug_abbrev
-        segname:         __DWARF
-        addr:            0x100005198
-        size:            64
-        offset:          0x2198
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-      - sectname:        __debug_str
-        segname:         __DWARF
-        addr:            0x1000051D8
-        size:            163
-        offset:          0x21D8
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-      - sectname:        __apple_namespac
-        segname:         __DWARF
-        addr:            0x10000527B
-        size:            36
-        offset:          0x227B
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
-      - sectname:        __apple_names
-        segname:         __DWARF
-        addr:            0x10000529F
-        size:            116
-        offset:          0x229F
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-        content:         485341480100000003000000030000000C000000000000000100000001000600FFFFFFFF0000000002000000DC41AB586A7F9A7CDD41AB584400000054000000640000008A000000010000002E000000000000009E00000001000000500000000000000094000000010000003F00000000000000
-      - sectname:        __apple_types
-        segname:         __DWARF
-        addr:            0x100005313
-        size:            48
-        offset:          0x2313
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-        content:         48534148010000000100000000000000180000000000000004000000010006000300050005000B0006000600FFFFFFFF
-      - sectname:        __apple_objc
-        segname:         __DWARF
-        addr:            0x100005343
-        size:            36
-        offset:          0x2343
-        align:           0
-        reloff:          0x0
-        nreloc:          0
-        flags:           0x0
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
-LinkEditData:
-  NameList:
-    - n_strx:          2
-      n_type:          0xF
-      n_sect:          1
-      n_desc:          0
-      n_value:         4294967980
-    - n_strx:          8
-      n_type:          0xF
-      n_sect:          1
-      n_desc:          0
-      n_value:         4294967968
-    - n_strx:          19
-      n_type:          0xF
-      n_sect:          1
-      n_desc:          0
-      n_value:         4294967968
-    - n_strx:          30
-      n_type:          0xF
-      n_sect:          1
-      n_desc:          16
-      n_value:         4294967296
-  StringTable:
-    - ''
-    - ''
-    - _main
-    - _function1
-    - _function2
-    - __mh_execute_header
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
 DWARF:
-  debug_str:
-    - ''
-    - 'clang version 20.0.0git (https://github.com/alx32/llvm-project.git 92a15dd7482ff4e1fae7a07f888564e5b1d53eee)'
-    - '/tmp/out/my_code.cpp'
-    - '/'
-    - '/tmp'
-    - function1
-    - function2
-    - main
   debug_abbrev:
-    - ID:              0
-      Table:
-        - Code:            0x1
-          Tag:             DW_TAG_compile_unit
-          Children:        DW_CHILDREN_yes
-          Attributes:
-            - Attribute:       DW_AT_producer
-              Form:            DW_FORM_strp
-            - Attribute:       DW_AT_language
-              Form:            DW_FORM_data2
-            - Attribute:       DW_AT_name
-              Form:            DW_FORM_strp
-            - Attribute:       DW_AT_LLVM_sysroot
-              Form:            DW_FORM_strp
-            - Attribute:       DW_AT_stmt_list
-              Form:            DW_FORM_sec_offset
-            - Attribute:       DW_AT_comp_dir
-              Form:            DW_FORM_strp
-            - Attribute:       DW_AT_APPLE_optimized
-              Form:            DW_FORM_flag_present
-            - Attribute:       DW_AT_low_pc
-              Form:            DW_FORM_addr
-            - Attribute:       DW_AT_high_pc
-              Form:            DW_FORM_data4
-        - Code:            0x2
-          Tag:             DW_TAG_subprogram
-          Children:        DW_CHILDREN_no
-          Attributes:
-            - Attribute:       DW_AT_low_pc
-              Form:            DW_FORM_addr
-            - Attribute:       DW_AT_high_pc
-              Form:            DW_FORM_data4
-            - Attribute:       DW_AT_APPLE_omit_frame_ptr
-              Form:            DW_FORM_flag_present
-            - Attribute:       DW_AT_call_all_calls
-              Form:            DW_FORM_flag_present
-            - Attribute:       DW_AT_name
-              Form:            DW_FORM_strp
-        - Code:            0x3
-          Tag:             DW_TAG_subprogram
-          Children:        DW_CHILDREN_yes
-          Attributes:
-            - Attribute:       DW_AT_low_pc
-              Form:            DW_FORM_addr
-            - Attribute:       DW_AT_high_pc
-              Form:            DW_FORM_data4
-            - Attribute:       DW_AT_call_all_calls
-              Form:            DW_FORM_flag_present
-            - Attribute:       DW_AT_name
-              Form:            DW_FORM_strp
-        - Code:            0x4
-          Tag:             DW_TAG_call_site
-          Children:        DW_CHILDREN_no
-          Attributes:
-            - Attribute:       DW_AT_call_origin
-              Form:            DW_FORM_ref4
-            - Attribute:       DW_AT_call_return_pc
-              Form:            DW_FORM_addr
-  debug_aranges:
-    - Length:          0x2C
-      Version:         2
-      CuOffset:        0x0
-      AddressSize:     0x8
-      Descriptors:
-        - Address:         0x1000002A0
-          Length:          0x3C
-  debug_info:
-    - Length:          0x79
-      Version:         4
-      AbbrevTableID:   0
-      AbbrOffset:      0x0
-      AddrSize:        8
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_ranges:
+    - Offset:    0x0
+      AddrSize:  0x8
       Entries:
-        - AbbrCode:        0x1
+        - LowOffset:  0x1000
+          HighOffset: 0x2000
+        - LowOffset:  0x3000
+          HighOffset: 0x4000
+        - LowOffset:  0x5000  # Overlaps with 2nd range below
+          HighOffset: 0x6000
+        - LowOffset:  0x0
+          HighOffset: 0x0
+    - Offset:    0x50
+      AddrSize:  0x8
+      Entries:
+        - LowOffset:  0x2500
+          HighOffset: 0x2800
+        - LowOffset:  0x5000  # Overlaps with 3rd range above
+          HighOffset: 0x6000
+        - LowOffset:  0x7000
+          HighOffset: 0x8000
+        - LowOffset:  0x0
+          HighOffset: 0x0
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
           Values:
-            - Value:           0x1
-            - Value:           0x21
-            - Value:           0x6E
-            - Value:           0x83
-            - Value:           0x0
-            - Value:           0x85
-            - Value:           0x1
-            - Value:           0x1000002A0
-            - Value:           0x3C
-        - AbbrCode:        0x2
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x1000
+            - Value:  0x100
+        - AbbrCode: 4
           Values:
-            - Value:           0x1000002A0
-            - Value:           0xC
-            - Value:           0x1
-            - Value:           0x1
-            - Value:           0x8A
-        - AbbrCode:        0x2
+            - CStr: int
+        - AbbrCode: 2
           Values:
-            - Value:           0x1000002A0
-            - Value:           0xC
-            - Value:           0x1
-            - Value:           0x1
-            - Value:           0x94
-        - AbbrCode:        0x3
+            - CStr: foo1
+            - Value:  0x1000
+            - Value:  0x10
+        - AbbrCode: 2
           Values:
-            - Value:           0x1000002AC
-            - Value:           0x30
-            - Value:           0x1
-            - Value:           0x9E
-        - AbbrCode:        0x4
+            - CStr: foo2
+            - Value:  0x0    # Overlaps with 'foo3' below
+            - Value:  0x77
+        - AbbrCode: 2
           Values:
-            - Value:           0x2E
-            - Value:           0x1000002C0
-        - AbbrCode:        0x4
+            - CStr: foo3
+            - Value:  0x0    # Overlaps with 'foo2' above
+            - Value:  0x77
+        - AbbrCode: 3
           Values:
-            - Value:           0x3F
-            - Value:           0x1000002CC
-        - AbbrCode:        0x0
-        - AbbrCode:        0x0
-  debug_line:
-    - Length:          119
-      Version:         4
-      PrologueLength:  39
-      MinInstLength:   1
-      MaxOpsPerInst:   1
-      DefaultIsStmt:   1
-      LineBase:        251
-      LineRange:       14
-      OpcodeBase:      13
-      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-      IncludeDirs:
-        - out
-      Files:
-        - Name:            my_code.cpp
-          DirIdx:          1
-          ModTime:         0
-          Length:          0
-      Opcodes:
-        - Opcode:          DW_LNS_extended_op
-          ExtLen:          9
-          SubOpcode:       DW_LNE_set_address
-          Data:            4294967968
-        - Opcode:          DW_LNS_set_column
-          Data:            15
-        - Opcode:          DW_LNS_set_prologue_end
-          Data:            0
-        - Opcode:          DW_LNS_advance_line
-          SData:           9
-          Data:            0
-        - Opcode:          DW_LNS_copy
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            20
-        - Opcode:          0x4B
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            5
-        - Opcode:          0x4B
-          Data:            0
-        - Opcode:          DW_LNS_advance_pc
-          Data:            4
-        - Opcode:          DW_LNS_extended_op
-          ExtLen:          1
-          SubOpcode:       DW_LNE_end_sequence
-          Data:            0
-        - Opcode:          DW_LNS_extended_op
-          ExtLen:          9
-          SubOpcode:       DW_LNE_set_address
-          Data:            4294967968
-        - Opcode:          DW_LNS_set_column
-          Data:            15
-        - Opcode:          DW_LNS_set_prologue_end
-          Data:            0
-        - Opcode:          0x15
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            20
-        - Opcode:          0x4B
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            5
-        - Opcode:          0x4B
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            0
-        - Opcode:          DW_LNS_advance_line
-          SData:           9
-          Data:            0
-        - Opcode:          0x4A
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            12
-        - Opcode:          DW_LNS_set_prologue_end
-          Data:            0
-        - Opcode:          0xBB
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            27
-        - Opcode:          DW_LNS_negate_stmt
-          Data:            0
-        - Opcode:          0xBA
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            25
-        - Opcode:          0x82
-          Data:            0
-        - Opcode:          DW_LNS_set_column
-          Data:            5
-        - Opcode:          DW_LNS_set_epilogue_begin
-          Data:            0
-        - Opcode:          0x4A
-          Data:            0
-        - Opcode:          DW_LNS_advance_pc
-          Data:            12
-        - Opcode:          DW_LNS_extended_op
-          ExtLen:          1
-          SubOpcode:       DW_LNE_end_sequence
-          Data:            0
+            - CStr: func1_with_ranges
+            - Value:  0x0
+        - AbbrCode: 3
+          Values:
+            - CStr: func2_with_ranges
+            - Value:  0x50
+        - AbbrCode: 0
 ...

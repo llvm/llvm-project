@@ -144,13 +144,13 @@ DWARF:
           Values:
             - CStr: foo2
             - Value:  0x0
-            - Value:  0x120
+            - Value:  0x100
             - Value:  0x00000040
         - AbbrCode: 2
           Values:
             - CStr: foo3
             - Value:  0x0
-            - Value:  0x100
+            - Value:  0x80
             - Value:  0x00000040
         - AbbrCode: 0
 ...
