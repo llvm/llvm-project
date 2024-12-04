@@ -1000,7 +1000,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
         Ty->getIntParameter(0);
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),
-        TargetExtType::CanBeLocal);
+        TargetExtType::CanBeLocal, TargetExtType::HasZeroInit);
   }
 
   // DirectX resources
