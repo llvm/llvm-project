@@ -2572,6 +2572,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_FRAMERETURNADDR(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
+  if (N->getValueType(0).isVector())
+    return DAG.UnrollVectorOp(N);
+
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
 

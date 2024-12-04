@@ -4649,24 +4649,6 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
         DAG.getLibInfo().getIntSize() ==
         Node->getOperand(1 + Offset).getValueType().getSizeInBits();
     if (!ExponentHasSizeOfInt) {
-      // In some backends, such as RISCV64 and LoongArch64, the i32 type is
-      // illegal and is promoted by previous process. For such cases, the
-      // exponent actually matches with sizeof(int) and a libcall should be
-      // generated.
-      SDNode *ExponentNode = Node->getOperand(1 + Offset).getNode();
-      unsigned LibIntSize = DAG.getLibInfo().getIntSize();
-      if (ExponentNode->getOpcode() == ISD::SIGN_EXTEND_INREG ||
-          ExponentNode->getOpcode() == ISD::AssertSext ||
-          ExponentNode->getOpcode() == ISD::AssertZext) {
-        EVT InnerType = cast<VTSDNode>(ExponentNode->getOperand(1))->getVT();
-        ExponentHasSizeOfInt = LibIntSize == InnerType.getSizeInBits();
-      } else if (ISD::isExtOpcode(ExponentNode->getOpcode())) {
-        ExponentHasSizeOfInt =
-            LibIntSize ==
-            ExponentNode->getOperand(0).getValueType().getSizeInBits();
-      }
-    }
-    if (!ExponentHasSizeOfInt) {
       // If the exponent does not match with sizeof(int) a libcall to
       // RTLIB::POWI would use the wrong type for the argument.
       DAG.getContext()->emitError("POWI exponent does not match sizeof(int)");
