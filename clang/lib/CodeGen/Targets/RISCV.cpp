@@ -114,8 +114,13 @@ void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
 
 void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   unsigned ArgABIVLen = 1 << FI.getExtInfo().getLog2RISCVABIVLen();
-  if (ArgABIVLen == 1)
+  // If ArgABIVLen is default value(2), try to set it to the value passed by
+  // option if any, otherwise, set it to default value 128.
+  // Note that ArgABIVLen == 1 means vector_cc is not enabled.
+  if (ArgABIVLen == 2 && ABIVLen)
     ArgABIVLen = ABIVLen;
+  else if (ArgABIVLen == 2)
+    ArgABIVLen = 128;
 
   QualType RetTy = FI.getReturnType();
   if (!getCXXABI().classifyReturnType(FI))
@@ -416,8 +421,8 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty,
         (EltType->isDoubleTy() && !TI.hasFeature("zve64d")) ||
         (EltType->isIntegerTy(64) && !TI.hasFeature("zve64x")) ||
         EltType->isIntegerTy(128)) {
-      NumElts = NumElts * EltType->getScalarSizeInBits() / 32;
-      EltType = llvm::Type::getInt32Ty(getVMContext());
+      EltType =
+          llvm::Type::getIntNTy(getVMContext(), EltType->getScalarSizeInBits());
     }
 
     // Generic vector
@@ -537,7 +542,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       return coerceVLSVector(Ty);
-    if (VT->getVectorKind() == VectorKind::Generic && ArgABIVLen != 0)
+    if (VT->getVectorKind() == VectorKind::Generic && ArgABIVLen != 1)
       // Generic vector without riscv_vls_cc should fall through and pass by
       // reference.
       return coerceVLSVector(Ty, ArgABIVLen);
