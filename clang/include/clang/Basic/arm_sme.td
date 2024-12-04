@@ -741,10 +741,11 @@ let SMETargetGuard = "sme2" in {
 }
 
 // FDOT
-let SMETargetGuard = "sme2,sme-f8f16" in {
+let SMETargetGuard = "sme-f8f16" in {
   def SVDOT_LANE_FP8_ZA16_VG1x2 : Inst<"svdot_lane_za16[_mf8]_vg1x2_fpm", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za16_vg1x2", [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
   def SVDOT_LANE_FP8_ZA16_VG1x4 : Inst<"svdot_lane_za16[_mf8]_vg1x4_fpm", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za16_vg1x4", [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 // SME2p1 - FMOPA, FMOPS (non-widening)
 let SMETargetGuard = "sme-b16b16" in {
