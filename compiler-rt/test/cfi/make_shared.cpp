@@ -1,5 +1,5 @@
 // RUN: %clangxx_cfi %s -o %t
-// RUN: %t
+// RUN: %run %t
 
 #include <memory>
 
