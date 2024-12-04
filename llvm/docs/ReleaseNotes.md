@@ -132,6 +132,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Bump the default `.amdhsa_code_object_version` to 6.
+
 * Removed `llvm.amdgcn.flat.atomic.fadd` and
   `llvm.amdgcn.global.atomic.fadd` intrinsics. Users should use the
   {ref}`atomicrmw <i_atomicrmw>` instruction with `fadd` and
