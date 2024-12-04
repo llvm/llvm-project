@@ -15,9 +15,8 @@
 .macro SAVE_ARG_REGISTERS
 	// Push return registers to stack
 	addi	sp, sp, -144
-	.cfi_def_cfa_offset 144
+        CFI_DEF_CFA_OFFSET(144)
         sd	ra, 136(sp)
-        .cfi_offset ra, -8
         sd	a7, 128(sp)
         sd	a6, 120(sp)
         sd	a5, 112(sp)
@@ -39,9 +38,8 @@
 .macro SAVE_RET_REGISTERS
 	// Push return registers to stack
         addi    sp, sp, -48
-        .cfi_def_cfa_offset 48
+        CFI_DEF_CFA_OFFSET(48)
         sd      ra, 40(sp)
-        .cfi_offset ra, -8
         sd      a1, 32(sp)
         sd      a0, 24(sp)
         fsd     fa1, 16(sp)
@@ -56,6 +54,7 @@
         ld      a1, 32(sp)
         ld      ra, 40(sp)
         addi    sp, sp, 48
+        CFI_DEF_CFA_OFFSET(0)
 .endm
 
 .macro RESTORE_ARG_REGISTERS
@@ -78,6 +77,7 @@
 	ld	a7, 128(sp)
 	ld	ra, 136(sp)
 	addi	sp, sp, 144
+        CFI_DEF_CFA_OFFSET(0)
 .endm
 
 .macro LOAD_XLEN, rd, src
