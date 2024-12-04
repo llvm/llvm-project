@@ -496,44 +496,43 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
                             getReservedNumSGPRs(F));
 }
 
-unsigned GCNSubtarget::getBaseMaxNumVGPRs(
-    const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
-  // Compute maximum number of VGPRs function can use using default/requested
-  // minimum number of waves per execution unit.
-  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
+unsigned
+GCNSubtarget::getBaseMaxNumVGPRs(const Function &F,
+                                 std::pair<unsigned, unsigned> NumVGPRBounds,
+                                 bool UnifiedRF) const {
+  const auto &[Min, Max] = NumVGPRBounds;
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
-    unsigned Requested =
-        F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
+  if (!F.hasFnAttribute("amdgpu-num-vgpr"))
+    return Max;
 
-    if (hasGFX90AInsts())
-      Requested *= 2;
+  unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
+  if (!Requested)
+    return Max;
+  if (UnifiedRF)
+    Requested *= 2;
 
-    // Make sure requested value is compatible with values implied by
-    // default/requested minimum/maximum number of waves per execution unit.
-    if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
-      Requested = 0;
-    if (WavesPerEU.second && Requested &&
-        Requested < getMinNumVGPRs(WavesPerEU.second))
-      Requested = 0;
-
-    if (Requested)
-      MaxNumVGPRs = Requested;
-  }
-
-  return MaxNumVGPRs;
+  // Make sure requested value is inside the range of possible VGPR usage.
+  return std::clamp(Requested, Min, Max);
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  return getBaseMaxNumVGPRs(F, getWavesPerEU(F));
+  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  return getBaseMaxNumVGPRs(
+      F, {getMinNumVGPRs(Waves.second), getMaxNumVGPRs(Waves.first)},
+      hasGFX90AInsts());
+}
+
+unsigned GCNSubtarget::getMaxNumArchVGPRs(const Function &F) const {
+  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  return getBaseMaxNumVGPRs(
+      F, {getMinNumArchVGPRs(Waves.second), getMaxNumArchVGPRs(Waves.first)},
+      false);
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
+  return getMaxNumVGPRs(MF.getFunction());
 }
 
 void GCNSubtarget::adjustSchedDependency(

@@ -318,13 +318,28 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
 
+/// Returns the minimum number of VGPRs that meets given number of waves per
+/// execution unit requirement for given subtarget \p STI with \p TotNumVGPRs
+/// VGPRs available and \p NumAddressableVGPRs addressable VGPRs.
+unsigned getBaseMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                            unsigned TotalNumVGPRs,
+                            unsigned NumAddressableVGPRs);
+
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 
+/// \returns Minimum number of ArchVGPRs that meets given number of waves per
+/// execution unit requirement for given subtarget \p STI.
+unsigned getMinNumArchVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
 unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+
+/// \returns Maximum number of ArchVGPRs that meets given number of waves per
+/// execution unit requirement for given subtarget \p STI.
+unsigned getMaxNumArchVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
