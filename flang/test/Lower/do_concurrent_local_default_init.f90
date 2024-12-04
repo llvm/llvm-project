@@ -21,7 +21,7 @@ subroutine test_default_init()
   integer :: i, res(4)
   type(t) :: a
   do concurrent (i=1:4) local(a)
-    res = a%i
+    res(i) = a%i
   end do
   call something(res)
 end subroutine

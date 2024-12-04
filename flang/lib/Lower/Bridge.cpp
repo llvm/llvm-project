@@ -710,8 +710,8 @@ public:
     return bool(shallowLookupSymbol(sym));
   }
 
-  bool createHostAssociateVarClone(
-      const Fortran::semantics::Symbol &sym) override final {
+  bool createHostAssociateVarClone(const Fortran::semantics::Symbol &sym,
+                                   bool skipDefaultInit) override final {
     mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
     const auto *details = sym.detailsIf<Fortran::semantics::HostAssocDetails>();
@@ -830,6 +830,8 @@ public:
           if_builder.end();
         },
         [&](const auto &) -> void {
+          if (skipDefaultInit)
+            return;
           // Initialize local/private derived types with default
           // initialization (Fortran 2023 section 11.1.7.5 and OpenMP 5.2
           // section 5.3). Pointer and allocatable components, when allowed,
@@ -1986,9 +1988,9 @@ private:
     Fortran::semantics::SemanticsContext &semanticsContext =
         bridge.getSemanticsContext();
     for (const Fortran::semantics::Symbol *sym : info.localSymList)
-      createHostAssociateVarClone(*sym);
+      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
     for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
-      createHostAssociateVarClone(*sym);
+      createHostAssociateVarClone(*sym, /*skipDefaultInit=*/true);
       const auto *hostDetails =
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
       assert(hostDetails && "missing locality spec host symbol");
