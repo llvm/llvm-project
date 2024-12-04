@@ -127,7 +127,8 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
     // HighPart members into the FILETIME structure.
     auto kernel_time_hns = cpp::bit_cast<ULARGE_INTEGER>(kernel_time);
     auto user_time_hns = cpp::bit_cast<ULARGE_INTEGER>(user_time);
-    auto total_time_hns = kernel_time_hns.QuadPart + user_time_hns.QuadPart;
+    unsigned long long total_time_hns =
+        kernel_time_hns.QuadPart + user_time_hns.QuadPart;
 
     if (LIBC_UNLIKELY(tv_sec > SEC_LIMIT)) {
       ret = cpp::unexpected(EOVERFLOW);
