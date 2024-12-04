@@ -125,7 +125,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
      << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
      << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
      << (Sym.isLive() ? "live" : "dead") << "  -   "
-     << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>");
+     << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>");
   return OS;
 }
 
