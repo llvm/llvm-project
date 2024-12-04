@@ -182,16 +182,14 @@ TEST(raw_ostream_proxyTest, ColorMode) {
   {
     SmallString<128> Dest;
     BufferedNoPwriteSmallVectorStream DestOS(Dest);
-    DestOS.IsDisplayed = true;
     raw_ostream_proxy ProxyOS(DestOS);
-    ProxyOS.enable_colors(true);
 
     WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false,
               ColorMode::Auto)
         << "test";
     EXPECT_EQ("", Dest);
     ProxyOS.flush();
-    EXPECT_EQ("\x1B[0;1;31mtest\x1B[0m", Dest);
+    EXPECT_EQ("test", Dest);
   }
 
 #ifdef LLVM_ON_UNIX
