@@ -4981,7 +4981,7 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
                            sizeof(ELFSymTy),
                            DynSymSection->sh_offset + Offset);
         },
-        [](StringRef) -> size_t { return 0; });;
+        [](StringRef) -> size_t { return 0; });
   }
 
   if (opts::RemoveSymtab)

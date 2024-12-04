@@ -1,22 +1,29 @@
 ## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced.
+## It invokes BOLT twice first testing CFG path, and second when function has to be disassembled.
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
 # RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt --no-threads %t.exe --icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
-# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf -debug -debug-only=bolt-icf \
+# RUN:        -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf \
+# RUN:        -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug -debug-only=bolt-icf \
+# RUN:        --skip-funcs=helper1Func,main -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECKNOCFG %s
 
 # ICFCHECK:      ICF iteration 1
 # ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
-# ICFCHECK-NEXT: folding barMulFunc into fooMulFunc
 # ICFCHECK-NEXT: folding barSubFunc into fooSubFunc
 
-# SAFEICFCHECK:      skipping function fooMulFunc
-# SAFEICFCHECK-NEXT: skipping function barMulFunc
-# SAFEICFCHECK-NEXT: skipping function barAddFunc
+# SAFEICFCHECK: skipping function barAddFunc
 # SAFEICFCHECK-NEXT: ICF iteration 1
 # SAFEICFCHECK-NEXT: folding barSubFunc into fooSubFunc
 # SAFEICFCHECK-NEXT: ===---------
+
+# SAFEICFCHECKNOCFG: skipping function barAddFunc
+# SAFEICFCHECKNOCFG-NEXT: ICF iteration 1
+# SAFEICFCHECKNOCFG-NEXT: folding barSubFunc into fooSubFunc
+# SAFEICFCHECKNOCFG-NEXT: ===---------
 
 ## clang++ -c main.cpp -o main.o
 ## extern int FooVar;
@@ -30,14 +37,6 @@
 ##   return a - b;
 ## }
 ## [[clang::noinline]]
-## int fooMul(int a, int b) {
-##   return a * b;
-## }
-## [[clang::noinline]]
-## int barMul(int a, int b) {
-##   return a * b;
-## }
-## [[clang::noinline]]
 ## int fooAdd(int a, int b) {
 ##   return a + b;
 ## }
@@ -45,109 +44,55 @@
 ## int barAdd(int a, int b) {
 ##   return a + b;
 ## }
-## [[clang::noinline]]
-## int helper1(int (*func)(int, int), int a, int b) {
-##   if (func == barAdd)
-##     return 1;
-##   return func(a, b) - 4;
-## }
-## [[clang::noinline]]
-## int helper2(int (*func)(int, int), int (*func2)(int, int), int a, int b) {
-##   if (func == func2)
-##     return 2;
-##   return func(a, b) + func2(a, b);
-## }
 ## int main(int argc, char **argv) {
 ##   int temp = helper1(barAdd, FooVar, BarVar) +
-##              helper2(fooMul, barMul, FooVar, BarVar) + fooSub(FooVar, BarVar) +
+##              fooSub(FooVar, BarVar) +
 ##              barSub(FooVar, BarVar) + fooAdd(FooVar, BarVar);
 ##   return temp;
 ## }
 	.globl	fooSubFunc
 	.type	fooSubFunc,@function
 fooSubFunc:
-	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
 	.size	fooSubFunc, .-fooSubFunc
-	.cfi_endproc
 
 	.globl	barSubFunc
 	.type	barSubFunc,@function
 barSubFunc:
-	.cfi_startproc
 	subl	-8(%rbp), %eax
 	retq
 	.size	barSubFunc, .-barSubFunc
-	.cfi_endproc
-
-	.globl	fooMulFunc
-	.type	fooMulFunc,@function
-fooMulFunc:
-	.cfi_startproc
-	imull	-8(%rbp), %eax
-	retq
-	.size	fooMulFunc, .-fooMulFunc
-	.cfi_endproc
-
-	.globl	barMulFunc
-	.type	barMulFunc,@function
-barMulFunc:
-	.cfi_startproc
-	imull	-8(%rbp), %eax
-	retq
-	.size	barMulFunc, .-barMulFunc
-	.cfi_endproc
 
 	.globl	fooAddFunc
 	.type	fooAddFunc,@function
 fooAddFunc:
-	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
 	.size	fooAddFunc, .-fooAddFunc
-	.cfi_endproc
 
 	.globl	barAddFunc
 	.type	barAddFunc,@function
 barAddFunc:
-	.cfi_startproc
 	addl	-8(%rbp), %eax
 	retq
 	.size	barAddFunc, .-barAddFunc
-	.cfi_endproc
 
 	.globl	helper1Func
 	.type	helper1Func,@function
 helper1Func:
-	.cfi_startproc
 	leaq	barAddFunc(%rip), %rax
 	cmpq	%rax, -16(%rbp)
 	retq
 	.size	helper1Func, .-helper1Func
-	.cfi_endproc
-
-	.globl	helper2Func
-	.type	helper2Func,@function
-helper2Func:
-	.cfi_startproc
-  # Operates on registers.
-	retq
-	.size	helper2Func, .-helper2Func
-	.cfi_endproc
 
 	.globl	main
 	.type	main,@function
 main:
-	.cfi_startproc
 	leaq	barAddFunc(%rip), %rdi
 	callq	helper1Func
-	leaq	fooMulFunc(%rip), %rdi
-	leaq	barMulFunc(%rip), %rsi
-	callq	helper2Func
 	callq	fooSubFunc
 	callq	barSubFunc
 	callq	fooAddFunc
 	retq
 	.size	main, .-main
-	.cfi_endproc

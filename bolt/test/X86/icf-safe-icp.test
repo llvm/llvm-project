@@ -92,42 +92,33 @@
 	.globl	_Z10createTypei
 	.type	_Z10createTypei,@function
 _Z10createTypei:
-	.cfi_startproc
 	callq	_Znwm@PLT
 	leaq	_ZTV8Derived2+16(%rip), %rcx
 	leaq	_ZTV8Derived3+16(%rip), %rdx
 	cmoveq	%rcx, %rdx
 	retq
 	.size	_Z10createTypei, .-_Z10createTypei
-	.cfi_endproc
-
 
 	.globl	_Z10returnFivev
 	.type	_Z10returnFivev,@function
 _Z10returnFivev:
-	.cfi_startproc
 	movl	$5, %eax
 	retq
 	.size	_Z10returnFivev, .-_Z10returnFivev
-	.cfi_endproc
 
 	.globl	returnFourOrFiveFunc
 	.type	returnFourOrFiveFunc,@function
 returnFourOrFiveFunc:
-	.cfi_startproc
 	xorl	%eax, %eax
 	cmpl	$1, %edi
 	sete	%al
 	xorl	$5, %eax
 	retq
 	.size	returnFourOrFiveFunc, .-returnFourOrFiveFunc
-	.cfi_endproc
-
 
 	.globl	main
 	.type	main,@function
 main:
-	.cfi_startproc
 	callq	returnFourOrFiveFunc@PLT
 	callq	_Z10returnFivev@PLT
 	callq	_Z10createTypei
@@ -137,56 +128,45 @@ main:
 	leaq	_ZNK8Derived34funcEii(%rip), %rcx
 	callq	_ZNK8Derived34funcEii
 	.size	main, .-main
-	.cfi_endproc
 
 	.section	.text.hot._ZNK8Derived24funcEii,"axG",@progbits,_ZNK8Derived24funcEii,comdat
 	.weak	_ZNK8Derived24funcEii
 	.type	_ZNK8Derived24funcEii,@function
 _ZNK8Derived24funcEii:                  #
-	.cfi_startproc
 	imull	%esi, %eax
 	retq
 	.size	_ZNK8Derived24funcEii, .-_ZNK8Derived24funcEii
-	.cfi_endproc
 
 	.section	.text.unlikely._ZN8Derived2D0Ev,"axG",@progbits,_ZN8Derived2D0Ev,comdat
 	.weak	_ZN8Derived2D0Ev
 	.type	_ZN8Derived2D0Ev,@function
 _ZN8Derived2D0Ev:
-	.cfi_startproc
 	movl	$16, %esi
 	jmp	_ZdlPvm@PLT
 	.size	_ZN8Derived2D0Ev, .-_ZN8Derived2D0Ev
-	.cfi_endproc
 
 	.section	.text.hot._ZNK8Derived34funcEii,"axG",@progbits,_ZNK8Derived34funcEii,comdat
 	.weak	_ZNK8Derived34funcEii
 	.type	_ZNK8Derived34funcEii,@function
 _ZNK8Derived34funcEii:
-	.cfi_startproc
 	imull	%esi, %eax
 	retq
 	.size	_ZNK8Derived34funcEii, .-_ZNK8Derived34funcEii
-	.cfi_endproc
 
 	.section	.text.unlikely._ZN4BaseD2Ev,"axG",@progbits,_ZN4BaseD2Ev,comdat
 	.weak	_ZN4BaseD2Ev
 	.type	_ZN4BaseD2Ev,@function
 _ZN4BaseD2Ev:
-	.cfi_startproc
 	retq
 	.size	_ZN4BaseD2Ev, .-_ZN4BaseD2Ev
-	.cfi_endproc
 
 	.section	.text.unlikely._ZN8Derived3D0Ev,"axG",@progbits,_ZN8Derived3D0Ev,comdat
 	.weak	_ZN8Derived3D0Ev
 	.type	_ZN8Derived3D0Ev,@function
 _ZN8Derived3D0Ev:
-	.cfi_startproc
 	movl	$16, %esi
 	jmp	_ZdlPvm@PLT
 	.size	_ZN8Derived3D0Ev, .-_ZN8Derived3D0Ev
-	.cfi_endproc
 
 	.type	_ZTV8Derived2,@object
 	.section	.data.rel.ro._ZTV8Derived2,"awG",@progbits,_ZTV8Derived2,comdat

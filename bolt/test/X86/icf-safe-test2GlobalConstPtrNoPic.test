@@ -17,130 +17,63 @@
 # SAFEICFCHECK-NEXT: ICF iteration 1
 # SAFEICFCHECK-NEXT: ===---------
 
-## clang++ main.cpp -c -o
+## clang++ main.cpp -c -o -fno-PIC
 ## Similar code gets generated for external reference function.
-## #define MY_CONST const
-## extern int FooVar;
-## extern int BarVar;
-## [[clang::noinline]]
-## MY_CONST int fooMul(int a, int b) {
-##   return a * b;
-## }
-## [[clang::noinline]]
-## MY_CONST int barMul(int a, int b) {
-##   return a * b;
-## }
-## [[clang::noinline]]
-## MY_CONST int fooAdd(int a, int b) {
-##   return a + b;
-## }
-## [[clang::noinline]]
-## MY_CONST int barAdd(int a, int b) {
-##   return a + b;
-## }
-## [[clang::noinline]]
-## MY_CONST int helper1(MY_CONST int (*func)(int, int), int a, int b) {
-##   if (func == barAdd)
-##     return 1;
-##   return func(a, b) - 4;
-## }
-## [[clang::noinline]]
-## MY_CONST int helper2(MY_CONST int (*func)(int, int), MY_CONST int (*func2)(int, int), int a, int b) {
-##   if (func == func2)
-##     return 2;
-##   return func(a, b) + func2(a, b);
-## }
-## MY_CONST static int (*MY_CONST funcGlobalBarAdd)(int, int) = barAdd;
-## MY_CONST int (*MY_CONST funcGlobalBarMul)(int, int) = barMul;
+## Other functions removed for brevity.
+## const static int (*const funcGlobalBarAdd)(int, int) = barAdd;
+## const int (*const funcGlobalBarMul)(int, int) = barMul;
 ## int main(int argc, char **argv) {
-##   int temp = helper1(funcGlobalBarAdd, FooVar, BarVar) +
-##              helper2(fooMul, funcGlobalBarMul, FooVar, BarVar)
-##              fooAdd(FooVar, BarVar);
-##   MY_PRINTF("val: %d", temp);
+##   int temp = helper1(funcGlobalBarAdd, FooVar, BarVar)
 ##   return temp;
 ## }
-## clang++ helper.cpp -c -o
-## #define MY_CONST const
-## int FooVar = 1;
-## int BarVar = 2;
 ## Manually modified to remove "extra" assembly.
 	.globl	fooMulFunc
 	.type	fooMulFunc,@function
 fooMulFunc:
-	.cfi_startproc
 	imull	-8(%rbp), %eax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
 	retq
 	.size	fooMulFunc, .-fooMulFunc
-	.cfi_endproc
 
 	.globl	barMulFunc
 	.type	barMulFunc,@function
 barMulFunc:
-	.cfi_startproc
 	imull	-8(%rbp), %eax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
 	retq
 	.size	barMulFunc, .-barMulFunc
-	.cfi_endproc
 
 	.globl	fooAddFunc
 	.type	fooAddFunc,@function
 fooAddFunc:
-	.cfi_startproc
 	addl	-8(%rbp), %eax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
 	retq
 	.size	fooAddFunc, .-fooAddFunc
-	.cfi_endproc
 
 	.globl	barAddFunc
 	.type	barAddFunc,@function
 barAddFunc:
-	.cfi_startproc
 	addl	-8(%rbp), %eax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
 	retq
 	.size	barAddFunc, .-barAddFunc
-	.cfi_endproc
 
-	.globl	_Z7helper1PFKiiiEii
-	.type	_Z7helper1PFKiiiEii,@function
-_Z7helper1PFKiiiEii:
-	.cfi_startproc
+	.globl	helperFunc
+	.type	helperFunc,@function
+helperFunc:
 	movabsq	$barAddFunc, %rax
 	cmpq	%rax, -16(%rbp)
 	retq
-	.size	_Z7helper1PFKiiiEii, .-_Z7helper1PFKiiiEii
-	.cfi_endproc
-
-	.globl	_Z7helper2PFKiiiES1_ii
-	.type	_Z7helper2PFKiiiES1_ii,@function
-_Z7helper2PFKiiiES1_ii:
-  .cfi_startproc
-  # no direct function references.
-	retq
-	.size	_Z7helper2PFKiiiES1_ii, .-_Z7helper2PFKiiiES1_ii
-	.cfi_endproc
+	.size	helperFunc, .-helperFunc
 
 	.globl	main
 	.type	main,@function
 main:
-	.cfi_startproc
 	movl	FooVar, %esi
 	movl	BarVar, %edx
 	movabsq	$barAddFunc, %rdi
-	callq	_Z7helper1PFKiiiEii
+	callq	helperFunc
 	movabsq	$fooMulFunc, %rdi
 	movabsq	$barMulFunc, %rsi
-	callq	_Z7helper2PFKiiiES1_ii
 	retq
 	.size	main, .-main
-	.cfi_endproc
 
 	.type	FooVar,@object
 	.data
