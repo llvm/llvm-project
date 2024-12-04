@@ -522,7 +522,10 @@ async def main() -> None:
     # Load the database and extract all files.
     with open(os.path.join(build_path, db_path)) as f:
         database = json.load(f)
-    files = {os.path.abspath(os.path.join(e["directory"], e["file"])) for e in database}
+    files = {
+        os.path.normpath(os.path.abspath(os.path.join(e["directory"], e["file"])))
+        for e in database
+    }
     number_files_in_database = len(files)
 
     # Filter source files from compilation database.
