@@ -2013,9 +2013,9 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     `implementation_attrs` is a string which is a backend and identifier specific
     set of attributes to the custom operator.
 
-    `inputs` is the set of tensor inputs to the custom operator.
+    `input_list` is the set of tensor inputs to the custom operator.
 
-    `outputs is the list of tensors returned by the operator. The number of operators
+    `output_list` is the list of tensors returned by the operator. The number of operators
     is backend specific.
 
     Example:
@@ -2031,11 +2031,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     StrAttr:$operator_name,
     StrAttr:$domain_name,
     StrAttr:$implementation_attrs,
-    Variadic<Tosa_Tensor>:$inputs
+    Variadic<Tosa_Tensor>:$input_list
   );
 
   let results = (outs
-    Variadic<Tosa_Tensor>:$outputs
+    Variadic<Tosa_Tensor>:$output_list
   );
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
