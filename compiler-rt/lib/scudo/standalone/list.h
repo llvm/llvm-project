@@ -61,10 +61,11 @@ public:
   using LinkTy = decltype(T::Next);
 
   LinkOp() = default;
-  LinkOp(T *BaseT, uptr BaseSize) : Base(BaseT), Size(BaseSize) {}
+  // TODO: Check if the `BaseSize` can fit in `Size`.
+  LinkOp(T *BaseT, uptr BaseSize)
+      : Base(BaseT), Size(static_cast<LinkTy>(BaseSize)) {}
   void init(T *LinkBase, uptr BaseSize) {
     Base = LinkBase;
-    // TODO: Check if the `BaseSize` can fit in `Size`.
     Size = static_cast<LinkTy>(BaseSize);
   }
   T *getBase() const { return Base; }
