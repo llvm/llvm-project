@@ -1206,8 +1206,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
       CT = CT_Dependent;
     } else {
       const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
+      CT = canCalleeThrow(*this, DE, OperatorDelete);
       if (!OperatorDelete->isDestroyingOperatorDelete()) {
-        CT = canCalleeThrow(*this, DE, OperatorDelete);
         if (const RecordType *RT = DTy->getAs<RecordType>()) {
           const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
           const CXXDestructorDecl *DD = RD->getDestructor();

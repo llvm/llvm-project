@@ -19,3 +19,15 @@ struct Explicit {
 Explicit *qn = nullptr;
 // This assertion used to fail, see GH118660
 static_assert(noexcept(delete(qn)));
+
+struct ThrowingDestroyingDelete {
+    ~ThrowingDestroyingDelete() noexcept(false) {}
+
+    void operator delete(ThrowingDestroyingDelete*, std::destroying_delete_t) noexcept(false) {
+    }
+};
+
+ThrowingDestroyingDelete *pn = nullptr;
+// noexcept should return false here because the destroying delete itself is a
+// potentially throwing function.
+static_assert(!noexcept(delete(pn)));
