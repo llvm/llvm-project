@@ -3266,10 +3266,11 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
       FormattingOff = false;
 
     bool IsBlockComment = false;
+    ClangFormatDirective CFD = parseClangFormatDirective(Trimmed);
 
-    if (isClangFormatOff(Trimmed)) {
+    if (CFD == ClangFormatDirective::Off) {
       FormattingOff = true;
-    } else if (isClangFormatOn(Trimmed)) {
+    } else if (CFD == ClangFormatDirective::On) {
       FormattingOff = false;
     } else if (Trimmed.starts_with("/*")) {
       IsBlockComment = true;
@@ -3452,9 +3453,10 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
         Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
 
     StringRef Trimmed = Line.trim();
-    if (isClangFormatOff(Trimmed))
+    ClangFormatDirective CFD = parseClangFormatDirective(Trimmed);
+    if (CFD == ClangFormatDirective::Off)
       FormattingOff = true;
-    else if (isClangFormatOn(Trimmed))
+    else if (CFD == ClangFormatDirective::On)
       FormattingOff = false;
 
     if (ImportRegex.match(Line, &Matches)) {
@@ -4190,24 +4192,45 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   return FallbackStyle;
 }
 
-static bool isClangFormatOnOff(StringRef Comment, bool On) {
-  if (Comment == (On ? "/* clang-format on */" : "/* clang-format off */"))
-    return true;
-
-  static const char ClangFormatOn[] = "// clang-format on";
-  static const char ClangFormatOff[] = "// clang-format off";
-  const unsigned Size = (On ? sizeof ClangFormatOn : sizeof ClangFormatOff) - 1;
-
-  return Comment.starts_with(On ? ClangFormatOn : ClangFormatOff) &&
-         (Comment.size() == Size || Comment[Size] == ':');
+static unsigned skipWhitespace(unsigned Pos, StringRef Str, unsigned Length) {
+  while (Pos < Length && isspace(Str[Pos]))
+    ++Pos;
+  return Pos;
 }
 
-bool isClangFormatOn(StringRef Comment) {
-  return isClangFormatOnOff(Comment, /*On=*/true);
-}
+ClangFormatDirective parseClangFormatDirective(StringRef Comment) {
+  size_t Pos = std::min(Comment.find("/*"), Comment.find("//"));
+  unsigned Length = Comment.size();
+  if (Pos == StringRef::npos)
+    return ClangFormatDirective::None;
 
-bool isClangFormatOff(StringRef Comment) {
-  return isClangFormatOnOff(Comment, /*On=*/false);
+  Pos = skipWhitespace(Pos + 2, Comment, Length);
+  StringRef ClangFormatDirectiveName = "clang-format";
+
+  if (Comment.substr(Pos, ClangFormatDirectiveName.size()) ==
+      ClangFormatDirectiveName) {
+    Pos =
+        skipWhitespace(Pos + ClangFormatDirectiveName.size(), Comment, Length);
+
+    unsigned EndDirectiveValuePos = Pos;
+    while (EndDirectiveValuePos < Length) {
+      char Char = Comment[EndDirectiveValuePos];
+      if (isspace(Char) || Char == '*' || Char == ':')
+        break;
+
+      ++EndDirectiveValuePos;
+    }
+
+    return llvm::StringSwitch<ClangFormatDirective>(
+               Comment.substr(Pos, EndDirectiveValuePos - Pos))
+        .Case("off", ClangFormatDirective::Off)
+        .Case("on", ClangFormatDirective::On)
+        .Case("off-line", ClangFormatDirective::OffLine)
+        .Case("off-next-line", ClangFormatDirective::OffNextLine)
+        .Default(ClangFormatDirective::None);
+  }
+
+  return ClangFormatDirective::None;
 }
 
 } // namespace format

@@ -93,9 +93,9 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
     auto Location = Tok.getLocation();
     auto Text = StringRef(SourceMgr.getCharacterData(Location), Length);
     if (Tok.is(tok::comment)) {
-      if (isClangFormatOff(Text))
+      if (parseClangFormatDirective(Text) == ClangFormatDirective::Off)
         Skip = true;
-      else if (isClangFormatOn(Text))
+      else if (parseClangFormatDirective(Text) == ClangFormatDirective::On)
         Skip = false;
       continue;
     }

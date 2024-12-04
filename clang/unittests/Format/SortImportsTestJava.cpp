@@ -235,6 +235,15 @@ TEST_F(SortImportsTestJava, FormatTotallyOn) {
                  "import org.a;"));
 }
 
+TEST_F(SortImportsTestJava, DisableLine) {
+  EXPECT_EQ("// clang-format on\n"
+            "import org.a;\n"
+            "import org.b;",
+            sort("// clang-format on\n"
+                 "import org.b;\n"
+                 "import org.a;"));
+}
+
 TEST_F(SortImportsTestJava, FormatPariallyOnShouldNotReorder) {
   EXPECT_EQ("// clang-format off\n"
             "import org.b;\n"

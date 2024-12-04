@@ -28273,6 +28273,59 @@ TEST_F(FormatTest, KeepFormFeed) {
                Style);
 }
 
+TEST_F(FormatTest, DisableLine) {
+  verifyFormat("int  a  =  1; // clang-format off-line\n"
+               "int b = 1;",
+               "int  a  =  1; // clang-format off-line\n"
+               "int  b  =  1;");
+
+  verifyFormat("int a = 1;\n"
+               "int  b  =  1; // clang-format off-line\n"
+               "int c = 1;",
+               "int  a  =  1;\n"
+               "int  b  =  1; // clang-format off-line\n"
+               "int  c  =  1;");
+
+  verifyFormat("int  a  =  1; /* clang-format off-line */\n"
+               "int b = 1;",
+               "int  a  =  1; /* clang-format off-line */\n"
+               "int  b  =  1;");
+
+  verifyFormat("int a = 1;\n"
+               "int  b  =  1; /* clang-format off-line */\n"
+               "int c = 1;",
+               "int  a  =  1;\n"
+               "int  b  =  1; /* clang-format off-line */\n"
+               "int  c  =  1;");
+}
+
+TEST_F(FormatTest, DisableNextLine) {
+  verifyFormat("// clang-format off-next-line\n"
+               "int  a  =  1;\n"
+               "int b = 1;",
+               "// clang-format off-next-line\n"
+               "int  a  =  1;\n"
+               "int  b  =  1;");
+
+  verifyFormat("// clang-format off-next-line\n"
+               "\n"
+               "\n"
+               "int  a  =  1;\n"
+               "int b = 1;",
+               "// clang-format off-next-line\n"
+               "\n"
+               "\n"
+               "int  a  =  1;\n"
+               "int  b  =  1;");
+
+  verifyFormat("/* clang-format off-next-line */\n"
+               "int  a  =  1;\n"
+               "int b = 1;",
+               "/* clang-format off-next-line */\n"
+               "int  a  =  1;\n"
+               "int  b  =  1;");
+}
+
 } // namespace
 } // namespace test
 } // namespace format

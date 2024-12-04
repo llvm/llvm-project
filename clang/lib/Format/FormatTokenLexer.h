@@ -32,6 +32,12 @@ enum LexerState {
   TOKEN_STASHED,
 };
 
+enum class FormatDisableState {
+  None,
+  SingleLine,
+  Range,
+};
+
 class FormatTokenLexer {
 public:
   FormatTokenLexer(const SourceManager &SourceMgr, FileID ID, unsigned Column,
@@ -131,7 +137,7 @@ private:
 
   llvm::SmallPtrSet<IdentifierInfo *, 8> TemplateNames, TypeNames;
 
-  bool FormattingDisabled;
+  FormatDisableState FDS;
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;

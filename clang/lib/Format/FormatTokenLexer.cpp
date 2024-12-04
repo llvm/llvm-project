@@ -32,7 +32,8 @@ FormatTokenLexer::FormatTokenLexer(
       LangOpts(getFormattingLangOpts(Style)), SourceMgr(SourceMgr), ID(ID),
       Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
-      FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
+      FDS(FormatDisableState::None),
+      MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
@@ -82,7 +83,23 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
   assert(Tokens.empty());
   assert(FirstInLineIndex == 0);
   do {
-    Tokens.push_back(getNextToken());
+    FormatToken *NextToken = getNextToken();
+
+    if (FDS == FormatDisableState::None && NextToken->is(tok::comment) &&
+        parseClangFormatDirective(NextToken->TokenText) ==
+            ClangFormatDirective::OffLine) {
+      for (unsigned i = FirstInLineIndex; i < Tokens.size(); ++i)
+        Tokens[i]->Finalized = true;
+    }
+
+    if (Tokens.size() >= 1 && Tokens.back()->isNot(tok::comment) &&
+        FDS == FormatDisableState::SingleLine &&
+        (NextToken->NewlinesBefore > 0 || NextToken->IsMultiline)) {
+      FDS = FormatDisableState::None;
+    }
+
+    Tokens.push_back(NextToken);
+
     if (Style.isJavaScript()) {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
@@ -1450,13 +1467,21 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   if ((Style.isJavaScript() || Style.isProto()) && Tok.is(tok::char_constant))
     Tok.Tok.setKind(tok::string_literal);
 
-  if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
-    FormattingDisabled = false;
+  if (Tok.is(tok::comment) &&
+      parseClangFormatDirective(Tok.TokenText) == ClangFormatDirective::On) {
+    FDS = FormatDisableState::None;
+  }
 
-  Tok.Finalized = FormattingDisabled;
+  Tok.Finalized = FDS != FormatDisableState::None;
 
-  if (Tok.is(tok::comment) && isClangFormatOff(Tok.TokenText))
-    FormattingDisabled = true;
+  if (Tok.is(tok::comment)) {
+    ClangFormatDirective FSD = parseClangFormatDirective(Tok.TokenText);
+    if (FSD == ClangFormatDirective::Off)
+      FDS = FormatDisableState::Range;
+
+    if (FSD == ClangFormatDirective::OffNextLine)
+      FDS = FormatDisableState::SingleLine;
+  }
 }
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {

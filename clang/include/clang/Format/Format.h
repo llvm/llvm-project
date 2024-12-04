@@ -5620,8 +5620,15 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
   }
 }
 
-bool isClangFormatOn(StringRef Comment);
-bool isClangFormatOff(StringRef Comment);
+enum class ClangFormatDirective {
+  None,
+  Off,
+  On,
+  OffLine,
+  OffNextLine,
+};
+
+ClangFormatDirective parseClangFormatDirective(StringRef Comment);
 
 } // end namespace format
 } // end namespace clang
