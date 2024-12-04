@@ -286,8 +286,8 @@ void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
 // is represented only by {{& variable}}.
 SmallVector<Token> tokenize(StringRef Template) {
   SmallVector<Token> Tokens;
-  StringRef Open("{{");
-  StringRef Close("}}");
+  const StringRef Open("{{");
+  const StringRef Close("}}");
   size_t Start = 0;
   size_t DelimiterStart = Template.find(Open);
   if (DelimiterStart == StringRef::npos) {
