@@ -130,11 +130,6 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
     unsigned long long total_time_hns =
         kernel_time_hns.QuadPart + user_time_hns.QuadPart;
 
-    if (LIBC_UNLIKELY(tv_sec > SEC_LIMIT)) {
-      ret = cpp::unexpected(EOVERFLOW);
-      break;
-    }
-
     unsigned long long tv_sec = total_time_hns / HNS_PER_SEC;
     unsigned long long tv_nsec = (total_time_hns % HNS_PER_SEC) * 100ULL;
 
