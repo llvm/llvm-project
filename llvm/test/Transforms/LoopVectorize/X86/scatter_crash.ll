@@ -183,7 +183,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[DOTSPLAT68:%.*]] = shufflevector <8 x i64> [[DOTSPLATINSERT67]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION69:%.*]] = add <8 x i64> [[DOTSPLAT68]], <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY51:%.*]]
-; CHECK:       vec.epilog.vector.body51:
+; CHECK:       vec.epilog.vector.body57:
 ; CHECK-NEXT:    [[INDEX61:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL51]], [[VEC_EPILOG_PH42]] ], [ [[INDEX_NEXT74:%.*]], [[VEC_EPILOG_VECTOR_BODY51]] ]
 ; CHECK-NEXT:    [[VEC_IND65:%.*]] = phi <8 x i64> [ [[INDUCTION64]], [[VEC_EPILOG_PH42]] ], [ [[VEC_IND_NEXT66:%.*]], [[VEC_EPILOG_VECTOR_BODY51]] ]
 ; CHECK-NEXT:    [[VEC_IND70:%.*]] = phi <8 x i64> [ [[INDUCTION69]], [[VEC_EPILOG_PH42]] ], [ [[VEC_IND_NEXT71:%.*]], [[VEC_EPILOG_VECTOR_BODY51]] ]

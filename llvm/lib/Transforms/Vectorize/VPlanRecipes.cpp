@@ -1751,47 +1751,72 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
                            : ConstantFP::get(Ty, C);
 }
 
-void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
+void VPWidenIntOrFpInductionInitialRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Int or FP induction being replicated.");
 
-  Value *Start = getStartValue()->getLiveInIRValue();
-  const InductionDescriptor &ID = getInductionDescriptor();
-  TruncInst *Trunc = getTruncInst();
+  Value *Start = State.get(getStartValue(), true);
   IRBuilderBase &Builder = State.Builder;
-  assert(getPHINode()->getType() == ID.getStartValue()->getType() &&
-         "Types must match");
   assert(State.VF.isVector() && "must have vector VF");
-
-  // The value from the original loop to which we are mapping the new induction
-  // variable.
-  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : getPHINode();
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
+  if (isa_and_nonnull<FPMathOperator>(ID.getInductionBinOp()))
     Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
 
   // Now do the actual transformations, and start with fetching the step value.
   Value *Step = State.get(getStepValue(), VPLane(0));
 
-  assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
-         "Expected either an induction phi-node or a truncate of it!");
-
-  // Construct the initial value of the vector IV in the vector loop preheader
-  auto CurrIP = Builder.saveIP();
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Builder.SetInsertPoint(VectorPH->getTerminator());
-  if (isa<TruncInst>(EntryVal)) {
-    assert(Start->getType()->isIntegerTy() &&
-           "Truncation requires an integer type");
-    auto *TruncType = cast<IntegerType>(EntryVal->getType());
-    Step = Builder.CreateTrunc(Step, TruncType);
-    Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
-  }
-
+  // Construct the initial value of the vector IV
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
   Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
                                       State.VF, State.Builder);
+  State.set(this, SteppedStart);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenIntOrFpInductionInitialRecipe::print(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = WIDEN-INDUCTION-START ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPWidenIntOrFpInductionPHIRecipe::execute(VPTransformState &State) {
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+
+  Value *Start = State.get(getOperand(0));
+  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, "vec.ind");
+  Phi->addIncoming(Start, VectorPH);
+  Phi->setDebugLoc(IV->getDebugLoc());
+  State.set(this, Phi);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenIntOrFpInductionPHIRecipe::print(raw_ostream &O,
+                                             const Twine &Indent,
+                                             VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = WIDEN-INDUCTION-PHI ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPWidenIntOrFpInductionBackedgeRecipe::execute(VPTransformState &State) {
+  IRBuilderBase &Builder = State.Builder;
+
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  if (isa_and_nonnull<FPMathOperator>(ID.getInductionBinOp()))
+    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
+
+  Value *Step = State.get(getStepValue(), VPLane(0));
+
+  auto CurrIP = Builder.saveIP();
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  Builder.SetInsertPoint(VectorPH->getTerminator());
 
   // We create vector phi nodes for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -1826,28 +1851,26 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   }
 
   Builder.restoreIP(CurrIP);
-
-  // We may need to add the step a number of times, depending on the unroll
-  // factor. The last of those goes into the PHI.
-  PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind");
-  VecInd->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
-  VecInd->setDebugLoc(getDebugLoc());
-  State.set(this, VecInd);
+  Value *PrevVal = State.get(getPrevValue());
 
   Instruction *LastInduction = cast<Instruction>(
-      Builder.CreateBinOp(AddOp, VecInd, SplatVF, "vec.ind.next"));
-  if (isa<TruncInst>(EntryVal))
-    State.addMetadata(LastInduction, EntryVal);
-  LastInduction->setDebugLoc(getDebugLoc());
+      Builder.CreateBinOp(AddOp, PrevVal, SplatVF, "vec.ind.next"));
+  if (isa<TruncInst>(IV))
+    State.addMetadata(LastInduction, IV);
+  LastInduction->setDebugLoc(IV->getDebugLoc());
 
-  VecInd->addIncoming(SteppedStart, VectorPH);
-  // Add induction update using an incorrect block temporarily. The phi node
-  // will be fixed after VPlan execution. Note that at this point the latch
-  // block cannot be used, as it does not exist yet.
-  // TODO: Model increment value in VPlan, by turning the recipe into a
-  // multi-def and a subclass of VPHeaderPHIRecipe.
-  VecInd->addIncoming(LastInduction, VectorPH);
+  State.set(this, LastInduction);
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenIntOrFpInductionBackedgeRecipe::print(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = WIDEN-INDUCTION-INC ";
+  printOperands(O, SlotTracker);
+}
+#endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,

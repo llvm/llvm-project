@@ -608,8 +608,8 @@ define void @pr70590_recipe_without_underlying_instr(i64 %n, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr %dst, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 true, label %middle.block, label %vector.body
 ; CHECK:       middle.block:
 

@@ -2013,10 +2013,89 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
+/// Expand a VPWidenIntOrFpInduction into separate recipes for the initial
+/// value, phi and backedge value. In the followng example:
+///
+///  vector.ph:
+///  Successor(s): vector loop
+///
+///  <x1> vector loop: {
+///    vector.body:
+///      WIDEN-INDUCTION %i = phi %bc.resume.val, %i.next, ir<1>, ir<%5>
+///      ...
+///      EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+///    No successors
+///  }
+///
+/// WIDEN-INDUCTION will get expanded to:
+///
+///  vector.ph:
+///    vp<%0> = WIDEN-INDUCTION-START ir<0>, ir<1>
+///  Successor(s): vector loop
+///
+///  <x1> vector loop: {
+///    vector.body:
+///      ir<%i> = WIDEN-INDUCTION-PHI vp<%0>, vp<%4>
+///      ...
+///      vp<%4> = WIDEN-INDUCTION-INC ir<1>, ir<%5>, ir<%i>
+///      EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+///    No successors
+///  }
+static void
+expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
+  VPlan *Plan = WidenIVR->getParent()->getPlan();
+  VPValue *Start = WidenIVR->getStartValue();
+  VPValue *Step = WidenIVR->getStepValue();
+  VPValue *VF = WidenIVR->getVFValue();
+  const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
+  TruncInst *Trunc = WidenIVR->getTruncInst();
+  DebugLoc DL = WidenIVR->getDebugLoc();
+
+  // The value from the original loop to which we are mapping the new induction
+  // variable.
+  Instruction *IV = Trunc ? cast<Instruction>(Trunc) : WidenIVR->getPHINode();
+
+  // If the phi is truncated, truncate the start and step values.
+  VPBuilder Builder(Plan->getVectorPreheader());
+  if (isa<TruncInst>(IV)) {
+    assert(Start->getUnderlyingValue()->getType()->isIntegerTy() &&
+           "Truncation requires an integer type");
+    auto *TruncType = cast<IntegerType>(IV->getType());
+    Step = Builder.createScalarCast(Instruction::Trunc, Step, TruncType, DL);
+    Start = Builder.createScalarCast(Instruction::Trunc, Start, TruncType, DL);
+  }
+
+  // Construct the initial value of the vector IV in the vector loop preheader.
+  auto *StartR = new VPWidenIntOrFpInductionInitialRecipe(IV, Start, Step, ID);
+  Plan->getVectorPreheader()->insert(StartR, Builder.getInsertPoint());
+
+  // Create the widened phi of the vector IV.
+  auto *PhiR = new VPWidenIntOrFpInductionPHIRecipe(IV, StartR);
+  PhiR->insertBefore(WidenIVR);
+
+  // Create the backedge value for the vector IV.
+  VPValue *Prev = PhiR;
+  // If unrolled, use the last unrolled part in the increment.
+  if (auto *UnrolledPart = WidenIVR->getLastUnrolledPartOperand())
+    Prev = UnrolledPart;
+  auto *IncR = new VPWidenIntOrFpInductionBackedgeRecipe(
+      IV, Step, VF, Prev, WidenIVR->getSplatVFValue(), ID);
+  VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
+  ExitingBB->insert(IncR, ExitingBB->getTerminator()->getIterator());
+  PhiR->addOperand(IncR);
+
+  WidenIVR->replaceAllUsesWith(PhiR);
+  WidenIVR->eraseFromParent();
+}
+
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
+      if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+        expandVPWidenIntOrFpInduction(WidenIVR);
+        continue;
+      }
       if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
         continue;
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);

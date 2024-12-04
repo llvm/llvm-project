@@ -1749,7 +1749,9 @@ public:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector values.
+/// producing their vector values. This won't execute any LLVM IR and will get
+/// expanded later into VPWidenIntOrFpInitialRecipe, VPWidenIntOrFpPHIRecipe and
+/// VPWidenIntOrFpBackedgeRecipe.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
@@ -1782,9 +1784,10 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
 
-  /// Generate the vectorized and scalarized versions of the phi node as
-  /// needed by their users.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be expanded via "
+                     "expandVPWidenIntOrFpInductionRecipe");
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1817,10 +1820,152 @@ public:
   }
 
   /// Returns the VPValue representing the value of this induction at
-  /// the last unrolled part, if it exists. Returns itself if unrolling did not
+  /// the last unrolled part, if it exists. Returns nullptr if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return getNumOperands() == 5 ? getOperand(4) : this;
+    return getNumOperands() == 5 ? getOperand(4) : nullptr;
+  }
+};
+
+/// A recipe to compute the initial value for a widened IV, expanded from
+/// VPWidenIntOrFpInductionRecipe.
+class VPWidenIntOrFpInductionInitialRecipe : public VPSingleDefRecipe {
+  Instruction *IV;
+  const InductionDescriptor &ID;
+
+public:
+  VPWidenIntOrFpInductionInitialRecipe(Instruction *IV, VPValue *Start,
+                                       VPValue *Step,
+                                       const InductionDescriptor &ID)
+      : VPSingleDefRecipe(VPDef::VPWidenIntOrFpInductionStartSC, {Start, Step}),
+        IV(IV), ID(ID) {
+    assert((isa<PHINode>(IV) || isa<TruncInst>(IV)) &&
+           "Expected either an induction phi-node or a truncate of it!");
+  }
+
+  ~VPWidenIntOrFpInductionInitialRecipe() override = default;
+
+  VPWidenIntOrFpInductionInitialRecipe *clone() override {
+    return new VPWidenIntOrFpInductionInitialRecipe(IV, getOperand(0),
+                                                    getOperand(1), ID);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionStartSC)
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VPValue *getStartValue() { return getOperand(0); }
+  const VPValue *getStartValue() const { return getOperand(0); }
+
+  VPValue *getStepValue() { return getOperand(1); }
+  const VPValue *getStepValue() const { return getOperand(1); }
+
+  /// Returns the scalar type of the induction.
+  Type *getScalarType() const { return IV->getType(); }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+};
+
+/// A recipe to generate the PHI of a widened IV, expanded from
+/// VPWidenIntOrFpInductionRecipe.
+class VPWidenIntOrFpInductionPHIRecipe : public VPHeaderPHIRecipe {
+  Instruction *IV;
+
+public:
+  VPWidenIntOrFpInductionPHIRecipe(Instruction *IV, VPValue *Start)
+      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionPHISC, IV, Start),
+        IV(IV) {
+    assert((isa<PHINode>(IV) || isa<TruncInst>(IV)) &&
+           "Expected either an induction phi-node or a truncate of it!");
+  }
+
+  ~VPWidenIntOrFpInductionPHIRecipe() override = default;
+
+  VPWidenIntOrFpInductionPHIRecipe *clone() override {
+    auto *R = new VPWidenIntOrFpInductionPHIRecipe(IV, getOperand(0));
+    R->addOperand(getBackedgeValue());
+    return R;
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionPHISC)
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe to compute the backedge value for a widened IV, expanded from
+/// VPWidenIntOrFpInductionRecipe.
+class VPWidenIntOrFpInductionBackedgeRecipe : public VPSingleDefRecipe {
+  Instruction *IV;
+  const InductionDescriptor &ID;
+
+public:
+  VPWidenIntOrFpInductionBackedgeRecipe(Instruction *IV, VPValue *Step,
+                                        VPValue *VF, VPValue *Prev,
+                                        VPValue *SplatVF,
+                                        const InductionDescriptor &ID)
+      : VPSingleDefRecipe(VPDef::VPWidenIntOrFpInductionSC, {Step, VF, Prev}),
+        IV(IV), ID(ID) {
+    assert((isa<PHINode>(IV) || isa<TruncInst>(IV)) &&
+           "Expected either an induction phi-node or a truncate of it!");
+    if (SplatVF)
+      addOperand(SplatVF);
+  }
+
+  ~VPWidenIntOrFpInductionBackedgeRecipe() override = default;
+
+  VPWidenIntOrFpInductionBackedgeRecipe *clone() override {
+    return new VPWidenIntOrFpInductionBackedgeRecipe(
+        IV, getOperand(0), getOperand(1), getOperand(2), getOperand(3), ID);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionIncSC)
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VPValue *getStepValue() { return getOperand(0); }
+  const VPValue *getStepValue() const { return getOperand(0); }
+
+  VPValue *getVFValue() { return getOperand(1); }
+  const VPValue *getVFValue() const { return getOperand(1); }
+
+  VPValue *getPrevValue() { return getOperand(2); }
+  const VPValue *getPrevValue() const { return getOperand(2); }
+
+  VPValue *getSplatVFValue() {
+    // If the recipe has been unrolled (4 operands), return the VPValue for the
+    // induction increment.
+    return getNumOperands() == 4 ? getOperand(3) : nullptr;
+  }
+
+  /// Returns the scalar type of the induction.
+  Type *getScalarType() const { return IV->getType(); }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getOperand(0) || Op == getOperand(1);
   }
 };
 
