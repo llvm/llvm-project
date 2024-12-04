@@ -2147,8 +2147,8 @@ std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
   for (SDValue Op : Ops) {
     Entry.Node = Op;
     Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Entry.IsSExt = shouldSignExtendTypeInLibCall(Op.getValueType(), IsSigned);
-    Entry.IsZExt = !shouldSignExtendTypeInLibCall(Op.getValueType(), IsSigned);
+    Entry.IsSExt = shouldSignExtendTypeInLibCall(Entry.Ty, IsSigned);
+    Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }
 
@@ -2157,7 +2157,7 @@ std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
-  bool SignExtend = shouldSignExtendTypeInLibCall(RetVT, IsSigned);
+  bool SignExtend = shouldSignExtendTypeInLibCall(RetTy, IsSigned);
   CLI.setDebugLoc(DL)
       .setChain(Chain)
       .setCallee(CallConv, RetTy, Callee, std::move(Args))
