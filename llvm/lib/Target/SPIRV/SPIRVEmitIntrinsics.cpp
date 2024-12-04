@@ -209,6 +209,8 @@ class SPIRVEmitIntrinsics
   void replaceAllUsesWithAndErase(IRBuilder<> &B, Instruction *Src,
                                   Instruction *Dest, bool DeleteOld = true);
 
+  void applyDemangledPtrArgTypes(IRBuilder<> &B);
+
   bool runOnFunction(Function &F);
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
@@ -2156,6 +2158,53 @@ bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
   return true;
 }
 
+// Apply types parsed from demangled function declarations.
+void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
+  for (auto It : FDeclPtrTys) {
+    Function *F = It.first;
+    for (auto *U : F->users()) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != F)
+        continue;
+      unsigned Sz = CI->arg_size();
+      for (auto [Idx, ElemTy] : It.second) {
+        if (Idx >= Sz)
+          continue;
+        Value *Param = CI->getArgOperand(Idx);
+        if (GR->findDeducedElementType(Param) || isa<GlobalValue>(Param))
+          continue;
+        if (Argument *Arg = dyn_cast<Argument>(Param)) {
+          if (!hasPointeeTypeAttr(Arg)) {
+            B.SetInsertPointPastAllocas(Arg->getParent());
+            B.SetCurrentDebugLocation(DebugLoc());
+            buildAssignPtr(B, ElemTy, Arg);
+          }
+        } else if (isa<Instruction>(Param)) {
+          GR->addDeducedElementType(Param, ElemTy);
+          // insertAssignTypeIntrs() will complete buildAssignPtr()
+        } else {
+          B.SetInsertPoint(CI->getParent()
+                               ->getParent()
+                               ->getEntryBlock()
+                               .getFirstNonPHIOrDbgOrAlloca());
+          buildAssignPtr(B, ElemTy, Param);
+        }
+        CallInst *Ref = dyn_cast<CallInst>(Param);
+        if (!Ref)
+          continue;
+        Function *RefF = Ref->getCalledFunction();
+        if (!RefF || !isPointerTy(RefF->getReturnType()) ||
+            GR->findDeducedElementType(RefF))
+          continue;
+        GR->addDeducedElementType(RefF, ElemTy);
+        GR->addReturnType(
+            RefF, TypedPointerType::get(
+                      ElemTy, getPointerAddressSpace(RefF->getReturnType())));
+      }
+    }
+  }
+}
+
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
@@ -2198,33 +2247,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : instructions(Func))
     Worklist.push_back(&I);
 
-  // Apply types parsed from demangled function declarations.
-  for (auto It : FDeclPtrTys) {
-    Function *F = It.first;
-    for (auto *U : F->users()) {
-      CallInst *CI = dyn_cast<CallInst>(U);
-      if (!CI || CI->getCalledFunction() != F)
-        continue;
-      unsigned Sz = CI->arg_size();
-      for (auto [Idx, ElemTy] : It.second) {
-        if (Idx >= Sz)
-          continue;
-        Value *Arg = CI->getArgOperand(Idx);
-        GR->addDeducedElementType(Arg, ElemTy);
-        CallInst *Ref = dyn_cast<CallInst>(Arg);
-        if (!Ref)
-          continue;
-        Function *RefF = Ref->getCalledFunction();
-        if (!RefF || !isPointerTy(RefF->getReturnType()) ||
-            GR->findDeducedElementType(RefF))
-          continue;
-        GR->addDeducedElementType(RefF, ElemTy);
-        GR->addReturnType(
-            RefF, TypedPointerType::get(
-                      ElemTy, getPointerAddressSpace(RefF->getReturnType())));
-      }
-    }
-  }
+  applyDemangledPtrArgTypes(B);
 
   // Pass forward: use operand to deduce instructions result.
   for (auto &I : Worklist) {
@@ -2344,9 +2367,11 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
       continue;
     // find pointer arguments
     SmallVector<unsigned> Idxs;
-    for (unsigned OpIdx = 0; OpIdx < F.arg_size(); ++OpIdx)
-      if (isPointerTy(F.getArg(OpIdx)->getType()))
+    for (unsigned OpIdx = 0; OpIdx < F.arg_size(); ++OpIdx) {
+      Argument *Arg = F.getArg(OpIdx);
+      if (isPointerTy(Arg->getType()) && !hasPointeeTypeAttr(Arg))
         Idxs.push_back(OpIdx);
+    }
     if (!Idxs.size())
       continue;
     // parse function arguments
@@ -2361,7 +2386,9 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
         continue;
       if (Type *ElemTy =
               SPIRV::parseBuiltinCallArgumentType(TypeStrs[Idx].trim(), Ctx))
-        FDeclPtrTys[&F].push_back(std::make_pair(Idx, ElemTy));
+        if (TypedPointerType::isValidElementType(ElemTy) &&
+            !ElemTy->isTargetExtTy())
+          FDeclPtrTys[&F].push_back(std::make_pair(Idx, ElemTy));
     }
   }
 }
