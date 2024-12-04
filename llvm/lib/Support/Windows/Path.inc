@@ -1387,29 +1387,31 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   Path16.push_back(0);
   Path16.push_back(0);
 
-  HRESULT HR = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+  HRESULT HR =
+      CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
   if (SUCCEEDED(HR)) {
-    IFileOperation *FileOp;
+    IFileOperation *FileOp = NULL;
     HR = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL,
                           IID_PPV_ARGS(&FileOp));
     if (SUCCEEDED(HR)) {
       HR = FileOp->SetOperationFlags(FOF_NO_UI | FOFX_NOCOPYHOOKS);
       if (SUCCEEDED(HR)) {
+        PIDLIST_ABSOLUTE PIDL = ILCreateFromPathW(Path16.data());
         IShellItem *ShItem = NULL;
-        HR = SHCreateItemFromParsingName(Path16.data(), NULL,
-                                         IID_PPV_ARGS(&ShItem));
+        HR = SHCreateItemFromIDList(PIDL, IID_PPV_ARGS(&ShItem));
         if (SUCCEEDED(HR)) {
           HR = FileOp->DeleteItem(ShItem, NULL);
+          if (SUCCEEDED(HR)) {
+            HR = FileOp->PerformOperations();
+          }
           ShItem->Release();
         }
-        if (SUCCEEDED(HR)) {
-          HR = FileOp->PerformOperations();
-        }
+        ILFree(PIDL);
       }
       FileOp->Release();
     }
+    CoUninitialize();
   }
-  CoUninitialize();
 
   int result = FAILED(HR) ? HRESULT_CODE(HR) : 0;
   if (result != 0 && !IgnoreErrors)
