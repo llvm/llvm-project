@@ -429,16 +429,10 @@ static cl::opt<bool>
                        cl::desc("Enable loop data prefetch on AMDGPU"),
                        cl::Hidden, cl::init(false));
 
-static cl::opt<bool> EnableMaxIlpSchedStrategy(
-    "amdgpu-enable-max-ilp-scheduling-strategy",
-    cl::desc("Enable scheduling strategy to maximize ILP for a single wave."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> EnableMaxMemoryClauseSchedStrategy(
-    "amdgpu-enable-max-memory-clause-scheduling-strategy",
-    cl::desc("Enable scheduling strategy to maximize memory clause for a "
-             "single wave."),
-    cl::Hidden, cl::init(false));
+static cl::opt<std::string>
+    AMDGPUSchedStrategy("amdgpu-sched-strategy",
+                        cl::desc("Select custom AMDGPU scheduling strategy."),
+                        cl::Hidden, cl::init(""));
 
 static cl::opt<bool> EnableRewritePartialRegUses(
     "amdgpu-enable-rewrite-partial-reg-uses",
@@ -1311,14 +1305,14 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
 
   Attribute SchedStrategyAttr =
       C->MF->getFunction().getFnAttribute("amdgpu-sched-strategy");
-  StringRef SchedStrategy =
-      SchedStrategyAttr.isValid() ? SchedStrategyAttr.getValueAsString() : "";
+  StringRef SchedStrategy = SchedStrategyAttr.isValid()
+                                ? SchedStrategyAttr.getValueAsString()
+                                : AMDGPUSchedStrategy;
 
-  if (EnableMaxIlpSchedStrategy || SchedStrategy == "max-ilp")
+  if (SchedStrategy == "max-ilp")
     return createGCNMaxILPMachineScheduler(C);
 
-  if (EnableMaxMemoryClauseSchedStrategy ||
-      SchedStrategy == "max-memory-clause")
+  if (SchedStrategy == "max-memory-clause")
     return createGCNMaxMemoryClauseMachineScheduler(C);
 
   return createGCNMaxOccupancyMachineScheduler(C);

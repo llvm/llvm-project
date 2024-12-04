@@ -620,6 +620,7 @@ GCNMaxMemoryClauseSchedStrategy::GCNMaxMemoryClauseSchedStrategy(
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::MemoryClauseInitialSchedule);
 }
+
 /// GCNMaxMemoryClauseSchedStrategy tries best to clause memory instructions as
 /// much as possible. This is achieved by:
 //  1. Prioritize clustered operations before stall latency heuristic.
