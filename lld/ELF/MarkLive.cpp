@@ -56,7 +56,7 @@ public:
 private:
   void enqueue(InputSectionBase *sec, std::optional<uint64_t> offset,
                std::optional<LiveObject> parent);
-  void printWhyLive(const Symbol *s) const;
+  void printWhyLive(Symbol *s) const;
   void markSymbol(Symbol *sym);
   void mark();
 
@@ -231,8 +231,29 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec,
     queue.push_back(s);
 }
 
-template <class ELFT>
-void MarkLive<ELFT>::printWhyLive(const Symbol *s) const {
+template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
+  std::string out = toString(*s) + " from " + toString(s->file);
+  int indent = 2;
+  LiveObject cur = s;
+  while (true) {
+    auto it = whyLive.find(cur);
+    if (it == whyLive.end())
+      if (auto *d = dyn_cast<Defined>(s))
+        it = whyLive.find(LiveObject{d->section});
+    if (it == whyLive.end())
+      break;
+    cur = it->second;
+    out += "\n" + std::string(indent, ' ');
+    if (std::holds_alternative<Symbol *>(cur)) {
+      auto *s = std::get<Symbol *>(cur);
+      out += toString(*s) + " from " + toString(s->file);
+    } else {
+      auto *s = std::get<InputSectionBase *>(cur);
+      // TODO: Fancy formatting
+      out += toString(s);
+    }
+  }
+  message(out);
 }
 
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
