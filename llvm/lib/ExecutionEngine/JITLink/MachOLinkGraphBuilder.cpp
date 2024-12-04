@@ -836,7 +836,7 @@ Error CompactUnwindSplitter::operator()(LinkGraph &G) {
             return make_error<JITLinkError>(
                 "Error adding keep-alive edge for compact unwind record at " +
                 formatv("{0:x}", CURec->getAddress()) + ": target " +
-                *E.getTarget().getName() + " is an external symbol");
+                E.getTarget().getName() + " is an external symbol");
           auto &TgtBlock = E.getTarget().getBlock();
           auto &CURecSym =
               G.addAnonymousSymbol(*CURec, 0, CURecordSize, false, false);
