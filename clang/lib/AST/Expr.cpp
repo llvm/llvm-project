@@ -1618,8 +1618,7 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
 std::pair<const NamedDecl *, const Attr *>
 CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
   // If the callee is marked nodiscard, return that attribute
-  const Decl *D = getCalleeDecl();
-  if (D != nullptr)
+  if (const Decl *D = getCalleeDecl())
     if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
       return {nullptr, A};
 
