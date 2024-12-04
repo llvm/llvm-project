@@ -630,14 +630,12 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   bool AllowDuplicates = Die.getTag() == DW_TAG_subprogram;
   const auto IntersectingChild = ParentRI.insert(RI, AllowDuplicates);
   if (IntersectingChild != ParentRI.Children.end()) {
-    if (IntersectingChild->Ranges != ParentRI.Children.end()->Ranges) {
-      ++NumErrors;
-      ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {
-        error() << "DIEs have overlapping address ranges:";
-        dump(Die);
-        dump(IntersectingChild->Die) << '\n';
-      });
-    }
+    ++NumErrors;
+    ErrorCategory.Report("DIEs have overlapping address ranges", [&]() {
+      error() << "DIEs have overlapping address ranges:";
+      dump(Die);
+      dump(IntersectingChild->Die) << '\n';
+    });
   }
 
   // Verify that ranges are contained within their parent.
