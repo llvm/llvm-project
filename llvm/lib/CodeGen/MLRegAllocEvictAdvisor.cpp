@@ -420,7 +420,7 @@ public:
             InteractiveChannelBaseName + ".out",
             InteractiveChannelBaseName + ".in");
     }
-    assert((MBFI && Loops) &&
+    assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), *MBFI,
                                             *Loops);
