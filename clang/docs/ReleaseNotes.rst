@@ -818,6 +818,8 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Bump the default code object version to 6.
+
 - Initial support for gfx950
 
 - Added headers ``gpuintrin.h`` and ``amdgpuintrin.h`` that contains common
