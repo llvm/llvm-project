@@ -1980,30 +1980,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       SlideCost = 1; // With a constant index, we do not need to use addi.
   }
 
-  // Extract i64 in the target that has XLEN=32 need more instruction.
-  if (Val->getScalarType()->isIntegerTy() &&
-      ST->getXLen() < Val->getScalarSizeInBits()) {
-    // For extractelement, we need the following instructions:
-    // vsetivli zero, 1, e64, m1, ta, mu (not count)
-    // vslidedown.vx v8, v8, a0
-    // vmv.x.s a0, v8
-    // li a1, 32
-    // vsrl.vx v8, v8, a1
-    // vmv.x.s a1, v8
-
-    // For insertelement, we need the following instructions:
-    // vsetivli zero, 2, e32, m4, ta, mu (not count)
-    // vmv.v.i v12, 0
-    // vslide1up.vx v16, v12, a1
-    // vslide1up.vx v12, v16, a0
-    // addi a0, a2, 1
-    // vsetvli zero, a0, e64, m4, tu, mu (not count)
-    // vslideup.vx v8, v12, a2
-
-    // TODO: should we count these special vsetvlis?
-    BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
-  }
-
   // When the vector needs to split into multiple register groups and the index
   // exceeds single vector register group, we need to insert/extract the element
   // via stack.
@@ -2029,6 +2005,30 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                        CostKind)) +
            getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
                            CostKind);
+  }
+
+  // Extract i64 in the target that has XLEN=32 need more instruction.
+  if (Val->getScalarType()->isIntegerTy() &&
+      ST->getXLen() < Val->getScalarSizeInBits()) {
+    // For extractelement, we need the following instructions:
+    // vsetivli zero, 1, e64, m1, ta, mu (not count)
+    // vslidedown.vx v8, v8, a0
+    // vmv.x.s a0, v8
+    // li a1, 32
+    // vsrl.vx v8, v8, a1
+    // vmv.x.s a1, v8
+
+    // For insertelement, we need the following instructions:
+    // vsetivli zero, 2, e32, m4, ta, mu (not count)
+    // vmv.v.i v12, 0
+    // vslide1up.vx v16, v12, a1
+    // vslide1up.vx v12, v16, a0
+    // addi a0, a2, 1
+    // vsetvli zero, a0, e64, m4, tu, mu (not count)
+    // vslideup.vx v8, v12, a2
+
+    // TODO: should we count these special vsetvlis?
+    BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
   }
 
   return BaseCost + SlideCost;
