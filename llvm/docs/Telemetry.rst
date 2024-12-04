@@ -93,7 +93,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 
   class JsonSerializer : public Serializer {
   public:
-      json::Object *getOutputObject() { return object.get(); }
+    json::Object *getOutputObject() { return object.get(); }
 
     llvm::Error start() override {
       if (started)
@@ -199,7 +199,9 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       // Send the `copied` object to wherever.
       return Error::success();
     }
-    
+
+  private:
+    JsonSerializer serializer;
   };
 
   // This defines a custom TelemetryInfo that has an addition Msg field.
