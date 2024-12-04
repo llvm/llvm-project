@@ -1,6 +1,4 @@
-//===- ExtraFunctionPassManager.h - Run Optimizations on Demand ---------*- C++
-//-*-===//
-//
+//===- ExtraFunctionPassManager.h - Run Optimizations on Demand -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -80,8 +78,6 @@ struct ExtraLoopPassManager : public LoopPassManager {
     PA.abandon<MarkerTy>();
     return PA;
   }
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

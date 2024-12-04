@@ -86,8 +86,6 @@ struct ShouldRunExtraSimpleLoopUnswitch
     : public ShouldRunExtraPasses<ShouldRunExtraSimpleLoopUnswitch>,
       public AnalysisInfoMixin<ShouldRunExtraSimpleLoopUnswitch> {
   static AnalysisKey Key;
-
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm
