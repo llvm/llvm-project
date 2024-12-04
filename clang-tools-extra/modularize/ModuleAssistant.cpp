@@ -46,6 +46,8 @@ class Module {
 public:
   Module(llvm::StringRef Name, bool Problem);
   ~Module();
+  Module(const Module &other) = default;
+  Module &operator=(const Module &other) = default;
   bool output(llvm::raw_fd_ostream &OS, int Indent);
   Module *findSubModule(llvm::StringRef SubName);
 

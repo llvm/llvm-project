@@ -328,6 +328,9 @@ public:
   Preprocessor(const TokenStream &In, TokenStream &Out) : In(In), Out(Out) {}
   ~Preprocessor() { Out.finalize(); }
 
+  Preprocessor(const Preprocessor&) = default; // Default copy constructor
+  Preprocessor& operator=(const Preprocessor&) = default; // Default copy assignment operator
+
   void walk(const DirectiveTree &T) {
     for (const auto &C : T.Chunks)
       std::visit(*this, C);

@@ -411,6 +411,8 @@ public:
     if (Throttler)
       Throttler->release(ID);
   }
+  PreambleThrottlerRequest(const PreambleThrottlerRequest &) = default;
+  PreambleThrottlerRequest &operator=(const PreambleThrottlerRequest &) = default;
 
 private:
   PreambleThrottler::RequestID ID;
@@ -621,7 +623,8 @@ public:
          AsyncTaskRunner *Tasks, Semaphore &Barrier,
          const TUScheduler::Options &Opts, ParsingCallbacks &Callbacks);
   ~ASTWorker();
-
+  ASTWorker(const ASTWorker &other) = default;
+  ASTWorker &operator=(const ASTWorker &other) = default;
   void update(ParseInputs Inputs, WantDiagnostics, bool ContentChanged);
   void
   runWithAST(llvm::StringRef Name,
