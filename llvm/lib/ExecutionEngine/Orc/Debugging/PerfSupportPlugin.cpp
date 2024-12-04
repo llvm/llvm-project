@@ -117,7 +117,7 @@ getDebugInfoRecord(const Symbol &Sym, DWARFContext &DC) {
   auto Addr = Sym.getAddress();
   auto Size = Sym.getSize();
   auto SAddr = object::SectionedAddress{Addr.getValue(), Section.getOrdinal()};
-  LLVM_DEBUG(dbgs() << "Getting debug info for symbol " << *Sym.getName()
+  LLVM_DEBUG(dbgs() << "Getting debug info for symbol " << Sym.getName()
                     << " at address " << Addr.getValue() << " with size "
                     << Size << "\n"
                     << "Section ordinal: " << Section.getOrdinal() << "\n");
