@@ -19891,10 +19891,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
   case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
   case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
-  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128: {
 
     Intrinsic::ID IID;
     switch (BuiltinID) {
@@ -19916,6 +19913,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
       IID = Intrinsic::amdgcn_flat_load_monitor_b128;
       break;
+    }
+
+    llvm::Type *LoadTy = ConvertType(E->getType());
+    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Val  = EmitScalarExpr(E->getArg(1));
+    llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
+    return Builder.CreateCall(F, {Addr, Val});
+  }
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
       IID = Intrinsic::amdgcn_cluster_load_b32;
       break;
@@ -19926,12 +19936,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       IID = Intrinsic::amdgcn_cluster_load_b128;
       break;
     }
-
-    llvm::Type *LoadTy = ConvertType(E->getType());
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val  = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
-    return Builder.CreateCall(F, {Addr, Val});
+    SmallVector<Value *, 3> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    llvm::Function *F = CGM.getIntrinsic(IID, {ConvertType(E->getType())});
+    return Builder.CreateCall(F, {Args});
   }
   case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds:
   case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds_d2:

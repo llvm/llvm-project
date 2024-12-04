@@ -3965,9 +3965,12 @@ class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],
     [ptr_ty,
-    llvm_i32_ty],     // workgroup broadcast mask (in M0)
+     llvm_i32_ty,      // gfx12+ cachepolicy:
+                       //   bits [0-2] = th
+                       //   bits [3-4] = scope
+     llvm_i32_ty],     // workgroup broadcast mask (in M0)
     [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, IntrWillReturn, IntrConvergent,
-     NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
     "", [SDNPMemOperand]
   >;
 
