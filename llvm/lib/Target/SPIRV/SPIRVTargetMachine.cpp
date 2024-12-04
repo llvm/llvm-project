@@ -133,6 +133,8 @@ unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
 
 bool SPIRVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
                                              unsigned DestAS) const {
+  if (getTargetTriple().getVendor() != Triple::VendorType::AMD)
+    return false;
   if (SrcAS != AddressSpace::Generic && SrcAS != AddressSpace::CrossWorkgroup)
     return false;
   return DestAS == AddressSpace::Generic ||
