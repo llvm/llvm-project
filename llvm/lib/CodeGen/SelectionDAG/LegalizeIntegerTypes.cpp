@@ -2601,7 +2601,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
              N->getOperand(1 + OpOffset).getValueType().getSizeInBits() &&
          "POWI exponent should match with sizeof(int) when doing the libcall.");
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
+  CallOptions.setIsSigned(true);
   SDValue Ops[2] = {N->getOperand(0 + OpOffset), N->getOperand(1 + OpOffset)};
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
       DAG, LC, N->getValueType(0), Ops, CallOptions, SDLoc(N), Chain);
@@ -4006,7 +4006,7 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT(SDNode *N, SDValue &Lo,
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftenFloat)
     CallOptions.setTypeListBeforeSoften(OpVT, VT);
   else
-    CallOptions.setSExt(true);
+    CallOptions.setIsSigned(true); // FIXME: Is this needed?
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, VT, Op,
                                                     CallOptions, dl, Chain);
   SplitInteger(Tmp.first, Lo, Hi);
@@ -4098,7 +4098,7 @@ void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
   EVT RetVT = N->getValueType(0);
 
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
+  CallOptions.setIsSigned(true);
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
                                                     Op, CallOptions, dl,
                                                     Chain);
@@ -4269,7 +4269,7 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
   // upper half of the result if it exceeds VT.
   SDValue Ops[2] = { N->getOperand(0), N->getOperand(1) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
+  CallOptions.setIsSigned(true);
   SplitInteger(TLI.makeLibCall(DAG, LC, VT, Ops, CallOptions, dl).first,
                Lo, Hi);
 }
@@ -4640,7 +4640,7 @@ void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported SDIV!");
 
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
+  CallOptions.setIsSigned(true);
   SplitInteger(TLI.makeLibCall(DAG, LC, VT, Ops, CallOptions, dl).first, Lo, Hi);
 }
 
@@ -4880,7 +4880,7 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
     SDValue ShAmt = DAG.getZExtOrTrunc(N->getOperand(1), dl, ShAmtTy);
     SDValue Ops[2] = {N->getOperand(0), ShAmt};
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setSExt(isSigned);
+    CallOptions.setIsSigned(isSigned);
     SplitInteger(TLI.makeLibCall(DAG, LC, VT, Ops, CallOptions, dl).first, Lo, Hi);
     return;
   }
@@ -4970,7 +4970,7 @@ void DAGTypeLegalizer::ExpandIntRes_SREM(SDNode *N,
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported SREM!");
 
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
+  CallOptions.setIsSigned(true);
   SplitInteger(TLI.makeLibCall(DAG, LC, VT, Ops, CallOptions, dl).first, Lo, Hi);
 }
 
@@ -5659,7 +5659,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
          "Don't know how to expand this XINT_TO_FP!");
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(true);
+  CallOptions.setIsSigned(true);
   std::pair<SDValue, SDValue> Tmp =
       TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, SDLoc(N), Chain);
 
