@@ -363,7 +363,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that reducedes the rank of the vector "
+    return "Test lowering patterns that reduces the rank of the vector "
            "transfer memory and vector operands.";
   }
 
@@ -388,7 +388,7 @@ struct TestVectorSinkPatterns
   StringRef getArgument() const final { return "test-vector-sink-patterns"; }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that eliminate redundant brodacast "
+    return "Test lowering patterns that eliminate redundant broadcast "
            "and transpose operations.";
   }
 
@@ -617,7 +617,7 @@ struct TestVectorDistribution
 
   Option<bool> propagateDistribution{
       *this, "propagate-distribution",
-      llvm::cl::desc("Test distribution propgation"), llvm::cl::init(false)};
+      llvm::cl::desc("Test distribution propagation"), llvm::cl::init(false)};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());

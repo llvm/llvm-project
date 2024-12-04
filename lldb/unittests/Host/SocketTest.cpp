@@ -88,6 +88,28 @@ TEST_P(SocketTest, DomainListenConnectAccept) {
   CreateDomainConnectedSockets(Path, &socket_a_up, &socket_b_up);
 }
 
+TEST_P(SocketTest, DomainListenGetListeningConnectionURI) {
+  llvm::SmallString<64> Path;
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(Path, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (Path.size() > 107u)
+    return;
+
+  auto listen_socket_up = std::make_unique<DomainSocket>(
+      /*should_close=*/true);
+  Status error = listen_socket_up->Listen(Path, 5);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
+
+  ASSERT_THAT(
+      listen_socket_up->GetListeningConnectionURI(),
+      testing::ElementsAre(llvm::formatv("unix-connect://{0}", Path).str()));
+}
+
 TEST_P(SocketTest, DomainMainLoopAccept) {
   llvm::SmallString<64> Path;
   std::error_code EC =
@@ -225,10 +247,27 @@ TEST_P(SocketTest, TCPListen0GetPort) {
   if (!HostSupportsIPv4())
     return;
   llvm::Expected<std::unique_ptr<TCPSocket>> sock =
-      Socket::TcpListen("10.10.12.3:0", false);
+      Socket::TcpListen("10.10.12.3:0", 5);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_TRUE(sock.get()->IsValid());
   EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
+}
+
+TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
+  if (!HostSupportsProtocol())
+    return;
+
+  std::string addr = llvm::formatv("[{0}]:0", GetParam().localhost_ip).str();
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock = Socket::TcpListen(addr);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_TRUE(sock.get()->IsValid());
+
+  EXPECT_THAT(
+      sock.get()->GetListeningConnectionURI(),
+      testing::ElementsAre(llvm::formatv("connection://[{0}]:{1}",
+                                         GetParam().localhost_ip,
+                                         sock->get()->GetLocalPortNumber())
+                               .str()));
 }
 
 TEST_P(SocketTest, TCPGetConnectURI) {

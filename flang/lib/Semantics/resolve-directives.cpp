@@ -2023,16 +2023,16 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   if (!dirContext_.empty()) {
     switch (x.v) {
-    case parser::OmpDefaultClause::Type::Private:
+    case parser::OmpDefaultClause::DataSharingAttribute::Private:
       SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
       break;
-    case parser::OmpDefaultClause::Type::Firstprivate:
+    case parser::OmpDefaultClause::DataSharingAttribute::Firstprivate:
       SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
       break;
-    case parser::OmpDefaultClause::Type::Shared:
+    case parser::OmpDefaultClause::DataSharingAttribute::Shared:
       SetContextDefaultDSA(Symbol::Flag::OmpShared);
       break;
-    case parser::OmpDefaultClause::Type::None:
+    case parser::OmpDefaultClause::DataSharingAttribute::None:
       SetContextDefaultDSA(Symbol::Flag::OmpNone);
       break;
     }
@@ -2097,17 +2097,16 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
           std::get<parser::OmpObjectList>(alloc->v.t),
           std::get<parser::Statement<parser::AllocateStmt>>(x.t).statement);
 
-      const auto &allocMod{
-          std::get<std::optional<parser::OmpAllocateClause::AllocateModifier>>(
-              alloc->v.t)};
+      auto &modifiers{OmpGetModifiers(alloc->v)};
+      bool hasAllocator{
+          OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(modifiers) ||
+          OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(modifiers)};
+
       // TODO: As with allocate directive, exclude the case when a requires
       //       directive with the dynamic_allocators clause is present in
       //       the same compilation unit (OMP5.0 2.11.3).
       if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) &&
-          (!allocMod.has_value() ||
-              std::holds_alternative<
-                  parser::OmpAllocateClause::AllocateModifier::Align>(
-                  allocMod->u))) {
+          !hasAllocator) {
         context_.Say(x.source,
             "ALLOCATORS directives that appear in a TARGET region "
             "must specify an allocator"_err_en_US);

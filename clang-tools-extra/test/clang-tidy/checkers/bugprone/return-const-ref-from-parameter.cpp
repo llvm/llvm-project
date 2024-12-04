@@ -76,6 +76,9 @@ struct C {
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: returning a constant reference parameter
 };
 
+const auto Lf1 = [](const T& t) -> const T& { return t; };
+// CHECK-MESSAGES: :[[@LINE-1]]:54: warning: returning a constant reference parameter
+
 } // namespace invalid
 
 namespace false_negative_because_dependent_and_not_instantiated {
@@ -151,6 +154,14 @@ void instantiate(const int &param, const float &paramf, int &mut_param, float &m
         itf6(mut_paramf);
 }
 
+template<class T>
+void f(const T& t) {
+    const auto get = [&t] -> const T& { return t; };
+    return T{};
+}
+
+const auto Lf1 = [](T& t) -> const T& { return t; };
+
 } // namespace valid
 
 namespace overload {
@@ -186,3 +197,9 @@ int const &overload_params_difference3(int p1, int const &a, int p2) { return a;
 int const &overload_params_difference3(int p1, long &&a, int p2);
 
 } // namespace overload
+
+namespace gh117696 {
+namespace use_lifetime_bound_attr {
+int const &f(int const &a [[clang::lifetimebound]]) { return a; }
+} // namespace use_lifetime_bound_attr
+} // namespace gh117696

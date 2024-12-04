@@ -6,7 +6,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; CHECK: error:
 ; CHECK-SAME: in function storetoomany
 ; CHECK-SAME: typedBufferStore data must be a vector of 4 elements
-define void @storetoomany(<5 x float> %data, i32 %index) {
+define void @storetoomany(<5 x float> %data, i32 %index) "hlsl.export" {
   %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -21,7 +21,7 @@ define void @storetoomany(<5 x float> %data, i32 %index) {
 ; CHECK: error:
 ; CHECK-SAME: in function storetoofew
 ; CHECK-SAME: typedBufferStore data must be a vector of 4 elements
-define void @storetoofew(<3 x i32> %data, i32 %index) {
+define void @storetoofew(<3 x i32> %data, i32 %index) "hlsl.export" {
   %buffer = call target("dx.TypedBuffer", <4 x i32>, 1, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i32_1_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
