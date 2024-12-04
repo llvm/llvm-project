@@ -1,3 +1,6 @@
+#include <clc/clcfunc.h>
+#include <clc/clctypes.h>
+
 #define __CLC_FLOAT float
 #define __CLC_FPSIZE 32
 
