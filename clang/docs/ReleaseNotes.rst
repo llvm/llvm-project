@@ -656,7 +656,7 @@ Bug Fixes in This Version
   ``_Atomic``-qualified type (#GH116124).
 - No longer return ``false`` for ``noexcept`` expressions involving a
   ``delete`` which resolves to a destroying delete but the type of the object
-  being deleted as a potentially throwing destructor (#GH118660).
+  being deleted has a potentially throwing destructor (#GH118660).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
