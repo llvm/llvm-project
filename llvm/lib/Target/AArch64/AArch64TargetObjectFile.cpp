@@ -41,7 +41,7 @@ void AArch64_ELFTargetObjectFile::emitPersonalityValueImpl(
   // The value is ptrauth_string_discriminator("personality")
   constexpr uint16_t Discriminator = 0x7EAD;
   TS->emitAuthValue(MCSymbolRefExpr::create(Sym, getContext()), Discriminator,
-                    AArch64PACKey::IA, true, getContext());
+                    AArch64PACKey::IA, /*HasAddressDiversity=*/true);
 }
 
 const MCExpr *AArch64_ELFTargetObjectFile::getIndirectSymViaGOTPCRel(

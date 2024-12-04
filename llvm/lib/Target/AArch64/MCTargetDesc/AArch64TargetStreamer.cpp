@@ -38,10 +38,10 @@ AArch64TargetStreamer::~AArch64TargetStreamer() = default;
 void AArch64TargetStreamer::emitAuthValue(const MCExpr *Expr,
                                           uint16_t Discriminator,
                                           AArch64PACKey::ID Key,
-                                          bool HasAddressDiversity,
-                                          MCContext &Ctx) {
+                                          bool HasAddressDiversity) {
   Streamer.emitValueImpl(AArch64AuthMCExpr::create(Expr, Discriminator, Key,
-                                                   HasAddressDiversity, Ctx),
+                                                   HasAddressDiversity,
+                                                   Streamer.getContext()),
                          8);
 }
 

@@ -42,8 +42,7 @@ public:
   /// Callback used to emit AUTH expressions (e.g. signed
   /// personality function pointer).
   void emitAuthValue(const MCExpr *Expr, uint16_t Discriminator,
-                     AArch64PACKey::ID Key, bool HasAddressDiversity,
-                     MCContext &Ctx);
+                     AArch64PACKey::ID Key, bool HasAddressDiversity);
 
   /// Callback used to implement the .inst directive.
   virtual void emitInst(uint32_t Inst);
