@@ -2564,3 +2564,13 @@ GH50055::E2 GlobalInitNotCE2 = GH50055::testDefaultArgForParam(); // ok, not a c
 constexpr GH50055::E2 GlobalInitCE = (GH50055::E2)-1;
 // expected-error@-1 {{constexpr variable 'GlobalInitCE' must be initialized by a constant expression}}
 // expected-note@-2 {{integer value -1 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
+
+namespace GH112140 {
+struct S {
+  constexpr S(const int &a = ) { } // expected-error {{expected expression}}
+};
+
+void foo() {
+  constexpr S s[2] = { }; // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
+}
+}

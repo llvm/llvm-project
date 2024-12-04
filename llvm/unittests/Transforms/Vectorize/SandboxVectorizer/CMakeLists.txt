@@ -13,4 +13,5 @@ add_llvm_unittest(SandboxVectorizerTests
   LegalityTest.cpp
   SchedulerTest.cpp
   SeedCollectorTest.cpp	
+  VecUtilsTest.cpp
 )

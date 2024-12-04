@@ -137,7 +137,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
                           " has the same name as a previous operand!");
 
     OperandInfo &OpInfo = OperandList.emplace_back(
-        Rec, std::string(ArgName), std::string(PrintMethod),
+        Rec, std::string(ArgName), std::string(std::move(PrintMethod)),
         OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
@@ -180,7 +180,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
       // method, the single encoder will multiple sub-ops, itself.
-      OpInfo.EncoderMethodNames[0] = EncoderMethod;
+      OpInfo.EncoderMethodNames[0] = std::move(EncoderMethod);
       for (unsigned j = 1; j < NumOps; ++j)
         OpInfo.DoNotEncode[j] = true;
     }
@@ -566,7 +566,8 @@ std::string CodeGenInstruction::FlattenAsmStringVariants(StringRef Cur,
     }
 
     // Select the Nth variant (or empty).
-    StringRef Selection = Cur.slice(VariantsStart, VariantsEnd);
+    StringRef Selection =
+        Cur.substr(VariantsStart, VariantsEnd - VariantsStart);
     for (unsigned i = 0; i != Variant; ++i)
       Selection = Selection.split('|').second;
     Res += Selection.split('|').first;

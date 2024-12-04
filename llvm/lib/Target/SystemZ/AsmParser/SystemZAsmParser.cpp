@@ -1071,9 +1071,16 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
       if (getLexer().is(AsmToken::Integer)) {
         if (parseIntegerRegister(Reg2, RegGR))
           return true;
-      } else {
-        if (isParsingGNU() && parseRegister(Reg2, /*RequirePercent=*/true))
-          return true;
+      } else if (isParsingGNU()) {
+        if (Parser.getTok().is(AsmToken::Percent)) {
+          if (parseRegister(Reg2, /*RequirePercent=*/true))
+            return true;
+        } else {
+          // GAS allows ",)" to indicate a missing base register.
+          Reg2.Num = 0;
+          Reg2.Group = RegGR;
+          Reg2.StartLoc = Reg2.EndLoc = Parser.getTok().getLoc();
+        }
       }
     }
 
@@ -1141,9 +1148,10 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (HaveReg1) {
       if (parseAddressRegister(Reg1))
         return ParseStatus::Failure;
-      // If the are two registers, the first one is the index and the
-      // second is the base.
-      if (HaveReg2)
+      // If there are two registers, the first one is the index and the
+      // second is the base.  If there is only a single register, it is
+      // used as base with GAS and as index with HLASM.
+      if (HaveReg2 || isParsingHLASM())
         Index = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
       else
         Base = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
@@ -1186,6 +1194,10 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (!HaveReg1 || Reg1.Group != RegV)
       return Error(StartLoc, "vector index required in address");
     Index = SystemZMC::VR128Regs[Reg1.Num];
+    // In GAS mode, we must have Reg2, since a single register would be
+    // interpreted as base register, which cannot be a vector register.
+    if (isParsingGNU() && !HaveReg2)
+      return Error(Reg1.StartLoc, "invalid use of vector addressing");
     // If we have Reg2, it must be an address register.
     if (HaveReg2) {
       if (parseAddressRegister(Reg2))

@@ -78,7 +78,6 @@
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <functional>
 #include <tuple>
 #include <vector>
 
@@ -1370,7 +1369,7 @@ void MachineOutliner::emitOutlinedHashTree(Module &M) {
 
     Triple TT(M.getTargetTriple());
     embedBufferInModule(
-        M, *Buffer.get(),
+        M, *Buffer,
         getCodeGenDataSectionName(CG_outline, TT.getObjectFormat()));
   }
 }

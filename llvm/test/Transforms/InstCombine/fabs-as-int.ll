@@ -19,7 +19,7 @@ define <2 x i32> @fabs_as_int_v2f32_noimplicitfloat(<2 x float> %x) noimplicitfl
 ; CHECK-LABEL: define <2 x i32> @fabs_as_int_v2f32_noimplicitfloat
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[BC]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[BC]], splat (i32 2147483647)
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
 ;
   %bc = bitcast <2 x float> %x to <2 x i32>

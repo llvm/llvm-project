@@ -705,7 +705,7 @@ TEST_F(MemorySSATest, PartialWalkerCacheWithPhis) {
   BasicBlock *IfThen = BasicBlock::Create(C, "B", F);
   BasicBlock *IfEnd = BasicBlock::Create(C, "C", F);
 
-  B.CreateCondBr(UndefValue::get(Type::getInt1Ty(C)), IfThen, IfEnd);
+  B.CreateCondBr(PoisonValue::get(Type::getInt1Ty(C)), IfThen, IfEnd);
 
   B.SetInsertPoint(IfThen);
   Instruction *FirstStore = B.CreateStore(Zero, AllocA);

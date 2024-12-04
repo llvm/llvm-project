@@ -60,7 +60,8 @@ public:
     Compiler.setInvocation(std::move(Invocation));
     Compiler.setFileManager(FileMgr);
 
-    Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+    Compiler.createDiagnostics(FileMgr->getVirtualFileSystem(), DiagConsumer,
+                               /*ShouldOwnClient=*/false);
     if (!Compiler.hasDiagnostics())
       return false;
 

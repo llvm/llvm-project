@@ -589,6 +589,15 @@ declare ptr @gets(ptr)
 ; CHECK: declare noundef i32 @gettimeofday(ptr nocapture noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i32 @gettimeofday(ptr, ptr)
 
+; CHECK: declare double @hypot(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @hypot(double, double)
+
+; CHECK: declare float @hypotf(float, float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @hypotf(float, float)
+
+; CHECK: declare x86_fp80 @hypotl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @hypotl(x86_fp80, x86_fp80)
+
 ; CHECK: declare i32 @isascii(i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare i32 @isascii(i32)
 
@@ -666,6 +675,15 @@ declare float @logf(float)
 
 ; CHECK: declare x86_fp80 @logl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @logl(x86_fp80)
+
+; CHECK: declare double @tgamma(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @tgamma(double)
+
+; CHECK: declare float @tgammaf(float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @tgammaf(float)
+
+; CHECK: declare x86_fp80 @tgammal(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @tgammal(x86_fp80)
 
 ; CHECK: declare noundef i32 @lstat(ptr nocapture noundef readonly, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i32 @lstat(ptr, ptr)
@@ -808,6 +826,9 @@ declare i64 @readlink(ptr, ptr, i64)
 
 ; CHECK: declare noalias noundef ptr @realloc(ptr allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC:#[0-9]+]]
 declare ptr @realloc(ptr, i64)
+
+; CHECK: declare noalias noundef ptr @reallocarray(ptr allocptr nocapture, i64 noundef, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE12_FAMILY_MALLOC:#[0-9]+]]
+declare ptr @reallocarray(ptr, i64, i64)
 
 ; CHECK: declare noalias noundef ptr @reallocf(ptr allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]]
 declare ptr @reallocf(ptr, i64)
@@ -1176,6 +1197,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nofree nounwind memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE12_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1,2) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[NOFREE_COLD]] = { cold nofree }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }

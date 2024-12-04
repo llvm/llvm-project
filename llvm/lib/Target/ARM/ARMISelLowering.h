@@ -101,15 +101,15 @@ class VectorType;
 
     BCC_i64,
 
-    SRL_GLUE, // V,Flag = srl_flag X -> srl X, 1 + save carry out.
-    SRA_GLUE, // V,Flag = sra_flag X -> sra X, 1 + save carry out.
-    RRX,      // V = RRX X, Flag     -> srl X, 1 + shift in carry flag.
+    LSLS,  // Flag-setting shift left.
+    LSRS1, // Flag-setting logical shift right by one bit.
+    ASRS1, // Flag-setting arithmetic shift right by one bit.
+    RRX,   // Shift right one bit with carry in.
 
     ADDC, // Add with carry
     ADDE, // Add using carry
     SUBC, // Sub with carry
     SUBE, // Sub using carry
-    LSLS, // Shift left producing carry
 
     VMOVRRD, // double to two gprs.
     VMOVDRR, // Two gprs to double.
@@ -395,6 +395,19 @@ class VectorType;
   //  ARMTargetLowering - ARM Implementation of the TargetLowering interface
 
   class ARMTargetLowering : public TargetLowering {
+    // Copying needed for an outgoing byval argument.
+    enum ByValCopyKind {
+      // Argument is already in the correct location, no copy needed.
+      NoCopy,
+      // Argument value is currently in the local stack frame, needs copying to
+      // outgoing arguemnt area.
+      CopyOnce,
+      // Argument value is currently in the outgoing argument area, but not at
+      // the correct offset, so needs copying via a temporary in local stack
+      // space.
+      CopyViaTemp,
+    };
+
   public:
     explicit ARMTargetLowering(const TargetMachine &TM,
                                const ARMSubtarget &STI);
@@ -809,6 +822,9 @@ class VectorType;
     computeAddrForCallArg(const SDLoc &dl, SelectionDAG &DAG,
                           const CCValAssign &VA, SDValue StackPtr,
                           bool IsTailCall, int SPDiff) const;
+    ByValCopyKind ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                            SDValue Dst,
+                                            ISD::ArgFlagsTy Flags) const;
     SDValue LowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_SJLJ_SETUP_DISPATCH(SDValue Op, SelectionDAG &DAG) const;

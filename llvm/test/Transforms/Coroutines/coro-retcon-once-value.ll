@@ -184,7 +184,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    [[NEW_VAL:%.*]] = add i32 [[VAL_RELOAD]], 123
 ; CHECK-NEXT:    tail call void @deallocate(ptr [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 undef, ptr undef }, i32 [[NEW_VAL]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 poison, ptr poison }, i32 [[NEW_VAL]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { ptr, i32, ptr } [[TMP3]], ptr @deallocate, 2
 ; CHECK-NEXT:    ret { ptr, i32, ptr } [[TMP4]]
 ;
@@ -202,7 +202,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    [[NEW_VAL:%.*]] = add i32 [[VAL_RELOAD]], 123
 ; CHECK-NEXT:    tail call void @deallocate(ptr [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 undef, ptr undef }, i32 [[NEW_VAL]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr, i32, ptr } { ptr null, i32 poison, ptr poison }, i32 [[NEW_VAL]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { ptr, i32, ptr } [[TMP3]], ptr @deallocate, 2
 ; CHECK-NEXT:    ret { ptr, i32, ptr } [[TMP4]]
 ;

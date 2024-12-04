@@ -19,7 +19,7 @@ using namespace llvm;
 
 void SystemZHLASMInstPrinter::printFormattedRegName(const MCAsmInfo *MAI,
                                                     MCRegister Reg,
-                                                    raw_ostream &O) const {
+                                                    raw_ostream &O) {
   const char *RegName = getRegisterName(Reg);
   // Skip register prefix so that only register number is left
   assert(isalpha(RegName[0]) && isdigit(RegName[1]));
@@ -30,6 +30,16 @@ void SystemZHLASMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                         StringRef Annot,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  printInstruction(MI, Address, O);
+  std::string Str;
+  raw_string_ostream RSO(Str);
+  printInstruction(MI, Address, RSO);
+  // Eat the first tab character and replace it with a space since it is
+  // hardcoded in AsmWriterEmitter::EmitPrintInstruction
+  // TODO: introduce a line prefix member to AsmWriter to avoid this problem
+  if (!Str.empty() && Str.front() == '\t')
+    O << " " << Str.substr(1, Str.length());
+  else
+    O << Str;
+
   printAnnotation(O, Annot);
 }

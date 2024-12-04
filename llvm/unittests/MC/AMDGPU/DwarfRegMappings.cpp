@@ -27,7 +27,7 @@ void InitializeAMDGPUTarget() {
   });
 }
 
-std::unique_ptr<LLVMTargetMachine>
+std::unique_ptr<TargetMachine>
 createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   InitializeAMDGPUTarget();
 
@@ -37,9 +37,8 @@ createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-          TStr, CPU, FS, Options, std::nullopt, std::nullopt)));
+  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
+      TStr, CPU, FS, Options, std::nullopt, std::nullopt));
 }
 
 TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {

@@ -119,9 +119,8 @@ void test1(struct annotated *p, int index, int val) {
 // SANITIZE-WITH-ATTR:       cont3:
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [0 x i32], ptr [[ARRAY]], i64 0, i64 [[INDEX]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = shl i32 [[DOT_COUNTED_BY_LOAD]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[DOT_COUNTED_BY_LOAD]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[DOT_COUNTED_BY_LOAD]], i32 0)
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[TMP2]], 2
 // SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -130,9 +129,8 @@ void test1(struct annotated *p, int index, int val) {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i32, ptr [[DOT_COUNTED_BY_GEP]], align 4
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = shl i32 [[DOT_COUNTED_BY_LOAD]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[DOT_COUNTED_BY_LOAD]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP0]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.smax.i32(i32 [[DOT_COUNTED_BY_LOAD]], i32 0)
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[TMP0]], 2
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [0 x i32], ptr [[ARRAY]], i64 0, i64 [[INDEX]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
@@ -539,10 +537,9 @@ size_t test5_bdos(struct anon_struct *p) {
 // SANITIZE-WITH-ATTR:       cont3:
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[TMP1]], i64 0, i64 [[IDXPROM]]
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[DOT_COUNTED_BY_LOAD]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD_TR:%.*]] = trunc i64 [[DOT_COUNTED_BY_LOAD]] to i32
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = shl i32 [[DOT_COUNTED_BY_LOAD_TR]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[DOT_COUNTED_BY_LOAD]], i64 0)
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP2]] to i32
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[DOTTR]], 2
 // SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -551,10 +548,9 @@ size_t test5_bdos(struct anon_struct *p) {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i64, ptr [[DOT_COUNTED_BY_GEP]], align 4
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[DOT_COUNTED_BY_LOAD]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD_TR:%.*]] = trunc i64 [[DOT_COUNTED_BY_LOAD]] to i32
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = shl i32 [[DOT_COUNTED_BY_LOAD_TR]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP0]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[DOT_COUNTED_BY_LOAD]], i64 0)
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP0]] to i32
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[DOTTR]], 2
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[TMP1]], i64 0, i64 [[IDXPROM]]
@@ -588,9 +584,8 @@ void test6(struct anon_struct *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i64, ptr [[DOT_COUNTED_BY_GEP]], align 4
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[DOT_COUNTED_BY_LOAD]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[DOT_COUNTED_BY_LOAD]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], i64 0, i64 [[TMP0]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[DOT_COUNTED_BY_LOAD]], i64 0)
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP1]]
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 0, -3) i64 @test6_bdos(
@@ -598,9 +593,8 @@ void test6(struct anon_struct *p, int index) {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i64, ptr [[DOT_COUNTED_BY_GEP]], align 4
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[DOT_COUNTED_BY_LOAD]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[DOT_COUNTED_BY_LOAD]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], i64 0, i64 [[TMP0]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[DOT_COUNTED_BY_LOAD]], i64 0)
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP1]]
 //
 // SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @test6_bdos(
@@ -1740,9 +1734,8 @@ struct annotated_struct_array {
 // SANITIZE-WITH-ATTR:       cont20:
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 12
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[IDXPROM15]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = shl i32 [[DOT_COUNTED_BY_LOAD]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[DOT_COUNTED_BY_LOAD]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP5]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.smax.i32(i32 [[DOT_COUNTED_BY_LOAD]], i32 0)
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[TMP5]], 2
 // SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX18]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -1754,9 +1747,8 @@ struct annotated_struct_array {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA11]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i32, ptr [[DOT_COUNTED_BY_GEP]], align 4
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl i32 [[DOT_COUNTED_BY_LOAD]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[DOT_COUNTED_BY_LOAD]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP1]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[DOT_COUNTED_BY_LOAD]], i32 0)
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[TMP1]], 2
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM4:%.*]] = sext i32 [[IDX2]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[IDXPROM4]]

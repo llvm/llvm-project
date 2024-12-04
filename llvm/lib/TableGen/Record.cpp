@@ -1543,6 +1543,23 @@ const Init *BinOpInit::resolveReferences(Resolver &R) const {
   const Init *lhs = LHS->resolveReferences(R);
   const Init *rhs = RHS->resolveReferences(R);
 
+  unsigned Opc = getOpcode();
+  if (Opc == AND || Opc == OR) {
+    // Short-circuit. Regardless whether this is a logical or bitwise
+    // AND/OR.
+    // Ideally we could also short-circuit `!or(true, ...)`, but it's
+    // difficult to do it right without knowing if rest of the operands
+    // are all `bit` or not. Therefore, we're only implementing a relatively
+    // limited version of short-circuit against all ones (`true` is casted
+    // to 1 rather than all ones before we evaluate `!or`).
+    if (const auto *LHSi = dyn_cast_or_null<IntInit>(
+            lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if ((Opc == AND && !LHSi->getValue()) ||
+          (Opc == OR && LHSi->getValue() == -1))
+        return LHSi;
+    }
+  }
+
   if (LHS != lhs || RHS != rhs)
     return (BinOpInit::get(getOpcode(), lhs, rhs, getType()))
         ->Fold(R.getCurrentRecord());
@@ -2294,7 +2311,7 @@ const RecTy *DefInit::getFieldType(const StringInit *FieldName) const {
 
 std::string DefInit::getAsString() const { return std::string(Def->getName()); }
 
-static void ProfileVarDefInit(FoldingSetNodeID &ID, Record *Class,
+static void ProfileVarDefInit(FoldingSetNodeID &ID, const Record *Class,
                               ArrayRef<const ArgumentInit *> Args) {
   ID.AddInteger(Args.size());
   ID.AddPointer(Class);
@@ -2303,11 +2320,11 @@ static void ProfileVarDefInit(FoldingSetNodeID &ID, Record *Class,
     ID.AddPointer(I);
 }
 
-VarDefInit::VarDefInit(SMLoc Loc, Record *Class, unsigned N)
+VarDefInit::VarDefInit(SMLoc Loc, const Record *Class, unsigned N)
     : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Loc(Loc), Class(Class),
       NumArgs(N) {}
 
-const VarDefInit *VarDefInit::get(SMLoc Loc, Record *Class,
+const VarDefInit *VarDefInit::get(SMLoc Loc, const Record *Class,
                                   ArrayRef<const ArgumentInit *> Args) {
   FoldingSetNodeID ID;
   ProfileVarDefInit(ID, Class, Args);

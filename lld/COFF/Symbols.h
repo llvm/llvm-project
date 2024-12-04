@@ -35,6 +35,9 @@ class InputFile;
 class ObjFile;
 class SymbolTable;
 
+const COFFSyncStream &operator<<(const COFFSyncStream &,
+                                 const llvm::object::Archive::Symbol *);
+
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -351,6 +354,10 @@ public:
   void setWeakAlias(Symbol *sym, bool antiDep = false) {
     weakAlias = sym;
     isAntiDep = antiDep;
+  }
+
+  bool isECAlias(MachineTypes machine) const {
+    return weakAlias && isAntiDep && isArm64EC(machine);
   }
 
   // If this symbol is external weak, replace this object with aliased symbol.

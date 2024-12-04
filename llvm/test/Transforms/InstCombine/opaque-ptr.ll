@@ -549,7 +549,7 @@ define ptr @phi_of_gep_flags_1(i1 %c, ptr %p) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[PHI]]
 ;
   br i1 %c, label %if, label %else

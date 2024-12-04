@@ -15,7 +15,6 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -25,8 +24,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <memory>
 
 using namespace llvm;
@@ -49,6 +46,8 @@ template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder);
+static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder);
 template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
@@ -80,6 +79,9 @@ static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
                                        uint64_t Address,
                                        const MCDisassembler *Decoder);
+static DecodeStatus DecodePCRelLabel9(MCInst &Inst, unsigned Imm,
+                                      uint64_t Address,
+                                      const MCDisassembler *Decoder);
 static DecodeStatus DecodeMemExtend(MCInst &Inst, unsigned Imm,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder);
@@ -387,6 +389,17 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
   return Success;
 }
 
+static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  if (RegNo > 7)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPR_KRegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
 static DecodeStatus DecodeZPR4Mul4RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder) {
@@ -484,6 +497,20 @@ static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
 
   if (!Decoder->tryAddingSymbolicOperand(
           Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 0, 4))
+    Inst.addOperand(MCOperand::createImm(ImmVal));
+  return Success;
+}
+
+static DecodeStatus DecodePCRelLabel9(MCInst &Inst, unsigned Imm, uint64_t Addr,
+                                      const MCDisassembler *Decoder) {
+  int64_t ImmVal = Imm;
+
+  // Sign-extend 9-bit immediate.
+  if (ImmVal & (1 << (9 - 1)))
+    ImmVal |= ~((1LL << 9) - 1);
+
+  if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal * 4), Addr,
+                                         /*IsBranch=*/true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(ImmVal));
   return Success;
 }

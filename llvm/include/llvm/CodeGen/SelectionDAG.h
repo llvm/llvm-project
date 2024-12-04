@@ -34,6 +34,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/CodeGen.h"
@@ -584,7 +585,7 @@ public:
     return Root;
   }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   void VerifyDAGDivergence();
 #endif
 
@@ -698,6 +699,10 @@ public:
   SDValue getTargetConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
+  }
+  SDValue getSignedTargetConstant(int64_t Val, const SDLoc &DL, EVT VT,
+                                  bool isOpaque = false) {
+    return getSignedConstant(Val, DL, VT, true, isOpaque);
   }
 
   /// Create a true or false constant of type \p VT using the target's
@@ -1064,17 +1069,13 @@ public:
   /// addressing some offset of an object. i.e. if a load is split into multiple
   /// components, create an add nuw from the base pointer to the offset.
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, TypeSize Offset) {
-    SDNodeFlags Flags;
-    Flags.setNoUnsignedWrap(true);
-    return getMemBasePlusOffset(Ptr, Offset, SL, Flags);
+    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
   }
 
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, SDValue Offset) {
     // The object itself can't wrap around the address space, so it shouldn't be
     // possible for the adds of the offsets to the split parts to overflow.
-    SDNodeFlags Flags;
-    Flags.setNoUnsignedWrap(true);
-    return getMemBasePlusOffset(Ptr, Offset, SL, Flags);
+    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
   }
 
   /// Return a new CALLSEQ_START node, that starts new call frame, in which
@@ -1598,6 +1599,15 @@ public:
   /// its operands and ReducedTY is the intrinsic's return type.
   SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
                               SDValue Op2);
+
+  /// Expands a node with multiple results to an FP or vector libcall. The
+  /// libcall is expected to take all the operands of the \p Node followed by
+  /// output pointers for each of the results. \p CallRetResNo can be optionally
+  /// set to indicate that one of the results comes from the libcall's return
+  /// value.
+  bool expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
+                                     SmallVectorImpl<SDValue> &Results,
+                                     std::optional<unsigned> CallRetResNo = {});
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);

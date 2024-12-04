@@ -14,8 +14,9 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_ASTOPS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "llvm/ADT/DenseSet.h"
@@ -88,14 +89,14 @@ private:
 /// the function to analyze. Don't call `TraverseDecl()` on the function itself;
 /// this won't work as `TraverseDecl()` contains code to avoid traversing nested
 /// functions.
-template <class Derived>
-class AnalysisASTVisitor : public RecursiveASTVisitor<Derived> {
+class AnalysisASTVisitor : public DynamicRecursiveASTVisitor {
 public:
-  bool shouldVisitImplicitCode() { return true; }
+  AnalysisASTVisitor() {
+    ShouldVisitImplicitCode = true;
+    ShouldVisitLambdaBody = false;
+  }
 
-  bool shouldVisitLambdaBody() const { return false; }
-
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(Decl *D) override {
     // Don't traverse nested record or function declarations.
     // - We won't be analyzing code contained in these anyway
     // - We don't model fields that are used only in these nested declaration,
@@ -104,30 +105,30 @@ public:
     if (isa_and_nonnull<RecordDecl>(D) || isa_and_nonnull<FunctionDecl>(D))
       return true;
 
-    return RecursiveASTVisitor<Derived>::TraverseDecl(D);
+    return DynamicRecursiveASTVisitor::TraverseDecl(D);
   }
 
   // Don't traverse expressions in unevaluated contexts, as we don't model
   // fields that are only used in these.
   // Note: The operand of the `noexcept` operator is an unevaluated operand, but
   // nevertheless it appears in the Clang CFG, so we don't exclude it here.
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) override { return true; }
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) override { return true; }
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) override {
     if (TIE->isPotentiallyEvaluated())
-      return RecursiveASTVisitor<Derived>::TraverseCXXTypeidExpr(TIE);
+      return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(TIE);
     return true;
   }
-  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
+  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) override {
     return true;
   }
 
-  bool TraverseBindingDecl(BindingDecl *BD) {
+  bool TraverseBindingDecl(BindingDecl *BD) override {
     // `RecursiveASTVisitor` doesn't traverse holding variables for
     // `BindingDecl`s by itself, so we need to tell it to.
     if (VarDecl *HoldingVar = BD->getHoldingVar())
       TraverseDecl(HoldingVar);
-    return RecursiveASTVisitor<Derived>::TraverseBindingDecl(BD);
+    return DynamicRecursiveASTVisitor::TraverseBindingDecl(BD);
   }
 };
 
@@ -145,6 +146,10 @@ struct ReferencedDecls {
   /// Free functions and member functions which are referenced (but not
   /// necessarily called).
   llvm::DenseSet<const FunctionDecl *> Functions;
+  /// When analyzing a lambda's call operator, the set of all parameters (from
+  /// the surrounding function) that the lambda captures. Captured local
+  /// variables are already included in `Locals` above.
+  llvm::DenseSet<const ParmVarDecl *> LambdaCapturedParams;
 };
 
 /// Returns declarations that are declared in or referenced from `FD`.

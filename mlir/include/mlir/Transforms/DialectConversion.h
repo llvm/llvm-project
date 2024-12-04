@@ -163,17 +163,19 @@ public:
 
   /// All of the following materializations require function objects that are
   /// convertible to the following form:
-  ///   `std::optional<Value>(OpBuilder &, T, ValueRange, Location)`,
+  ///   `Value(OpBuilder &, T, ValueRange, Location)`,
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
   /// "casts" a range of values into a single value of the given type `T`. It
-  /// must return a Value of the type `T` on success, an `std::nullopt` if
-  /// it failed but other materialization can be attempted, and `nullptr` on
-  /// unrecoverable failure. Materialization functions must be provided when a
-  /// type conversion may persist after the conversion has finished.
+  /// must return a Value of the type `T` on success and `nullptr` if
+  /// it failed but other materialization should be attempted. Materialization
+  /// functions must be provided when a type conversion may persist after the
+  /// conversion has finished.
   ///
   /// Note: Target materializations may optionally accept an additional Type
-  /// parameter, which is the original type of the SSA value.
+  /// parameter, which is the original type of the SSA value. Furthermore, `T`
+  /// can be a TypeRange; in that case, the function must return a
+  /// SmallVector<Value>.
 
   /// This method registers a materialization that will be called when
   /// converting (potentially multiple) block arguments that were the result of
@@ -187,9 +189,9 @@ public:
   }
 
   /// This method registers a materialization that will be called when
-  /// converting a legal replacement value back to an illegal source type.
-  /// This is used when some uses of the original, illegal value must persist
-  /// beyond the main conversion.
+  /// converting a replacement value back to its original source type.
+  /// This is used when some uses of the original value persist beyond the main
+  /// conversion.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
@@ -198,18 +200,22 @@ public:
   }
 
   /// This method registers a materialization that will be called when
-  /// converting an illegal (source) value to a legal (target) type.
+  /// converting a value to a target type according to a pattern's type
+  /// converter.
   ///
-  /// Note: For target materializations, users can optionally take the original
-  /// type. This type may be different from the type of the input. For example,
-  /// let's assume that a conversion pattern "P1" replaced an SSA value "v1"
-  /// (type "t1") with "v2" (type "t2"). Then a different conversion pattern
-  /// "P2" matches an op that has "v1" as an operand. Let's furthermore assume
-  /// that "P2" determines that the legalized type of "t1" is "t3", which may
-  /// be different from "t2". In this example, the target materialization
-  /// will be invoked with: outputType = "t3", inputs = "v2",
-  // originalType = "t1". Note  that the original type "t1" cannot be recovered
+  /// Note: Target materializations can optionally inspect the "original"
+  /// type. This type may be different from the type of the input value.
+  /// For example, let's assume that a conversion pattern "P1" replaced an SSA
+  /// value "v1" (type "t1") with "v2" (type "t2"). Then a different conversion
+  /// pattern "P2" matches an op that has "v1" as an operand. Let's furthermore
+  /// assume that "P2" determines that the converted target type of "t1" is
+  /// "t3", which may be different from "t2". In this example, the target
+  /// materialization will be invoked with: outputType = "t3", inputs = "v2",
+  /// originalType = "t1". Note that the original type "t1" cannot be recovered
   /// from just "t3" and "v2"; that's why the originalType parameter exists.
+  ///
+  /// Note: During a 1:N conversion, the result types can be a TypeRange. In
+  /// that case the materialization produces a SmallVector<Value>.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
@@ -316,6 +322,11 @@ public:
   Value materializeTargetConversion(OpBuilder &builder, Location loc,
                                     Type resultType, ValueRange inputs,
                                     Type originalType = {}) const;
+  SmallVector<Value> materializeTargetConversion(OpBuilder &builder,
+                                                 Location loc,
+                                                 TypeRange resultType,
+                                                 ValueRange inputs,
+                                                 Type originalType = {}) const;
 
   /// Convert an attribute present `attr` from within the type `type` using
   /// the registered conversion functions. If no applicable conversion has been
@@ -335,14 +346,14 @@ private:
   /// conversion.
   ///
   /// Arguments: builder, result type, inputs, location
-  using MaterializationCallbackFn = std::function<std::optional<Value>(
-      OpBuilder &, Type, ValueRange, Location)>;
+  using MaterializationCallbackFn =
+      std::function<Value(OpBuilder &, Type, ValueRange, Location)>;
 
   /// The signature of the callback used to materialize a target conversion.
   ///
-  /// Arguments: builder, result type, inputs, location, original type
-  using TargetMaterializationCallbackFn = std::function<std::optional<Value>(
-      OpBuilder &, Type, ValueRange, Location, Type)>;
+  /// Arguments: builder, result types, inputs, location, original type
+  using TargetMaterializationCallbackFn = std::function<SmallVector<Value>(
+      OpBuilder &, TypeRange, ValueRange, Location, Type)>;
 
   /// The signature of the callback used to convert a type attribute.
   using TypeAttributeConversionCallbackFn =
@@ -396,10 +407,10 @@ private:
   MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
-               Location loc) -> std::optional<Value> {
+               Location loc) -> Value {
       if (T derivedType = dyn_cast<T>(resultType))
         return callback(builder, derivedType, inputs, loc);
-      return std::nullopt;
+      return Value();
     };
   }
 
@@ -409,22 +420,46 @@ private:
   /// callback.
   ///
   /// With callback of form:
-  /// `Value(OpBuilder &, T, ValueRange, Location, Type)`
+  /// - Value(OpBuilder &, T, ValueRange, Location, Type)
+  /// - SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location, Type)
   template <typename T, typename FnT>
   std::enable_if_t<
       std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location, Type>,
       TargetMaterializationCallbackFn>
   wrapTargetMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
-               OpBuilder &builder, Type resultType, ValueRange inputs,
-               Location loc, Type originalType) -> std::optional<Value> {
-      if (T derivedType = dyn_cast<T>(resultType))
-        return callback(builder, derivedType, inputs, loc, originalType);
-      return std::nullopt;
+               OpBuilder &builder, TypeRange resultTypes, ValueRange inputs,
+               Location loc, Type originalType) -> SmallVector<Value> {
+      SmallVector<Value> result;
+      if constexpr (std::is_same<T, TypeRange>::value) {
+        // This is a 1:N target materialization. Return the produces values
+        // directly.
+        result = callback(builder, resultTypes, inputs, loc, originalType);
+      } else if constexpr (std::is_assignable<Type, T>::value) {
+        // This is a 1:1 target materialization. Invoke the callback only if a
+        // single SSA value is requested.
+        if (resultTypes.size() == 1) {
+          // Invoke the callback only if the type class of the callback matches
+          // the requested result type.
+          if (T derivedType = dyn_cast<T>(resultTypes.front())) {
+            // 1:1 materializations produce single values, but we store 1:N
+            // target materialization functions in the type converter. Wrap the
+            // result value in a SmallVector<Value>.
+            Value val =
+                callback(builder, derivedType, inputs, loc, originalType);
+            if (val)
+              result.push_back(val);
+          }
+        }
+      } else {
+        static_assert(sizeof(T) == 0, "T must be a Type or a TypeRange");
+      }
+      return result;
     };
   }
   /// With callback of form:
-  /// `Value(OpBuilder &, T, ValueRange, Location)`
+  /// - Value(OpBuilder &, T, ValueRange, Location)
+  /// - SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location)
   template <typename T, typename FnT>
   std::enable_if_t<
       std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location>,
@@ -432,9 +467,9 @@ private:
   wrapTargetMaterialization(FnT &&callback) const {
     return wrapTargetMaterialization<T>(
         [callback = std::forward<FnT>(callback)](
-            OpBuilder &builder, T resultType, ValueRange inputs, Location loc,
-            Type originalType) -> std::optional<Value> {
-          return callback(builder, resultType, inputs, loc);
+            OpBuilder &builder, T resultTypes, ValueRange inputs, Location loc,
+            Type originalType) {
+          return callback(builder, resultTypes, inputs, loc);
         });
   }
 
@@ -503,8 +538,15 @@ public:
                        ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("unimplemented rewrite");
   }
+  virtual void rewrite(Operation *op, ArrayRef<ValueRange> operands,
+                       ConversionPatternRewriter &rewriter) const {
+    rewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
+  }
 
   /// Hook for derived classes to implement combined matching and rewriting.
+  /// This overload supports only 1:1 replacements. The 1:N overload is called
+  /// by the driver. By default, it calls this 1:1 overload or reports a fatal
+  /// error if 1:N replacements were found.
   virtual LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
@@ -512,6 +554,14 @@ public:
       return failure();
     rewrite(op, operands, rewriter);
     return success();
+  }
+
+  /// Hook for derived classes to implement combined matching and rewriting.
+  /// This overload supports 1:N replacements.
+  virtual LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
   }
 
   /// Attempt to match and rewrite the IR root at the specified operation.
@@ -540,6 +590,15 @@ protected:
       : RewritePattern(std::forward<Args>(args)...),
         typeConverter(&typeConverter) {}
 
+  /// Given an array of value ranges, which are the inputs to a 1:N adaptor,
+  /// try to extract the single value of each range to construct a the inputs
+  /// for a 1:1 adaptor.
+  ///
+  /// This function produces a fatal error if at least one range has 0 or
+  /// more than 1 value: "pattern 'name' does not support 1:N conversion"
+  SmallVector<Value>
+  getOneToOneAdaptorOperands(ArrayRef<ValueRange> operands) const;
+
 protected:
   /// An optional type converter for use by this pattern.
   const TypeConverter *typeConverter = nullptr;
@@ -555,6 +614,8 @@ template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
+  using OneToNOpAdaptor =
+      typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
 
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
@@ -573,11 +634,23 @@ public:
     auto sourceOp = cast<SourceOp>(op);
     rewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
   }
+  void rewrite(Operation *op, ArrayRef<ValueRange> operands,
+               ConversionPatternRewriter &rewriter) const final {
+    auto sourceOp = cast<SourceOp>(op);
+    rewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp), rewriter);
+  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto sourceOp = cast<SourceOp>(op);
     return matchAndRewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
+  }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto sourceOp = cast<SourceOp>(op);
+    return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
+                           rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
@@ -589,6 +662,12 @@ public:
                        ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("must override matchAndRewrite or a rewrite method");
   }
+  virtual void rewrite(SourceOp op, OneToNOpAdaptor adaptor,
+                       ConversionPatternRewriter &rewriter) const {
+    SmallVector<Value> oneToOneOperands =
+        getOneToOneAdaptorOperands(adaptor.getOperands());
+    rewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
+  }
   virtual LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
@@ -596,6 +675,13 @@ public:
       return failure();
     rewrite(op, adaptor, rewriter);
     return success();
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const {
+    SmallVector<Value> oneToOneOperands =
+        getOneToOneAdaptorOperands(adaptor.getOperands());
+    return matchAndRewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
   }
 
 private:
@@ -622,8 +708,17 @@ public:
                ConversionPatternRewriter &rewriter) const final {
     rewrite(cast<SourceOp>(op), operands, rewriter);
   }
+  void rewrite(Operation *op, ArrayRef<ValueRange> operands,
+               ConversionPatternRewriter &rewriter) const final {
+    rewrite(cast<SourceOp>(op), operands, rewriter);
+  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
+  }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
   }
@@ -634,6 +729,10 @@ public:
                        ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("must override matchAndRewrite or a rewrite method");
   }
+  virtual void rewrite(SourceOp op, ArrayRef<ValueRange> operands,
+                       ConversionPatternRewriter &rewriter) const {
+    rewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
+  }
   virtual LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
@@ -641,6 +740,11 @@ public:
       return failure();
     rewrite(op, operands, rewriter);
     return success();
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
   }
 
 private:
@@ -761,11 +865,31 @@ public:
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
 
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the new values. The number of op results
+  /// and replacement values must match. The types may differ: the dialect
+  /// conversion driver will reconcile any surviving type mismatches at the end
+  /// of the conversion process with source materializations. The given
+  /// operation is erased.
   void replaceOp(Operation *op, ValueRange newValues) override;
 
-  /// PatternRewriter hook for replacing an operation.
+  /// Replace the given operation with the results of the new op. The number of
+  /// op results must match. The types may differ: the dialect conversion
+  /// driver will reconcile any surviving type mismatches at the end of the
+  /// conversion process with source materializations. The original operation
+  /// is erased.
   void replaceOp(Operation *op, Operation *newOp) override;
+
+  /// Replace the given operation with the new value ranges. The number of op
+  /// results and value ranges must match. If an original SSA value is replaced
+  /// by multiple SSA values (i.e., a value range has more than 1 element), the
+  /// conversion driver will insert an argument materialization to convert the
+  /// N SSA values back into 1 SSA value of the original type. The given
+  /// operation is erased.
+  ///
+  /// Note: The argument materialization is a workaround until we have full 1:N
+  /// support in the dialect conversion. (It is going to disappear from both
+  /// `replaceOpWithMultiple` and `applySignatureConversion`.)
+  void replaceOpWithMultiple(Operation *op, ArrayRef<ValueRange> newValues);
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
   /// operation *must* be made dead by the end of the conversion process,

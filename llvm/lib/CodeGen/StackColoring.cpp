@@ -1193,9 +1193,6 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
   if (SC.run(MF))
     return PreservedAnalyses::none();

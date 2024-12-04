@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
-#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -191,7 +190,7 @@ public:
   bool allowedByRules(const SUnit *SU,
                       SmallVectorImpl<SchedGroup> &SyncPipe) const {
     for (auto &Rule : Rules) {
-      if (!Rule.get()->apply(SU, Collection, SyncPipe))
+      if (!Rule->apply(SU, Collection, SyncPipe))
         return false;
     }
     return true;

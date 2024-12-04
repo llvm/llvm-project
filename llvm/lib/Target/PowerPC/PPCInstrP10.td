@@ -79,6 +79,10 @@ def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
   SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
 ]>;
 
+def SDT_PPCsetbc : SDTypeProfile<1, 1, [
+  SDTCisInt<0>, SDTCisInt<1>
+]>;
+
 //===----------------------------------------------------------------------===//
 // ISA 3.1 specific PPCISD nodes.
 //
@@ -91,6 +95,8 @@ def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
 def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
                         []>;
 def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
+def PPCsetbc  : SDNode<"PPCISD::SETBC",   SDT_PPCsetbc, []>;
+def PPCsetbcr : SDNode<"PPCISD::SETBCR",  SDT_PPCsetbc, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -105,7 +111,7 @@ def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
 
 // PPC Specific DAG Nodes.
 def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // Top-level class for prefixed instructions.
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -137,6 +143,10 @@ class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
 
   bits<1> Prefixed = 1;  // This is a prefixed instruction.
   let TSFlags{7}  = Prefixed;
+
+  // Indicate that this instruction takes a register+immediate memory operand.
+  bits<1> MemriOp = 0;
+  let TSFlags{10} = MemriOp;
 
   // For cases where multiple instruction definitions really represent the
   // same underlying instruction but with one definition for 64-bit arguments
@@ -183,7 +193,7 @@ multiclass VXForm_VTB5_RCr<bits<10> xo, bits<5> R, dag OOL, dag IOL,
 
 class MLS_DForm_R_SI34_RTA5_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
                                 InstrItinClass itin, list<dag> pattern>
-  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  : PI<1, opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RST;
   bits<5> RA;
   bits<34> D;
@@ -257,7 +267,7 @@ multiclass MLS_DForm_R_SI34_RTA5_p<bits<6> opcode, dag OOL, dag IOL,
 
 class 8LS_DForm_R_SI34_RTA5_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
                                 InstrItinClass itin, list<dag> pattern>
-  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  : PI<1, opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RST;
   bits<5> RA;
   bits<34> D;
@@ -281,7 +291,7 @@ class 8LS_DForm_R_SI34_RTA5_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
 class 8LS_DForm_R_SI34_XT6_RA5_MEM<bits<5> opcode, dag OOL, dag IOL,
                                    string asmstr, InstrItinClass itin,
                                    list<dag> pattern>
-  : PI<1, { opcode, ? }, OOL, IOL, asmstr, itin> {
+  : PI<1, { opcode, ? }, OOL, IOL, asmstr, itin>, MemriOp {
   bits<6> XST;
   bits<5> RA;
   bits<34> D;
@@ -585,7 +595,7 @@ multiclass MLS_DForm_R_SI34_RTA5_MEM_p<bits<6> opcode, dag OOL, dag IOL,
                                      isPCRel;
   let isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
     def nopc : MLS_DForm_R_SI34_RTA5_MEM<opcode, OOL, IOL, asmstr, itin, []>;
-    let RA = 0 in
+    let RA = 0, MemriOp = 0 in
       def onlypc : MLS_DForm_R_SI34_RTA5_MEM<opcode, OOL, PCRelOnly_IOL,
                                              asmstr_pcext, itin, []>, isPCRel;
   }
@@ -602,7 +612,7 @@ multiclass 8LS_DForm_R_SI34_RTA5_MEM_p<bits<6> opcode, dag OOL, dag IOL,
                                      isPCRel;
   let isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
     def nopc : 8LS_DForm_R_SI34_RTA5_MEM<opcode, OOL, IOL, asmstr, itin, []>;
-    let RA = 0 in
+    let RA = 0, MemriOp = 0 in
       def onlypc : 8LS_DForm_R_SI34_RTA5_MEM<opcode, OOL, PCRelOnly_IOL,
                                              asmstr_pcext, itin, []>, isPCRel;
   }
@@ -619,7 +629,7 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_MEM_p<bits<5> opcode, dag OOL, dag IOL,
                                         isPCRel;
   let isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
     def nopc : 8LS_DForm_R_SI34_XT6_RA5_MEM<opcode, OOL, IOL, asmstr, itin, []>;
-    let RA = 0 in
+    let RA = 0, MemriOp = 0 in
       def onlypc : 8LS_DForm_R_SI34_XT6_RA5_MEM<opcode, OOL, PCRelOnly_IOL,
                                                 asmstr_pcext, itin, []>, isPCRel;
   }
@@ -847,7 +857,7 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
 
 class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> XTp;
   bits<5> RA;
   bits<12> DQ;
@@ -879,7 +889,7 @@ class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
 
 class 8LS_DForm_R_XTp5_SI34_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
                                 InstrItinClass itin, list<dag> pattern>
-  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  : PI<1, opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> XTp;
   bits<5> RA;
   bits<34> D;
@@ -910,7 +920,7 @@ multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> opcode, dag OOL,
                                      isPCRel;
   let isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
     def nopc : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, IOL, asmstr, itin, []>;
-    let RA = 0 in
+    let RA = 0, MemriOp = 0 in
       def onlypc : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, PCRelOnly_IOL,
                                              asmstr_pcext, itin, []>, isPCRel;
   }
@@ -1397,10 +1407,12 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
 
 let Predicates = [IsISA3_1] in {
   def SETBC : XForm_XT5_BI5<31, 384, (outs gprc:$RST), (ins crbitrc:$BI),
-                            "setbc $RST, $BI", IIC_IntCompare, []>,
+                            "setbc $RST, $BI", IIC_IntCompare,
+                            [(set i32:$RST, (PPCsetbc i1:$BI))]>,
                             SExt32To64, ZExt32To64;
   def SETBCR : XForm_XT5_BI5<31, 416, (outs gprc:$RST), (ins crbitrc:$BI),
-                             "setbcr $RST, $BI", IIC_IntCompare, []>,
+                             "setbcr $RST, $BI", IIC_IntCompare,
+                             [(set i32:$RST, (PPCsetbcr i1:$BI))]>,
                              SExt32To64, ZExt32To64;
   def SETNBC : XForm_XT5_BI5<31, 448, (outs gprc:$RST), (ins crbitrc:$BI),
                              "setnbc $RST, $BI", IIC_IntCompare, []>,
@@ -2506,7 +2518,7 @@ let Predicates = [IsISA3_1, PrefixInstrs], isAsmParserOnly = 1, hasNoSchedulingI
   let Interpretation64Bit = 1 in {
     def PLA8 : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
                                   (ins g8rc_nox0:$RA, s34imm:$SI),
-                                  "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>;
+                                  "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemriOp;
     def PLA8pc : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
                                     (ins s34imm_pcrel:$SI),
                                     "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;
@@ -2517,7 +2529,7 @@ let Predicates = [IsISA3_1, PrefixInstrs], isAsmParserOnly = 1, hasNoSchedulingI
 
   def PLA : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
                                (ins gprc_nor0:$RA, s34imm:$SI),
-                               "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>;
+                               "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemriOp;
   def PLApc : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
                                  (ins s34imm_pcrel:$SI),
                                  "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;

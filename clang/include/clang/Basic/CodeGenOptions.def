@@ -136,6 +136,8 @@ CODEGENOPT(XRayIgnoreLoops , 1, 0)
 ///< Emit the XRay function index section.
 CODEGENOPT(XRayFunctionIndex , 1, 1)
 
+///< Set when -fxray-shared is enabled
+CODEGENOPT(XRayShared , 1, 0)
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
@@ -153,6 +155,7 @@ VALUE_CODEGENOPT(PatchableFunctionEntryOffset , 32, 0)
 CODEGENOPT(HotPatch, 1, 0) ///< Supports the Microsoft /HOTPATCH flag and
                            ///< generates a 'patchable-function' attribute.
 
+CODEGENOPT(TlsGuards , 1, 1) ///< Controls emission of tls guards via -fms-tls-guards
 CODEGENOPT(JMCInstrument, 1, 0) ///< Set when -fjmc is enabled.
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0) ///< Set when -mfentry is enabled.

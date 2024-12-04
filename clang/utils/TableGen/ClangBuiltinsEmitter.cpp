@@ -1,4 +1,4 @@
-//=- ClangBuiltinsEmitter.cpp - Generate Clang builtins tables -*- C++ -*-====//
+//===-- ClangBuiltinsEmitter.cpp - Generate Clang builtins tables ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,7 +64,8 @@ private:
       // detecting the comma of the template class as a separator for
       // the parameters of the prototype. Note: the assumption is that
       // we cannot have nested _ExtVector.
-      if (Current.starts_with("_ExtVector<")) {
+      if (Current.starts_with("_ExtVector<") ||
+          Current.starts_with("_Vector<")) {
         const size_t EndTemplate = Current.find('>', 0);
         ParseType(Current.substr(0, EndTemplate + 1));
         // Move the prototype beyond _ExtVector<...>
@@ -123,7 +124,8 @@ private:
       if (Substitution.empty())
         PrintFatalError(Loc, "Not a template");
       ParseType(Substitution);
-    } else if (T.consume_front("_ExtVector")) {
+    } else if (auto IsExt = T.consume_front("_ExtVector");
+               IsExt || T.consume_front("_Vector")) {
       // Clang extended vector types are mangled as follows:
       //
       // '_ExtVector<' <lanes> ',' <scalar type> '>'
@@ -135,7 +137,7 @@ private:
       unsigned long long Lanes;
       if (consumeUnsignedInteger(T, 10, Lanes))
         PrintFatalError(Loc, "Expected number of lanes after '_ExtVector<'");
-      Type += "E" + std::to_string(Lanes);
+      Type += (IsExt ? "E" : "V") + std::to_string(Lanes);
       if (!T.consume_front(","))
         PrintFatalError(Loc,
                         "Expected ',' after number of lanes in '_ExtVector<'");

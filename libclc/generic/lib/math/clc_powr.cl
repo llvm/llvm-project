@@ -21,11 +21,12 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
+#include <clc/math/clc_fabs.h>
 
 #include "config.h"
 #include "math.h"
 #include "tables.h"
-#include "../clcmacro.h"
 
 // compute pow using log and exp
 // x^y = exp(y * log(x))
@@ -76,7 +77,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_powr(float x, float y)
     // Extra precise log calculation
     // First handle case that x is close to 1
     float r = 1.0f - as_float(ax);
-    int near1 = fabs(r) < 0x1.0p-4f;
+    int near1 = __clc_fabs(r) < 0x1.0p-4f;
     float r2 = r*r;
 
     // Coefficients are just 1/3, 1/4, 1/5 and 1/6

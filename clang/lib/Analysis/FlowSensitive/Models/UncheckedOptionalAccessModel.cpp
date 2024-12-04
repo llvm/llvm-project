@@ -338,6 +338,11 @@ auto isZeroParamConstMemberCall() {
       callee(cxxMethodDecl(parameterCountIs(0), isConst())));
 }
 
+auto isZeroParamConstMemberOperatorCall() {
+  return cxxOperatorCallExpr(
+      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
+}
+
 auto isNonConstMemberCall() {
   return cxxMemberCallExpr(callee(cxxMethodDecl(unless(isConst()))));
 }
@@ -572,9 +577,10 @@ void handleConstMemberCall(const CallExpr *CE,
     return;
   }
 
-  // Cache if the const method returns a boolean type.
+  // Cache if the const method returns a boolean or pointer type.
   // We may decide to cache other return types in the future.
-  if (RecordLoc != nullptr && CE->getType()->isBooleanType()) {
+  if (RecordLoc != nullptr &&
+      (CE->getType()->isBooleanType() || CE->getType()->isPointerType())) {
     Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
                                                                  State.Env);
     if (Val == nullptr)
@@ -597,14 +603,26 @@ void transferValue_ConstMemberCall(const CXXMemberCallExpr *MCE,
       MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result, State);
 }
 
+void transferValue_ConstMemberOperatorCall(
+    const CXXOperatorCallExpr *OCE, const MatchFinder::MatchResult &Result,
+    LatticeTransferState &State) {
+  auto *RecordLoc = cast_or_null<dataflow::RecordStorageLocation>(
+      State.Env.getStorageLocation(*OCE->getArg(0)));
+  handleConstMemberCall(OCE, RecordLoc, Result, State);
+}
+
 void handleNonConstMemberCall(const CallExpr *CE,
                               dataflow::RecordStorageLocation *RecordLoc,
                               const MatchFinder::MatchResult &Result,
                               LatticeTransferState &State) {
-  // When a non-const member function is called, reset some state.
   if (RecordLoc != nullptr) {
+    // When a non-const member function is called, clear all (non-const)
+    // optional fields of the receiver. Const-qualified fields can't be
+    // changed (at least, not without UB).
     for (const auto &[Field, FieldLoc] : RecordLoc->children()) {
-      if (isSupportedOptionalType(Field->getType())) {
+      QualType FieldType = Field->getType();
+      if (!FieldType.isConstQualified() &&
+          isSupportedOptionalType(Field->getType())) {
         auto *FieldRecordLoc = cast_or_null<RecordStorageLocation>(FieldLoc);
         if (FieldRecordLoc) {
           setHasValue(*FieldRecordLoc, State.Env.makeAtomicBoolValue(),
@@ -1016,6 +1034,8 @@ auto buildTransferMatchSwitch() {
       // const accessor calls
       .CaseOfCFGStmt<CXXMemberCallExpr>(isZeroParamConstMemberCall(),
                                         transferValue_ConstMemberCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isZeroParamConstMemberOperatorCall(),
+                                          transferValue_ConstMemberOperatorCall)
       // non-const member calls that may modify the state of an object.
       .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
                                         transferValue_NonConstMemberCall)

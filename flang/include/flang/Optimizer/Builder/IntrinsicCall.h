@@ -289,6 +289,8 @@ struct IntrinsicLibrary {
   template <mlir::arith::CmpFPredicate pred>
   mlir::Value genIeeeQuietCompare(mlir::Type resultType,
                                   llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeReal(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeRem(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeRint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <bool isFlag>
   void genIeeeSetFlagOrHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
@@ -393,7 +395,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSignalSubroutine(llvm::ArrayRef<fir::ExtendedValue>);
   void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
-  void genSystem(mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genSystem(std::optional<mlir::Type>,
+                               mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
