@@ -4431,10 +4431,21 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_HLSL_Array_RValue:
-    FromType = Context.getArrayParameterType(FromType);
-    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                             /*BasePath=*/nullptr, CCK)
-               .get();
+    if (ToType->isArrayParameterType()) {
+      FromType = Context.getArrayParameterType(FromType);
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
+    } else { // FromType must be ArrayParameterType
+      assert(FromType->isArrayParameterType() &&
+             "FromType must be ArrayParameterType in ICK_HLSL_Array_RValue \
+              if it is not ToType");
+      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
+      FromType = APT->getConstantArrayType(Context);
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
+    }
     break;
 
   case ICK_Function_To_Pointer:
@@ -5720,8 +5731,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
            "typed resource element compatible types are an HLSL-only feature");
-    if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
-                                 diag::err_incomplete_type))
+    if (T->isIncompleteType())
       return false;
 
     return Self.HLSL().IsTypedResourceElementCompatible(T);

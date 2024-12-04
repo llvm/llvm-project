@@ -91,6 +91,7 @@ struct IntelSubgroupsBuiltin {
   uint32_t Opcode;
   bool IsBlock;
   bool IsWrite;
+  bool IsMedia;
 };
 
 #define GET_IntelSubgroupsBuiltins_DECL
@@ -215,6 +216,8 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   // - "__spirv_ReadClockKHR"
   // - "__spirv_SubgroupBlockReadINTEL"
   // - "__spirv_SubgroupImageBlockReadINTEL"
+  // - "__spirv_SubgroupImageMediaBlockReadINTEL"
+  // - "__spirv_SubgroupImageMediaBlockWriteINTEL"
   // - "__spirv_Convert"
   // - "__spirv_UConvert"
   // - "__spirv_SConvert"
@@ -225,7 +228,9 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   static const std::regex SpvWithR(
       "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageQuerySizeLod|UDotKHR|"
       "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
-      "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|Convert|"
+      "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
+      "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
+      "Convert|"
       "UConvert|SConvert|FConvert|SatConvert).*)_R.*");
   std::smatch Match;
   if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 2)
@@ -469,12 +474,8 @@ static Register buildLoadInst(SPIRVType *BaseType, Register PtrRegister,
                               MachineIRBuilder &MIRBuilder,
                               SPIRVGlobalRegistry *GR, LLT LowLevelType,
                               Register DestinationReg = Register(0)) {
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  if (!DestinationReg.isValid()) {
-    DestinationReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-    MRI->setType(DestinationReg, LLT::scalar(64));
-    GR->assignSPIRVTypeToVReg(BaseType, DestinationReg, MIRBuilder.getMF());
-  }
+  if (!DestinationReg.isValid())
+    DestinationReg = createVirtualRegister(BaseType, GR, MIRBuilder);
   // TODO: consider using correct address space and alignment (p0 is canonical
   // type for selection though).
   MachinePointerInfo PtrInfo = MachinePointerInfo();
@@ -1196,19 +1197,28 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   MachineFunction &MF = MIRBuilder.getMF();
   const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
-  if (!ST->canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+  const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
+      SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
+
+  if (IntelSubgroups->IsMedia &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_media_block_io)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_INTEL_media_block_io";
+    report_fatal_error(DiagMsg.c_str(), false);
+  } else if (!IntelSubgroups->IsMedia &&
+             !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
     std::string DiagMsg = std::string(Builtin->Name) +
                           ": the builtin requires the following SPIR-V "
                           "extension: SPV_INTEL_subgroups";
     report_fatal_error(DiagMsg.c_str(), false);
   }
-  const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
-      SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
 
   uint32_t OpCode = IntelSubgroups->Opcode;
   if (Call->isSpirvOp()) {
     bool IsSet = OpCode != SPIRV::OpSubgroupBlockWriteINTEL &&
-                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL;
+                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL &&
+                 OpCode != SPIRV::OpSubgroupImageMediaBlockWriteINTEL;
     return buildOpFromWrapper(MIRBuilder, OpCode, Call,
                               IsSet ? GR->getSPIRVTypeID(Call->ReturnType)
                                     : Register(0));
@@ -2151,7 +2161,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     const SPIRVType *PointerSizeTy = GR->getOrCreateSPIRVPointerType(
         Int32Ty, MIRBuilder, SPIRV::StorageClass::Function);
     for (unsigned I = 0; I < LocalSizeNum; ++I) {
-      Register Reg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+      Register Reg = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
       MRI->setType(Reg, LLType);
       GR->assignSPIRVTypeToVReg(PointerSizeTy, Reg, MIRBuilder.getMF());
       auto GEPInst = MIRBuilder.buildIntrinsic(
@@ -2539,23 +2549,11 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  SPIRVGlobalRegistry *GR) {
   LLVM_DEBUG(dbgs() << "Lowering builtin call: " << DemangledCall << "\n");
 
-  // SPIR-V type and return register.
-  Register ReturnRegister = OrigRet;
-  SPIRVType *ReturnType = nullptr;
-  if (OrigRetTy && !OrigRetTy->isVoidTy()) {
-    ReturnType = GR->assignTypeToVReg(OrigRetTy, ReturnRegister, MIRBuilder);
-    if (!MIRBuilder.getMRI()->getRegClassOrNull(ReturnRegister))
-      MIRBuilder.getMRI()->setRegClass(ReturnRegister,
-                                       GR->getRegClass(ReturnType));
-  } else if (OrigRetTy && OrigRetTy->isVoidTy()) {
-    ReturnRegister = MIRBuilder.getMRI()->createVirtualRegister(&IDRegClass);
-    MIRBuilder.getMRI()->setType(ReturnRegister, LLT::scalar(64));
-    ReturnType = GR->assignTypeToVReg(OrigRetTy, ReturnRegister, MIRBuilder);
-  }
-
   // Lookup the builtin in the TableGen records.
+  SPIRVType *SpvType = GR->getSPIRVTypeForVReg(OrigRet);
+  assert(SpvType && "Inconsistent return register: expected valid type info");
   std::unique_ptr<const IncomingCall> Call =
-      lookupBuiltin(DemangledCall, Set, ReturnRegister, ReturnType, Args);
+      lookupBuiltin(DemangledCall, Set, OrigRet, SpvType, Args);
 
   if (!Call) {
     LLVM_DEBUG(dbgs() << "Builtin record was not found!\n");

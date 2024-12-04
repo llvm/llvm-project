@@ -99,8 +99,9 @@ public:
     return try_wait_impl(__value);
   }
   inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait() const {
-    std::__atomic_wait_unless(
-        __a_, [this](ptrdiff_t& __value) -> bool { return try_wait_impl(__value); }, memory_order_acquire);
+    std::__atomic_wait_unless(__a_, memory_order_acquire, [this](ptrdiff_t& __value) -> bool {
+      return try_wait_impl(__value);
+    });
   }
   inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void arrive_and_wait(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update >= 0, "latch::arrive_and_wait called with a negative value");

@@ -586,7 +586,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
      ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - xnack            - Absolute flat   FP8 and BF8 instructions,
                                          - ``gfx941``      - sramecc            scratch         FP8 and BF8 conversion instructions,
                                          - ``gfx942``                                           as well as instructions with XF32 format support
-                                                                                                are not available.
+                                         - ``gfx950``                                           are not available.
 
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
@@ -1406,6 +1406,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - Matrix B scale values
 
   llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4       Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
+
+  llvm.amdgcn.permlane16.swap                      Provide direct access to `v_permlane16_swap_b32` instruction on supported targets.
+                                                   Swaps the values across lanes of first 2 operands. Odd rows of the first operand are
+                                                   swapped with even rows of the second operand (one row is 16 lanes).
+                                                   Returns a pair for the swapped registers. The first element of the return corresponds
+                                                   to the swapped element of the first argument.
+
+
+  llvm.amdgcn.permlane32.swap                      Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
+                                                   Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
+                                                   swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
+                                                   Returns a pair for the swapped registers. The first element of the return
+                                                   corresponds to the swapped element of the first argument.
 
   ==============================================   ==========================================================
 

@@ -9,6 +9,7 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
@@ -203,6 +204,7 @@ struct IndirectLocalPathEntry {
     GslPointerInit,
     GslPointerAssignment,
     DefaultArg,
+    ParenAggInit,
   } Kind;
   Expr *E;
   union {
@@ -253,9 +255,35 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   LocalVisitor Visit);
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
-  if (auto *RD = Type->getAsCXXRecordDecl())
-    return RD->hasAttr<T>();
-  return false;
+  auto *RD = Type->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // Generally, if a primary template class declaration is annotated with an
+  // attribute, all its specializations generated from template instantiations
+  // should inherit the attribute.
+  //
+  // However, since lifetime analysis occurs during parsing, we may encounter
+  // cases where a full definition of the specialization is not required. In
+  // such cases, the specialization declaration remains incomplete and lacks the
+  // attribute. Therefore, we fall back to checking the primary template class.
+  //
+  // Note: it is possible for a specialization declaration to have an attribute
+  // even if the primary template does not.
+  //
+  // FIXME: What if the primary template and explicit specialization
+  // declarations have conflicting attributes? We should consider diagnosing
+  // this scenario.
+  bool Result = RD->hasAttr<T>();
+
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    Result |= CTSD->getSpecializedTemplate()->getTemplatedDecl()->hasAttr<T>();
+
+  return Result;
+}
+
+bool isPointerLikeType(QualType QT) {
+  return isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
+         QT->isNullPtrType();
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
@@ -274,11 +302,6 @@ static bool isInStlNamespace(const Decl *D) {
     }
 
   return DC->isStdNamespace();
-}
-
-static bool isPointerLikeType(QualType Type) {
-  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
-         Type->isNullPtrType();
 }
 
 // Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
@@ -490,7 +513,7 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
       if (MD && MD->isCXXInstanceMember())
         LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
       else
-        LHST = MD->getParamDecl(0)->getType();
+        LHST = FD->getParamDecl(0)->getType();
       if (Ctx.hasSameType(RetT, LHST))
         return true;
     }
@@ -498,7 +521,7 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
   return false;
 }
 
-static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;
@@ -622,6 +645,26 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       Arg = DAE->getExpr();
     }
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+    else if (const auto *CaptureAttr =
+                 Callee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+             CaptureAttr && isa<CXXConstructorDecl>(Callee) &&
+             llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
+               return ArgIdx == LifetimeCaptureByAttr::THIS;
+             }))
+      // `lifetime_capture_by(this)` in a class constructor has the same
+      // semantics as `lifetimebound`:
+      //
+      // struct Foo {
+      //   const int& a;
+      //   // Equivalent to Foo(const int& t [[clang::lifetimebound]])
+      //   Foo(const int& t [[clang::lifetime_capture_by(this)]]) : a(t) {}
+      // };
+      //
+      // In the implementation, `lifetime_capture_by` is treated as an alias for
+      // `lifetimebound` and shares the same code path. This implies the emitted
+      // diagnostics will be emitted under `-Wdangling`, not
+      // `-Wdangling-capture`.
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
@@ -961,6 +1004,17 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   if (isa<CallExpr>(Init) || isa<CXXConstructExpr>(Init))
     return visitFunctionCallArguments(Path, Init, Visit);
 
+  if (auto *CPE = dyn_cast<CXXParenListInitExpr>(Init)) {
+    RevertToOldSizeRAII RAII(Path);
+    Path.push_back({IndirectLocalPathEntry::ParenAggInit, CPE});
+    for (auto *I : CPE->getInitExprs()) {
+      if (I->isGLValue())
+        visitLocalsRetainedByReferenceBinding(Path, I, RK_ReferenceBinding,
+                                              Visit);
+      else
+        visitLocalsRetainedByInitializer(Path, I, Visit, true);
+    }
+  }
   switch (Init->getStmtClass()) {
   case Stmt::UnaryOperatorClass: {
     auto *UO = cast<UnaryOperator>(Init);
@@ -1057,6 +1111,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslPointerAssignment:
+    case IndirectLocalPathEntry::ParenAggInit:
       // These exist primarily to mark the path as not permitting or
       // supporting lifetime extension.
       break;
@@ -1368,6 +1423,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       switch (Elem.Kind) {
       case IndirectLocalPathEntry::AddressOf:
       case IndirectLocalPathEntry::LValToRVal:
+      case IndirectLocalPathEntry::ParenAggInit:
         // These exist primarily to mark the path as not permitting or
         // supporting lifetime extension.
         break;
