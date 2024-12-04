@@ -1896,6 +1896,18 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
     }
 
+    if (VT.isRISCVVectorTuple()) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      return NodeMap[V] = DAG.getNode(
+                 ISD::BITCAST, getCurSDLoc(), VT,
+                 DAG.getNode(
+                     ISD::SPLAT_VECTOR, getCurSDLoc(),
+                     EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                                      VT.getSizeInBits().getKnownMinValue() / 8,
+                                      true),
+                     DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
