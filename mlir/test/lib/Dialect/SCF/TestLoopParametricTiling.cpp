@@ -40,9 +40,11 @@ public:
   }
 
   void runOnOperation() override {
-    // If no outer loop iteration is given, ignore the pass.
-    if (sizes.empty())
+    if (sizes.empty()) {
+      getOperation()->emitError("expect non-empty outer loop sizes");
+      signalPassFailure();
       return;
+    }
     getOperation()->walk([this](scf::ForOp op) {
       // Ignore nested loops.
       if (op->getParentRegion()->getParentOfType<scf::ForOp>())
