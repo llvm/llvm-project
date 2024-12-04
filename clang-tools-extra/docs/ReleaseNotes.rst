@@ -184,7 +184,8 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check to
   diagnose potential dangling references when returning a ``const &`` parameter
   by using the conditional operator ``cond ? var1 : var2`` and no longer giving
-  false positives for functions which contain lambda.
+  false positives for functions which contain lambda and ignore parameters
+  with ``[[clang::lifetimebound]]`` attribute.
   
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious

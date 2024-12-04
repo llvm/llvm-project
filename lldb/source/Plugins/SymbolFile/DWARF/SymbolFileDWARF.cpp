@@ -1305,121 +1305,76 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
   return true;
 }
 
-size_t SymbolFileDWARF::ParseBlocksRecursive(
-    lldb_private::CompileUnit &comp_unit, Block *parent_block,
-    const DWARFDIE &orig_die, addr_t subprogram_low_pc, uint32_t depth) {
+size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
+                                             Block *parent_block, DWARFDIE die,
+                                             addr_t subprogram_low_pc) {
   size_t blocks_added = 0;
-  DWARFDIE die = orig_die;
-  while (die) {
+  for (; die; die = die.GetSibling()) {
     dw_tag_t tag = die.Tag();
 
-    switch (tag) {
-    case DW_TAG_inlined_subroutine:
-    case DW_TAG_subprogram:
-    case DW_TAG_lexical_block: {
-      Block *block = nullptr;
-      if (tag == DW_TAG_subprogram) {
-        // Skip any DW_TAG_subprogram DIEs that are inside of a normal or
-        // inlined functions. These will be parsed on their own as separate
-        // entities.
+    if (tag != DW_TAG_inlined_subroutine && tag != DW_TAG_lexical_block)
+      continue;
 
-        if (depth > 0)
-          break;
+    Block *block = parent_block->CreateChild(die.GetID()).get();
+    DWARFRangeList ranges;
+    const char *name = nullptr;
+    const char *mangled_name = nullptr;
 
-        block = parent_block;
-      } else {
-        block = parent_block->CreateChild(die.GetID()).get();
-      }
-      DWARFRangeList ranges;
-      const char *name = nullptr;
-      const char *mangled_name = nullptr;
-
-      std::optional<int> decl_file;
-      std::optional<int> decl_line;
-      std::optional<int> decl_column;
-      std::optional<int> call_file;
-      std::optional<int> call_line;
-      std::optional<int> call_column;
-      if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
-                                   decl_line, decl_column, call_file, call_line,
-                                   call_column, nullptr)) {
-        if (tag == DW_TAG_subprogram) {
-          assert(subprogram_low_pc == LLDB_INVALID_ADDRESS);
-          subprogram_low_pc = ranges.GetMinRangeBase(0);
-        } else if (tag == DW_TAG_inlined_subroutine) {
-          // We get called here for inlined subroutines in two ways. The first
-          // time is when we are making the Function object for this inlined
-          // concrete instance.  Since we're creating a top level block at
-          // here, the subprogram_low_pc will be LLDB_INVALID_ADDRESS.  So we
-          // need to adjust the containing address. The second time is when we
-          // are parsing the blocks inside the function that contains the
-          // inlined concrete instance.  Since these will be blocks inside the
-          // containing "real" function the offset will be for that function.
-          if (subprogram_low_pc == LLDB_INVALID_ADDRESS) {
-            subprogram_low_pc = ranges.GetMinRangeBase(0);
-          }
-        }
-
-        const size_t num_ranges = ranges.GetSize();
-        for (size_t i = 0; i < num_ranges; ++i) {
-          const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
-          const addr_t range_base = range.GetRangeBase();
-          if (range_base >= subprogram_low_pc)
-            block->AddRange(Block::Range(range_base - subprogram_low_pc,
-                                         range.GetByteSize()));
-          else {
-            GetObjectFile()->GetModule()->ReportError(
-                "{0:x8}: adding range [{1:x16}-{2:x16}) which has a base "
-                "that is less than the function's low PC {3:x16}. Please file "
-                "a bug and attach the file at the "
-                "start of this error message",
-                block->GetID(), range_base, range.GetRangeEnd(),
-                subprogram_low_pc);
-          }
-        }
-        block->FinalizeRanges();
-
-        if (tag != DW_TAG_subprogram &&
-            (name != nullptr || mangled_name != nullptr)) {
-          std::unique_ptr<Declaration> decl_up;
-          if (decl_file || decl_line || decl_column)
-            decl_up = std::make_unique<Declaration>(
-                comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                    decl_file ? *decl_file : 0),
-                decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
-
-          std::unique_ptr<Declaration> call_up;
-          if (call_file || call_line || call_column)
-            call_up = std::make_unique<Declaration>(
-                comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                    call_file ? *call_file : 0),
-                call_line ? *call_line : 0, call_column ? *call_column : 0);
-
-          block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
-                                        call_up.get());
-        }
-
-        ++blocks_added;
-
-        if (die.HasChildren()) {
-          blocks_added +=
-              ParseBlocksRecursive(comp_unit, block, die.GetFirstChild(),
-                                   subprogram_low_pc, depth + 1);
+    std::optional<int> decl_file;
+    std::optional<int> decl_line;
+    std::optional<int> decl_column;
+    std::optional<int> call_file;
+    std::optional<int> call_line;
+    std::optional<int> call_column;
+    if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
+                                 decl_line, decl_column, call_file, call_line,
+                                 call_column, nullptr)) {
+      const size_t num_ranges = ranges.GetSize();
+      for (size_t i = 0; i < num_ranges; ++i) {
+        const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
+        const addr_t range_base = range.GetRangeBase();
+        if (range_base >= subprogram_low_pc)
+          block->AddRange(Block::Range(range_base - subprogram_low_pc,
+                                       range.GetByteSize()));
+        else {
+          GetObjectFile()->GetModule()->ReportError(
+              "{0:x8}: adding range [{1:x16}-{2:x16}) which has a base "
+              "that is less than the function's low PC {3:x16}. Please file "
+              "a bug and attach the file at the "
+              "start of this error message",
+              block->GetID(), range_base, range.GetRangeEnd(),
+              subprogram_low_pc);
         }
       }
-    } break;
-    default:
-      break;
+      block->FinalizeRanges();
+
+      if (tag != DW_TAG_subprogram &&
+          (name != nullptr || mangled_name != nullptr)) {
+        std::unique_ptr<Declaration> decl_up;
+        if (decl_file || decl_line || decl_column)
+          decl_up = std::make_unique<Declaration>(
+              comp_unit.GetSupportFiles().GetFileSpecAtIndex(
+                  decl_file ? *decl_file : 0),
+              decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
+
+        std::unique_ptr<Declaration> call_up;
+        if (call_file || call_line || call_column)
+          call_up = std::make_unique<Declaration>(
+              comp_unit.GetSupportFiles().GetFileSpecAtIndex(
+                  call_file ? *call_file : 0),
+              call_line ? *call_line : 0, call_column ? *call_column : 0);
+
+        block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
+                                      call_up.get());
+      }
+
+      ++blocks_added;
+
+      if (die.HasChildren()) {
+        blocks_added += ParseBlocksRecursive(
+            comp_unit, block, die.GetFirstChild(), subprogram_low_pc);
+      }
     }
-
-    // Only parse siblings of the block if we are not at depth zero. A depth of
-    // zero indicates we are currently parsing the top level DW_TAG_subprogram
-    // DIE
-
-    if (depth == 0)
-      die.Clear();
-    else
-      die = die.GetSibling();
   }
   return blocks_added;
 }
@@ -3240,8 +3195,16 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
   DWARFDIE function_die =
       dwarf_cu->GetNonSkeletonUnit().GetDIE(function_die_offset);
   if (function_die) {
-    ParseBlocksRecursive(*comp_unit, &func.GetBlock(false), function_die,
-                         LLDB_INVALID_ADDRESS, 0);
+    // We can't use the file address from the Function object as (in the OSO
+    // case) it will already be remapped to the main module.
+    DWARFRangeList ranges = function_die.GetDIE()->GetAttributeAddressRanges(
+        function_die.GetCU(),
+        /*check_hi_lo_pc=*/true);
+    lldb::addr_t function_file_addr =
+        ranges.GetMinRangeBase(LLDB_INVALID_ADDRESS);
+    if (function_file_addr != LLDB_INVALID_ADDRESS)
+      ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
+                           function_die.GetFirstChild(), function_file_addr);
   }
 
   return functions_added;

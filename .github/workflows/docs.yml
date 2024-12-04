@@ -162,7 +162,7 @@ jobs:
           cmake -B libc-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libc" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libc-build docs-libc-html
           mkdir built-docs/libc
-          cp -r libc-build/docs/* built-docs/libc/
+          cp -r libc-build/libc/docs/* built-docs/libc/
       - name: Build LLD docs
         if: steps.docs-changed-subprojects.outputs.lld_any_changed == 'true'
         run: |

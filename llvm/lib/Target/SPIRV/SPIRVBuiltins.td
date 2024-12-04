@@ -1156,14 +1156,19 @@ class IntelSubgroupsBuiltin<string name, Op operation> {
   string Name = name;
   Op Opcode = operation;
   bit IsBlock = !or(!eq(operation, OpSubgroupBlockReadINTEL),
-                    !eq(operation, OpSubgroupBlockWriteINTEL));
-  bit IsWrite = !eq(operation, OpSubgroupBlockWriteINTEL);
+                    !eq(operation, OpSubgroupBlockWriteINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockReadINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
+  bit IsWrite = !or(!eq(operation, OpSubgroupBlockWriteINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
+  bit IsMedia = !or(!eq(operation, OpSubgroupImageMediaBlockReadINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
 }
 
 // Table gathering all the Intel sub group builtins.
 def IntelSubgroupsBuiltins : GenericTable {
   let FilterClass = "IntelSubgroupsBuiltin";
-  let Fields = ["Name", "Opcode", "IsBlock", "IsWrite"];
+  let Fields = ["Name", "Opcode", "IsBlock", "IsWrite", "IsMedia"];
 }
 
 // Function to lookup group builtins by their name and set.
@@ -1191,17 +1196,24 @@ foreach i = ["", "2", "4", "8"] in {
   // cl_intel_subgroups_short
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_ui",  i), 1, 2, OpSubgroupBlockReadINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_ui", i), 2, 3, OpSubgroupBlockWriteINTEL>;
+  // cl_intel_media_block_io
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read",  i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read_ui",  i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write_ui", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
 }
-// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long
+// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long, cl_intel_media_block_io
 foreach i = ["", "2", "4", "8", "16"] in {
   foreach j = ["c", "s", "l"] in {
     defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_u", j,  i), 1, 2, OpSubgroupBlockReadINTEL>;
     defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_u", j, i), 2, 3, OpSubgroupBlockWriteINTEL>;
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read_u", j, i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write_u", j, i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
   }
 }
 // OpSubgroupImageBlockReadINTEL and OpSubgroupImageBlockWriteINTEL are to be resolved later on (in code)
 
-// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups extension.
+// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups and the SPV_INTEL_media_block_io extensions.
 multiclass DemangledIntelSubgroupsBuiltinWrapper<string name, bits<8> numArgs, Op operation> {
   def : DemangledBuiltin<!strconcat("__spirv_", name), OpenCL_std, IntelSubgroups, numArgs, numArgs>;
   def : IntelSubgroupsBuiltin<!strconcat("__spirv_", name), operation>;
@@ -1215,6 +1227,8 @@ defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockReadINTEL", 1, OpSubg
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockWriteINTEL", 2, OpSubgroupBlockWriteINTEL>;
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockReadINTEL", 2, OpSubgroupImageBlockReadINTEL>;
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockWriteINTEL", 3, OpSubgroupImageBlockWriteINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageMediaBlockReadINTEL", 4, OpSubgroupImageMediaBlockReadINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageMediaBlockWriteINTEL", 5, OpSubgroupImageMediaBlockWriteINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a builtin for group operations within uniform control flow.

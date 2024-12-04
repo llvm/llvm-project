@@ -310,6 +310,9 @@ Resolutions to C++ Defect Reports
   by default.
   (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
+- Fix name lookup for a dependent base class that is the current instantiation.
+  (`CWG591: When a dependent base class is the current instantiation <https://cplusplus.github.io/CWG/issues/591.html>`_).
+
 C Language Changes
 ------------------
 
@@ -932,9 +935,15 @@ and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
 and [Non-trapping float-to-int Conversions] language features, which are
 [widely implemented in engines].
 
+A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
+the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
+-mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
+and -mextended-const.
+
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
 [widely implemented in engines]: https://webassembly.org/features/
+[here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
 AVR Support
 ^^^^^^^^^^^
@@ -968,7 +977,13 @@ AST Matchers
 - Ensure ``hasName`` matches template specializations across inline namespaces,
   making `matchesNodeFullSlow` and `matchesNodeFullFast` consistent.
 
+- Improved the performance of the ``getExpansionLocOfMacro`` by tracking already processed macros during recursion.
+
 - Add ``exportDecl`` matcher to match export declaration.
+
+- Ensure ``hasType`` and ``hasDeclaration`` match Objective-C interface declarations.
+
+- Ensure ``pointee`` matches Objective-C pointer types.
 
 clang-format
 ------------
