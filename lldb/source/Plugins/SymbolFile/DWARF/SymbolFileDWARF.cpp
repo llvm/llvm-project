@@ -3202,9 +3202,9 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
     // We can't use the file address from the Function object as (in the OSO
     // case) it will already be remapped to the main module.
     if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
-        function_die.GetDIE()->GetAttributeAddressRanges(
-            function_die.GetCU(),
-            /*check_hi_lo_pc=*/true)) {
+            function_die.GetDIE()->GetAttributeAddressRanges(
+                function_die.GetCU(),
+                /*check_hi_lo_pc=*/true)) {
       if (ranges->empty())
         return 0;
       // TODO: Use the first range instead.
