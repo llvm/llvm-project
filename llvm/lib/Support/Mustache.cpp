@@ -167,6 +167,27 @@ private:
   const llvm::json::Value *ParentContext;
 };
 
+// syntax wrapper for arena allocator for ASTNodes
+auto CreateNode = [](void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
+                     llvm::BumpPtrAllocator &Alloc,
+                     llvm::StringMap<ASTNode *> &Partials,
+                     llvm::StringMap<Lambda> &Lambdas,
+                     llvm::StringMap<SectionLambda> &SectionLambdas,
+                     llvm::DenseMap<char, std::string> &Escapes) -> ASTNode * {
+  return new (Node)
+      ASTNode(T, A, Parent, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+};
+
+auto CreateTextNode =
+    [](void *Node, StringRef Body, ASTNode *Parent,
+       llvm::BumpPtrAllocator &Alloc, llvm::StringMap<ASTNode *> &Partials,
+       llvm::StringMap<Lambda> &Lambdas,
+       llvm::StringMap<SectionLambda> &SectionLambdas,
+       llvm::DenseMap<char, std::string> &Escapes) -> ASTNode * {
+  return new (Node)
+      ASTNode(Body, Parent, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+};
+
 // Function to check if there is meaningful text behind.
 // We determine if a token has meaningful text behind
 // if the right of previous token contains anything that is
@@ -256,8 +277,8 @@ void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
 // is represented only by {{& variable}}.
 SmallVector<Token> tokenize(StringRef Template) {
   SmallVector<Token> Tokens;
-  std::string Open("{{");
-  std::string Close("}}");
+  StringRef Open("{{");
+  StringRef Close("}}");
   size_t Start = 0;
   size_t DelimiterStart = Template.find(Open);
   if (DelimiterStart == StringRef::npos) {
@@ -279,7 +300,7 @@ SmallVector<Token> tokenize(StringRef Template) {
     size_t InterpolatedEnd = DelimiterEnd - DelimiterStart - Close.size();
     std::string Interpolated =
         Template.substr(InterpolatedStart, InterpolatedEnd).str();
-    std::string RawBody = Open + Interpolated + Close;
+    std::string RawBody = Open.str() + Interpolated + Close.str();
     Tokens.emplace_back(RawBody, Interpolated, Interpolated[0]);
     Start = DelimiterEnd + Close.size();
     DelimiterStart = Template.find(Open, Start);
@@ -477,37 +498,34 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
     switch (CurrentToken.getType()) {
     case Token::Type::Text: {
       CurrentNode =
-          new (Node) ASTNode(CurrentToken.getTokenBody(), Parent, Alloc,
-                             Partials, Lambdas, SectionLambdas, Escapes);
+          CreateTextNode(Node, CurrentToken.getTokenBody(), Parent, Alloc,
+                         Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Variable: {
-      CurrentNode =
-          new (Node) ASTNode(ASTNode::Variable, A, Parent, Alloc, Partials,
-                             Lambdas, SectionLambdas, Escapes);
+      CurrentNode = CreateNode(Node, ASTNode::Variable, A, Parent, Alloc,
+                               Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::UnescapeVariable: {
       CurrentNode =
-          new (Node) ASTNode(ASTNode::UnescapeVariable, A, Parent, Alloc,
-                             Partials, Lambdas, SectionLambdas, Escapes);
+          CreateNode(Node, ASTNode::UnescapeVariable, A, Parent, Alloc,
+                     Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Partial: {
-      CurrentNode =
-          new (Node) ASTNode(ASTNode::Partial, A, Parent, Alloc, Partials,
-                             Lambdas, SectionLambdas, Escapes);
+      CurrentNode = CreateNode(Node, ASTNode::Partial, A, Parent, Alloc,
+                               Partials, Lambdas, SectionLambdas, Escapes);
       CurrentNode->setIndentation(CurrentToken.getIndentation());
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::SectionOpen: {
-      CurrentNode =
-          new (Node) ASTNode(ASTNode::Section, A, Parent, Alloc, Partials,
-                             Lambdas, SectionLambdas, Escapes);
+      CurrentNode = CreateNode(Node, ASTNode::Section, A, Parent, Alloc,
+                               Partials, Lambdas, SectionLambdas, Escapes);
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode, Alloc, Partials, Lambdas, SectionLambdas,
                     Escapes);
@@ -520,9 +538,8 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
       break;
     }
     case Token::Type::InvertSectionOpen: {
-      CurrentNode =
-          new (Node) ASTNode(ASTNode::InvertSection, A, Parent, Alloc, Partials,
-                             Lambdas, SectionLambdas, Escapes);
+      CurrentNode = CreateNode(Node, ASTNode::InvertSection, A, Parent, Alloc,
+                               Partials, Lambdas, SectionLambdas, Escapes);
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode, Alloc, Partials, Lambdas, SectionLambdas,
                     Escapes);
