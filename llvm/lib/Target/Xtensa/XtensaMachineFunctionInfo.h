@@ -25,8 +25,8 @@ class XtensaMachineFunctionInfo : public MachineFunctionInfo {
   /// FrameIndex of the spill slot for the scratch register in BranchRelaxation.
   int BranchRelaxationScratchFrameIndex = -1;
   unsigned VarArgsFirstGPR;
-  unsigned VarArgsOnStackFrameIndex;
-  unsigned VarArgsInRegsFrameIndex;
+  int VarArgsOnStackFrameIndex;
+  int VarArgsInRegsFrameIndex;
 
 public:
   explicit XtensaMachineFunctionInfo(const Function &F,
@@ -44,18 +44,12 @@ public:
   unsigned getVarArgsFirstGPR() const { return VarArgsFirstGPR; }
   void setVarArgsFirstGPR(unsigned GPR) { VarArgsFirstGPR = GPR; }
 
-  unsigned getVarArgsOnStackFrameIndex() const {
-    return VarArgsOnStackFrameIndex;
-  }
-  void setVarArgsOnStackFrameIndex(unsigned FI) {
-    VarArgsOnStackFrameIndex = FI;
-  }
+  int getVarArgsOnStackFrameIndex() const { return VarArgsOnStackFrameIndex; }
+  void setVarArgsOnStackFrameIndex(int FI) { VarArgsOnStackFrameIndex = FI; }
 
   // Get and set the frame index of the first stack vararg.
-  unsigned getVarArgsInRegsFrameIndex() const {
-    return VarArgsInRegsFrameIndex;
-  }
-  void setVarArgsInRegsFrameIndex(unsigned FI) { VarArgsInRegsFrameIndex = FI; }
+  int getVarArgsInRegsFrameIndex() const { return VarArgsInRegsFrameIndex; }
+  void setVarArgsInRegsFrameIndex(int FI) { VarArgsInRegsFrameIndex = FI; }
 };
 
 } // namespace llvm
