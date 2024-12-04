@@ -2365,6 +2365,11 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
     std::string DemangledName = getOclOrSpirvBuiltinDemangledName(F.getName());
     if (DemangledName.empty())
       continue;
+    // allow only OpGroupAsyncCopy use case at the moment
+    auto [Grp, Opcode, ExtNo] =
+        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    if (Opcode != SPIRV::OpGroupAsyncCopy)
+      continue;
     // find pointer arguments
     SmallVector<unsigned> Idxs;
     for (unsigned OpIdx = 0; OpIdx < F.arg_size(); ++OpIdx) {
