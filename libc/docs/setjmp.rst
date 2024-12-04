@@ -15,7 +15,7 @@ Macros
   * - Macro
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - __STDC_VERSION_SETJMP_H__
     -
     - 7.13.2
@@ -32,7 +32,7 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - longjmp
     - |check|
     - 7.13.2.1
