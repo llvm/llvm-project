@@ -6759,7 +6759,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
-            child_indexes = save_indices;
+            child_indexes = std::move(save_indices);
           } else if (field_name == name) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
