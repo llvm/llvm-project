@@ -7,6 +7,7 @@
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: ModulePass Manager
+; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
 ; CHECK-NEXT:   DXIL Data Scalarization
 ; CHECK-NEXT:   DXIL Array Flattener
@@ -15,7 +16,6 @@
 ; CHECK-NEXT:     Scalarize vector operations
 ; CHECK-NEXT:   DXIL Resource analysis
 ; CHECK-NEXT:   DXIL Op Lowering
-; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   DXIL resource Information
 ; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis

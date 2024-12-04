@@ -459,17 +459,6 @@ def riscv_vfwmul_vl : SDNode<"RISCVISD::VFWMUL_VL", SDT_RISCVVWFPBinOp_VL, [SDNP
 def riscv_vfwadd_vl : SDNode<"RISCVISD::VFWADD_VL", SDT_RISCVVWFPBinOp_VL, [SDNPCommutative]>;
 def riscv_vfwsub_vl : SDNode<"RISCVISD::VFWSUB_VL", SDT_RISCVVWFPBinOp_VL, []>;
 
-def SDT_RISCVVNIntBinOp_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisInt<0>,
-                                                  SDTCisInt<1>,
-                                                  SDTCisSameNumEltsAs<0, 1>,
-                                                  SDTCisOpSmallerThanOp<0, 1>,
-                                                  SDTCisSameAs<0, 2>,
-                                                  SDTCisSameAs<0, 3>,
-                                                  SDTCisSameNumEltsAs<0, 4>,
-                                                  SDTCVecEltisVT<4, i1>,
-                                                  SDTCisVT<5, XLenVT>]>;
-def riscv_vnsrl_vl : SDNode<"RISCVISD::VNSRL_VL", SDT_RISCVVNIntBinOp_VL>;
-
 def SDT_RISCVVWIntBinOpW_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisInt<0>,
                                                    SDTCisSameAs<0, 1>,
                                                    SDTCisInt<2>,
@@ -881,29 +870,6 @@ multiclass VPatBinaryWVL_VV_VX_WV_WX<SDPatternOperator vop, SDNode vop_w,
                             wti.Vector, wti.Vector, vti.Vector, vti.Mask,
                             vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,
                             SplatPat, GPR>;
-    }
-  }
-}
-
-multiclass VPatBinaryNVL_WV_WX_WI<SDPatternOperator vop, string instruction_name> {
-  foreach VtiToWti = AllWidenableIntVectors in {
-    defvar vti = VtiToWti.Vti;
-    defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in {
-      def : VPatBinaryVL_V<vop, instruction_name, "WV",
-                           vti.Vector, wti.Vector, vti.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul, vti.RegClass, wti.RegClass,
-                           vti.RegClass>;
-      def : VPatBinaryVL_XI<vop, instruction_name, "WX",
-                            vti.Vector, wti.Vector, vti.Vector, vti.Mask,
-                            vti.Log2SEW, vti.LMul, vti.RegClass, wti.RegClass,
-                            SplatPat, GPR>;
-      def : VPatBinaryVL_XI<vop, instruction_name, "WI",
-                            vti.Vector, wti.Vector, vti.Vector, vti.Mask,
-                            vti.Log2SEW, vti.LMul, vti.RegClass, wti.RegClass,
-                            !cast<ComplexPattern>(SplatPat#_#uimm5),
-                            uimm5>;
     }
   }
 }
@@ -2165,8 +2131,6 @@ defm : VPatNarrowShiftSplatExt_WX<riscv_srl_vl, riscv_zext_vl_oneuse, "PseudoVNS
 
 defm : VPatNarrowShiftVL_WV<riscv_srl_vl, "PseudoVNSRL">;
 defm : VPatNarrowShiftVL_WV<riscv_sra_vl, "PseudoVNSRA">;
-
-defm : VPatBinaryNVL_WV_WX_WI<riscv_vnsrl_vl, "PseudoVNSRL">;
 
 foreach vtiTowti = AllWidenableIntVectors in {
   defvar vti = vtiTowti.Vti;

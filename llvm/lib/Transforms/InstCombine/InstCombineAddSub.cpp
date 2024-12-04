@@ -2092,28 +2092,31 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
 
   // To avoid duplicating the offset arithmetic, rewrite the GEP to use the
   // computed offset. This may erase the original GEP, so be sure to cache the
-  // inbounds flag before emitting the offset.
+  // nowrap flags before emitting the offset.
   // TODO: We should probably do this even if there is only one GEP.
   bool RewriteGEPs = GEP2 != nullptr;
 
   // Emit the offset of the GEP and an intptr_t.
-  bool GEP1IsInBounds = GEP1->isInBounds();
+  GEPNoWrapFlags GEP1NW = GEP1->getNoWrapFlags();
   Value *Result = EmitGEPOffset(GEP1, RewriteGEPs);
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
   if (auto *I = dyn_cast<Instruction>(Result))
-    if (IsNUW && !GEP2 && !Swapped && GEP1IsInBounds &&
+    if (IsNUW && !GEP2 && !Swapped && GEP1NW.isInBounds() &&
         I->getOpcode() == Instruction::Mul)
       I->setHasNoUnsignedWrap();
 
   // If we have a 2nd GEP of the same base pointer, subtract the offsets.
   // If both GEPs are inbounds, then the subtract does not have signed overflow.
+  // If both GEPs are nuw and the original sub is nuw, the new sub is also nuw.
   if (GEP2) {
-    bool GEP2IsInBounds = GEP2->isInBounds();
+    GEPNoWrapFlags GEP2NW = GEP2->getNoWrapFlags();
     Value *Offset = EmitGEPOffset(GEP2, RewriteGEPs);
-    Result = Builder.CreateSub(Result, Offset, "gepdiff", /* NUW */ false,
-                               GEP1IsInBounds && GEP2IsInBounds);
+    Result = Builder.CreateSub(Result, Offset, "gepdiff",
+                               IsNUW && GEP1NW.hasNoUnsignedWrap() &&
+                                   GEP2NW.hasNoUnsignedWrap(),
+                               GEP1NW.isInBounds() && GEP2NW.isInBounds());
   }
 
   // If we have p - gep(p, ...)  then we have to negate the result.

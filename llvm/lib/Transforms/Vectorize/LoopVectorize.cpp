@@ -7736,6 +7736,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BestVPlan.prepareToExecute(ILV.getTripCount(),
                              ILV.getOrCreateVectorTripCount(nullptr),
                              CanonicalIVStartValue, State);
+  VPlanTransforms::prepareToExecute(BestVPlan);
 
   BestVPlan.execute(&State);
 

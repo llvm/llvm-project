@@ -108,6 +108,16 @@ void buildOpName(Register Target, const StringRef &Name,
   }
 }
 
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII) {
+  if (!Name.empty()) {
+    auto MIB =
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpName))
+            .addUse(Target);
+    addStringImm(Name, MIB);
+  }
+}
+
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
                                   const std::vector<uint32_t> &DecArgs,
                                   StringRef StrImm) {
@@ -207,8 +217,12 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
                : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
+  case 8:
+    return SPIRV::StorageClass::Output;
   case 9:
     return SPIRV::StorageClass::CodeSectionINTEL;
+  case 10:
+    return SPIRV::StorageClass::Private;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -566,8 +580,9 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
 
     if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
-      assert(QueueIndex < ToVisit.size() &&
-             "No valid candidate in the queue. Is the graph reducible?");
+      if (QueueIndex >= ToVisit.size())
+        llvm::report_fatal_error(
+            "No valid candidate in the queue. Is the graph reducible?");
       QueueIndex++;
       continue;
     }

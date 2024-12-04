@@ -6073,6 +6073,23 @@ void BoUpSLP::reorderTopToBottom() {
                                      TE->Scalars.size();
                         }) &&
                  "All users must be of VF size.");
+          if (SLPReVec) {
+            assert(SLPReVec && "Only supported by REVEC.");
+            // ShuffleVectorInst does not do reorderOperands (and it should not
+            // because ShuffleVectorInst supports only a limited set of
+            // patterns). Only do reorderNodeWithReuses if all of the users are
+            // not ShuffleVectorInst.
+            if (all_of(TE->UserTreeIndices, [&](const EdgeInfo &EI) {
+                  return isa<ShuffleVectorInst>(EI.UserTE->getMainOp());
+                }))
+              continue;
+            assert(none_of(TE->UserTreeIndices,
+                           [&](const EdgeInfo &EI) {
+                             return isa<ShuffleVectorInst>(
+                                 EI.UserTE->getMainOp());
+                           }) &&
+                   "Does not know how to reorder.");
+          }
           // Update ordering of the operands with the smaller VF than the given
           // one.
           reorderNodeWithReuses(*TE, Mask);
