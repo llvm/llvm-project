@@ -387,12 +387,12 @@ struct OffsetResult {
   Value *BasePtr;
   APInt ConstantOffset;
   SmallMapVector<Value *, APInt, 4> VariableOffsets;
-  bool AllInbounds;
+  GEPNoWrapFlags NW;
 
   OffsetResult() : BasePtr(nullptr), ConstantOffset(0, uint64_t(0)) {}
 
   OffsetResult(GEPOperator &GEP, const DataLayout &DL)
-      : BasePtr(GEP.getPointerOperand()), AllInbounds(GEP.isInBounds()) {
+      : BasePtr(GEP.getPointerOperand()), NW(GEP.getNoWrapFlags()) {
     ConstantOffset = APInt(DL.getIndexTypeSizeInBits(BasePtr->getType()), 0);
   }
 };
@@ -426,7 +426,7 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
     Result.ConstantOffset += ConstantOffset2;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
       Result.VariableOffsets = VariableOffsets2;
-    Result.AllInbounds &= InnerGEP->isInBounds();
+    Result.NW &= InnerGEP->getNoWrapFlags();
   }
   return Result;
 }
@@ -450,9 +450,9 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
 
   assert(!IsSigned && "The logic below only supports decomposition for "
                       "unsigned predicates at the moment.");
-  const auto &[BasePtr, ConstantOffset, VariableOffsets, AllInbounds] =
+  const auto &[BasePtr, ConstantOffset, VariableOffsets, NW] =
       collectOffsets(GEP, DL);
-  if (!BasePtr || !AllInbounds)
+  if (!BasePtr || !NW.hasNoUnsignedSignedWrap())
     return &GEP;
 
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));

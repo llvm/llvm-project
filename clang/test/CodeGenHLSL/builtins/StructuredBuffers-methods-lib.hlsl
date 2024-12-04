@@ -6,7 +6,7 @@
 RWStructuredBuffer<float> RWSB1 : register(u0);
 RWStructuredBuffer<float> RWSB2 : register(u1);
 
-// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 0), float }
+// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 0) }
 
 export void TestIncrementCounter() {
     RWSB1.IncrementCounter();

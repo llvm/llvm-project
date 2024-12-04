@@ -1,5 +1,4 @@
 add_mlir_dialect_library(MLIRFuncTransforms
-  DecomposeCallGraphTypes.cpp
   DuplicateFunctionElimination.cpp
   FuncConversions.cpp
   OneToNFuncConversions.cpp

@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -331,9 +332,10 @@ public:
   using fir::impl::AbstractResultOptBase<
       AbstractResultOpt>::AbstractResultOptBase;
 
-  void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
-                              mlir::RewritePatternSet &patterns,
-                              mlir::ConversionTarget &target) {
+  template <typename OpTy>
+  void runOnFunctionLikeOperation(OpTy func, bool shouldBoxResult,
+                                  mlir::RewritePatternSet &patterns,
+                                  mlir::ConversionTarget &target) {
     auto loc = func.getLoc();
     auto *context = &getContext();
     // Convert function type itself if it has an abstract result.
@@ -382,6 +384,18 @@ public:
         func.setAllArgAttrs(allArgs);
       }
     }
+  }
+
+  void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
+                              mlir::RewritePatternSet &patterns,
+                              mlir::ConversionTarget &target) {
+    runOnFunctionLikeOperation(func, shouldBoxResult, patterns, target);
+  }
+
+  void runOnSpecificOperation(mlir::gpu::GPUFuncOp func, bool shouldBoxResult,
+                              mlir::RewritePatternSet &patterns,
+                              mlir::ConversionTarget &target) {
+    runOnFunctionLikeOperation(func, shouldBoxResult, patterns, target);
   }
 
   inline static bool containsFunctionTypeWithAbstractResult(mlir::Type type) {
@@ -448,6 +462,14 @@ public:
     mlir::TypeSwitch<mlir::Operation *, void>(op)
         .Case<mlir::func::FuncOp, fir::GlobalOp>([&](auto op) {
           runOnSpecificOperation(op, shouldBoxResult, patterns, target);
+        })
+        .Case<mlir::gpu::GPUModuleOp>([&](auto op) {
+          auto gpuMod = mlir::dyn_cast<mlir::gpu::GPUModuleOp>(*op);
+          for (auto funcOp : gpuMod.template getOps<mlir::func::FuncOp>())
+            runOnSpecificOperation(funcOp, shouldBoxResult, patterns, target);
+          for (auto gpuFuncOp : gpuMod.template getOps<mlir::gpu::GPUFuncOp>())
+            runOnSpecificOperation(gpuFuncOp, shouldBoxResult, patterns,
+                                   target);
         });
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.

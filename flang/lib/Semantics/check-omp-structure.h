@@ -209,6 +209,7 @@ private:
   void CheckAtomicCaptureStmt(const parser::AssignmentStmt &);
   void CheckAtomicWriteStmt(const parser::AssignmentStmt &);
   void CheckAtomicCaptureConstruct(const parser::OmpAtomicCapture &);
+  void CheckAtomicCompareConstruct(const parser::OmpAtomicCompare &);
   void CheckAtomicConstructStructure(const parser::OpenMPAtomicConstruct &);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);

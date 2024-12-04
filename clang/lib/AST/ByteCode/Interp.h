@@ -41,13 +41,6 @@ namespace interp {
 using APSInt = llvm::APSInt;
 using FixedPointSemantics = llvm::FixedPointSemantics;
 
-/// Convert a value to an APValue.
-template <typename T>
-bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
-  R = V.toAPValue(S.getASTContext());
-  return true;
-}
-
 /// Checks if the variable has externally defined storage.
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -299,7 +292,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 
 /// Interpreter entry point.
-bool Interpret(InterpState &S, APValue &Result);
+bool Interpret(InterpState &S);
 
 /// Interpret a builtin function.
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -321,7 +314,7 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
                               const Function *Func);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
+bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
 
   // Make sure returned pointers are live. We might be trying to return a
@@ -349,13 +342,13 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    if (!ReturnValue<T>(S, Ret, Result))
-      return false;
+    // The topmost frame should come from an EvalEmitter,
+    // which has its own implementation of the Ret<> instruction.
   }
   return true;
 }
 
-inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
+inline bool RetVoid(InterpState &S, CodePtr &PC) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
