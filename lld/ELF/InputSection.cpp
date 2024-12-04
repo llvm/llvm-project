@@ -783,7 +783,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_ARM_SBREL:
     return r.sym->getVA(ctx, a) - getARMStaticBase(*r.sym);
   case R_GOT:
-  case R_AARCH64_AUTH_GOT:
+  case RE_AARCH64_AUTH_GOT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return r.sym->getGotVA(ctx) + a;
   case RE_LOONGARCH_GOT:

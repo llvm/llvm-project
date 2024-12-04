@@ -1090,7 +1090,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
       bool needsGotAuth =
-          (expr == R_AARCH64_AUTH_GOT || expr == R_AARCH64_AUTH_GOT_PAGE_PC);
+          (expr == RE_AARCH64_AUTH_GOT || expr == RE_AARCH64_AUTH_GOT_PAGE_PC);
       uint16_t flags = sym.flags.load(std::memory_order_relaxed);
       if (!(flags & NEEDS_GOT)) {
         sym.setFlags(needsGotAuth ? (NEEDS_GOT | NEEDS_GOT_AUTH) : NEEDS_GOT);

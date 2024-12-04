@@ -204,7 +204,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
     return R_GOT;
   case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
-    return R_AARCH64_AUTH_GOT;
+    return RE_AARCH64_AUTH_GOT;
   case R_AARCH64_LD64_GOTPAGE_LO15:
     return RE_AARCH64_GOT_PAGE;
   case R_AARCH64_ADR_GOT_PAGE:
