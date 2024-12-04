@@ -243,7 +243,7 @@ public:
   ~TUScheduler();
 
   TUScheduler(const TUScheduler &other) = default;
-  TUScheduler& operator=(const TUScheduler& other) = default;
+  TUScheduler &operator=(const TUScheduler &other) = default;
 
   struct FileStats {
     std::size_t UsedBytesAST = 0;

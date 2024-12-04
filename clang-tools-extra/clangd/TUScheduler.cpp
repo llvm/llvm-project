@@ -412,7 +412,8 @@ public:
       Throttler->release(ID);
   }
   PreambleThrottlerRequest(const PreambleThrottlerRequest &) = default;
-  PreambleThrottlerRequest &operator=(const PreambleThrottlerRequest &) = default;
+  PreambleThrottlerRequest &
+  operator=(const PreambleThrottlerRequest &) = default;
 
 private:
   PreambleThrottler::RequestID ID;

@@ -73,7 +73,7 @@ public:
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
-  ClangdLSPServer(const ClangdLSPServer& other) = default;
+  ClangdLSPServer(const ClangdLSPServer &other) = default;
   ClangdLSPServer &operator=(const ClangdLSPServer &other) = default;
 
   /// Run LSP server loop, communicating with the Transport provided in the
