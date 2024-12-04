@@ -5,11 +5,7 @@ define i1 @ult_ule(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ult_ule(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ult i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -23,11 +19,7 @@ define i1 @ult_ule_no_flags(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ult_ule_no_flags(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ult i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -41,11 +33,7 @@ define i1 @slt_sle(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @slt_sle(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sle i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp slt i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -59,11 +47,7 @@ define i1 @slt_sle_no_flags(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @slt_sle_no_flags(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sle i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp slt i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -77,11 +61,7 @@ define i1 @ugt_uge(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ugt_uge(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ugt i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -95,11 +75,7 @@ define i1 @sgt_sge(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @sgt_sge(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sge i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp sgt i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -113,11 +89,7 @@ define <2 x i1> @ult_ule_splat_vector(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i1> @ult_ule_splat_vector(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[C1]] to <2 x i8>
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule <2 x i8> [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[C1]], <2 x i1> [[C2]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[AND]]
+; CHECK-NEXT:    ret <2 x i1> [[C1]]
 ;
   %c1 = icmp ult <2 x i8> %x, %y
   %z = zext <2 x i1> %c1 to <2 x i8>
@@ -131,11 +103,7 @@ define <2 x i1> @ult_ule_vector_with_poison(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i1> @ult_ule_vector_with_poison(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[C1]] to <2 x i8>
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule <2 x i8> [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[C1]], <2 x i1> [[C2]], <2 x i1> <i1 false, i1 poison>
-; CHECK-NEXT:    ret <2 x i1> [[AND]]
+; CHECK-NEXT:    ret <2 x i1> [[C1]]
 ;
   %c1 = icmp ult <2 x i8> %x, %y
   %z = zext <2 x i1> %c1 to <2 x i8>
@@ -170,8 +138,7 @@ define i1 @ult_ule_multi_use(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], [[Z]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
 ; CHECK-NEXT:    call void @use_bit(i1 [[C2]])
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ult i8 %x, %y
   call void @use_bit(i1 %c1)
@@ -190,9 +157,7 @@ define i1 @ult_ule_multi_use_add(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ult i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -207,11 +172,7 @@ define i1 @ult_ule_commuted_binop(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ult_ule_commuted_binop(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ult i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -225,11 +186,7 @@ define i1 @ult_sext_sub_ule(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ult_sext_sub_ule(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z_NEG:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[Z_NEG]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ult i8 %x, %y
   %z = sext i1 %c1 to i8
@@ -243,11 +200,7 @@ define i1 @ugt_uge_const_fold_false(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ugt_uge_const_fold_false(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i8
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ugt i8 %x, %y
   %z = zext i1 %c1 to i8
@@ -268,9 +221,7 @@ define void @rust_inlclusive_noop(i8 noundef %n) unnamed_addr {
 ; CHECK-NEXT:    [[_0_I3_I:%.*]] = icmp ult i8 [[ITER_SROA_0_07]], [[N]]
 ; CHECK-NEXT:    [[_0_I4_I:%.*]] = zext i1 [[_0_I3_I]] to i8
 ; CHECK-NEXT:    [[SPEC_SELECT5]] = add nuw i8 [[ITER_SROA_0_07]], [[_0_I4_I]]
-; CHECK-NEXT:    [[_0_I_NOT_I:%.*]] = icmp ule i8 [[SPEC_SELECT5]], [[N]]
-; CHECK-NEXT:    [[OR_COND_NOT:%.*]] = select i1 [[_0_I3_I]], i1 [[_0_I_NOT_I]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND_NOT]], label %[[BB2_I]], label %[[THEEND:.*]]
+; CHECK-NEXT:    br i1 [[_0_I3_I]], label %[[BB2_I]], label %[[THEEND:.*]]
 ; CHECK:       [[THEEND]]:
 ; CHECK-NEXT:    ret void
 ;
