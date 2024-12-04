@@ -342,6 +342,20 @@ llvm::Error Replacements::add(const Replacement &R) {
   return llvm::Error::success();
 }
 
+llvm::Error Replacements::addOrMerge(const Replacement &R) {
+  auto Err = add(R);
+  if (Err) {
+    llvm::consumeError(std::move(Err));
+    auto Replace = getReplacementInChangedCode(R);
+    if (Replace.getLength() != R.getLength()) {
+      return llvm::make_error<ReplacementError>(
+          replacement_error::overlap_conflict, R);
+    }
+    *this = merge(tooling::Replacements(Replace));
+  }
+  return llvm::Error::success();
+}
+
 namespace {
 
 // Represents a merged replacement, i.e. a replacement consisting of multiple
@@ -578,7 +592,7 @@ bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite) {
 }
 
 llvm::Expected<std::string> applyAllReplacements(StringRef Code,
-                                                const Replacements &Replaces) {
+                                                 const Replacements &Replaces) {
   if (Replaces.empty())
     return Code.str();
 
