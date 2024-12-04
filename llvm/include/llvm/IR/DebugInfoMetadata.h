@@ -3291,6 +3291,29 @@ private:
   static constexpr std::array<uint64_t, 1> PoisonedExpr = {
       dwarf::DW_OP_LLVM_poisoned};
 
+  DIExpression *getPoisonedFragment(unsigned OffsetInBits,
+                                    unsigned SizeInBits) const {
+    std::array<uint64_t, 4> PoisonedOps = {dwarf::DW_OP_LLVM_poisoned,
+                                           dwarf::DW_OP_LLVM_fragment,
+                                           OffsetInBits, SizeInBits};
+    return DIExpression::get(getContext(), PoisonedOps);
+  }
+
+  OldElementsRef getPoisonedElements() const {
+    std::optional<FragmentInfo> Frag = getFragmentInfo();
+    if (!Frag)
+      return PoisonedExpr;
+    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits)
+        ->getElements();
+  }
+
+  DIExpression *getPoisoned() const {
+    std::optional<FragmentInfo> Frag = getFragmentInfo();
+    if (!Frag)
+      return DIExpression::get(getContext(), PoisonedExpr);
+    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits);
+  }
+
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
       : MDNode(C, DIExpressionKind, Storage, {}),
         Elements(std::in_place_type<OldElements>, Elements.begin(),
@@ -3327,17 +3350,12 @@ public:
                     (bool /*ignored*/, ArrayRef<DIOp::Variant> Elements),
                     (false, Elements))
 
-  static DIExpression *getPoisoned(LLVMContext &Ctx) {
-    return get(Ctx, PoisonedExpr);
-  }
-  DIExpression *getPoisoned() const { return getPoisoned(getContext()); }
-
   TempDIExpression clone() const { return cloneImpl(); }
 
   OldElementsRef getElements() const {
     if (auto *E = std::get_if<OldElements>(&Elements))
       return *E;
-    return PoisonedExpr;
+    return getPoisonedElements();
   }
 
   unsigned getNumElements() const { return getElements().size(); }

@@ -198,6 +198,8 @@ void DwarfExpression::addStackValue() {
 }
 
 void DwarfExpression::addSignedConstant(int64_t Value) {
+  if (IsPoisonedExpr)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
   emitOp(dwarf::DW_OP_consts);
@@ -205,12 +207,16 @@ void DwarfExpression::addSignedConstant(int64_t Value) {
 }
 
 void DwarfExpression::addUnsignedConstant(uint64_t Value) {
+  if (IsPoisonedExpr)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
   emitConstu(Value);
 }
 
 void DwarfExpression::addUnsignedConstant(const APInt &Value) {
+  if (IsPoisonedExpr)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
 
@@ -231,6 +237,8 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
 }
 
 void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
+  if (IsPoisonedExpr)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   APInt API = APF.bitcastToAPInt();
   int NumBytes = API.getBitWidth() / 8;
@@ -261,6 +269,8 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                                               DIExpressionCursor &ExprCursor,
                                               llvm::Register MachineReg,
                                               unsigned FragmentOffsetInBits) {
+  if (IsPoisonedExpr)
+    return true;
   auto Fragment = ExprCursor.getFragmentInfo();
   if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U)) {
     LocationKind = Unknown;
@@ -516,6 +526,8 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
+  IsPoisonedExpr = false;
+
   std::optional<DIExpression::ExprOperand> PrevConvertOp;
 
   while (ExprCursor) {
@@ -535,7 +547,7 @@ bool DwarfExpression::addExpression(
       emitOp(dwarf::DW_OP_LLVM_user);
       emitOp(dwarf::DW_OP_LLVM_USER_undefined);
       LocationKind = Unknown;
-      return true;
+      break;
     case dwarf::DW_OP_LLVM_arg:
       if (!InsertArg(Op->getArg(0), ExprCursor)) {
         LocationKind = Unknown;
@@ -721,6 +733,7 @@ bool DwarfExpression::addExpression(
 void DwarfExpression::addExpression(DIExpression::NewElementsRef Expr,
                                     ArrayRef<DbgValueLocEntry> ArgLocEntries,
                                     const TargetRegisterInfo *TRI) {
+  assert(!IsPoisonedExpr && "poisoned exprs should have old elements");
   this->ArgLocEntries = ArgLocEntries;
   this->TRI = TRI;
   buildAST(Expr);
@@ -728,6 +741,13 @@ void DwarfExpression::addExpression(DIExpression::NewElementsRef Expr,
   ASTRoot.reset();
   this->TRI = nullptr;
   this->ArgLocEntries = std::nullopt;
+
+  for (DIOp::Variant Op : Expr) {
+    if (auto *Frag = std::get_if<DIOp::Fragment>(&Op)) {
+      addOpPiece(Frag->getBitSize());
+      break;
+    }
+  }
 }
 
 /// add masking operations to stencil out a subregister.
@@ -762,7 +782,13 @@ void DwarfExpression::finalize() {
 }
 
 void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
-  if (!Expr || !Expr->isFragment())
+  if (!Expr)
+    return;
+
+  if (Expr->holdsOldElements() && Expr->isPoisoned())
+    IsPoisonedExpr = true;
+
+  if (!Expr->isFragment())
     return;
 
   uint64_t FragmentOffset = Expr->getFragmentInfo()->OffsetInBits;
@@ -812,6 +838,8 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
 }
 
 void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
+  if (IsPoisonedExpr)
+    return;
   emitOp(dwarf::DW_OP_WASM_location);
   emitUnsigned(Index == 4/*TI_LOCAL_INDIRECT*/ ? 0/*TI_LOCAL*/ : Index);
   emitUnsigned(Offset);
@@ -927,7 +955,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
   }
 
   if (Entry.isInt()) {
-    addUnsignedConstant(Entry.getInt());
+    emitConstu(Entry.getInt());
   } else if (Entry.isConstantFP()) {
     // DwarfExpression does not support arguments wider than 64 bits
     // (see PR52584).
@@ -936,12 +964,12 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     APInt RawBytes = Entry.getConstantFP()->getValueAPF().bitcastToAPInt();
     if (RawBytes.getBitWidth() > 64)
       return std::nullopt;
-    addUnsignedConstant(RawBytes.getZExtValue());
+    emitConstu(RawBytes.getZExtValue());
   } else if (Entry.isConstantInt()) {
     APInt RawBytes = Entry.getConstantInt()->getValue();
     if (RawBytes.getBitWidth() > 64)
       return std::nullopt;
-    addUnsignedConstant(RawBytes.getZExtValue());
+    emitConstu(RawBytes.getZExtValue());
   } else if (Entry.isTargetIndexLocation()) {
     return std::nullopt;
   } else {
@@ -961,9 +989,10 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Constant Constant,
     return std::nullopt;
 
   if (isUnsigned(IntLiteralValue)) {
-    addUnsignedConstant(IntLiteralValue->getZExtValue());
+    emitConstu(IntLiteralValue->getZExtValue());
   } else {
-    addSignedConstant(IntLiteralValue->getSExtValue());
+    emitOp(dwarf::DW_OP_consts);
+    emitSigned(IntLiteralValue->getSExtValue());
   }
 
   return NewOpResult{IntLiteralValue->getType(), ValueKind::Value};
@@ -1062,7 +1091,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
 
   emitOp(dwarf::DW_OP_deref_size);
   emitData1(PointerSizeInBytes);
-  addUnsignedConstant(*PointerDWARFAddrSpace);
+  emitConstu(*PointerDWARFAddrSpace);
   emitUserOp(dwarf::DW_OP_LLVM_USER_form_aspace_address);
 
   // FIXME(KZHURAVL): Is the following result type correct?
@@ -1159,7 +1188,7 @@ void DwarfExpression::readToValue(Type *Ty) {
 
   if (NeedsMask) {
     uint64_t Mask = (1ULL << PrimitiveSizeInBits) - 1ULL;
-    addUnsignedConstant(Mask);
+    emitConstu(Mask);
     emitOp(dwarf::DW_OP_and);
   }
 }

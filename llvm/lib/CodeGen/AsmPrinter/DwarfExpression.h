@@ -362,6 +362,12 @@ public:
   // is terminated by a DW_OP_LLVM_undefined operation.
   bool IsImplemented = true;
 
+  /// Set when emitting a fragment/non-fragment expression that contains a
+  /// DW_OP_LLVM_poison operation. This matters for correctness in the fragment
+  /// case, since we need to ensure that we don't add any registers or constants
+  /// onto the stack. In the non-fragment case it's simply an optimization.
+  bool IsPoisonedExpr = false;
+
   void buildAST(DIExpression::NewElementsRef Elements);
 
   /// Describes a kind of value on the DWARF expression stack. ValueKind::Value

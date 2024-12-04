@@ -1390,6 +1390,28 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     OldElementsRef Elements,
                                     StorageType Storage, bool ShouldCreate) {
+  // If Elements is any expression containing DW_OP_LLVM_poisoned and an
+  // optional fragment then canonicalize, the other ops aren't doing anything.
+  SmallVector<uint64_t, 4> CanonicalizedPoisonOps;
+  for (unsigned Idx = 0; Idx < Elements.size();) {
+    ExprOperand Op(&Elements[Idx]);
+
+    if (CanonicalizedPoisonOps.empty()) {
+      if (Op.getOp() == dwarf::DW_OP_LLVM_poisoned)
+        CanonicalizedPoisonOps.push_back(Op.getOp());
+    } else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment &&
+               Idx + 2 < Elements.size()) {
+      CanonicalizedPoisonOps.push_back(Op.getOp());
+      CanonicalizedPoisonOps.push_back(Op.getArg(0));
+      CanonicalizedPoisonOps.push_back(Op.getArg(1));
+    }
+
+    // Have to handle invalid exprs.
+    Idx += Op.getSize();
+  }
+  if (!CanonicalizedPoisonOps.empty())
+    Elements = CanonicalizedPoisonOps;
+
   DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
 }
@@ -2366,13 +2388,6 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
 
   if (Expr->holdsNewElements())
     return createNewFragmentExpression(Expr, OffsetInBits, SizeInBits);
-
-  // FIXME(diexpression-poison): Is it safe to handle each fragment
-  // independently? If a fragment gets poisoned we lose the fragment info, so
-  // can't locate it correctly. Conservatively we can just have it cover the
-  // whole variable.
-  if (Expr->isPoisoned())
-    return Expr->getPoisoned();
 
   SmallVector<uint64_t, 8> Ops;
   // Track whether it's safe to split the value at the top of the DWARF stack,
