@@ -5,9 +5,9 @@
 
 // check that -tosa-validate of stateful ops kick in
 func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  tosa.variable 1 = dense<-1> : tensor<2x4x8xi32>
   // expected-error@+1 {{'tosa.variable.write' op operand type does not equal variable type}}
-  tosa.variable.write @stored_var, %arg0 : tensor<1x4x8xi32>
+  tosa.variable.write 1, %arg0 : tensor<1x4x8xi32>
   return
 }
 

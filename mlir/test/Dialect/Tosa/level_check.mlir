@@ -1151,11 +1151,11 @@ func.func @test_scatter_tensor_size_invalid(%arg0: tensor<13x210000000x3xf32>, %
 // -----
 
 func.func @test_variable_read_write_tensor_size_invalid() -> () {
-  tosa.variable @stored_var = dense<3.14> : tensor<536870912xf32>
+  tosa.variable 1 = dense<3.14> : tensor<536870912xf32>
   // expected-error@+1 {{'tosa.variable.read' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
-  %0 = tosa.variable.read @stored_var : tensor<536870912xf32>
+  %0 = tosa.variable.read 1 : tensor<536870912xf32>
   // expected-error@+1 {{'tosa.variable.write' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
-  tosa.variable.write @stored_var, %0 : tensor<536870912xf32>
+  tosa.variable.write 1, %0 : tensor<536870912xf32>
   return
 }
 
@@ -1219,11 +1219,11 @@ func.func @test_cond_if_rank_invalid(%arg0: tensor<1x1x1x1x1x1x1x1xf32>, %arg1: 
 
 func.func @test_variable_read_write_rank_invalid() -> () {
   // expected-error@+1 {{'tosa.variable' op failed level check: attribute rank(shape) <= MAX_RANK}}
-  tosa.variable @stored_var = dense<3.14> : tensor<1x1x1x1x1x1x1x1xf32>
+  tosa.variable 1 = dense<3.14> : tensor<1x1x1x1x1x1x1x1xf32>
   // expected-error@+1 {{'tosa.variable.read' op failed level check: result rank(shape) <= MAX_RANK}}
-  %0 = tosa.variable.read @stored_var : tensor<1x1x1x1x1x1x1x1xf32>
+  %0 = tosa.variable.read 1 : tensor<1x1x1x1x1x1x1x1xf32>
   // expected-error@+1 {{'tosa.variable.write' op failed level check: operand rank(shape) <= MAX_RANK}}
-  tosa.variable.write @stored_var, %0 : tensor<1x1x1x1x1x1x1x1xf32>
+  tosa.variable.write 1, %0 : tensor<1x1x1x1x1x1x1x1xf32>
   return
 }
 

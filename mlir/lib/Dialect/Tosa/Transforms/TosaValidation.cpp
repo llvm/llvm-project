@@ -449,7 +449,7 @@ private:
 
   SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
   TosaLevel tosaLevel;
-  DenseMap<StringAttr, mlir::Type> variablesMap;
+  DenseMap<IntegerAttr, mlir::Type> variablesMap;
   TosaProfileCompliance profileComp;
   tosa::TargetEnv targetEnv;
 };
@@ -677,9 +677,9 @@ inline bool CompatibleTypes(const mlir::Type &type,
 
 bool TosaValidation::CheckVariable(Operation *op) {
   if (isa<mlir::tosa::VariableOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+    mlir::IntegerAttr uidAttr = cast<mlir::IntegerAttr>(op->getAttr("uid"));
 
-    if (variablesMap.count(nameAttr)) {
+    if (variablesMap.count(uidAttr)) {
       op->emitOpError() << "name has already been declared";
       return false;
     }
@@ -687,7 +687,7 @@ bool TosaValidation::CheckVariable(Operation *op) {
     auto typeAttr = cast<mlir::TypeAttr>(op->getAttr("type"));
     mlir::Type type = typeAttr.getValue();
 
-    variablesMap[nameAttr] = type;
+    variablesMap[uidAttr] = type;
   }
 
   return true;
@@ -696,14 +696,13 @@ bool TosaValidation::CheckVariable(Operation *op) {
 bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
-
-    if (!variablesMap.count(nameAttr)) {
+    mlir::IntegerAttr uidAttr = cast<mlir::IntegerAttr>(op->getAttr("uid"));
+    if (!variablesMap.count(uidAttr)) {
       op->emitOpError() << "name has not been declared";
       return false;
     }
 
-    auto varType = variablesMap[nameAttr];
+    auto varType = variablesMap[uidAttr];
 
     for (auto v : op->getOperands()) {
       auto type = v.getType();

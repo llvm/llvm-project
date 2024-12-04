@@ -26,8 +26,12 @@ public:
 
   LogicalResult matchAndRewrite(tosa::VariableOp op,
                                 PatternRewriter &rewriter) const final {
+
+    std::string uid = std::to_string(op.getUid());
+    llvm::StringRef uidStringRef(uid);
+
     auto newVariable = rewriter.create<mlir::ml_program::GlobalOp>(
-        op.getLoc(), op.getName(), op.getType(), /*is_mutable=*/true,
+        op.getLoc(), uidStringRef, op.getType(), /*is_mutable=*/true,
         op.getInitialValueAttr(), /*sym_visibility=*/nullptr);
     newVariable.setPrivate();
     rewriter.replaceOp(op, newVariable);
@@ -42,8 +46,12 @@ public:
 
   LogicalResult matchAndRewrite(tosa::VariableWriteOp op,
                                 PatternRewriter &rewriter) const final {
+
+    std::string uid = std::to_string(op.getUid());
+    llvm::StringRef uidStringRef(uid);
+
     auto globalSymbolRef =
-        SymbolRefAttr::get(rewriter.getContext(), op.getName());
+        SymbolRefAttr::get(rewriter.getContext(), uidStringRef);
     auto newVariableWrite = rewriter.create<ml_program::GlobalStoreOp>(
         op.getLoc(), globalSymbolRef, op.getValue());
     rewriter.replaceOp(op, newVariableWrite);
@@ -57,8 +65,11 @@ public:
 
   LogicalResult matchAndRewrite(tosa::VariableReadOp op,
                                 PatternRewriter &rewriter) const final {
+    std::string uid = std::to_string(op.getUid());
+    llvm::StringRef uidStringRef(uid);
+
     auto globalSymbolRef =
-        SymbolRefAttr::get(rewriter.getContext(), op.getName());
+        SymbolRefAttr::get(rewriter.getContext(), uidStringRef);
     auto newVariableRead = rewriter.create<ml_program::GlobalLoadOp>(
         op.getLoc(), op.getType(), globalSymbolRef);
     rewriter.replaceOp(op, newVariableRead);
