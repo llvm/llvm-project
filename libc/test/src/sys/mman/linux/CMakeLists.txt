@@ -197,7 +197,6 @@ add_libc_unittest(
     libc.src.signal.kill
     libc.include.signal
     libc.src.stdlib.exit
-    libc.src.signal.raise
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.sleep
     libc.test.UnitTest.ErrnoSetterMatcher
