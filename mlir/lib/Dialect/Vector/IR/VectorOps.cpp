@@ -1756,11 +1756,6 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   if (!shapeCastOp)
     return Value();
 
-  // 0-D vectors not supported.
-  assert(!hasZeroDimVectors(extractOp) && "0-D vectors not supported");
-  if (hasZeroDimVectors(shapeCastOp))
-    return Value();
-
   // Get the nth dimension size starting from lowest dimension.
   auto getDimReverse = [](VectorType type, int64_t n) {
     return type.getShape().take_back(n + 1).front();
