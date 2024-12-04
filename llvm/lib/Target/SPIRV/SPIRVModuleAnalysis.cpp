@@ -1466,11 +1466,11 @@ void addInstrRequirements(const MachineInstr &MI,
             SPIRV::CooperativeMatrixOperands::MatrixCBFloat16ComponentsINTEL ||
         CoopOperands & SPIRV::CooperativeMatrixOperands::
                            MatrixResultBFloat16ComponentsINTEL) {
-        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
-          report_fatal_error("***BF16ComponentsINTEL type interpretations "
-                             "require the following SPIR-V extension: "
-                             "SPV_INTEL_joint_matrix",
-                             false);
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
+        report_fatal_error("***BF16ComponentsINTEL type interpretations "
+                           "require the following SPIR-V extension: "
+                           "SPV_INTEL_joint_matrix",
+                           false);
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
       Reqs.addCapability(
           SPIRV::Capability::CooperativeMatrixBFloat16ComponentTypeINTEL);
