@@ -564,12 +564,11 @@ static void cleanRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 }
 
 // 1. Iterate over each successor block of the given BranchOpInterface
-// operation.
+//    operation.
 // 2. For each successor block:
 //    a. Retrieve the operands passed to the successor.
 //    b. Use the provided liveness analysis (`RunLivenessAnalysis`) to determine
-//    which
-//       operands are live in the successor block.
+//       which operands are live in the successor block.
 //    c. Mark each operand as live or dead based on the analysis.
 // 3. Remove dead operands from the branch operation and arguments accordingly
 
