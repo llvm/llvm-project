@@ -826,7 +826,7 @@ Error CompactUnwindSplitter::operator()(LinkGraph &G) {
         if (E.getOffset() == 0) {
           LLVM_DEBUG({
             dbgs() << "    Updating compact unwind record at "
-                   << formatv("{0:x16}", CURec->getAddress()) << " to point to "
+                   << CURec->getAddress() << " to point to "
                    << (E.getTarget().hasName() ? *E.getTarget().getName()
                                                : StringRef())
                    << " (at " << E.getTarget().getAddress() << ")\n";
