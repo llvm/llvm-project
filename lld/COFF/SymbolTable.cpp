@@ -54,7 +54,7 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
 }
 
 void SymbolTable::addFile(InputFile *file) {
-  log("Reading " + toString(file));
+  Log(ctx) << "Reading " << toString(file);
   if (file->lazy) {
     if (auto *f = dyn_cast<BitcodeFile>(file))
       f->parseLazy();
@@ -320,8 +320,8 @@ void SymbolTable::loadMinGWSymbols() {
       if (newName != origName && (l = find(newName)) != nullptr) {
         // If we found a symbol and it is lazy; load it.
         if (l->isLazy() && !l->pendingArchiveLoad) {
-          log("Loading lazy " + l->getName() + " from " +
-              l->getFile()->getName() + " for stdcall fixup");
+          Log(ctx) << "Loading lazy " << l->getName() << " from "
+                   << l->getFile()->getName() << " for stdcall fixup";
           forceLazy(l);
         }
         // If it's lazy or already defined, hook it up as weak alias.
@@ -330,7 +330,8 @@ void SymbolTable::loadMinGWSymbols() {
             Warn(ctx) << "Resolving " << origName << " by linking to "
                       << newName;
           else
-            log("Resolving " + origName + " by linking to " + newName);
+            Log(ctx) << "Resolving " << origName << " by linking to "
+                     << newName;
           undef->setWeakAlias(l);
           continue;
         }
@@ -346,8 +347,8 @@ void SymbolTable::loadMinGWSymbols() {
       if (!l || l->pendingArchiveLoad || !l->isLazy())
         continue;
 
-      log("Loading lazy " + l->getName() + " from " + l->getFile()->getName() +
-          " for automatic import");
+      Log(ctx) << "Loading lazy " << l->getName() << " from "
+               << l->getFile()->getName() << " for automatic import";
       forceLazy(l);
     }
   }
@@ -372,12 +373,12 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
   // reference itself to point at the IAT entry.
   size_t impSize = 0;
   if (isa<DefinedImportData>(imp)) {
-    log("Automatically importing " + name + " from " +
-        cast<DefinedImportData>(imp)->getDLLName());
+    Log(ctx) << "Automatically importing " << name << " from "
+             << cast<DefinedImportData>(imp)->getDLLName();
     impSize = sizeof(DefinedImportData);
   } else if (isa<DefinedRegular>(imp)) {
-    log("Automatically importing " + name + " from " +
-        toString(cast<DefinedRegular>(imp)->file));
+    Log(ctx) << "Automatically importing " << name << " from "
+             << toString(cast<DefinedRegular>(imp)->file);
     impSize = sizeof(DefinedRegular);
   } else {
     Warn(ctx) << "unable to automatically import " << name << " from "
@@ -398,7 +399,7 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
   if (refptr && refptr->getChunk()->getSize() == ctx.config.wordsize) {
     SectionChunk *sc = dyn_cast_or_null<SectionChunk>(refptr->getChunk());
     if (sc && sc->getRelocs().size() == 1 && *sc->symbols().begin() == sym) {
-      log("Replacing .refptr." + name + " with " + imp->getName());
+      Log(ctx) << "Replacing .refptr." << name << " with " << imp->getName();
       refptr->getChunk()->live = false;
       refptr->replaceKeepingName(imp, impSize);
     }
