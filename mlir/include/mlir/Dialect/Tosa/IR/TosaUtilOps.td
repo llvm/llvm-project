@@ -86,12 +86,13 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
   let summary = "Defines a variable";
 
   let description = [{
-    Defines a new TOSA variable. This is a mutable value.
+    Defines a new TOSA variable.
+    This is a persistent mutable value across multiple TOSA graph invocations.
     Modifications are expressed using read/write semantics.
   }];
 
   let arguments = (ins
-    SymbolNameAttr:$name,
+    SymbolNameAttr:$uid,
     TypeAttr:$type,
     OptionalAttr<AnyAttr>:$initial_value
   );
@@ -102,7 +103,7 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
   ];
 
   let assemblyFormat = [{
-    $name
+    $uid
     attr-dict
     custom<TypeOrAttr>($type, $initial_value)
   }];
@@ -115,12 +116,12 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
   let summary = "write_buffer operator";
 
   let description = [{
-    Assigns a value to pseudo-buffer resource holding a mutable tensor.
+    Assigns a value to the pseudo-buffer resource holding a persistent mutable tensor.
   }];
 
   let arguments = (ins
-    SymbolNameAttr:$name,
-    AnyType:$value
+    SymbolNameAttr:$uid,
+    Tosa_Tensor:$input1
   );
 
   list<Availability> availability = [
@@ -129,7 +130,7 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `,` $value `:` type($value)
+    $uid attr-dict `,` $input1 `:` type($input1)
   }];
 }
 
@@ -140,15 +141,15 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   let summary = "read_buffer operator";
 
   let description = [{
-    Reads the value from a pseudo-buffer resource holding a mutable tensor.
+    Reads the value from a pseudo-buffer resource holding a persistent mutable tensor.
   }];
 
   let arguments = (ins
-    SymbolNameAttr:$name
+    SymbolNameAttr:$uid
   );
 
   let results = (outs
-    AnyType:$value
+    Tosa_Tensor:$output1
   );
 
   list<Availability> availability = [
@@ -157,7 +158,7 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `:` type($value)
+    $uid attr-dict `:` type($output1)
   }];
 }
 
