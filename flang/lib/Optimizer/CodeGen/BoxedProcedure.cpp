@@ -272,7 +272,7 @@ public:
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
             FirOpBuilder builder(rewriter, module);
-            const auto triple{fir::getTargetTriple(builder.getModule())};
+            const auto triple{fir::getTargetTriple(module)};
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
