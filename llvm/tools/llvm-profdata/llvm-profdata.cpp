@@ -723,6 +723,35 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     return;
   }
 
+  using ::llvm::memprof::YAMLMemProfReader;
+  if (YAMLMemProfReader::hasFormat(Input.Filename)) {
+    auto ReaderOrErr = YAMLMemProfReader::create(Input.Filename);
+    if (!ReaderOrErr) {
+      exitWithError(ReaderOrErr.takeError(), Input.Filename);
+    }
+    std::unique_ptr<YAMLMemProfReader> Reader = std::move(ReaderOrErr.get());
+    // Check if the profile types can be merged, e.g. clang frontend profiles
+    // should not be merged with memprof profiles.
+    if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
+      consumeError(std::move(E));
+      WC->Errors.emplace_back(
+          make_error<StringError>(
+              "Cannot merge MemProf profile with Clang generated profile.",
+              std::error_code()),
+          Filename);
+      return;
+    }
+
+    auto MemProfError = [&](Error E) {
+      auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
+      WC->Errors.emplace_back(make_error<InstrProfError>(ErrorCode, Msg),
+                              Filename);
+    };
+
+    WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
+    return;
+  }
+
   auto FS = vfs::getRealFileSystem();
   // TODO: This only saves the first non-fatal error from InstrProfReader, and
   // then added to WriterContext::Errors. However, this is not extensible, if
@@ -3242,18 +3271,54 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for MemProf");
-  auto ReaderOr = llvm::memprof::RawMemProfReader::create(
-      Filename, ProfiledBinary, /*KeepNames=*/true);
-  if (Error E = ReaderOr.takeError())
-    // Since the error can be related to the profile or the binary we do not
-    // pass whence. Instead additional context is provided where necessary in
-    // the error message.
-    exitWithError(std::move(E), /*Whence*/ "");
 
-  std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
-      ReaderOr.get().release());
+  // Load the file to check the magic bytes.
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferOrError =
+      llvm::MemoryBuffer::getFile(Filename);
+  if (auto EC = BufferOrError.getError())
+    exitWithError("Error opening profile file '" + Filename + "'");
+  auto Buffer = std::move(BufferOrError.get());
 
-  Reader->printYAML(OS);
+  // Show the raw profile in YAML.
+  if (memprof::RawMemProfReader::hasFormat(*Buffer)) {
+    auto ReaderOr = llvm::memprof::RawMemProfReader::create(
+        Filename, ProfiledBinary, /*KeepNames=*/true);
+    if (Error E = ReaderOr.takeError())
+      // Since the error can be related to the profile or the binary we do not
+      // pass whence. Instead additional context is provided where necessary in
+      // the error message.
+      exitWithError(std::move(E), /*Whence*/ "");
+
+    std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
+        ReaderOr.get().release());
+
+    Reader->printYAML(OS);
+    return 0;
+  }
+
+  // Show the indexed MemProf profile in YAML.
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = IndexedInstrProfReader::create(Filename, *FS);
+  if (Error E = ReaderOrErr.takeError())
+    exitWithError(std::move(E), Filename);
+
+  auto Reader = std::move(ReaderOrErr.get());
+
+  // Build pairs of GUID and MemProfRecord.
+  memprof::AllMemProfData Data;
+  for (const uint64_t Key : Reader->getMemProfRecordKeys()) {
+    auto Record = Reader->getMemProfRecord(Key);
+    if (Record.takeError())
+      continue;
+    memprof::GUIDMemProfRecordPair Pair;
+    Pair.GUID = Key;
+    Pair.Record = std::move(*Record);
+    Data.HeapProfileRecords.push_back(std::move(Pair));
+  }
+
+  yaml::Output Yout(OS);
+  Yout << Data;
+
   return 0;
 }
 

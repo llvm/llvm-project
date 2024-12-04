@@ -716,6 +716,9 @@ public:
 
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() const;
+
+  // Return a vector of all GUIDs that we have corresponding MemProfRecords for.
+  SmallVector<uint64_t, 0> getMemProfRecordKeys() const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -821,6 +824,10 @@ public:
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() {
     return MemProfReader.getMemProfCallerCalleePairs();
+  }
+
+  SmallVector<uint64_t, 0> getMemProfRecordKeys() {
+    return MemProfReader.getMemProfRecordKeys();
   }
 
   /// Fill Counts with the profile data for the given function name.

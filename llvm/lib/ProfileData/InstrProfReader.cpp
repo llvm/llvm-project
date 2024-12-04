@@ -1664,6 +1664,14 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   return Pairs;
 }
 
+SmallVector<uint64_t, 0> IndexedMemProfReader::getMemProfRecordKeys() const {
+  SmallVector<uint64_t, 0> Keys;
+  Keys.reserve(MemProfRecordTable->getNumEntries());
+  for (uint64_t Key : MemProfRecordTable->keys())
+    Keys.push_back(Key);
+  return Keys;
+}
+
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 std::vector<uint64_t> &Counts) {
