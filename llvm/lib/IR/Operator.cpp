@@ -125,7 +125,7 @@ bool GEPOperator::accumulateConstantOffset(
     Type *SourceType, ArrayRef<const Value *> Index, const DataLayout &DL,
     APInt &Offset, function_ref<bool(Value &, APInt &)> ExternalAnalysis) {
   // Fast path for canonical getelementptr i8 form.
-  if (SourceType->isIntegerTy(8) && !ExternalAnalysis) {
+  if (SourceType->isIntegerTy(8) && !Index.empty() && !ExternalAnalysis) {
     auto *CI = dyn_cast<ConstantInt>(Index.front());
     if (CI && CI->getType()->isIntegerTy()) {
       Offset += CI->getValue().sextOrTrunc(Offset.getBitWidth());
