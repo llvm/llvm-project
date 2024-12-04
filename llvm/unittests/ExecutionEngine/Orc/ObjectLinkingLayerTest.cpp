@@ -353,7 +353,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
           if (*Sym->getName() == "_testFunc")
             SawSymbolDef = true;
           else
-            ADD_FAILURE() << "unexpected symbol " << *Sym->getName();
+            ADD_FAILURE() << "unexpected symbol " << Sym->getName();
         }
         EXPECT_EQ(SymCount, 1u);
         return Error::success();
