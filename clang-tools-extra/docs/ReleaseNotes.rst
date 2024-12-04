@@ -83,6 +83,8 @@ Code actions
 - Improved the extract-to-function code action to allow extracting statements
   with overloaded operators like ``<<`` of ``std::ostream``.
 
+- Improved diagnostics code actions to better remove leftover commas and colons.
+
 Signature help
 ^^^^^^^^^^^^^^
 
