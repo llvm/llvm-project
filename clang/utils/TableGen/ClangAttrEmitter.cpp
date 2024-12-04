@@ -5178,7 +5178,7 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
 
 static void WriteDocumentation(const RecordKeeper &Records,
                                const DocumentationData &Doc, raw_ostream &OS) {
-  if (const StringRef Label = Doc.Documentation->getValueAsString("Label");
+  if (StringRef Label = Doc.Documentation->getValueAsString("Label");
       !Label.empty())
     OS << ".. _" << Label << ":\n\n";
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
