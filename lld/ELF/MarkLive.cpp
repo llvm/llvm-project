@@ -54,8 +54,9 @@ public:
   void moveToMain();
 
 private:
-  void enqueue(InputSectionBase *sec, std::optional<uint64_t> offset,
-               std::optional<LiveObject> parent);
+  void enqueue(InputSectionBase *sec,
+               std::optional<uint64_t> offset = std::nullopt,
+               std::optional<LiveObject> parent = std::nullopt);
   void printWhyLive(Symbol *s) const;
   void markSymbol(Symbol *sym);
   void mark();
@@ -77,7 +78,7 @@ private:
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 
-  DenseMap<LiveObject, LiveObject> whyLive;
+  DenseMap<LiveObject, std::optional<LiveObject>> whyLive;
 };
 } // namespace
 
@@ -143,7 +144,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
   }
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
-    enqueue(sec, std::nullopt, parent);
+    enqueue(sec);
 }
 
 // The .eh_frame section is an unfortunate special case.
@@ -217,13 +218,11 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec,
     return;
   sec->partition = sec->partition ? 1 : partition;
 
-  if (parent) {
-    whyLive.try_emplace(sec, *parent);
-    if (offset) {
-      Defined *sym = sec->getEnclosingSymbol(*offset);
-      if (sym)
-        whyLive.try_emplace(sym, *parent);
-    }
+  whyLive.try_emplace(sec, parent);
+  if (offset) {
+    Defined *sym = sec->getEnclosingSymbol(*offset);
+    if (sym)
+      whyLive.try_emplace(sym, parent);
   }
 
   // Add input section to the queue.
@@ -241,9 +240,11 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
       if (auto *d = dyn_cast<Defined>(s))
         if (auto *s = dyn_cast<InputSectionBase>(d->section))
           it = whyLive.find(LiveObject{s});
-    if (it == whyLive.end())
+    assert(it != whyLive.end() &&
+           "all live objects should have a tracked reason for being live");
+    if (!it->second)
       break;
-    cur = it->second;
+    cur = *it->second;
     out += "\n" + std::string(indent, ' ');
     if (std::holds_alternative<Symbol *>(cur)) {
       auto *s = std::get<Symbol *>(cur);
@@ -260,7 +261,7 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
   if (auto *d = dyn_cast_or_null<Defined>(sym))
     if (auto *isec = dyn_cast_or_null<InputSectionBase>(d->section))
-      enqueue(isec, d->value, std::nullopt);
+      enqueue(isec, d->value);
 }
 
 // This is the main function of the garbage collector.
@@ -307,7 +308,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   }
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
-      enqueue(sec, std::nullopt, std::nullopt);
+      enqueue(sec);
       continue;
     }
     if (sec->flags & SHF_LINK_ORDER)
@@ -346,7 +347,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
     if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
-      enqueue(sec, std::nullopt, std::nullopt);
+      enqueue(sec);
     } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
@@ -406,7 +407,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
       continue;
     if (ctx.symtab->find(("__start_" + sec->name).str()) ||
         ctx.symtab->find(("__stop_" + sec->name).str()))
-      enqueue(sec, std::nullopt, std::nullopt);
+      enqueue(sec);
   }
 
   mark();
