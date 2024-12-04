@@ -646,3 +646,11 @@ func.func @negative_transpose_store_scalable_via_za__bad_source_shape(%vec: vect
   vector.transfer_write %tr, %dest[%i, %j] {in_bounds = [true, true]} : vector<[7]x2xf32>,  memref<?x?xf32>
   return
 }
+
+// -----
+
+// From: https://github.com/llvm/llvm-project/issues/118449 (check we don't crash).
+func.func @vector_mask_empty(%m0: vector<16x2xi1>, %arg1: vector<16x16xf32>) -> vector<16x16xf32> {
+  %0 = vector.mask %m0 { vector.yield %arg1 : vector<16x16xf32> } : vector<16x2xi1> -> vector<16x16xf32>
+  return %0 : vector<16x16xf32>
+}
