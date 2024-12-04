@@ -40,6 +40,12 @@ using namespace llvm;
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
 
+static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
+    DEBUG_TYPE "-whole-vector-register-move-valid-vtype", cl::Hidden,
+    cl::desc("Insert vsetvlis before vmvNr.vs to ensure vtype is valid and "
+             "vill is cleared"),
+    cl::init(true));
+
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
@@ -1468,7 +1474,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       PrefixTransparent = false;
     }
 
-    if (isVectorCopy(ST->getRegisterInfo(), MI)) {
+    if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+        isVectorCopy(ST->getRegisterInfo(), MI)) {
       if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
         PrefixTransparent = false;
