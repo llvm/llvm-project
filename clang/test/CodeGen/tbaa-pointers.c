@@ -186,6 +186,25 @@ void vla1(int n, int ptr[][n], int idx) {
     ptr[idx][0] = 0;
 }
 
+typedef struct {
+  int i1;
+} TypedefS;
+
+void unamed_struct_typedef(TypedefS *ptr) {
+// COMMON-LABEL: define void @unamed_struct_typedef(
+// COMMON-SAME: ptr noundef [[PTRA:%.+]])
+// COMMON:   [[PTR_ADDR:%.+]]  = alloca ptr, align 8
+// DEFAULT-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+// DEFAULT-NEXT:  [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
+// ENABLED-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[P1TYPEDEF:!.+]]
+// ENABLED-NEXT:  [[L0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa  [[P1TYPEDEF]]
+// COMMON-NEXT:   [[GEP:%.+]]  = getelementptr inbounds nuw %struct.TypedefS, ptr [[L0]], i32 0, i32 0
+// COMMON-NEXT:   store i32 0, ptr [[GEP]], align 4
+// COMMON-NEXT:   ret void
+
+  ptr->i1 = 0;
+}
+
 // ENABLED: [[P2INT_0]] = !{[[P2INT:!.+]], [[P2INT]], i64 0}
 // ENABLED: [[P2INT]] = !{!"p2 int", [[ANY_POINTER:!.+]], i64 0}
 // DEFAULT: [[ANYPTR]] = !{[[ANY_POINTER:!.+]], [[ANY_POINTER]], i64 0}
@@ -217,3 +236,4 @@ void vla1(int n, int ptr[][n], int idx) {
 // DEFAULT: [[S2_TY]]  = !{!"S2", [[ANY_POINTER]], i64 0}
 // COMMON:  [[INT_TAG]] = !{[[INT_TY:!.+]], [[INT_TY]], i64 0}
 // COMMON:  [[INT_TY]] = !{!"int", [[CHAR]], i64 0}
+// ENABLED: [[P1TYPEDEF]] = !{[[ANY_POINTER]],  [[ANY_POINTER]], i64 0}

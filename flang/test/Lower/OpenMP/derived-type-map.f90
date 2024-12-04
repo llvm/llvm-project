@@ -41,7 +41,7 @@ end subroutine mapType_derived_explicit
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
 !CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[MEMBER]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<10xi32>> {name = "scalar_arr%array"}
 !CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.type<_QFmaptype_derived_explicit_single_memberTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.type<_QFmaptype_derived_explicit_single_memberTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP]] : [1] : !fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.type<_QFmaptype_derived_explicit_single_memberTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>> {name = "scalar_arr", partial_map = true}
-!CHECK: omp.target map_entries(%[[MEMBER_MAP]] -> %[[ARG0:.*]], %[[PARENT_MAP]] -> %[[ARG1:.*]] : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.type<_QFmaptype_derived_explicit_single_memberTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>) {
+!CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP]] -> %[[ARG1:.*]] : !fir.ref<!fir.type<_QFmaptype_derived_explicit_single_memberTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.ref<!fir.array<10xi32>>) {
 subroutine mapType_derived_explicit_single_member
     type :: scalar_and_array
       real(4) :: real
@@ -62,7 +62,7 @@ end subroutine mapType_derived_explicit_single_member
 !CHECK: %[[MEMBER2:.*]] = hlfir.designate %[[DECLARE]]#0{"real"}   : (!fir.ref<!fir.type<_QFmaptype_derived_explicit_multiple_membersTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>) -> !fir.ref<f32>
 !CHECK: %[[MEMBER_MAP_2:.*]] = omp.map.info var_ptr(%[[MEMBER2]] : !fir.ref<f32>, f32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<f32> {name = "scalar_arr%real"}
 !CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.type<_QFmaptype_derived_explicit_multiple_membersTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.type<_QFmaptype_derived_explicit_multiple_membersTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP_1]], %[[MEMBER_MAP_2]] : [2], [0] : !fir.ref<i32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFmaptype_derived_explicit_multiple_membersTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>> {name = "scalar_arr", partial_map = true}
-!CHECK: omp.target map_entries(%[[MEMBER_MAP_1]] -> %[[ARG0:.*]], %[[MEMBER_MAP_2]] -> %[[ARG1:.*]], %[[PARENT_MAP]] -> %[[ARG2:.*]] : !fir.ref<i32>, !fir.ref<f32>, !fir.ref<!fir.type<_QFmaptype_derived_explicit_multiple_membersTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>) {
+!CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP_1]] -> %[[ARG1:.*]], %[[MEMBER_MAP_2]] -> %[[ARG2:.*]] : !fir.ref<!fir.type<_QFmaptype_derived_explicit_multiple_membersTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.ref<i32>, !fir.ref<f32>) {
 subroutine mapType_derived_explicit_multiple_members
     type :: scalar_and_array
       real(4) :: real
@@ -85,7 +85,7 @@ end subroutine mapType_derived_explicit_multiple_members
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB]] : index) upper_bound(%[[UB]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
 !CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[MEMBER]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%20) -> !fir.ref<!fir.array<10xi32>> {name = "scalar_arr%array(2:5)"}
 !CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP]] : [1] : !fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>> {name = "scalar_arr", partial_map = true}
-!CHECK: omp.target map_entries(%[[MEMBER_MAP]] -> %[[ARG0:.*]], %[[PARENT_MAP]] -> %[[ARG1:.*]] : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>) {
+!CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP]] -> %[[ARG1:.*]] : !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.ref<!fir.array<10xi32>>) {
 subroutine mapType_derived_explicit_member_with_bounds
     type :: scalar_and_array
       real(4) :: real
@@ -105,8 +105,8 @@ end subroutine mapType_derived_explicit_member_with_bounds
 !CHECK: %[[NEST_MEMBER:.*]] = hlfir.designate %[[NEST]]{"array"}   shape %{{.*}} : (!fir.ref<!fir.type<_QFmaptype_derived_nested_explicit_single_memberTnested{int:i32,real:f32,array:!fir.array<10xi32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
 !CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[NEST_MEMBER]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<10xi32>> {name = "scalar_arr%nest%array"}
-!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%35 : [2,2] : !fir.ref<!fir.array<10xi32>>) -> {{.*}} {name = "scalar_arr", partial_map = true}
-!CHECK: omp.target map_entries(%[[MEMBER_MAP]] -> %[[ARG0:.*]], %[[PARENT_MAP]] -> %[[ARG1:.*]] : {{.*}}, {{.*}}) {
+!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%35 : [2, 2] : !fir.ref<!fir.array<10xi32>>) -> {{.*}} {name = "scalar_arr", partial_map = true}
+!CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP]] -> %[[ARG1:.*]] : {{.*}}, {{.*}}) {
 subroutine mapType_derived_nested_explicit_single_member
   type :: nested
     integer(4) :: int
@@ -136,8 +136,8 @@ end subroutine mapType_derived_nested_explicit_single_member
 !CHECK: %[[NEST:.*]] = hlfir.designate %[[DECLARE]]#0{"nest"}   : ({{.*}}) -> {{.*}}
 !CHECK: %[[NEST_MEMBER2:.*]] = hlfir.designate %[[NEST]]{"real"}   : ({{.*}}) -> !fir.ref<f32>
 !CHECK: %[[MEMBER_MAP_2:.*]] = omp.map.info var_ptr(%[[NEST_MEMBER2]] : !fir.ref<f32>, f32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<f32> {name = "scalar_arr%nest%real"}
-!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP_1]], %[[MEMBER_MAP_2]] : [2,0], [2,1] : !fir.ref<i32>, !fir.ref<f32>) -> {{.*}} {name = "scalar_arr", partial_map = true}
-!CHECK: omp.target map_entries(%[[MEMBER_MAP_1]] -> %[[ARG0:.*]], %[[MEMBER_MAP_2]] -> %[[ARG1:.*]], %[[PARENT_MAP]] -> %[[ARG2:.*]] : !fir.ref<i32>, !fir.ref<f32>, {{.*}}) {
+!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP_1]], %[[MEMBER_MAP_2]] : [2, 0], [2, 1] : !fir.ref<i32>, !fir.ref<f32>) -> {{.*}} {name = "scalar_arr", partial_map = true}
+!CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP_1]] -> %[[ARG1:.*]], %[[MEMBER_MAP_2]] -> %[[ARG2:.*]] : {{.*}}, !fir.ref<i32>, !fir.ref<f32>) {
 subroutine mapType_derived_nested_explicit_multiple_members
   type :: nested
     integer(4) :: int
@@ -169,8 +169,8 @@ end subroutine mapType_derived_nested_explicit_multiple_members
 !CHECK: %[[C4:.*]] = arith.constant 4 : index
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[C1_2]] : index) upper_bound(%[[C4]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
 !CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[NEST_MEMBER]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<10xi32>> {name = "scalar_arr%nest%array(2:5)"}
-!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP]] : [2,2] : !fir.ref<!fir.array<10xi32>>) -> {{.*}} {name = "scalar_arr", partial_map = true}
-!CHECK: omp.target map_entries(%[[MEMBER_MAP]] -> %[[ARG0:.*]], %[[PARENT_MAP]] -> %[[ARG1:.*]] : !fir.ref<!fir.array<10xi32>>, {{.*}}) {
+!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP]] : [2, 2] : !fir.ref<!fir.array<10xi32>>) -> {{.*}} {name = "scalar_arr", partial_map = true}
+!CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP]] -> %[[ARG1:.*]] : {{.*}}, !fir.ref<!fir.array<10xi32>>) {
 subroutine mapType_derived_nested_explicit_member_with_bounds
   type :: nested
     integer(4) :: int
@@ -202,9 +202,9 @@ end subroutine mapType_derived_nested_explicit_member_with_bounds
 !CHECK: %[[PARENT_2:.*]] = hlfir.designate %[[DECLARE_2]]#0{"nest"}   : {{.*}} -> {{.*}}
 !CHECK: %[[MEMBER_2:.*]] = hlfir.designate %[[PARENT_2]]{"int"}   : {{.*}} -> !fir.ref<i32>
 !CHECK: %[[MAP_MEMBER_2:.*]] = omp.map.info var_ptr(%[[MEMBER_2]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "scalar_arr2%nest%int"}
-!CHECK: %[[MAP_PARENT_1:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_1]] : [2,0] : !fir.ref<i32>) -> {{.*}} {name = "scalar_arr1", partial_map = true}
-!CHECK: %[[MAP_PARENT_2:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_2]] : [2,0] : !fir.ref<i32>) -> {{.*}} {name = "scalar_arr2", partial_map = true}
-!CHECK: omp.target map_entries(%[[MAP_MEMBER_1]] -> %[[ARG0:.*]], %[[MAP_PARENT_1]] -> %[[ARG1:.*]], %[[MAP_MEMBER_2]] -> %[[ARG2:.*]], %[[MAP_PARENT_2:.*]] -> %[[ARG3:.*]] : !fir.ref<i32>, {{.*}}, !fir.ref<i32>, {{.*}}) {
+!CHECK: %[[MAP_PARENT_1:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_1]] : [2, 0] : !fir.ref<i32>) -> {{.*}} {name = "scalar_arr1", partial_map = true}
+!CHECK: %[[MAP_PARENT_2:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_2]] : [2, 0] : !fir.ref<i32>) -> {{.*}} {name = "scalar_arr2", partial_map = true}
+!CHECK: omp.target map_entries(%[[MAP_PARENT_1]] -> %[[ARG0:.*]], %[[MAP_PARENT_2:.*]] -> %[[ARG1:.*]], %[[MAP_MEMBER_1]] -> %[[ARG2:.*]], %[[MAP_MEMBER_2]] -> %[[ARG3:.*]] : {{.*}}, {{.*}}, !fir.ref<i32>, !fir.ref<i32>) {
 subroutine mapType_multilpe_derived_nested_explicit_member
   type :: nested
     integer(4) :: int

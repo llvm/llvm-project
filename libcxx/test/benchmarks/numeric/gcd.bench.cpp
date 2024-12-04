@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 #include <array>
 #include <benchmark/benchmark.h>
 #include <cstring>
@@ -41,7 +43,8 @@ static void bm_gcd_trivial(benchmark::State& state) {
 BENCHMARK(bm_gcd_trivial);
 
 static void bm_gcd_complex(benchmark::State& state) {
-  int lhs = 2971215073, rhs = 1836311903;
+  long long lhs = 2971215073;
+  long long rhs = 1836311903;
   for (auto _ : state) {
     benchmark::DoNotOptimize(lhs);
     benchmark::DoNotOptimize(rhs);

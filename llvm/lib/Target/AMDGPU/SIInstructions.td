@@ -2175,8 +2175,11 @@ foreach vt = [i32, p3, p5, p6, p2] in {
   >;
 }
 
+// FIXME: The register bank of the frame index should depend on the
+// users, and transitive users of the add. We may require an
+// unnecessary copy from SGPR to VGPR.
 def : GCNPat <
-  (p5 frameindex:$fi),
+  (VGPRImm<(p5 frameindex)>:$fi),
   (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
@@ -3200,7 +3203,7 @@ def : GCNPat <
 let SubtargetPredicate = isGFX10Plus in {
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
-let OtherPredicates = [NotHasTrue16BitInsts] in
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (fma (f16 (VOP3NoMods f32:$src0)),
        (f16 (VOP3NoMods f32:$src1)),
@@ -3208,12 +3211,12 @@ def : GCNPat <
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
-let OtherPredicates = [HasTrue16BitInsts] in
+let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f32:$src0)),
-       (f16 (VOP3NoMods f32:$src1)),
-       (f16 (VOP3NoMods f32:$src2))),
-  (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
+  (V_FMAC_F16_fake16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
 }
@@ -3547,23 +3550,14 @@ def : AMDGPUPat <
   (V_BFE_U32_e64 $src, (i32 0), $width)
 >;
 
+def uint5Bits : PatLeaf<(i32 VGPR_32:$width), [{
+  return CurDAG->computeKnownBits(SDValue(N, 0)).countMaxActiveBits() <= 5;
+}]>;
+
 // x & (-1 >> (bitwidth - y))
 def : AMDGPUPat <
-  (DivergentBinFrag<and> i32:$src, (srl_oneuse -1, (sub 32, i32:$width))),
+  (DivergentBinFrag<and> i32:$src, (srl_oneuse -1, (sub 32, uint5Bits:$width))),
   (V_BFE_U32_e64 $src, (i32 0), $width)
->;
-
-// x << (bitwidth - y) >> (bitwidth - y)
-def : AMDGPUPat <
-  (DivergentBinFrag<srl> (shl_oneuse i32:$src, (sub 32, i32:$width)),
-                         (sub 32, i32:$width)),
-  (V_BFE_U32_e64 $src, (i32 0), $width)
->;
-
-def : AMDGPUPat <
-  (DivergentBinFrag<sra> (shl_oneuse i32:$src, (sub 32, i32:$width)),
-                         (sub 32, i32:$width)),
-  (V_BFE_I32_e64 $src, (i32 0), $width)
 >;
 
 // SHA-256 Ma patterns
@@ -3733,7 +3727,7 @@ def FPPow2ToExponentXForm : SDNodeXForm<fpimm, [{
   const auto &APF = N->getValueAPF();
   int Log2 = APF.getExactLog2Abs();
   assert(Log2 != INT_MIN);
-  return CurDAG->getTargetConstant(Log2, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(Log2, SDLoc(N), MVT::i32);
 }]>;
 
 // Check if a floating point value is a power of 2 floating-point

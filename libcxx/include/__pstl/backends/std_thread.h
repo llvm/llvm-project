@@ -22,7 +22,6 @@
 #include <__pstl/cpu_algos/transform_reduce.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

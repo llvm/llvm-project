@@ -64,6 +64,19 @@ declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU
 ; CHECK: OpGroupWaitEvents %[[#]] %[[#]] %[[#EventVarBarGen]]
 ; CHECK: OpFunctionEnd
 
+; CHECK2: OpFunction
+; CHECK2: %[[#BarArg1:]] = OpFunctionParameter %[[#TyPtrSV4_W]]
+; CHECK2: %[[#BarArg2:]] = OpFunctionParameter %[[#TyPtrSV4_CW]]
+; CHECK2: %[[#EventVarBar:]] = OpVariable %[[#TyEventPtr]] Function
+; CHECK2: %[[#SrcBar:]] = OpInBoundsPtrAccessChain %[[#TyPtrSV4_CW]] %[[#BarArg2]] %[[#]]
+; CHECK2-DAG: %[[#BarArg1Casted:]] = OpBitcast %[[#TyPtrV4_W]] %[[#BarArg1]]
+; CHECK2-DAG: %[[#SrcBarCasted:]] = OpBitcast %[[#TyPtrV4_CW]] %[[#SrcBar]]
+; CHECK2: %[[#ResBar:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#BarArg1Casted]] %[[#SrcBarCasted]] %[[#]] %[[#]] %[[#ConstEvent]]
+; CHECK2: OpStore %[[#EventVarBar]] %[[#ResBar]]
+; CHECK2: %[[#EventVarBarGen:]] = OpPtrCastToGeneric %[[#TyEventPtrGen]] %[[#EventVarBar]]
+; CHECK2: OpGroupWaitEvents %[[#]] %[[#]] %[[#EventVarBarGen]]
+; CHECK2: OpFunctionEnd
+
 %Vec4 = type { <4 x i8> }
 
 define spir_kernel void @bar(ptr addrspace(3) %_arg_Local, ptr addrspace(1) readonly %_arg) {

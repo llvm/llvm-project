@@ -211,6 +211,7 @@ def DeprecatedWritableStr : DiagGroup<"deprecated-writable-strings",
                                       [CXX11CompatDeprecatedWritableStr]>;
 def DeprecatedPragma : DiagGroup<"deprecated-pragma">;
 def DeprecatedType : DiagGroup<"deprecated-type">;
+def DeprecatedMissingCommaVariadicParam : DiagGroup<"deprecated-missing-comma-variadic-parameter">;
 // FIXME: Why is DeprecatedImplementations not in this group?
 def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedArrayCompare,
@@ -235,7 +236,8 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedType,
                                           DeprecatedVolatile,
                                           DeprecatedWritableStr,
-                                          DeprecatedRedundantConstexprStaticDef
+                                          DeprecatedRedundantConstexprStaticDef,
+                                          DeprecatedMissingCommaVariadicParam
                                           ]>,
                  DiagCategory<"Deprecations">;
 
@@ -292,11 +294,13 @@ def : DiagGroup<"c++1z-compat-mangling", [CXX17CompatMangling]>;
 // Name of this warning in GCC.
 def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
 
+def VariadicMacroArgumentsOmitted : DiagGroup<"variadic-macro-arguments-omitted">;
+
 // Warnings for C code which is not compatible with previous C standards.
 def CPre11Compat : DiagGroup<"pre-c11-compat">;
 def CPre11CompatPedantic : DiagGroup<"pre-c11-compat-pedantic",
                                      [CPre11Compat]>;
-def CPre23Compat : DiagGroup<"pre-c23-compat">;
+def CPre23Compat : DiagGroup<"pre-c23-compat", [VariadicMacroArgumentsOmitted]>;
 def CPre23CompatPedantic : DiagGroup<"pre-c23-compat-pedantic",
                                      [CPre23Compat]>;
 def : DiagGroup<"pre-c2x-compat", [CPre23Compat]>;
@@ -453,6 +457,7 @@ def ShiftOpParentheses: DiagGroup<"shift-op-parentheses">;
 def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
 def DanglingAssignment: DiagGroup<"dangling-assignment">;
 def DanglingAssignmentGsl : DiagGroup<"dangling-assignment-gsl">;
+def DanglingCapture : DiagGroup<"dangling-capture">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
@@ -462,6 +467,7 @@ def ReturnStackAddress : DiagGroup<"return-stack-address">;
 def : DiagGroup<"return-local-addr", [ReturnStackAddress]>;
 def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingAssignmentGsl,
+                                      DanglingCapture,
                                       DanglingField,
                                       DanglingInitializerList,
                                       DanglingGsl,
@@ -681,7 +687,8 @@ def SizeofArrayDecay : DiagGroup<"sizeof-array-decay">;
 def SizeofPointerMemaccess : DiagGroup<"sizeof-pointer-memaccess">;
 def MemsetTransposedArgs : DiagGroup<"memset-transposed-args">;
 def DynamicClassMemaccess : DiagGroup<"dynamic-class-memaccess">;
-def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess">;
+def NonTrivialMemcall : DiagGroup<"nontrivial-memcall">;
+def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess", [NonTrivialMemcall]>;
 def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
 def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
   [SizeofPointerMemaccess, DynamicClassMemaccess,
@@ -901,7 +908,7 @@ def VolatileRegisterVar : DiagGroup<"volatile-register-var">;
 def Visibility : DiagGroup<"visibility">;
 def ZeroLengthArray : DiagGroup<"zero-length-array">;
 def GNUZeroLineDirective : DiagGroup<"gnu-zero-line-directive">;
-def GNUZeroVariadicMacroArguments : DiagGroup<"gnu-zero-variadic-macro-arguments">;
+def GNUZeroVariadicMacroArguments : DiagGroup<"gnu-zero-variadic-macro-arguments", [VariadicMacroArgumentsOmitted]>;
 def MisleadingIndentation : DiagGroup<"misleading-indentation">;
 def PtrAuthNullPointers : DiagGroup<"ptrauth-null-pointers">;
 
@@ -1194,7 +1201,7 @@ def CXX17 : DiagGroup<"c++17-extensions", [CXX17Attrs]>;
 
 // A warning group for warnings about using C++20 features as extensions in
 // earlier C++ versions.
-def CXX20 : DiagGroup<"c++20-extensions", [CXX20Designator, CXX20Attrs]>;
+def CXX20 : DiagGroup<"c++20-extensions", [CXX20Designator, CXX20Attrs, VariadicMacroArgumentsOmitted]>;
 
 // A warning group for warnings about using C++23 features as extensions in
 // earlier C++ versions.
@@ -1221,7 +1228,7 @@ def C11 : DiagGroup<"c11-extensions">;
 def C99 : DiagGroup<"c99-extensions", [C99Designator]>;
 
 // A warning group for warnings about using C23 features as extensions.
-def C23 : DiagGroup<"c23-extensions">;
+def C23 : DiagGroup<"c23-extensions", [VariadicMacroArgumentsOmitted]>;
 
 def : DiagGroup<"c2x-extensions", [C23]>;
 
@@ -1587,4 +1594,3 @@ def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-stor
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
-

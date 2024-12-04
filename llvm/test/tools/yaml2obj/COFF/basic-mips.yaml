@@ -1,0 +1,39 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --file-headers --relocs %t | FileCheck %s
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP
+
+# CHECK: Format: COFF-MIPS
+# CHECK: Arch: mipsel
+# CHECK: Machine: IMAGE_FILE_MACHINE_R4000 (0x166)
+# CHECK: Relocations [
+# CHECK:  Section (1) .text {
+# CHECK:    0x4 IMAGE_REL_MIPS_JMPADDR main (0)
+# CHECK:  }
+# CHECK: ]
+
+# ROUNDTRIP:      Machine: IMAGE_FILE_MACHINE_R4000
+# ROUNDTRIP:      Relocations:
+# ROUNDTRIP-NEXT: - VirtualAddress: 4
+# ROUNDTRIP-NEXT:   SymbolName:     main
+# ROUNDTRIP-NEXT:   Type:           IMAGE_REL_MIPS_JMPADDR
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_R4000
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualSize:     12
+    SectionData:     000000000000000C00000000
+    Relocations:
+      - VirtualAddress:  4
+        SymbolName:      main
+        Type:            IMAGE_REL_MIPS_JMPADDR
+symbols:
+  - Name: main
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...

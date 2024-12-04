@@ -171,6 +171,7 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_floor(<vscale x 8 x i64> %x, i64 %y
 ; RV32-NEXT:    csrwi vxrm, 2
 ; RV32-NEXT:    vaaddu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_nxv8i64_floor:
@@ -390,6 +391,7 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_ceil(<vscale x 8 x i64> %x, i64 %y)
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    vaaddu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_nxv8i64_ceil:

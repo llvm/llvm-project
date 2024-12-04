@@ -555,9 +555,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
-                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                           .getSExtValue() +
-                       1));
+                   static_cast<double>(
+                       APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                           .getSExtValue()) +
+                       1.0f));
 
       auto intMax = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getIntegerAttr(
@@ -700,9 +701,9 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
 
   // Filter operands with dynamic dimension
   auto operandsWithDynamicDim =
-      llvm::to_vector(llvm::make_filter_range(operands, [&](Value operand) {
+      llvm::filter_to_vector(operands, [&](Value operand) {
         return cast<RankedTensorType>(operand.getType()).isDynamicDim(dim);
-      }));
+      });
 
   // If no operand has a dynamic dimension, it means all sizes were 1
   if (operandsWithDynamicDim.empty())
@@ -1152,6 +1153,9 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
+    if (!isa<IntegerType>(inputTy.getElementType()))
+      return rewriter.notifyMatchFailure(op, "only support integer type");
+
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
       if (outputTy.isDynamicDim(i)) {
@@ -1257,14 +1261,7 @@ public:
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
           if (valueTy.getIntOrFloatBitWidth() < 32) {
-            if (valueTy.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(
-                              nestedLoc,
-                              nestedBuilder.getIntegerType(
-                                  valueTy.getIntOrFloatBitWidth()),
-                              value)
-                          .getResult(0);
+            if (op.getInputUnsigned()) {
               value = nestedBuilder.create<arith::ExtUIOp>(
                   nestedLoc, nestedBuilder.getI32Type(), value);
             } else {
@@ -1293,7 +1290,7 @@ public:
           int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
 
           // Unsigned integers have a difference output value.
-          if (outIntType.isUnsignedInteger()) {
+          if (op.getOutputUnsigned()) {
             intMin = 0;
             intMax = APInt::getMaxValue(outBitWidth).getZExtValue();
           }
@@ -1310,13 +1307,6 @@ public:
             value = nestedBuilder.create<arith::TruncIOp>(
                 nestedLoc, rewriter.getIntegerType(outIntType.getWidth()),
                 value);
-
-            if (outIntType.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(nestedLoc,
-                                                              outIntType, value)
-                          .getResult(0);
-            }
           }
 
           nestedBuilder.create<linalg::YieldOp>(loc, value);

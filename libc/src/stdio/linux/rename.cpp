@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/rename.h"
-#include "include/llvm-libc-macros/linux/fcntl-macros.h"
+#include "hdr/fcntl_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

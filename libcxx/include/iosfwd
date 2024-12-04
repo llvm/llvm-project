@@ -131,7 +131,7 @@ class _LIBCPP_TEMPLATE_VIS ostreambuf_iterator;
 template <class _State>
 class _LIBCPP_TEMPLATE_VIS fpos;
 typedef fpos<mbstate_t> streampos;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef fpos<mbstate_t> wstreampos;
 #endif
 #if _LIBCPP_HAS_CHAR8_T
@@ -146,7 +146,7 @@ template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = 
 class basic_syncbuf;
 
 using syncbuf = basic_syncbuf<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 using wsyncbuf = basic_syncbuf<wchar_t>;
 #  endif
 
@@ -154,7 +154,7 @@ template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = 
 class basic_osyncstream;
 
 using osyncstream = basic_osyncstream<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 using wosyncstream = basic_osyncstream<wchar_t>;
 #  endif
 

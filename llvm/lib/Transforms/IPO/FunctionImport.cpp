@@ -430,10 +430,18 @@ class GlobalsImporter final {
         // than as part of the logic deciding which functions to import (i.e.
         // based on profile information). Should we decide to handle them here,
         // we can refactor accordingly at that time.
-        if (!GVS || !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true) ||
+        bool CanImportDecl = false;
+        if (!GVS ||
             shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
-                                           Summary.modulePath()))
+                                           Summary.modulePath()) ||
+            !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true,
+                                      CanImportDecl)) {
+          if (ImportDeclaration && CanImportDecl)
+            ImportList.maybeAddDeclaration(RefSummary->modulePath(),
+                                           VI.getGUID());
+
           continue;
+        }
 
         // If there isn't an entry for GUID, insert <GUID, Definition> pair.
         // Otherwise, definition should take precedence over declaration.
@@ -1540,8 +1548,7 @@ void llvm::gatherImportedSummariesForModule(
     auto &SummariesForIndex =
         LookupOrCreate(ModuleToSummariesForIndex, FromModule);
 
-    const auto &DefinedGVSummaries =
-        ModuleToDefinedGVSummaries.lookup(FromModule);
+    const auto &DefinedGVSummaries = ModuleToDefinedGVSummaries.at(FromModule);
     const auto &DS = DefinedGVSummaries.find(GUID);
     assert(DS != DefinedGVSummaries.end() &&
            "Expected a defined summary for imported global value");

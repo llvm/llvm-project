@@ -15,6 +15,7 @@ static_library("Orc") {
     "//llvm/lib/WindowsDriver",
   ]
   sources = [
+    "AbsoluteSymbols.cpp",
     "COFFPlatform.cpp",
     "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",
@@ -40,6 +41,7 @@ static_library("Orc") {
     "JITTargetMachineBuilder.cpp",
     "LLJIT.cpp",
     "Layer.cpp",
+    "LazyObjectLinkingLayer.cpp",
     "LazyReexports.cpp",
     "LoadLinkableFile.cpp",
     "LookupAndRecordAddrs.cpp",

@@ -108,7 +108,7 @@ define i1 @umin_cttz_i1_zero_defined(i1 %X) {
 define <2 x i32> @umin_cttz_2xi32_splat_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_cttz_2xi32_splat_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 64, i32 64>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], splat (i32 64)
 ; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
@@ -298,7 +298,7 @@ define i1 @umin_ctlz_i1_zero_defined(i1 %X) {
 define <2 x i32> @umin_ctlz_2xi32_splat_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_ctlz_2xi32_splat_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 33554432, i32 33554432>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], splat (i32 33554432)
 ; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;

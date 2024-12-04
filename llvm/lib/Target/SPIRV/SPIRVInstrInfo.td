@@ -524,6 +524,9 @@ defm OpISubBorrow: BinOpTypedGen<"OpISubBorrow", 150, subc, 0, 1>;
 def OpUMulExtended: BinOp<"OpUMulExtended", 151>;
 def OpSMulExtended: BinOp<"OpSMulExtended", 152>;
 
+def OpSDot: BinOp<"OpSDot", 4450>;
+def OpUDot: BinOp<"OpUDot", 4451>;
+
 // 3.42.14 Bit Instructions
 
 defm OpShiftRightLogical: BinOpTypedGen<"OpShiftRightLogical", 194, srl, 0, 1>;
@@ -636,6 +639,7 @@ let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplic
 }
 def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr, $sz">;
 def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr, $sz">;
+def OpDemoteToHelperInvocation: SimpleOp<"OpDemoteToHelperInvocation", 5380>;
 
 // 3.42.18 Atomic Instructions
 
@@ -845,6 +849,12 @@ def OpSubgroupImageBlockReadINTEL: Op<5577, (outs ID:$res), (ins TYPE:$type, ID:
                   "$res = OpSubgroupImageBlockReadINTEL $type $image $coordinate">;
 def OpSubgroupImageBlockWriteINTEL: Op<5578, (outs), (ins ID:$image, ID:$coordinate, ID:$data),
                   "OpSubgroupImageBlockWriteINTEL $image $coordinate $data">;
+
+// SPV_INTEL_media_block_io
+def OpSubgroupImageMediaBlockReadINTEL: Op<5580, (outs ID:$res), (ins TYPE:$type, ID:$image, ID:$coordinate, ID:$width, ID:$height),
+                  "$res = OpSubgroupImageMediaBlockReadINTEL $type $image $coordinate $width $height">;
+def OpSubgroupImageMediaBlockWriteINTEL: Op<5581, (outs), (ins ID:$image, ID:$coordinate, ID:$width, ID:$height, ID:$data),
+                  "OpSubgroupImageMediaBlockWriteINTEL $image $coordinate $width $height $data">;
 
 // - SPV_KHR_uniform_group_instructions
 def OpGroupIMulKHR: Op<6401, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),

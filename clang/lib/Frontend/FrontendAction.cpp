@@ -358,7 +358,7 @@ static std::error_code collectModuleHeaderIncludes(
 
   // Add includes for each of these headers.
   for (auto HK : {Module::HK_Normal, Module::HK_Private}) {
-    for (Module::Header &H : Module->Headers[HK]) {
+    for (const Module::Header &H : Module->getHeaders(HK)) {
       Module->addTopHeader(H.Entry);
       // Use the path as specified in the module map file. We'll look for this
       // file relative to the module build directory (the directory containing
@@ -534,7 +534,6 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     }
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
-      M->IsInferred = true;
       auto FileCharacter =
           M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
       FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(

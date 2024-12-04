@@ -15,11 +15,11 @@ define void @tail_call_void_func_void() {
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr6_sgpr7
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @external_void_func_void
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]](p4)
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s64) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[COPY4]]

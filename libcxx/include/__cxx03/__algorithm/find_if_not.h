@@ -10,7 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_IF_NOT_H
 #define _LIBCPP___ALGORITHM_FIND_IF_NOT_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

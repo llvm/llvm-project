@@ -46,6 +46,8 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
     return COFF::isArm64EC(mt) || mt == AMD64;
   case ARM64X:
     return COFF::isAnyArm64(mt) || mt == AMD64;
+  case IMAGE_FILE_MACHINE_UNKNOWN:
+    return true;
   default:
     return ctx.config.machine == mt;
   }
@@ -74,13 +76,25 @@ void SymbolTable::addFile(InputFile *file) {
   }
 
   MachineTypes mt = file->getMachineType();
-  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-    ctx.config.machine = mt;
-    ctx.driver.addWinSysRootLibSearchPaths();
-  } else if (!compatibleMachineType(ctx, mt)) {
+  // The ARM64EC target must be explicitly specified and cannot be inferred.
+  if (mt == ARM64EC &&
+      (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
+       (ctx.config.machineInferred &&
+        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
+    error(toString(file) + ": machine type arm64ec is ambiguous and cannot be "
+                           "inferred, use /machine:arm64ec or /machine:arm64x");
+    return;
+  }
+  if (!compatibleMachineType(ctx, mt)) {
     error(toString(file) + ": machine type " + machineToStr(mt) +
           " conflicts with " + machineToStr(ctx.config.machine));
     return;
+  }
+  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
+      mt != IMAGE_FILE_MACHINE_UNKNOWN) {
+    ctx.config.machineInferred = true;
+    ctx.config.machine = mt;
+    ctx.driver.addWinSysRootLibSearchPaths();
   }
 
   ctx.driver.parseDirectives(file);
@@ -313,7 +327,8 @@ void SymbolTable::loadMinGWSymbols() {
         // If it's lazy or already defined, hook it up as weak alias.
         if (l->isLazy() || isa<Defined>(l)) {
           if (ctx.config.warnStdcallFixup)
-            warn("Resolving " + origName + " by linking to " + newName);
+            Warn(ctx) << "Resolving " << origName << " by linking to "
+                      << newName;
           else
             log("Resolving " + origName + " by linking to " + newName);
           undef->setWeakAlias(l);
@@ -365,9 +380,9 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
         toString(cast<DefinedRegular>(imp)->file));
     impSize = sizeof(DefinedRegular);
   } else {
-    warn("unable to automatically import " + name + " from " + imp->getName() +
-         " from " + toString(cast<DefinedRegular>(imp)->file) +
-         "; unexpected symbol type");
+    Warn(ctx) << "unable to automatically import " << name << " from "
+              << imp->getName() << " from " << cast<DefinedRegular>(imp)->file
+              << "; unexpected symbol type";
     return false;
   }
   sym->replaceKeepingName(imp, impSize);
@@ -398,7 +413,7 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
 /// objFiles and bitcodeFiles (if not nullptr) are used to report where
 /// undefined symbols are referenced.
 static void reportProblemSymbols(
-    const COFFLinkerContext &ctx, const SmallPtrSetImpl<Symbol *> &undefs,
+    COFFLinkerContext &ctx, const SmallPtrSetImpl<Symbol *> &undefs,
     const DenseMap<Symbol *, Symbol *> *localImports, bool needBitcodeFiles) {
   // Return early if there is nothing to report (which should be
   // the common case).
@@ -411,8 +426,9 @@ static void reportProblemSymbols(
                   ctx.config.forceUnresolved);
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
-        warn("<root>: locally defined symbol imported: " + toString(ctx, *imp) +
-             " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
+        Warn(ctx) << "<root>: locally defined symbol imported: "
+                  << toString(ctx, *imp) << " (defined in "
+                  << toString(imp->getFile()) << ") [LNK4217]";
   }
 
   std::vector<UndefinedDiag> undefDiags;
@@ -433,9 +449,9 @@ static void reportProblemSymbols(
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
-          warn(toString(file) +
-               ": locally defined symbol imported: " + toString(ctx, *imp) +
-               " (defined in " + toString(imp->getFile()) + ") [LNK4217]");
+          Warn(ctx) << file << ": locally defined symbol imported: "
+                    << toString(ctx, *imp) << " (defined in " << imp->getFile()
+                    << ") [LNK4217]";
     }
   };
 
@@ -501,13 +517,30 @@ bool SymbolTable::resolveRemainingUndefines() {
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
     if (name.starts_with("__imp_")) {
-      Symbol *imp = find(name.substr(strlen("__imp_")));
-      if (imp) {
-        // The unprefixed symbol might come later in symMap, so handle it now
-        // so that the condition below can be appropriately applied.
-        auto *undef = dyn_cast<Undefined>(imp);
-        if (undef) {
-          undef->resolveWeakAlias();
+      auto findLocalSym = [&](StringRef n) {
+        Symbol *sym = find(n);
+        if (auto undef = dyn_cast_or_null<Undefined>(sym)) {
+          // The unprefixed symbol might come later in symMap, so handle it now
+          // if needed.
+          if (!undef->resolveWeakAlias())
+            sym = nullptr;
+        }
+        return sym;
+      };
+
+      StringRef impName = name.substr(strlen("__imp_"));
+      Symbol *imp = findLocalSym(impName);
+      if (!imp && isArm64EC(ctx.config.machine)) {
+        // Try to use the mangled symbol on ARM64EC.
+        std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(impName);
+        if (mangledName)
+          imp = findLocalSym(*mangledName);
+        if (!imp && impName.consume_front("aux_")) {
+          // If it's a __imp_aux_ symbol, try skipping the aux_ prefix.
+          imp = findLocalSym(impName);
+          if (!imp && (mangledName = getArm64ECMangledFunctionName(impName)))
+            imp = findLocalSym(*mangledName);
         }
       }
       if (imp && imp->isLazy()) {
@@ -652,8 +685,11 @@ bool checkLazyECPair(SymbolTable *symtab, StringRef name, InputFile *f) {
   if (std::optional<std::string> mangledName =
           getArm64ECMangledFunctionName(name))
     pairName = std::move(*mangledName);
+  else if (std::optional<std::string> demangledName =
+               getArm64ECDemangledFunctionName(name))
+    pairName = std::move(*demangledName);
   else
-    pairName = *getArm64ECDemangledFunctionName(name);
+    return true;
 
   Symbol *sym = symtab->find(pairName);
   if (!sym)
@@ -780,7 +816,7 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                           existing->getName());
 
   if (ctx.config.forceMultiple)
-    warn(msg);
+    Warn(ctx) << msg;
   else
     error(msg);
 }

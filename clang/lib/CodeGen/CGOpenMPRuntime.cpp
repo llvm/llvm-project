@@ -23,14 +23,10 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/BitmaskEnum.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -40,7 +36,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -1192,6 +1187,7 @@ struct PushAndPopStackRAII {
       CodeGenFunction::JumpDest Dest =
           CGF.getOMPCancelDestination(OMPD_parallel);
       CGF.EmitBranchThroughCleanup(Dest);
+      return llvm::Error::success();
     };
 
     // TODO: Remove this once we emit parallel regions through the
@@ -2331,8 +2327,11 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
   auto *OMPRegionInfo =
       dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    CGF.Builder.restoreIP(OMPBuilder.createBarrier(
-        CGF.Builder, Kind, ForceSimpleCall, EmitChecks));
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+        OMPBuilder.createBarrier(CGF.Builder, Kind, ForceSimpleCall,
+                                 EmitChecks);
+    assert(AfterIP && "unexpected error creating barrier");
+    CGF.Builder.restoreIP(*AfterIP);
     return;
   }
 
@@ -4667,7 +4666,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                                CGF.getContext().VoidPtrTy);
   }
   enum { NoSchedule = 0, Grainsize = 1, NumTasks = 2 };
-  llvm::Value *TaskArgs[] = {
+  llvm::SmallVector<llvm::Value *, 12> TaskArgs{
       UpLoc,
       ThreadID,
       Result.NewTask,
@@ -4684,12 +4683,18 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
       Data.Schedule.getPointer()
           ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
                                       /*isSigned=*/false)
-          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
-      Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                             Result.TaskDupFn, CGF.VoidPtrTy)
-                       : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
+          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0)};
+  if (Data.HasModifier)
+    TaskArgs.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 1));
+
+  TaskArgs.push_back(Result.TaskDupFn
+                         ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                               Result.TaskDupFn, CGF.VoidPtrTy)
+                         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_taskloop),
+                          CGM.getModule(), Data.HasModifier
+                                               ? OMPRTL___kmpc_taskloop_5
+                                               : OMPRTL___kmpc_taskloop),
                       TaskArgs);
 }
 
@@ -5928,8 +5933,10 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         return CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
       };
 
-  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
-                                      IsOffloadEntry, OutlinedFn, OutlinedFnID);
+  llvm::Error Err = OMPBuilder.emitTargetRegionFunction(
+      EntryInfo, GenerateOutlinedFunction, IsOffloadEntry, OutlinedFn,
+      OutlinedFnID);
+  assert(!Err && "unexpected error creating target region");
 
   if (!OutlinedFn)
     return;
@@ -9670,9 +9677,12 @@ static void emitTargetCallKernelLaunch(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
         DynCGGroupMem, HasNoWait);
 
-    CGF.Builder.restoreIP(OMPRuntime->getOMPBuilder().emitKernelLaunch(
-        CGF.Builder, OutlinedFnID, EmitTargetCallFallbackCB, Args, DeviceID,
-        RTLoc, AllocaIP));
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+        OMPRuntime->getOMPBuilder().emitKernelLaunch(
+            CGF.Builder, OutlinedFnID, EmitTargetCallFallbackCB, Args, DeviceID,
+            RTLoc, AllocaIP);
+    assert(AfterIP && "unexpected error creating kernel launch");
+    CGF.Builder.restoreIP(*AfterIP);
   };
 
   if (RequiresOuterTask)
@@ -10349,9 +10359,12 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
-  CGF.Builder.restoreIP(OMPBuilder.createTargetData(
-      OmpLoc, AllocaIP, CodeGenIP, DeviceID, IfCondVal, Info, GenMapInfoCB,
-      /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, CustomMapperCB, RTLoc));
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      OMPBuilder.createTargetData(
+          OmpLoc, AllocaIP, CodeGenIP, DeviceID, IfCondVal, Info, GenMapInfoCB,
+          /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, CustomMapperCB, RTLoc);
+  assert(AfterIP && "unexpected error creating target data");
+  CGF.Builder.restoreIP(*AfterIP);
 }
 
 void CGOpenMPRuntime::emitTargetDataStandAloneCall(

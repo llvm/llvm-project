@@ -9,9 +9,9 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; The cold region is too small to split.
 ; CHECK-LABEL: @foo
 ; CHECK-NOT: foo.cold.1
-define void @foo() {
+define void @foo(i1 %arg) {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   unreachable
@@ -23,9 +23,9 @@ if.end:                                           ; preds = %entry
 ; The cold region is still too small to split.
 ; CHECK-LABEL: @bar
 ; CHECK-NOT: bar.cold.1
-define void @bar() {
+define void @bar(i1 %arg) {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -38,9 +38,9 @@ if.end:                                           ; preds = %entry
 ; Make sure we don't try to outline the entire function.
 ; CHECK-LABEL: @fun
 ; CHECK-NOT: fun.cold.1
-define void @fun() {
+define void @fun(i1 %arg) {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -63,9 +63,9 @@ entry:
 ; Do not split `noinline` functions.
 ; CHECK-LABEL: @noinline_func
 ; CHECK-NOT: noinline_func.cold.1
-define void @noinline_func() noinline {
+define void @noinline_func(i1 %arg) noinline {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -78,9 +78,9 @@ if.end:                                           ; preds = %entry
 ; Do not split `alwaysinline` functions.
 ; CHECK-LABEL: @alwaysinline_func
 ; CHECK-NOT: alwaysinline_func.cold.1
-define void @alwaysinline_func() alwaysinline {
+define void @alwaysinline_func(i1 %arg) alwaysinline {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -105,10 +105,10 @@ loop:
 ; Don't count debug intrinsics towards the outlining threshold.
 ; CHECK-LABEL: @dont_count_debug_intrinsics
 ; CHECK-NOT: dont_count_debug_intrinsics.cold.1
-define void @dont_count_debug_intrinsics(i32 %arg1) !dbg !6 {
+define void @dont_count_debug_intrinsics(i32 %arg1, i1 %arg) !dbg !6 {
 entry:
   %var = add i32 0, 0, !dbg !11
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   ret void
@@ -122,9 +122,9 @@ if.end:                                           ; preds = %entry
 
 ; CHECK-LABEL: @sanitize_address
 ; CHECK-NOT: sanitize_address.cold.1
-define void @sanitize_address() sanitize_address {
+define void @sanitize_address(i1 %arg) sanitize_address {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -136,9 +136,9 @@ if.end:                                           ; preds = %entry
 
 ; CHECK-LABEL: @sanitize_hwaddress
 ; CHECK-NOT: sanitize_hwaddress.cold.1
-define void @sanitize_hwaddress() sanitize_hwaddress {
+define void @sanitize_hwaddress(i1 %arg) sanitize_hwaddress {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -150,9 +150,9 @@ if.end:                                           ; preds = %entry
 
 ; CHECK-LABEL: @sanitize_thread
 ; CHECK-NOT: sanitize_thread.cold.1
-define void @sanitize_thread() sanitize_thread {
+define void @sanitize_thread(i1 %arg) sanitize_thread {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -164,9 +164,9 @@ if.end:                                           ; preds = %entry
 
 ; CHECK-LABEL: @sanitize_memory
 ; CHECK-NOT: sanitize_memory.cold.1
-define void @sanitize_memory() sanitize_memory {
+define void @sanitize_memory(i1 %arg) sanitize_memory {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @sink()
@@ -180,9 +180,9 @@ declare void @llvm.trap() cold noreturn
 
 ; CHECK-LABEL: @nosanitize_call
 ; CHECK-NOT: nosanitize_call.cold.1
-define void @nosanitize_call() sanitize_memory {
+define void @nosanitize_call(i1 %arg) sanitize_memory {
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   call void @llvm.trap(), !nosanitize !2
