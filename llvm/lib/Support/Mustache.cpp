@@ -108,7 +108,7 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), T(Type::Root),
-        ParentContext(nullptr){};
+        ParentContext(nullptr) {};
 
   ASTNode(llvm::StringRef Body, ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
           llvm::StringMap<ASTNode *> &Partials,
