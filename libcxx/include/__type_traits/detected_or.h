@@ -29,8 +29,7 @@ struct __detector<_Default, __void_t<_Op<_Args...> >, _Op, _Args...> {
 };
 
 template <class _Default, template <class...> class _Op, class... _Args>
-using __detected_or_t _LIBCPP_NODEBUG =
-    typename __detector<_Default, void, _Op, _Args...>::type;
+using __detected_or_t _LIBCPP_NODEBUG = typename __detector<_Default, void, _Op, _Args...>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
