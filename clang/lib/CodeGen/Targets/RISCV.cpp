@@ -410,8 +410,9 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                           CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+      /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   uint64_t Size = getContext().getTypeSize(Ty);
@@ -492,7 +493,10 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
-        return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+        return getNaturalAlignIndirect(
+            Ty,
+            /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+            /*ByVal=*/false);
     }
 
     ABIArgInfo Info = ABIArgInfo::getDirect();
@@ -530,7 +534,9 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
           llvm::IntegerType::get(getVMContext(), XLen), 2));
     }
   }
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy) const {

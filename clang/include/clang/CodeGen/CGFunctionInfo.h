@@ -206,7 +206,7 @@ public:
   static ABIArgInfo getIgnore() {
     return ABIArgInfo(Ignore);
   }
-  static ABIArgInfo getIndirect(CharUnits Alignment, unsigned AddrSpace = 0,
+  static ABIArgInfo getIndirect(CharUnits Alignment, unsigned AddrSpace,
                                 bool ByVal = true, bool Realign = false,
                                 llvm::Type *Padding = nullptr) {
     auto AI = ABIArgInfo(Indirect);

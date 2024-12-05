@@ -105,11 +105,6 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
-  // srets / indirect returns are unconditionally in the alloca AS.
-  if (FI.getReturnInfo().isIndirect())
-    FI.getReturnInfo().setIndirectAddrSpace(
-        getDataLayout().getAllocaAddrSpace());
-
   unsigned ArgumentIndex = 0;
   const unsigned numFixedArguments = FI.getNumRequiredArgs();
 
@@ -230,7 +225,10 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(
+          Ty,
+          getContext().getTargetAddressSpace(LangAS::Default),
+          RAA == CGCXXABI::RAA_DirectInMemory);
 
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))

@@ -69,16 +69,20 @@ public:
 
 
 ABIArgInfo ARCABIInfo::getIndirectByRef(QualType Ty, bool HasFreeRegs) const {
-  return HasFreeRegs ? getNaturalAlignIndirectInReg(Ty) :
-                       getNaturalAlignIndirect(Ty, false);
+  return HasFreeRegs
+      ? getNaturalAlignIndirectInReg(Ty)
+      : getNaturalAlignIndirect(
+            Ty, getContext().getTargetAddressSpace(LangAS::Default), false);
 }
 
 ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
   // Compute the byval alignment.
   const unsigned MinABIStackAlignInBytes = 4;
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), 0, /*ByVal=*/true,
-                                 TypeAlign > MinABIStackAlignInBytes);
+  return ABIArgInfo::getIndirect(
+      CharUnits::fromQuantity(4),
+      /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+      /*ByVal=*/true, TypeAlign > MinABIStackAlignInBytes);
 }
 
 RValue ARCABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
