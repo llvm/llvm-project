@@ -13,7 +13,7 @@
 #define FLANG_RT_IOSTAT_FUNCS_H_
 
 #include "flang/Common/api-attrs.h"
-#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/iostat-consts.h"
 
 namespace Fortran::runtime::io {
 

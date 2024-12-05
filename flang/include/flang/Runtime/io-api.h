@@ -14,7 +14,7 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api-consts.h"
-#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/iostat-consts.h"
 #include "flang/Runtime/magic-numbers.h"
 #include <cinttypes>
 #include <cstddef>
@@ -36,5 +36,4 @@ RT_API_ATTRS const char *InquiryKeywordHashDecode(
     char *buffer, std::size_t, InquiryKeywordHash);
 
 } // namespace Fortran::runtime::io
-
-#endif /* FORTRAN_RUNTIME_IO_API_H_ */
+#endif

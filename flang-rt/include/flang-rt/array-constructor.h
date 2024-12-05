@@ -44,5 +44,6 @@ private:
   unsigned char useValueLengthParameters_ : 1;
 };
 
+
 } // namespace Fortran::runtime
 #endif /* FLANG_RT_ARRAY_CONSTRUCTOR_H_ */
