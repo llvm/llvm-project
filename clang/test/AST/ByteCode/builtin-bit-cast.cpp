@@ -350,9 +350,8 @@ void test_record() {
   static_assert(t4 == tuple4{1, 2, 3, 4});
   static_assert(check_round_trip<tuple4>(b));
 
-  /// FIXME: We need to initialize the base pointers in the pointer we're bitcasting to.
-//  constexpr auto b2 = bit_cast<bases>(t4);
-//  static_assert(t4 == b2);
+  constexpr auto b2 = bit_cast<bases>(t4);
+  static_assert(t4 == b2);
 }
 
 void test_partially_initialized() {

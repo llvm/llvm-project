@@ -1548,7 +1548,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   std::string BarPath = testPath("bar.cc");
   // Build the index, the index has "Foo" references from foo.cc and "Bar"
   // references from bar.cc.
-  FileSymbols FSymbols(IndexContents::All, true);
+  FileSymbols FSymbols(IndexContents::All);
   FSymbols.update(FooPath, nullptr, buildRefSlab(FooCode, "Foo", FooPath),
                   nullptr, false);
   FSymbols.update(BarPath, nullptr, buildRefSlab(BarCode, "Bar", BarPath),
@@ -1601,12 +1601,6 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
       return true; // has more references
     }
 
-    bool containedRefs(const ContainedRefsRequest &Req,
-                       llvm::function_ref<void(const ContainedRefsResult &)>
-                           Callback) const override {
-      return false;
-    }
-
     bool fuzzyFind(
         const FuzzyFindRequest &Req,
         llvm::function_ref<void(const Symbol &)> Callback) const override {
@@ -1655,12 +1649,6 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
       // Return two duplicated refs.
       Callback(ReturnedRef);
       Callback(ReturnedRef);
-      return false;
-    }
-
-    bool containedRefs(const ContainedRefsRequest &Req,
-                       llvm::function_ref<void(const ContainedRefsResult &)>
-                           Callback) const override {
       return false;
     }
 

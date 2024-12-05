@@ -292,7 +292,7 @@ TEST(MergeIndexTest, Lookup) {
 }
 
 TEST(MergeIndexTest, LookupRemovedDefinition) {
-  FileIndex DynamicIndex(true), StaticIndex(true);
+  FileIndex DynamicIndex, StaticIndex;
   MergedIndex Merge(&DynamicIndex, &StaticIndex);
 
   const char *HeaderCode = "class Foo;";
@@ -349,7 +349,7 @@ TEST(MergeIndexTest, FuzzyFind) {
 }
 
 TEST(MergeIndexTest, FuzzyFindRemovedSymbol) {
-  FileIndex DynamicIndex(true), StaticIndex(true);
+  FileIndex DynamicIndex, StaticIndex;
   MergedIndex Merge(&DynamicIndex, &StaticIndex);
 
   const char *HeaderCode = "class Foo;";
@@ -446,8 +446,8 @@ TEST(MergeTest, PreferSymbolLocationInCodegenFile) {
 }
 
 TEST(MergeIndexTest, Refs) {
-  FileIndex Dyn(true);
-  FileIndex StaticIndex(true);
+  FileIndex Dyn;
+  FileIndex StaticIndex;
   MergedIndex Merge(&Dyn, &StaticIndex);
 
   const char *HeaderCode = "class Foo;";
