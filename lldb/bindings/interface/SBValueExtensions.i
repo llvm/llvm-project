@@ -24,7 +24,12 @@ STRING_EXTENSION_OUTSIDE(SBValue)
                         key %= count
                         return self.sbvalue.GetChildAtIndex(key)
                 elif isinstance(key, str):
-                    return self.sbvalue.GetChildMemberWithName(key)
+                    if child := self.sbvalue.GetChildMemberWithName(key)
+                        return child
+                    # Support base classes, which are children but not members.
+                    for child in self.sbvalue:
+                        if child.name == key:
+                            return child
                 return None
 
         def get_child_access_object(self):
