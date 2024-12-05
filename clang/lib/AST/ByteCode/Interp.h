@@ -2432,9 +2432,11 @@ static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool Null(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
-  // Note: Desc can be null.
-  S.Stk.push<T>(0, Desc);
+inline bool Null(InterpState &S, CodePtr OpPC, uint64_t Value,
+                 const Descriptor *Desc) {
+  // FIXME(perf): This is a somewhat often-used function and the value of a
+  // null pointer is almost always 0.
+  S.Stk.push<T>(Value, Desc);
   return true;
 }
 
