@@ -216,7 +216,9 @@ TypePayloadSwift::TypePayloadSwift(bool is_fixed_value_buffer) {
 }
 
 CompilerType SwiftASTContext::GetCompilerType(ConstString mangled_name) {
-  return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(mangled_name);
+  if (auto ts = GetTypeSystemSwiftTypeRef())
+    return ts->GetTypeFromMangledTypename(mangled_name);
+  return {};
 }
 
 CompilerType SwiftASTContext::GetCompilerType(swift::TypeBase *swift_type) {
@@ -993,8 +995,8 @@ SwiftASTContext::SwiftASTContext()
 #endif
 
 SwiftASTContext::SwiftASTContext(std::string description,
-                                 TypeSystemSwiftTypeRef &typeref_typesystem)
-    : TypeSystemSwift(), m_typeref_typesystem(&typeref_typesystem),
+                                 TypeSystemSwiftTypeRefSP typeref_typesystem)
+    : TypeSystemSwift(), m_typeref_typesystem(typeref_typesystem),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_diagnostic_consumer_ap(new StoringDiagnosticConsumer(*this)) {
   assert(
@@ -2422,8 +2424,9 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   }
 
   // If there is a target this may be a fallback scratch context.
-  std::shared_ptr<SwiftASTContext> swift_ast_sp(static_cast<SwiftASTContext *>(
-      new SwiftASTContextForModule(m_description, typeref_typesystem)));
+  std::shared_ptr<SwiftASTContext> swift_ast_sp(
+      static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
+          m_description, typeref_typesystem.GetTypeSystemSwiftTypeRef())));
   bool suppress_config_log = false;
   auto defer_log =
       llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
@@ -2761,8 +2764,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
       return {};
     }
     swift_ast_sp.reset(new SwiftASTContextForExpressions(
-        m_description,
-        *llvm::cast<TypeSystemSwiftTypeRef>(&typeref_typesystem)));
+        m_description, typeref_typesystem.GetTypeSystemSwiftTypeRef()));
     // This is a scratch AST context, mark it as such.
     swift_ast_sp->m_is_scratch_context = true;
     auto &lang_opts = swift_ast_sp->GetLanguageOptions();
@@ -2775,8 +2777,9 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
       LOG_PRINTF(GetLog(LLDBLog::Types), "No module for fallback typesystem");
       return {};
     }
-    swift_ast_sp.reset(static_cast<SwiftASTContext *>(
-        new SwiftASTContextForModule(m_description, typeref_typesystem)));
+    swift_ast_sp.reset(
+        static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
+            m_description, typeref_typesystem.GetTypeSystemSwiftTypeRef())));
     // This is a module AST context, mark it as such.
     swift_ast_sp->m_is_scratch_context = false;
     swift_ast_sp->m_module = module_sp.get();
@@ -4622,7 +4625,10 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   // that look like they might be come from Objective-C (or C) as
   // Clang types. LLDB's Objective-C part is very robust against
   // malformed object pointers, so this isn't very risky.
-  Module *module = GetTypeSystemSwiftTypeRef().GetModule();
+  auto ts = GetTypeSystemSwiftTypeRef();
+  if (!ts)
+    return {};
+  Module *module = ts->GetModule();
   if (!module)
     return {};
   auto type_system_or_err =
@@ -5077,7 +5083,8 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   if (!mangled_name)
     return {};
   if (ts.isa_and_nonnull<TypeSystemSwiftTypeRef>())
-    return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(mangled_name);
+    if (auto my_ts_tr = GetTypeSystemSwiftTypeRef())
+      return my_ts_tr->GetTypeFromMangledTypename(mangled_name);
   swift::TypeBase *our_type_base =
       m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
   if (our_type_base)
@@ -5902,8 +5909,9 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
 
 CompilerType
 SwiftASTContext::GetTypeRefType(lldb::opaque_compiler_type_t type) {
-  return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(
-      GetMangledTypeName(type));
+  if (auto ts = GetTypeSystemSwiftTypeRef())
+    return ts->GetTypeFromMangledTypename(GetMangledTypeName(type));
+  return {};
 }
 
 //----------------------------------------------------------------------
@@ -8488,8 +8496,10 @@ CompilerType SwiftASTContext::GetBuiltinRawPointerType() {
 
 CompilerType
 SwiftASTContext::ConvertClangTypeToSwiftType(CompilerType clang_type) {
-  auto typeref_type = 
-      GetTypeSystemSwiftTypeRef().ConvertClangTypeToSwiftType(clang_type);
+  auto ts = GetTypeSystemSwiftTypeRef();
+  if (!ts)
+    return {};
+  auto typeref_type = ts->ConvertClangTypeToSwiftType(clang_type);
 
   if (!typeref_type)
     return {};
@@ -8770,11 +8780,15 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
 }
 
 plugin::dwarf::DWARFASTParser *SwiftASTContext::GetDWARFParser() {
-  return GetTypeSystemSwiftTypeRef().GetDWARFParser();
+  if (auto ts = GetTypeSystemSwiftTypeRef())
+    return ts->GetDWARFParser();
+  return nullptr;
 }
 
 lldb::TargetWP SwiftASTContext::GetTargetWP() const {
-  return GetTypeSystemSwiftTypeRef().GetTargetWP();
+  if (auto ts = GetTypeSystemSwiftTypeRef())
+    return ts->GetTargetWP();
+  return {};
 }
 
 std::vector<lldb::DataBufferSP> &
@@ -8783,9 +8797,10 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
 }
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(
-    std::string description, TypeSystemSwiftTypeRef &typeref_typesystem)
+    std::string description, TypeSystemSwiftTypeRefSP typeref_typesystem)
     : SwiftASTContext(std::move(description), typeref_typesystem) {
-  assert(llvm::isa<TypeSystemSwiftTypeRefForExpressions>(m_typeref_typesystem));
+  assert(llvm::isa<TypeSystemSwiftTypeRefForExpressions>(
+      m_typeref_typesystem.lock().get()));
 }
 
 SwiftASTContextForExpressions::~SwiftASTContextForExpressions() {
@@ -8807,15 +8822,11 @@ SwiftASTContextForExpressions::~SwiftASTContextForExpressions() {
   GetASTMap().Erase(ctx);
 }
 
-lldb::TargetWP SwiftASTContextForExpressions::GetTargetWP() const {
-  auto *ts = reinterpret_cast<TypeSystemSwiftTypeRefForExpressions *>(
-      m_typeref_typesystem);
-  return ts->m_target_wp;
-}
-
 PersistentExpressionState *
 SwiftASTContextForExpressions::GetPersistentExpressionState() {
-  return GetTypeSystemSwiftTypeRef().GetPersistentExpressionState();
+  if (auto ts = GetTypeSystemSwiftTypeRef())
+    return ts->GetPersistentExpressionState();
+  return nullptr;
 }
 
 static void DescribeFileUnit(Stream &s, const swift::FileUnit *file_unit) {

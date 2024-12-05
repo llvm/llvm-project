@@ -96,8 +96,8 @@ void SwiftDWARFImporterForClangTypes::lookupValue(
       if (!swift_ts)
         continue;
       // FIXME: LookupClangType won't work for nested C++ types.
-      clang_type_sp =
-          swift_ts->GetTypeSystemSwiftTypeRef().LookupClangType(name);
+      if (auto tr_ts = swift_ts->GetTypeSystemSwiftTypeRef())
+        clang_type_sp = tr_ts->LookupClangType(name);
       if (clang_type_sp)
         break;
     }
@@ -170,7 +170,7 @@ SwiftDWARFImporterDelegate::GetDeclForTypeAndKind(clang::QualType qual_type,
 SwiftDWARFImporterDelegate::SwiftDWARFImporterDelegate(SwiftASTContext &ts)
     : m_swift_ast_ctx(ts),
       m_importer(m_swift_ast_ctx.GetTypeSystemSwiftTypeRef()
-                     .GetSwiftDWARFImporterForClangTypes()),
+                     ->GetSwiftDWARFImporterForClangTypes()),
       m_description(ts.GetDescription() + "::SwiftDWARFImporterDelegate") {}
 
 void SwiftDWARFImporterDelegate::lookupValue(

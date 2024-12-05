@@ -1419,9 +1419,9 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                     if (auto swift_ast_ctx =
                             result_type.GetTypeSystem()
                                 .dyn_cast_or_null<SwiftASTContext>())
-                      result_type = swift_ast_ctx->GetTypeSystemSwiftTypeRef()
-                                        .GetTypeFromMangledTypename(
-                                            result_type.GetMangledTypeName());
+                      if (auto ts = swift_ast_ctx->GetTypeSystemSwiftTypeRef())
+                        result_type = ts->GetTypeFromMangledTypename(
+                            result_type.GetMangledTypeName());
                   }
                   results.insert(TypeOrDecl(result_type));
                 }
