@@ -808,15 +808,20 @@ HeapProfileRecords:
               ElementsAre(hashCallStack(CS3), hashCallStack(CS4)));
 }
 
-TEST(MemProf, YAMLWriterFrame) {
-  Frame F(12, 34, 56, true);
-
+template <typename T> std::string serializeInYAML(T &Val) {
   std::string Out;
   llvm::raw_string_ostream OS(Out);
   llvm::yaml::Output Yout(OS);
-  Yout << F;
+  Yout << Val;
+  return Out;
+}
+
+TEST(MemProf, YAMLWriterFrame) {
+  Frame F(11, 22, 33, true);
+
+  std::string Out = serializeInYAML(F);
   EXPECT_EQ(Out, R"YAML(---
-{ Function: 12, LineOffset: 34, Column: 56, Inline: true }
+{ Function: 11, LineOffset: 22, Column: 33, Inline: true }
 ...
 )YAML");
 }
@@ -829,10 +834,7 @@ TEST(MemProf, YAMLWriterMIB) {
   MIB.TotalLifetimeAccessDensity = 444;
   PortableMemInfoBlock PMIB(MIB, llvm::memprof::getHotColdSchema());
 
-  std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  llvm::yaml::Output Yout(OS);
-  Yout << PMIB;
+  std::string Out = serializeInYAML(PMIB);
   EXPECT_EQ(Out, R"YAML(---
 AllocCount:      111
 TotalSize:       222

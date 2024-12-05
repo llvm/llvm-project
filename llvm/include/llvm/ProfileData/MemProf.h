@@ -1179,7 +1179,6 @@ template <> struct MappingTraits<memprof::Frame> {
   }
 
   // Request the inline notation for brevity:
-  //
   //   { Function: 123, LineOffset: 11, Column: 10; IsInlineFrame: true }
   static const bool flow = true;
 };
