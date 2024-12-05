@@ -39,8 +39,8 @@ struct StableFunction {
   /// A vector of pairs of IndexPair and operand hash which was skipped.
   IndexOperandHashVecType IndexOperandHashes;
 
-  StableFunction(stable_hash Hash, StringRef FunctionName,
-                 StringRef ModuleName, unsigned InstCount,
+  StableFunction(stable_hash Hash, StringRef FunctionName, StringRef ModuleName,
+                 unsigned InstCount,
                  IndexOperandHashVecType &&IndexOperandHashes)
       : Hash(Hash), FunctionName(FunctionName), ModuleName(ModuleName),
         InstCount(InstCount),
