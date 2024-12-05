@@ -52,6 +52,12 @@ code bases.
   `migrate to Vulkan <https://developer.android.com/guide/topics/renderscript/migrate>`_
   or other options.
 
+- Clang now emits distinct type-based alias analysis tags for incompatible
+  pointers by default, enabling more powerful alias analysis when accessing
+  pointer types. This change may silently change code behavior for code
+  containing strict-aliasing violations. The new default behavior can be
+  disabled using ``-fno-pointer-tbaa``.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -419,6 +425,9 @@ New Compiler Flags
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
 
+- The ``-Warray-compare`` warning has been added to warn about array comparison
+  on versions older than C++20.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -770,6 +779,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
+- Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

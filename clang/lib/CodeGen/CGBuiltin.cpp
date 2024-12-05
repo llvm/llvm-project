@@ -244,6 +244,19 @@ static Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   return CGF.Builder.CreateBitCast(BitVec, ResultType);
 }
 
+/// Helper for the read/write/add/inc X18 builtins: read the X18 register and
+/// return it as an i8 pointer.
+Value *readX18AsPtr(CodeGenFunction &CGF) {
+  LLVMContext &Context = CGF.CGM.getLLVMContext();
+  llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
+  llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+  llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+  llvm::Function *F =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::read_register, {CGF.Int64Ty});
+  llvm::Value *X18 = CGF.Builder.CreateCall(F, Metadata);
+  return CGF.Builder.CreateIntToPtr(X18, CGF.Int8PtrTy);
+}
+
 /// getBuiltinLibFunction - Given a builtin id for a function like
 /// "__builtin_fabsf", return a Function* for "fabsf".
 llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
@@ -509,8 +522,15 @@ Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
 
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
-  auto *Comparand = CGF.EmitScalarExpr(E->getArg(2));
   auto *Exchange = CGF.EmitScalarExpr(E->getArg(1));
+  auto *RTy = Exchange->getType();
+
+  auto *Comparand = CGF.EmitScalarExpr(E->getArg(2));
+
+  if (RTy->isPointerTy()) {
+    Exchange = CGF.Builder.CreatePtrToInt(Exchange, CGF.IntPtrTy);
+    Comparand = CGF.Builder.CreatePtrToInt(Comparand, CGF.IntPtrTy);
+  }
 
   // For Release ordering, the failure ordering should be Monotonic.
   auto FailureOrdering = SuccessOrdering == AtomicOrdering::Release ?
@@ -521,10 +541,16 @@ Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
   // blocks the few atomics optimizations that LLVM has. If we want to optimize
   // _Interlocked* operations in the future, we will have to remove the volatile
   // marker.
-  auto *Result = CGF.Builder.CreateAtomicCmpXchg(
+  auto *CmpXchg = CGF.Builder.CreateAtomicCmpXchg(
       DestAddr, Comparand, Exchange, SuccessOrdering, FailureOrdering);
-  Result->setVolatile(true);
-  return CGF.Builder.CreateExtractValue(Result, 0);
+  CmpXchg->setVolatile(true);
+
+  auto *Result = CGF.Builder.CreateExtractValue(CmpXchg, 0);
+  if (RTy->isPointerTy()) {
+    Result = CGF.Builder.CreateIntToPtr(Result, RTy);
+  }
+
+  return Result;
 }
 
 // 64-bit Microsoft platforms support 128 bit cmpxchg operations. They are
@@ -1607,6 +1633,7 @@ enum class CodeGenFunction::MSVCIntrin {
   _BitScanForward,
   _BitScanReverse,
   _InterlockedAnd,
+  _InterlockedCompareExchange,
   _InterlockedDecrement,
   _InterlockedExchange,
   _InterlockedExchangeAdd,
@@ -1692,26 +1719,31 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
   case clang::ARM::BI_InterlockedExchange16_acq:
   case clang::ARM::BI_InterlockedExchange_acq:
   case clang::ARM::BI_InterlockedExchange64_acq:
+  case clang::ARM::BI_InterlockedExchangePointer_acq:
     return MSVCIntrin::_InterlockedExchange_acq;
   case clang::ARM::BI_InterlockedExchange8_rel:
   case clang::ARM::BI_InterlockedExchange16_rel:
   case clang::ARM::BI_InterlockedExchange_rel:
   case clang::ARM::BI_InterlockedExchange64_rel:
+  case clang::ARM::BI_InterlockedExchangePointer_rel:
     return MSVCIntrin::_InterlockedExchange_rel;
   case clang::ARM::BI_InterlockedExchange8_nf:
   case clang::ARM::BI_InterlockedExchange16_nf:
   case clang::ARM::BI_InterlockedExchange_nf:
   case clang::ARM::BI_InterlockedExchange64_nf:
+  case clang::ARM::BI_InterlockedExchangePointer_nf:
     return MSVCIntrin::_InterlockedExchange_nf;
   case clang::ARM::BI_InterlockedCompareExchange8_acq:
   case clang::ARM::BI_InterlockedCompareExchange16_acq:
   case clang::ARM::BI_InterlockedCompareExchange_acq:
   case clang::ARM::BI_InterlockedCompareExchange64_acq:
+  case clang::ARM::BI_InterlockedCompareExchangePointer_acq:
     return MSVCIntrin::_InterlockedCompareExchange_acq;
   case clang::ARM::BI_InterlockedCompareExchange8_rel:
   case clang::ARM::BI_InterlockedCompareExchange16_rel:
   case clang::ARM::BI_InterlockedCompareExchange_rel:
   case clang::ARM::BI_InterlockedCompareExchange64_rel:
+  case clang::ARM::BI_InterlockedCompareExchangePointer_rel:
     return MSVCIntrin::_InterlockedCompareExchange_rel;
   case clang::ARM::BI_InterlockedCompareExchange8_nf:
   case clang::ARM::BI_InterlockedCompareExchange16_nf:
@@ -1838,26 +1870,31 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   case clang::AArch64::BI_InterlockedExchange16_acq:
   case clang::AArch64::BI_InterlockedExchange_acq:
   case clang::AArch64::BI_InterlockedExchange64_acq:
+  case clang::AArch64::BI_InterlockedExchangePointer_acq:
     return MSVCIntrin::_InterlockedExchange_acq;
   case clang::AArch64::BI_InterlockedExchange8_rel:
   case clang::AArch64::BI_InterlockedExchange16_rel:
   case clang::AArch64::BI_InterlockedExchange_rel:
   case clang::AArch64::BI_InterlockedExchange64_rel:
+  case clang::AArch64::BI_InterlockedExchangePointer_rel:
     return MSVCIntrin::_InterlockedExchange_rel;
   case clang::AArch64::BI_InterlockedExchange8_nf:
   case clang::AArch64::BI_InterlockedExchange16_nf:
   case clang::AArch64::BI_InterlockedExchange_nf:
   case clang::AArch64::BI_InterlockedExchange64_nf:
+  case clang::AArch64::BI_InterlockedExchangePointer_nf:
     return MSVCIntrin::_InterlockedExchange_nf;
   case clang::AArch64::BI_InterlockedCompareExchange8_acq:
   case clang::AArch64::BI_InterlockedCompareExchange16_acq:
   case clang::AArch64::BI_InterlockedCompareExchange_acq:
   case clang::AArch64::BI_InterlockedCompareExchange64_acq:
+  case clang::AArch64::BI_InterlockedCompareExchangePointer_acq:
     return MSVCIntrin::_InterlockedCompareExchange_acq;
   case clang::AArch64::BI_InterlockedCompareExchange8_rel:
   case clang::AArch64::BI_InterlockedCompareExchange16_rel:
   case clang::AArch64::BI_InterlockedCompareExchange_rel:
   case clang::AArch64::BI_InterlockedCompareExchange64_rel:
+  case clang::AArch64::BI_InterlockedCompareExchangePointer_rel:
     return MSVCIntrin::_InterlockedCompareExchange_rel;
   case clang::AArch64::BI_InterlockedCompareExchange8_nf:
   case clang::AArch64::BI_InterlockedCompareExchange16_nf:
@@ -2060,6 +2097,8 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
   case MSVCIntrin::_InterlockedExchange_nf:
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xchg, E,
                                  AtomicOrdering::Monotonic);
+  case MSVCIntrin::_InterlockedCompareExchange:
+    return EmitAtomicCmpXchgForMSIntrin(*this, E);
   case MSVCIntrin::_InterlockedCompareExchange_acq:
     return EmitAtomicCmpXchgForMSIntrin(*this, E, AtomicOrdering::Acquire);
   case MSVCIntrin::_InterlockedCompareExchange_rel:
@@ -5707,32 +5746,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(
         EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E));
   case Builtin::BI_InterlockedCompareExchangePointer:
-  case Builtin::BI_InterlockedCompareExchangePointer_nf: {
-    llvm::Type *RTy;
-    llvm::IntegerType *IntType = IntegerType::get(
-        getLLVMContext(), getContext().getTypeSize(E->getType()));
-
-    Address DestAddr = CheckAtomicAlignment(*this, E);
-
-    llvm::Value *Exchange = EmitScalarExpr(E->getArg(1));
-    RTy = Exchange->getType();
-    Exchange = Builder.CreatePtrToInt(Exchange, IntType);
-
-    llvm::Value *Comparand =
-      Builder.CreatePtrToInt(EmitScalarExpr(E->getArg(2)), IntType);
-
-    auto Ordering =
-      BuiltinID == Builtin::BI_InterlockedCompareExchangePointer_nf ?
-      AtomicOrdering::Monotonic : AtomicOrdering::SequentiallyConsistent;
-
-    auto Result = Builder.CreateAtomicCmpXchg(DestAddr, Comparand, Exchange,
-                                              Ordering, Ordering);
-    Result->setVolatile(true);
-
-    return RValue::get(Builder.CreateIntToPtr(Builder.CreateExtractValue(Result,
-                                                                         0),
-                                              RTy));
-  }
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange, E));
+  case Builtin::BI_InterlockedCompareExchangePointer_nf:
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_nf, E));
   case Builtin::BI_InterlockedCompareExchange8:
   case Builtin::BI_InterlockedCompareExchange16:
   case Builtin::BI_InterlockedCompareExchange:
@@ -11836,21 +11854,18 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__writex18word ||
       BuiltinID == AArch64::BI__writex18dword ||
       BuiltinID == AArch64::BI__writex18qword) {
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
+    Value *DataArg = EmitScalarExpr(E->getArg(1));
+
     // Read x18 as i8*
-    LLVMContext &Context = CGM.getLLVMContext();
-    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
-    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
-    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
-    llvm::Value *X18 = Builder.CreateCall(F, Metadata);
-    X18 = Builder.CreateIntToPtr(X18, Int8PtrTy);
+    llvm::Value *X18 = readX18AsPtr(*this);
 
     // Store val at x18 + offset
-    Value *Offset = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int64Ty);
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
     Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    StoreInst *Store = Builder.CreateAlignedStore(Val, Ptr, CharUnits::One());
+    StoreInst *Store =
+        Builder.CreateAlignedStore(DataArg, Ptr, CharUnits::One());
     return Store;
   }
 
@@ -11858,23 +11873,72 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__readx18word ||
       BuiltinID == AArch64::BI__readx18dword ||
       BuiltinID == AArch64::BI__readx18qword) {
-    llvm::Type *IntTy = ConvertType(E->getType());
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
 
     // Read x18 as i8*
-    LLVMContext &Context = CGM.getLLVMContext();
-    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
-    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
-    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
-    llvm::Value *X18 = Builder.CreateCall(F, Metadata);
-    X18 = Builder.CreateIntToPtr(X18, Int8PtrTy);
+    llvm::Value *X18 = readX18AsPtr(*this);
 
     // Load x18 + offset
-    Value *Offset = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int64Ty);
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
     Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
+    llvm::Type *IntTy = ConvertType(E->getType());
     LoadInst *Load = Builder.CreateAlignedLoad(IntTy, Ptr, CharUnits::One());
     return Load;
+  }
+
+  if (BuiltinID == AArch64::BI__addx18byte ||
+      BuiltinID == AArch64::BI__addx18word ||
+      BuiltinID == AArch64::BI__addx18dword ||
+      BuiltinID == AArch64::BI__addx18qword ||
+      BuiltinID == AArch64::BI__incx18byte ||
+      BuiltinID == AArch64::BI__incx18word ||
+      BuiltinID == AArch64::BI__incx18dword ||
+      BuiltinID == AArch64::BI__incx18qword) {
+    llvm::Type *IntTy;
+    bool isIncrement;
+    switch (BuiltinID) {
+    case AArch64::BI__incx18byte:
+      IntTy = Int8Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18word:
+      IntTy = Int16Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18dword:
+      IntTy = Int32Ty;
+      isIncrement = true;
+      break;
+    case AArch64::BI__incx18qword:
+      IntTy = Int64Ty;
+      isIncrement = true;
+      break;
+    default:
+      IntTy = ConvertType(E->getArg(1)->getType());
+      isIncrement = false;
+      break;
+    }
+    // Process the args first
+    Value *OffsetArg = EmitScalarExpr(E->getArg(0));
+    Value *ValToAdd =
+        isIncrement ? ConstantInt::get(IntTy, 1) : EmitScalarExpr(E->getArg(1));
+
+    // Read x18 as i8*
+    llvm::Value *X18 = readX18AsPtr(*this);
+
+    // Load x18 + offset
+    Value *Offset = Builder.CreateZExt(OffsetArg, Int64Ty);
+    Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
+    LoadInst *Load = Builder.CreateAlignedLoad(IntTy, Ptr, CharUnits::One());
+
+    // Add values
+    Value *AddResult = Builder.CreateAdd(Load, ValToAdd);
+
+    // Store val at x18 + offset
+    StoreInst *Store =
+        Builder.CreateAlignedStore(AddResult, Ptr, CharUnits::One());
+    return Store;
   }
 
   if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
