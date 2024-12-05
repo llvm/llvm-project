@@ -309,9 +309,13 @@ void Filler::insertCallDefsUses(MachineBasicBlock::iterator MI,
 
   switch(MI->getOpcode()) {
   default: llvm_unreachable("Unknown opcode.");
-  case SP::CALL: break;
+  case SP::CALL:
+  case SP::CALLi:
+    break;
   case SP::CALLrr:
   case SP::CALLri:
+  case SP::CALLrri:
+  case SP::CALLrii:
     assert(MI->getNumOperands() >= 2);
     const MachineOperand &Reg = MI->getOperand(0);
     assert(Reg.isReg() && "CALL first operand is not a register.");
@@ -372,8 +376,13 @@ bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
   switch (I->getOpcode()) {
   default: llvm_unreachable("Unknown call opcode.");
   case SP::CALL: structSizeOpNum = 1; break;
+  case SP::CALLi:
   case SP::CALLrr:
   case SP::CALLri: structSizeOpNum = 2; break;
+  case SP::CALLrri:
+  case SP::CALLrii:
+    structSizeOpNum = 3;
+    break;
   case SP::TLS_CALL: return false;
   case SP::TAIL_CALLri:
   case SP::TAIL_CALL: return false;
