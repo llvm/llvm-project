@@ -136,6 +136,8 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
       if (offset >= d->value + d->size)
         if (Symbol *s = relSec->getEnclosingSymbol(offset))
           canonicalSym = s;
+      if (canonicalSym->isSection())
+        canonicalSym = nullptr;
       enqueue(relSec, offset, canonicalSym, parent);
     }
     return;
