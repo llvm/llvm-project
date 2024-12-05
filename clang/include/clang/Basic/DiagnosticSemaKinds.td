@@ -10274,6 +10274,11 @@ def warn_array_comparison : Warning<
   "to compare array addresses, use unary '+' to decay operands to pointers">,
   InGroup<DiagGroup<"array-compare">>;
 
+def warn_array_comparison_cxx26 : Warning<
+  "comparison between two arrays compare their addresses not their contents; "
+  "to compare array addresses, use unary '+' to decay operands to pointers">,
+  InGroup<DiagGroup<"array-compare-cxx26">>, DefaultError;
+
 def warn_stringcompare : Warning<
   "result of comparison against %select{a string literal|@encode}0 is "
   "unspecified (use an explicit string comparison function instead)">,
