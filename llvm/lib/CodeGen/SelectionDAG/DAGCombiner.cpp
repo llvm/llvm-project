@@ -18765,7 +18765,8 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
         SetCCVT = getSetCCResultType(SetCCVT);
       // Replace the uses of XOR with SETCC. Note, avoid this transformation if
       // it would introduce illegal operations post-legalization as this can
-      // result in an infinite loop.
+      // result in infinite looping between converting xor->setcc here, and
+      // expanding setcc->xor in LegalizeSetCCCondCode if requested.
       const ISD::CondCode CC = Equal ? ISD::SETEQ : ISD::SETNE;
       if (!LegalOperations || TLI.isCondCodeLegal(CC, Op0.getSimpleValueType()))
         return DAG.getSetCC(SDLoc(N), SetCCVT, Op0, Op1, CC);
