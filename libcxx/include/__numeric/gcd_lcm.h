@@ -55,7 +55,8 @@ template <class _Tp>
 constexpr _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
   static_assert(!is_signed<_Tp>::value, "");
 
-  // From: https://lemire.me/blog/2024/04/13/greatest-common-divisor-the-extended-euclidean-algorithm-and-speed/
+  // Using Binary GCD algorithm https://en.wikipedia.org/wiki/Binary_GCD_algorithm, based on an implementation
+  // from https://lemire.me/blog/2024/04/13/greatest-common-divisor-the-extended-euclidean-algorithm-and-speed/
   //
   // If power of two divides both numbers, we can push it out.
   // - gcd( 2^x * a, 2^x * b) = 2^x * gcd(a, b)
