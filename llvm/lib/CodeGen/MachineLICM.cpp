@@ -1250,6 +1250,8 @@ bool MachineLICMImpl::CanCauseHighRegPressure(
     if (CheapInstr && !HoistCheapInsts)
       return true;
 
+    if (static_cast<int>(RegPressure[Class]) + RPIdAndCost.second >= Limit)
+      return true;
     for (const auto &RP : BackTrace)
       if (static_cast<int>(RP[Class]) + RPIdAndCost.second >= Limit)
         return true;
