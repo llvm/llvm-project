@@ -58,7 +58,7 @@ struct __const_pointer {
 template <class _Tp, class _Ptr, class _Alloc>
 struct __const_pointer<_Tp, _Ptr, _Alloc, false> {
 #ifdef _LIBCPP_CXX03_LANG
-  using type = typename pointer_traits<_Ptr>::template rebind<const _Tp>::other;
+  using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<const _Tp>::other;
 #else
   using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<const _Tp>;
 #endif
@@ -88,7 +88,7 @@ struct __const_void_pointer {
 template <class _Ptr, class _Alloc>
 struct __const_void_pointer<_Ptr, _Alloc, false> {
 #ifdef _LIBCPP_CXX03_LANG
-  using type = typename pointer_traits<_Ptr>::template rebind<const void>::other;
+  using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<const void>::other;
 #else
   using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<const void>;
 #endif
@@ -253,9 +253,9 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Tp>
-  using rebind_alloc = __allocator_traits_rebind_t<allocator_type, _Tp>;
+  using rebind_alloc _LIBCPP_NODEBUG = __allocator_traits_rebind_t<allocator_type, _Tp>;
   template <class _Tp>
-  using rebind_traits = allocator_traits<rebind_alloc<_Tp> >;
+  using rebind_traits _LIBCPP_NODEBUG = allocator_traits<rebind_alloc<_Tp> >;
 #else  // _LIBCPP_CXX03_LANG
   template <class _Tp>
   struct rebind_alloc {
@@ -358,7 +358,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Traits, class _Tp>
-using __rebind_alloc = typename _Traits::template rebind_alloc<_Tp>;
+using __rebind_alloc _LIBCPP_NODEBUG = typename _Traits::template rebind_alloc<_Tp>;
 #else
 template <class _Traits, class _Tp>
 using __rebind_alloc _LIBCPP_NODEBUG = typename _Traits::template rebind_alloc<_Tp>::other;
