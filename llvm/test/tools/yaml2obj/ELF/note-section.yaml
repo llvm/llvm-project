@@ -471,6 +471,10 @@ Sections:
 ## field even if "ShAddrAlign" is also specified; an unexpected value in the
 ## "ShAddrAlign" property does not trigger an incorrect alignment error.
 
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=0 -D SHADDRALIGN=8 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_4
+
 # RUN: yaml2obj --docnum=18 -D ADDRALIGN=4 -D SHADDRALIGN=3 %s -o - | \
 # RUN:   llvm-readobj --sections --section-data --notes - | \
 # RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_4
