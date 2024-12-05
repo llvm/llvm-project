@@ -1876,6 +1876,8 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   Args.addOptInFlag(CmdArgs,
                     options::OPT_fptrauth_init_fini_address_discrimination,
                     options::OPT_fno_ptrauth_init_fini_address_discrimination);
+  Args.addOptInFlag(CmdArgs, options::OPT_faarch64_jump_table_hardening,
+                    options::OPT_fno_aarch64_jump_table_hardening);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
