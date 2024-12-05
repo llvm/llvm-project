@@ -41,7 +41,7 @@ slowly replacing functions from its bundled libc with functions from this
 project.
 
 LLVM-libc does not guarantee backward compatibility with operating systems that have reached their EOL.
-Compatibility patch for obsolete operating systems will not be accepted.
+Compatibility patches for obsolete operating systems will not be accepted.
 
 For Linux, we support kernel versions as listed on `kernel.org <https://kernel.org/>`_, including
 ``longterm`` (not past EOL date), ``stable``, and ``mainline`` versions. We actively adopt new features
