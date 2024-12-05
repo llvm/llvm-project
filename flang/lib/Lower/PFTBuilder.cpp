@@ -161,11 +161,14 @@ public:
       return;
     if (procName.starts_with("ieee_set_modes_") ||
         procName.starts_with("ieee_set_status_"))
-      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode = true;
+      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode =
+          proc->mayModifyUnderflowMode = true;
     else if (procName.starts_with("ieee_set_halting_mode_"))
       proc->mayModifyHaltingMode = true;
     else if (procName.starts_with("ieee_set_rounding_mode_"))
       proc->mayModifyRoundingMode = true;
+    else if (procName.starts_with("ieee_set_underflow_mode_"))
+      proc->mayModifyUnderflowMode = true;
   }
 
   /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the
