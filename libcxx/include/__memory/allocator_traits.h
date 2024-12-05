@@ -47,7 +47,7 @@ template <class _Tp>
 using __pointer_member _LIBCPP_NODEBUG = typename _Tp::pointer;
 
 template <class _Tp, class _Alloc>
-using __pointer _LIBCPP_NODEBUG = __detected_or_t<_Tp *, __pointer_member, __libcpp_remove_reference_t<_Alloc>>;
+using __pointer _LIBCPP_NODEBUG = __detected_or_t<_Tp *, __pointer_member, __libcpp_remove_reference_t<_Alloc> >;
 
 // __const_pointer
 _LIBCPP_ALLOCATOR_TRAITS_HAS_XXX(__has_const_pointer, const_pointer);
@@ -247,7 +247,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   template <class _Tp>
   using rebind_alloc = __allocator_traits_rebind_t<allocator_type, _Tp>;
   template <class _Tp>
-  using rebind_traits = allocator_traits<rebind_alloc<_Tp>>;
+  using rebind_traits = allocator_traits<rebind_alloc<_Tp> >;
 #else  // _LIBCPP_CXX03_LANG
   template <class _Tp>
   struct rebind_alloc {
