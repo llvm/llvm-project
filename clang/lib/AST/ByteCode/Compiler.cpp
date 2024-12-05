@@ -355,7 +355,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
                                   std::nullopt, true, false,
                                   /*IsMutable=*/false, nullptr);
     }
-    return this->emitNull(classifyPrim(CE->getType()), Desc, CE);
+
+    uint64_t Val = Ctx.getASTContext().getTargetNullPointerValue(CE->getType());
+    return this->emitNull(classifyPrim(CE->getType()), Val, Desc, CE);
   }
 
   case CK_PointerToIntegral: {
@@ -3817,7 +3819,7 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 
   // Convert pointers to bool.
   if (T == PT_Ptr || T == PT_FnPtr) {
-    if (!this->emitNull(*T, nullptr, E))
+    if (!this->emitNull(*T, 0, nullptr, E))
       return false;
     return this->emitNE(*T, E);
   }
@@ -3857,11 +3859,12 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
   case PT_IntAPS:
     return this->emitZeroIntAPS(Ctx.getBitWidth(QT), E);
   case PT_Ptr:
-    return this->emitNullPtr(nullptr, E);
+    return this->emitNullPtr(Ctx.getASTContext().getTargetNullPointerValue(QT),
+                             nullptr, E);
   case PT_FnPtr:
-    return this->emitNullFnPtr(nullptr, E);
+    return this->emitNullFnPtr(0, nullptr, E);
   case PT_MemberPtr:
-    return this->emitNullMemberPtr(nullptr, E);
+    return this->emitNullMemberPtr(0, nullptr, E);
   case PT_Float:
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
   case PT_FixedPoint: {
@@ -4421,7 +4424,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
 
   if (Val.isLValue()) {
     if (Val.isNullPointer())
-      return this->emitNull(ValType, nullptr, E);
+      return this->emitNull(ValType, 0, nullptr, E);
     APValue::LValueBase Base = Val.getLValueBase();
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
@@ -4431,7 +4434,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   } else if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
       return this->emitGetMemberPtr(MemberDecl, E);
-    return this->emitNullMemberPtr(nullptr, E);
+    return this->emitNullMemberPtr(0, nullptr, E);
   }
 
   return false;
@@ -4783,7 +4786,8 @@ bool Compiler<Emitter>::VisitCXXNullPtrLiteralExpr(
   if (DiscardResult)
     return true;
 
-  return this->emitNullPtr(nullptr, E);
+  uint64_t Val = Ctx.getASTContext().getTargetNullPointerValue(E->getType());
+  return this->emitNullPtr(Val, nullptr, E);
 }
 
 template <class Emitter>
@@ -5333,7 +5337,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
   // one here, and we don't need one either because the lambda cannot have
   // any captures, as verified above. Emit a null pointer. This is then
   // special-cased when interpreting to not emit any misleading diagnostics.
-  if (!this->emitNullPtr(nullptr, MD))
+  if (!this->emitNullPtr(0, nullptr, MD))
     return false;
 
   // Forward all arguments from the static invoker to the lambda call operator.
@@ -6483,7 +6487,7 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     if (!this->discard(SubExpr))
       return false;
 
-    return this->emitNullPtr(nullptr, E);
+    return this->emitNullPtr(0, nullptr, E);
   }
 
   if (FromType->isNullPtrType() && ToT) {
