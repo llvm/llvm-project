@@ -221,31 +221,28 @@ TEST(MemProf, FillsValue) {
   EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
 
-  ASSERT_THAT(Bar.CallSites, SizeIs(1));
-  ASSERT_THAT(Bar.CallSites[0], SizeIs(2));
-  EXPECT_THAT(Bar.CallSites[0][0], FrameContains("foo", 5U, 30U, true));
-  EXPECT_THAT(Bar.CallSites[0][1], FrameContains("bar", 51U, 20U, false));
+  EXPECT_THAT(Bar.CallSites,
+              ElementsAre(ElementsAre(FrameContains("foo", 5U, 30U, true),
+                                      FrameContains("bar", 51U, 20U, false))));
 
   // Check the memprof record for xyz.
   const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
   ASSERT_TRUE(Records.contains(XyzId));
   const MemProfRecord &Xyz = Records[XyzId];
-  ASSERT_THAT(Xyz.CallSites, SizeIs(1));
-  ASSERT_THAT(Xyz.CallSites[0], SizeIs(2));
   // Expect the entire frame even though in practice we only need the first
   // entry here.
-  EXPECT_THAT(Xyz.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
-  EXPECT_THAT(Xyz.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Xyz.CallSites,
+              ElementsAre(ElementsAre(FrameContains("xyz", 5U, 30U, true),
+                                      FrameContains("abc", 5U, 30U, false))));
 
   // Check the memprof record for abc.
   const llvm::GlobalValue::GUID AbcId = IndexedMemProfRecord::getGUID("abc");
   ASSERT_TRUE(Records.contains(AbcId));
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
-  ASSERT_THAT(Abc.CallSites, SizeIs(1));
-  ASSERT_THAT(Abc.CallSites[0], SizeIs(2));
-  EXPECT_THAT(Abc.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
-  EXPECT_THAT(Abc.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Abc.CallSites,
+              ElementsAre(ElementsAre(FrameContains("xyz", 5U, 30U, true),
+                                      FrameContains("abc", 5U, 30U, false))));
 }
 
 TEST(MemProf, PortableWrapper) {
@@ -419,9 +416,8 @@ TEST(MemProf, SymbolizationFilter) {
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
-  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(1));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
-              FrameContains("foo", 5U, 30U, false));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack,
+              ElementsAre(FrameContains("foo", 5U, 30U, false)));
 }
 
 TEST(MemProf, BaseMemProfReader) {
@@ -452,11 +448,9 @@ TEST(MemProf, BaseMemProfReader) {
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
-  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
-              FrameContains("foo", 20U, 5U, true));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
-              FrameContains("bar", 10U, 2U, false));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack,
+              ElementsAre(FrameContains("foo", 20U, 5U, true),
+                          FrameContains("bar", 10U, 2U, false)));
 }
 
 TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
@@ -489,11 +483,9 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
-  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
-              FrameContains("foo", 20U, 5U, true));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
-              FrameContains("bar", 10U, 2U, false));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack,
+              ElementsAre(FrameContains("foo", 20U, 5U, true),
+                          FrameContains("bar", 10U, 2U, false)));
 }
 
 TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
