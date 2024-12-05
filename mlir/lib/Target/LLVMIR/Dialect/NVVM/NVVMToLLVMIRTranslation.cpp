@@ -215,6 +215,20 @@ public:
       if (values.size() > 2)
         generateMetadata(values[2], NVVM::NVVMDialect::getReqntidZName());
     } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getClusterDimAttrName()) {
+      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+        return failure();
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
+      generateMetadata(values[0], NVVM::NVVMDialect::getClusterDimXName());
+      if (values.size() > 1)
+        generateMetadata(values[1], NVVM::NVVMDialect::getClusterDimYName());
+      if (values.size() > 2)
+        generateMetadata(values[2], NVVM::NVVMDialect::getClusterDimZName());
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+      generateMetadata(value.getInt(), "cluster_max_blocks");
+    } else if (attribute.getName() ==
                NVVM::NVVMDialect::getMinctasmAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
       generateMetadata(value.getInt(), "minctasm");

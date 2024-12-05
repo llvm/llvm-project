@@ -5044,11 +5044,9 @@ define i1 @isnormal_logical_select_0_fmf1(half %x) {
 
 define i1 @and_fcmp_reassoc1(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @and_fcmp_reassoc1(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ugt double [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = and i1 [[RETVAL]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -5059,11 +5057,9 @@ define i1 @and_fcmp_reassoc1(i1 %x, double %a, double %b) {
 
 define i1 @and_fcmp_reassoc2(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @and_fcmp_reassoc2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ugt double [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = and i1 [[RETVAL]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -5074,11 +5070,9 @@ define i1 @and_fcmp_reassoc2(i1 %x, double %a, double %b) {
 
 define i1 @and_fcmp_reassoc3(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @and_fcmp_reassoc3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ugt double [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = and i1 [[CMP1]], [[RETVAL]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ugt double %a, %b
@@ -5089,11 +5083,9 @@ define i1 @and_fcmp_reassoc3(i1 %x, double %a, double %b) {
 
 define i1 @and_fcmp_reassoc4(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @and_fcmp_reassoc4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ugt double [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = and i1 [[CMP1]], [[RETVAL]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ugt double %a, %b
