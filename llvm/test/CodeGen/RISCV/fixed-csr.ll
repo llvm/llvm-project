@@ -13,21 +13,17 @@ define noundef signext i32 @foo() {
 
 declare void @llvm.write_register.i64(metadata, i64)
 
-define noundef signext i32 @bar() {
+define noundef signext i32 @bar() nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sd s9, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset s9, -8
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    li s8, 321
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ld s9, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_restore s9
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   tail call void asm sideeffect "", "~{x25}"() #3
   tail call void @llvm.write_register.i64(metadata !0, i64 321)
