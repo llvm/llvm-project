@@ -9,8 +9,7 @@ define i1 @test_icmp_ult_zext_icmp_trunc_nuw(i16 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i32 [[Y]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X]], [[CONV]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -35,8 +34,7 @@ define i1 @test_icmp_slt_sext_icmp_trunc_nsw(i16 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc nsw i32 [[Y]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], [[CONV]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -63,8 +61,7 @@ define i1 @test_icmp_ult_trunc_nsw_nneg_icmp_trunc_nuw(i64 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[AND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[CONV]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -102,8 +99,7 @@ define i1 @test2(i32 %n) {
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i64 [[INDVAR_NEXT]] to i32
-; CHECK-NEXT:    [[RES:%.*]] = icmp sgt i32 [[N]], [[TRUNC]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
