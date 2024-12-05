@@ -40,6 +40,16 @@ and MacOS have limited support (may be broken).  The Fuchsia platform is
 slowly replacing functions from its bundled libc with functions from this
 project.
 
+LLVM-libc does not guarantee backward compatibility with operating systems that reaches their EOL.
+Compatibility patch for obsolete operating systems will not be accepted.
+
+For Linux, we support kernel versions as listed on `kernel.org <https://kernel.org/>`_, including
+``longterm``, ``stable``, and ``mainline`` versions. We actively adapt new features
+from ``linux-next``.
+
+For Windows, we support products within their lifecycle. Please refer to 
+`Search Product and Services Lifecycle Information <https://learn.microsoft.com/en-us/lifecycle/products/?products=windows>`_ for more information.
+
 ABI Compatibility
 =================
 
