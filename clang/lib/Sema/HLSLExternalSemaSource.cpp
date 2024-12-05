@@ -555,10 +555,10 @@ private:
 
     // create method decl
     auto *TSInfo = AST.getTrivialTypeSourceInfo(MethodTy, SourceLocation());
-    Method = CXXMethodDecl::Create(
-        AST, DeclBuilder.Record, SourceLocation(),
-        NameInfo, MethodTy, TSInfo, SC_None, false, false,
-        ConstexprSpecKind::Unspecified, SourceLocation());
+    Method =
+        CXXMethodDecl::Create(AST, DeclBuilder.Record, SourceLocation(),
+                              NameInfo, MethodTy, TSInfo, SC_None, false, false,
+                              ConstexprSpecKind::Unspecified, SourceLocation());
 
     // create params & set them to the function prototype
     SmallVector<ParmVarDecl *> ParmDecls;
