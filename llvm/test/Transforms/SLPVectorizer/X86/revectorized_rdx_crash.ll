@@ -12,10 +12,10 @@
 ; iteration (it was matched and vectorized, which added a use of a deleted
 ; instruction)
 
-define void @test() {
+define void @test(i1 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_END:%.*]], label [[FOR_COND_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 2
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 3
@@ -35,7 +35,7 @@ define void @test() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %if.end, label %for.cond.preheader
+  br i1 %arg, label %if.end, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
   %i = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 2
