@@ -14590,8 +14590,8 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr *>();
 
       auto DiagArith = [&](unsigned DiagID) {
-        std::string LHS = LHSValue.toString(Info.Ctx, LHSExpr->getType());
-        std::string RHS = RHSValue.toString(Info.Ctx, RHSExpr->getType());
+        std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
+        std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
         Info.FFDiag(E, DiagID) << LHS << RHS;
         if (LHSExpr && LHSExpr == RHSExpr)
           Info.Note(LHSExpr->getExprLoc(),
