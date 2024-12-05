@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "memory_utils/memory_check_utils.h"
 #include "src/__support/macros/config.h"
-#include "src/string/bzero.h"
+#include "src/strings/bzero.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/string/memory_utils/memory_check_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

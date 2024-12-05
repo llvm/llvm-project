@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strncasecmp.h"
+#include "src/strings/strncasecmp.h"
 
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
