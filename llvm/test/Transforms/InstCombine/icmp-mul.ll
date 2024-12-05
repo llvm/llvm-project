@@ -1468,10 +1468,7 @@ entry:
 define i1 @test_icmp_slt_mul_known_sgt(i64 %x, i64 %z) {
 ; CHECK-LABEL: @test_icmp_slt_mul_known_sgt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i64 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i64 [[Y]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1485,10 +1482,7 @@ entry:
 define i1 @test_icmp_sle_mul_known_sgt(i64 %x, i64 %z) {
 ; CHECK-LABEL: @test_icmp_sle_mul_known_sgt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i64 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i64 [[Y]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1502,10 +1496,7 @@ entry:
 define i1 @test_icmp_mul_known_slt(i64 %x, i64 %z) {
 ; CHECK-LABEL: @test_icmp_mul_known_slt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i64 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i64 [[Y]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[MUL2]], [[MUL1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[Z:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1519,10 +1510,7 @@ entry:
 define i1 @test_icmp_slt_mul_known_sgt_commuted1(i64 %x, i64 %z) {
 ; CHECK-LABEL: @test_icmp_slt_mul_known_sgt_commuted1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i64 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i64 [[Y]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1536,10 +1524,7 @@ entry:
 define i1 @test_icmp_slt_mul_known_sgt_commuted2(i64 %x, i64 %z) {
 ; CHECK-LABEL: @test_icmp_slt_mul_known_sgt_commuted2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i64 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i64 [[Z]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
