@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "bzero": {
+      "posix-definition": "removed in POSIX.1-2008"
+    },
+    "bcmp": {
+      "posix-definition": "removed in POSIX.1-2008"
+    },
+    "bcopy": {
+      "posix-definition": "removed in POSIX.1-2008"
+    }
+  }
+}
