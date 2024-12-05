@@ -4853,7 +4853,7 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   // issues because MIR does not have freeze.
   if (EvenV.isUndef())
     return getWideningSpread(OddV, 2, 1, DL, DAG);
-  else if (OddV.isUndef())
+  if (OddV.isUndef())
     return getWideningSpread(EvenV, 2, 0, DL, DAG);
 
   MVT VecVT = EvenV.getSimpleValueType();
