@@ -365,14 +365,14 @@ public:
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
         std::string kernelFnName;
-        if (auto outlineModuleAttr = op->getAttrOfType<SymbolRefAttr>("outline_module")) {
-          kernelFnName = outlineModuleAttr.getRootReference().str();
-          llvm::errs() << "outlined module name = " << kernelFnName << "\n";
+        if (op.hasKernelFuncName()) {
+          kernelFnName = op->getAttrOfType<mlir::SymbolRefAttr>("kernelFunc").getRootReference().str();
+          llvm::errs() << "use provided kernel func name = " << kernelFnName << "\n";
         } else {
           kernelFnName =
               Twine(op->getParentOfType<SymbolOpInterface>().getName(), "_kernel")
                   .str();
-          llvm::errs() << "original module name = " << kernelFnName << "\n";
+          llvm::errs() << "use default kernel func name = " << kernelFnName << "\n";
         }
 
         gpu::GPUFuncOp outlinedFunc =
@@ -381,7 +381,7 @@ public:
         // Create nested module and insert outlinedFunc. The module will
         // originally get the same name as the function, but may be renamed on
         // insertion into the parent module.
-        auto kernelModule = createKernelModule(outlinedFunc, symbolTable);
+        auto kernelModule = createKernelModule(op, outlinedFunc, symbolTable);
         symbolTable.insert(kernelModule, insertPt);
 
         // Potentially changes signature, pulling in constants.
@@ -402,7 +402,7 @@ public:
 
 private:
   /// Returns a gpu.module containing kernelFunc and all callees (recursive).
-  gpu::GPUModuleOp createKernelModule(gpu::GPUFuncOp kernelFunc,
+  gpu::GPUModuleOp createKernelModule(gpu::LaunchOp gpuLaunchOp, gpu::GPUFuncOp kernelFunc,
                                       const SymbolTable &parentSymbolTable) {
     // TODO: This code cannot use an OpBuilder because it must be inserted into
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
@@ -410,8 +410,26 @@ private:
     // and then this needs to use the OpBuilder.
     auto *context = getOperation().getContext();
     OpBuilder builder(context);
-    auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
-                                                         kernelFunc.getName());
+    std::string kernelModuleName;
+    if (gpuLaunchOp.hasKernelModuleName()) {
+      kernelModuleName = gpuLaunchOp->getAttrOfType<mlir::SymbolRefAttr>("kernelModule").getRootReference().str();
+      llvm::errs() << "use provided kernel module name = " << kernelModuleName << "\n";
+    } else {
+      kernelModuleName = kernelFunc.getName();
+      llvm::errs() << "use default kernel module name = " << kernelModuleName << "\n";
+    }
+
+    gpu::GPUModuleOp kernelModule;
+    // Check if the module already exists in the symbol table
+    if (auto existingModule = parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName)) {
+      llvm::errs() << "Reusing existing kernel module: " << kernelModuleName << "\n";
+      kernelModule = existingModule;
+    } else {
+      // If not found, create a new GPU module
+      llvm::errs() << "Creating new kernel module: " << kernelModuleName << "\n";
+      kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
+                                                           kernelModuleName);
+    }
 
     // If a valid data layout spec was provided, attach it to the kernel module.
     // Otherwise, the default data layout will be used.
@@ -438,6 +456,8 @@ private:
         }
       }
     }
+
+    //llvm::errs() << "kernelModule:\n" << kernelModule << "\n";
 
     return kernelModule;
   }

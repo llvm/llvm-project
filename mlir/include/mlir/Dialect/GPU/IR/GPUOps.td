@@ -804,7 +804,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
-               OptionalAttr<SymbolRefAttr>:$outlineModule)>,
+               OptionalAttr<SymbolRefAttr>:$kernelFunc,
+               OptionalAttr<SymbolRefAttr>:$kernelModule)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -838,9 +839,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     -   a variadic number of Workgroup memory attributions.
     -   a variadic number of Private memory attributions.
 
-    The `outline_module` attribute is optional and specifies a module in which 
-    the kernel should be outlined. When this attribute is present, the kernel is
-    outlined into the specified module instead of the default behavior.
+    The `kernelFunc` and `kernelModule` attributes are optional and specifies the kernel name and a module in whichthe kernel should be outlined. 
+
 
     Syntax:
 
@@ -1036,9 +1036,14 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       return "workgroup_attributions";
     }
 
-    /// Checks if the outline_module attribute is present.
-    bool hasOutlineModule() {
-      return getOutlineModule().has_value();
+    /// Checks if the kernel func name attribute is present.
+    bool hasKernelFuncName() {
+      return getKernelFunc().has_value();
+    }
+
+    /// Checks if the kernel module name attribute is present.
+    bool hasKernelModuleName() {
+      return getKernelModule().has_value();
     }
   }];
 
