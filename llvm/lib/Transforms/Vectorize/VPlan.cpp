@@ -862,9 +862,8 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPIRBasicBlock *Entry =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
-  // Connect entry only to vector preheader initially. Edges to the scalar
-  // preheader will be inserted later, during skeleton creation when runtime
-  // guards are added as needed.
+  // Connect entry only to vector preheader initially. Entry will also be connected to the scalar preheader later, during skeleton creation when runtime guards are added as needed.
+  // Note that when executing the VPlan for an epilogue vector loop, the original entry block here will be replaced by a new VPIRBasicBlock wrapping the entry to the epilogue vector loop after generating code for the main vector loop.
   VPBlockUtils::connectBlocks(Entry, VecPreheader);
   VPIRBasicBlock *ScalarHeader =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getHeader());
@@ -1021,12 +1020,11 @@ void VPlan::execute(VPTransformState *State) {
   // blocks are created during skeleton creation, so we can only create the
   // VPIRBasicBlocks now during VPlan execution rather than earlier during VPlan
   // construction.
-  replaceVPBBWithIRVPBB(getVectorPreheader(), VectorPreHeader);
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
+  replaceVPBBWithIRVPBB(getVectorPreheader(), VectorPreHeader);
+  replaceVPBBWithIRVPBB(getMiddleBlock(), MiddleBB);
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
-  VPBasicBlock *MiddleVPBB = getMiddleBlock();
-  replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');

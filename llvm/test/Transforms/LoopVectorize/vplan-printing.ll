@@ -505,6 +505,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT:   IR %muladd.lcssa = phi float [ %muladd, %for.body ] (extra operand: vp<[[RED_EX]]> from middle.block)
+; CHECK-NEXT: No successors
 ; CHECK-NEXT:}
 
 entry:

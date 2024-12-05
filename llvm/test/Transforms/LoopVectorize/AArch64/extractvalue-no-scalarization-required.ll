@@ -64,6 +64,7 @@ exit:
 declare float @powf(float, float) readnone nounwind
 
 ; Ensure the extractvalue + add instructions are hoisted out
+; CM-LABEL: Checking a loop in 'test_getVectorCallCost'
 ; CM: vector.ph:
 ; CM:  CLONE ir<%a> = extractvalue ir<%sv>
 ; CM:  CLONE ir<%b> = extractvalue ir<%sv>

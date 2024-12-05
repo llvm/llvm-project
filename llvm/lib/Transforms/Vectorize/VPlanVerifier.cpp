@@ -194,7 +194,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       errs() << "not in a VPIRBasicBlock!\n";
       return false;
     }
-
     for (const VPValue *V : R.definedValues()) {
       for (const VPUser *U : V->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);

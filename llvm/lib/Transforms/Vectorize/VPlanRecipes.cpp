@@ -3248,6 +3248,7 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
 
   const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
   SCEVExpander Exp(SE, DL, "induction");
+
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
                                  &*State.Builder.GetInsertPoint());
   State.ExpandedSCEVs[Expr] = Res;
@@ -3501,7 +3502,7 @@ void VPScalarPHIRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-PHI";
+  O << Indent << "SCALAR-PHI ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);

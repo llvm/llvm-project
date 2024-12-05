@@ -2432,7 +2432,6 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 /// vector preheader and its predecessor, also connecting the new block to the
 /// scalar preheader.
 static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
-
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
@@ -2530,7 +2529,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(TCCheckBlock);
 
   // TODO: Wrap LoopVectorPreHeader in VPIRBasicBlock here.
-  introduceCheckBlockInVPlan(Plan, nullptr);
+  introduceCheckBlockInVPlan(Plan, TCCheckBlock);
 }
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
@@ -7913,7 +7912,6 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
-  // Connect TCCheckblock to the VPlan.
   introduceCheckBlockInVPlan(Plan, TCCheckBlock);
   return TCCheckBlock;
 }
@@ -8068,7 +8066,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   Plan.setEntry(NewEntry);
   delete OldEntry;
 
-  introduceCheckBlockInVPlan(Plan, nullptr);
+  introduceCheckBlockInVPlan(Plan, Insert);
   return Insert;
 }
 
