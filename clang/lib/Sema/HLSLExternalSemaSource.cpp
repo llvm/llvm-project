@@ -556,7 +556,7 @@ private:
     // create method decl
     auto *TSInfo = AST.getTrivialTypeSourceInfo(MethodTy, SourceLocation());
     Method = CXXMethodDecl::Create(
-        AST, DeclBuilder.finalizeForwardDeclaration(), SourceLocation(),
+        AST, DeclBuilder.Record, SourceLocation(),
         NameInfo, MethodTy, TSInfo, SC_None, false, false,
         ConstexprSpecKind::Unspecified, SourceLocation());
 
