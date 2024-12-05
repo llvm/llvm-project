@@ -1,4 +1,4 @@
-.. include:: check.rst
+.. include:: ../check.rst
 
 =========
 threads.h
