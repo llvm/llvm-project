@@ -21,3 +21,9 @@ Revert: breaks build of rocFFT
 854d7301f989 [Clang/AMDGPU] Zero sized arrays not allowed in HIP device code. (#113470)
 Ron and Vigneshwar
 ---
+breaks build OMPT related?
+ld.lld: error: undefined symbol: llvm::omp::target::ompt::enableDeviceTracing(int)
+
+b877a533a6d1 (HEAD -> amd-staging) Revert "Reland #118503: [Offload] Introduce offload-tblgen and initial new API implementation (#118614)"
+Ron and JP
+---

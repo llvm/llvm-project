@@ -315,9 +315,17 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   return Success;
 }
-
 bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
                                  const Pointer &FromPtr, Pointer &ToPtr) {
+  const ASTContext &ASTCtx = S.getASTContext();
+  CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(ToPtr.getType());
+
+  return DoBitCastPtr(S, OpPC, FromPtr, ToPtr, ObjectReprChars.getQuantity());
+}
+
+bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
+                                 const Pointer &FromPtr, Pointer &ToPtr,
+                                 size_t Size) {
   assert(FromPtr.isLive());
   assert(FromPtr.isBlockPointer());
   assert(ToPtr.isBlockPointer());
@@ -331,9 +339,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
     return false;
 
   const ASTContext &ASTCtx = S.getASTContext();
-
-  CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(ToType);
-  BitcastBuffer Buffer(Bits(ASTCtx.toBits(ObjectReprChars)));
+  BitcastBuffer Buffer(Bytes(Size).toBits());
   readPointerToBuffer(S.getContext(), FromPtr, Buffer,
                       /*ReturnOnUninit=*/false);
 

@@ -1831,7 +1831,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
 
-  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr, Size.getZExtValue()))
     return false;
 
   S.Stk.push<Pointer>(DestPtr);

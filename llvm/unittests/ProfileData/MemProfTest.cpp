@@ -430,8 +430,8 @@ TEST(MemProf, BaseMemProfReader) {
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  MemProfData.Frames.insert({F1.hash(), F1});
-  MemProfData.Frames.insert({F2.hash(), F2});
+  MemProfData.addFrame(F1);
+  MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack{F1.hash(), F2.hash()};
   CallStackId CSId = hashCallStack(CallStack);
@@ -466,8 +466,8 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  MemProfData.Frames.insert({F1.hash(), F1});
-  MemProfData.Frames.insert({F2.hash(), F2});
+  MemProfData.addFrame(F1);
+  MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
   CallStackId CSId = hashCallStack(CallStack);
