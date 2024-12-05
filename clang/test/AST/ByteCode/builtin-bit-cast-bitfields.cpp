@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple armv8 -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble %s
