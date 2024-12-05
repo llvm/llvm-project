@@ -2,7 +2,7 @@
 String Functions
 ================
 
-.. include:: check.rst
+.. include:: ../check.rst
 
 ---------------
 Source location

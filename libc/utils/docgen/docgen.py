@@ -161,7 +161,7 @@ def print_macros_rst(header: Header, macros: Dict):
 
 
 def print_impl_status_rst(header: Header, api: Dict):
-    print(".. include:: check.rst\n")
+    print(".. include:: ../check.rst\n")
 
     print("=" * len(header.name))
     print(header.name)
