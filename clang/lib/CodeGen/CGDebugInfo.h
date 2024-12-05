@@ -486,6 +486,8 @@ public:
   void EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
                         QualType FnType, llvm::Function *Fn = nullptr);
 
+  llvm::DIScope *PickCompositeTypeScope(llvm::DIScope *S, StringRef Identifier);
+
   /// Emit debug info for an extern function being called.
   /// This is needed for call site debug info.
   void EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
