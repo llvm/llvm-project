@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/descriptor.h"
-#include "../terminator.h"
-#include "flang/Runtime/CUDA/allocator.h"
+#include "flang-rt/CUDA/allocator.h"
+#include "flang-rt/descriptor.h"
+#include "../flang_rt/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"

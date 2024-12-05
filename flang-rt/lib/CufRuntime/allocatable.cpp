@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/allocatable.h"
-#include "../assign-impl.h"
-#include "../stat.h"
-#include "../terminator.h"
+#include "flang-rt/descriptor.h"
+#include "../flang_rt/assign-impl.h"
+#include "../flang_rt/stat.h"
+#include "../flang_rt/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memmove-function.h"
