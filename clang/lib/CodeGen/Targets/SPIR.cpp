@@ -156,8 +156,9 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
       // and matches the NVPTX implementation.
       return getNaturalAlignIndirect(
-        Ty, /* AddrSpace */ getContext().getTargetAddressSpace(LangAS::Default),
-        /* byval */ true);
+          Ty,
+          /* AddrSpace */ getContext().getTargetAddressSpace(LangAS::Default),
+          /* byval */ true);
     }
   }
   return classifyArgumentType(Ty);
@@ -173,8 +174,7 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   // passed by value.
   if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
     return getNaturalAlignIndirect(
-        Ty,
-        getContext().getTargetAddressSpace(LangAS::Default),
+        Ty, getContext().getTargetAddressSpace(LangAS::Default),
         RAA == CGCXXABI::RAA_DirectInMemory);
 
   if (const RecordType *RT = Ty->getAs<RecordType>()) {

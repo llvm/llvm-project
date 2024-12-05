@@ -72,8 +72,8 @@ ABIArgInfo LanaiABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       --State.FreeRegs; // Non-byval indirects just use one pointer.
       return getNaturalAlignIndirectInReg(Ty);
     }
-    return getNaturalAlignIndirect(
-        Ty, getDataLayout().getAllocaAddrSpace(), false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   false);
   }
 
   // Compute the byval alignment.

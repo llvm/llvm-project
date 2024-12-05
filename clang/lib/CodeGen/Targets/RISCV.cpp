@@ -411,8 +411,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
     return getNaturalAlignIndirect(
-      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-      /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
+        Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   uint64_t Size = getContext().getTypeSize(Ty);

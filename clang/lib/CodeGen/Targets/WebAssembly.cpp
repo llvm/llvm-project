@@ -104,8 +104,8 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
       return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        RAA == CGCXXABI::RAA_DirectInMemory);
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
+          RAA == CGCXXABI::RAA_DirectInMemory);
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))
       return ABIArgInfo::getIgnore();

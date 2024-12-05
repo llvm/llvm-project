@@ -22,9 +22,8 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
       return getNaturalAlignIndirect(
-        Ty,
-        getContext().getTargetAddressSpace(LangAS::Default),
-        RAA == CGCXXABI::RAA_DirectInMemory);
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
+          RAA == CGCXXABI::RAA_DirectInMemory);
 
     return getNaturalAlignIndirect(
         Ty, getContext().getTargetAddressSpace(LangAS::Default));
@@ -64,8 +63,8 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
         getContext().getTypeSize(getContext().getTargetInfo().hasInt128Type()
                                      ? getContext().Int128Ty
                                      : getContext().LongLongTy))
-      return getNaturalAlignIndirect(
-          RetTy, getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());

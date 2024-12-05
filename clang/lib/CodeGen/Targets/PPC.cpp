@@ -209,8 +209,7 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
       return getNaturalAlignIndirect(
-          Ty,
-          getContext().getTargetAddressSpace(LangAS::Default),
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
           RAA == CGCXXABI::RAA_DirectInMemory);
 
     CharUnits CCAlign = getParamTypeAlignment(Ty);
@@ -218,7 +217,7 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
 
     return ABIArgInfo::getIndirect(
         CCAlign,
-        /*AddrSpace*/getContext().getTargetAddressSpace(LangAS::Default),
+        /*AddrSpace*/ getContext().getTargetAddressSpace(LangAS::Default),
         /*ByVal*/ true, /*Realign*/ TyAlign > CCAlign);
   }
 
@@ -850,14 +849,13 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
   if (const auto *EIT = Ty->getAs<BitIntType>())
     if (EIT->getNumBits() > 128)
       return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        /*ByVal=*/true);
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
+          /*ByVal=*/true);
 
   if (isAggregateTypeForABI(Ty)) {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
       return getNaturalAlignIndirect(
-          Ty,
-          getContext().getTargetAddressSpace(LangAS::Default),
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
           RAA == CGCXXABI::RAA_DirectInMemory);
 
     uint64_t ABIAlign = getParamTypeAlignment(Ty).getQuantity();

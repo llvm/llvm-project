@@ -414,8 +414,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // copy constructor are always indirect.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     return getNaturalAlignIndirect(
-      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-      /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
+        Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Empty records are always ignored on Darwin, but actually passed in C++ mode
@@ -490,7 +490,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   }
 
   return getNaturalAlignIndirect(
-      Ty, /*AddrSpace*/getContext().getTargetAddressSpace(LangAS::Default),
+      Ty, /*AddrSpace*/ getContext().getTargetAddressSpace(LangAS::Default),
       /*ByVal=*/false);
 }
 

@@ -233,8 +233,8 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   // pointer / sret pointer.
   if (Size > SizeLimit)
     return getNaturalAlignIndirect(
-      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-      /*ByVal=*/false);
+        Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+        /*ByVal=*/false);
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())

@@ -299,8 +299,8 @@ ABIArgInfo ARMABIInfo::coerceIllegalVector(QualType Ty) const {
     return ABIArgInfo::getDirect(ResType);
   }
   return getNaturalAlignIndirect(
-    Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-    /*ByVal=*/false);
+      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
@@ -543,8 +543,8 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   if (const VectorType *VT = RetTy->getAs<VectorType>()) {
     // Large vector types should be returned via memory.
     if (getContext().getTypeSize(RetTy) > 128)
-      return getNaturalAlignIndirect(
-          RetTy, getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
     // TODO: FP16/BF16 vectors should be converted to integer vectors
     // This check is similar  to isIllegalVectorType - refactor?
     if ((!getTarget().hasLegalHalfType() &&

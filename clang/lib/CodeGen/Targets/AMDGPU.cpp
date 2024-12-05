@@ -226,8 +226,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
       return getNaturalAlignIndirect(
-          Ty,
-          getContext().getTargetAddressSpace(LangAS::Default),
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
           RAA == CGCXXABI::RAA_DirectInMemory);
 
     // Ignore empty structs/unions.

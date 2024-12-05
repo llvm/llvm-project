@@ -210,8 +210,7 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
       Offset = OrigOffset + MinABIStackAlignInBytes;
       return getNaturalAlignIndirect(
-          Ty,
-          getContext().getTargetAddressSpace(LangAS::Default),
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
           RAA == CGCXXABI::RAA_DirectInMemory);
     }
 
@@ -326,8 +325,8 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
     if (EIT->getNumBits() > 128 ||
         (EIT->getNumBits() > 64 &&
          !getContext().getTargetInfo().hasInt128Type()))
-      return getNaturalAlignIndirect(
-          RetTy, getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
 
   if (isPromotableIntegerTypeForABI(RetTy))
     return ABIArgInfo::getExtend(RetTy);

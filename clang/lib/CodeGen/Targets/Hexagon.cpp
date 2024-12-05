@@ -106,8 +106,8 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
 
     if (Size > 64 && Ty->isBitIntType())
       return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        /*ByVal=*/true);
+          Ty, getContext().getTargetAddressSpace(LangAS::Default),
+          /*ByVal=*/true);
 
     return isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                              : ABIArgInfo::getDirect();
@@ -157,8 +157,8 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
     }
     // Large vector types should be returned via memory.
     if (Size > 64)
-      return getNaturalAlignIndirect(
-          RetTy, getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
   }
 
   if (!isAggregateTypeForABI(RetTy)) {
@@ -184,8 +184,8 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
     Size = llvm::bit_ceil(Size);
     return ABIArgInfo::getDirect(llvm::Type::getIntNTy(getVMContext(), Size));
   }
-  return getNaturalAlignIndirect(
-      RetTy, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/true);
+  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/true);
 }
 
 Address HexagonABIInfo::EmitVAArgFromMemory(CodeGenFunction &CGF,

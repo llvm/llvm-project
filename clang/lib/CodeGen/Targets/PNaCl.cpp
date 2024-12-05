@@ -93,14 +93,13 @@ ABIArgInfo PNaClABIInfo::classifyReturnType(QualType RetTy) const {
 
   // In the PNaCl ABI we always return records/structures on the stack.
   if (isAggregateTypeForABI(RetTy))
-    return getNaturalAlignIndirect(
-        RetTy, getDataLayout().getAllocaAddrSpace());
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   // Treat bit-precise integers as integers if <= 64, otherwise pass indirectly.
   if (const auto *EIT = RetTy->getAs<BitIntType>()) {
     if (EIT->getNumBits() > 64)
-      return getNaturalAlignIndirect(
-          RetTy, getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
     return ABIArgInfo::getDirect();
   }
 

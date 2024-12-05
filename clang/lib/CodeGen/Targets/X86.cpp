@@ -3302,7 +3302,6 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       return getNaturalAlignIndirect(
           Ty, getContext().getTargetAddressSpace(LangAS::Default),
           /*ByVal=*/false);
-
   }
 
   const Type *Base = nullptr;
