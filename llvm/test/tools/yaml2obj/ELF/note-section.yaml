@@ -351,7 +351,7 @@ Sections:
     Notes:
       - Type: 0x1
 
-## Check that note entries and their `Desc` fields are aligned according to the
+## Check that note entries and their "Desc" fields are aligned according to the
 ## specified section alignment.
 
 # RUN: yaml2obj --docnum=17 -D ELFCLASS=64 %s -o - | \
@@ -458,6 +458,50 @@ Sections:
   - Name:        .note.foo8
     Type:         SHT_NOTE
     AddressAlign: 8
+    Notes:
+      - Name: ABCD
+        Type: NT_VERSION
+        Desc: 0102
+      - Type: NT_ARCH
+        Desc: 030405
+      - Name: GNU
+        Type: NT_GNU_BUILD_ID
+
+## Check that the alignment for note entries is taken from the "AddressAlign"
+## field even if "ShAddrAlign" is also specified; an unexpected value in the
+## "ShAddrAlign" property does not trigger an incorrect alignment error.
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=4 -D SHADDRALIGN=3 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_4
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=8 -D SHADDRALIGN=4 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_8
+
+# TEST18:        Name: .note
+# TEST18:        SectionData (
+# TEST18_4-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST18_4-NEXT:   0010: 00000000 01020000 00000000 03000000  |................|
+# TEST18_4-NEXT:   0020: 02000000 03040500 04000000 00000000  |................|
+# TEST18_4-NEXT:   0030: 03000000 474E5500                    |....GNU.|
+# TEST18_8-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST18_8-NEXT:   0010: 00000000 00000000 01020000 00000000  |................|
+# TEST18_8-NEXT:   0020: 00000000 03000000 02000000 00000000  |................|
+# TEST18_8-NEXT:   0030: 03040500 00000000 04000000 00000000  |................|
+# TEST18_8-NEXT:   0040: 03000000 474E5500                    |....GNU.|
+# TEST18-NEXT:   )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    AddressAlign: [[ADDRALIGN]]
+    ShAddrAlign:  [[SHADDRALIGN]]
     Notes:
       - Name: ABCD
         Type: NT_VERSION
