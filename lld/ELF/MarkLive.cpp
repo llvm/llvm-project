@@ -54,9 +54,8 @@ public:
   void moveToMain();
 
 private:
-  void enqueue(InputSectionBase *sec, uint64_t offset = 0,
-               Symbol *sym = nullptr,
-               std::optional<LiveObject> parent = std::nullopt);
+  void enqueue(InputSectionBase *sec, uint64_t offset, Symbol *sym,
+               std::optional<LiveObject> parent);
   void printWhyLive(Symbol *s) const;
   void markSymbol(Symbol *sym);
   void mark();
@@ -277,7 +276,7 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
   if (auto *d = dyn_cast_or_null<Defined>(sym))
     if (auto *isec = dyn_cast_or_null<InputSectionBase>(d->section))
-      enqueue(isec, d->value);
+      enqueue(isec, d->value, sym, std::nullopt);
 }
 
 // This is the main function of the garbage collector.
@@ -324,7 +323,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   }
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
-      enqueue(sec);
+      enqueue(sec, 0, nullptr, std::nullopt);
       continue;
     }
     if (sec->flags & SHF_LINK_ORDER)
@@ -363,7 +362,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
     if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
-      enqueue(sec);
+      enqueue(sec, 0, nullptr, std::nullopt);
     } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
@@ -423,7 +422,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
       continue;
     if (ctx.symtab->find(("__start_" + sec->name).str()) ||
         ctx.symtab->find(("__stop_" + sec->name).str()))
-      enqueue(sec);
+      enqueue(sec, 0, nullptr, std::nullopt);
   }
 
   mark();
