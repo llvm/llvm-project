@@ -145,7 +145,7 @@ public:
   // arguments.
   void setInitialFreeUserSGPRsCount() {
     GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
-    NumFreeUserSGPRs = UserSGPRInfo.getNumFreeKernargPreloadSGPRs();
+    NumFreeUserSGPRs = UserSGPRInfo.getNumFreeUserSGPRs();
   }
 
   bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
@@ -486,8 +486,8 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     uint64_t ImplicitArgsBaseOffset =
         alignTo(ExplicitArgOffset, ST.getAlignmentForImplicitArgPtr()) +
         BaseOffset;
-    PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset, ExplicitArgOffset,
-                                                Builder);
+    PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset,
+                                                ExplicitArgOffset, Builder);
   }
 
   return true;

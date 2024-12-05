@@ -461,6 +461,7 @@ private:
   bool WorkGroupIDY : 1;
   bool WorkGroupIDZ : 1;
   bool WorkGroupInfo : 1;
+  bool LDSKernelId : 1;
   bool PrivateSegmentWaveByteOffset : 1;
 
   bool WorkItemIDX : 1; // Always initialized.
@@ -820,6 +821,8 @@ public:
     NumSystemSGPRs += 1;
     return ArgInfo.WorkGroupInfo.getRegister();
   }
+
+  bool hasLDSKernelId() const { return LDSKernelId; }
 
   // Add special VGPR inputs
   void setWorkItemIDX(ArgDescriptor Arg) {

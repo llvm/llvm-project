@@ -1678,13 +1678,11 @@ public:
 
   bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
 
-  bool hasLDSKernelId() const { return LDSKernelId; }
-
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
 
   unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
 
-  unsigned getNumFreeKernargPreloadSGPRs();
+  unsigned getNumFreeUserSGPRs();
 
   void allocKernargPreloadSGPRs(unsigned NumSGPRs);
 
@@ -1696,12 +1694,11 @@ public:
     KernargSegmentPtrID = 4,
     DispatchIdID = 5,
     FlatScratchInitID = 6,
-    PrivateSegmentSizeID = 7,
-    LDSKernelIdID = 8
+    PrivateSegmentSizeID = 7
   };
 
   // Returns the size in number of SGPRs for preload user SGPR field.
-  static constexpr unsigned getNumUserSGPRForField(UserSGPRID ID) {
+  static unsigned getNumUserSGPRForField(UserSGPRID ID) {
     switch (ID) {
     case ImplicitBufferPtrID:
       return 2;
@@ -1718,8 +1715,6 @@ public:
     case FlatScratchInitID:
       return 2;
     case PrivateSegmentSizeID:
-      return 1;
-    case LDSKernelIdID:
       return 1;
     }
     llvm_unreachable("Unknown UserSGPRID.");
@@ -1749,13 +1744,9 @@ private:
 
   bool PrivateSegmentSize = false;
 
-  bool LDSKernelId = false;
-
   unsigned NumKernargPreloadSGPRs = 0;
 
   unsigned NumUsedUserSGPRs = 0;
-
-  unsigned NumSyntheticSGPRs = 0;
 };
 
 } // end namespace llvm

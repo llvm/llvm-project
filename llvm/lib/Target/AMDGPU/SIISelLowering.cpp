@@ -2422,7 +2422,7 @@ void SITargetLowering::allocateSpecialInputSGPRs(
   if (Info.hasWorkGroupIDZ())
     allocateSGPR32Input(CCInfo, ArgInfo.WorkGroupIDZ);
 
-  if (UserSGPRInfo.hasLDSKernelId())
+  if (Info.hasLDSKernelId())
     allocateSGPR32Input(CCInfo, ArgInfo.LDSKernelId);
 }
 
@@ -2545,8 +2545,7 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       unsigned Padding = ArgOffset - LastExplicitArgOffset;
       unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
       // Check for free user SGPRs for preloading.
-      if (PaddingSGPRs + NumAllocSGPRs >
-          SGPRInfo.getNumFreeKernargPreloadSGPRs()) {
+      if (PaddingSGPRs + NumAllocSGPRs > SGPRInfo.getNumFreeUserSGPRs()) {
         InPreloadSequence = false;
         break;
       }
@@ -2574,8 +2573,7 @@ void SITargetLowering::allocateLDSKernelId(CCState &CCInfo, MachineFunction &MF,
                                            const SIRegisterInfo &TRI,
                                            SIMachineFunctionInfo &Info) const {
   // Always allocate this last since it is a synthetic preload.
-  const GCNUserSGPRUsageInfo &UserSGPRInfo = Info.getUserSGPRInfo();
-  if (UserSGPRInfo.hasLDSKernelId()) {
+  if (Info.hasLDSKernelId()) {
     Register Reg = Info.addLDSKernelId();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
@@ -2825,7 +2823,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     const GCNUserSGPRUsageInfo &UserSGPRInfo = Info->getUserSGPRInfo();
     assert(!UserSGPRInfo.hasDispatchPtr() &&
            !UserSGPRInfo.hasKernargSegmentPtr() && !Info->hasWorkGroupInfo() &&
-           !UserSGPRInfo.hasLDSKernelId() && !Info->hasWorkItemIDX() &&
+           !Info->hasLDSKernelId() && !Info->hasWorkItemIDX() &&
            !Info->hasWorkItemIDY() && !Info->hasWorkItemIDZ());
     (void)UserSGPRInfo;
     if (!Subtarget->enableFlatScratch())
@@ -3025,8 +3023,8 @@ SDValue SITargetLowering::LowerFormalArguments(
           NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
         }
       } else {
-        // Hidden arguments that are in the kernel signature must be preloded to
-        // user SGPRs, or loaded via the implicit_arg ptr. Print a diagnostic
+        // Hidden arguments that are in the kernel signature must be preloaded
+        // to user SGPRs, or loaded via the implicit_arg ptr. Print a diagnostic
         // error if a hidden argument is in the argument list and is not
         // preloaded.
         if (Arg.isOrigArg()) {
@@ -3034,7 +3032,7 @@ SDValue SITargetLowering::LowerFormalArguments(
           if (OrigArg->hasAttribute("amdgpu-hidden-argument")) {
             DiagnosticInfoUnsupported NonPreloadHiddenArg(
                 *OrigArg->getParent(),
-                "Hidden argument in kernel signature was not preloaded",
+                "hidden argument in kernel signature was not preloaded",
                 DL.getDebugLoc());
             DAG.getContext()->diagnose(NonPreloadHiddenArg);
           }
