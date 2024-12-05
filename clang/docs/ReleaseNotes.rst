@@ -664,7 +664,8 @@ Bug Fixes in This Version
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
 - No longer incorrectly diagnosing use of a deleted destructor when the
-  selected overload of ``operator delete`` for that type is a destroying delete.
+  selected overload of ``operator delete`` for that type is a destroying delete
+  (#GH46818).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
