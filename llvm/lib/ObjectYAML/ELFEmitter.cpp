@@ -1796,7 +1796,7 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::NoteSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  if (!Section.Notes)
+  if (!Section.Notes || Section.Notes->empty())
     return;
 
   unsigned Align;
@@ -1811,6 +1811,13 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   default:
     reportError(Section.Name + ": invalid alignment for a note section: 0x" +
                 Twine::utohexstr(Section.AddressAlign));
+    return;
+  }
+
+  if (CBA.getOffset() != alignTo(CBA.getOffset(), Align)) {
+    reportError(Section.Name + ": invalid offset of a note section: 0x" +
+                Twine::utohexstr(CBA.getOffset()) + ", should be aligned to " +
+                Twine(Align));
     return;
   }
 
