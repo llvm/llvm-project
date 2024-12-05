@@ -78,6 +78,12 @@ static AffineExpr toAffineExpr(Value value,
       matchPattern(value, m_Op<arith::MulIOp>(m_Any(&lhs), m_Any(&rhs)))) {
     AffineExpr lhsE;
     AffineExpr rhsE;
+    // TODO: replace recursion with explicit stack.
+    // For the moment this can be tolerated as we only recurse on
+    // arith.addi and arith.muli, so there cannot be any infinite
+    // recursion. The depth of these expressions should be in most
+    // cases very manageable, as affine expressions should be as
+    // simple as `a + b * c`.
     if ((lhsE = toAffineExpr(lhs, affineDims, affineSymbols)) &&
         (rhsE = toAffineExpr(rhs, affineDims, affineSymbols))) {
       AffineExprKind kind;
