@@ -3526,9 +3526,9 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
     return SDValue();
 
   // Check that Index lies within VT
-  // TODO: Can we check if the Index is constant and known in-bounds?
-  if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits()))
-    return SDValue();
+  if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx))
+    if (VT.getVectorElementCount().getKnownMinValue() <= CIdx->getZExtValue())
+      return SDValue();
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
