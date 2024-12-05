@@ -426,6 +426,11 @@ public:
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
 
+  /// Clear collected statistics for targets belonging to this debugger. This
+  /// includes clearing symbol table and debug info parsing/index time for all
+  /// modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
+
 #ifndef SWIG
   /// Run the command interpreter.
   ///

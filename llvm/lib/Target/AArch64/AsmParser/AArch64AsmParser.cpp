@@ -3025,7 +3025,7 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
     return Kind == RegKind::Matrix ? RegNum : 0;
 
  if (Name.equals_insensitive("zt0"))
-    return Kind == RegKind::LookupTable ? AArch64::ZT0 : 0;
+    return Kind == RegKind::LookupTable ? unsigned(AArch64::ZT0) : 0;
 
   // The parsed register must be of RegKind Scalar
   if ((RegNum = MatchRegisterName(Name)))

@@ -70,4 +70,5 @@ static constexpr RT_API_ATTRS std::size_t MaxDescriptorSizeInBytes(
 }
 
 } // namespace Fortran::runtime
+
 #endif /* FORTRAN_RUNTIME_DESCRIPTOR_CONSTS_H_ */

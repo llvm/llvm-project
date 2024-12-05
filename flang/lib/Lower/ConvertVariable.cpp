@@ -1670,6 +1670,27 @@ cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
   return cuf::getDataAttribute(mlirContext, cudaAttr);
 }
 
+static bool
+isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
+                              const Fortran::semantics::Symbol &sym) {
+  const Fortran::lower::pft::FunctionLikeUnit *funit =
+      converter.getCurrentFunctionUnit();
+  if (!funit || funit->getHostAssoc().empty())
+    return false;
+  if (funit->getHostAssoc().isAssociated(sym))
+    return true;
+  // Consider that any capture of a variable that is in an equivalence with the
+  // symbol imply that the storage of the symbol may also be accessed inside
+  // symbol implies that the storage of the symbol may also be accessed inside
+
+  // the internal procedure and flag it as captured.
+  if (const auto *equivSet = Fortran::semantics::FindEquivalenceSet(sym))
+    for (const Fortran::semantics::EquivalenceObject &eqObj : *equivSet)
+      if (funit->getHostAssoc().isAssociated(eqObj.symbol))
+        return true;
+  return false;
+}
+
 /// Map a symbol to its FIR address and evaluated specification expressions.
 /// Not for symbols lowered to fir.box.
 /// Will optionally create fir.declare.
@@ -1705,8 +1726,12 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     if (len)
       lenParams.emplace_back(len);
     auto name = converter.mangleName(sym);
+    fir::FortranVariableFlagsEnum extraFlags = {};
+    if (isCapturedInInternalProcedure(converter, sym))
+      extraFlags = extraFlags | fir::FortranVariableFlagsEnum::internal_assoc;
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
+                                                  extraFlags);
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
                                                         sym);
@@ -1793,6 +1818,8 @@ void Fortran::lower::genDeclareSymbol(
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
+    if (isCapturedInInternalProcedure(converter, sym))
+      extraFlags = extraFlags | fir::FortranVariableFlagsEnum::internal_assoc;
     // FIXME: Using the ultimate symbol for translating symbol attributes will
     // lead to situations where the VOLATILE/ASYNCHRONOUS attributes are not
     // propagated to the hlfir.declare (these attributes can be added when

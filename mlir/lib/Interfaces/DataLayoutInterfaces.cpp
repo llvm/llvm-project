@@ -304,11 +304,11 @@ mlir::detail::getDevicePropertyValue(DataLayoutEntryInterface entry) {
 DataLayoutEntryList
 mlir::detail::filterEntriesForType(DataLayoutEntryListRef entries,
                                    TypeID typeID) {
-  return llvm::to_vector<4>(llvm::make_filter_range(
+  return llvm::filter_to_vector<4>(
       entries, [typeID](DataLayoutEntryInterface entry) {
         auto type = llvm::dyn_cast_if_present<Type>(entry.getKey());
         return type && type.getTypeID() == typeID;
-      }));
+      });
 }
 
 DataLayoutEntryInterface
@@ -393,9 +393,9 @@ static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
 
   // Create the list of non-null specs (null/missing specs can be safely
   // ignored) from the outermost to the innermost.
-  auto nonNullSpecs = llvm::to_vector<2>(llvm::make_filter_range(
+  auto nonNullSpecs = llvm::filter_to_vector<2>(
       llvm::reverse(specs),
-      [](DataLayoutSpecInterface iface) { return iface != nullptr; }));
+      [](DataLayoutSpecInterface iface) { return iface != nullptr; });
 
   // Combine the specs using the innermost as anchor.
   if (DataLayoutSpecInterface current = getSpec(leaf))

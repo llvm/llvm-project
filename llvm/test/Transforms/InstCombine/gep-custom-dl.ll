@@ -182,3 +182,11 @@ entry:
   ret i16 %E
 }
 
+define ptr @gep_too_large_type(ptr %p) {
+; CHECK-LABEL: @gep_too_large_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i32 -4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr inbounds [4294967295 x i32], ptr %p, i32 1
+  ret ptr %gep
+}

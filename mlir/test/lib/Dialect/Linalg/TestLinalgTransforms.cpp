@@ -70,17 +70,17 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
-  Option<bool> testGeneralizePadTensor{
-      *this, "test-generalize-pad-tensor",
+  Option<bool> testDecomposePadTensor{
+      *this, "test-decompose-pad-tensor",
       llvm::cl::desc("Test transform pad tensor by copying with generic ops"),
       llvm::cl::init(false)};
-  Option<bool> testGeneralizeTensorPackOp{
-      *this, "test-generalize-tensor-pack",
+  Option<bool> testDecomposeTensorPackOp{
+      *this, "test-decompose-tensor-pack",
       llvm::cl::desc("Test transform that generalizes pack ops into a sequence "
                      "of tensor and Linalg ops"),
       llvm::cl::init(false)};
-  Option<bool> testGeneralizeTensorUnPackOp{
-      *this, "test-generalize-tensor-unpack",
+  Option<bool> testDecomposeTensorUnPackOp{
+      *this, "test-decompose-tensor-unpack",
       llvm::cl::desc(
           "Test transform that generalizes unpack ops into a sequence "
           "of tensor and Linalg ops"),
@@ -166,21 +166,21 @@ static void applyLinalgToVectorPatterns(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyGeneralizePadTensorPatterns(func::FuncOp funcOp) {
+static void applyDecomposePadPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<GeneralizePadOpPattern>(funcOp.getContext());
+  patterns.add<DecomposePadOpPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyGeneralizeTensorPackPatterns(func::FuncOp funcOp) {
+static void applyDecomposeTensorPackPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<GeneralizeOuterUnitDimsPackOpPattern>(funcOp.getContext());
+  patterns.add<DecomposeOuterUnitDimsPackOpPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyGeneralizeTensorUnPackPatterns(func::FuncOp funcOp) {
+static void applyDecomposeTensorUnPackPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<GeneralizeOuterUnitDimsUnPackOpPattern>(funcOp.getContext());
+  patterns.add<DecomposeOuterUnitDimsUnPackOpPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
@@ -235,12 +235,12 @@ void TestLinalgTransforms::runOnOperation() {
     return applyVectorTransferForwardingPatterns(getOperation());
   if (testGenericToVectorPattern)
     return applyLinalgToVectorPatterns(getOperation());
-  if (testGeneralizePadTensor)
-    return applyGeneralizePadTensorPatterns(getOperation());
-  if (testGeneralizeTensorPackOp)
-    return applyGeneralizeTensorPackPatterns(getOperation());
-  if (testGeneralizeTensorUnPackOp)
-    return applyGeneralizeTensorUnPackPatterns(getOperation());
+  if (testDecomposePadTensor)
+    return applyDecomposePadPatterns(getOperation());
+  if (testDecomposeTensorPackOp)
+    return applyDecomposeTensorPackPatterns(getOperation());
+  if (testDecomposeTensorUnPackOp)
+    return applyDecomposeTensorUnPackPatterns(getOperation());
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getOperation());
   if (testBubbleUpExtractSliceOpPattern)

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/CUFCommon.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
 /// Retrieve or create the CUDA Fortran GPU module in the give in \p mod.
@@ -22,10 +24,22 @@ mlir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(mlir::ModuleOp mod,
   mlir::OpBuilder builder(ctx);
   auto gpuMod = builder.create<mlir::gpu::GPUModuleOp>(mod.getLoc(),
                                                        cudaDeviceModuleName);
-  llvm::SmallVector<mlir::Attribute> targets;
-  targets.push_back(mlir::NVVM::NVVMTargetAttr::get(ctx));
-  gpuMod.setTargetsAttr(builder.getArrayAttr(targets));
   mlir::Block::iterator insertPt(mod.getBodyRegion().front().end());
   symTab.insert(gpuMod, insertPt);
   return gpuMod;
+}
+
+bool cuf::isInCUDADeviceContext(mlir::Operation *op) {
+  if (!op)
+    return false;
+  if (op->getParentOfType<cuf::KernelOp>() ||
+      op->getParentOfType<mlir::gpu::GPUFuncOp>())
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr = funcOp->getAttrOfType<cuf::ProcAttributeAttr>(
+            cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host;
+    }
+  }
+  return false;
 }

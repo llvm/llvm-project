@@ -36,4 +36,5 @@ RT_API_ATTRS const char *InquiryKeywordHashDecode(
     char *buffer, std::size_t, InquiryKeywordHash);
 
 } // namespace Fortran::runtime::io
+
 #endif /* FORTRAN_RUNTIME_IO_API_FUNCS_H_ */

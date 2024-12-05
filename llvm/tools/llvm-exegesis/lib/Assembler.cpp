@@ -272,6 +272,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   std::vector<unsigned> RegistersSetUp;
+  RegistersSetUp.reserve(Key.RegisterInitialValues.size());
   for (const auto &InitValue : Key.RegisterInitialValues) {
     RegistersSetUp.push_back(InitValue.Register);
   }

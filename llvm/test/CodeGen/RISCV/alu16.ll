@@ -254,8 +254,8 @@ define i16 @slt(i16 %a, i16 %b) nounwind {
 ; RV32I-LABEL: slt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 16
-; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    slt a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -263,8 +263,8 @@ define i16 @slt(i16 %a, i16 %b) nounwind {
 ; RV64I-LABEL: slt:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 48
-; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    slt a0, a0, a1
 ; RV64I-NEXT:    ret

@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/ErrorHandling.h"

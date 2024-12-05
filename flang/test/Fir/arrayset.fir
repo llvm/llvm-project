@@ -1,7 +1,7 @@
 // RUN: tco %s | FileCheck %s
 // RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
 
-// CHECK-LABEL: define void @x(ptr %0)
+// CHECK-LABEL: define void @x(ptr nocapture %0)
 func.func @x(%arr : !fir.ref<!fir.array<10xf32>>) {
   %1 = arith.constant 0 : index
   %2 = arith.constant 9 : index
