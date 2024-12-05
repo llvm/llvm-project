@@ -1724,10 +1724,8 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
-    return copyFlags(
-        *CI,
-        emitMalloc(CI->getArgOperand(1), B, DL, TLI,
-                   CI->getArgOperand(0)->getType()->getPointerAddressSpace()));
+    return copyFlags(*CI, emitMalloc(CI->getArgOperand(0)->getType(),
+                                     CI->getArgOperand(1), B, DL, TLI));
 
   return nullptr;
 }
@@ -1762,139 +1760,123 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znwm12__hot_cold_t, HotCold,
-                            CI->getType()->getPointerAddressSpace());
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znwm:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znwm12__hot_cold_t, HotCold,
-                            CI->getType()->getPointerAddressSpace());
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znam12__hot_cold_t, HotCold,
-                            CI->getType()->getPointerAddressSpace());
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znam12__hot_cold_t, HotCold,
-                            CI->getType()->getPointerAddressSpace());
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold,
-          CI->getType()->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_size_returning_new:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdSizeReturningNew(
-          CI->getArgOperand(0), B, TLI, LibFunc_size_returning_new_hot_cold,
-          HotCold,
-          CI->getType()->getStructElementType(0)->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), B, TLI,
+          LibFunc_size_returning_new_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (OptimizeExistingHotColdNew)
       return emitHotColdSizeReturningNew(
-          CI->getArgOperand(0), B, TLI, LibFunc_size_returning_new_hot_cold,
-          HotCold,
-          CI->getType()->getStructElementType(0)->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), B, TLI,
+          LibFunc_size_returning_new_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdSizeReturningNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_size_returning_new_aligned_hot_cold, HotCold,
-          CI->getType()->getStructElementType(0)->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (OptimizeExistingHotColdNew)
       return emitHotColdSizeReturningNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_size_returning_new_aligned_hot_cold, HotCold,
-          CI->getType()->getStructElementType(0)->getPointerAddressSpace());
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
     return nullptr;
