@@ -699,7 +699,7 @@ unsigned TargetRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
 
   unsigned NReserved = 0;
   const BitVector Reserved = MF.getRegInfo().getReservedRegs();
-  for (unsigned PhysReg : RC->getRawAllocationOrder(MF))
+  for (MCPhysReg PhysReg : RC->getRawAllocationOrder(MF))
     if (Reserved.test(PhysReg))
       NReserved++;
 
