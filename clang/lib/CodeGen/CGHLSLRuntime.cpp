@@ -391,7 +391,7 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   }
   if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
     llvm::Function *GroupThreadIDIntrinsic =
-        CGM.getIntrinsic(Intrinsic::dx_thread_id_in_group);
+        CGM.getIntrinsic(getGroupThreadIdIntrinsic());
     return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
