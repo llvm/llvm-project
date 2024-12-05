@@ -175,29 +175,12 @@ define void @combine_fabs_int_f32(ptr %src, ptr %dst) {
 define void @combine_fabs_int_rmw_bfloat(ptr %ptr) nounwind {
 ; SSE-LABEL: combine_fabs_int_rmw_bfloat:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    movq %rdi, %rbx
-; SSE-NEXT:    movzwl (%rdi), %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    callq __truncsfbf2@PLT
-; SSE-NEXT:    pextrw $0, %xmm0, (%rbx)
-; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    andb $127, 1(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_fabs_int_rmw_bfloat:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    movq %rdi, %rbx
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    shll $16, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    callq __truncsfbf2@PLT
-; AVX-NEXT:    vpextrw $0, %xmm0, (%rbx)
-; AVX-NEXT:    popq %rbx
+; AVX-NEXT:    andb $127, 1(%rdi)
 ; AVX-NEXT:    retq
   %1 = load bfloat, ptr %ptr
   %2 = call bfloat @llvm.fabs.bf16(bfloat %1)
@@ -208,27 +191,16 @@ define void @combine_fabs_int_rmw_bfloat(ptr %ptr) nounwind {
 define void @combine_fabs_int_half(ptr %src, ptr %dst) nounwind {
 ; SSE-LABEL: combine_fabs_int_half:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    movq %rsi, %rbx
-; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
-; SSE-NEXT:    callq __extendhfsf2@PLT
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    callq __truncsfhf2@PLT
-; SSE-NEXT:    pextrw $0, %xmm0, (%rbx)
-; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    movzwl (%rdi), %eax
+; SSE-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; SSE-NEXT:    movw %ax, (%rsi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_fabs_int_half:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    movq %rsi, %rbx
-; AVX-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    callq __truncsfhf2@PLT
-; AVX-NEXT:    vpextrw $0, %xmm0, (%rbx)
-; AVX-NEXT:    popq %rbx
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; AVX-NEXT:    movw %ax, (%rsi)
 ; AVX-NEXT:    retq
   %1 = load half, ptr %src
   %2 = call half @llvm.fabs.f16(half %1)
