@@ -1465,13 +1465,10 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
 
   // Historically LLVM assume that size_t has same size as intptr_t (hence
   // deriving the size from sizeof(int*) in address space zero). This should
-  // work for most targets. For future consideration: DataLayout also implement
-  // getIndexSizeInBits which might map better to size_t compared to
-  // getPointerSizeInBits. Hard coding address space zero here might be
-  // unfortunate as well. Maybe getDefaultGlobalsAddressSpace() or
-  // getAllocaAddrSpace() is better.
+  // work for most targets. For future consideration: Hard coding address space
+  // zero here might be unfortunate. Maybe getMaxIndexSizeInBits() is better.
   unsigned AddressSpace = 0;
-  return M.getDataLayout().getPointerSizeInBits(AddressSpace);
+  return M.getDataLayout().getIndexSizeInBits(AddressSpace);
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
