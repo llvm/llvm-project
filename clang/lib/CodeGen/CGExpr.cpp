@@ -6360,7 +6360,8 @@ LValue CodeGenFunction::EmitPseudoObjectLValue(const PseudoObjectExpr *E) {
   return emitPseudoObjectExpr(*this, E, true, AggValueSlot::ignored()).LV;
 }
 
-llvm::Value* CodeGenFunction::PerformLoad(std::pair<Address, llvm::Value *> &GEP) {
+llvm::Value *
+CodeGenFunction::PerformLoad(std::pair<Address, llvm::Value *> &GEP) {
   Address GEPAddress = GEP.first;
   llvm::Value *Idx = GEP.second;
   llvm::Value *V = Builder.CreateLoad(GEPAddress, "load");
@@ -6370,8 +6371,9 @@ llvm::Value* CodeGenFunction::PerformLoad(std::pair<Address, llvm::Value *> &GEP
   return V;
 }
 
-llvm::Value* CodeGenFunction::PerformStore(std::pair<Address, llvm::Value *> &GEP,
-				           llvm::Value *Val) {
+llvm::Value *
+CodeGenFunction::PerformStore(std::pair<Address, llvm::Value *> &GEP,
+                              llvm::Value *Val) {
   Address GEPAddress = GEP.first;
   llvm::Value *Idx = GEP.second;
   if (Idx) {
@@ -6382,20 +6384,21 @@ llvm::Value* CodeGenFunction::PerformStore(std::pair<Address, llvm::Value *> &GE
   }
 }
 
-void CodeGenFunction::FlattenAccessAndType(Address Val, QualType SrcTy,
-			         SmallVector<llvm::Value *, 4> &IdxList,
-			         SmallVector<std::pair<Address, llvm::Value *>, 16> &GEPList,
-				 SmallVector<QualType> &FlatTypes) {
-  llvm::IntegerType *IdxTy = llvm::IntegerType::get(getLLVMContext(),32);
+void CodeGenFunction::FlattenAccessAndType(
+    Address Val, QualType SrcTy, SmallVector<llvm::Value *, 4> &IdxList,
+    SmallVector<std::pair<Address, llvm::Value *>, 16> &GEPList,
+    SmallVector<QualType> &FlatTypes) {
+  llvm::IntegerType *IdxTy = llvm::IntegerType::get(getLLVMContext(), 32);
   if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(SrcTy)) {
     uint64_t Size = CAT->getZExtSize();
-    for(unsigned i = 0; i < Size; i ++) {
+    for (unsigned i = 0; i < Size; i++) {
       // flatten each member of the array
       // add index of this element to index list
       llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, i);
       IdxList.push_back(Idx);
       // recur on this object
-      FlattenAccessAndType(Val, CAT->getElementType(), IdxList, GEPList, FlatTypes);
+      FlattenAccessAndType(Val, CAT->getElementType(), IdxList, GEPList,
+                           FlatTypes);
       // remove index of this element from index list
       IdxList.pop_back();
     }
@@ -6405,7 +6408,7 @@ void CodeGenFunction::FlattenAccessAndType(Address Val, QualType SrcTy,
     // do I need to check if its a cxx record decl?
 
     for (auto fieldIter = Record->field_begin(), fieldEnd = Record->field_end();
-	 fieldIter != fieldEnd; ++fieldIter) {
+         fieldIter != fieldEnd; ++fieldIter) {
       // get the field number
       unsigned FieldNum = RL.getLLVMFieldNo(*fieldIter);
       // can we just do *fieldIter->getFieldIndex();
@@ -6414,16 +6417,16 @@ void CodeGenFunction::FlattenAccessAndType(Address Val, QualType SrcTy,
       IdxList.push_back(Idx);
       // recur on the field
       FlattenAccessAndType(Val, fieldIter->getType(), IdxList, GEPList,
-			   FlatTypes);
+                           FlatTypes);
       // remove index of this element from index list
       IdxList.pop_back();
     }
   } else if (const VectorType *VT = SrcTy->getAs<VectorType>()) {
     llvm::Type *VTy = ConvertTypeForMem(SrcTy);
     CharUnits Align = getContext().getTypeAlignInChars(SrcTy);
-    Address GEP = Builder.CreateInBoundsGEP(Val, IdxList,
-						 VTy, Align, "vector.gep");
-    for(unsigned i = 0; i < VT->getNumElements(); i ++) {
+    Address GEP =
+        Builder.CreateInBoundsGEP(Val, IdxList, VTy, Align, "vector.gep");
+    for (unsigned i = 0; i < VT->getNumElements(); i++) {
       // add index to the list
       llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, i);
       // create gep. no need to recur since its always a scalar
@@ -6435,8 +6438,7 @@ void CodeGenFunction::FlattenAccessAndType(Address Val, QualType SrcTy,
     // create a gep
     llvm::Type *Ty = ConvertTypeForMem(SrcTy);
     CharUnits Align = getContext().getTypeAlignInChars(SrcTy);
-    Address GEP = Builder.CreateInBoundsGEP(Val, IdxList,
-						     Ty, Align,  "gep");
+    Address GEP = Builder.CreateInBoundsGEP(Val, IdxList, Ty, Align, "gep");
     GEPList.push_back({GEP, NULL});
     FlatTypes.push_back(SrcTy);
   }

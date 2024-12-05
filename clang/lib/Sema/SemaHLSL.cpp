@@ -2530,7 +2530,7 @@ bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
   QualType SrcTy = Src->getType();
   if (SrcTy->isScalarType()) // always a splat and this cast doesn't handle that
     return false;
-  
+
   if ((DestTy->isScalarType() || DestTy->isVectorType()) &&
       (SrcTy->isScalarType() || SrcTy->isVectorType()))
     return false;
@@ -2540,11 +2540,12 @@ bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
   llvm::SmallVector<QualType> SrcTypes;
   BuildFlattenedTypeList(SrcTy, SrcTypes);
 
-  // Usually the size of SrcTypes must be greater than or equal to the size of DestTypes.
+  // Usually the size of SrcTypes must be greater than or equal to the size of
+  // DestTypes.
   if (SrcTypes.size() >= DestTypes.size()) {
 
     unsigned i;
-    for(i = 0; i < DestTypes.size() && i < SrcTypes.size(); i ++) {
+    for (i = 0; i < DestTypes.size() && i < SrcTypes.size(); i++) {
       if (!CanPerformScalarCast(SrcTypes[i], DestTypes[i])) {
         return false;
       }

@@ -23,9 +23,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
-#include "clang/Sema/SemaHLSL.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <set>
@@ -2780,7 +2780,9 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   if (Self.getLangOpts().HLSL &&
       Self.HLSL().CanPerformAggregateCast(SrcExpr.get(), DestType)) {
     if (SrcTy->isConstantArrayType())
-      SrcExpr = Self.ImpCastExprToType(SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy), CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
+          CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
     Kind = CK_HLSLAggregateCast;
     return;
   }

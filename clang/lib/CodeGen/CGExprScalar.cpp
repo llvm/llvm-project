@@ -2264,8 +2264,8 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
 
 // RHS is an aggregate type
 static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
-					QualType RHSTy, QualType LHSTy,
-					SourceLocation Loc) {
+                                        QualType RHSTy, QualType LHSTy,
+                                        SourceLocation Loc) {
   SmallVector<llvm::Value *, 4> IdxList;
   SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
   SmallVector<QualType> SrcTypes; // Flattened type
@@ -2273,22 +2273,23 @@ static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
   // LHS is either a vector or a builtin?
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = LHSTy->getAs<VectorType>()) {
-    llvm::Value *V = CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
+    llvm::Value *V =
+        CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
     // write to V.
-    for(unsigned i = 0; i < VecTy->getNumElements(); i ++) {
+    for (unsigned i = 0; i < VecTy->getNumElements(); i++) {
       llvm::Value *Load = CGF.PerformLoad(LoadGEPList[i]);
-      llvm::Value *Cast = CGF.EmitScalarConversion(Load, SrcTypes[i],
-						   VecTy->getElementType(), Loc);
+      llvm::Value *Cast = CGF.EmitScalarConversion(
+          Load, SrcTypes[i], VecTy->getElementType(), Loc);
       V = CGF.Builder.CreateInsertElement(V, Cast, i);
     }
     return V;
   }
   // i its a builtin just do an extract element or load.
   assert(LHSTy->isBuiltinType() &&
-	 "Destination type must be a vector or builtin type.");
+         "Destination type must be a vector or builtin type.");
   // TODO add asserts about things being long enough
-  return CGF.EmitScalarConversion(CGF.PerformLoad(LoadGEPList[0]),
-				  LHSTy, SrcTypes[0], Loc);
+  return CGF.EmitScalarConversion(CGF.PerformLoad(LoadGEPList[0]), LHSTy,
+                                  SrcTypes[0], Loc);
 }
 
 // VisitCastExpr - Emit code for an explicit or implicit cast.  Implicit casts

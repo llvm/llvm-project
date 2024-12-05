@@ -4360,11 +4360,12 @@ public:
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
 
   llvm::Value *PerformLoad(std::pair<Address, llvm::Value *> &GEP);
-  llvm::Value *PerformStore(std::pair<Address, llvm::Value *> &GEP, llvm::Value *Val);
-  void FlattenAccessAndType(Address Val, QualType SrcTy,
-			    SmallVector<llvm::Value *, 4> &IdxList,
-			    SmallVector<std::pair<Address, llvm::Value *>, 16> &GEPList,
-			    SmallVector<QualType> &FlatTypes);
+  llvm::Value *PerformStore(std::pair<Address, llvm::Value *> &GEP,
+                            llvm::Value *Val);
+  void FlattenAccessAndType(
+      Address Val, QualType SrcTy, SmallVector<llvm::Value *, 4> &IdxList,
+      SmallVector<std::pair<Address, llvm::Value *>, 16> &GEPList,
+      SmallVector<QualType> &FlatTypes);
 
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);
