@@ -8,7 +8,7 @@
 
 #include "flang/Runtime/CUDA/allocatable.h"
 #include "flang-rt/descriptor.h"
-#include "../assign-impl.h"
+#include "../flang_rt/assign-impl.h"
 #include "../flang_rt/stat.h"
 #include "../flang_rt/terminator.h"
 #include "flang/Runtime/CUDA/common.h"

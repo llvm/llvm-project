@@ -38,10 +38,9 @@ add_flangrt_unittest(RuntimeTests
   TemporaryStack.cpp
   Transformational.cpp
 
-LINK_LIBS
-  flang_rt.unittest
+  LINK_LIBS
+    flang_rt.unittest
 )
-message("${LLVM_TOOLS_DIR}/not${CMAKE_EXECUTABLE_SUFFIX}")
 target_compile_definitions(RuntimeTests PRIVATE NOT_EXE="${LLVM_TOOLS_DIR}/not${CMAKE_EXECUTABLE_SUFFIX}")
 
 if (FLANG_RT_ENABLE_CUF)

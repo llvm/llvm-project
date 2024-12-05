@@ -39,22 +39,20 @@ if (TARGET FlangRTUnitTests)
   )
 endif ()
 
-set(FLANG_RT_TEST_DEPENDS
+
+add_custom_target(flang-rt-test-depends)
+set_target_properties(flang-rt-test-depends PROPERTIES FOLDER "Flang-RT/Meta")
+add_dependencies(flang-rt-test-depends
     FlangRTUnitTests
     flang_rt.unittest
     flang_rt.static
   )
 
-add_custom_target(flang-rt-test-depends)
-set_target_properties(flang-rt-test-depends PROPERTIES FOLDER "Fortran Runtime/Meta")
-add_dependencies(flang-rt-test-depends ${FLANG_RT_TEST_DEPENDS})
-
-add_lit_testsuite(check-flang-rt "Running the flang-rt regression tests"
+add_lit_testsuite(check-flang-rt "Running the Flang-RT regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS flang-rt-test-depends
   )
-set_target_properties(check-flang-rt PROPERTIES FOLDER "Fortran Runtime/Meta")
-
+set_target_properties(check-flang-rt PROPERTIES FOLDER "Flang-RT/Meta")
 
 add_lit_testsuites(flang-rt ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS flang-rt-test-depends

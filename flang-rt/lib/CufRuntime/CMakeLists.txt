@@ -12,11 +12,10 @@
 set(CUFRT_LIBNAME CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR})
 
 add_flangrt_library(${CUFRT_LIBNAME}
-  allocator.cpp
   allocatable.cpp
+  allocator.cpp
   descriptor.cpp
   kernel.cpp
-  memmove-function.cpp
   memory.cpp
   registration.cpp
 )

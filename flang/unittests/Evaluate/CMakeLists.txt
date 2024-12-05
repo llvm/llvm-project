@@ -43,8 +43,8 @@ add_flang_nongtest_unittest(intrinsics
   FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
-  FortranSemantics
   FortranSupport
+  FortranSemantics
   FortranParser
 )
 

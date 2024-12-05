@@ -84,13 +84,13 @@ set(host_sources
 )
 
 file(GLOB_RECURSE public_headers
-  "${FLANG_RT_SOURCE_DIR}/include/flang/Runtime/*.h"
-  "${FLANG_RT_SOURCE_DIR}/include/flang/Common/*.h"
+  "${FLANG_RT_SOURCE_DIR}/include/flang_rt/*.h"
+  "${FLANG_SOURCE_DIR}/include/flang/Common/*.h"
   )
 
 file(GLOB_RECURSE private_headers
-  "${FLANG_RT_SOURCE_DIR}/lib/Runtime/*.h"
-  "${FLANG_RT_SOURCE_DIR}/lib/Common/*.h"
+  "${FLANG_RT_SOURCE_DIR}/lib/flang_rt/*.h"
+  "${FLANG_SOURCE_DIR}/lib/Common/*.h"
   )
 
 
@@ -139,7 +139,7 @@ if (NOT WIN32)
 else()
   # Target for building all versions of the runtime
   add_custom_target(flang_rt)
-  set_target_properties(flang_rt PROPERTIES FOLDER "Fortran Runtime/Meta")
+  set_target_properties(flang_rt PROPERTIES FOLDER "Flang-RT/Meta")
 
   function (add_win_flangrt_library libtype suffix msvc_lib)
     set(name "flang_rt.${suffix}")
@@ -173,14 +173,14 @@ else()
   # roadblocks:
   #
   #  * Flang emits /DEFAULTLIB:flang_rt.dynamic.lib into
-  #    iso_fortran_env_impl.f90.obj. Since that file is itself part of
+  #    iso_fortran_env_impl.f90.obj. Because that file is itself part of
   #    flang_rt.dynamic, this results in a recursive dependency when invoking
   #    the linker.
   #
   #  * The externally-visible functions must either be annotated with
-  #    __declspec(dllexport), or listed in a exports file. A possible workaround
+  #    __declspec(dllexport), or listed in an exports file. A possible workaround
   #    is CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS which would also export the internal
-  #    C++ symbols and still requires global data symbols by be annotated
+  #    C++ symbols and still requires global data symbols to be annotated
   #    manually.
   #
   #add_win_flangrt_library(SHARED dynamic     MultiThreadedDLL)

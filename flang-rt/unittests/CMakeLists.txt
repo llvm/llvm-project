@@ -16,8 +16,8 @@ if (NOT TARGET llvm_gtest)
   build_gtest()
 endif ()
 
-# LLVM's modified GTest depends on LLVM, but not all runtime projects using
-# GTest also add the include search path.
+# LLVM's modified GTest depends on LLVM, but not all sibling runtime projects
+# creating a llvm_gtest target also use target_include_directories.
 target_include_directories(llvm_gtest PUBLIC "${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
 
 # Required because LLVMSupport is compiled with this option (by default).
@@ -30,7 +30,7 @@ endif()
 
 # Target that depends on all unittests
 add_custom_target(FlangRTUnitTests)
-set_target_properties(FlangRTUnitTests PROPERTIES FOLDER "Fortran Runtime/Meta")
+set_target_properties(FlangRTUnitTests PROPERTIES FOLDER "Flang-RT/Meta")
 
 
 function(add_flangrt_unittest_offload_properties target)
@@ -84,7 +84,7 @@ function(add_flangrt_nongtest_unittest test_name)
   endif()
 
   add_executable(${test_name}${suffix} ${ARG_UNPARSED_ARGUMENTS})
-  set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Fortran Runtime/Tests/Unit")
+  set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang-RT/Tests/Unit")
 
   target_include_directories(${test_name}${suffix} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
   target_include_directories(${test_name}${suffix} PRIVATE "${FLANG_SOURCE_DIR}/include")

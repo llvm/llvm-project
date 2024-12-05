@@ -9,7 +9,4 @@
 add_flang_library(FortranCommon
   binary-to-decimal.cpp
   decimal-to-binary.cpp
-
-  LINK_LIBS
-  MLIRIR
 )

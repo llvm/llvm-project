@@ -1,4 +1,4 @@
-#===-- cmake/modules/AddFlangRT.cmake -------------------------------===#
+#===-- cmake/modules/AddFlangRT.cmake --------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -58,11 +58,11 @@ function (add_flangrt_library name)
   add_library(${name} ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
 
   if (ARG_INSTALL_WITH_TOOLCHAIN)
-    set_target_properties(${name} PROPERTIES FOLDER "Fortran Runtime/Toolchain Libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Toolchain Libraries")
   elseif (ARG_OBJECT)
-    set_target_properties(${name} PROPERTIES FOLDER "Fortran Runtime/Object Libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Object Libraries")
   else ()
-    set_target_properties(${name} PROPERTIES FOLDER "Fortran Runtime/Libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "Flang-RT/Libraries")
   endif ()
 
   # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.

@@ -2,7 +2,6 @@
 
 ! RUN: %flang -L"%libdir" %s %deplibs -o %t
 ! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
-! RUN: rm -f %t
 
 ! CHECK: Hello, World!
 program hello
