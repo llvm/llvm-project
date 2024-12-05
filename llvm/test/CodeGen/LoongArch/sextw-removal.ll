@@ -1322,7 +1322,6 @@ define signext i32 @test20(<4 x i32> %v) {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ;
 ; NORMV-LABEL: test20:
