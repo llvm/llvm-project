@@ -1,0 +1,13 @@
+{
+  "Base": {
+    "RuntimeName": "__instrumentor_",
+    "PrintRuntimeSignatures": true
+  },
+  "Alloca": {
+    "Instrument": true,
+    "Value": true,
+    "AllocationSize": true,
+    "Alignment": true,
+    "ReplaceValue": true
+  }
+}
