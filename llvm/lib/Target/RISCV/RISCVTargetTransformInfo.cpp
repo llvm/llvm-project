@@ -2253,7 +2253,6 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Runtime = true;
   UP.UnrollRemainder = true;
   UP.UnrollAndJam = true;
-  UP.UnrollAndJamInnerLoopThreshold = 60;
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
