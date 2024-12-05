@@ -54,8 +54,8 @@ public:
   void moveToMain();
 
 private:
-  void enqueue(InputSectionBase *sec,
-               std::optional<uint64_t> offset = std::nullopt,
+  void enqueue(InputSectionBase *sec, uint64_t offset = 0,
+               Symbol *sym = nullptr,
                std::optional<LiveObject> parent = std::nullopt);
   void printWhyLive(Symbol *s) const;
   void markSymbol(Symbol *sym);
@@ -131,8 +131,13 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     // group/SHF_LINK_ORDER rules (b) if the associated text section should be
     // discarded, marking the LSDA will unnecessarily retain the text section.
     if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
-                      relSec->nextInSectionGroup)))
-      enqueue(relSec, offset, parent);
+                      relSec->nextInSectionGroup))) {
+      Symbol *canonicalSym = d;
+      if (offset >= d->value + d->size)
+        if (Symbol *s = relSec->getEnclosingSymbol(offset))
+          canonicalSym = s;
+      enqueue(relSec, offset, canonicalSym, parent);
+    }
     return;
   }
 
@@ -202,14 +207,13 @@ static bool isReserved(InputSectionBase *sec) {
 }
 
 template <class ELFT>
-void MarkLive<ELFT>::enqueue(InputSectionBase *sec,
-                             std::optional<uint64_t> offset,
-                             std::optional<LiveObject> parent) {
+void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
+                             Symbol *sym, std::optional<LiveObject> parent) {
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
   if (auto *ms = dyn_cast<MergeInputSection>(sec))
-    ms->getSectionPiece(offset.value_or(0)).live = true;
+    ms->getSectionPiece(offset).live = true;
 
   // Set Sec->Partition to the meet (i.e. the "minimum") of Partition and
   // Sec->Partition in the following lattice: 1 < other < 0. If Sec->Partition
@@ -218,9 +222,6 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec,
     return;
   sec->partition = sec->partition ? 1 : partition;
 
-  Defined *sym = nullptr;
-  if (offset)
-    sym = sec->getEnclosingSymbol(*offset);
   if (sym) {
     // If a specific symbol is referenced, the parent makes it alive, and it
     // (may) makes its section alive.
@@ -388,11 +389,11 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, std::nullopt, &sec);
+      enqueue(isec, 0, nullptr, &sec);
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, std::nullopt, &sec);
+      enqueue(sec.nextInSectionGroup, 0, nullptr, &sec);
   }
 
   printWhyLive(ctx.symtab->find("bar"));
