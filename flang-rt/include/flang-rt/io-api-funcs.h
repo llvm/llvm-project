@@ -13,7 +13,7 @@
 
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-consts.h"
 #include "flang/Runtime/iostat.h"
 #include "flang/Runtime/magic-numbers.h"
 #include <cinttypes>
