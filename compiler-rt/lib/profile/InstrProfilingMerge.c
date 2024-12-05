@@ -207,7 +207,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     // CountersDelta computes the offset into the in-buffer counter section.
     //
     // On WIN64, CountersDelta is truncated as well, so no need for signext.
-    char *SrcCounters = ptr_add_with_overflow(
+    const char *SrcCounters = ptr_add_with_overflow(
         SrcCountersStart, (uintptr_t)SrcData->CounterPtr - CountersDelta);
     // CountersDelta needs to be decreased as we advance to the next data
     // record.
@@ -227,8 +227,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
       }
     }
 
-    const char *SrcBitmap =
-        SrcBitmapStart + ((uintptr_t)SrcData->BitmapPtr - BitmapDelta);
+    const char *SrcBitmap = ptr_add_with_overflow(
+        SrcBitmapStart, (uintptr_t)SrcData->BitmapPtr - BitmapDelta);
     // BitmapDelta also needs to be decreased as we advance to the next data
     // record.
     BitmapDelta -= sizeof(*SrcData);
