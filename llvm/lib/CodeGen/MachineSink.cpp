@@ -44,6 +44,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -100,12 +101,6 @@ static cl::opt<bool>
                                 "register spills"),
                        cl::init(false), cl::Hidden);
 
-static cl::opt<bool> AggressivelySinkInstsIntoCycle(
-    "aggressive-sink-insts-into-cycles",
-    cl::desc("Aggressively sink instructions into cycles to avoid "
-             "register spills"),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<unsigned> SinkIntoCycleLimit(
     "machine-sink-cycle-limit",
     cl::desc(
@@ -135,6 +130,7 @@ class MachineSinking : public MachineFunctionPass {
   const MachineBranchProbabilityInfo *MBPI = nullptr;
   AliasAnalysis *AA = nullptr;
   RegisterClassInfo RegClassInfo;
+  TargetSchedModel SchedModel;
 
   // Remember which edges have been considered for breaking.
   SmallSet<std::pair<MachineBasicBlock *, MachineBasicBlock *>, 8>
@@ -262,7 +258,6 @@ private:
 
   void FindCycleSinkCandidates(MachineCycle *Cycle, MachineBasicBlock *BB,
                                SmallVectorImpl<MachineInstr *> &Candidates);
-  bool SinkIntoCycle(MachineCycle *Cycle, MachineInstr &I);
 
   bool isDead(const MachineInstr *MI) const;
   bool aggressivelySinkIntoCycle(
@@ -284,11 +279,14 @@ private:
   GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
                          AllSuccsCache &AllSuccessors) const;
 
-  std::vector<unsigned> &getBBRegisterPressure(const MachineBasicBlock &MBB);
+  std::vector<unsigned> &getBBRegisterPressure(const MachineBasicBlock &MBB,
+                                               bool UseCache = true);
 
   bool registerPressureSetExceedsLimit(unsigned NRegs,
                                        const TargetRegisterClass *RC,
                                        const MachineBasicBlock &MBB);
+
+  bool registerPressureExceedsLimit(const MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
@@ -787,48 +785,63 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
     EverMadeChange = true;
   }
 
-  if (SinkInstsIntoCycle || AggressivelySinkInstsIntoCycle) {
+  if (SinkInstsIntoCycle) {
     SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
+    SchedModel.init(STI);
+    enum CycleSinkStage { COPY, LOW_LATENCY, AGGRESSIVE, END };
 
-    DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
-        SunkInstrs;
-    for (auto *Cycle : Cycles) {
-      MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
-      if (!Preheader) {
-        LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
-        continue;
-      }
-      SmallVector<MachineInstr *, 8> Candidates;
-      FindCycleSinkCandidates(Cycle, Preheader, Candidates);
-
-      // Walk the candidates in reverse order so that we start with the use
-      // of a def-use chain, if there is any.
-      // TODO: Sort the candidates using a cost-model.
-      unsigned i = 0;
-
-      for (MachineInstr *I : llvm::reverse(Candidates)) {
-        // AggressivelySinkInstsIntoCycle sinks a superset of instructions
-        // relative to regular cycle sinking. Thus, this option supercedes
-        // captures all sinking opportunites done
-        if (AggressivelySinkInstsIntoCycle) {
-          aggressivelySinkIntoCycle(Cycle, *I, SunkInstrs);
-          EverMadeChange = true;
-          ++NumCycleSunk;
+    CycleSinkStage Stage = CycleSinkStage::COPY;
+    bool HasHighPressure;
+    do {
+      HasHighPressure = false;
+      DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
+          SunkInstrs;
+      for (auto *Cycle : Cycles) {
+        MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+        if (!Preheader) {
+          LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
           continue;
         }
+        SmallVector<MachineInstr *, 8> Candidates;
+        FindCycleSinkCandidates(Cycle, Preheader, Candidates);
 
-        if (i++ == SinkIntoCycleLimit) {
-          LLVM_DEBUG(dbgs() << "CycleSink:   Limit reached of instructions to "
-                               "be analysed.");
-          break;
+        unsigned i = 0;
+
+        // Walk the candidates in reverse order so that we start with the use
+        // of a def-use chain, if there is any.
+        // TODO: Sort the candidates using a cost-model.
+        for (MachineInstr *I : llvm::reverse(Candidates)) {
+          // CycleSinkStage::COPY: Sink a limited number of copies
+          if (Stage == CycleSinkStage::COPY) {
+            if (i++ == SinkIntoCycleLimit) {
+              LLVM_DEBUG(dbgs()
+                         << "CycleSink:   Limit reached of instructions to "
+                            "be analysed.");
+              break;
+            }
+
+            if (!I->isCopy())
+              continue;
+          }
+
+          // CycleSinkStage::LOW_LATENCY: sink unlimited number of instructions
+          // which the target specifies as low-latency
+          if (Stage == CycleSinkStage::LOW_LATENCY &&
+              !TII->hasLowDefLatency(SchedModel, *I, 0))
+            continue;
+
+          if (!aggressivelySinkIntoCycle(Cycle, *I, SunkInstrs))
+            break;
+          EverMadeChange = true;
+          ++NumCycleSunk;
         }
 
-        if (!SinkIntoCycle(Cycle, *I))
-          break;
-        EverMadeChange = true;
-        ++NumCycleSunk;
+        // Recalculate the pressure after sinking
+        if (!HasHighPressure)
+          HasHighPressure = registerPressureExceedsLimit(*Preheader);
       }
-    }
+      Stage = (CycleSinkStage)(Stage + 1);
+    } while (HasHighPressure && Stage < CycleSinkStage::END);
   }
 
   HasStoreCache.clear();
@@ -1081,13 +1094,15 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
 }
 
 std::vector<unsigned> &
-MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB) {
+MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB,
+                                      bool UseCache) {
   // Currently to save compiling time, MBB's register pressure will not change
   // in one ProcessBlock iteration because of CachedRegisterPressure. but MBB's
   // register pressure is changed after sinking any instructions into it.
   // FIXME: need a accurate and cheap register pressure estiminate model here.
+
   auto RP = CachedRegisterPressure.find(&MBB);
-  if (RP != CachedRegisterPressure.end())
+  if (UseCache && RP != CachedRegisterPressure.end())
     return RP->second;
 
   RegionPressure Pressure;
@@ -1111,6 +1126,12 @@ MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB) {
   }
 
   RPTracker.closeRegion();
+
+  if (RP != CachedRegisterPressure.end()) {
+    CachedRegisterPressure[&MBB] = RPTracker.getPressure().MaxSetPressure;
+    return CachedRegisterPressure[&MBB];
+  }
+
   auto It = CachedRegisterPressure.insert(
       std::make_pair(&MBB, RPTracker.getPressure().MaxSetPressure));
   return It.first->second;
@@ -1126,6 +1147,21 @@ bool MachineSinking::registerPressureSetExceedsLimit(
     if (Weight + BBRegisterPressure[*PS] >=
         TRI->getRegPressureSetLimit(*MBB.getParent(), *PS))
       return true;
+  return false;
+}
+
+// Recalculate RP and check if any pressure set exceeds the set limit.
+bool MachineSinking::registerPressureExceedsLimit(
+    const MachineBasicBlock &MBB) {
+  std::vector<unsigned> BBRegisterPressure = getBBRegisterPressure(MBB, false);
+
+  for (unsigned PS = 0; PS < BBRegisterPressure.size(); ++PS) {
+    if (BBRegisterPressure[PS] >=
+        TRI->getRegPressureSetLimit(*MBB.getParent(), PS)) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -1656,10 +1692,6 @@ bool MachineSinking::aggressivelySinkIntoCycle(
   if (I.getNumDefs() > 1)
     return false;
 
-  // Only sink instructions which the target considers to be low latency
-  if (!TII->isLowLatencyInstruction(I))
-    return false;
-
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
   MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
   assert(Preheader && "Cycle sink needs a preheader block");
@@ -1738,86 +1770,6 @@ bool MachineSinking::aggressivelySinkIntoCycle(
   // If we have replaced all uses, then delete the dead instruction
   if (isDead(&I))
     I.eraseFromParent();
-  return true;
-}
-
-/// Sink instructions into cycles if profitable. This especially tries to
-/// prevent register spills caused by register pressure if there is little to no
-/// overhead moving instructions into cycles.
-bool MachineSinking::SinkIntoCycle(MachineCycle *Cycle, MachineInstr &I) {
-  LLVM_DEBUG(dbgs() << "CycleSink: Finding sink block for: " << I);
-  MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
-  assert(Preheader && "Cycle sink needs a preheader block");
-  MachineBasicBlock *SinkBlock = nullptr;
-  bool CanSink = true;
-  const MachineOperand &MO = I.getOperand(0);
-
-  for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
-    LLVM_DEBUG(dbgs() << "CycleSink:   Analysing use: " << MI);
-    if (!Cycle->contains(MI.getParent())) {
-      LLVM_DEBUG(dbgs() << "CycleSink:   Use not in cycle, can't sink.\n");
-      CanSink = false;
-      break;
-    }
-
-    // FIXME: Come up with a proper cost model that estimates whether sinking
-    // the instruction (and thus possibly executing it on every cycle
-    // iteration) is more expensive than a register.
-    // For now assumes that copies are cheap and thus almost always worth it.
-    if (!MI.isCopy()) {
-      LLVM_DEBUG(dbgs() << "CycleSink:   Use is not a copy\n");
-      CanSink = false;
-      break;
-    }
-    if (!SinkBlock) {
-      SinkBlock = MI.getParent();
-      LLVM_DEBUG(dbgs() << "CycleSink:   Setting sink block to: "
-                        << printMBBReference(*SinkBlock) << "\n");
-      continue;
-    }
-    SinkBlock = DT->findNearestCommonDominator(SinkBlock, MI.getParent());
-    if (!SinkBlock) {
-      LLVM_DEBUG(dbgs() << "CycleSink:   Can't find nearest dominator\n");
-      CanSink = false;
-      break;
-    }
-    LLVM_DEBUG(dbgs() << "CycleSink:   Setting nearest common dom block: "
-                      << printMBBReference(*SinkBlock) << "\n");
-  }
-
-  if (!CanSink) {
-    LLVM_DEBUG(dbgs() << "CycleSink: Can't sink instruction.\n");
-    return false;
-  }
-  if (!SinkBlock) {
-    LLVM_DEBUG(dbgs() << "CycleSink: Not sinking, can't find sink block.\n");
-    return false;
-  }
-  if (SinkBlock == Preheader) {
-    LLVM_DEBUG(
-        dbgs() << "CycleSink: Not sinking, sink block is the preheader\n");
-    return false;
-  }
-  if (SinkBlock->sizeWithoutDebugLargerThan(SinkLoadInstsPerBlockThreshold)) {
-    LLVM_DEBUG(
-        dbgs() << "CycleSink: Not Sinking, block too large to analyse.\n");
-    return false;
-  }
-
-  LLVM_DEBUG(dbgs() << "CycleSink: Sinking instruction!\n");
-  SinkBlock->splice(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()), Preheader,
-                    I);
-
-  // Conservatively clear any kill flags on uses of sunk instruction
-  for (MachineOperand &MO : I.operands()) {
-    if (MO.isReg() && MO.readsReg())
-      RegsToClearKillFlags.insert(MO.getReg());
-  }
-
-  // The instruction is moved from its basic block, so do not retain the
-  // debug information.
-  assert(!I.isDebugInstr() && "Should not sink debug inst");
-  I.setDebugLoc(DebugLoc());
   return true;
 }
 

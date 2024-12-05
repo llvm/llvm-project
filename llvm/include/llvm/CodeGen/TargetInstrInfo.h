@@ -1806,11 +1806,6 @@ public:
   unsigned defaultDefLatency(const MCSchedModel &SchedModel,
                              const MachineInstr &DefMI) const;
 
-  /// Return true if this instruction is considered low latency.
-  virtual bool isLowLatencyInstruction(const MachineInstr &MI) const {
-    return false;
-  };
-
   /// Return true if this opcode has high latency to its result.
   virtual bool isHighLatencyDef(int opc) const { return false; }
 

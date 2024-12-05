@@ -1291,7 +1291,7 @@ public:
   uint64_t getDefaultRsrcDataFormat() const;
   uint64_t getScratchRsrcWords23() const;
 
-  bool isLowLatencyInstruction(const MachineInstr &MI) const override;
+  bool isLowLatencyInstruction(const MachineInstr &MI) const;
   bool isHighLatencyDef(int Opc) const override;
 
   /// Return the descriptor of the target-specific machine instruction

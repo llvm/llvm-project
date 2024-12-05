@@ -8676,13 +8676,7 @@ uint64_t SIInstrInfo::getScratchRsrcWords23() const {
 bool SIInstrInfo::isLowLatencyInstruction(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
 
-  if (MI.isCopy() || isSMRD(Opc))
-    return true;
-
-  if (SchedModel.hasInstrSchedModel())
-    return SchedModel.computeInstrLatency(Opc) < 4;
-
-  return false;
+  return isSMRD(Opc);
 }
 
 bool SIInstrInfo::isHighLatencyDef(int Opc) const {
