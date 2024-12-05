@@ -33,4 +33,3 @@ _start:
 
   andq 0(%rip), %rax, %r16
   .reloc .-4, R_X86_64_CODE_6_GOTTPOFF, tls0-4
-
