@@ -156,7 +156,7 @@ namespace dtor_access {
   struct T {
     void operator delete(T *, std::destroying_delete_t);
   protected:
-    virtual ~T();
+    virtual ~T(); // expected-note {{here}}
   };
 
   struct U : T {
@@ -165,7 +165,7 @@ namespace dtor_access {
     ~U() override;
   };
 
-  void g() { delete (T *)new U; }
+  void g() { delete (T *)new U; } // expected-error {{calling a protected destructor of class 'T'}}
 }
 
 namespace delete_from_new {

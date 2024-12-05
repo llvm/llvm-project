@@ -3768,6 +3768,28 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     DeclarationName DeleteName = Context.DeclarationNames.getCXXOperatorName(
                                       ArrayForm ? OO_Array_Delete : OO_Delete);
 
+    // C++20 [expr.delete]p6: If the value of the operand of the delete-
+    // expression is not a null pointer value and the selected deallocation
+    // function (see below) is not a destroying operator delete, the delete-
+    // expression will invoke the destructor (if any) for the object or the
+    // elements of the array being deleted.
+    //
+    // This means we should not look at the destructor for a destroying
+    // delete operator, as that destructor is never called, unless the
+    // destructor is virtual (see [expr.delete]p8.1) because then the
+    // selected operator depends on the dynamic type of the pointer.
+    auto IsDtorCalled = [](const CXXMethodDecl *Dtor,
+                           const FunctionDecl *OperatorDelete) {
+      if (!OperatorDelete)
+        return true;
+
+      if (!OperatorDelete->isDestroyingOperatorDelete())
+        return true;
+
+      // We have a destroying operator delete, so it depends on the dtor.
+      return Dtor->isVirtual();
+    };
+
     if (PointeeRD) {
       if (!UseGlobal &&
           FindDeallocationFunction(StartLoc, PointeeRD, DeleteName,
@@ -3792,21 +3814,14 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
               .HasSizeT;
       }
 
-      // C++20 [expr.delete]p6: If the value of the operand of the delete-
-      // expression is not a null pointer value and the selected deallocation
-      // function (see below) is not a destroying operator delete, the delete-
-      // expression will invoke the destructor (if any) for the object or the
-      // elements of the array being deleted.
-      //
-      // This means we should not look at the destructor for a destroying
-      // delete operator, as that destructor is never called.
-      if (!PointeeRD->hasIrrelevantDestructor() &&
-          (!OperatorDelete || !OperatorDelete->isDestroyingOperatorDelete())) {
+      if (!PointeeRD->hasIrrelevantDestructor()) {
         if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-          MarkFunctionReferenced(StartLoc,
-                                 const_cast<CXXDestructorDecl *>(Dtor));
-          if (DiagnoseUseOfDecl(Dtor, StartLoc))
-            return ExprError();
+          if (IsDtorCalled(Dtor, OperatorDelete)) {
+            MarkFunctionReferenced(StartLoc,
+                                   const_cast<CXXDestructorDecl *>(Dtor));
+            if (DiagnoseUseOfDecl(Dtor, StartLoc))
+              return ExprError();
+          }
         }
       }
 
@@ -3839,13 +3854,13 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     MarkFunctionReferenced(StartLoc, OperatorDelete);
 
     // Check access and ambiguity of destructor if we're going to call it.
-    // Note that this is required even for a virtual delete, but not for a
-    // destroying delete operator.
+    // Note that this is required even for a virtual delete.
     bool IsVirtualDelete = false;
-    if (PointeeRD && !OperatorDelete->isDestroyingOperatorDelete()) {
+    if (PointeeRD) {
       if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-        CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
-                              PDiag(diag::err_access_dtor) << PointeeElem);
+        if (IsDtorCalled(Dtor, OperatorDelete))
+          CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
+                                PDiag(diag::err_access_dtor) << PointeeElem);
         IsVirtualDelete = Dtor->isVirtual();
       }
     }

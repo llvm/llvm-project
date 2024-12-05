@@ -44,10 +44,27 @@ private:
   ~T();
 };
 
-void foo(S *s) {
+void foo(S *s, T *t) {
   delete s; // Was rejected, is intended to be accepted.
+  delete t; // Was rejected, is intended to be accepted.
 }
 
-void bar(T *t) {
-  delete t; // Was rejected, is intended to be accepted.
+// However, if the destructor is virtual, then it has to be accessible because
+// the behavior depends on which operator delete is selected and that is based
+// on the dynamic type of the pointer.
+struct U {
+  virtual ~U() = delete; // expected-note {{here}}
+  void operator delete(U *, std::destroying_delete_t) noexcept {}
+};
+
+struct V {
+  void operator delete(V *, std::destroying_delete_t) noexcept {}
+private:
+  virtual ~V(); // expected-note {{here}}
+};
+
+void bar(U *u, V *v) {
+  // Both should be rejected because they have virtual destructors.
+  delete u; // expected-error {{attempt to use a deleted function}}
+  delete v; // expected-error {{calling a private destructor of class 'V'}}
 }
