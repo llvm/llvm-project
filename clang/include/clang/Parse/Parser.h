@@ -3052,7 +3052,6 @@ private:
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
-
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
