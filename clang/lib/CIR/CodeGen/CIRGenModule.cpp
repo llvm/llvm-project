@@ -67,8 +67,8 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       return;
     }
   } else {
-    const auto *vd = cast<VarDecl>(global);
-    assert(vd->isFileVarDecl() && "Cannot emit local var decl as global");
+    assert(cast<VarDecl>(global)->isFileVarDecl() &&
+           "Cannot emit local var decl as global");
   }
 
   // TODO(CIR): Defer emitting some global definitions until later

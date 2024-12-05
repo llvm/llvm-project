@@ -86,7 +86,10 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 def GlobalOp : CIR_Op<"global"> {
   let summary = "Declare or define a global variable";
   let description = [{
-    ... lots of text to be added later ...
+    The `cir.global` operation declares or defines a named global variable.
+
+    The backing memory for the variable is allocated statically and is
+    described by the type of the variable.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type);
@@ -112,7 +115,8 @@ def GlobalOp : CIR_Op<"global"> {
 def FuncOp : CIR_Op<"func"> {
   let summary = "Declare or define a function";
   let description = [{
-    ... lots of text to be added later ...
+    THe `cir.func` operation defines a function, similar to the `mlir::FuncOp`
+    built-in.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name);

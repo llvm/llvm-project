@@ -35,7 +35,9 @@ def CIR_IntType : CIR_Type<"Int", "int",
     [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
-    CIR type that represents integer types with arbitrary precision.
+    CIR type that represents integer types with arbitrary precision, including
+    standard integral types such as `int` and `long`, extended integral types
+    such as `__int128`, and arbitrary width types such as `_BitInt(n)`.
 
     Those integer types that are directly available in C/C++ standard are called
     primitive integer types. Said types are: `signed char`, `short`, `int`,

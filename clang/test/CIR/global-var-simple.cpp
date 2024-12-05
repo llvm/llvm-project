@@ -51,3 +51,9 @@ char16_t c16;
 
 char32_t c32;
 // CHECK: cir.global @c32 : !cir.int<u, 32>
+
+_BitInt(20) sb20;
+// CHECK: cir.global @sb20 : !cir.int<s, 20>
+
+unsigned _BitInt(48) ub48;
+// CHECK: cir.global @ub48 : !cir.int<u, 48>
