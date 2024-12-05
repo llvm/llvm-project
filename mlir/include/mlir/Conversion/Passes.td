@@ -884,6 +884,29 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MeshToMPI
+//===----------------------------------------------------------------------===//
+
+def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
+  let summary = "Convert Mesh dialect to MPI dialect.";
+  let constructor = "mlir::createConvertMeshToMPIPass()";
+  let description = [{
+    This pass converts communication operations from the Mesh dialect to the
+    MPI dialect.
+    If it finds a global named "static_mpi_rank" it will use that splat value
+    instead of calling MPI_Comm_rank. This allows optimizations like constant
+    shape propagation and fusion because shard/partition sizes depend on the
+    rank.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "mpi::MPIDialect",
+    "scf::SCFDialect",
+    "bufferization::BufferizationDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVMToLLVM
 //===----------------------------------------------------------------------===//
 

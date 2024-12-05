@@ -10,8 +10,8 @@ define void @foo(ptr addrspace(1) align 8 dereferenceable_or_null(16), ptr addrs
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[ITER_CHECK:%.*]]
 ; CHECK:       iter.check:
-; CHECK-NEXT:    [[DOT10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0:%.*]], i64 16
-; CHECK-NEXT:    [[DOT12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP1:%.*]], i64 16
+; CHECK-NEXT:    [[DOT10:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP0:%.*]], i64 16
+; CHECK-NEXT:    [[DOT12:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP1:%.*]], i64 16
 ; CHECK-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2:%.*]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
@@ -33,17 +33,17 @@ define void @foo(ptr addrspace(1) align 8 dereferenceable_or_null(16), ptr addrs
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[DOT12]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i64 32
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i64 64
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i64 96
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP5]], i64 32
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP5]], i64 64
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP5]], i64 96
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP5]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP6]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP7]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x ptr addrspace(1)>, ptr addrspace(1) [[TMP8]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[DOT10]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP9]], i64 32
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP9]], i64 64
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP9]], i64 96
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP9]], i64 32
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP9]], i64 64
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP9]], i64 96
 ; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD]], ptr addrspace(1) [[TMP9]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD4]], ptr addrspace(1) [[TMP10]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    store <4 x ptr addrspace(1)> [[WIDE_LOAD5]], ptr addrspace(1) [[TMP11]], align 8, !alias.scope [[META3]], !noalias [[META0]]

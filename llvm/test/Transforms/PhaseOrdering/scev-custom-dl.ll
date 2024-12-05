@@ -21,7 +21,7 @@ define void @test1(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-NEXT:    --> {%p,+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((504 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add.ptr = getelementptr inbounds i32, ptr %p.addr.02, i32 %div1
 ; CHECK-NEXT:    --> {((4 * (%d /u 4))<nuw><nsw> + %p),+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((508 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %div1
+; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i32, ptr %add.ptr, i32 %div1
 ; CHECK-NEXT:    --> {((8 * (%d /u 4)) + %p),+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((512 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }
@@ -68,7 +68,7 @@ define void @test1a(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-NEXT:    --> {%p,+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((504 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add.ptr = getelementptr inbounds i32, ptr %p.addr.02, i32 %div1
 ; CHECK-NEXT:    --> {((4 * (%d /u 2))<nuw><nsw> + %p),+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((508 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %div1
+; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i32, ptr %add.ptr, i32 %div1
 ; CHECK-NEXT:    --> {((8 * (%d /u 2)) + %p),+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((512 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }

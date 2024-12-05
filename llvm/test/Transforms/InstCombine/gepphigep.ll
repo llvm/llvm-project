@@ -54,7 +54,7 @@ define i32 @test2(ptr %dm, i1 %tmp4, i64 %tmp9, i64 %tmp19) {
 ; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[TMP1]], i64 [[TMP19:%.*]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 4
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP10]], i64 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP25]]
 ;
@@ -86,12 +86,12 @@ define i32 @test3(ptr %dm, i1 %tmp4, i64 %tmp9, i64 %tmp19, i64 %tmp20, i64 %tmp
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP19]], [[BB1]] ], [ [[TMP20]], [[BB2]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = invoke i32 @foo1(i32 11)
-; CHECK-NEXT:    to label [[BB4:%.*]] unwind label [[BB5:%.*]]
+; CHECK-NEXT:            to label [[BB4:%.*]] unwind label [[BB5:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[TMP27:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @_ZTIi
+; CHECK-NEXT:            catch ptr @_ZTIi
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT4:%.*]], ptr [[TMP1]], i64 [[TMP21:%.*]], i32 1, i32 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP35]], align 4
@@ -189,7 +189,7 @@ define void @test5(ptr %idx, ptr %in) #0 {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[IN:%.*]], align 8
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    [[CMP23:%.*]] = icmp eq i8 [[TMP1]], 54
 ; CHECK-NEXT:    br i1 [[CMP23]], label [[WHILE_COND:%.*]], label [[IF_THEN_25:%.*]]
@@ -211,7 +211,7 @@ define void @test5(ptr %idx, ptr %in) #0 {
 ; CHECK:       while.cond.57:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[INCDEC_PTR34]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
-; CHECK-NEXT:    [[ARRAYIDX61:%.*]] = getelementptr inbounds i16, ptr [[IDX:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[ARRAYIDX61:%.*]] = getelementptr inbounds nuw i16, ptr [[IDX:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX61]], align 2
 ; CHECK-NEXT:    [[AND63:%.*]] = and i16 [[TMP5]], 2048
 ; CHECK-NEXT:    [[TOBOOL64:%.*]] = icmp eq i16 [[AND63]], 0

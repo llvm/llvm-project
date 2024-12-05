@@ -70,6 +70,11 @@ std::string lld::toString(const coff::InputFile *file) {
       .str();
 }
 
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s,
+                                       const InputFile *f) {
+  return s << toString(f);
+}
+
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
@@ -201,7 +206,7 @@ void ObjFile::initializeECThunks() {
       case Arm64ECThunkType::GuestExit:
         break;
       default:
-        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+        Warn(ctx) << "Ignoring unknown EC thunk type " << entry->type;
       }
     }
   }
@@ -513,8 +518,8 @@ void ObjFile::initializeSymbols() {
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
       StringRef name = check(coffObj->getSymbolName(sym));
-      log("comdat section " + name +
-          " without leader and unassociated, discarding");
+      Log(ctx) << "comdat section " << name
+               << " without leader and unassociated, discarding";
       continue;
     }
     symbols[i] = createRegular(sym);
@@ -615,10 +620,9 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    log(("conflicting comdat type for " + toString(ctx, *leader) + ": " +
-         Twine((int)leaderSelection) + " in " + toString(leader->getFile()) +
-         " and " + Twine((int)selection) + " in " + toString(this))
-            .str());
+    Log(ctx) << "conflicting comdat type for " << toString(ctx, *leader) << ": "
+             << (int)leaderSelection << " in " << leader->getFile() << " and "
+             << (int)selection << " in " << this;
     ctx.symtab.reportDuplicate(leader, this);
     return;
   }

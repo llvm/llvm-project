@@ -14,7 +14,7 @@ define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %f
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[NFACE]] to i64
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[TMP0]]
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[FACE_CELL]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[NFACE]], 4
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_BODY_PREHEADER14:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER14]]:
@@ -48,10 +48,10 @@ define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %f
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[INDVARS_IV_PH]], %[[FOR_BODY_PREHEADER14]] ]
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_NEXT_2]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_NEXT_2]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[GEP_3]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[FACE_CELL]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[GEP]], align 4, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; CHECK-NEXT:    [[IDXPROM3_3:%.*]] = sext i32 [[TMP22]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX4_3:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[IDXPROM3_3]]
 ; CHECK-NEXT:    [[IDXPROM5_3:%.*]] = sext i32 [[TMP23]] to i64

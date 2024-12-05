@@ -70,23 +70,23 @@ void test_argpass_simple(PST *p) {
 // CHECK-AAPCS:      define dso_local void @test_argpass_simple(ptr nocapture noundef readonly %p)
 // CHECK-AAPCS-NEXT: entry:
 // CHECK-AAPCS-NEXT: %0 = load <2 x i8>, ptr %p, align 16
-// CHECK-AAPCS-NEXT: %cast.scalable = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> %0, i64 0)
+// CHECK-AAPCS-NEXT: %cast.scalable = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %0, i64 0)
 // CHECK-AAPCS-NEXT: %1 = bitcast <vscale x 2 x i8> %cast.scalable to <vscale x 16 x i1>
 // CHECK-AAPCS-NEXT: %2 = getelementptr inbounds nuw i8, ptr %p, i64 16
 // CHECK-AAPCS-NEXT: %3 = load <2 x double>, ptr %2, align 16
-// CHECK-AAPCS-NEXT: %cast.scalable1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %3, i64 0)
+// CHECK-AAPCS-NEXT: %cast.scalable1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> poison, <2 x double> %3, i64 0)
 // CHECK-AAPCS-NEXT: %4 = getelementptr inbounds nuw i8, ptr %p, i64 32
 // CHECK-AAPCS-NEXT: %5 = load <4 x float>, ptr %4, align 16
-// CHECK-AAPCS-NEXT: %cast.scalable2 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %5, i64 0)
+// CHECK-AAPCS-NEXT: %cast.scalable2 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %5, i64 0)
 // CHECK-AAPCS-NEXT: %6 = getelementptr inbounds nuw i8, ptr %p, i64 48
 // CHECK-AAPCS-NEXT: %7 = load <4 x float>, ptr %6, align 16
-// CHECK-AAPCS-NEXT: %cast.scalable3 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %7, i64 0)
+// CHECK-AAPCS-NEXT: %cast.scalable3 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %7, i64 0)
 // CHECK-AAPCS-NEXT: %8 = getelementptr inbounds nuw i8, ptr %p, i64 64
 // CHECK-AAPCS-NEXT: %9 = load <16 x i8>, ptr %8, align 16
-// CHECK-AAPCS-NEXT: %cast.scalable4 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> %9, i64 0)
+// CHECK-AAPCS-NEXT: %cast.scalable4 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison, <16 x i8> %9, i64 0)
 // CHECK-AAPCS-NEXT: %10 = getelementptr inbounds nuw i8, ptr %p, i64 80
 // CHECK-AAPCS-NEXT: %11 = load <2 x i8>, ptr %10, align 16
-// CHECK-AAPCS-NEXT: %cast.scalable5 = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> %11, i64 0)
+// CHECK-AAPCS-NEXT: %cast.scalable5 = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %11, i64 0)
 // CHECK-AAPCS-NEXT: %12 = bitcast <vscale x 2 x i8> %cast.scalable5 to <vscale x 16 x i1>
 // CHECK-AAPCS-NEXT: tail call void @argpass_simple_callee(<vscale x 16 x i1> %1, <vscale x 2 x double> %cast.scalable1, <vscale x 4 x float> %cast.scalable2, <vscale x 4 x float> %cast.scalable3, <vscale x 16 x i8> %cast.scalable4, <vscale x 16 x i1> %12)
 // CHECK-AAPCS-NEXT: ret void
@@ -417,7 +417,7 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS-EMPTY:
 // CHECK-AAPCS-NEXT: vaarg.on_stack:                                   ; preds = %vaarg.maybe_reg, %entry
 // CHECK-AAPCS-NEXT:   %stack = load ptr, ptr %ap, align 8
-// CHECK-AAPCS-NEXT:   %new_stack = getelementptr inbounds i8, ptr %stack, i64 8
+// CHECK-AAPCS-NEXT:   %new_stack = getelementptr inbounds nuw i8, ptr %stack, i64 8
 // CHECK-AAPCS-NEXT:   store ptr %new_stack, ptr %ap, align 8
 // CHECK-AAPCS-NEXT:   br label %vaarg.end
 // CHECK-AAPCS-EMPTY:
@@ -428,12 +428,12 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS-NEXT:   %vaarg.addr = load ptr, ptr %vaargs.addr, align 8
 
 // CHECK-AAPCS-NEXT:   %v.sroa.0.0.copyload = load <2 x i8>, ptr %vaarg.addr, align 16
-// CHECK-AAPCS-NEXT:   %v.sroa.43.0.vaarg.addr.sroa_idx = getelementptr inbounds i8, ptr %vaarg.addr, i64 48
+// CHECK-AAPCS-NEXT:   %v.sroa.43.0.vaarg.addr.sroa_idx = getelementptr inbounds nuw i8, ptr %vaarg.addr, i64 48
 // CHECK-AAPCS-NEXT:   %v.sroa.43.0.copyload = load <4 x float>, ptr %v.sroa.43.0.vaarg.addr.sroa_idx, align 16
 // CHECK-AAPCS-NEXT:   call void @llvm.va_end.p0(ptr nonnull %ap)
-// CHECK-AAPCS-NEXT:   %cast.scalable = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> %v.sroa.0.0.copyload, i64 0)
+// CHECK-AAPCS-NEXT:   %cast.scalable = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %v.sroa.0.0.copyload, i64 0)
 // CHECK-AAPCS-NEXT:   %3 = bitcast <vscale x 2 x i8> %cast.scalable to <vscale x 16 x i1>
-// CHECK-AAPCS-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %v.sroa.43.0.copyload, i64 0)
+// CHECK-AAPCS-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %v.sroa.43.0.copyload, i64 0)
 // CHECK-AAPCS-NEXT:   call void @use1(<vscale x 16 x i1> noundef %3, <vscale x 4 x float> noundef %cast.scalable2)
 // CHECK-AAPCS-NEXT:   call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   ret void
@@ -445,16 +445,16 @@ void test_va_arg(int n, ...) {
 // CHECK-DARWIN-NEXT:   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   call void @llvm.va_start.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   %argp.cur = load ptr, ptr %ap, align 8
-// CHECK-DARWIN-NEXT:   %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 8
+// CHECK-DARWIN-NEXT:   %argp.next = getelementptr inbounds nuw i8, ptr %argp.cur, i64 8
 // CHECK-DARWIN-NEXT:   store ptr %argp.next, ptr %ap, align 8
 // CHECK-DARWIN-NEXT:   %0 = load ptr, ptr %argp.cur, align 8
 // CHECK-DARWIN-NEXT:   %v.sroa.0.0.copyload = load <2 x i8>, ptr %0, align 16
-// CHECK-DARWIN-NEXT:   %v.sroa.43.0..sroa_idx = getelementptr inbounds i8, ptr %0, i64 48
+// CHECK-DARWIN-NEXT:   %v.sroa.43.0..sroa_idx = getelementptr inbounds nuw i8, ptr %0, i64 48
 // CHECK-DARWIN-NEXT:   %v.sroa.43.0.copyload = load <4 x float>, ptr %v.sroa.43.0..sroa_idx, align 16
 // CHECK-DARWIN-NEXT:   call void @llvm.va_end.p0(ptr nonnull %ap)
-// CHECK-DARWIN-NEXT:   %cast.scalable = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> %v.sroa.0.0.copyload, i64 0)
+// CHECK-DARWIN-NEXT:   %cast.scalable = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %v.sroa.0.0.copyload, i64 0)
 // CHECK-DARWIN-NEXT:   %1 = bitcast <vscale x 2 x i8> %cast.scalable to <vscale x 16 x i1>
-// CHECK-DARWIN-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %v.sroa.43.0.copyload, i64 0)
+// CHECK-DARWIN-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %v.sroa.43.0.copyload, i64 0)
 // CHECK-DARWIN-NEXT:   call void @use1(<vscale x 16 x i1> noundef %1, <vscale x 4 x float> noundef %cast.scalable2)
 // CHECK-DARWIN-NEXT:   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   ret void

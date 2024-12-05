@@ -66,7 +66,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg2: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
+func.func @vectorize_nd_tensor_extract_scalar_broadcast(%arg0: tensor<3x3xf32>, %arg2: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
   %c0 = arith.constant 1 : index
   %c1 = arith.constant 2 : index
   %2 = linalg.generic {
@@ -80,17 +80,17 @@ func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg
   return %2 : tensor<1x1x3xf32>
 }
 
-// CHECK: #[[$MAP:.*]] = affine_map<(d0, d1) -> (0, 0, 0)>
-// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_constant_idx(
+// CHECK: #[[$MAP:.+]] = affine_map<(d0, d1) -> (0, 0, 0)>
+// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_scalar_broadcast(
 // CHECK-SAME:      %[[ARG_0:.*]]: tensor<3x3xf32>,
 // CHECK-SAME:      %[[ARG_1:.*]]: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
 // CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[C2:.*]] = arith.constant 2 : index
-// CHECK-DAG:       %[[C0_f32_2:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK-DAG:       %[[C0_f32:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[READ:.*]] = vector.transfer_read  %[[ARG_0]][%[[C1]], %[[C2]]], %[[C0_f32]] {in_bounds = [true, true, true], permutation_map = #[[$MAP]]} : tensor<3x3xf32>, vector<1x1x3xf32>
-// CHECK:           %[[C0_4:.*]] = arith.constant 0 : index
-// CHECK:           vector.transfer_write %[[READ]], %[[ARG_1]][%[[C0_4]], %[[C0_4]], %[[C0_4]]]  : vector<1x1x3xf32>, tensor<1x1x3xf32>
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[MASK:.*]] = vector.constant_mask [1] : vector<1xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[ARG_0]][%[[C1]], %[[C2]]], {{.*}} {in_bounds = [true, true, true], permutation_map = #[[$MAP]]} : tensor<3x3xf32>, vector<1x1x3xf32> } : vector<1xi1> -> vector<1x1x3xf32>
+// CHECK:           %[[C0_2:.*]] = arith.constant 0 : index
+// CHECK:           vector.transfer_write %[[READ]], %[[ARG_1]]{{\[}}%[[C0_2]], %[[C0_2]], %[[C0_2]]] : vector<1x1x3xf32>, tensor<1x1x3xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -823,7 +823,7 @@ func.func @vectorize_scalar_broadcast_column_tensor(%in: tensor<1x1x4xi32>) -> t
   return %out:tensor<1x1x4xi32>
 }
 
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1) -> (0, 0, 0)>
+// CHECK: #[[$MAP:.+]] = affine_map<(d0, d1) -> (0, 0, 0)>
 // CHECK-LABEL:   func.func @vectorize_scalar_broadcast_column_tensor(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<1x1x4xi32>) -> tensor<1x1x4xi32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 4 : index
@@ -844,12 +844,14 @@ func.func @vectorize_scalar_broadcast_column_tensor(%in: tensor<1x1x4xi32>) -> t
 // CHECK:           %[[VAL_16:.*]] = arith.constant dense<true> : vector<1x1x4xi1>
 // CHECK:           %[[VAL_17:.*]] = arith.constant dense<0> : vector<1x1x4xi32>
 // CHECK:           %[[VAL_18:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_20:.*]] = vector.shape_cast %[[VAL_15]] : vector<1x1x4xindex> to vector<4xindex>
-// CHECK:           %[[VAL_21:.*]] = vector.extract %[[VAL_20]][0] : index from vector<4xindex>
-// CHECK:           %[[VAL_22:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_23:.*]] = vector.transfer_read %[[VAL_3]]{{\[}}%[[VAL_21]], %[[VAL_2]]], %[[VAL_22]] {in_bounds = [true, true, true], permutation_map = #[[$ATTR_1]]} : tensor<15x1xi32>, vector<1x1x4xi32>
+// CHECK:           %[[VAL_19:.*]] = vector.shape_cast %[[VAL_15]] : vector<1x1x4xindex> to vector<4xindex>
+// CHECK:           %[[VAL_20:.*]] = vector.extract %[[VAL_19]][0] : index from vector<4xindex>
+// CHECK:           %[[VAL_21:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_22:.*]] = vector.constant_mask [1] : vector<1xi1>
+// CHECK:           %[[VAL_23:.*]] = vector.mask %[[VAL_22]] { vector.transfer_read %[[VAL_3]]{{\[}}%[[VAL_20]], %[[VAL_2]]], %[[VAL_21]] {in_bounds = [true, true, true], permutation_map = #[[$MAP]]} : tensor<15x1xi32>, vector<1x1x4xi32> } : vector<1xi1> -> vector<1x1x4xi32>
 // CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_25:.*]] = vector.transfer_write %[[VAL_23]], %[[VAL_0]]{{\[}}%[[VAL_24]], %[[VAL_24]], %[[VAL_24]]] : vector<1x1x4xi32>, tensor<1x1x4xi32>
+// CHECK:           return %[[VAL_25]] : tensor<1x1x4xi32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
