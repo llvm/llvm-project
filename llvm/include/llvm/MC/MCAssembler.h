@@ -229,7 +229,6 @@ public:
   }
 
   void setCPU(std::string TargetCPU) { CPU = std::move(TargetCPU); }
-  StringRef getCPU() const { return CPU; }
 
   bool registerSection(MCSection &Section);
   bool registerSymbol(const MCSymbol &Symbol);

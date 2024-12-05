@@ -37,6 +37,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -426,8 +427,8 @@ public:
   }
 
   void emitMachine(StringRef CPU) override {
-    MCXCOFFStreamer &XCOFFStreamer = static_cast<MCXCOFFStreamer &>(Streamer);
-    XCOFFStreamer.getAssembler().getWriter().setCPU(CPU);
+    static_cast<XCOFFObjectWriter &>(Streamer.getAssemblerPtr()->getWriter())
+        .setCPU(CPU);
   }
 
   void emitAbiVersion(int AbiVersion) override {
