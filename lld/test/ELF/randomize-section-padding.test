@@ -1,12 +1,13 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
 
 ## --randomize-section-padding= inserts segment offset padding and pre-section
 ## padding, and does not affect flags. Segment offset padding is only inserted
 ## when PT_LOAD changes, as shown by .bss size (.data and .bss share a PT_LOAD).
 
-# RUN: ld.lld --randomize-section-padding=6 %t.o -o %t.out
-# RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t.out | FileCheck --check-prefix=PAD6 %s
+# RUN: ld.lld --randomize-section-padding=6 %t/a.o -o %t/a.out
+# RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t/a.out | FileCheck --check-prefix=PAD6 %s
 
 # PAD6: .rodata           PROGBITS        0000000000200158 000158 000b8d 00   A  0   0  1
 # PAD6: .text             PROGBITS        0000000000201ce8 000ce8 000270 00  AX  0   0  4
@@ -28,8 +29,8 @@
 ## Size of segment offset padding and location of pre-section padding is
 ## dependent on the seed.
 
-# RUN: ld.lld --randomize-section-padding=46 %t.o -o %t.out
-# RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t.out | FileCheck --check-prefix=PAD46 %s
+# RUN: ld.lld --randomize-section-padding=46 %t/a.o -o %t/a.out
+# RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t/a.out | FileCheck --check-prefix=PAD46 %s
 
 # PAD46: .rodata           PROGBITS        0000000000200158 000158 000cc0 00   A  0   0  1
 # PAD46: .text             PROGBITS        0000000000201e18 000e18 0009bf 00  AX  0   0  4
@@ -46,6 +47,31 @@
 # PAD46: 0x002027c8 cccccccc cccccccc cccccccc 040506
 # PAD46: Hex dump of section '.data':
 # PAD46: 0x00203d07 00000000 00000000 00000000 07000809
+
+## When there are multiple InputSectionDescriptions for an output section,
+## segment offset padding is inserted in the first InputSectionDescription.
+
+# RUN: ld.lld --randomize-section-padding=46 %t/a.o %t/a.lds -o %t/a.out
+
+# RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t/a.out | FileCheck --check-prefix=PAD46-LDS %s
+
+# PAD46-LDS: .rodata           PROGBITS        0000000000000158 000158 000cc0 00   A  0   0  1
+# PAD46-LDS: .text             PROGBITS        0000000000001000 001000 0009c0 00  AX  0   0  4
+# PAD46-LDS: .data             PROGBITS        0000000000002000 002000 000540 00  WA  0   0  1
+# PAD46-LDS: .bss              NOBITS          0000000000002540 002540 000004 00  WA  0   0  1
+
+# PAD46-LDS: 0000000000002543     0 NOTYPE  LOCAL  DEFAULT     4 a
+# PAD46-LDS: 0000000000002541     0 NOTYPE  LOCAL  DEFAULT     4 b
+# PAD46-LDS: 0000000000002540     0 NOTYPE  LOCAL  DEFAULT     4 c
+
+# PAD46-LDS: Hex dump of section '.rodata':
+# PAD46-LDS: 0x00000e08 00000000 00000000 00000000 00030201 ................
+# PAD46-LDS: Hex dump of section '.text':
+# PAD46-LDS: 0x000019b0 cccccccc cccccccc cccc0605 04cccccc ................
+# PAD46-LDS: Hex dump of section '.data':
+# PAD46-LDS: 0x00002530 00000000 00000000 00000000 09000807 ................
+
+#--- a.s
 
 .section .rodata.a,"a",@progbits
 .byte 1
@@ -86,3 +112,14 @@ b:
 c:
 .zero 1
 
+#--- a.lds
+
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .rodata : { *(.rodata.c) *(.rodata.b) *(.rodata.a) }
+  . = ALIGN(CONSTANT(MAXPAGESIZE));
+  .text : { *(.text.c) *(.text.b) *(.text.a) }
+  . = ALIGN(CONSTANT(MAXPAGESIZE));
+  .data : { *(.data.c) *(.data.b) *(.data.a) }
+  .bss : { *(.bss.c) *(.bss.b) *(.bss.a) }
+}
