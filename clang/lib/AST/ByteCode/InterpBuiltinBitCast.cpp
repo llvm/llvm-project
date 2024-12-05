@@ -254,9 +254,13 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         }
 
         assert(P.isInitialized());
-        // nullptr_t is a PT_Ptr for us, but it's still not std::is_pointer_v.
-        if (T == PT_Ptr)
-          assert(false && "Implement casting to pointer types");
+        if (T == PT_Ptr) {
+          assert(P.getType()->isNullPtrType());
+          // Clang treats nullptr_t has having NO bits in its value
+          // representation. So, we accept it here and leave its bits
+          // uninitialized.
+          return true;
+        }
 
         auto Buff =
             std::make_unique<std::byte[]>(ObjectReprChars.getQuantity());
@@ -315,9 +319,17 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   return Success;
 }
-
 bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
                                  const Pointer &FromPtr, Pointer &ToPtr) {
+  const ASTContext &ASTCtx = S.getASTContext();
+  CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(ToPtr.getType());
+
+  return DoBitCastPtr(S, OpPC, FromPtr, ToPtr, ObjectReprChars.getQuantity());
+}
+
+bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
+                                 const Pointer &FromPtr, Pointer &ToPtr,
+                                 size_t Size) {
   assert(FromPtr.isLive());
   assert(FromPtr.isBlockPointer());
   assert(ToPtr.isBlockPointer());
@@ -331,9 +343,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
     return false;
 
   const ASTContext &ASTCtx = S.getASTContext();
-
-  CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(ToType);
-  BitcastBuffer Buffer(Bits(ASTCtx.toBits(ObjectReprChars)));
+  BitcastBuffer Buffer(Bytes(Size).toBits());
   readPointerToBuffer(S.getContext(), FromPtr, Buffer,
                       /*ReturnOnUninit=*/false);
 

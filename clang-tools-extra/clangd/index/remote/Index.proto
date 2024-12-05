@@ -133,7 +133,7 @@ message Relation {
 }
 
 message ContainedRefsRequest {
-  required string id = 1;
+  optional string id = 1;
   optional uint32 limit = 2;
 }
 
@@ -145,7 +145,7 @@ message ContainedRefsReply {
 }
 
 message ContainedRef {
-  required SymbolLocation location = 1;
-  required uint32 kind = 2;
-  required string symbol = 3;
+  optional SymbolLocation location = 1;
+  optional uint32 kind = 2;
+  optional string symbol = 3;
 }

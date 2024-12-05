@@ -10623,7 +10623,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT) {
-  return makeVTList(SDNode::getValueTypeList(VT), 1);
+  if (!VT.isExtended())
+    return makeVTList(SDNode::getValueTypeList(VT.getSimpleVT()), 1);
+
+  return makeVTList(&(*EVTs.insert(VT).first), 1);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2) {
@@ -12383,17 +12386,11 @@ namespace {
 
 /// getValueTypeList - Return a pointer to the specified value type.
 ///
-const EVT *SDNode::getValueTypeList(EVT VT) {
-  static std::set<EVT, EVT::compareRawBits> EVTs;
+const EVT *SDNode::getValueTypeList(MVT VT) {
   static EVTArray SimpleVTArray;
-  static sys::SmartMutex<true> VTMutex;
 
-  if (VT.isExtended()) {
-    sys::SmartScopedLock<true> Lock(VTMutex);
-    return &(*EVTs.insert(VT).first);
-  }
-  assert(VT.getSimpleVT() < MVT::VALUETYPE_SIZE && "Value type out of range!");
-  return &SimpleVTArray.VTs[VT.getSimpleVT().SimpleTy];
+  assert(VT < MVT::VALUETYPE_SIZE && "Value type out of range!");
+  return &SimpleVTArray.VTs[VT.SimpleTy];
 }
 
 /// hasNUsesOfValue - Return true if there are exactly NUSES uses of the
