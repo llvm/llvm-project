@@ -3703,17 +3703,17 @@ void Parser::ParseDeclarationSpecifiers(
           // We reject AT_LifetimeBound and AT_AnyX86NoCfCheck, even though they
           // are type attributes, because we historically haven't allowed these
           // to be used as type attributes in C++11 / C23 syntax.
-          if (PA.getKind() == ParsedAttr::AT_LifetimeBound) {
+          if (PA.isTypeAttr() && PA.getKind() != ParsedAttr::AT_LifetimeBound &&
+              PA.getKind() != ParsedAttr::AT_AnyX86NoCfCheck)
+            continue;
+
+          if (PA.getKind() == ParsedAttr::AT_LifetimeBound)
             Diag(PA.getLoc(), diag::err_attribute_wrong_decl_type_str)
                 << PA << PA.isRegularKeywordAttribute()
                 << "parameters and implicit object parameters";
-            PA.setInvalid();
-            continue;
-          }
-          if (PA.isTypeAttr() && PA.getKind() != ParsedAttr::AT_AnyX86NoCfCheck)
-            continue;
-          Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
-              << PA << PA.isRegularKeywordAttribute();
+          else
+            Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
+                << PA << PA.isRegularKeywordAttribute();
           PA.setInvalid();
         }
 
