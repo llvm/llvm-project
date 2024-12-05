@@ -81,8 +81,8 @@ public:
 
   ~ClangTidyContext();
 
-  ClangTidyContext(const ClangTidyContext &) = default;
-  ClangTidyContext &operator=(const ClangTidyContext &) = default;
+  ClangTidyContext(const ClangTidyContext &) = delete;
+  ClangTidyContext &operator=(const ClangTidyContext &) = delete;
 
   /// Report any errors detected using this method.
   ///
