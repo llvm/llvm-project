@@ -65,7 +65,10 @@ function (add_flangrt_library name)
     set_target_properties(${name} PROPERTIES FOLDER "Fortran Runtime/Libraries")
   endif ()
 
+  # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
   target_compile_features(${name} PRIVATE cxx_std_17)
+
+  # Use compiler-specific options to disable exceptions and RTTI.
   if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     target_compile_options(${name} PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
@@ -73,6 +76,23 @@ function (add_flangrt_library name)
   elseif (MSVC)
     target_compile_options(${name} PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
+      )
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+    target_compile_options(${name} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
+      )
+  endif ()
+
+  # Also for CUDA source when compiling with FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA
+  if (CMAKE_CUDA_COMPILER_ID MATCHES "NVIDIA")
+    # Assuming gcc as host compiler.
+    target_compile_options(${name} PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions -Xcompiler -fno-rtti -Xcompiler -fno-unwind-tables -Xcompiler -fno-asynchronous-unwind-tables>
+      )
+  else ()
+    # Assuming a clang-compatible CUDA compiler.
+    target_compile_options(${name} PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
       )
   endif ()
 

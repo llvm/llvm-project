@@ -6,6 +6,9 @@
 #
 #===------------------------------------------------------------------------===#
 
+# Phony build target that does not include the CUDA version.
+add_custom_target(CufRuntime)
+
 # libCufRuntime depends on a certain version of CUDA. To be able to have
 # multiple build of this library with different CUDA version, the version is
 # added to the library name.
@@ -20,6 +23,7 @@ add_flangrt_library(${CUFRT_LIBNAME}
   memory.cpp
   registration.cpp
 )
+add_dependencies(CufRuntime ${CUFRT_LIBNAME})
 target_include_directories(${CUFRT_LIBNAME} PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
 
 if (BUILD_SHARED_LIBS)

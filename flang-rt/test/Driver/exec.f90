@@ -1,7 +1,7 @@
 ! Verify that flang can correctly build executables.
 
-! RUN: %flang %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%llvmshlibdir" %t | FileCheck %s
+! RUN: %flang -L"%libdir" %s %deplibs -o %t
+! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
 ! RUN: rm -f %t
 
 ! CHECK: Hello, World!

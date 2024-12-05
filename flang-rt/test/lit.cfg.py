@@ -1,9 +1,13 @@
 # -*- Python -*-
 
+import shlex
 import lit.util
 
 from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst, FindTool
+
+def shjoin(args, sep=' '):
+    return sep.join([shlex.quote(arg) for arg in args])
 
 # Configuration file for the 'lit' test runner.
 
@@ -54,7 +58,7 @@ config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
 # lit writes a '.lit_test_times.txt' file into this directory.
-config.test_exec_root = config.flangrt_binary_test_dir
+config.test_exec_root = config.flang_rt_binary_test_dir
 
 # On MacOS, -isysroot is needed to build binaries.
 isysroot_flag = []
@@ -67,20 +71,36 @@ tools = [
         command=FindTool("flang"),
         extra_args=isysroot_flag,
         unresolved="fatal",
-    )
+    ),
+    ToolSubst(
+        "%clang",
+        command=FindTool("clang"),
+        extra_args=isysroot_flag,
+        unresolved="fatal",
+    ),
+    ToolSubst("%cc",
+        command=config.cc,
+        extra_args=isysroot_flag,
+        unresolved="fatal"
+    ),
 ]
-
-# Define some variables to help us test that the flang runtime doesn't depend on
-# the C++ runtime libraries. For this we need a C compiler.
-libruntime = os.path.join(config.flangrt_build_lib_dir, "libflang_rt.a")
-include = os.path.join(config.flang_source_dir, "include")
-tools.append(
-    ToolSubst("%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal")
-)
-tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
-tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
+llvm_config.add_tool_substitutions(tools)
 
 # Let tests find LLVM's standard tools (FileCheck, split-file, not, ...)
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
-llvm_config.add_tool_substitutions(tools)
+# Library path of libflang_rt.a
+config.substitutions.append(("%libdir", config.flang_rt_build_lib_dir))
+
+# Define some variables to help us test that the flang runtime doesn't depend on
+# the C++ runtime libraries. For this we need a C compiler.
+libruntime = os.path.join(config.flang_rt_build_lib_dir, "libflang_rt.a")
+include = os.path.join(config.flang_source_dir, "include")
+config.substitutions.append(("%libruntime", libruntime))
+config.substitutions.append(("%include", include))
+
+# Additional library depedendencies the that flang driver does not add itself.
+deplibs = []
+if config.flang_rt_experimental_offload_support == "CUDA":
+    deplibs.append('-lcudart')
+config.substitutions.append(("%deplibs", shjoin(deplibs)))

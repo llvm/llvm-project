@@ -42,21 +42,27 @@ macro(enable_cuda_compilation name files)
       "${CUDA_COMPILE_OPTIONS}"
       )
 
-    if (EXISTS "${FLANG_RT_LIBCUDACXX_PATH}/include")
-      # When using libcudacxx headers files, we have to use them
-      # for all files of F18 runtime.
-      include_directories(AFTER ${FLANG_RT_LIBCUDACXX_PATH}/include)
-      add_compile_definitions(RT_USE_LIBCUDACXX=1)
-    endif()
+    # Create a .a library consisting of CUDA PTX.
+    # This is different from a regular static library. The CUDA_PTX_COMPILATION
+    # property can only be applied to object libraries and create *.ptx files
+    # instead of *.o files. The .a will consist of those *.ptx files only.
+    add_flangrt_library(obj.${name}PTX OBJECT ${files})
+    set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    add_flangrt_library(${name}PTX STATIC "$<TARGET_OBJECTS:obj.${name}PTX>")
 
-    # Add an OBJECT library consisting of CUDA PTX.
-    add_flangrt_library(${name}PTX OBJECT ${files})
-    set_property(TARGET ${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    # Apply configuration options
     if (FLANG_RT_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
-      target_compile_definitions(${name}PTX
+      target_compile_definitions(obj.${name}PTX
         PRIVATE FLANG_RT_NO_GLOBAL_VAR_DEFS
         )
     endif()
+
+    # When using libcudacxx headers files, we have to use them
+    # for all files of Flang-RT.
+    if (EXISTS "${FLANG_RT_LIBCUDACXX_PATH}/include")
+      target_include_directories(obj.${name}PTX AFTER PRIVATE "${FLANG_RT_LIBCUDACXX_PATH}/include")
+      target_compile_definitions(obj.${name}PTX PRIVATE RT_USE_LIBCUDACXX=1)
+    endif ()
   endif()
 endmacro()
 

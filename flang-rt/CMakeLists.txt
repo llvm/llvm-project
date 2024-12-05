@@ -73,13 +73,22 @@ if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSIO
 endif()
 
 if (LLVM_TREE_AVAILABLE)
+  # In a bootstrap build emit the libraries into a default search path in the
+  # build directory of the just-built compiler. This allows using the
+  # just-built compiler without specifying paths to runtime libraries.
+  #
   # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
   # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
   get_clang_resource_dir(FLANG_RT_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
   get_clang_resource_dir(FLANG_RT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command finds the install prefix itself
 else ()
-  set(FLANG_RT_BUILD_LIB_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
+  # In a runtimes build never write into LLVM's build dir. It might be reused
+  # for mutliple Flang-RT builds (e.g. Debug/Release). Instead create our own
+  # library directory.
+  #
+  # TODO: Support multi-config generators
+  set(FLANG_RT_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
   set(FLANG_RT_INSTALL_LIB_DIR "lib${LLVM_LIBDIR_SUFFIX}")
 endif ()
 
@@ -102,19 +111,23 @@ endif ()
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 
 
-set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile flang-rt with GPU support (CUDA or OpenMP)")
+set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile Flang-RT with GPU support (CUDA or OpenMP)")
 set_property(CACHE FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT PROPERTY STRINGS
     ""
     CUDA
     OpenMP
   )
 if (NOT FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT)
+  # Support for GPUs disabled
 elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  # Support for CUDA
   set(FLANG_RT_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
   option(FLANG_RT_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS "Do not compile global variables' definitions when producing PTX library" OFF)
 elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-set(FLANG_RT_DEVICE_ARCHITECTURES "all" CACHE STRING
-  "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')")
+  # Support for OpenMP offloading
+  set(FLANG_RT_DEVICE_ARCHITECTURES "all" CACHE STRING
+      "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')"
+    )
 else ()
   message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
 endif ()
