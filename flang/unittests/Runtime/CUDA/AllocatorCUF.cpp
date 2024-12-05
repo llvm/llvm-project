@@ -53,8 +53,7 @@ TEST(AllocatableCUFTest, SimpleStreamDeviceAllocate) {
   EXPECT_FALSE(a->HasAddendum());
   RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
   RTNAME(AllocatableAllocate)
-  (*a, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
-      __LINE__);
+  (*a, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
