@@ -65,12 +65,15 @@ include(FlangCommon)
 ############################
 
 # Setting these variables from an LLVM build is sufficient that flang-rt can
-# construct the output paths, so it can behave as if it were in-tree here.
+# construct the output paths, so it can behave as if it was in-tree here.
 set(LLVM_TREE_AVAILABLE OFF)
 if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
   # This is a bootstap build
   set(LLVM_TREE_AVAILABLE ON)
 endif()
+
+# Path to LLVM development tools (FileCheck, llvm-lit, not, ...)
+set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin")
 
 if (LLVM_TREE_AVAILABLE)
   # In a bootstrap build emit the libraries into a default search path in the
