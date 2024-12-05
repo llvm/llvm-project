@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass combines uniform intrinsic instructions.
-/// Uniform Intrinsic Combine uses pattern match to identify and optimize
-/// redundant intrinsic instructions.
+/// This pass simplifies certain intrinsic calls when the arguments are uniform.
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -21,6 +19,7 @@
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
@@ -35,14 +34,11 @@ using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
 namespace {
-
 class AMDGPUUniformIntrinsicCombine : public FunctionPass {
 public:
   static char ID;
   AMDGPUUniformIntrinsicCombine() : FunctionPass(ID) {}
-
   bool runOnFunction(Function &F) override;
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<UniformityInfoWrapperPass>();
@@ -54,46 +50,36 @@ class AMDGPUUniformIntrinsicCombineImpl
     : public InstVisitor<AMDGPUUniformIntrinsicCombineImpl> {
 private:
   const UniformityInfo *UI;
-
   bool optimizeUniformIntrinsicInst(IntrinsicInst &II) const;
 
 public:
   AMDGPUUniformIntrinsicCombineImpl() = delete;
-
   AMDGPUUniformIntrinsicCombineImpl(const UniformityInfo *UI) : UI(UI) {}
-
   bool run(Function &F);
 };
-
 } // namespace
 
 char AMDGPUUniformIntrinsicCombine::ID = 0;
-
 char &llvm::AMDGPUUniformIntrinsicCombineID = AMDGPUUniformIntrinsicCombine::ID;
 
 bool AMDGPUUniformIntrinsicCombine::runOnFunction(Function &F) {
   if (skipFunction(F)) {
     return false;
   }
-
   const UniformityInfo *UI =
       &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
   return AMDGPUUniformIntrinsicCombineImpl(UI).run(F);
 }
 
 PreservedAnalyses
 AMDGPUUniformIntrinsicCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
-
   const auto *UI = &AM.getResult<UniformityInfoAnalysis>(F);
-
   bool IsChanged = AMDGPUUniformIntrinsicCombineImpl(UI).run(F);
 
   if (!IsChanged) {
     return PreservedAnalyses::all();
   }
-
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
@@ -104,19 +90,14 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 }
 
 bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
-
   bool IsChanged{false};
-
   // Iterate over each instruction in the function to get the desired intrinsic
   // inst to check for optimization.
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      if (auto *Intrinsic = dyn_cast<IntrinsicInst>(&I)) {
-        IsChanged |= optimizeUniformIntrinsicInst(*Intrinsic);
-      }
+  for (Instruction &I : instructions(F)) {
+    if (auto *Intrinsic = dyn_cast<IntrinsicInst>(&I)) {
+      IsChanged |= optimizeUniformIntrinsicInst(*Intrinsic);
     }
   }
-
   return IsChanged;
 }
 
