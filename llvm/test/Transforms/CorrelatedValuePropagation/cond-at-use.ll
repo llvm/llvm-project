@@ -638,8 +638,7 @@ define i1 @test_icmp_mod(i64 noundef %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[REM]], 0
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i64 86400, i64 0
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[COND]], [[REM]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[ADD]], 86399
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %rem = srem i64 %x, 86400
