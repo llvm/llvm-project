@@ -781,9 +781,7 @@ public:
     default:
       break;
     case Intrinsic::experimental_vector_histogram_add:
-    case Intrinsic::experimental_vector_match:
-      // For now, we want explicit support from the target for histograms and
-      // matches.
+      // For now, we want explicit support from the target for histograms.
       return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
