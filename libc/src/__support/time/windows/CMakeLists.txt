@@ -8,7 +8,6 @@ add_object_library(
     libc.hdr.types.struct_timespec
     libc.hdr.types.clockid_t
     libc.hdr.errno_macros
-    libc.include.llvm-libc-macros.windows.time_macros_ext
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
