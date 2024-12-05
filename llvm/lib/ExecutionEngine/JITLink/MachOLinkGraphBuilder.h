@@ -44,13 +44,13 @@ protected:
           S(S) {
       assert((!Name || !Name->empty()) && "Name must be none or non-empty");
     }
-    
+
   public:
     NormalizedSymbol(const NormalizedSymbol &) = delete;
     NormalizedSymbol &operator=(const NormalizedSymbol &) = delete;
     NormalizedSymbol(NormalizedSymbol &&) = delete;
     NormalizedSymbol &operator=(NormalizedSymbol &&) = delete;
-  
+
     std::optional<StringRef> Name;
     uint64_t Value = 0;
     uint8_t Type = 0;

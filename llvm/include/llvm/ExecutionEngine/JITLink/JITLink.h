@@ -397,12 +397,7 @@ const char *getLinkageName(Linkage L);
 ///   SideEffectsOnly -- Like hidden, but symbol can only be looked up once
 ///                      to trigger materialization of the containing graph.
 ///   Local -- Visible only within the LinkGraph.
-enum class Scope : uint8_t {
-  Default,
-  Hidden,
-  SideEffectsOnly,
-  Local
-};
+enum class Scope : uint8_t { Default, Hidden, SideEffectsOnly, Local };
 
 /// For debugging output.
 const char *getScopeName(Scope S);
@@ -1015,15 +1010,15 @@ public:
             const Triple &TT, SubtargetFeatures Features, unsigned PointerSize,
             llvm::endianness Endianness,
             GetEdgeKindNameFunction GetEdgeKindName)
-      : Name(std::move(Name)), SSP(std::move(SSP)), TT(TT), Features(std::move(Features)),
-        PointerSize(PointerSize), Endianness(Endianness),
-        GetEdgeKindName(std::move(GetEdgeKindName)) {}
+      : Name(std::move(Name)), SSP(std::move(SSP)), TT(TT),
+        Features(std::move(Features)), PointerSize(PointerSize),
+        Endianness(Endianness), GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
   LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
             const Triple &TT, unsigned PointerSize, llvm::endianness Endianness,
             GetEdgeKindNameFunction GetEdgeKindName)
-      : LinkGraph(std::move(Name), std::move(SSP), TT, SubtargetFeatures(), PointerSize,
-                  Endianness, GetEdgeKindName) {}
+      : LinkGraph(std::move(Name), std::move(SSP), TT, SubtargetFeatures(),
+                  PointerSize, Endianness, GetEdgeKindName) {}
 
   LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
             const Triple &TT, GetEdgeKindNameFunction GetEdgeKindName)
@@ -1648,7 +1643,7 @@ private:
   llvm::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
-  //FIXME(jared): these should become dense maps 
+  // FIXME(jared): these should become dense maps
   ExternalSymbolMap ExternalSymbols;
   AbsoluteSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;

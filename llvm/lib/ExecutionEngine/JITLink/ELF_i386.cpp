@@ -227,8 +227,9 @@ public:
   ELFLinkGraphBuilder_i386(StringRef FileName, const object::ELFFile<ELFT> &Obj,
                            std::shared_ptr<orc::SymbolStringPool> SSP,
                            Triple TT, SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT), std::move(Features),
-                                  FileName, i386::getEdgeKindName) {}
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  i386::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>

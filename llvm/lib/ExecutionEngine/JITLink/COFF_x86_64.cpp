@@ -237,7 +237,7 @@ public:
   }
 
 private:
-  const orc::SymbolStringPtr & getImageBaseSymbolName() const {
+  const orc::SymbolStringPtr &getImageBaseSymbolName() const {
     return this->ImageBaseName;
   }
 
@@ -330,7 +330,8 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromCOFFObject_x86_64(
   if (!Features)
     return Features.takeError();
 
-  return COFFLinkGraphBuilder_x86_64(**COFFObj, std::move(SSP), (*COFFObj)->makeTriple(),
+  return COFFLinkGraphBuilder_x86_64(**COFFObj, std::move(SSP),
+                                     (*COFFObj)->makeTriple(),
                                      std::move(*Features))
       .buildGraph();
 }

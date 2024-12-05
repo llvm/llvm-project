@@ -531,9 +531,8 @@ absoluteSymbolsLinkGraph(const Triple &TT,
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
   auto G = std::make_unique<LinkGraph>(
-      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP), 
-      TT, PointerSize,
-      Endianness, /*GetEdgeKindName=*/nullptr);
+      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP), TT,
+      PointerSize, Endianness, /*GetEdgeKindName=*/nullptr);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,

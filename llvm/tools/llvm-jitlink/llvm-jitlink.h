@@ -110,8 +110,8 @@ struct Session {
   Expected<MemoryRegionInfo &> findGOTEntryInfo(StringRef FileName,
                                                 StringRef TargetName);
 
-  bool isSymbolRegistered(const orc::SymbolStringPtr& Name);
-  Expected<MemoryRegionInfo &> findSymbolInfo(const orc::SymbolStringPtr& Name,
+  bool isSymbolRegistered(const orc::SymbolStringPtr &Name);
+  Expected<MemoryRegionInfo &> findSymbolInfo(const orc::SymbolStringPtr &Name,
                                               Twine ErrorMsgStem);
 
   DynLibJDMap DynLibJDs;

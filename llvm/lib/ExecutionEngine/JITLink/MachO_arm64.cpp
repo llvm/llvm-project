@@ -591,7 +591,8 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_arm64(
   if (!Features)
     return Features.takeError();
 
-  return MachOLinkGraphBuilder_arm64(**MachOObj, std::move(SSP), std::move(*Features))
+  return MachOLinkGraphBuilder_arm64(**MachOObj, std::move(SSP),
+                                     std::move(*Features))
       .buildGraph();
 }
 

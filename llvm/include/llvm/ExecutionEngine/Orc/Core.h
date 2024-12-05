@@ -1783,7 +1783,7 @@ template <typename MaterializationUnitType>
 Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU,
                        ResourceTrackerSP RT) {
   assert(MU && "Can not define with a null MU");
-  
+
   if (MU->getSymbols().empty()) {
     // Empty MUs are allowable but pathological, so issue a warning.
     DEBUG_WITH_TYPE("orc", {

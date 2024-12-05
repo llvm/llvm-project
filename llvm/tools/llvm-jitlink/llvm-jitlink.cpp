@@ -1485,12 +1485,12 @@ Session::findGOTEntryInfo(StringRef FileName, StringRef TargetName) {
   return GOTInfoItr->second;
 }
 
-bool Session::isSymbolRegistered(const orc::SymbolStringPtr& SymbolName) {
+bool Session::isSymbolRegistered(const orc::SymbolStringPtr &SymbolName) {
   return SymbolInfos.count(SymbolName);
 }
 
 Expected<Session::MemoryRegionInfo &>
-Session::findSymbolInfo(const orc::SymbolStringPtr& SymbolName,
+Session::findSymbolInfo(const orc::SymbolStringPtr &SymbolName,
                         Twine ErrorMsgStem) {
   auto SymInfoItr = SymbolInfos.find(SymbolName);
   if (SymInfoItr == SymbolInfos.end())
@@ -1726,7 +1726,7 @@ static Error addAbsoluteSymbols(Session &S,
 
     // Register the absolute symbol with the session symbol infos.
     S.SymbolInfos[InternedName] = {ArrayRef<char>(), Addr,
-                                  AbsDef.getFlags().getTargetFlags()};
+                                   AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();

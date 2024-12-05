@@ -533,8 +533,9 @@ public:
                               std::shared_ptr<orc::SymbolStringPool> SSP,
                               Triple TT, SubtargetFeatures Features)
 
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT), std::move(Features),
-                                  FileName, aarch64::getEdgeKindName) {}
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  aarch64::getEdgeKindName) {}
 };
 
 // TLS Info Builder.

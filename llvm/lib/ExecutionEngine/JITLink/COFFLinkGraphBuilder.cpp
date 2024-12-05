@@ -31,11 +31,11 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(
-          Obj.getFileName().str(), std::move(SSP), 
-          createTripleWithCOFFFormat(TT),
-          std::move(Features), getPointerSize(Obj), getEndianness(Obj),
-          std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(Obj.getFileName().str(), std::move(SSP),
+                                    createTripleWithCOFFFormat(TT),
+                                    std::move(Features), getPointerSize(Obj),
+                                    getEndianness(Obj),
+                                    std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
            << "\"\n";
@@ -631,9 +631,8 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
       false);
   LLVM_DEBUG({
     dbgs() << "    " << SymIndex
-           << ": Exporting COMDAT graph symbol for COFF symbol \""
-           << SymbolName << "\" in section " << Symbol.getSectionNumber()
-           << "\n";
+           << ": Exporting COMDAT graph symbol for COFF symbol \"" << SymbolName
+           << "\" in section " << Symbol.getSectionNumber() << "\n";
     dbgs() << "      " << *GSym << "\n";
   });
   setGraphSymbol(Symbol.getSectionNumber(), PendingComdatExport->SymbolIndex,

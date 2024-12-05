@@ -171,8 +171,8 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_loongarch(
   if ((*ELFObj)->getArch() == Triple::loongarch64) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_loongarch<object::ELF64LE>(
-               (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
-               (*ELFObj)->makeTriple(), std::move(*Features))
+               (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+               std::move(SSP), (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 

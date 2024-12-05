@@ -930,8 +930,9 @@ public:
                             const object::ELFFile<ELFT> &Obj,
                             std::shared_ptr<orc::SymbolStringPool> SSP,
                             Triple TT, SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT), std::move(Features),
-                                  FileName, riscv::getEdgeKindName) {}
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  riscv::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>
@@ -953,16 +954,16 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer,
   if ((*ELFObj)->getArch() == Triple::riscv64) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF64LE>(
-               (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
-               (*ELFObj)->makeTriple(), std::move(*Features))
+               (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+               std::move(SSP), (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   } else {
     assert((*ELFObj)->getArch() == Triple::riscv32 &&
            "Invalid triple for RISCV ELF object file");
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF32LE>(
-               (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
-               (*ELFObj)->makeTriple(), std::move(*Features))
+               (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+               std::move(SSP), (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 }

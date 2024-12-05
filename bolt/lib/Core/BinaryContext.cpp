@@ -137,12 +137,12 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
                              std::unique_ptr<MCDisassembler> DisAsm,
                              JournalingStreams Logger)
     : Ctx(std::move(Ctx)), DwCtx(std::move(DwCtx)),
-      TheTriple(std::move(TheTriple)), SSP(std::move(SSP)), TheTarget(TheTarget),
-      TripleName(TripleName), MCE(std::move(MCE)), MOFI(std::move(MOFI)),
-      AsmInfo(std::move(AsmInfo)), MII(std::move(MII)), STI(std::move(STI)),
-      InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
-      MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
-      Logger(Logger), InitialDynoStats(isAArch64()) {
+      TheTriple(std::move(TheTriple)), SSP(std::move(SSP)),
+      TheTarget(TheTarget), TripleName(TripleName), MCE(std::move(MCE)),
+      MOFI(std::move(MOFI)), AsmInfo(std::move(AsmInfo)), MII(std::move(MII)),
+      STI(std::move(STI)), InstPrinter(std::move(InstPrinter)),
+      MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
+      DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -285,8 +285,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   auto BC = std::make_unique<BinaryContext>(
       std::move(Ctx), std::move(DwCtx), std::make_unique<Triple>(TheTriple),
-      std::move(SSP), TheTarget, std::string(TripleName), std::move(MCE), std::move(MOFI),
-      std::move(AsmInfo), std::move(MII), std::move(STI),
+      std::move(SSP), TheTarget, std::string(TripleName), std::move(MCE),
+      std::move(MOFI), std::move(AsmInfo), std::move(MII), std::move(STI),
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm), Logger);
 

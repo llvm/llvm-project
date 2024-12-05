@@ -168,7 +168,7 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
     for (auto *Symbol : G.defined_symbols()) {
       SymbolInfo Info{Symbol->getAddress().getValue(), Symbol->getSize()};
       auto Name =
-        Symbol->hasName() ? (*Symbol->getName()).str() : std::string();
+          Symbol->hasName() ? (*Symbol->getName()).str() : std::string();
       Linker.Symtab.insert({std::move(Name), Info});
     }
 

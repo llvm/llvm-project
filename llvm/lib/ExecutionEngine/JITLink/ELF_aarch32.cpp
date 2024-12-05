@@ -223,8 +223,9 @@ public:
                               std::shared_ptr<orc::SymbolStringPool> SSP,
                               Triple TT, SubtargetFeatures Features,
                               aarch32::ArmConfig ArmCfg)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT), std::move(Features),
-                                  FileName, getELFAArch32EdgeKindName),
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  getELFAArch32EdgeKindName),
         ArmCfg(std::move(ArmCfg)) {}
 };
 
@@ -274,18 +275,16 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch32(
   case Triple::thumb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32LE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<llvm::endianness::little>(
-               (*ELFObj)->getFileName(), ELFFile, std::move(SSP), 
-               TT, std::move(*Features),
-               ArmCfg)
+               (*ELFObj)->getFileName(), ELFFile, std::move(SSP), TT,
+               std::move(*Features), ArmCfg)
         .buildGraph();
   }
   case Triple::armeb:
   case Triple::thumbeb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32BE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<llvm::endianness::big>(
-               (*ELFObj)->getFileName(), ELFFile, std::move(SSP),
-               TT, std::move(*Features),
-               ArmCfg)
+               (*ELFObj)->getFileName(), ELFFile, std::move(SSP), TT,
+               std::move(*Features), ArmCfg)
         .buildGraph();
   }
   default:
