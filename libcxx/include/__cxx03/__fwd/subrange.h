@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___FWD_SUBRANGE_H
 #define _LIBCPP___FWD_SUBRANGE_H
 
-#include <__concepts/copyable.h>
-#include <__config>
-#include <__iterator/concepts.h>
-#include <cstddef>
+#include <__cxx03/__concepts/copyable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

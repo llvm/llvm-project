@@ -275,3 +275,52 @@ func.func @delinearize(%linear_idx: index, %basis0: index, %basis1 :index) -> (i
   %1:2 = affine.delinearize_index %linear_idx into (%basis0, %basis1) : index, index
   return %1#0, %1#1 : index, index
 }
+
+// CHECK-LABEL: @delinearize_mixed
+func.func @delinearize_mixed(%linear_idx: index, %basis1: index) -> (index, index, index) {
+  // CHECK: affine.delinearize_index %{{.+}} into (2, %{{.+}}, 3) : index, index, index
+  %1:3 = affine.delinearize_index %linear_idx into (2, %basis1, 3) : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @linearize
+func.func @linearize(%index0: index, %index1: index, %basis0: index, %basis1 :index) -> index {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}] by (%{{.+}}, %{{.+}}) : index
+  %1 = affine.linearize_index [%index0, %index1] by (%basis0, %basis1) : index
+  return %1 : index
+}
+
+// CHECK-LABEL: @linearize_mixed
+func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basis1: index) -> index {
+  // CHECK: affine.linearize_index disjoint [%{{.+}}, %{{.+}}, %{{.+}}] by (2, %{{.+}}, 3) : index
+  %1 = affine.linearize_index disjoint [%index0, %index1, %index2] by (2, %basis1, 3) : index
+  return %1 : index
+}
+
+// -----
+
+#map = affine_map<()[s0] -> (s0)>
+
+// CHECK-LABEL: @gpu_affine_for
+
+module attributes {gpu.container_module} {
+  gpu.module @gpu {
+    gpu.func @gpu_affine_for(%arg0: memref<?x?xf32>) kernel {
+      %c3 = arith.constant 1 : index
+      %dim = memref.dim %arg0, %c3 : memref<?x?xf32>
+      %c0 = arith.constant 0 : index
+      affine.for %arg3 = %c0 to #map()[%dim] step 32 {
+      }
+      gpu.return
+    }
+  }
+}
+// CHECK-SAME:        (%[[VAL_0:.*]]: memref<?x?xf32>) kernel {
+// CHECK:             %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:             %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
+// CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:             affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
+// CHECK:             }
+// CHECK:             gpu.return

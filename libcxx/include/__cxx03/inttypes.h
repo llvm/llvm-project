@@ -20,7 +20,7 @@
 
 This entire header is C99 / C++0X
 
-#include <stdint.h>  // <cinttypes> includes <cstdint>
+#include <__cxx03/stdint.h>  // <cinttypes> includes <cstdint>
 
 Macros:
 
@@ -235,7 +235,7 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -254,7 +254,7 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 
 #ifdef __cplusplus
 
-#  include <stdint.h>
+#  include <__cxx03/stdint.h>
 
 #  undef imaxabs
 #  undef imaxdiv

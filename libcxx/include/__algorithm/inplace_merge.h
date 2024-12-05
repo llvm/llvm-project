@@ -18,6 +18,7 @@
 #include <__algorithm/rotate.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__functional/identity.h>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>

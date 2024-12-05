@@ -15,6 +15,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__functional/bind_back.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
@@ -30,7 +31,6 @@
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -111,14 +111,14 @@ template <class _Container, input_range _Range, class... _Args>
 
       for (auto&& __ref : __range) {
         using _Ref = decltype(__ref);
-        if constexpr (requires { __result.emplace_back(declval<_Ref>()); }) {
+        if constexpr (requires { __result.emplace_back(std::declval<_Ref>()); }) {
           __result.emplace_back(std::forward<_Ref>(__ref));
-        } else if constexpr (requires { __result.push_back(declval<_Ref>()); }) {
+        } else if constexpr (requires { __result.push_back(std::declval<_Ref>()); }) {
           __result.push_back(std::forward<_Ref>(__ref));
-        } else if constexpr (requires { __result.emplace(__result.end(), declval<_Ref>()); }) {
+        } else if constexpr (requires { __result.emplace(__result.end(), std::declval<_Ref>()); }) {
           __result.emplace(__result.end(), std::forward<_Ref>(__ref));
         } else {
-          static_assert(requires { __result.insert(__result.end(), declval<_Ref>()); });
+          static_assert(requires { __result.insert(__result.end(), std::declval<_Ref>()); });
           __result.insert(__result.end(), std::forward<_Ref>(__ref));
         }
       }

@@ -151,10 +151,10 @@ createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
 }
 
 LazyReexportsMaterializationUnit::LazyReexportsMaterializationUnit(
-    LazyCallThroughManager &LCTManager, IndirectStubsManager &ISManager,
+    LazyCallThroughManager &LCTManager, RedirectableSymbolManager &RSManager,
     JITDylib &SourceJD, SymbolAliasMap CallableAliases, ImplSymbolMap *SrcJDLoc)
     : MaterializationUnit(extractFlags(CallableAliases)),
-      LCTManager(LCTManager), ISManager(ISManager), SourceJD(SourceJD),
+      LCTManager(LCTManager), RSManager(RSManager), SourceJD(SourceJD),
       CallableAliases(std::move(CallableAliases)), AliaseeTable(SrcJDLoc) {}
 
 StringRef LazyReexportsMaterializationUnit::getName() const {
@@ -174,7 +174,7 @@ void LazyReexportsMaterializationUnit::materialize(
   }
 
   if (!CallableAliases.empty())
-    if (auto Err = R->replace(lazyReexports(LCTManager, ISManager, SourceJD,
+    if (auto Err = R->replace(lazyReexports(LCTManager, RSManager, SourceJD,
                                             std::move(CallableAliases),
                                             AliaseeTable))) {
       R->getExecutionSession().reportError(std::move(Err));
@@ -182,43 +182,33 @@ void LazyReexportsMaterializationUnit::materialize(
       return;
     }
 
-  IndirectStubsManager::StubInitsMap StubInits;
+  SymbolMap Inits;
   for (auto &Alias : RequestedAliases) {
-
     auto CallThroughTrampoline = LCTManager.getCallThroughTrampoline(
         SourceJD, Alias.second.Aliasee,
-        [&ISManager = this->ISManager,
+        [&TargetJD = R->getTargetJITDylib(), &RSManager = this->RSManager,
          StubSym = Alias.first](ExecutorAddr ResolvedAddr) -> Error {
-          return ISManager.updatePointer(*StubSym, ResolvedAddr);
+          return RSManager.redirect(TargetJD, StubSym,
+                                    ExecutorSymbolDef(ResolvedAddr, {}));
         });
 
     if (!CallThroughTrampoline) {
-      SourceJD.getExecutionSession().reportError(
-          CallThroughTrampoline.takeError());
+      R->getExecutionSession().reportError(CallThroughTrampoline.takeError());
       R->failMaterialization();
       return;
     }
 
-    StubInits[*Alias.first] =
-        std::make_pair(*CallThroughTrampoline, Alias.second.AliasFlags);
+    Inits[Alias.first] = {*CallThroughTrampoline, Alias.second.AliasFlags};
   }
 
   if (AliaseeTable != nullptr && !RequestedAliases.empty())
     AliaseeTable->trackImpls(RequestedAliases, &SourceJD);
 
-  if (auto Err = ISManager.createStubs(StubInits)) {
-    SourceJD.getExecutionSession().reportError(std::move(Err));
-    R->failMaterialization();
-    return;
+  if (auto Err = R->replace(std::make_unique<RedirectableMaterializationUnit>(
+          RSManager, std::move(Inits)))) {
+    R->getExecutionSession().reportError(std::move(Err));
+    return R->failMaterialization();
   }
-
-  SymbolMap Stubs;
-  for (auto &Alias : RequestedAliases)
-    Stubs[Alias.first] = ISManager.findStub(*Alias.first, false);
-
-  // No registered dependencies, so these calls cannot fail.
-  cantFail(R->notifyResolved(Stubs));
-  cantFail(R->notifyEmitted({}));
 }
 
 void LazyReexportsMaterializationUnit::discard(const JITDylib &JD,

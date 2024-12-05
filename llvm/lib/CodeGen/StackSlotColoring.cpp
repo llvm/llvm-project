@@ -38,7 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -160,7 +159,7 @@ namespace {
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
       AU.addPreserved<LiveIntervalsWrapperPass>();
-      AU.addPreserved<LiveDebugVariables>();
+      AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
     }

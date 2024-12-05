@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "count_new.h"
+#include "test_allocator.h"
 #include "test_iterators.h"
 
 template <class T>
@@ -36,7 +37,9 @@ struct Allocator {
   void deallocate(T* ptr, std::size_t n) { std::allocator<T>().deallocate(ptr, n); }
 
   template <class U>
-  friend bool operator==(const Allocator&, const Allocator<U>&) { return true; }
+  friend bool operator==(const Allocator&, const Allocator<U>&) {
+    return true;
+  }
 };
 
 struct ThrowingT {
@@ -49,13 +52,14 @@ struct ThrowingT {
     --throw_after_n;
   }
 
-  ThrowingT(const ThrowingT&) {
+  ThrowingT(const ThrowingT& rhs) : throw_after_n_(rhs.throw_after_n_) {
     if (throw_after_n_ == nullptr || *throw_after_n_ == 0)
       throw 1;
     --*throw_after_n_;
   }
 
-  ThrowingT& operator=(const ThrowingT&) {
+  ThrowingT& operator=(const ThrowingT& rhs) {
+    throw_after_n_ = rhs.throw_after_n_;
     if (throw_after_n_ == nullptr || *throw_after_n_ == 0)
       throw 1;
     --*throw_after_n_;
@@ -137,7 +141,7 @@ int main(int, char**) {
   } catch (int) {
   }
   check_new_delete_called();
-#endif  // TEST_STD_VER >= 14
+#endif // TEST_STD_VER >= 14
 
   try { // Throw in vector(size_type, value_type, const allocator_type&) from the type
     int throw_after = 1;
@@ -216,11 +220,12 @@ int main(int, char**) {
   }
   check_new_delete_called();
 
-  try { // Throw in vector(vector&&, const allocator_type&) from type
-    std::vector<ThrowingT, Allocator<ThrowingT> > vec(Allocator<ThrowingT>(false));
-    int throw_after = 1;
-    vec.emplace_back(throw_after);
-    std::vector<ThrowingT, Allocator<ThrowingT> > vec2(std::move(vec), Allocator<ThrowingT>(false));
+  try { // Throw in vector(vector&&, const allocator_type&) from type during element-wise move
+    std::vector<ThrowingT, test_allocator<ThrowingT> > vec(test_allocator<ThrowingT>(1));
+    int throw_after = 10;
+    ThrowingT v(throw_after);
+    vec.insert(vec.end(), 6, v);
+    std::vector<ThrowingT, test_allocator<ThrowingT> > vec2(std::move(vec), test_allocator<ThrowingT>(2));
   } catch (int) {
   }
   check_new_delete_called();

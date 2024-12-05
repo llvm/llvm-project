@@ -10,10 +10,10 @@
 #ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_OPENBSD_H
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_OPENBSD_H
 
-#include <__support/xlocale/__strtonum_fallback.h>
-#include <clocale>
-#include <cstdlib>
-#include <ctype.h>
-#include <cwctype>
+#include <__cxx03/__support/xlocale/__strtonum_fallback.h>
+#include <__cxx03/clocale>
+#include <__cxx03/cstdlib>
+#include <__cxx03/ctype.h>
+#include <__cxx03/cwctype>
 
 #endif // _LIBCPP___LOCALE_LOCALE_BASE_API_OPENBSD_H

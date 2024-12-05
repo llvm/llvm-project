@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 

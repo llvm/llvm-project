@@ -93,6 +93,10 @@ static cl::opt<bool>
                                  cl::init(false), cl::Hidden,
                                  cl::desc("Enable subreg liveness tracking"));
 
+static cl::opt<bool>
+    UseScalarIncVL("sve-use-scalar-inc-vl", cl::init(false), cl::Hidden,
+                   cl::desc("Prefer add+cnt over addvl/inc/dec"));
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -251,12 +255,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseV2:
-    // Specialize cost for Neoverse-V2.
+  case NeoverseV3:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
-  case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -385,8 +390,6 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   // X29 is named FP, so we can't use TRI->getName to check X29.
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
-
-  AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
 
   EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }
@@ -574,6 +577,14 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 }
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
+
+bool AArch64Subtarget::useScalarIncVL() const {
+  // If SVE2 or SME is present (we are not SVE-1 only) and UseScalarIncVL
+  // is not otherwise set, enable it by default.
+  if (UseScalarIncVL.getNumOccurrences())
+    return UseScalarIncVL;
+  return hasSVE2() || hasSME();
+}
 
 // If return address signing is enabled, tail calls are emitted as follows:
 //

@@ -92,6 +92,10 @@ def sew : RISCVOp {
   let OperandType = "OPERAND_SEW";
 }
 
+def vec_rm : RISCVOp {
+  let OperandType = "OPERAND_VEC_RM";
+}
+
 // X0 has special meaning for vsetvl/vsetvli.
 //  rd | rs1 |   AVL value | Effect on vl
 //--------------------------------------------------------------
@@ -100,8 +104,8 @@ def sew : RISCVOp {
 def VLOp : ComplexPattern<XLenVT, 1, "selectVLOp">;
 
 def DecImm : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(N->getSExtValue() - 1, SDLoc(N),
-                                   N->getValueType(0), /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue() - 1, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 defvar TAIL_AGNOSTIC = 1;
@@ -1057,7 +1061,7 @@ class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
                                      string Constraint = "",
                                      bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, OpClass:$rs2, ixlenimm:$rm,
+             (ins RetClass:$passthru, OpClass:$rs2, vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1070,6 +1074,7 @@ class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoUnaryMask<VReg RetClass,
@@ -1097,7 +1102,7 @@ class VPseudoUnaryMaskRoundingMode<VReg RetClass,
                                    bits<2> TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
-                  VMaskOp:$vm, ixlenimm:$rm,
+                  VMaskOp:$vm, vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1111,6 +1116,7 @@ class VPseudoUnaryMaskRoundingMode<VReg RetClass,
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoUnaryMask_NoExcept<VReg RetClass,
@@ -1128,46 +1134,6 @@ class VPseudoUnaryMask_NoExcept<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let usesCustomInserter = 1;
-}
-
-class VPseudoUnaryNoMask_FRM<VReg RetClass,
-                             VReg OpClass,
-                             string Constraint = "",
-                             bits<2> TargetConstraintType = 1> :
-      Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, OpClass:$rs2, ixlenimm:$frm,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $passthru"], ",");
-  let TargetOverlapConstraintType = TargetConstraintType;
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let HasVecPolicyOp = 1;
-  let HasRoundModeOp = 1;
-}
-
-class VPseudoUnaryMask_FRM<VReg RetClass,
-                           VReg OpClass,
-                           string Constraint = "",
-                           bits<2> TargetConstraintType = 1> :
-      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
-                  VMaskOp:$vm, ixlenimm:$frm,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $passthru"], ",");
-  let TargetOverlapConstraintType = TargetConstraintType;
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let HasVecPolicyOp = 1;
-  let UsesMaskPolicy = 1;
-  let HasRoundModeOp = 1;
 }
 
 class VPseudoUnaryNoMaskGPROut :
@@ -1250,7 +1216,7 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
                                       bit UsesVXRM_ = 1,
                                       bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, ixlenimm:$rm,
+             (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1262,6 +1228,7 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = UsesVXRM_;
+  let hasPostISelHook = !not(UsesVXRM_);
 }
 
 class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
@@ -1273,7 +1240,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, ixlenimm:$rm, AVL:$vl,
+                  VMaskOp:$vm, vec_rm:$rm, AVL:$vl,
                   sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1286,6 +1253,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = UsesVXRM_;
+  let hasPostISelHook = !not(UsesVXRM_);
 }
 
 // Special version of VPseudoBinaryNoMask where we pretend the first source is
@@ -1317,7 +1285,7 @@ class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
                                           bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs2, Op2Class:$rs1,
-                  ixlenimm:$rm,
+                  vec_rm:$rm,
                   AVL:$vl, sew:$sew,
                   vec_policy:$policy), []>,
       RISCVVPseudo {
@@ -1333,6 +1301,7 @@ class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
   let IsTiedPseudo = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
@@ -1408,7 +1377,7 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
                   VMaskOp:$vm,
-                  ixlenimm:$rm,
+                  vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1420,6 +1389,7 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 // Like VPseudoBinaryMaskPolicy, but output can be V0 and there is no policy.
@@ -1475,7 +1445,7 @@ class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
              (ins GetVRegNoV0<RetClass>.R:$passthru,
                   Op2Class:$rs1,
                   VMaskOp:$vm,
-                  ixlenimm:$rm,
+                  vec_rm:$rm,
                   AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
@@ -1490,6 +1460,7 @@ class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
   let IsTiedPseudo = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoBinaryCarry<VReg RetClass,
@@ -1578,7 +1549,7 @@ class VPseudoTernaryNoMaskWithPolicyRoundingMode<VReg RetClass,
                                                  bits<2> TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
-                  ixlenimm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+                  vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1590,6 +1561,7 @@ class VPseudoTernaryNoMaskWithPolicyRoundingMode<VReg RetClass,
   let HasSEWOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoUSSegLoadNoMask<VReg RetClass,
@@ -2011,6 +1983,7 @@ multiclass VPseudoVPOP_M {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
     }
   }
@@ -2023,6 +1996,7 @@ multiclass VPseudoV1ST_M {
       def "_M_" #mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
     }
   }
@@ -3574,23 +3548,6 @@ multiclass VPseudoConversionRoundingMode<VReg RetClass,
   }
 }
 
-
-multiclass VPseudoConversionRM<VReg RetClass,
-                               VReg Op1Class,
-                               LMULInfo MInfo,
-                               string Constraint = "",
-                               int sew = 0,
-                               bits<2> TargetConstraintType = 1> {
-  let VLMul = MInfo.value, SEW=sew in {
-    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoUnaryNoMask_FRM<RetClass, Op1Class,
-                                        Constraint, TargetConstraintType>;
-    def suffix # "_MASK" : VPseudoUnaryMask_FRM<RetClass, Op1Class,
-                                                Constraint, TargetConstraintType>,
-                           RISCVMaskedPseudo<MaskIdx=2>;
-  }
-}
-
 multiclass VPseudoConversionNoExcept<VReg RetClass,
                                      VReg Op1Class,
                                      LMULInfo MInfo,
@@ -3616,14 +3573,6 @@ multiclass VPseudoVCVTI_V_RM {
   }
 }
 
-multiclass VPseudoVCVTI_RM_V {
-  foreach m = MxListF in {
-    defm _V : VPseudoConversionRM<m.vrclass, m.vrclass, m>,
-              SchedUnary<"WriteVFCvtFToIV", "ReadVFCvtFToIV", m.MX,
-                         forcePassthruRead=true>;
-  }
-}
-
 multiclass VPseudoVFROUND_NOEXCEPT_V {
   foreach m = MxListF in {
     defm _V : VPseudoConversionNoExcept<m.vrclass, m.vrclass, m>,
@@ -3636,15 +3585,6 @@ multiclass VPseudoVCVTF_V_RM {
   foreach m = MxListF in {
     foreach e = SchedSEWSet<m.MX, isF=1>.val in
       defm _V : VPseudoConversionRoundingMode<m.vrclass, m.vrclass, m, sew=e>,
-                SchedUnary<"WriteVFCvtIToFV", "ReadVFCvtIToFV", m.MX, e,
-                           forcePassthruRead=true>;
-  }
-}
-
-multiclass VPseudoVCVTF_RM_V {
-  foreach m = MxListF in {
-    foreach e = SchedSEWSet<m.MX, isF=1>.val in
-      defm _V : VPseudoConversionRM<m.vrclass, m.vrclass, m, sew=e>,
                 SchedUnary<"WriteVFCvtIToFV", "ReadVFCvtIToFV", m.MX, e,
                            forcePassthruRead=true>;
   }
@@ -3663,15 +3603,6 @@ multiclass VPseudoVWCVTI_V_RM {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListFW in {
     defm _V : VPseudoConversionRoundingMode<m.wvrclass, m.vrclass, m, constraint, TargetConstraintType=3>,
-              SchedUnary<"WriteVFWCvtFToIV", "ReadVFWCvtFToIV", m.MX,
-                         forcePassthruRead=true>;
-  }
-}
-
-multiclass VPseudoVWCVTI_RM_V {
-  defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListFW in {
-    defm _V : VPseudoConversionRM<m.wvrclass, m.vrclass, m, constraint>,
               SchedUnary<"WriteVFWCvtFToIV", "ReadVFWCvtFToIV", m.MX,
                          forcePassthruRead=true>;
   }
@@ -3717,15 +3648,6 @@ multiclass VPseudoVNCVTI_W_RM {
   }
 }
 
-multiclass VPseudoVNCVTI_RM_W {
-  defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in {
-    defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint, TargetConstraintType=2>,
-              SchedUnary<"WriteVFNCvtFToIV", "ReadVFNCvtFToIV", m.MX,
-                         forcePassthruRead=true>;
-  }
-}
-
 multiclass VPseudoVNCVTF_W_RM {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListFW in {
@@ -3733,17 +3655,6 @@ multiclass VPseudoVNCVTF_W_RM {
       defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m,
                                               constraint, sew=e,
                                               TargetConstraintType=2>,
-                SchedUnary<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV", m.MX, e,
-                           forcePassthruRead=true>;
-  }
-}
-
-multiclass VPseudoVNCVTF_RM_W {
-  defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListFW in {
-    foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
-      defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint, sew=e,
-                                    TargetConstraintType=2>,
                 SchedUnary<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV", m.MX, e,
                            forcePassthruRead=true>;
   }
@@ -4450,21 +4361,22 @@ class VPatTernaryNoMaskWithPolicy<string intrinsic,
                                   ValueType result_type,
                                   ValueType op1_type,
                                   ValueType op2_type,
-                                  int sew,
+                                  int log2sew,
                                   LMULInfo vlmul,
                                   VReg result_reg_class,
                                   RegisterClass op1_reg_class,
-                                  DAGOperand op2_kind> :
+                                  DAGOperand op2_kind,
+                                  bit isSEWAware = false> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic)
                     (result_type result_reg_class:$rs3),
                     (op1_type op1_reg_class:$rs1),
                     (op2_type op2_kind:$rs2),
                     VLOpFrag, (XLenVT timm:$policy))),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#!if(isSEWAware, "_E"#!shl(1, log2sew), ""))
                     result_reg_class:$rs3,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
-                    GPR:$vl, sew, (XLenVT timm:$policy))>;
+                    GPR:$vl, log2sew, (XLenVT timm:$policy))>;
 
 class VPatTernaryNoMaskWithPolicyRoundingMode<string intrinsic,
                                   string inst,
@@ -6451,7 +6363,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasPostISelHook = 1 in {
+let mayRaiseFPException = true in {
 defm PseudoVFADD  : VPseudoVALU_VV_VF_RM;
 defm PseudoVFSUB  : VPseudoVALU_VV_VF_RM;
 defm PseudoVFRSUB : VPseudoVALU_VF_RM;
@@ -6460,7 +6372,7 @@ defm PseudoVFRSUB : VPseudoVALU_VF_RM;
 //===----------------------------------------------------------------------===//
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFWADD : VPseudoVFWALU_VV_VF_RM;
 defm PseudoVFWSUB : VPseudoVFWALU_VV_VF_RM;
 defm PseudoVFWADD : VPseudoVFWALU_WV_WF_RM;
@@ -6470,7 +6382,7 @@ defm PseudoVFWSUB : VPseudoVFWALU_WV_WF_RM;
 //===----------------------------------------------------------------------===//
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFMUL  : VPseudoVFMUL_VV_VF_RM;
 defm PseudoVFDIV  : VPseudoVFDIV_VV_VF_RM;
 defm PseudoVFRDIV : VPseudoVFRDIV_VF_RM;
@@ -6486,7 +6398,7 @@ defm PseudoVFWMUL : VPseudoVWMUL_VV_VF_RM;
 //===----------------------------------------------------------------------===//
 // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFMACC  : VPseudoVMAC_VV_VF_AAXA_RM;
 defm PseudoVFNMACC : VPseudoVMAC_VV_VF_AAXA_RM;
 defm PseudoVFMSAC  : VPseudoVMAC_VV_VF_AAXA_RM;
@@ -6500,7 +6412,7 @@ defm PseudoVFNMSUB : VPseudoVMAC_VV_VF_AAXA_RM;
 //===----------------------------------------------------------------------===//
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFWMACC  : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWNMACC : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWMSAC  : VPseudoVWMAC_VV_VF_RM;
@@ -6574,36 +6486,29 @@ defm PseudoVFMV_V : VPseudoVMV_F;
 // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
 let mayRaiseFPException = true in {
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFCVT_XU_F : VPseudoVCVTI_V_RM;
 defm PseudoVFCVT_X_F : VPseudoVCVTI_V_RM;
 }
-
-defm PseudoVFCVT_RM_XU_F : VPseudoVCVTI_RM_V;
-defm PseudoVFCVT_RM_X_F : VPseudoVCVTI_RM_V;
 
 defm PseudoVFCVT_RTZ_XU_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_RTZ_X_F : VPseudoVCVTI_V;
 
 defm PseudoVFROUND_NOEXCEPT : VPseudoVFROUND_NOEXCEPT_V;
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFCVT_F_XU : VPseudoVCVTF_V_RM;
 defm PseudoVFCVT_F_X : VPseudoVCVTF_V_RM;
 }
-defm PseudoVFCVT_RM_F_XU : VPseudoVCVTF_RM_V;
-defm PseudoVFCVT_RM_F_X  : VPseudoVCVTF_RM_V;
 } // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
 let mayRaiseFPException = true in {
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFWCVT_XU_F     : VPseudoVWCVTI_V_RM;
 defm PseudoVFWCVT_X_F      : VPseudoVWCVTI_V_RM;
 }
-defm PseudoVFWCVT_RM_XU_F  : VPseudoVWCVTI_RM_V;
-defm PseudoVFWCVT_RM_X_F   : VPseudoVWCVTI_RM_V;
 
 defm PseudoVFWCVT_RTZ_XU_F : VPseudoVWCVTI_V;
 defm PseudoVFWCVT_RTZ_X_F  : VPseudoVWCVTI_V;
@@ -6619,26 +6524,23 @@ defm PseudoVFWCVTBF16_F_F :  VPseudoVWCVTD_V;
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
 let mayRaiseFPException = true in {
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFNCVT_XU_F     : VPseudoVNCVTI_W_RM;
 defm PseudoVFNCVT_X_F      : VPseudoVNCVTI_W_RM;
 }
-defm PseudoVFNCVT_RM_XU_F  : VPseudoVNCVTI_RM_W;
-defm PseudoVFNCVT_RM_X_F   : VPseudoVNCVTI_RM_W;
 
 defm PseudoVFNCVT_RTZ_XU_F : VPseudoVNCVTI_W;
 defm PseudoVFNCVT_RTZ_X_F  : VPseudoVNCVTI_W;
 
-let hasSideEffects = 0, hasPostISelHook = 1 in {
+let hasSideEffects = 0 in {
 defm PseudoVFNCVT_F_XU     : VPseudoVNCVTF_W_RM;
 defm PseudoVFNCVT_F_X      : VPseudoVNCVTF_W_RM;
 }
-defm PseudoVFNCVT_RM_F_XU  : VPseudoVNCVTF_RM_W;
-defm PseudoVFNCVT_RM_F_X   : VPseudoVNCVTF_RM_W;
 
-let hasSideEffects = 0, hasPostISelHook = 1 in
+let hasSideEffects = 0 in {
 defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W_RM;
 defm PseudoVFNCVTBF16_F_F :  VPseudoVNCVTD_W_RM;
+}
 
 defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
 } // mayRaiseFPException = true
@@ -6674,8 +6576,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true,
-    hasSideEffects = 0 in {
+let mayRaiseFPException = true, hasSideEffects = 0 in {
 defm PseudoVFREDOSUM : VPseudoVFREDO_VS_RM;
 defm PseudoVFREDUSUM : VPseudoVFRED_VS_RM;
 }
@@ -6687,9 +6588,7 @@ defm PseudoVFREDMAX  : VPseudoVFREDMINMAX_VS;
 //===----------------------------------------------------------------------===//
 // 14.4. Vector Widening Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
-let IsRVVWideningReduction = 1,
-    hasSideEffects = 0,
-    mayRaiseFPException = true in {
+let IsRVVWideningReduction = 1, hasSideEffects = 0, mayRaiseFPException = true in {
 defm PseudoVFWREDUSUM  : VPseudoVFWRED_VS_RM;
 defm PseudoVFWREDOSUM  : VPseudoVFWREDO_VS_RM;
 }

@@ -12,10 +12,10 @@ Macros
   :align: center
   :header-rows: 1
 
-  * - Function
+  * - Macro
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - ONCE_FLAG_INIT
     -
     - 7.28.1.3
@@ -36,7 +36,7 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - call_once
     - |check|
     - 7.28.2.1

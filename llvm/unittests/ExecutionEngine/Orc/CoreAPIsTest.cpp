@@ -9,6 +9,7 @@
 #include "OrcTestCommon.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Testing/Support/Error.h"
@@ -515,6 +516,71 @@ TEST_F(CoreAPIsStandardTest, TestTrivialCircularDependency) {
 
   EXPECT_TRUE(FooReady)
     << "Self-dependency prevented symbol from being marked ready";
+}
+
+TEST_F(CoreAPIsStandardTest, TestBasicQueryDependenciesReporting) {
+  // Test that dependencies are reported as expected.
+
+  bool DependenciesCallbackRan = false;
+
+  std::unique_ptr<MaterializationResponsibility> FooR;
+  std::unique_ptr<MaterializationResponsibility> BarR;
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        FooR = std::move(R);
+      })));
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Bar, BarSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        BarR = std::move(R);
+      })));
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Baz, BazSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        cantFail(R->notifyResolved({{Baz, BazSym}}));
+        cantFail(R->notifyEmitted({}));
+      })));
+
+  // First issue a lookup for Foo and Bar so that we can put them
+  // into the required states for the test lookup below.
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({Foo, Bar}), SymbolState::Resolved,
+      [](Expected<SymbolMap> Result) {
+        EXPECT_THAT_EXPECTED(std::move(Result), Succeeded());
+      },
+      NoDependenciesToRegister);
+
+  cantFail(FooR->notifyResolved({{Foo, FooSym}}));
+  cantFail(FooR->notifyEmitted({}));
+
+  cantFail(BarR->notifyResolved({{Bar, BarSym}}));
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({Foo, Bar, Baz}), SymbolState::Resolved,
+      [](Expected<SymbolMap> Result) {
+        EXPECT_THAT_EXPECTED(std::move(Result), Succeeded());
+      },
+      [&](const SymbolDependenceMap &Dependencies) {
+        EXPECT_EQ(Dependencies.size(), 1U)
+            << "Expect dependencies on only one JITDylib";
+        EXPECT_TRUE(Dependencies.count(&JD))
+            << "Expect dependencies on JD only";
+        auto &Deps = Dependencies.begin()->second;
+        EXPECT_EQ(Deps.size(), 2U);
+        EXPECT_TRUE(Deps.count(Bar));
+        EXPECT_TRUE(Deps.count(Baz));
+        DependenciesCallbackRan = true;
+      });
+
+  cantFail(BarR->notifyEmitted({}));
+
+  EXPECT_TRUE(DependenciesCallbackRan);
 }
 
 TEST_F(CoreAPIsStandardTest, TestCircularDependenceInOneJITDylib) {

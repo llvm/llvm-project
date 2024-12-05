@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
-#include "Opcode.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -159,7 +158,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   if (const auto *E = D.dyn_cast<const Expr *>()) {
     QT = E->getType();
   } else {
-    const ValueDecl *VD = cast<ValueDecl>(D.get<const Decl *>());
+    const ValueDecl *VD = cast<ValueDecl>(cast<const Decl *>(D));
     IsWeak = VD->isWeak();
     QT = VD->getType();
     if (const auto *RT = QT->getAs<ReferenceType>())
@@ -399,10 +398,10 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
   }
 
   // Arrays.
-  if (const auto ArrayType = Ty->getAsArrayTypeUnsafe()) {
+  if (const auto *ArrayType = Ty->getAsArrayTypeUnsafe()) {
     QualType ElemTy = ArrayType->getElementType();
     // Array of well-known bounds.
-    if (auto CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
       size_t NumElems = CAT->getZExtSize();
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.

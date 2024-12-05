@@ -23,14 +23,6 @@ package(
 
 licenses(["notice"])
 
-exports_files([
-    "tools/clang-format/clang-format.el",
-    "tools/clang-format/clang-format-test.el",
-    "tools/clang-format/clang-format.py",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer.el",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer-test.el",
-])
-
 cc_binary(
     name = "clang-tblgen",
     srcs = glob([
@@ -365,7 +357,7 @@ gentbl(
 )
 
 gentbl(
-    name="basic_builtins_x86_gen",
+    name = "basic_builtins_x86_gen",
     tbl_outs = [(
         "-gen-clang-builtins",
         "include/clang/Basic/BuiltinsX86.inc",
@@ -1028,6 +1020,7 @@ cc_library(
         ":basic",
         ":basic_builtins_gen",
         ":lex",
+        ":support",
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
         "//llvm:Core",
@@ -1969,6 +1962,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TransformUtils",
         "//llvm:config",
     ],
 )

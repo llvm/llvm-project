@@ -200,10 +200,8 @@ define void @test_attributes(ptr byval(%struct2) %s) nounwind gc "statepoint-exa
 ; CHECK-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; CHECK-NEXT:    ld.d $a1, $a0, 16
 ; CHECK-NEXT:    st.d $a1, $sp, 16
-; CHECK-NEXT:    ld.d $a1, $a0, 8
-; CHECK-NEXT:    st.d $a1, $sp, 8
-; CHECK-NEXT:    ld.d $a0, $a0, 0
-; CHECK-NEXT:    st.d $a0, $sp, 0
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vst $vr0, $sp, 0
 ; CHECK-NEXT:    ori $a0, $zero, 42
 ; CHECK-NEXT:    ori $a2, $zero, 17
 ; CHECK-NEXT:    addi.d $a3, $sp, 0

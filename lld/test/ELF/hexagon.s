@@ -1,7 +1,9 @@
 # REQUIRES: hexagon
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %S/Inputs/hexagon.s -o %t1.o
-# RUN: ld.lld %t.o %t1.o -o %t
+# RUN: ld.lld %t.o %t1.o -o %t --Ttext=0x200b4 --section-start=b_1000000=0x1000000 \
+# RUN:  --section-start=b_1000400=0x1000400 --section-start=b_1004000=0x1004000 \
+# RUN:  --section-start=b_1010000=0x1010000 --section-start=b_1800000=0x1800000
 # RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
 
 # Note: 131584 == 0x20200
@@ -221,3 +223,40 @@ r0 = memw(r1+##_start)
 
 memw(r0+##_start) = r1
 # CHECK: memw(r0+##131644) = r1
+
+
+## Tests for maximum branch ranges reachable without trampolines.
+
+.section b_1000000, "ax"
+## The nop makes sure the first jump is within range.
+nop
+{ r0 = #0; jump #b_1000400 } // R_HEX_B9_PCREL
+if (r0==#0) jump:t #b_1004000 // R_HEX_B13_PCREL
+if (p0) jump #b_1010000 // R_HEX_B15_PCREL
+jump #b_1800000 // R_HEX_B22_PCREL
+
+.section b_1000400, "ax"
+nop
+
+.section b_1004000, "ax"
+nop
+
+.section b_1010000, "ax"
+nop
+
+.section b_1800000, "ax"
+nop
+
+## Make sure we got the right relocations.
+# RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=REL
+# REL: R_HEX_B9_PCREL         00000000   b_1000400
+# REL: R_HEX_B13_PCREL        00000000   b_1004000
+# REL: R_HEX_B15_PCREL        00000000   b_1010000
+# REL: R_HEX_B22_PCREL        00000000   b_1800000
+
+# CHECK: 01000000 <b_1000000>:
+# CHECK-NEXT: 1000000: {{.*}} {  nop }
+# CHECK-NEXT: 1000004: {{.*}} {  r0 = #0 ; jump 0x1000400 }
+# CHECK-NEXT: 1000008: {{.*}} {  if (r0==#0) jump:t 0x1004000 }
+# CHECK-NEXT: 100000c: {{.*}} {  if (p0) jump:nt 0x1010000 }
+# CHECK-NEXT: 1000010: {{.*}} {  jump 0x1800000 }

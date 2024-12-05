@@ -30,11 +30,11 @@ void test(void) {
 
   res_vsi = vec_cts(a1, 31);
   //  CHECK:       [[TMP0:%.*]] = load <2 x double>, ptr @a1, align 16
-  //  CHECK-NEXT:  fmul <2 x double> [[TMP0]], <double 0x41E0000000000000, double 0x41E0000000000000>
+  //  CHECK-NEXT:  fmul <2 x double> [[TMP0]], splat (double 0x41E0000000000000)
 
   res_vsi = vec_cts(a1, 500);
   // CHECK:        [[TMP4:%.*]] = load <2 x double>, ptr @a1, align 16
-  // CHECK-NEXT:   fmul <2 x double> [[TMP4]], <double 0x4130000000000000, double 0x4130000000000000>
+  // CHECK-NEXT:   fmul <2 x double> [[TMP4]], splat (double 0x4130000000000000)
 
   res_vsi = vec_ctu(vf1, 31);
   // CHECK:        [[TMP8:%.*]] = load <4 x float>, ptr @vf1, align 16
@@ -46,19 +46,19 @@ void test(void) {
 
   res_vull = vec_ctul(vf1, 31);
   // CHECK:        [[TMP12:%.*]] = load <4 x float>, ptr @vf1, align 16
-  // CHECK-NEXT:   fmul <4 x float> [[TMP12]], <float 0x41E0000000000000, float 0x41E0000000000000, float 0x41E0000000000000, float 0x41E0000000000000>
+  // CHECK-NEXT:   fmul <4 x float> [[TMP12]], splat (float 0x41E0000000000000)
 
   res_vull = vec_ctul(vf1, 500);
   // CHECK:        [[TMP21:%.*]] = load <4 x float>, ptr @vf1, align 16
-  // CHECK-NEXT:   fmul <4 x float> [[TMP21]], <float 0x4130000000000000, float 0x4130000000000000, float 0x4130000000000000, float 0x4130000000000000>
+  // CHECK-NEXT:   fmul <4 x float> [[TMP21]], splat (float 0x4130000000000000)
 
   res_vsll = vec_ctsl(vf1, 31);
   // CHECK:        [[TMP30:%.*]] = load <4 x float>, ptr @vf1, align 16
-  // CHECK-NEXT:   fmul <4 x float> [[TMP30]], <float 0x41E0000000000000, float 0x41E0000000000000, float 0x41E0000000000000, float 0x41E0000000000000>
+  // CHECK-NEXT:   fmul <4 x float> [[TMP30]], splat (float 0x41E0000000000000)
 
   res_vsll = vec_ctsl(vf1, 500);
   // CHECK:        [[TMP39:%.*]] = load <4 x float>, ptr @vf1, align 16
-  // CHECK-NEXT:   fmul <4 x float> [[TMP39]], <float 0x4130000000000000, float 0x4130000000000000, float 0x4130000000000000, float 0x4130000000000000>
+  // CHECK-NEXT:   fmul <4 x float> [[TMP39]], splat (float 0x4130000000000000)
 
   res_vf = vec_ctf(vsi1, 31);
   // CHECK:        [[TMP48:%.*]] = load <4 x i32>, ptr @vsi1, align 16
@@ -71,10 +71,10 @@ void test(void) {
   res_vd = vec_ctd(vsi1, 31);
   // CHECK:        [[TMP53:%.*]] = load <4 x i32>, ptr @vsi1, align 16
   // CHECK:        [[TMP83:%.*]] = call <2 x double> @llvm.ppc.vsx.xvcvsxwdp(<4 x i32> [[TMP82:%.*]])
-  // CHECK-NEXT:   fmul <2 x double> [[TMP83]], <double 0x3E00000000000000, double 0x3E00000000000000>
+  // CHECK-NEXT:   fmul <2 x double> [[TMP83]], splat (double 0x3E00000000000000)
 
   res_vd = vec_ctd(vsi1, 500);
   // CHECK:        [[TMP84:%.*]] = load <4 x i32>, ptr @vsi1, align 16
   // CHECK:        [[TMP115:%.*]] = call <2 x double> @llvm.ppc.vsx.xvcvsxwdp(<4 x i32> [[TMP114:%.*]])
-  // CHECK-NEXT:   fmul <2 x double> [[TMP115]], <double 0x3EB0000000000000, double 0x3EB0000000000000>
+  // CHECK-NEXT:   fmul <2 x double> [[TMP115]], splat (double 0x3EB0000000000000)
 }

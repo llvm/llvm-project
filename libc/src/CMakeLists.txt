@@ -1,5 +1,6 @@
 add_subdirectory(__support)
 
+add_subdirectory(complex)
 add_subdirectory(ctype)
 add_subdirectory(dlfcn)
 add_subdirectory(errno)

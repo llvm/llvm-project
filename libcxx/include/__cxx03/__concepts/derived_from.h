@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___CONCEPTS_DERIVED_FROM_H
 #define _LIBCPP___CONCEPTS_DERIVED_FROM_H
 
-#include <__config>
-#include <__type_traits/is_base_of.h>
-#include <__type_traits/is_convertible.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_base_of.h>
+#include <__cxx03/__type_traits/is_convertible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -32,7 +32,6 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/MangleNumberingContext.h"
@@ -41,7 +40,6 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Stmt.h"
-#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -81,7 +79,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/Support/Capacity.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -377,10 +374,10 @@ static const Decl &adjustDeclToTemplate(const Decl &D) {
       llvm::PointerUnion<ClassTemplateDecl *,
                          ClassTemplatePartialSpecializationDecl *>
           PU = CTSD->getSpecializedTemplateOrPartial();
-      return PU.is<ClassTemplateDecl *>()
-                 ? *static_cast<const Decl *>(PU.get<ClassTemplateDecl *>())
+      return isa<ClassTemplateDecl *>(PU)
+                 ? *static_cast<const Decl *>(cast<ClassTemplateDecl *>(PU))
                  : *static_cast<const Decl *>(
-                       PU.get<ClassTemplatePartialSpecializationDecl *>());
+                       cast<ClassTemplatePartialSpecializationDecl *>(PU));
     }
 
     // Class is instantiated from a member definition of a class template?
@@ -829,6 +826,15 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   Canonical = new (*this) CanonicalTemplateTemplateParm(CanonTTP);
   CanonTemplateTemplateParms.InsertNode(Canonical, InsertPos);
   return CanonTTP;
+}
+
+/// Check if a type can have its sanitizer instrumentation elided based on its
+/// presence within an ignorelist.
+bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
+                                          const QualType &Ty) const {
+  std::string TyName = Ty.getUnqualifiedType().getAsString(getPrintingPolicy());
+  return NoSanitizeL->containsType(Mask, TyName) &&
+         !NoSanitizeL->containsType(Mask, TyName, "sanitize");
 }
 
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
@@ -1583,14 +1589,17 @@ ASTContext::setInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst,
   InstantiatedFromUsingShadowDecl[Inst] = Pattern;
 }
 
-FieldDecl *ASTContext::getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) {
+FieldDecl *
+ASTContext::getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) const {
   return InstantiatedFromUnnamedFieldDecl.lookup(Field);
 }
 
 void ASTContext::setInstantiatedFromUnnamedFieldDecl(FieldDecl *Inst,
                                                      FieldDecl *Tmpl) {
-  assert(!Inst->getDeclName() && "Instantiated field decl is not unnamed");
-  assert(!Tmpl->getDeclName() && "Template field decl is not unnamed");
+  assert((!Inst->getDeclName() || Inst->isPlaceholderVar(getLangOpts())) &&
+         "Instantiated field decl is not unnamed");
+  assert((!Inst->getDeclName() || Inst->isPlaceholderVar(getLangOpts())) &&
+         "Template field decl is not unnamed");
   assert(!InstantiatedFromUnnamedFieldDecl[Inst] &&
          "Already noted what unnamed field was instantiated from");
 
@@ -3549,10 +3558,11 @@ ASTContext::adjustType(QualType Orig,
                        llvm::function_ref<QualType(QualType)> Adjust) const {
   switch (Orig->getTypeClass()) {
   case Type::Attributed: {
-    const auto *AT = dyn_cast<AttributedType>(Orig);
+    const auto *AT = cast<AttributedType>(Orig);
     return getAttributedType(AT->getAttrKind(),
                              adjustType(AT->getModifiedType(), Adjust),
-                             adjustType(AT->getEquivalentType(), Adjust));
+                             adjustType(AT->getEquivalentType(), Adjust),
+                             AT->getAttr());
   }
 
   case Type::BTFTagAttributed: {
@@ -5197,22 +5207,52 @@ QualType ASTContext::getUnresolvedUsingType(
 
 QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType modifiedType,
-                                       QualType equivalentType) const {
+                                       QualType equivalentType,
+                                       const Attr *attr) const {
   llvm::FoldingSetNodeID id;
-  AttributedType::Profile(id, attrKind, modifiedType, equivalentType);
+  AttributedType::Profile(id, attrKind, modifiedType, equivalentType, attr);
 
   void *insertPos = nullptr;
   AttributedType *type = AttributedTypes.FindNodeOrInsertPos(id, insertPos);
   if (type) return QualType(type, 0);
 
+  assert(!attr || attr->getKind() == attrKind);
+
   QualType canon = getCanonicalType(equivalentType);
-  type = new (*this, alignof(AttributedType))
-      AttributedType(canon, attrKind, modifiedType, equivalentType);
+	type = new (*this, alignof(AttributedType))
+      AttributedType(canon, attrKind, attr, modifiedType, equivalentType);
 
   Types.push_back(type);
   AttributedTypes.InsertNode(type, insertPos);
 
   return QualType(type, 0);
+}
+
+QualType ASTContext::getAttributedType(const Attr *attr, QualType modifiedType,
+                                       QualType equivalentType) const {
+  return getAttributedType(attr->getKind(), modifiedType, equivalentType, attr);
+}
+
+QualType ASTContext::getAttributedType(NullabilityKind nullability,
+                                       QualType modifiedType,
+                                       QualType equivalentType) {
+  switch (nullability) {
+  case NullabilityKind::NonNull:
+    return getAttributedType(attr::TypeNonNull, modifiedType, equivalentType);
+
+  case NullabilityKind::Nullable:
+    return getAttributedType(attr::TypeNullable, modifiedType, equivalentType);
+
+  case NullabilityKind::NullableResult:
+    return getAttributedType(attr::TypeNullableResult, modifiedType,
+                             equivalentType);
+
+  case NullabilityKind::Unspecified:
+    return getAttributedType(attr::TypeNullUnspecified, modifiedType,
+                             equivalentType);
+  }
+
+  llvm_unreachable("Unknown nullability kind");
 }
 
 QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
@@ -5260,10 +5300,11 @@ QualType ASTContext::getHLSLAttributedResourceType(
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex) const {
+    std::optional<unsigned> PackIndex,
+    SubstTemplateTypeParmTypeFlag Flag) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Replacement, AssociatedDecl, Index,
-                                     PackIndex);
+                                     PackIndex, Flag);
   void *InsertPos = nullptr;
   SubstTemplateTypeParmType *SubstParm =
       SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -5273,7 +5314,7 @@ QualType ASTContext::getSubstTemplateTypeParmType(
                              !Replacement.isCanonical()),
                          alignof(SubstTemplateTypeParmType));
     SubstParm = new (Mem) SubstTemplateTypeParmType(Replacement, AssociatedDecl,
-                                                    Index, PackIndex);
+                                                    Index, PackIndex, Flag);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
@@ -6182,13 +6223,11 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                          ArrayRef<QualType> Expansions,
                                          int Index) const {
   QualType Canonical;
-  bool ExpandsToEmptyPack = FullySubstituted && Expansions.empty();
   if (FullySubstituted && Index != -1) {
     Canonical = getCanonicalType(Expansions[Index]);
   } else {
     llvm::FoldingSetNodeID ID;
-    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr,
-                              ExpandsToEmptyPack);
+    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr, FullySubstituted);
     void *InsertPos = nullptr;
     PackIndexingType *Canon =
         DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -6197,7 +6236,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
       Canon = new (Mem) PackIndexingType(*this, QualType(), Pattern, IndexExpr,
-                                         ExpandsToEmptyPack, Expansions);
+                                         FullySubstituted, Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -6207,7 +6246,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
                TypeAlignment);
   auto *T = new (Mem) PackIndexingType(*this, Canonical, Pattern, IndexExpr,
-                                       ExpandsToEmptyPack, Expansions);
+                                       FullySubstituted, Expansions);
   Types.push_back(T);
   return QualType(T, 0);
 }
@@ -7537,8 +7576,8 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
 
   // int x[_Nullable] -> int * _Nullable
   if (auto Nullability = Ty->getNullability()) {
-    Result = const_cast<ASTContext *>(this)->getAttributedType(
-        AttributedType::getNullabilityAttrKind(*Nullability), Result, Result);
+    Result = const_cast<ASTContext *>(this)->getAttributedType(*Nullability,
+                                                               Result, Result);
   }
   return Result;
 }
@@ -11361,7 +11400,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       Qualifiers RHSPteeQual = RHSPointee.getQualifiers();
       // Blocks can't be an expression in a ternary operator (OpenCL v2.0
       // 6.12.5) thus the following check is asymmetric.
-      if (!LHSPteeQual.isAddressSpaceSupersetOf(RHSPteeQual))
+      if (!LHSPteeQual.isAddressSpaceSupersetOf(RHSPteeQual, *this))
         return {};
       LHSPteeQual.removeAddressSpace();
       RHSPteeQual.removeAddressSpace();
@@ -13773,7 +13812,8 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     // FIXME: It's inefficient to have to unify the modified types.
     return Ctx.getAttributedType(Kind, Ctx.getCommonSugaredType(MX, MY),
-                                 Ctx.getQualifiedType(Underlying));
+                                 Ctx.getQualifiedType(Underlying),
+                                 AX->getAttr());
   }
   case Type::BTFTagAttributed: {
     const auto *BX = cast<BTFTagAttributedType>(X);
@@ -14254,11 +14294,13 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 // corresponding backend features (which may contain duplicates).
 static std::vector<std::string> getFMVBackendFeaturesFor(
     const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
-  std::vector<std::string> BackendFeats;
+  std::vector<std::string> BackendFeats{{"+fmv"}};
+  llvm::AArch64::ExtensionSet FeatureBits;
   for (StringRef F : FMVFeatStrings)
     if (auto FMVExt = llvm::AArch64::parseFMVExtension(F))
-      for (StringRef F : FMVExt->getImpliedFeatures())
-        BackendFeats.push_back(F.str());
+      if (FMVExt->ID)
+        FeatureBits.enable(*FMVExt->ID);
+  FeatureBits.toLLVMFeatureList(BackendFeats);
   return BackendFeats;
 }
 
@@ -14368,6 +14410,33 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
   } else {
     FeatureMap = Target->getTargetOpts().FeatureMap;
   }
+}
+
+static SYCLKernelInfo BuildSYCLKernelInfo(CanQualType KernelNameType,
+                                          const FunctionDecl *FD) {
+  return {KernelNameType, FD};
+}
+
+void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
+  // If the function declaration to register is invalid or dependent, the
+  // registration attempt is ignored.
+  if (FD->isInvalidDecl() || FD->isTemplated())
+    return;
+
+  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+
+  // Be tolerant of multiple registration attempts so long as each attempt
+  // is for the same entity. Callers are obligated to detect and diagnose
+  // conflicting kernel names prior to calling this function.
+  CanQualType KernelNameType = getCanonicalType(SKEPAttr->getKernelName());
+  auto IT = SYCLKernels.find(KernelNameType);
+  assert((IT == SYCLKernels.end() ||
+          declaresSameEntity(FD, IT->second.getKernelEntryPointDecl())) &&
+         "SYCL kernel name conflict");
+  (void)IT;
+  SYCLKernels.insert(
+      std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
 }
 
 OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {

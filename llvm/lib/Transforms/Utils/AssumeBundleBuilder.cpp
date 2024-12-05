@@ -412,7 +412,7 @@ struct AssumeSimplify {
             CleanupToDo.insert(Assume);
             if (BOI.Begin != BOI.End) {
               Use *U = &Assume->op_begin()[BOI.Begin + ABA_WasOn];
-              U->set(UndefValue::get(U->get()->getType()));
+              U->set(PoisonValue::get(U->get()->getType()));
             }
             BOI.Tag = IgnoreTag;
           };

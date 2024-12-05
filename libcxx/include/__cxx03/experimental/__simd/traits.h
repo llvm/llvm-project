@@ -10,13 +10,13 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_TRAITS_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_TRAITS_H
 
-#include <__bit/bit_ceil.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_same.h>
-#include <cstddef>
-#include <experimental/__config>
-#include <experimental/__simd/declaration.h>
-#include <experimental/__simd/utility.h>
+#include <__cxx03/__bit/bit_ceil.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/experimental/__simd/declaration.h>
+#include <__cxx03/experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 

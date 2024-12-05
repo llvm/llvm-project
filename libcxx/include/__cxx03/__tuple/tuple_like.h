@@ -9,11 +9,11 @@
 #ifndef _LIBCPP___TUPLE_TUPLE_LIKE_H
 #define _LIBCPP___TUPLE_TUPLE_LIKE_H
 
-#include <__config>
-#include <__fwd/subrange.h>
-#include <__tuple/tuple_like_no_subrange.h>
-#include <__tuple/tuple_size.h>
-#include <__type_traits/remove_cvref.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/subrange.h>
+#include <__cxx03/__tuple/tuple_like_no_subrange.h>
+#include <__cxx03/__tuple/tuple_size.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

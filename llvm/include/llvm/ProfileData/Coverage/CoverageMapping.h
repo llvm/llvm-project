@@ -461,7 +461,7 @@ public:
         Folded(std::move(Folded)), PosToID(std::move(PosToID)),
         CondLoc(std::move(CondLoc)){};
 
-  CounterMappingRegion getDecisionRegion() const { return Region; }
+  const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }

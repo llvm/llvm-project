@@ -11,7 +11,7 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_DECLARATION_H
 
 #include <__config>
-#include <cstddef>
+#include <__cstddef/size_t.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 

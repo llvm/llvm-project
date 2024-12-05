@@ -49,10 +49,10 @@ wctrans_t wctrans(const char* property);
 
 */
 
-#include <__config>
-#include <cctype>
+#include <__cxx03/__config>
+#include <__cxx03/cctype>
 
-#include <wctype.h>
+#include <__cxx03/wctype.h>
 
 #ifndef _LIBCPP_WCTYPE_H
 #   error <cwctype> tried including <wctype.h> but didn't find libc++'s <wctype.h> header. \

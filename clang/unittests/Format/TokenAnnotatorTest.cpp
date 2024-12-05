@@ -2598,6 +2598,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   Tokens = Annotate("x = '{\"\"};");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_Unknown);
+
+  // Module headers.
+  Tokens = Annotate("module x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic `x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic x``x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
+  Tokens = Annotate("function automatic x::x x();\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
@@ -3569,6 +3587,13 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   ASSERT_EQ(Tokens.size(), 24u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
+}
+
+TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
+  auto Tokens = annotate("FOOBAR(switch);\n"
+                         "void f() {}");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
 }
 
 } // namespace
