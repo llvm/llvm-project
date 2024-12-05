@@ -15,7 +15,10 @@
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "lldb/Core/SwiftForward.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ThreadSafeDenseMap.h"
+#include "swift/Demangling/ManglingFlavor.h"
 
 // FIXME: needed only for the DenseMap.
 #include "clang/APINotes/APINotesManager.h"
@@ -332,8 +335,9 @@ public:
   static bool IsBuiltinType(CompilerType type);
 
   /// Creates a GenericTypeParamType with the desired depth and index.
-  CompilerType CreateGenericTypeParamType(unsigned int depth,
-                                    unsigned int index) override;
+  CompilerType
+  CreateGenericTypeParamType(unsigned int depth, unsigned int index,
+                             swift::Mangle::ManglingFlavor flavor) override;
 
   /// Create a __C imported struct type.
   CompilerType CreateClangStructType(llvm::StringRef name);
@@ -386,7 +390,8 @@ public:
   /// Wrap \p node as \p Global(TypeMangling(node)), remangle the type
   /// and create a CompilerType from it.
   CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
-                              swift::Demangle::NodePointer node);
+                              swift::Demangle::NodePointer node,
+                              swift::Mangle::ManglingFlavor flavor);
 
   /// Search the debug info for a non-nested Clang type with the specified name
   /// and cache the result. Users should prefer the version that takes in the
@@ -411,6 +416,11 @@ public:
   /// Lookup a type in the debug info.
   lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 
+  /// Returns the mangling flavor associated with the ASTContext corresponding
+  /// with this TypeSystem.
+  swift::Mangle::ManglingFlavor
+  GetManglingFlavor(ExecutionContext *exe_ctx = nullptr);
+
 protected:
   /// Helper that creates an AST type from \p type.
   ///
@@ -424,7 +434,6 @@ protected:
   /// Cast \p opaque_type as a mangled name.
   static const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
-
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
   ///
@@ -436,17 +445,17 @@ protected:
   /// If \p node is a Struct/Class/Typedef in the __C module, return a
   /// Swiftified node by looking up the name in the corresponding APINotes and
   /// optionally putting it into the correctly named module.
-  swift::Demangle::NodePointer GetSwiftified(swift::Demangle::Demangler &dem,
-                                             swift::Demangle::NodePointer node,
-                                             bool resolve_objc_module);
+  swift::Demangle::NodePointer
+  GetSwiftified(swift::Demangle::Demangler &dem,
+                swift::Demangle::NodePointer node,
+                swift::Mangle::ManglingFlavor flavor, bool resolve_objc_module);
 
   /// Replace all "__C" module names with their actual Clang module
   /// names.  This is the recursion step of \p
   /// GetDemangleTreeForPrinting(). Don't call it directly.
-  swift::Demangle::NodePointer
-  GetNodeForPrintingImpl(swift::Demangle::Demangler &dem,
-                         swift::Demangle::NodePointer node,
-                         bool resolve_objc_module);
+  swift::Demangle::NodePointer GetNodeForPrintingImpl(
+      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+      swift::Mangle::ManglingFlavor flavor, bool resolve_objc_module);
 
   /// Return the demangle tree representation with all "__C" module
   /// names with their actual Clang module names.
@@ -463,17 +472,18 @@ protected:
   CompilerType LookupClangForwardType(llvm::StringRef name, 
                   llvm::ArrayRef<CompilerContext> decl_context);
 
-  std::pair<swift::Demangle::NodePointer, CompilerType>
-  ResolveTypeAlias(swift::Demangle::Demangler &dem,
-                   swift::Demangle::NodePointer node,
-                   bool prefer_clang_types = false);
+  std::pair<swift::Demangle::NodePointer, CompilerType> ResolveTypeAlias(
+      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+      swift::Mangle::ManglingFlavor flavor, bool prefer_clang_types = false);
 
   swift::Demangle::NodePointer
   GetCanonicalNode(swift::Demangle::Demangler &dem,
-                   swift::Demangle::NodePointer node);
+                   swift::Demangle::NodePointer node,
+                   swift::Mangle::ManglingFlavor flavor);
 
   uint32_t CollectTypeInfo(swift::Demangle::Demangler &dem,
                            swift::Demangle::NodePointer node,
+                           swift::Mangle::ManglingFlavor flavor,
                            bool &unresolved_typealias);
 
   swift::Demangle::NodePointer

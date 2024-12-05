@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftExpressionSourceCode.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "SwiftPersistentExpressionState.h"
 
 #include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
@@ -60,10 +61,14 @@ static llvm::Expected<std::string> TransformPackType(
   if (!ts)
     return llvm::createStringError(llvm::errc::not_supported,
                                    "no typeref typesystem");
+
+  auto mangled_name = type.GetMangledTypeName().GetStringRef();
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+
   using namespace swift::Demangle;
   Demangler dem;
-  NodePointer node = ts->GetCanonicalDemangleTree(
-      dem, type.GetMangledTypeName().GetStringRef());
+
+  NodePointer node = ts->GetCanonicalDemangleTree(dem, mangled_name);
 
   node = TypeSystemSwiftTypeRef::Transform(dem, node, [](NodePointer n) {
     if (n->getKind() == Node::Kind::SILPackIndirect &&
@@ -76,7 +81,8 @@ static llvm::Expected<std::string> TransformPackType(
   });
 
   bool error = false;
-  ConstString type_name = ts->RemangleAsType(dem, node).GetMangledTypeName();
+  ConstString type_name =
+      ts->RemangleAsType(dem, node, flavor).GetMangledTypeName();
   swift::Demangle::DemangleOptions options;
   options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
   options.DisplayStdlibModule = false;

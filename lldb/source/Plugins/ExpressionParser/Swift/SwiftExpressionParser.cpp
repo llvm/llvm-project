@@ -12,6 +12,7 @@
 
 #include "SwiftExpressionParser.h"
 
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "SwiftASTManipulator.h"
 #include "SwiftDiagnostic.h"
 #include "SwiftExpressionSourceCode.h"
@@ -1181,8 +1182,9 @@ AddArchetypeTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     llvm::StringRef &type_name = pair.getFirst();
     MetadataPointerInfo &info = pair.getSecond();
 
-    auto dependent_type =
-        typeref_typesystem->CreateGenericTypeParamType(info.depth, info.index);
+    auto flavor = SwiftLanguageRuntime::GetManglingFlavor(type_name);
+    auto dependent_type = typeref_typesystem->CreateGenericTypeParamType(
+        info.depth, info.index, flavor);
     auto bound_type =
         runtime->BindGenericTypeParameters(stack_frame, dependent_type);
     if (!bound_type) {

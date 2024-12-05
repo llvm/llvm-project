@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntimeImpl.h"
 #include "lldb/Symbol/VariableList.h"

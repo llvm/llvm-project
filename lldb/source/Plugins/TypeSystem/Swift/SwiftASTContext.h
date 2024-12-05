@@ -24,6 +24,7 @@
 
 #include "swift/AST/Import.h"
 #include "swift/AST/Module.h"
+#include "swift/Demangling/ManglingFlavor.h"
 #include "swift/Parse/ParseVersion.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 
@@ -467,8 +468,9 @@ public:
       lldb::opaque_compiler_type_t type) override;
 
   /// Creates a GenericTypeParamType with the desired depth and index.
-  CompilerType CreateGenericTypeParamType(unsigned int depth,
-                                               unsigned int index) override;
+  CompilerType
+  CreateGenericTypeParamType(unsigned int depth, unsigned int index,
+                             swift::Mangle::ManglingFlavor flavor) override;
 
   CompilerType GetErrorType() override;
 
@@ -859,6 +861,9 @@ public:
   /// Perform all the implicit imports for the current frame.
   void PerformCompileUnitImports(const SymbolContext &sc, lldb::ProcessSP process_sp,
                                  Status &error);
+
+  /// Returns the mangling flavor associated with this ASTContext.
+  swift::Mangle::ManglingFlavor GetManglingFlavor();
 
 protected:
   bool GetCompileUnitImportsImpl(

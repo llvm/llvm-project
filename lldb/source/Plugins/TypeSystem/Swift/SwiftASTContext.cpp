@@ -46,6 +46,7 @@
 #include "swift/Basic/PrimarySpecificPaths.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/ManglingFlavor.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/ModuleInterfaceLoader.h"
@@ -5298,10 +5299,12 @@ SwiftASTContext::GetNonTriviallyManagedReferenceKind(
   return {};
 }
 
-CompilerType
-SwiftASTContext::CreateGenericTypeParamType(unsigned int depth,
-                                                 unsigned int index) {
+CompilerType SwiftASTContext::CreateGenericTypeParamType(
+    unsigned int depth, unsigned int index,
+    swift::Mangle::ManglingFlavor flavor) {
   ThreadSafeASTContext ast_ctx = GetASTContext();
+  auto ast_flavor = GetManglingFlavor();
+  assert(flavor == ast_flavor && "Requested flavor and ast flavor diverge!");
   return ToCompilerType(
       swift::GenericTypeParamType::getType(depth, index, **ast_ctx));
 }
@@ -5969,7 +5972,8 @@ ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type,
 /// Build a dictionary of Archetype names that appear in \p type.
 static llvm::DenseMap<swift::CanType, swift::Identifier>
 GetArchetypeNames(swift::Type swift_type, swift::ASTContext &ast_ctx,
-                  const SymbolContext *sc) {
+                  const SymbolContext *sc,
+                  swift::Mangle::ManglingFlavor flavor) {
   LLDB_SCOPED_TIMER();
   llvm::DenseMap<swift::CanType, swift::Identifier> dict;
 
@@ -5979,7 +5983,7 @@ GetArchetypeNames(swift::Type swift_type, swift::ASTContext &ast_ctx,
 
   llvm::DenseMap<std::pair<uint64_t, uint64_t>, StringRef> names;
   SwiftLanguageRuntime::GetGenericParameterNamesForFunction(*sc, nullptr,
-                                                            names);
+                                                            flavor, names);
   swift_type.visit([&](swift::Type type) {
     if (!type->isTypeParameter() || dict.count(type->getCanonicalType()))
       return;
@@ -6008,7 +6012,8 @@ ConstString SwiftASTContext::GetDisplayTypeName(opaque_compiler_type_t type,
     print_options.SynthesizeSugarOnTypes = true;
     print_options.FullyQualifiedTypesIfAmbiguous = true;
     ThreadSafeASTContext ast_ctx = GetASTContext();
-    auto dict = GetArchetypeNames(swift_type, **ast_ctx, sc);
+    auto dict =
+        GetArchetypeNames(swift_type, **ast_ctx, sc, GetManglingFlavor());
     print_options.AlternativeTypeNames = &dict;
     type_name = swift_type.getString(print_options);
   }
@@ -9273,4 +9278,10 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
       modules->emplace_back(swift::ImportedModule(loaded_module));
   }
   return true;
+}
+
+swift::Mangle::ManglingFlavor SwiftASTContext::GetManglingFlavor() {
+  return GetASTContext()->LangOpts.hasFeature(swift::Feature::Embedded)
+             ? swift::Mangle::ManglingFlavor::Embedded
+             : swift::Mangle::ManglingFlavor::Default;
 }
