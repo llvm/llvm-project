@@ -487,5 +487,6 @@ with open(DOC_FILE, encoding="utf-8") as f:
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
 
-with open(DOC_FILE, "wb") as output:
+output_file_path = sys.argv[1] if len(sys.argv) == 2 else DOC_FILE
+with open(output_file_path, "wb") as output:
     output.write(contents.encode())
