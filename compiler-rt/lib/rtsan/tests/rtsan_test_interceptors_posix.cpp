@@ -860,6 +860,16 @@ TEST(TestRtsanInterceptors, AcceptingASocketDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_ACCEPT4
+TEST(TestRtsanInterceptors, Accepting4ASocketDiesWhenRealtime) {
+  auto Func = []() {
+    EXPECT_LT(accept4(kNotASocketFd, nullptr, nullptr, 0), 0);
+  };
+  ExpectRealtimeDeath(Func, "accept4");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST(TestRtsanInterceptors, ConnectingASocketDiesWhenRealtime) {
   auto Func = []() { EXPECT_NE(connect(kNotASocketFd, nullptr, 0), 0); };
   ExpectRealtimeDeath(Func, "connect");

@@ -713,6 +713,9 @@ INTERCEPTOR(int, accept4, int socket, struct sockaddr *address,
   __rtsan_notify_intercepted_call("accept4");
   return REAL(accept4)(socket, address, address_len, flags);
 }
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4 INTERCEPT_FUNCTION(accept4)
+#else
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4
 #endif
 
 // I/O Multiplexing
@@ -964,9 +967,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sendto);
   INTERCEPT_FUNCTION(shutdown);
   INTERCEPT_FUNCTION(socket);
-#if SANITIZER_INTERCEPT_ACCEPT4
-  INTERCEPT_FUNCTION(accept4);
-#endif
+  RTSAN_MAYBE_INTERCEPT_ACCEPT4;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
