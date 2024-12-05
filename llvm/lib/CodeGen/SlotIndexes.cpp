@@ -45,7 +45,7 @@ SlotIndexes::~SlotIndexes() {
 }
 
 INITIALIZE_PASS(SlotIndexesWrapperPass, DEBUG_TYPE, "Slot index numbering",
-                false, false)
+                false, true)
 
 STATISTIC(NumLocalRenum,  "Number of local renumberings");
 
