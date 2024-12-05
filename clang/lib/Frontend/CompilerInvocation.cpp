@@ -1511,6 +1511,7 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
   Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
   Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
   Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
+  Opts.AArch64JumpTableHardening = LangOpts.AArch64JumpTableHardening;
 }
 
 static void parsePointerAuthOptions(PointerAuthOptions &Opts,
@@ -1518,7 +1519,8 @@ static void parsePointerAuthOptions(PointerAuthOptions &Opts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
   if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthReturns &&
-      !LangOpts.PointerAuthAuthTraps && !LangOpts.PointerAuthIndirectGotos)
+      !LangOpts.PointerAuthAuthTraps && !LangOpts.PointerAuthIndirectGotos &&
+      !LangOpts.AArch64JumpTableHardening)
     return;
 
   CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple);
@@ -3452,6 +3454,10 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_init_fini);
   if (Opts.PointerAuthInitFiniAddressDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_init_fini_address_discrimination);
+  if (Opts.PointerAuthELFGOT)
+    GenerateArg(Consumer, OPT_fptrauth_elf_got);
+  if (Opts.AArch64JumpTableHardening)
+    GenerateArg(Consumer, OPT_faarch64_jump_table_hardening);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3472,6 +3478,9 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
   Opts.PointerAuthInitFiniAddressDiscrimination =
       Args.hasArg(OPT_fptrauth_init_fini_address_discrimination);
+  Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
+  Opts.AArch64JumpTableHardening =
+      Args.hasArg(OPT_faarch64_jump_table_hardening);
 }
 
 /// Check if input file kind and language standard are compatible.

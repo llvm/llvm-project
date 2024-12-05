@@ -164,9 +164,9 @@ defm : X86WriteRes<WriteXCHG, [HWPort0156], 2, [3], 3>;
 
 // Integer shifts and rotates.
 defm : HWWriteResPair<WriteShift,    [HWPort06],  1>;
-defm : HWWriteResPair<WriteShiftCL,  [HWPort06, HWPort0156],  3, [2,1], 3>;
+defm : HWWriteResPair<WriteShiftCL,  [HWPort06],  3, [3], 3>;
 defm : HWWriteResPair<WriteRotate,   [HWPort06],  1, [1], 1>;
-defm : HWWriteResPair<WriteRotateCL, [HWPort06, HWPort0156],  3, [2,1], 3>;
+defm : HWWriteResPair<WriteRotateCL, [HWPort06],  3, [3], 3>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [HWPort1], 3, [1], 1>;
@@ -249,10 +249,10 @@ defm : X86WriteRes<WriteFStoreNT,      [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTX,     [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTY,     [HWPort237,HWPort4], 1, [1,1], 2>;
 
-defm : X86WriteRes<WriteFMaskedStore32,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteFMaskedStore64,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore32,  [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore64,  [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
 
 defm : X86WriteRes<WriteFMove,         [HWPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [HWPort5], 1, [1], 1>;
@@ -364,33 +364,41 @@ defm : HWWriteResPair<WriteCvtPS2IY,  [HWPort1], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteCvtPS2IZ,  [HWPort1], 3, [1], 1, 7>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtI2SD,      [HWPort1,HWPort5], 4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PD,      [HWPort1,HWPort5], 4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PDY,     [HWPort1,HWPort5], 6, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PDZ,     [HWPort1,HWPort5], 6, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtI2SDLd,   [HWPort1,HWPort23], 9, [1,1], 2>;
-defm : HWWriteResPair<WriteCvtI2PD,   [HWPort1,HWPort5], 4, [1,1], 2, 6>;
-defm : HWWriteResPair<WriteCvtI2PDY,  [HWPort1,HWPort5], 6, [1,1], 2, 6>;
-defm : HWWriteResPair<WriteCvtI2PDZ,  [HWPort1,HWPort5], 6, [1,1], 2, 6>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtI2PDLd,   [HWPort1,HWPort23],10, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PDYLd,  [HWPort1,HWPort23],12, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PDZLd,  [HWPort1,HWPort23],12, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtI2SS,      [HWPort1,HWPort5], 4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PS,              [HWPort1], 3,   [1], 1>;
+defm : X86WriteRes<WriteCvtI2PSY,             [HWPort1], 3,   [1], 1>;
+defm : X86WriteRes<WriteCvtI2PSZ,             [HWPort1], 3,   [1], 1>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtI2SSLd,   [HWPort1,HWPort23], 9, [1,1], 2>;
-defm : HWWriteResPair<WriteCvtI2PS,   [HWPort1], 3, [1], 1, 6>;
-defm : HWWriteResPair<WriteCvtI2PSY,  [HWPort1], 3, [1], 1, 7>;
-defm : HWWriteResPair<WriteCvtI2PSZ,  [HWPort1], 3, [1], 1, 7>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtI2PSLd,   [HWPort1,HWPort23], 9, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PSYLd,  [HWPort1,HWPort23],10, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PSZLd,  [HWPort1,HWPort23],10, [1,1], 2>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtSS2SD,     [HWPort0,HWPort5], 2, [1,1], 2>;
-defm : X86WriteRes<WriteCvtSS2SDLd,  [HWPort0,HWPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPS2PD,     [HWPort0,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PDY,    [HWPort0,HWPort5], 4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PDZ,    [HWPort0,HWPort5], 4, [1,1], 2>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtSS2SDLd,  [HWPort0,HWPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPS2PDLd,  [HWPort0,HWPort23], 6, [1,1], 2>;
-defm : HWWriteResPair<WriteCvtPS2PDY, [HWPort0,HWPort5], 4, [1,1], 2, 6>;
-defm : HWWriteResPair<WriteCvtPS2PDZ, [HWPort0,HWPort5], 4, [1,1], 2, 6>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtPS2PDYLd, [HWPort0,HWPort23],10, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PDZLd, [HWPort0,HWPort23],10, [1,1], 2>; // Unsupported = 1
 defm : HWWriteResPair<WriteCvtSD2SS,  [HWPort1,HWPort5], 4, [1,1], 2, 5>;
 defm : HWWriteResPair<WriteCvtPD2PS,  [HWPort1,HWPort5], 4, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteCvtPD2PSY, [HWPort1,HWPort5], 6, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteCvtPD2PSZ, [HWPort1,HWPort5], 4, [1,1], 2, 6>; // Unsupported = 1
 
-defm : X86WriteRes<WriteCvtPH2PS,     [HWPort0,HWPort5], 2, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSY,    [HWPort0,HWPort5], 2, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSZ,    [HWPort0,HWPort5], 2, [1,1], 2>; // Unsupported = 1
-defm : X86WriteRes<WriteCvtPH2PSLd,  [HWPort0,HWPort23], 6, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSYLd, [HWPort0,HWPort23], 7, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSZLd, [HWPort0,HWPort23], 7, [1,1], 2>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtPH2PS,     [HWPort1,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSY,    [HWPort1,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZ,    [HWPort1,HWPort5], 2, [1,1], 2>; // Unsupported = 1
+defm : X86WriteRes<WriteCvtPH2PSLd,  [HWPort1,HWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSYLd, [HWPort1,HWPort23], 7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZLd, [HWPort1,HWPort23], 7, [1,1], 2>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtPS2PH,    [HWPort1,HWPort5], 4, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPS2PHY,   [HWPort1,HWPort5], 6, [1,1], 2>;
@@ -412,10 +420,10 @@ defm : X86WriteRes<WriteVecStoreX,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [HWPort237,HWPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [HWPort0,HWPort4,HWPort23,HWPort1], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [HWPort015], 1, [1], 1>;
@@ -619,7 +627,7 @@ def : WriteRes<WriteSystem,     [HWPort0156]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [HWPort0156]> { let Latency = 100; }
 
 // Fence instructions.
-def : WriteRes<WriteFence,  [HWPort23, HWPort4]>;
+def : WriteRes<WriteFence,  [HWPort23, HWPort4]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 
 // Nop, not very useful expect it provides a model for nops!
 def : WriteRes<WriteNop, []>;
@@ -911,13 +919,6 @@ def HWWriteResGroup3 : SchedWriteRes<[HWPort1]> {
 def: InstRW<[HWWriteResGroup3], (instregex "COM(P?)_FST0r",
                                            "UCOM_F(P?)r")>;
 
-def HWWriteResGroup4 : SchedWriteRes<[HWPort5]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ReleaseAtCycles = [1];
-}
-def: InstRW<[HWWriteResGroup4], (instrs MMX_MOVQ2DQrr)>;
-
 def HWWriteResGroup5 : SchedWriteRes<[HWPort6]> {
   let Latency = 1;
   let NumMicroOps = 1;
@@ -983,7 +984,6 @@ def HWWriteResGroup12 : SchedWriteRes<[HWPort1,HWPort23]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup12], (instrs MMX_CVTPI2PSrm)>;
 def: InstRW<[HWWriteResGroup12], (instregex "P(DEP|EXT)(32|64)rm")>;
 
 def HWWriteResGroup13 : SchedWriteRes<[HWPort5,HWPort23]> {
@@ -1047,13 +1047,6 @@ def HWWriteResGroup18 : SchedWriteRes<[HWPort23,HWPort0156]> {
 def: InstRW<[HWWriteResGroup18], (instrs POP16r, POP32r, POP64r)>;
 def: InstRW<[HWWriteResGroup18], (instregex "POP(16|32|64)rmr")>;
 
-def HWWriteResGroup19 : SchedWriteRes<[HWPort237,HWPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup19], (instrs SFENCE)>;
-
 def HWWriteResGroup21 : SchedWriteRes<[HWPort4,HWPort6,HWPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
@@ -1114,7 +1107,6 @@ def HWWriteResGroup30 : SchedWriteRes<[HWPort0156]> {
   let ReleaseAtCycles = [2];
 }
 def: InstRW<[HWWriteResGroup30], (instrs LFENCE,
-                                         MFENCE,
                                          WAIT,
                                          XGETBV)>;
 
@@ -1348,13 +1340,6 @@ def HWWriteResGroup75 : SchedWriteRes<[HWPort1,HWPort23]> {
   let ReleaseAtCycles = [2,1];
 }
 def: InstRW<[HWWriteResGroup75], (instregex "FICOM(P?)(16|32)m")>;
-
-def HWWriteResGroup78_1 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
-  let Latency = 9;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [1,1,1];
-}
-def: InstRW<[HWWriteResGroup78_1], (instrs MMX_CVTPI2PDrm)>;
 
 def HWWriteResGroup80 : SchedWriteRes<[HWPort5,HWPort23,HWPort015]> {
   let Latency = 9;

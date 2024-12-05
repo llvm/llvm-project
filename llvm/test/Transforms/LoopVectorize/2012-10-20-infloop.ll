@@ -20,25 +20,25 @@ for.body:                                         ; preds = %for.body, %entry
  %indvars.iv47 = phi i64 [ 0, %entry ], [ %indvars.iv.next48, %for.body ]
  %0 = phi i32 [ 1, %entry ], [ 0, %for.body ]
  %indvars.iv.next48 = add i64 %indvars.iv47, 1
- br i1 undef, label %for.end, label %for.body
+ br i1 false, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
  unreachable
 }
 
 ;PR14701
-define void @start_model_rare() nounwind uwtable ssp {
+define void @start_model_rare(i1 %arg) nounwind uwtable ssp {
 entry:
-  br i1 undef, label %return, label %if.end
+  br i1 false, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
-  br i1 undef, label %cond.false, label %cond.true
+  br i1 true, label %cond.false, label %cond.true
 
 cond.true:                                        ; preds = %if.end
   unreachable
 
 cond.false:                                       ; preds = %if.end
-  br i1 undef, label %cond.false28, label %cond.true20
+  br i1 true, label %cond.false28, label %cond.true20
 
 cond.true20:                                      ; preds = %cond.false
   unreachable
@@ -49,7 +49,7 @@ cond.false28:                                     ; preds = %cond.false
 for.body40:                                       ; preds = %for.inc50, %cond.false28
   %indvars.iv123 = phi i64 [ 3, %cond.false28 ], [ %indvars.iv.next124, %for.inc50 ]
   %step.0121 = phi i32 [ 1, %cond.false28 ], [ %step.1, %for.inc50 ]
-  br i1 undef, label %if.then46, label %for.inc50
+  br i1 %arg, label %if.then46, label %for.inc50
 
 if.then46:                                        ; preds = %for.body40
   %inc47 = add nsw i32 %step.0121, 1

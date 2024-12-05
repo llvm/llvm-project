@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonAsmPrinter.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"

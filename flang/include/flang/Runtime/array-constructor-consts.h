@@ -96,4 +96,5 @@ void RTDECL(PushArrayConstructorSimpleScalar)(
     ArrayConstructorVector &vector, void *from);
 } // extern "C"
 } // namespace Fortran::runtime
+
 #endif /* FORTRAN_RUNTIME_ARRAY_CONSTRUCTOR_CONSTS_H_ */

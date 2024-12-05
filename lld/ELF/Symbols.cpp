@@ -48,7 +48,7 @@ static std::string maybeDemangleSymbol(Ctx &ctx, StringRef symName) {
   return ctx.arg.demangle ? demangle(symName.str()) : symName.str();
 }
 
-std::string lld::toString(const elf::Symbol &sym) {
+std::string elf::toStr(Ctx &ctx, const elf::Symbol &sym) {
   StringRef name = sym.getName();
   std::string ret = maybeDemangleSymbol(ctx, name);
 
@@ -60,7 +60,7 @@ std::string lld::toString(const elf::Symbol &sym) {
 
 const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
                                      const Symbol *sym) {
-  return s << toString(*sym);
+  return s << toStr(s.ctx, *sym);
 }
 
 static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
@@ -295,12 +295,12 @@ void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   else
     s = ": definition of ";
 
-  message(toString(sym.file) + s + name);
+  Msg(sym.file->ctx) << sym.file << s << name;
 }
 
 static void recordWhyExtract(Ctx &ctx, const InputFile *reference,
                              const InputFile &extracted, const Symbol &sym) {
-  ctx.whyExtractRecords.emplace_back(toString(reference), &extracted, sym);
+  ctx.whyExtractRecords.emplace_back(toStr(ctx, reference), &extracted, sym);
 }
 
 void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
@@ -320,7 +320,7 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
   const InputFile *file = sym->file;
   auto *d = dyn_cast<Defined>(sym);
 
-  auto report = [&](StringRef s) { warn(toString(file) + s + sym->getName()); };
+  auto report = [&](StringRef s) { Warn(ctx) << file << s << sym->getName(); };
 
   if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
@@ -543,19 +543,18 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   //   >>> defined at baz.c:563
   //   >>>            baz.o in archive libbaz.a
   auto *sec1 = cast<InputSectionBase>(d->section);
-  std::string src1 = sec1->getSrcMsg(sym, d->value);
-  std::string obj1 = sec1->getObjMsg(d->value);
-  std::string src2 = errSec->getSrcMsg(sym, errOffset);
-  std::string obj2 = errSec->getObjMsg(errOffset);
-
-  std::string msg = "duplicate symbol: " + toString(sym) + "\n>>> defined at ";
-  if (!src1.empty())
-    msg += src1 + "\n>>>            ";
-  msg += obj1 + "\n>>> defined at ";
-  if (!src2.empty())
-    msg += src2 + "\n>>>            ";
-  msg += obj2;
-  Err(ctx) << msg;
+  auto diag = Err(ctx);
+  diag << "duplicate symbol: " << &sym << "\n>>> defined at ";
+  auto tell = diag.tell();
+  diag << sec1->getSrcMsg(sym, d->value);
+  if (tell != diag.tell())
+    diag << "\n>>>            ";
+  diag << sec1->getObjMsg(d->value) << "\n>>> defined at ";
+  tell = diag.tell();
+  diag << errSec->getSrcMsg(sym, errOffset);
+  if (tell != diag.tell())
+    diag << "\n>>>            ";
+  diag << errSec->getObjMsg(errOffset);
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
@@ -620,20 +619,18 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
     return;
   }
 
-  // For common objects, we want to look for global or weak definitions that
-  // should be extracted as the canonical definition instead.
-  if (LLVM_UNLIKELY(isCommon()) && ctx.arg.fortranCommon &&
-      other.file->shouldExtractForCommon(getName())) {
-    ctx.backwardReferences.erase(this);
-    other.overwrite(*this);
-    other.extract(ctx);
-    return;
-  }
-
-  if (!isUndefined()) {
-    // See the comment in resolveUndefined().
-    if (isDefined())
+  if (LLVM_UNLIKELY(!isUndefined())) {
+    // See the comment in resolve(Ctx &, const Undefined &).
+    if (isDefined()) {
       ctx.backwardReferences.erase(this);
+    } else if (isCommon() && ctx.arg.fortranCommon &&
+               other.file->shouldExtractForCommon(getName())) {
+      // For common objects, we want to look for global or weak definitions that
+      // should be extracted as the canonical definition instead.
+      ctx.backwardReferences.erase(this);
+      other.overwrite(*this);
+      other.extract(ctx);
+    }
     return;
   }
 

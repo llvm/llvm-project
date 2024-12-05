@@ -44,6 +44,10 @@ void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
 void RTDECL(CUFDataTransferDescDesc)(Descriptor *dst, Descriptor *src,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
+/// Data transfer from a scalar descriptor to a descriptor.
+void RTDECL(CUFDataTransferCstDesc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
+
 /// Data transfer from a descriptor to a descriptor.
 void RTDECL(CUFDataTransferDescDescNoRealloc)(Descriptor *dst, Descriptor *src,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
