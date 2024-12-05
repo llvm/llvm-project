@@ -364,9 +364,16 @@ public:
       Block::iterator insertPt(func->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
-        std::string kernelFnName =
-            Twine(op->getParentOfType<SymbolOpInterface>().getName(), "_kernel")
-                .str();
+        std::string kernelFnName;
+        if (auto outlineModuleAttr = op->getAttrOfType<SymbolRefAttr>("outline_module")) {
+          kernelFnName = outlineModuleAttr.getRootReference().str();
+          llvm::errs() << "outlined module name = " << kernelFnName << "\n";
+        } else {
+          kernelFnName =
+              Twine(op->getParentOfType<SymbolOpInterface>().getName(), "_kernel")
+                  .str();
+          llvm::errs() << "original module name = " << kernelFnName << "\n";
+        }
 
         gpu::GPUFuncOp outlinedFunc =
             outlineKernelFuncImpl(op, kernelFnName, operands);
