@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMInstrumentation
   IndirectCallPromotion.cpp
   InstrOrderFile.cpp
   InstrProfiling.cpp
+  Instrumentor.cpp
   KCFI.cpp
   LowerAllowCheckPass.cpp
   PGOCtxProfFlattening.cpp

@@ -1,0 +1,14 @@
+{
+  "Base": {
+    "RuntimeName": "__just_calls_",
+    "PrintRuntimeSignatures": false
+  },
+  "Alloca": {
+    "Instrument": true,
+    "Value": false,
+    "AllocationSize": false,
+    "Alignment": false,
+    "ArraySize": false,
+    "ReplaceValue": false
+  }
+}
