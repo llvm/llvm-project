@@ -212,6 +212,11 @@ static cl::opt<bool> DisableReplaceWithVecLib(
     "disable-replace-with-vec-lib", cl::Hidden,
     cl::desc("Disable replace with vector math call pass"));
 
+// Enable the Spill2Reg pass.
+static cl::opt<bool> EnableSpill2Reg("enable-spill2reg", cl::Hidden,
+                                     cl::init(false),
+                                     cl::desc("Enable Spill2Reg pass"));
+
 /// Option names for limiting the codegen pipeline.
 /// Those are used in error reporting and we didn't want
 /// to duplicate their names all over the place.
@@ -1408,6 +1413,10 @@ bool TargetPassConfig::addRegAssignAndRewriteOptimized() {
 
   // Finally rewrite virtual registers.
   addPass(&VirtRegRewriterID);
+
+  // Replace spills to stack with spills to registers.
+  if (EnableSpill2Reg)
+    addPass(&Spill2RegID);
 
   // Regalloc scoring for ML-driven eviction - noop except when learning a new
   // eviction policy.

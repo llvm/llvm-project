@@ -219,6 +219,7 @@ add_llvm_component_library(LLVMCodeGen
   SjLjEHPrepare.cpp
   SlotIndexes.cpp
   SpillPlacement.cpp
+  Spill2Reg.cpp
   SplitKit.cpp
   StackColoring.cpp
   StackFrameLayoutAnalysisPass.cpp

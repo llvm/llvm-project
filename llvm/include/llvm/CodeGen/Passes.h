@@ -608,6 +608,9 @@ namespace llvm {
 
   /// Lowers KCFI operand bundles for indirect calls.
   FunctionPass *createKCFIPass();
+
+  /// This pass replaces spills to stack with spills to registers.
+  extern char &Spill2RegID;
 } // End llvm namespace
 
 #endif
