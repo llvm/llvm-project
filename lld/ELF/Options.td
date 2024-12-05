@@ -434,7 +434,7 @@ defm section_start: Eq<"section-start", "Set address of section">,
 
 def shared: F<"shared">, HelpText<"Build a shared object">;
 
-def shuffle_padding: JJ<"shuffle-padding=">,
+def randomize_section_padding: JJ<"randomize-section-padding=">,
   HelpText<"Randomly insert padding between input sections using given seed">;
 
 defm soname: Eq<"soname", "Set DT_SONAME">;

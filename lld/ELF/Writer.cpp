@@ -1450,8 +1450,8 @@ static bool canInsertPadding(OutputSection *sec) {
          s.starts_with(".text");
 }
 
-static void shufflePadding(Ctx &ctx) {
-  std::mt19937 g(*ctx.arg.shufflePadding);
+static void randomizeSectionPadding(Ctx &ctx) {
+  std::mt19937 g(*ctx.arg.randomizeSectionPadding);
   PhdrEntry *curPtLoad = nullptr;
   for (OutputSection *os : ctx.outputSections) {
     if (!canInsertPadding(os))
@@ -1460,14 +1460,15 @@ static void shufflePadding(Ctx &ctx) {
       if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
         SmallVector<InputSection *, 0> tmp;
         if (os->ptLoad != curPtLoad) {
-          tmp.push_back(
-              make<ShufflePaddingSection>(ctx, g() % ctx.arg.maxPageSize, os));
+          tmp.push_back(make<RandomizePaddingSection>(
+              ctx, g() % ctx.arg.maxPageSize, os));
           curPtLoad = os->ptLoad;
         }
         for (InputSection *isec : isd->sections) {
-          if (g() < (1 << 28))
+          // Probability of inserting padding is 1 in 16.
+          if (g() % 16 == 0)
             tmp.push_back(
-                make<ShufflePaddingSection>(ctx, isec->addralign, os));
+                make<RandomizePaddingSection>(ctx, isec->addralign, os));
           tmp.push_back(isec);
         }
         isd->sections = std::move(tmp);
@@ -1502,8 +1503,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.emachine == EM_HEXAGON)
     hexagonTLSSymbolUpdate(ctx);
 
-  if (ctx.arg.shufflePadding)
-    shufflePadding(ctx);
+  if (ctx.arg.randomizeSectionPadding)
+    randomizeSectionPadding(ctx);
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {

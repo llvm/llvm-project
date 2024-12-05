@@ -796,11 +796,11 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
-class ShufflePaddingSection final : public SyntheticSection {
+class RandomizePaddingSection final : public SyntheticSection {
   uint64_t size;
 
 public:
-  ShufflePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;
 };

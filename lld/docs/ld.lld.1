@@ -529,6 +529,15 @@ and
 .It Fl -pop-state
 Restore the states saved by
 .Fl -push-state.
+.It Fl -randomize-section-padding Ns = Ns Ar seed
+Randomly insert padding between input sections using the given seed.
+Padding is inserted into output sections with names matching the following patterns:
+.Cm .bss ,
+.Cm .data ,
+.Cm .data.rel.ro ,
+.Cm .rodata
+and
+.Cm .text* .
 .It Fl --relax-gp
 Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
@@ -577,15 +586,6 @@ were concatenated in the order they appeared on the command line.
 Set address of section.
 .It Fl -shared , Fl -Bsharable
 Build a shared object.
-.It Fl -shuffle-padding Ns = Ns Ar seed
-Randomly insert padding between input sections using the given seed.
-Padding is inserted into output sections with names matching the following patterns:
-.Cm .bss ,
-.Cm .data ,
-.Cm .data.rel.ro ,
-.Cm .rodata
-and
-.Cm .text* .
 .It Fl -shuffle-sections Ns = Ns Ar seed
 Shuffle matched sections using the given seed before mapping them to the output sections.
 If -1, reverse the section order. If 0, use a random seed.

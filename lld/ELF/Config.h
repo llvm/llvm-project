@@ -320,6 +320,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  std::optional<uint64_t> randomizeSectionPadding;
   bool rejectMismatch;
   bool relax;
   bool relaxGP;
@@ -329,7 +330,6 @@ struct Config {
   bool relrPackDynRelocs = false;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
-  std::optional<uint64_t> shufflePadding;
   bool singleRoRx;
   bool shared;
   bool symbolic;
