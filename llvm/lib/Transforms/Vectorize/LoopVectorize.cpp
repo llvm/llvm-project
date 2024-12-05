@@ -7666,8 +7666,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                              CanonicalIVStartValue, State);
   VPlanTransforms::prepareToExecute(BestVPlan);
 
-  // TODO: Replace with upstream implementation.
-  VPlanTransforms::prepareExecute(BestVPlan);
   BestVPlan.execute(&State);
 
   // 2.5 Collect reduction resume values.

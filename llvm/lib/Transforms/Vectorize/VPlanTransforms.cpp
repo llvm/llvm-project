@@ -519,96 +519,6 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::prepareExecute(VPlan &Plan) {
-  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getVectorLoopRegion());
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
-        // Genearte VPWidenCastRecipe.
-        VPWidenCastRecipe *Ext;
-        // Only ZExt contiains non-neg flags.
-        if (ExtRed->isZExt())
-          Ext = new VPWidenCastRecipe(
-              ExtRed->getExtOpcode(), ExtRed->getVecOp(),
-              ExtRed->getResultType(), ExtRed->getNonNegFlags(),
-              ExtRed->getExtDebugLoc());
-        else
-          Ext = new VPWidenCastRecipe(
-              ExtRed->getExtOpcode(), ExtRed->getVecOp(),
-              ExtRed->getResultType(), ExtRed->getExtDebugLoc());
-
-        // Generate VPreductionRecipe.
-        auto *Red = new VPReductionRecipe(
-            ExtRed->getRecurrenceDescriptor(), ExtRed->getUnderlyingInstr(),
-            ExtRed->getChainOp(), Ext, ExtRed->getCondOp(),
-            ExtRed->isOrdered());
-        Ext->insertBefore(ExtRed);
-        Red->insertBefore(ExtRed);
-        ExtRed->replaceAllUsesWith(Red);
-        ExtRed->eraseFromParent();
-      } else if (isa<VPMulAccRecipe>(&R)) {
-        auto *MulAcc = cast<VPMulAccRecipe>(&R);
-        Type *RedTy = MulAcc->getRecurrenceDescriptor().getRecurrenceType();
-
-        // Generate inner VPWidenCastRecipes if necessary.
-        // Note that we will drop the extend after mul which transform
-        // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
-        VPValue *Op0, *Op1;
-        if (MulAcc->isExtended()) {
-          if (MulAcc->isZExt())
-            Op0 = new VPWidenCastRecipe(
-                MulAcc->getExtOpcode(), MulAcc->getVecOp0(), RedTy,
-                MulAcc->getNonNegFlags(), MulAcc->getExt0DebugLoc());
-          else
-            Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(),
-                                        MulAcc->getVecOp0(), RedTy,
-                                        MulAcc->getExt0DebugLoc());
-          Op0->getDefiningRecipe()->insertBefore(MulAcc);
-          // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
-          // VPWidenCastRecipe.
-          if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
-            Op1 = Op0;
-          } else {
-            if (MulAcc->isZExt())
-              Op1 = new VPWidenCastRecipe(
-                  MulAcc->getExtOpcode(), MulAcc->getVecOp1(), RedTy,
-                  MulAcc->getNonNegFlags(), MulAcc->getExt1DebugLoc());
-            else
-              Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(),
-                                          MulAcc->getVecOp1(), RedTy,
-                                          MulAcc->getExt1DebugLoc());
-            Op1->getDefiningRecipe()->insertBefore(MulAcc);
-          }
-          // No extends in this MulAccRecipe.
-        } else {
-          Op0 = MulAcc->getVecOp0();
-          Op1 = MulAcc->getVecOp1();
-        }
-
-        // Generate VPWidenRecipe.
-        SmallVector<VPValue *, 2> MulOps = {Op0, Op1};
-        auto *Mul = new VPWidenRecipe(
-            Instruction::Mul, make_range(MulOps.begin(), MulOps.end()),
-            MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
-            MulAcc->getMulDebugLoc());
-        Mul->insertBefore(MulAcc);
-
-        // Generate VPReductionRecipe.
-        auto *Red = new VPReductionRecipe(
-            MulAcc->getRecurrenceDescriptor(), MulAcc->getUnderlyingInstr(),
-            MulAcc->getChainOp(), Mul, MulAcc->getCondOp(),
-            MulAcc->isOrdered());
-        Red->insertBefore(MulAcc);
-
-        MulAcc->replaceAllUsesWith(Red);
-        MulAcc->eraseFromParent();
-      }
-    }
-  }
-}
-
 static VPScalarIVStepsRecipe *
 createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     Instruction::BinaryOps InductionOpcode,
@@ -1910,12 +1820,100 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
+// Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
+static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
+  // Genearte VPWidenCastRecipe.
+  VPWidenCastRecipe *Ext;
+  // Only ZExt contiains non-neg flags.
+  if (ExtRed->isZExt())
+    Ext = new VPWidenCastRecipe(
+        ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
+        ExtRed->getNonNegFlags(), ExtRed->getExtDebugLoc());
+  else
+    Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+                                ExtRed->getResultType(),
+                                ExtRed->getExtDebugLoc());
+
+  // Generate VPreductionRecipe.
+  auto *Red = new VPReductionRecipe(
+      ExtRed->getRecurrenceDescriptor(), ExtRed->getUnderlyingInstr(),
+      ExtRed->getChainOp(), Ext, ExtRed->getCondOp(), ExtRed->isOrdered());
+  Ext->insertBefore(ExtRed);
+  Red->insertBefore(ExtRed);
+  ExtRed->replaceAllUsesWith(Red);
+  ExtRed->eraseFromParent();
+}
+
+// Expand VPMulAccRecipe to VPWidenRecipe (mul) + VPReductionRecipe (reduce.add)
+// + VPWidenCastRecipe (optional).
+static void expandVPMulAcc(VPMulAccRecipe *MulAcc) {
+  Type *RedTy = MulAcc->getRecurrenceDescriptor().getRecurrenceType();
+
+  // Generate inner VPWidenCastRecipes if necessary.
+  // Note that we will drop the extend after mul which transform
+  // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
+  VPValue *Op0, *Op1;
+  if (MulAcc->isExtended()) {
+    if (MulAcc->isZExt())
+      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+                                  RedTy, MulAcc->getNonNegFlags(),
+                                  MulAcc->getExt0DebugLoc());
+    else
+      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+                                  RedTy, MulAcc->getExt0DebugLoc());
+    Op0->getDefiningRecipe()->insertBefore(MulAcc);
+    // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
+    // VPWidenCastRecipe.
+    if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
+      Op1 = Op0;
+    } else {
+      if (MulAcc->isZExt())
+        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+                                    RedTy, MulAcc->getNonNegFlags(),
+                                    MulAcc->getExt1DebugLoc());
+      else
+        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+                                    RedTy, MulAcc->getExt1DebugLoc());
+      Op1->getDefiningRecipe()->insertBefore(MulAcc);
+    }
+    // No extends in this MulAccRecipe.
+  } else {
+    Op0 = MulAcc->getVecOp0();
+    Op1 = MulAcc->getVecOp1();
+  }
+
+  // Generate VPWidenRecipe.
+  SmallVector<VPValue *, 2> MulOps = {Op0, Op1};
+  auto *Mul = new VPWidenRecipe(
+      Instruction::Mul, make_range(MulOps.begin(), MulOps.end()),
+      MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
+      MulAcc->getMulDebugLoc());
+  Mul->insertBefore(MulAcc);
+
+  // Generate VPReductionRecipe.
+  auto *Red = new VPReductionRecipe(
+      MulAcc->getRecurrenceDescriptor(), MulAcc->getUnderlyingInstr(),
+      MulAcc->getChainOp(), Mul, MulAcc->getCondOp(), MulAcc->isOrdered());
+  Red->insertBefore(MulAcc);
+
+  MulAcc->replaceAllUsesWith(Red);
+  MulAcc->eraseFromParent();
+}
+
 void VPlanTransforms::prepareToExecute(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
+        expandVPExtendedReduction(ExtRed);
+        continue;
+      }
+      if (auto *MulAcc = dyn_cast<VPMulAccRecipe>(&R)) {
+        expandVPMulAcc(MulAcc);
+        continue;
+      }
       if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
         continue;
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
