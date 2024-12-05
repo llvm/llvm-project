@@ -150,6 +150,39 @@ define half @test4_unary_fneg-mixed-fast-2(float %a) {
   ret half %c
 }
 
+define <2 x half> @test4_unary_fneg-vec-fast(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg fast <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg fast <2 x float> %a
+  %c = fptrunc fast <2 x float> %b to <2 x half>
+  ret <2 x half> %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-mixed-fast-1(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-mixed-fast-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg <2 x float> %a
+  %c = fptrunc fast <2 x float> %b to <2 x half>
+  ret <2 x half> %c
+}
+
+define <2 x half> @test4_unary_fneg-vec-mixed-fast-2(<2 x float> %a) {
+; CHECK-LABEL: @test4_unary_fneg-vec-mixed-fast-2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fneg fast <2 x float> %a
+  %c = fptrunc <2 x float> %b to <2 x half>
+  ret <2 x half> %c
+}
+
 define half @test5(float %a, float %b, float %c) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[D:%.*]] = fcmp ogt float [[A:%.*]], [[B:%.*]]

@@ -1849,8 +1849,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   if (Op && Op->hasOneUse()) {
     IRBuilder<>::FastMathFlagGuard FMFG(Builder);
     FastMathFlags FMF = FPT.getFastMathFlags();
-    if (isa<FPMathOperator>(Op))
-      FMF &= Op->getFastMathFlags();
+    if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
+      FMF &= FPMO->getFastMathFlags();
     Builder.setFastMathFlags(FMF);
 
     if (match(Op, m_FNeg(m_Value(X)))) {
