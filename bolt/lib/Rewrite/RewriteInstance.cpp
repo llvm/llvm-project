@@ -19,6 +19,7 @@
 #include "bolt/Core/Relocation.h"
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
+#include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -86,6 +87,7 @@ extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 extern cl::opt<bool> TimeRewrite;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel> ICF;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),
@@ -2051,7 +2053,7 @@ void RewriteInstance::adjustCommandLineOptions() {
   }
 
   if (!BC->HasRelocations &&
-      BC->getICFLevel() == BinaryContext::ICFLevel::Safe) {
+      opts::ICF == IdenticalCodeFolding::ICFLevel::Safe) {
     BC->errs() << "BOLT-ERROR: Binary built without relocations. Safe ICF is "
                   "not supported\n";
     exit(1);

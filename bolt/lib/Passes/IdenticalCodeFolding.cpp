@@ -42,6 +42,19 @@ TimeICF("time-icf",
   cl::ReallyHidden,
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
+
+cl::opt<bolt::IdenticalCodeFolding::ICFLevel> ICF(
+    "icf", cl::desc("fold functions with identical code"),
+    cl::init(bolt::IdenticalCodeFolding::ICFLevel::None),
+    cl::values(clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "all",
+                          "Enable identical code folding"),
+               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "",
+                          "Enable identical code folding"),
+               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::None, "none",
+                          "Disable identical code folding (default)"),
+               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::Safe, "safe",
+                          "Enable safe identical code folding")),
+    cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 /// Compare two jump tables in 2 functions. The function relies on consistent
@@ -342,7 +355,8 @@ namespace llvm {
 namespace bolt {
 
 Error IdenticalCodeFolding::processDataRelocations(
-    BinaryContext &BC, const SectionRef &SecRefRelData) {
+    BinaryContext &BC, const SectionRef &SecRefRelData,
+    const bool HasAddressTaken) {
   for (const RelocationRef &Rel : SecRefRelData.relocations()) {
     symbol_iterator SymbolIter = Rel.getSymbol();
     const ObjectFile *OwningObj = Rel.getObject();
@@ -358,16 +372,49 @@ Error IdenticalCodeFolding::processDataRelocations(
     BinaryFunction *BF = BC.getBinaryFunctionAtAddress(SymbolAddress + Addend);
     if (!BF)
       continue;
-    BF->setUnsafeICF();
+    BF->setHasAddressTaken(HasAddressTaken);
   }
   return Error::success();
 }
 
 Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
-  ErrorOr<BinarySection &> SecRelData = BC.getUniqueSectionByName(".rela.data");
-  if (SecRelData) {
-    SectionRef SecRefRelData = SecRelData->getSectionRef();
-    Error ErrorStatus = processDataRelocations(BC, SecRefRelData);
+  for (const auto &Sec : BC.sections()) {
+    if (!Sec.hasSectionRef() || !Sec.isRela())
+      continue;
+    const SectionRef &SecRef = Sec.getSectionRef();
+    section_iterator RelocatedSecIter = cantFail(SecRef.getRelocatedSection());
+    assert(RelocatedSecIter != SecRef.getObject()->section_end() &&
+           "Relocation section exists without corresponding relocated section");
+    const SectionRef &RelocatedSecRef = *RelocatedSecIter;
+    const StringRef RelocatedSectionName = cantFail(RelocatedSecRef.getName());
+    const bool SkipRelocs =
+        StringSwitch<bool>(RelocatedSectionName)
+            .Cases(".plt", ".got.plt", ".eh_frame", ".gcc_except_table",
+                   ".fini_array", ".init_array", true)
+            .Default(false);
+    if (!RelocatedSecRef.isData() || SkipRelocs)
+      continue;
+
+    Error ErrorStatus =
+        processDataRelocations(BC, SecRef, true /* HasAddressTaken */);
+    if (ErrorStatus)
+      return ErrorStatus;
+  }
+  ErrorOr<BinarySection &> SecRelDataIA =
+      BC.getUniqueSectionByName(".rela.init_array");
+  if (SecRelDataIA) {
+    const SectionRef SecRefRelData = SecRelDataIA->getSectionRef();
+    Error ErrorStatus =
+        processDataRelocations(BC, SecRefRelData, true /* HasAddressTaken */);
+    if (ErrorStatus)
+      return ErrorStatus;
+  }
+  ErrorOr<BinarySection &> SecRelDataFIA =
+      BC.getUniqueSectionByName(".rela.fini_array");
+  if (SecRelDataFIA) {
+    const SectionRef SecRefRelData = SecRelDataFIA->getSectionRef();
+    Error ErrorStatus =
+        processDataRelocations(BC, SecRefRelData, false /* !HasAddressTaken */);
     if (ErrorStatus)
       return ErrorStatus;
   }
@@ -387,7 +434,7 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
 
   LLVM_DEBUG({
     for (auto &BFIter : BC.getBinaryFunctions()) {
-      if (BFIter.second.isSafeToICF())
+      if (!BFIter.second.hasAddressTaken())
         continue;
       dbgs() << "BOLT-DEBUG: skipping function " << BFIter.second.getOneName()
              << '\n';
@@ -530,7 +577,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
     LLVM_DEBUG(SinglePass.stopTimer());
   };
-  if (BC.getICFLevel() == BinaryContext::ICFLevel::Safe)
+  if (opts::ICF == ICFLevel::Safe)
     if (Error Err = markFunctionsUnsafeToFold(BC))
       return Err;
   hashFunctions();

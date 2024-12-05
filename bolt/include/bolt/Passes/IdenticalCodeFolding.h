@@ -27,12 +27,17 @@ protected:
       return false;
     if (BF.hasSDTMarker())
       return false;
-    if (!BF.isSafeToICF())
+    if (BF.hasAddressTaken())
       return false;
     return BinaryFunctionPass::shouldOptimize(BF);
   }
 
 public:
+  enum class ICFLevel {
+    None, // No ICF. (Default)
+    Safe, // Safe ICF for all sections.
+    All,  // Aggressive ICF for code.
+  };
   explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass)
       : BinaryFunctionPass(PrintPass) {}
 
@@ -46,7 +51,8 @@ private:
   /// Process relocations in the .data section to identify function
   /// references.
   Error processDataRelocations(BinaryContext &BC,
-                               const SectionRef &SecRefRelData);
+                               const SectionRef &SecRefRelData,
+                               const bool HasAddressTaken);
 };
 
 } // namespace bolt

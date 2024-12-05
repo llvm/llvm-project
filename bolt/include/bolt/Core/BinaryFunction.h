@@ -429,7 +429,7 @@ private:
   uint32_t Index{-1U};
 
   /// Indicates if the function is safe to fold.
-  bool IsSafeToICF{true};
+  bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
@@ -821,10 +821,10 @@ public:
   }
 
   /// Indicates if the function is safe to fold.
-  bool isSafeToICF() const { return IsSafeToICF; }
+  bool hasAddressTaken() const { return HasAddressTaken; }
 
   /// Sets the function is not safe to fold.
-  void setUnsafeICF() { IsSafeToICF = false; }
+  void setHasAddressTaken(bool Hat) { HasAddressTaken = Hat; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;

@@ -75,19 +75,6 @@ cl::opt<std::string> CompDirOverride(
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
-
-cl::opt<bolt::BinaryContext::ICFLevel>
-    ICF("icf", cl::desc("fold functions with identical code"),
-        cl::init(bolt::BinaryContext::ICFLevel::None),
-        cl::values(clEnumValN(bolt::BinaryContext::ICFLevel::All, "all",
-                              "Enable identical code folding"),
-                   clEnumValN(bolt::BinaryContext::ICFLevel::All, "",
-                              "Enable identical code folding"),
-                   clEnumValN(bolt::BinaryContext::ICFLevel::None, "none",
-                              "Disable identical code folding (default)"),
-                   clEnumValN(bolt::BinaryContext::ICFLevel::Safe, "safe",
-                              "Enable safe identical code folding")),
-        cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -157,7 +144,6 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
-  CurrICFLevel = opts::ICF;
 }
 
 BinaryContext::~BinaryContext() {
@@ -1962,13 +1948,12 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
 /// Skip instructions that do not potentially manipulate or compare function
 /// addresses.
 static bool skipInstruction(const MCInst &Inst, const BinaryContext &BC) {
-  const bool IsX86 = BC.isX86();
   return (BC.MIB->isPseudo(Inst) || BC.MIB->isUnconditionalBranch(Inst) ||
-          (IsX86 && BC.MIB->isConditionalBranch(Inst)) ||
-          BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst));
+          BC.MIB->isConditionalBranch(Inst) || BC.MIB->isCall(Inst) ||
+          BC.MIB->isBranch(Inst));
 }
 void BinaryContext::processInstructionForFuncReferences(const MCInst &Inst) {
-  if (CurrICFLevel != ICFLevel::Safe || skipInstruction(Inst, *this))
+  if (skipInstruction(Inst, *this))
     return;
   for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
     if (!Op.isExpr())
@@ -1977,7 +1962,7 @@ void BinaryContext::processInstructionForFuncReferences(const MCInst &Inst) {
     if (Expr.getKind() == MCExpr::SymbolRef) {
       const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
       if (BinaryFunction *BF = getFunctionForSymbol(&Symbol))
-        BF->setUnsafeICF();
+        BF->setHasAddressTaken(true);
     }
   }
 }
