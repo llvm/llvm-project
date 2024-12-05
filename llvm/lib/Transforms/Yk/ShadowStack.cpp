@@ -190,21 +190,10 @@ public:
               continue;
             }
 
-            // YKFIXME: Skip functions that are marked with `yk_outline`
-            // (as those won't be traced and thus don't require a shadow
-            // stack).
-            // YKFIXME: Skip functions (direct or indirect) that we don't have
-            // IR for.
-
             if (CI.getCalledFunction()) {
-              if (CI.getCalledFunction()->isIntrinsic()) {
-                // Skip intrinsics.
-                continue;
-              }
-              if (CI.getCalledFunction()->isDeclaration()) {
-                // Skip external functions.
-                continue;
-              }
+              // Note that it's important that we adjust the shadow stack
+              // before calling foreign code and intrinsics, as they may call
+              // back into functions that require shadow space.
               if (CI.getCalledFunction()->getName() == "llvm.dbg.declare") {
                 continue;
               }
