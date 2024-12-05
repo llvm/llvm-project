@@ -913,9 +913,14 @@ public:
   virtual const char *getRegPressureSetName(unsigned Idx) const = 0;
 
   /// Get the register unit pressure limit for this dimension.
-  /// This limit must be adjusted dynamically for reserved registers.
+  /// TargetRegisterInfo adjusts this limit for reserved registers.
   virtual unsigned getRegPressureSetLimit(const MachineFunction &MF,
-                                          unsigned Idx) const = 0;
+                                          unsigned Idx) const;
+
+  /// Get the raw register unit pressure limit for this dimension.
+  /// This limit must be adjusted dynamically for reserved registers.
+  virtual unsigned getRawRegPressureSetLimit(const MachineFunction &MF,
+                                             unsigned Idx) const = 0;
 
   /// Get the dimensions of register pressure impacted by this register class.
   /// Returns a -1 terminated array of pressure set IDs.
