@@ -19,7 +19,6 @@
 #include "edit-output.h"
 #include "environment.h"
 #include "flang-rt/descriptor.h"
-#include "flang-rt/io-api-funcs.h"
 #include "flang-rt/memory.h"
 #include "format.h"
 #include "io-api-common.h"

@@ -9,7 +9,6 @@
 #include "namelist.h"
 #include "descriptor-io.h"
 #include "emit-encoded.h"
-#include "flang-rt/io-api-funcs.h"
 #include "io-stmt.h"
 #include "flang/Runtime/io-api.h"
 #include <algorithm>

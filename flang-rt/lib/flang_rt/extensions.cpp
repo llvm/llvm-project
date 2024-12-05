@@ -11,7 +11,6 @@
 
 #include "flang/Runtime/extensions.h"
 #include "flang-rt/descriptor.h"
-#include "flang-rt/io-api-funcs.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Runtime/command.h"

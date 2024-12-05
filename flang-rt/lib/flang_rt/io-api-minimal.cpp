@@ -10,7 +10,6 @@
 // list-directed output (PRINT *) of intrinsic types.
 
 #include "edit-output.h"
-#include "flang-rt/io-api-funcs.h"
 #include "format.h"
 #include "io-api-common.h"
 #include "io-stmt.h"

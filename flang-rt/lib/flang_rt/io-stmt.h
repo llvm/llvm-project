@@ -14,7 +14,6 @@
 #include "connection.h"
 #include "file.h"
 #include "flang-rt/descriptor.h"
-#include "flang-rt/io-api-funcs.h"
 #include "format.h"
 #include "internal-unit.h"
 #include "io-error.h"
