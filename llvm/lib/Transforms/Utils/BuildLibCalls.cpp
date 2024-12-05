@@ -2043,7 +2043,7 @@ Value *llvm::emitCalloc(Type *RetTy, Value *Num, Value *Size, IRBuilderBase &B,
   return CI;
 }
 
-Value *llvm::emitHotColdSizeReturningNew(Type *RetTy, Value *Num,
+Value *llvm::emitHotColdSizeReturningNew(Type *RetPtrTy, Value *Num,
                                          IRBuilderBase &B,
                                          const TargetLibraryInfo *TLI,
                                          LibFunc SizeFeedbackNewFunc,
@@ -2056,7 +2056,7 @@ Value *llvm::emitHotColdSizeReturningNew(Type *RetTy, Value *Num,
 
   // __sized_ptr_t struct return type { void*, size_t }
   StructType *SizedPtrT =
-      StructType::get(M->getContext(), {RetTy, Num->getType()});
+      StructType::get(M->getContext(), {RetPtrTy, Num->getType()});
   FunctionCallee Func =
       M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
@@ -2068,7 +2068,7 @@ Value *llvm::emitHotColdSizeReturningNew(Type *RetTy, Value *Num,
   return CI;
 }
 
-Value *llvm::emitHotColdSizeReturningNewAligned(Type *RetTy, Value *Num,
+Value *llvm::emitHotColdSizeReturningNewAligned(Type *RetPtrTy, Value *Num,
                                                 Value *Align, IRBuilderBase &B,
                                                 const TargetLibraryInfo *TLI,
                                                 LibFunc SizeFeedbackNewFunc,
@@ -2081,7 +2081,7 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Type *RetTy, Value *Num,
 
   // __sized_ptr_t struct return type { void*, size_t }
   StructType *SizedPtrT =
-      StructType::get(M->getContext(), {RetTy, Num->getType()});
+      StructType::get(M->getContext(), {RetPtrTy, Num->getType()});
   FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
                                                Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);

@@ -1857,25 +1857,27 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   case LibFunc_size_returning_new:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdSizeReturningNew(
-          CI->getType(), CI->getArgOperand(0), B, TLI,
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
           LibFunc_size_returning_new_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (OptimizeExistingHotColdNew)
       return emitHotColdSizeReturningNew(
-          CI->getType(), CI->getArgOperand(0), B, TLI,
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
           LibFunc_size_returning_new_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdSizeReturningNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
+          CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (OptimizeExistingHotColdNew)
       return emitHotColdSizeReturningNewAligned(
-          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
+          CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
