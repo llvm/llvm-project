@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Defines API between compiled code and I/O runtime library.
-
 #ifndef FORTRAN_RUNTIME_IO_API_CONSTS_H_
 #define FORTRAN_RUNTIME_IO_API_CONSTS_H_
 
