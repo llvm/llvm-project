@@ -997,10 +997,11 @@ defm FDOT_VG4_M4Z4Z_BtoH  : sme2_dot_mla_add_sub_array_vg4_multi<"fdot",    0b01
 defm FMLAL_MZZI_BtoH      : sme2_fp8_fmlal_indexed_za16<"fmlal",      int_aarch64_sme_fp8_fmlal_lane_za16_vg2x1>;
 defm FMLAL_VG2_M2ZZI_BtoH : sme2_fp8_fmlal_indexed_za16_vgx2<"fmlal", int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2>;
 defm FMLAL_VG4_M4ZZI_BtoH : sme2_fp8_fmlal_indexed_za16_vgx4<"fmlal", int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4>;
-def  FMLAL_VG2_MZZ_BtoH   : sme2_mla_long_array_single_16b<"fmlal">;
 
-defm FMLAL_VG2_M2ZZ_BtoH  : sme2_fp_mla_long_array_vg2_single<"fmlal",  0b001, MatrixOp16, ZZ_b, ZPR4b8, nxv16i8, null_frag>;
-defm FMLAL_VG4_M4ZZ_BtoH  :  sme2_fp_mla_long_array_vg4_single<"fmlal", 0b001, MatrixOp16, ZZZZ_b, ZPR4b8, nxv16i8, null_frag>;
+defm FMLAL_VG2_MZZ_BtoH  : sme2_fp8_fmlal_single_za16<"fmlal",      int_aarch64_sme_fp8_fmlal_single_za16_vg2x1>;
+defm FMLAL_VG2_M2ZZ_BtoH : sme2_fp8_fmlal_single_za16_vgx2<"fmlal", int_aarch64_sme_fp8_fmlal_single_za16_vg2x2>;
+defm FMLAL_VG4_M4ZZ_BtoH : sme2_fp8_fmlal_single_za16_vgx4<"fmlal", int_aarch64_sme_fp8_fmlal_single_za16_vg2x4>;
+
 defm FMLAL_VG2_M2Z2Z_BtoH : sme2_fp_mla_long_array_vg2_multi<"fmlal",   0b100, MatrixOp16, ZZ_b_mul_r, nxv16i8, null_frag>;
 defm FMLAL_VG4_M4Z4Z_BtoH : sme2_fp_mla_long_array_vg4_multi<"fmlal",   0b100, MatrixOp16, ZZZZ_b_mul_r, nxv16i8, null_frag>;
 
@@ -1024,9 +1025,10 @@ defm FMLALL_MZZI_BtoS      : sme2_fp8_fmlall_indexed_za32<"fmlall",      int_aar
 defm FMLALL_VG2_M2ZZI_BtoS : sme2_fp8_fmlall_indexed_za32_vgx2<"fmlall", int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2>;
 defm FMLALL_VG4_M4ZZI_BtoS : sme2_fp8_fmlall_indexed_za32_vgx4<"fmlall", int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4>;
 
-defm FMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"fmlall",      0b01000, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, null_frag>;
-defm FMLALL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg24_single<"fmlall", 0b000001, MatrixOp32, ZZ_b, ZPR4b8>;
-defm FMLALL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg24_single<"fmlall", 0b010001, MatrixOp32, ZZZZ_b, ZPR4b8>;
+defm FMLALL_MZZ_BtoS       : sme2_fp8_fmlall_single_za32<"fmlall",      int_aarch64_sme_fp8_fmlall_single_za32_vg4x1>;
+defm FMLALL_VG2_M2ZZ_BtoS  : sme2_fp8_fmlall_single_za32_vgx2<"fmlall", int_aarch64_sme_fp8_fmlall_single_za32_vg4x2>;
+defm FMLALL_VG4_M4ZZ_BtoS  : sme2_fp8_fmlall_single_za32_vgx4<"fmlall", int_aarch64_sme_fp8_fmlall_single_za32_vg4x4>;
+
 defm FMLALL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"fmlall",   0b01000, MatrixOp32, ZZ_b_mul_r, nxv16i8, null_frag>;
 defm FMLALL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"fmlall",   0b01000, MatrixOp32, ZZZZ_b_mul_r, nxv16i8, null_frag>;
 

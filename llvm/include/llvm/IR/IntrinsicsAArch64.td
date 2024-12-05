@@ -3902,13 +3902,39 @@ class SME_FP8_ZA_LANE_VGx4 :
                                llvm_i32_ty],
                           [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<6>>]>;
 
+class SME_FP8_ZA_SINGLE_VGx1 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+class SME_FP8_ZA_SINGLE_VGx2 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+class SME_FP8_ZA_SINGLE_VGx4 :
+    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
  // Double-vector groups (F8F16)
  def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x1 : SME_FP8_ZA_LANE_VGx1;
  def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2 : SME_FP8_ZA_LANE_VGx2;
  def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4 : SME_FP8_ZA_LANE_VGx4;
 
+ def int_aarch64_sme_fp8_fmlal_single_za16_vg2x1 : SME_FP8_ZA_SINGLE_VGx1;
+ def int_aarch64_sme_fp8_fmlal_single_za16_vg2x2 : SME_FP8_ZA_SINGLE_VGx2;
+ def int_aarch64_sme_fp8_fmlal_single_za16_vg2x4 : SME_FP8_ZA_SINGLE_VGx4;
+
  // Quad-vector groups (F8F32)
  def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1 : SME_FP8_ZA_LANE_VGx1;
  def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2 : SME_FP8_ZA_LANE_VGx2;
  def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4 : SME_FP8_ZA_LANE_VGx4;
+
+ def int_aarch64_sme_fp8_fmlall_single_za32_vg4x1 : SME_FP8_ZA_SINGLE_VGx1;
+ def int_aarch64_sme_fp8_fmlall_single_za32_vg4x2 : SME_FP8_ZA_SINGLE_VGx2;
+ def int_aarch64_sme_fp8_fmlall_single_za32_vg4x4 : SME_FP8_ZA_SINGLE_VGx4;
 }

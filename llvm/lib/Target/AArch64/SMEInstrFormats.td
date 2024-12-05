@@ -2134,6 +2134,15 @@ class sme2_mla_long_array_single_16b<string mnemonic>
     let Inst{2-0}   = imm;
 }
 
+multiclass sme2_fp8_fmlal_single_za16<string mnemonic, SDPatternOperator intrinsic> {
+  let Uses = [FPMR, FPCR] in
+  def NAME : sme2_mla_long_array_single_16b<mnemonic>, SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm3s2range, ZPR8, ZPR4b8, SMEMatrixArray>;
+
+  def: SME2_ZA_TwoOp_Multi_Single_Pat<NAME, intrinsic, uimm3s2range, ZPR4b8, nxv16i8, tileslicerange3s2>;
+}
+
 class sme2_mla_long_array_vg24_single<bits<2> op0, bit vg4, bits<2> op, bit o2,
                                       MatrixOperand matrix_ty, RegisterOperand multi_vector_ty,
                                       ZPRRegOp zpr_ty, string mnemonic, string vg_acronym>
@@ -2147,6 +2156,34 @@ class sme2_mla_long_array_vg24_single<bits<2> op0, bit vg4, bits<2> op, bit o2,
   let Inst{9-5}   = Zn;
   let Inst{2}     = o2;
   let Inst{1-0}   = imm;
+}
+
+multiclass sme2_fp8_fmlal_single_za16_vgx2<string mnemonic, SDPatternOperator intrinsic> {
+  let Uses = [FPMR, FPCR] in
+  def NAME : sme2_mla_long_array_vg24_single<0b00, 0b0, 0b00, 0b1, MatrixOp16, ZZ_b, ZPR4b8,
+                                             mnemonic, "vgx2">, SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm2s2range, ZZ_b, ZPR4b8, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Single_Pat<NAME, intrinsic, uimm2s2range, ZPR4b8, nxv16i8, tileslicerange2s2>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
+                  uimm2s2range:$imm, ZZ_b:$Zn, ZPR4b8:$Zm), 0>;
+}
+
+multiclass sme2_fp8_fmlal_single_za16_vgx4<string mnemonic, SDPatternOperator intrinsic> {
+  let Uses = [FPMR, FPCR] in
+  def NAME : sme2_mla_long_array_vg24_single<0b00, 0b1, 0b00, 0b1, MatrixOp16, ZZZZ_b, ZPR4b8,
+                                             mnemonic, "vgx4">, SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm2s2range, ZZZZ_b, ZPR4b8, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG4_Multi_Single_Pat<NAME, intrinsic, uimm2s2range, ZPR4b8, nxv16i8, tileslicerange2s2>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp16:$ZAda, MatrixIndexGPR32Op8_11:$Rv,
+                  uimm2s2range:$imm, ZZZZ_b:$Zn, ZPR4b8:$Zm), 0>;
 }
 
 multiclass sme2_fp_mla_long_array_vg2_single<string mnemonic, bits<3> op, MatrixOperand matrix_ty,
@@ -3245,6 +3282,15 @@ multiclass sme2_mla_ll_array_single<string mnemonic, bits<5> op,
   def : SME2_ZA_TwoOp_Multi_Single_Pat<NAME, intrinsic, uimm2s4range, zpr_ty, vt, tileslicerange2s4>;
 }
 
+multiclass sme2_fp8_fmlall_single_za32<string mnemonic, SDPatternOperator intrinsic> {
+  let Uses = [FPMR, FPCR] in
+  def NAME : sme2_mla_ll_array_single<mnemonic, 0b01000, MatrixOp32, ZPR8, ZPR4b8>, SMEPseudo2Instr<NAME, 1>;
+
+  def NAME # _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm2s4range, ZPR8, ZPR4b8, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_Multi_Single_Pat<NAME, intrinsic, uimm2s4range, ZPR4b8, nxv16i8, tileslicerange2s4>;
+}
+
 class sme2_mla_ll_array_vg24_single<bits<6> op, MatrixOperand matrix_ty,
                                     RegisterOperand vector_ty, ZPRRegOp zpr_ty,
                                     string mnemonic>
@@ -3273,6 +3319,33 @@ class sme2_mla_ll_array_vg24_single<bits<6> op, MatrixOperand matrix_ty,
 }
 
 //SME2 single-multi long long MLA two and four sources
+
+multiclass sme2_fp8_fmlall_single_za32_vgx2<string mnemonic, SDPatternOperator intrinsic> {
+  let Uses = [FPMR, FPCR] in
+  def NAME: sme2_mla_ll_array_vg24_single<0b000001, MatrixOp32, ZZ_b, ZPR4b8, mnemonic>, SMEPseudo2Instr<NAME, 1>;
+
+  def NAME # _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm1s4range, ZZ_b, ZPR4b8, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Single_Pat<NAME, intrinsic, uimm1s4range, ZPR4b8, nxv16i8, tileslicerange1s4>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
+                  uimm1s4range:$imm, ZZ_b:$Zn, ZPR4b8:$Zm), 0>;
+}
+
+multiclass sme2_fp8_fmlall_single_za32_vgx4<string mnemonic, SDPatternOperator intrinsic> {
+  let Uses = [FPMR, FPCR] in
+  def NAME: sme2_mla_ll_array_vg24_single<0b010001, MatrixOp32, ZZZZ_b, ZPR4b8, mnemonic>, SMEPseudo2Instr<NAME, 1>;
+
+  def NAME # _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm1s4range, ZZZZ_b, ZPR4b8, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG4_Multi_Single_Pat<NAME, intrinsic, uimm1s4range, ZPR4b8, nxv16i8, tileslicerange1s4>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
+                  uimm1s4range:$imm, ZZZZ_b:$Zn, ZPR4b8:$Zm), 0>;
+}
+
 
 multiclass sme2_mla_ll_array_vg24_single<string mnemonic, bits<6> op,
                                           MatrixOperand matrix_ty,
