@@ -4307,10 +4307,12 @@ def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
   NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
   MarshallingInfoEnum<CodeGenOpts<"ExtendVariableLiveness">, "None">;
 def fextend_this_ptr_liveness : Flag<["-"], "fextend-this-ptr-liveness">,
+  Visibility<[ClangOption, CC1Option]>,
   Alias<fextend_variable_liveness_EQ>, AliasArgs<["this"]>,
   HelpText<"Extend the liveness of the `this` pointer through optimizations to "
            "prevent a stale or optimized-out value when debugging.">;
 def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
+  Visibility<[ClangOption, CC1Option]>,
   Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,
   HelpText<"Extend the liveness of all local variables and parameters through "
            "optimizations to prevent stale or optimized-out variable values "
