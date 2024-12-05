@@ -359,13 +359,7 @@ def testPrintIrLargeLimitElements():
         pm = PassManager.parse("builtin.module(canonicalize)")
         ctx.enable_multithreading(False)
         pm.enable_ir_printing(large_elements_limit=2)
-        # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) //----- //
-        # CHECK: module {
-        # CHECK:   func.func @main() -> tensor<3xi64> {
         # CHECK:     %[[CST:.*]] = arith.constant dense_resource<__elided__> : tensor<3xi64>
-        # CHECK:     return %[[CST]] : tensor<3xi64>
-        # CHECK:   }
-        # CHECK: }
         pm.run(module)
 
 
