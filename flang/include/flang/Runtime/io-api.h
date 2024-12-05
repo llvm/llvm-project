@@ -1,4 +1,4 @@
-//===-- include/flang/Runtime/io-api-funcs.h --------------------*- C++ -*-===//
+//===-- include/flang/Runtime/io-api.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api-consts.h"
-#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/iostat-consts.h"
 #include "flang/Runtime/magic-numbers.h"
 #include <cinttypes>
 #include <cstddef>
@@ -36,5 +36,4 @@ RT_API_ATTRS const char *InquiryKeywordHashDecode(
     char *buffer, std::size_t, InquiryKeywordHash);
 
 } // namespace Fortran::runtime::io
-
-#endif /* FORTRAN_RUNTIME_IO_API_H_ */
+#endif

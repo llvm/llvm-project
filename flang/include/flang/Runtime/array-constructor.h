@@ -43,6 +43,7 @@ struct ArrayConstructorVector {
 private:
   unsigned char useValueLengthParameters_ : 1;
 };
+
 static_assert(sizeof(Fortran::runtime::ArrayConstructorVector) <=
         MaxArrayConstructorVectorSizeInBytes,
     "ABI requires sizeof(ArrayConstructorVector) to be smaller than "
