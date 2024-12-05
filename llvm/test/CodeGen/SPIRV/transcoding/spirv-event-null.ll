@@ -71,9 +71,7 @@ declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU
 ; CHECK: %[[#BarArg2:]] = OpFunctionParameter %[[#TyPtrSV4_CW]]
 ; CHECK: %[[#EventVarBar:]] = OpVariable %[[#TyStructPtr]] Function
 ; CHECK: %[[#EventVarBarCasted2:]] = OpBitcast %[[#TyEventPtr]] %[[#EventVarBar]]
-; CHECK: %[[#BarArg2Casted:]] = OpBitcast %[[#TyPtrV4_CW]] %[[#BarArg2]]
-; CHECK: %[[#SrcBar:]] = OpInBoundsPtrAccessChain %[[#TyPtrV4_CW]] %[[#BarArg2Casted]] %[[#]]
-; CHECK: %[[#ResBar:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#BarArg1]] %[[#SrcBar]] %[[#]] %[[#]] %[[#ConstEvent]]
+; CHECK: %[[#ResBar:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#BarArg1]] %[[#]] %[[#]] %[[#]] %[[#ConstEvent]]
 ; CHECK: %[[#EventVarBarCasted:]] = OpBitcast %[[#TyEventPtr]] %[[#EventVarBar]]
 ; CHECK: OpStore %[[#EventVarBarCasted]] %[[#ResBar]]
 ; CHECK: %[[#EventVarBarGen:]] = OpPtrCastToGeneric %[[#TyEventPtrGen]] %[[#EventVarBarCasted2]]

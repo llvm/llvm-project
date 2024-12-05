@@ -76,13 +76,15 @@ getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
   const SPIRV::SymbolicOperand *EnumValueInCategory =
       SPIRV::lookupSymbolicOperandByCategory(Category);
 
+  auto TableEnd = ArrayRef(SPIRV::SymbolicOperands).end();
   while (EnumValueInCategory && EnumValueInCategory->Category == Category) {
     if ((EnumValueInCategory->Value != 0) &&
         (Value & EnumValueInCategory->Value)) {
       Name += Separator + EnumValueInCategory->Mnemonic.str();
       Separator = "|";
     }
-    ++EnumValueInCategory;
+    if (++EnumValueInCategory == TableEnd)
+      break;
   }
 
   return Name;
@@ -123,8 +125,7 @@ getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
          Capability->Value == Value) {
     Capabilities.push_back(
         static_cast<SPIRV::Capability::Capability>(Capability->ReqCapability));
-    ++Capability;
-    if (Capability == TableEnd)
+    if (++Capability == TableEnd)
       break;
   }
 
@@ -138,16 +139,15 @@ getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension) {
           Extension, SPIRV::OperandCategory::CapabilityOperand);
 
   CapabilityList Capabilities;
+  auto TableEnd = ArrayRef(SPIRV::ExtensionEntries).end();
   while (Entry &&
          Entry->Category == SPIRV::OperandCategory::CapabilityOperand) {
     // Some capabilities' codes might go not in order.
-    if (Entry->ReqExtension != Extension) {
-      ++Entry;
-      continue;
-    }
-    Capabilities.push_back(
-        static_cast<SPIRV::Capability::Capability>(Entry->Value));
-    ++Entry;
+    if (Entry->ReqExtension == Extension)
+      Capabilities.push_back(
+          static_cast<SPIRV::Capability::Capability>(Entry->Value));
+    if (++Entry == TableEnd)
+      break;
   }
 
   return Capabilities;
@@ -160,11 +160,13 @@ getSymbolicOperandExtensions(SPIRV::OperandCategory::OperandCategory Category,
       SPIRV::lookupExtensionByCategoryAndValue(Category, Value);
 
   ExtensionList Extensions;
+  auto TableEnd = ArrayRef(SPIRV::ExtensionEntries).end();
   while (Extension && Extension->Category == Category &&
          Extension->Value == Value) {
     Extensions.push_back(
         static_cast<SPIRV::Extension::Extension>(Extension->ReqExtension));
-    ++Extension;
+    if (++Extension == TableEnd)
+      break;
   }
 
   return Extensions;
