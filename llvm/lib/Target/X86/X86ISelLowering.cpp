@@ -24228,6 +24228,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.hasAVX10_2()) {
     if (CC == ISD::SETOEQ || CC == ISD::SETUNE) {
       auto NewCC = (CC == ISD::SETOEQ) ? X86::COND_E : (X86::COND_NE);
+      assert(Op0.getSimpleValueType() != MVT::bf16 && "Unsupported Type");
       if (Op0.getSimpleValueType() != MVT::f80)
         return getSETCC(
             NewCC, DAG.getNode(X86ISD::UCOMX, dl, MVT::i32, Op0, Op1), dl, DAG);
