@@ -1486,7 +1486,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(LowerConstantIntrinsicsPass());
 
   OptimizePM.addPass(LowerMatrixIntrinsicsPass());
-  ExtraPassManager<ShouldRunExtraMatrixPasses> ExtraPasses;
+  ExtraFunctionPassManager<ShouldRunExtraMatrixPasses> ExtraPasses;
   ExtraPasses.addPass(EarlyCSEPass());
   OptimizePM.addPass(std::move(ExtraPasses));
 

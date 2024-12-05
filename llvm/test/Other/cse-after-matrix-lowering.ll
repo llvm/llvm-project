@@ -4,10 +4,10 @@
 
 define <4 x float> @multiply_2x2(<4 x float> %a, <4 x float> %b) {
 ; CHECK:      Running pass: LowerMatrixIntrinsicsPass
-; CHECK-NEXT: Running analysis: ShouldRunExtraPasses
+; CHECK-NEXT: Running analysis: ShouldRunExtraMatrixPasses
 ; CHECK-NEXT: Invalidating analysis: PostDominatorTreeAnalysis
 ; CHECK-NEXT: Running pass: EarlyCSEPass
-; CHECK-NEXT: Invalidating analysis: ShouldRunExtraPasses
+; CHECK-NEXT: Invalidating analysis: ShouldRunExtraMatrixPasses
 ;
 entry:
   %c = call <4 x float> @llvm.matrix.multiply.v4f32.v4f32.v4f32(<4 x float> %a, <4 x float> %b, i32 2, i32 2, i32 2)
