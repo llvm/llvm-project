@@ -151,7 +151,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
   }
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
-    enqueue(sec);
+    enqueue(sec, 0, nullptr, parent);
 }
 
 // The .eh_frame section is an unfortunate special case.
