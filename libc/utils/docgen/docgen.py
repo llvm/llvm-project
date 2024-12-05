@@ -103,7 +103,7 @@ def print_tbl_dir(name):
   * - {name}
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section"""
+    - POSIX.1-2024 Standard Section"""
     )
 
 
