@@ -1,4 +1,4 @@
-//===-- SystemZISelLowering.cpp - SystemZ DAG lowering implementation -----===//
+//===-- systemzisellowering.cpp - systemz dag lowering implementation -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -987,7 +987,7 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   //          | phi(v_mainMBB,v_restoreMBB) |
   //           -----------------------------
   // thisMBB:
-  //  buf[0] = Frame Pointer if hasFP.
+  //  buf[FPOffset] = Frame Pointer if hasFP.
   //  buf[LabelOffset] = restoreMBB <-- takes address of restoreMBB.
   //  buf[BCOffset] = Backchain value if building with -mbackchain.
   //  buf[SPOffset] = Stack Pointer.
@@ -6533,10 +6533,10 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerREADCYCLECOUNTER(Op, DAG);
   case ISD::EH_SJLJ_SETJMP:
   case ISD::EH_SJLJ_LONGJMP:
-    // These operations action  are Legal now, not Custom. The reason we need
-    // to keep it here is that common code treats these Pseudos as Custom,
-    // and expands them using EmitInstrWithCustomInserter in FinalizeISel.cpp
-    // after ISel.
+    // These operations are legal on our platform, but we cannot actually
+    // set the operation action to Legal as common code would treat this
+    // as equivalent to Expand. Instead, we keep the operation action to
+    // Custom and just leave them unchanged here.
     return Op;
 
   default:

@@ -4620,26 +4620,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Buf = EmitPointerWithAlignment(E->getArg(0));
 
     if (getTarget().getTriple().getArch() == llvm::Triple::systemz) {
-      // Call LLVM's EH setjmp, which is lightweight.
-      // We're not filling any fields of the jmp_buf here and leave
-      // it all to the back-end.
-      // Current LLVM implementation and documentation of the builtin is
-      // somewhat inconsistent with itself. The documentation starts out with:
-      // The buffer format and the overall functioning of this intrinsic is
-      // compatible with the GCC __builtin_setjmp implementation allowing code
-      // built with the clang and GCC to interoperate.
-      // But in GCC the format of the buffer is completely target-dependent,
-      // while LLVM attempts to impose some constraints on certain fields.
-      // 1. LLVM documentation continues with - The front end places the frame
-      // pointer in the first word - What clang puts into the first word,
-      // however, is the result of the frameaddress intrinsic - this value
-      // matches the frame pointer register contents on some but not all
-      // targets. On SystemZ these values differ, which would cause
-      // incompatibilties with GCC.
-      // 2. Clang front-end also writes the stack pointer into the third
-      // slot. Not only is this not even mentioned in the docs, it also does
-      // not match GCC behavior on all targets. On SystemZ we use the fourth
-      // slot.
+      // On this target, the back end fills in the context buffer completely.
       Function *F = CGM.getIntrinsic(Intrinsic::eh_sjlj_setjmp);
       return RValue::get(Builder.CreateCall(F, Buf.emitRawPointer(*this)));
     }
