@@ -112,6 +112,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timespec_get
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timespec_get
+)
+
+add_entrypoint_object(
   clock
   ALIAS
   DEPENDS

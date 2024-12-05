@@ -47,6 +47,7 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -356,6 +357,31 @@ INTERCEPTOR(int, dup, int oldfd) {
 INTERCEPTOR(int, dup2, int oldfd, int newfd) {
   __rtsan_notify_intercepted_call("dup2");
   return REAL(dup2)(oldfd, newfd);
+}
+
+INTERCEPTOR(int, chmod, const char *path, mode_t mode) {
+  __rtsan_notify_intercepted_call("chmod");
+  return REAL(chmod)(path, mode);
+}
+
+INTERCEPTOR(int, fchmod, int fd, mode_t mode) {
+  __rtsan_notify_intercepted_call("fchmod");
+  return REAL(fchmod)(fd, mode);
+}
+
+INTERCEPTOR(int, mkdir, const char *path, mode_t mode) {
+  __rtsan_notify_intercepted_call("mkdir");
+  return REAL(mkdir)(path, mode);
+}
+
+INTERCEPTOR(int, rmdir, const char *path) {
+  __rtsan_notify_intercepted_call("rmdir");
+  return REAL(rmdir)(path);
+}
+
+INTERCEPTOR(mode_t, umask, mode_t cmask) {
+  __rtsan_notify_intercepted_call("umask");
+  return REAL(umask)(cmask);
 }
 
 // Concurrency
@@ -789,6 +815,59 @@ INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
   return REAL(mkfifo)(pathname, mode);
 }
 
+INTERCEPTOR(pid_t, fork, void) {
+  __rtsan_notify_intercepted_call("fork");
+  return REAL(fork)();
+}
+
+INTERCEPTOR(int, execve, const char *filename, char *const argv[],
+            char *const envp[]) {
+  __rtsan_notify_intercepted_call("execve");
+  return REAL(execve)(filename, argv, envp);
+}
+
+// TODO: the `wait` family of functions is an oddity. In testing, if you
+// intercept them, Darwin seemingly ignores them, and linux never returns from
+// the test. Revisit this in the future, but hopefully intercepting fork/exec is
+// enough to dissuade usage of wait by proxy.
+
+#if SANITIZER_APPLE
+#define INT_TYPE_SYSCALL int
+#else
+#define INT_TYPE_SYSCALL long
+#endif
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+INTERCEPTOR(INT_TYPE_SYSCALL, syscall, INT_TYPE_SYSCALL number, ...) {
+  __rtsan_notify_intercepted_call("syscall");
+
+  va_list args;
+  va_start(args, number);
+
+  // the goal is to pick something large enough to hold all syscall args
+  // see fcntl for more discussion and why we always pull all 6 args
+  using arg_type = unsigned long;
+  arg_type arg1 = va_arg(args, arg_type);
+  arg_type arg2 = va_arg(args, arg_type);
+  arg_type arg3 = va_arg(args, arg_type);
+  arg_type arg4 = va_arg(args, arg_type);
+  arg_type arg5 = va_arg(args, arg_type);
+  arg_type arg6 = va_arg(args, arg_type);
+
+  // these are various examples of things that COULD be passed
+  static_assert(sizeof(arg_type) >= sizeof(off_t));
+  static_assert(sizeof(arg_type) >= sizeof(struct flock *));
+  static_assert(sizeof(arg_type) >= sizeof(const char *));
+  static_assert(sizeof(arg_type) >= sizeof(int));
+  static_assert(sizeof(arg_type) >= sizeof(unsigned long));
+
+  va_end(args);
+
+  return REAL(syscall)(number, arg1, arg2, arg3, arg4, arg5, arg6);
+}
+#pragma clang diagnostic pop
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -835,6 +914,11 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
   INTERCEPT_FUNCTION(dup2);
+  INTERCEPT_FUNCTION(chmod);
+  INTERCEPT_FUNCTION(fchmod);
+  INTERCEPT_FUNCTION(mkdir);
+  INTERCEPT_FUNCTION(rmdir);
+  INTERCEPT_FUNCTION(umask);
   INTERCEPT_FUNCTION(ioctl);
 
   RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK;
@@ -887,6 +971,11 @@ void __rtsan::InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
+
+  INTERCEPT_FUNCTION(fork);
+  INTERCEPT_FUNCTION(execve);
+
+  INTERCEPT_FUNCTION(syscall);
 }
 
 #endif // SANITIZER_POSIX

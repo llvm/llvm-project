@@ -387,12 +387,12 @@ struct OffsetResult {
   Value *BasePtr;
   APInt ConstantOffset;
   SmallMapVector<Value *, APInt, 4> VariableOffsets;
-  bool AllInbounds;
+  GEPNoWrapFlags NW;
 
   OffsetResult() : BasePtr(nullptr), ConstantOffset(0, uint64_t(0)) {}
 
   OffsetResult(GEPOperator &GEP, const DataLayout &DL)
-      : BasePtr(GEP.getPointerOperand()), AllInbounds(GEP.isInBounds()) {
+      : BasePtr(GEP.getPointerOperand()), NW(GEP.getNoWrapFlags()) {
     ConstantOffset = APInt(DL.getIndexTypeSizeInBits(BasePtr->getType()), 0);
   }
 };
@@ -426,7 +426,7 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
     Result.ConstantOffset += ConstantOffset2;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
       Result.VariableOffsets = VariableOffsets2;
-    Result.AllInbounds &= InnerGEP->isInBounds();
+    Result.NW &= InnerGEP->getNoWrapFlags();
   }
   return Result;
 }
@@ -450,9 +450,11 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
 
   assert(!IsSigned && "The logic below only supports decomposition for "
                       "unsigned predicates at the moment.");
-  const auto &[BasePtr, ConstantOffset, VariableOffsets, AllInbounds] =
+  const auto &[BasePtr, ConstantOffset, VariableOffsets, NW] =
       collectOffsets(GEP, DL);
-  if (!BasePtr || !AllInbounds)
+  // We support either plain gep nuw, or gep nusw with non-negative offset,
+  // which implies gep nuw.
+  if (!BasePtr || NW == GEPNoWrapFlags::none())
     return &GEP;
 
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
@@ -461,11 +463,13 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
     IdxResult.mul(Scale.getSExtValue());
     Result.add(IdxResult);
 
-    // If Op0 is signed non-negative, the GEP is increasing monotonically and
-    // can be de-composed.
-    if (!isKnownNonNegative(Index, DL))
-      Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
-                                 ConstantInt::get(Index->getType(), 0));
+    if (!NW.hasNoUnsignedWrap()) {
+      // Try to prove nuw from nusw and nneg.
+      assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
+      if (!isKnownNonNegative(Index, DL))
+        Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
+                                   ConstantInt::get(Index->getType(), 0));
+    }
   }
   return Result;
 }

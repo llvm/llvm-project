@@ -520,11 +520,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(ST.hasStdExtD(), {{s32, s64}})
       .legalFor(ST.hasStdExtZfh(), {{s16, s32}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}});
+      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}})
+      .libcallFor({{s32, s64}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
       .legalFor(ST.hasStdExtZfh(), {{s32, s16}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}});
+      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}})
+      .libcallFor({{s64, s32}});
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -563,7 +565,19 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtD(), {{s64, sXLen}})
       .legalFor(ST.hasStdExtZfh(), {{s16, sXLen}})
       .widenScalarToNextPow2(1)
-      .minScalar(1, sXLen)
+      // Promote to XLen if the operation is legal.
+      .widenScalarIf(
+          [=, &ST](const LegalityQuery &Query) {
+            return Query.Types[0].isScalar() && Query.Types[1].isScalar() &&
+                   (Query.Types[1].getSizeInBits() < ST.getXLen()) &&
+                   ((ST.hasStdExtF() && Query.Types[0].getSizeInBits() == 32) ||
+                    (ST.hasStdExtD() && Query.Types[0].getSizeInBits() == 64) ||
+                    (ST.hasStdExtZfh() &&
+                     Query.Types[0].getSizeInBits() == 16));
+          },
+          LegalizeMutations::changeTo(1, sXLen))
+      // Otherwise only promote to s32 since we have si libcalls.
+      .minScalar(1, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
 
@@ -579,6 +593,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
                                G_FTANH})
       .libcallFor({s32, s64});
+  getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
+      .libcallFor({{s32, s32}, {s64, s32}});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
