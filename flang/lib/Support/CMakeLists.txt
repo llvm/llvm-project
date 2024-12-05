@@ -49,6 +49,7 @@ add_flang_library(FortranSupport
   default-kinds.cpp
   idioms.cpp
   LangOptions.cpp
+  OpenMP-utils.cpp
   Version.cpp
   ${version_inc}
 
