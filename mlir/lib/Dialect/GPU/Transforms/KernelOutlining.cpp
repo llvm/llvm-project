@@ -365,10 +365,8 @@ public:
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
         std::string kernelFnName;
-        if (op.hasKernelFuncName()) {
-          kernelFnName = op->getAttrOfType<mlir::SymbolRefAttr>("kernelFunc")
-                             .getRootReference()
-                             .str();
+        if (op.getKernelFunc()) {
+          kernelFnName = op.getKernelFunc()->getRootReference().str();
         } else {
           kernelFnName =
               Twine(op->getParentOfType<SymbolOpInterface>().getName(),
@@ -413,11 +411,9 @@ private:
     auto *context = getOperation().getContext();
     OpBuilder builder(context);
     std::string kernelModuleName;
-    if (gpuLaunchOp.hasKernelModuleName()) {
+    if (gpuLaunchOp.getKernelModule()) {
       kernelModuleName =
-          gpuLaunchOp->getAttrOfType<mlir::SymbolRefAttr>("kernelModule")
-              .getRootReference()
-              .str();
+          gpuLaunchOp.getKernelModule()->getRootReference().str();
     } else {
       kernelModuleName = kernelFunc.getName();
     }
