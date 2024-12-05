@@ -9,7 +9,7 @@ add_object_library(
     libc.hdr.time_macros
 )
 
-add_entrypoint_object(
+add_object_library(
   clock_gettime
   SRCS
     clock_gettime.cpp
