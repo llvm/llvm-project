@@ -522,8 +522,15 @@ Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
 
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
-  auto *Comparand = CGF.EmitScalarExpr(E->getArg(2));
   auto *Exchange = CGF.EmitScalarExpr(E->getArg(1));
+  auto *RTy = Exchange->getType();
+
+  auto *Comparand = CGF.EmitScalarExpr(E->getArg(2));
+
+  if (RTy->isPointerTy()) {
+    Exchange = CGF.Builder.CreatePtrToInt(Exchange, CGF.IntPtrTy);
+    Comparand = CGF.Builder.CreatePtrToInt(Comparand, CGF.IntPtrTy);
+  }
 
   // For Release ordering, the failure ordering should be Monotonic.
   auto FailureOrdering = SuccessOrdering == AtomicOrdering::Release ?
@@ -534,10 +541,16 @@ Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
   // blocks the few atomics optimizations that LLVM has. If we want to optimize
   // _Interlocked* operations in the future, we will have to remove the volatile
   // marker.
-  auto *Result = CGF.Builder.CreateAtomicCmpXchg(
+  auto *CmpXchg = CGF.Builder.CreateAtomicCmpXchg(
       DestAddr, Comparand, Exchange, SuccessOrdering, FailureOrdering);
-  Result->setVolatile(true);
-  return CGF.Builder.CreateExtractValue(Result, 0);
+  CmpXchg->setVolatile(true);
+
+  auto *Result = CGF.Builder.CreateExtractValue(CmpXchg, 0);
+  if (RTy->isPointerTy()) {
+    Result = CGF.Builder.CreateIntToPtr(Result, RTy);
+  }
+
+  return Result;
 }
 
 // 64-bit Microsoft platforms support 128 bit cmpxchg operations. They are
@@ -1620,6 +1633,7 @@ enum class CodeGenFunction::MSVCIntrin {
   _BitScanForward,
   _BitScanReverse,
   _InterlockedAnd,
+  _InterlockedCompareExchange,
   _InterlockedDecrement,
   _InterlockedExchange,
   _InterlockedExchangeAdd,
@@ -1705,26 +1719,31 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
   case clang::ARM::BI_InterlockedExchange16_acq:
   case clang::ARM::BI_InterlockedExchange_acq:
   case clang::ARM::BI_InterlockedExchange64_acq:
+  case clang::ARM::BI_InterlockedExchangePointer_acq:
     return MSVCIntrin::_InterlockedExchange_acq;
   case clang::ARM::BI_InterlockedExchange8_rel:
   case clang::ARM::BI_InterlockedExchange16_rel:
   case clang::ARM::BI_InterlockedExchange_rel:
   case clang::ARM::BI_InterlockedExchange64_rel:
+  case clang::ARM::BI_InterlockedExchangePointer_rel:
     return MSVCIntrin::_InterlockedExchange_rel;
   case clang::ARM::BI_InterlockedExchange8_nf:
   case clang::ARM::BI_InterlockedExchange16_nf:
   case clang::ARM::BI_InterlockedExchange_nf:
   case clang::ARM::BI_InterlockedExchange64_nf:
+  case clang::ARM::BI_InterlockedExchangePointer_nf:
     return MSVCIntrin::_InterlockedExchange_nf;
   case clang::ARM::BI_InterlockedCompareExchange8_acq:
   case clang::ARM::BI_InterlockedCompareExchange16_acq:
   case clang::ARM::BI_InterlockedCompareExchange_acq:
   case clang::ARM::BI_InterlockedCompareExchange64_acq:
+  case clang::ARM::BI_InterlockedCompareExchangePointer_acq:
     return MSVCIntrin::_InterlockedCompareExchange_acq;
   case clang::ARM::BI_InterlockedCompareExchange8_rel:
   case clang::ARM::BI_InterlockedCompareExchange16_rel:
   case clang::ARM::BI_InterlockedCompareExchange_rel:
   case clang::ARM::BI_InterlockedCompareExchange64_rel:
+  case clang::ARM::BI_InterlockedCompareExchangePointer_rel:
     return MSVCIntrin::_InterlockedCompareExchange_rel;
   case clang::ARM::BI_InterlockedCompareExchange8_nf:
   case clang::ARM::BI_InterlockedCompareExchange16_nf:
@@ -1851,26 +1870,31 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   case clang::AArch64::BI_InterlockedExchange16_acq:
   case clang::AArch64::BI_InterlockedExchange_acq:
   case clang::AArch64::BI_InterlockedExchange64_acq:
+  case clang::AArch64::BI_InterlockedExchangePointer_acq:
     return MSVCIntrin::_InterlockedExchange_acq;
   case clang::AArch64::BI_InterlockedExchange8_rel:
   case clang::AArch64::BI_InterlockedExchange16_rel:
   case clang::AArch64::BI_InterlockedExchange_rel:
   case clang::AArch64::BI_InterlockedExchange64_rel:
+  case clang::AArch64::BI_InterlockedExchangePointer_rel:
     return MSVCIntrin::_InterlockedExchange_rel;
   case clang::AArch64::BI_InterlockedExchange8_nf:
   case clang::AArch64::BI_InterlockedExchange16_nf:
   case clang::AArch64::BI_InterlockedExchange_nf:
   case clang::AArch64::BI_InterlockedExchange64_nf:
+  case clang::AArch64::BI_InterlockedExchangePointer_nf:
     return MSVCIntrin::_InterlockedExchange_nf;
   case clang::AArch64::BI_InterlockedCompareExchange8_acq:
   case clang::AArch64::BI_InterlockedCompareExchange16_acq:
   case clang::AArch64::BI_InterlockedCompareExchange_acq:
   case clang::AArch64::BI_InterlockedCompareExchange64_acq:
+  case clang::AArch64::BI_InterlockedCompareExchangePointer_acq:
     return MSVCIntrin::_InterlockedCompareExchange_acq;
   case clang::AArch64::BI_InterlockedCompareExchange8_rel:
   case clang::AArch64::BI_InterlockedCompareExchange16_rel:
   case clang::AArch64::BI_InterlockedCompareExchange_rel:
   case clang::AArch64::BI_InterlockedCompareExchange64_rel:
+  case clang::AArch64::BI_InterlockedCompareExchangePointer_rel:
     return MSVCIntrin::_InterlockedCompareExchange_rel;
   case clang::AArch64::BI_InterlockedCompareExchange8_nf:
   case clang::AArch64::BI_InterlockedCompareExchange16_nf:
@@ -2073,6 +2097,8 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
   case MSVCIntrin::_InterlockedExchange_nf:
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xchg, E,
                                  AtomicOrdering::Monotonic);
+  case MSVCIntrin::_InterlockedCompareExchange:
+    return EmitAtomicCmpXchgForMSIntrin(*this, E);
   case MSVCIntrin::_InterlockedCompareExchange_acq:
     return EmitAtomicCmpXchgForMSIntrin(*this, E, AtomicOrdering::Acquire);
   case MSVCIntrin::_InterlockedCompareExchange_rel:
@@ -5720,32 +5746,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(
         EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E));
   case Builtin::BI_InterlockedCompareExchangePointer:
-  case Builtin::BI_InterlockedCompareExchangePointer_nf: {
-    llvm::Type *RTy;
-    llvm::IntegerType *IntType = IntegerType::get(
-        getLLVMContext(), getContext().getTypeSize(E->getType()));
-
-    Address DestAddr = CheckAtomicAlignment(*this, E);
-
-    llvm::Value *Exchange = EmitScalarExpr(E->getArg(1));
-    RTy = Exchange->getType();
-    Exchange = Builder.CreatePtrToInt(Exchange, IntType);
-
-    llvm::Value *Comparand =
-      Builder.CreatePtrToInt(EmitScalarExpr(E->getArg(2)), IntType);
-
-    auto Ordering =
-      BuiltinID == Builtin::BI_InterlockedCompareExchangePointer_nf ?
-      AtomicOrdering::Monotonic : AtomicOrdering::SequentiallyConsistent;
-
-    auto Result = Builder.CreateAtomicCmpXchg(DestAddr, Comparand, Exchange,
-                                              Ordering, Ordering);
-    Result->setVolatile(true);
-
-    return RValue::get(Builder.CreateIntToPtr(Builder.CreateExtractValue(Result,
-                                                                         0),
-                                              RTy));
-  }
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange, E));
+  case Builtin::BI_InterlockedCompareExchangePointer_nf:
+    return RValue::get(
+        EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_nf, E));
   case Builtin::BI_InterlockedCompareExchange8:
   case Builtin::BI_InterlockedCompareExchange16:
   case Builtin::BI_InterlockedCompareExchange:
