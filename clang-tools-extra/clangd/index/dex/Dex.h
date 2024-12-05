@@ -146,7 +146,7 @@ private:
   // Set of files which were used during this index build.
   llvm::StringSet<> Files;
   // Contents of the index (symbols, references, etc.)
-  IndexContents IdxContents;
+  IndexContents IdxContents = IndexContents::None;
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;
 };

@@ -242,4 +242,75 @@ void foo() {
 #pragma acc parallel loop vector_length((int)array[1])
   for(int i = 0;i<5;++i);
 
+// CHECK: #pragma acc parallel loop gang(dim: 2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop gang(dim:2)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc serial loop gang(static: i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop gang(static:i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop gang(static: i) gang(dim: 2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop gang(static:i) gang(dim:2)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop gang(static: i, dim: 2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop gang(static:i, dim:2)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop gang(dim: 2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop gang(dim:2)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop gang(static: i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop gang(static:i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop gang(static: i) gang(dim: 2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop gang(static:i) gang(dim:2)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop gang(static: i, dim: 2)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop gang(static:i, dim:2)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc kernels loop gang(num: i) gang(static: i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc kernels loop gang(i) gang(static:i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc kernels loop gang(num: i) gang(static: i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc kernels loop gang(num:i) gang(static:i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc serial loop gang(static: i)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop gang(static:i)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc serial loop gang(static: *)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop gang(static:*)
+  for(int i = 0;i<5;++i);
 }
