@@ -686,6 +686,8 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "Qualcomm uC CSR custom opcode table");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcisls, DecoderTableXqcisls32,
                         "Qualcomm uC Scaled Load Store custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcia, DecoderTableXqcia32,
+                        "Qualcomm uC Arithmetic custom opcode table");
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32 table");
 
   return MCDisassembler::Fail;
