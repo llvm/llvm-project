@@ -10626,19 +10626,7 @@ SDVTList SelectionDAG::getVTList(EVT VT) {
   if (!VT.isExtended())
     return makeVTList(SDNode::getValueTypeList(VT.getSimpleVT()), 1);
 
-  FoldingSetNodeID ID;
-  ID.AddInteger(1U);
-  ID.AddInteger(VT.getRawBits());
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(1);
-    Array[0] = VT;
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, 1);
-    VTListMap.InsertNode(Result, IP);
-  }
-  return Result->getSDVTList();
+  return makeVTList(&(*EVTs.insert(VT).first), 1);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2) {
