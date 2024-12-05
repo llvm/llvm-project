@@ -10,7 +10,9 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
@@ -20,7 +22,6 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-class ConstantInt;
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -249,12 +250,6 @@ public:
 
   /// Returns the size of the size_t type in bits.
   unsigned getSizeTSize(const Module &M) const;
-
-  /// Returns an IntegerType corresponding to size_t.
-  IntegerType *getSizeTType(const Module &M) const;
-
-  /// Returns a constant materialized as a size_t type.
-  ConstantInt *getAsSizeT(uint64_t V, const Module &M) const;
 
   /// Get size of a C-level int or unsigned int, in bits.
   unsigned getIntSize() const {
@@ -572,14 +567,14 @@ public:
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
   unsigned getSizeTSize(const Module &M) const { return Impl->getSizeTSize(M); }
 
-  /// \copydoc TargetLibraryInfoImpl::getSizeTType()
+  /// Returns an IntegerType corresponding to size_t.
   IntegerType *getSizeTType(const Module &M) const {
-    return Impl->getSizeTType(M);
+    return IntegerType::get(M.getContext(), getSizeTSize(M));
   }
 
-  /// \copydoc TargetLibraryInfoImpl::getAsSizeT()
+  /// Returns a constant materialized as a size_t type.
   ConstantInt *getAsSizeT(uint64_t V, const Module &M) const {
-    return Impl->getAsSizeT(V, M);
+    return ConstantInt::get(getSizeTType(M), V);
   }
 
   /// \copydoc TargetLibraryInfoImpl::getIntSize()
