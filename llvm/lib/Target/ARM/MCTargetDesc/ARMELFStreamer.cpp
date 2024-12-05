@@ -793,20 +793,23 @@ void ARMTargetELFStreamer::switchVendor(StringRef Vendor) {
 
 void ARMTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   getStreamer().setAttributeItem(Attribute, Value,
-                                 /* OverwriteExisting= */ true, getStreamer().Contents);
+                                 /* OverwriteExisting= */ true,
+                                 getStreamer().Contents);
 }
 
 void ARMTargetELFStreamer::emitTextAttribute(unsigned Attribute,
                                              StringRef Value) {
   getStreamer().setAttributeItem(Attribute, Value,
-                                 /* OverwriteExisting= */ true, getStreamer().Contents);
+                                 /* OverwriteExisting= */ true,
+                                 getStreamer().Contents);
 }
 
 void ARMTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
                                                 unsigned IntValue,
                                                 StringRef StringValue) {
   getStreamer().setAttributeItems(Attribute, IntValue, StringValue,
-                                  /* OverwriteExisting= */ true, getStreamer().Contents);
+                                  /* OverwriteExisting= */ true,
+                                  getStreamer().Contents);
 }
 
 void ARMTargetELFStreamer::emitArch(ARM::ArchKind Value) {
@@ -821,12 +824,15 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   using namespace ARMBuildAttrs;
   ARMELFStreamer &S = getStreamer();
 
-  S.setAttributeItem(CPU_name, ARM::getCPUAttr(Arch), false, getStreamer().Contents);
+  S.setAttributeItem(CPU_name, ARM::getCPUAttr(Arch), false,
+                     getStreamer().Contents);
 
   if (EmittedArch == ARM::ArchKind::INVALID)
-    S.setAttributeItem(CPU_arch, ARM::getArchAttr(Arch), false, getStreamer().Contents);
+    S.setAttributeItem(CPU_arch, ARM::getArchAttr(Arch), false,
+                       getStreamer().Contents);
   else
-    S.setAttributeItem(CPU_arch, ARM::getArchAttr(EmittedArch), false, getStreamer().Contents);
+    S.setAttributeItem(CPU_arch, ARM::getArchAttr(EmittedArch), false,
+                       getStreamer().Contents);
 
   switch (Arch) {
   case ARM::ArchKind::ARMV4:
@@ -843,15 +849,17 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
     break;
 
   case ARM::ArchKind::ARMV6T2:
-    S.setAttributeItem(ARM_ISA_use, Allowed, false,getStreamer().Contents);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
+    S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false,
+                       getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV6K:
   case ARM::ArchKind::ARMV6KZ:
     S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
     S.setAttributeItem(THUMB_ISA_use, Allowed, false, getStreamer().Contents);
-    S.setAttributeItem(Virtualization_use, AllowTZ, false, getStreamer().Contents);
+    S.setAttributeItem(Virtualization_use, AllowTZ, false,
+                       getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV6M:
@@ -859,21 +867,27 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
     break;
 
   case ARM::ArchKind::ARMV7A:
-    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false, getStreamer().Contents);
+    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false,
+                       getStreamer().Contents);
     S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false,
+                       getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV7R:
-    S.setAttributeItem(CPU_arch_profile, RealTimeProfile, false, getStreamer().Contents);
+    S.setAttributeItem(CPU_arch_profile, RealTimeProfile, false,
+                       getStreamer().Contents);
     S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false,
+                       getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV7EM:
   case ARM::ArchKind::ARMV7M:
-    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false, getStreamer().Contents);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
+    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false,
+                       getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false,
+                       getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV8A:
@@ -893,17 +907,22 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
   case ARM::ArchKind::ARMV9_6A:
-    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false, getStreamer().Contents);
+    S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false,
+                       getStreamer().Contents);
     S.setAttributeItem(ARM_ISA_use, Allowed, false, getStreamer().Contents);
-    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false,
+                       getStreamer().Contents);
     S.setAttributeItem(MPextension_use, Allowed, false, getStreamer().Contents);
-    S.setAttributeItem(Virtualization_use, AllowTZVirtualization, false, getStreamer().Contents);
+    S.setAttributeItem(Virtualization_use, AllowTZVirtualization, false,
+                       getStreamer().Contents);
     break;
 
   case ARM::ArchKind::ARMV8MBaseline:
   case ARM::ArchKind::ARMV8MMainline:
-    S.setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false, getStreamer().Contents);
-    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false, getStreamer().Contents);
+    S.setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false,
+                       getStreamer().Contents);
+    S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false,
+                       getStreamer().Contents);
     break;
 
   case ARM::ArchKind::IWMMXT:

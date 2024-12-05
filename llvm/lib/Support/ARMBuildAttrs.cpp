@@ -70,26 +70,26 @@ const TagNameItem ARMAttributeTags[] = {
 };
 
 const TagNameItem AVAttributeTags[] = {
-  { ARMBuildAttrs::AV_cpp_exceptions, "Tag_AV_cpp_exceptions" },
-  { ARMBuildAttrs::AV_eba, "Tag_AV_eba" },
+    {ARMBuildAttrs::AV_cpp_exceptions, "Tag_AV_cpp_exceptions"},
+    {ARMBuildAttrs::AV_eba, "Tag_AV_eba"},
 };
 
-template<typename T, size_t N> int FromString(T (&Table)[N], StringRef Tag) {
+template <typename T, size_t N> int FromString(T (&Table)[N], StringRef Tag) {
   bool HasTagPrefix = Tag.starts_with("Tag_");
-  for (unsigned TI = 0;  TI < N; ++TI)
+  for (unsigned TI = 0; TI < N; ++TI)
     if (Table[TI].tagName.drop_front(HasTagPrefix ? 0 : 4) == Tag)
       return Table[TI].attr;
   return -1;
 }
 
-template<typename T, size_t N, typename A>
+template <typename T, size_t N, typename A>
 StringRef AsString(T (&Table)[N], A Attr, bool HasTagPrefix) {
   for (unsigned TI = 0; TI < N; ++TI)
     if (Table[TI].attr == Attr)
       return Table[TI].tagName.drop_front(HasTagPrefix ? 0 : 4);
   return StringRef();
 }
-}
+} // namespace
 
 namespace llvm {
 namespace ARMBuildAttrs {
@@ -120,5 +120,5 @@ int AttrTypeFromString(StringRef Vendor, StringRef Tag) {
 
 static constexpr TagNameMap tagNameMap(ARMAttributeTags);
 const TagNameMap &getARMAttributeTags() { return tagNameMap; }
-}
-}
+} // namespace ARMBuildAttrs
+} // namespace llvm

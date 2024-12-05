@@ -113,36 +113,46 @@ public:
     // [<uint32: subsection-length> NTBS: vendor-name <bytes: vendor-data>]*
     StringRef Vendor;
     // <uint8: optional> <uint8: parameter type> <attribute>*
-    unsigned IsMandatory;  // SubsectionMandatory::REQUIRED (0), SubsectionMandatory::OPTIONAL (1)
-    unsigned ParameterType; // SubsectionType::ULEB128 (0), SubsectionType::NTBS (1)
+    unsigned IsMandatory; // SubsectionMandatory::REQUIRED (0),
+                          // SubsectionMandatory::OPTIONAL (1)
+    unsigned
+        ParameterType; // SubsectionType::ULEB128 (0), SubsectionType::NTBS (1)
     SmallVector<AttributeItem, 64> Content;
   };
 
   // Attributes that are added and managed entirely by target.
   SmallVector<AttributeItem, 64> Contents;
   void setAttributeItem(unsigned Attribute, unsigned Value,
-                        bool OverwriteExisting, SmallVector<AttributeItem, 64> &Attributes);
+                        bool OverwriteExisting,
+                        SmallVector<AttributeItem, 64> &Attributes);
   void setAttributeItem(unsigned Attribute, StringRef Value,
-                        bool OverwriteExisting, SmallVector<AttributeItem, 64> &Attributes);
+                        bool OverwriteExisting,
+                        SmallVector<AttributeItem, 64> &Attributes);
   void setAttributeItems(unsigned Attribute, unsigned IntValue,
-                         StringRef StringValue, bool OverwriteExisting, SmallVector<AttributeItem, 64> &Attributes);
+                         StringRef StringValue, bool OverwriteExisting,
+                         SmallVector<AttributeItem, 64> &Attributes);
   void emitAttributesSection(StringRef Vendor, const Twine &Section,
                              unsigned Type, MCSection *&AttributeSection) {
     createAttributesSection(Vendor, Section, Type, AttributeSection, Contents);
   }
-  void emitAttributesSection(MCSection *&AttributeSection,
-  const Twine &Section, unsigned Type, SmallVector<AttributeSubSection, 64> &SubSectionVec) {
+  void
+  emitAttributesSection(MCSection *&AttributeSection, const Twine &Section,
+                        unsigned Type,
+                        SmallVector<AttributeSubSection, 64> &SubSectionVec) {
     createAttributesSection(AttributeSection, Section, Type, SubSectionVec);
   }
 
 private:
-  AttributeItem *getAttributeItem(unsigned Attribute, SmallVector<AttributeItem, 64> &Attributes);
+  AttributeItem *getAttributeItem(unsigned Attribute,
+                                  SmallVector<AttributeItem, 64> &Attributes);
   size_t calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) const;
   void createAttributesSection(StringRef Vendor, const Twine &Section,
                                unsigned Type, MCSection *&AttributeSection,
                                SmallVector<AttributeItem, 64> &AttrsVec);
-  void createAttributesSection(MCSection *&AttributeSection, const Twine & Section,
-                               unsigned Type, SmallVector<AttributeSubSection, 64> &SubSectionVec);
+  void
+  createAttributesSection(MCSection *&AttributeSection, const Twine &Section,
+                          unsigned Type,
+                          SmallVector<AttributeSubSection, 64> &SubSectionVec);
 
   // GNU attributes that will get emitted at the end of the asm file.
   SmallVector<AttributeItem, 64> GNUAttributes;

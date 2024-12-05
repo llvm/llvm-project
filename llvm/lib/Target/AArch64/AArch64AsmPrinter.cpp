@@ -202,7 +202,8 @@ public:
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   // Emit Build Attributes
-  void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform, uint64_t PAuthABIVersion, AArch64TargetStreamer* TS);
+  void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform,
+                      uint64_t PAuthABIVersion, AArch64TargetStreamer *TS);
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
@@ -337,8 +338,10 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     return;
 
   // For emitting build attributes and .note.gnu.property section
-  auto *TS = static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  // Assemble feature flags that may require creation of build attributes and a note section.
+  auto *TS =
+      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+  // Assemble feature flags that may require creation of build attributes and a
+  // note section.
   unsigned BAFlags = 0;
   unsigned GNUFlags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
@@ -453,26 +456,35 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   recordSled(CurSled, MI, Kind, 2);
 }
 
-void AArch64AsmPrinter::emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform, uint64_t PAuthABIVersion, AArch64TargetStreamer* TS) {
+void AArch64AsmPrinter::emitAttributes(unsigned Flags,
+                                       uint64_t PAuthABIPlatform,
+                                       uint64_t PAuthABIVersion,
+                                       AArch64TargetStreamer *TS) {
 
   PAuthABIPlatform = (PAuthABIPlatform == uint64_t(-1)) ? 0 : PAuthABIPlatform;
   PAuthABIVersion = (PAuthABIVersion == uint64_t(-1)) ? 0 : PAuthABIVersion;
 
-  if(PAuthABIPlatform || PAuthABIVersion) {
+  if (PAuthABIPlatform || PAuthABIVersion) {
     TS->emitSubsection(ARMBuildAttrs::AEBI_PAUTHABI, 0, 0);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI, ARMBuildAttrs::Tag_PAuth_Platform, PAuthABIPlatform, false);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI, ARMBuildAttrs::Tag_PAuth_Schema, PAuthABIVersion, false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI,
+                      ARMBuildAttrs::Tag_PAuth_Platform, PAuthABIPlatform,
+                      false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI,
+                      ARMBuildAttrs::Tag_PAuth_Schema, PAuthABIVersion, false);
   }
 
   unsigned BTIValue = (Flags & ARMBuildAttrs::Feature_BTI_Flag) ? 1 : 0;
   unsigned PACValue = (Flags & ARMBuildAttrs::Feature_PAC_Flag) ? 1 : 0;
   unsigned GCSValue = (Flags & ARMBuildAttrs::Feature_GCS_Flag) ? 1 : 0;
 
-  if(BTIValue || PACValue || GCSValue) {
+  if (BTIValue || PACValue || GCSValue) {
     TS->emitSubsection(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, 1, 0);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, ARMBuildAttrs::Tag_Feature_BTI, BTIValue, false);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, ARMBuildAttrs::Tag_Feature_PAC, PACValue, false);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, ARMBuildAttrs::Tag_Feature_GCS, GCSValue, false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS,
+                      ARMBuildAttrs::Tag_Feature_BTI, BTIValue, false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS,
+                      ARMBuildAttrs::Tag_Feature_PAC, PACValue, false);
+    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS,
+                      ARMBuildAttrs::Tag_Feature_GCS, GCSValue, false);
   }
 }
 

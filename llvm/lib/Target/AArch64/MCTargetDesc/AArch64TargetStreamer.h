@@ -92,8 +92,10 @@ public:
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
-  virtual void emitSubsection(unsigned Vendor, unsigned IsMandatory, unsigned ParameterType) {}
-  virtual void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value, bool Override) {}
+  virtual void emitSubsection(unsigned Vendor, unsigned IsMandatory,
+                              unsigned ParameterType) {}
+  virtual void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value,
+                             bool Override) {}
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -108,8 +110,10 @@ private:
   SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
   /// Build attributes implementation
-  void emitSubsection(unsigned Vendor, unsigned IsMandatory, unsigned ParameterType) override;
-  void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value, bool Override) override;
+  void emitSubsection(unsigned Vendor, unsigned IsMandatory,
+                      unsigned ParameterType) override;
+  void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value,
+                     bool Override) override;
 
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
@@ -117,7 +121,7 @@ private:
 
 public:
   AArch64TargetELFStreamer(MCStreamer &S)
-    : AArch64TargetStreamer(S), CurrentVendor("aeabi") {}
+      : AArch64TargetStreamer(S), CurrentVendor("aeabi") {}
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
