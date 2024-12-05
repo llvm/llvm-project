@@ -91,7 +91,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
 
       Error commit() override {
         if (Committed)
-          return Error::success();
+          return createStringError(std::errc::invalid_argument,
+                                   Twine("CacheStream already committed."));
         Committed = true;
 
         // Make sure the stream is closed before committing it.
@@ -145,15 +146,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       }
 
       ~CacheStream() {
-        // In Debug builds, try to track down places where commit() was not
-        // called before destruction.
-        assert(Committed);
-        // In Release builds, fall back to the previous behaviour of committing
-        // during destruction and reporting errors with report_fatal_error.
-        if (Committed)
-          return;
-        if (Error Err = commit())
-          report_fatal_error(Twine(toString(std::move(Err))));
+        if (!Committed)
+          report_fatal_error(Twine("CacheStream was not committed.\n");
       }
     };
 
