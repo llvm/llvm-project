@@ -4179,7 +4179,7 @@ public:
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
     assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-        "Blocks can't have more than two successors.");
+           "Blocks can't have more than two successors.");
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else
