@@ -70,9 +70,6 @@ private:
 
   SmallVector<const MCSymbol *, 0> Symbols;
 
-  // PPC CPU type.
-  std::string CPU;
-
   MCDwarfLineTableParams LTParams;
 
   /// The set of function symbols for which a .thumb_func directive has
@@ -227,8 +224,6 @@ public:
   symbols() const {
     return make_pointee_range(Symbols);
   }
-
-  void setCPU(std::string TargetCPU) { CPU = std::move(TargetCPU); }
 
   bool registerSection(MCSection &Section);
   bool registerSymbol(const MCSymbol &Symbol);
