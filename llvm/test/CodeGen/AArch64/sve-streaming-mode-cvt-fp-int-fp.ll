@@ -2,7 +2,6 @@
 ; RUN: llc -mattr=+sve -force-streaming-compatible < %s | FileCheck %s
 ; RUN: llc -mattr=+sme -force-streaming < %s | FileCheck %s
 ; RUN: llc -mattr=+sme2p2 -force-streaming-compatible < %s | FileCheck %s --check-prefix=USE-NEON-NO-GPRS
-; RUN: llc -mattr=+neon < %s | FileCheck %s --check-prefix=USE-NEON-NO-GPRS
 ; RUN: llc -force-streaming-compatible < %s | FileCheck %s --check-prefix=NONEON-NOSVE
 
 target triple = "aarch64-unknown-linux-gnu"

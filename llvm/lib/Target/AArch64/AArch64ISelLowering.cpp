@@ -19087,8 +19087,12 @@ static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
 /// functions, this can help to reduce the number of fmovs to/from GPRs.
 static SDValue
 tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI,
                                       const AArch64Subtarget *Subtarget) {
   if (N->isStrictFPOpcode())
+    return SDValue();
+
+  if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
   if (!Subtarget->isSVEorStreamingSVEAvailable() ||
@@ -19096,60 +19100,69 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   auto isSupportedType = [](EVT VT) {
-    if (!VT.isSimple())
-      return false;
-    // There are SVE instructions that can convert to/from all pairs of these
-    // int and float types. Note: We don't bother with i8 or i16 as those are
-    // illegal types for scalars.
-    return is_contained({MVT::i32, MVT::i64, MVT::f16, MVT::f32, MVT::f64},
-                        VT.getSimpleVT().SimpleTy);
+    return VT != MVT::bf16 && VT != MVT::f128;
   };
 
   if (!isSupportedType(N->getValueType(0)) ||
       !isSupportedType(N->getOperand(0).getValueType()))
     return SDValue();
 
+  // Look through fp_extends to avoid extra fcvts.
   SDValue SrcVal = N->getOperand(0);
+  if (SrcVal->getOpcode() == ISD::FP_EXTEND &&
+      isSupportedType(SrcVal->getOperand(0).getValueType()))
+    SrcVal = SrcVal->getOperand(0);
+
   EVT SrcTy = SrcVal.getValueType();
   EVT DestTy = N->getValueType(0);
 
-  bool IsI32ToF64 = SrcTy == MVT::i32 && DestTy == MVT::f64;
-  bool isF64ToI32 = SrcTy == MVT::f64 && DestTy == MVT::i32;
-
-  // Conversions between f64 and i32 are a special case as nxv2i32 is an illegal
-  // type (unlike the equivalent nxv2f32 for floating-point types).
-  // TODO: Support these conversations.
-  if (IsI32ToF64 || isF64ToI32)
-    return SDValue();
+  // Merge in any subsequent fp_round to avoid extra fcvts.
+  SDNode *FPRoundNode = nullptr;
+  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND &&
+      isSupportedType(N->use_begin()->getValueType(0))) {
+    FPRoundNode = *N->use_begin();
+    DestTy = FPRoundNode->getValueType(0);
+  }
 
   EVT SrcVecTy;
   EVT DestVecTy;
   if (DestTy.bitsGT(SrcTy)) {
     DestVecTy = getPackedSVEVectorVT(DestTy);
-    SrcVecTy = SrcTy == MVT::i32 ? getPackedSVEVectorVT(SrcTy)
-                                 : DestVecTy.changeVectorElementType(SrcTy);
+    SrcVecTy = DestVecTy.changeVectorElementType(SrcTy);
   } else {
     SrcVecTy = getPackedSVEVectorVT(SrcTy);
-    DestVecTy = DestTy == MVT::i32 ? getPackedSVEVectorVT(DestTy)
-                                   : SrcVecTy.changeVectorElementType(DestTy);
+    DestVecTy = SrcVecTy.changeVectorElementType(DestTy);
   }
+
+  // Ensure the resulting src/dest vector type is legal.
+  if (SrcVecTy == MVT::nxv2i32 || DestVecTy == MVT::nxv2i32)
+    return SDValue();
 
   SDLoc DL(N);
   SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
   SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
                             DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
   SDValue Convert = DAG.getNode(N->getOpcode(), DL, DestVecTy, Vec);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
+  SDValue Scalar =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
+
+  if (FPRoundNode) {
+    DAG.ReplaceAllUsesWith(SDValue(FPRoundNode, 0), Scalar);
+    return SDValue();
+  }
+  return Scalar;
 }
 
 static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
   // First try to optimize away the conversion when it's conditionally from
   // a constant. Vectors only.
   if (SDValue Res = performVectorCompareAndMaskUnaryOpCombine(N, DAG))
     return Res;
 
-  if (SDValue Res = tryToReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
+  if (SDValue Res =
+          tryToReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
     return Res;
 
   EVT VT = N->getValueType(0);
@@ -19190,7 +19203,8 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
-  if (SDValue Res = tryToReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
+  if (SDValue Res =
+          tryToReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
     return Res;
 
   if (!Subtarget->isNeonAvailable())
@@ -26273,7 +26287,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMulCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    return performIntToFpCombine(N, DAG, Subtarget);
+    return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT_SAT:
