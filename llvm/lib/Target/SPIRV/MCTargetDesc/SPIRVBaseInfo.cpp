@@ -115,15 +115,17 @@ getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
 CapabilityList
 getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
                                uint32_t Value) {
+  CapabilityList Capabilities;
   const SPIRV::CapabilityEntry *Capability =
       SPIRV::lookupCapabilityByCategoryAndValue(Category, Value);
-
-  CapabilityList Capabilities;
+  auto TableEnd = ArrayRef(SPIRV::CapabilityEntries).end();
   while (Capability && Capability->Category == Category &&
          Capability->Value == Value) {
     Capabilities.push_back(
         static_cast<SPIRV::Capability::Capability>(Capability->ReqCapability));
     ++Capability;
+    if (Capability == TableEnd)
+      break;
   }
 
   return Capabilities;
