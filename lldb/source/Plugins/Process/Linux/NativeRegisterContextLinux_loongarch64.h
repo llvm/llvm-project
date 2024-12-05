@@ -51,42 +51,6 @@ public:
 
   bool RegisterOffsetIsDynamic() const override { return true; }
 
-  // Hardware breakpoints management functions
-
-  uint32_t NumSupportedHardwareBreakpoints() override;
-
-  uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
-
-  bool ClearHardwareBreakpoint(uint32_t hw_idx) override;
-
-  Status ClearAllHardwareBreakpoints() override;
-
-  Status GetHardwareBreakHitIndex(uint32_t &bp_index,
-                                  lldb::addr_t trap_addr) override;
-
-  bool BreakpointIsEnabled(uint32_t bp_index);
-
-  // Hardware watchpoints management functions
-  uint32_t NumSupportedHardwareWatchpoints() override;
-
-  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
-                                 uint32_t watch_flags) override;
-
-  bool ClearHardwareWatchpoint(uint32_t hw_index) override;
-
-  Status ClearAllHardwareWatchpoints() override;
-
-  Status GetWatchpointHitIndex(uint32_t &wp_index,
-                               lldb::addr_t trap_addr) override;
-
-  lldb::addr_t GetWatchpointHitAddress(uint32_t wp_index) override;
-
-  lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
-
-  uint32_t GetWatchpointSize(uint32_t wp_index);
-
-  bool WatchpointIsEnabled(uint32_t wp_index);
-
 protected:
   Status ReadGPR() override;
 
@@ -119,30 +83,6 @@ private:
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
   const RegisterInfoPOSIX_loongarch64 &GetRegisterInfo() const;
-
-  // Debug register type select
-  enum DREGType { eDREGTypeWATCH = 0, eDREGTypeBREAK };
-
-  Status ReadHardwareDebugInfo();
-  Status WriteHardwareDebugRegs(DREGType hwbType);
-
-  // Debug register info for hardware watchpoints management.
-  struct DREG {
-    lldb::addr_t address;  // Breakpoint/watchpoint address value.
-    lldb::addr_t hit_addr; // Address at which last watchpoint trigger
-                           // exception occurred.
-    uint32_t control;      // Breakpoint/watchpoint control value.
-  };
-
-  std::array<struct DREG, 14> m_hbp_regs; // hardware breakpoints
-  std::array<struct DREG, 14> m_hwp_regs; // hardware watchpoints
-
-  // Refer to:
-  // https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN.html#control-and-status-registers-related-to-watchpoints
-  // 14 is just a maximum value, query hardware for actual watchpoint count.
-  uint32_t m_max_hwp_supported = 14;
-  uint32_t m_max_hbp_supported = 14;
-  bool m_refresh_hwdebug_info = true;
 };
 
 } // namespace process_linux

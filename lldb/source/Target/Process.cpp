@@ -2517,8 +2517,7 @@ bool Process::GetWatchpointReportedAfter() {
   llvm::Triple triple = arch.GetTriple();
 
   if (triple.isMIPS() || triple.isPPC64() || triple.isRISCV() ||
-      triple.isAArch64() || triple.isArmMClass() || triple.isARM() ||
-      triple.isLoongArch())
+      triple.isAArch64() || triple.isArmMClass() || triple.isARM())
     reported_after = false;
 
   return reported_after;
