@@ -549,6 +549,9 @@ extern char &GCNRewritePartialRegUsesID;
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
+void initializeAMDGPUMarkSGPRHazardRegsLegacyPass(PassRegistry &);
+extern char &AMDGPUMarkSGPRHazardRegsLegacyID;
+
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,

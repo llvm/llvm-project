@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SIRegisterInfo.h"
 #include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -34,6 +35,10 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::desc("Enable spilling SGPRs to VGPRs"),
   cl::ReallyHidden,
   cl::init(true));
+
+static cl::opt<unsigned> SGPRHazardAvoidanceStrategy(
+    "amdgpu-sgpr-hazard-regalloc", cl::init(0), cl::ReallyHidden,
+    cl::desc("Register allocation strategy to reduce SGPR read hazards"));
 
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
@@ -3840,9 +3845,152 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return false;
   }
   default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+    break;
   }
+
+  bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
+      VirtReg, Order, Hints, MF, VRM, Matrix);
+  if (!VRM)
+    return BaseImplRetVal;
+
+  // Only use hinting to reduce SGPR read hazards when required.
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.hasVALUReadSGPRHazard())
+    return BaseImplRetVal;
+
+  // Only treat SGPRs
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  const auto *RC = MRI.getRegClass(VirtReg);
+  if (!isSGPRClass(RC))
+    return BaseImplRetVal;
+
+  const unsigned Strategy = getSGPRHazardAvoidanceStrategy(MF);
+  if (!Strategy)
+    return BaseImplRetVal;
+
+  SmallSet<MCPhysReg, 4> CopyHints;
+  CopyHints.insert(Hints.begin(), Hints.end());
+
+  auto AddHint = [&](MCPhysReg PhysReg) {
+    if (CopyHints.contains(PhysReg) || MRI.isReserved(PhysReg))
+      return;
+    Hints.push_back(PhysReg);
+  };
+  auto AddHints = [&](ArrayRef<MCPhysReg> Regs) {
+    for (MCPhysReg PhysReg : Regs)
+      AddHint(PhysReg);
+  };
+
+  // V1: simply reverse allocation order, mean 23% reduction in hazards
+  if (Strategy == 1) {
+    if (FuncInfo->checkFlag(VirtReg, AMDGPU::VirtRegFlag::SGPR_HAZARD_REG)) {
+      for (MCPhysReg PhysReg : reverse(Order))
+        AddHint(PhysReg);
+    } else {
+      for (MCPhysReg PhysReg : Order)
+        AddHint(PhysReg);
+    }
+    return true;
+  }
+
+  // Build set of current hazard pairs from live matrix
+  auto *LiveUnions = const_cast<LiveRegMatrix *>(Matrix)->getLiveUnions();
+
+  DenseMap<MCPhysReg, unsigned> IntervalCount;
+  std::bitset<64> HazardPairs;
+
+  for (MCPhysReg PhysReg : Order) {
+    SmallSet<const LiveInterval *, 4> Intervals;
+    bool IsHazard = false;
+    for (auto Unit : TRI->regunits(PhysReg)) {
+      LiveIntervalUnion &LIU = LiveUnions[Unit];
+      for (const LiveInterval *LI : LIU.getMap()) {
+        Intervals.insert(LI);
+        if (FuncInfo->checkFlag(LI->reg(),
+                                AMDGPU::VirtRegFlag::SGPR_HAZARD_REG)) {
+          IsHazard = true;
+          // Break here as we only care about interval count for non-hazard regs
+          break;
+        }
+      }
+      if (IsHazard)
+        break;
+    }
+    if (IsHazard) {
+      unsigned PairN = TRI->getEncodingValue(PhysReg) >> 1;
+      if (PairN <= 63)
+        HazardPairs.set(PairN);
+    }
+    IntervalCount[PhysReg] = Intervals.size();
+  }
+
+  // V2: weight the entire order based on hazard free usage, mean 30% reduction
+  // in hazards
+  if (Strategy == 2) {
+    bool VRegIsHazard =
+        FuncInfo->checkFlag(VirtReg, AMDGPU::VirtRegFlag::SGPR_HAZARD_REG);
+    SmallVector<MCPhysReg> NewOrder(Order);
+    std::sort(NewOrder.begin(), NewOrder.end(), [&](MCPhysReg A, MCPhysReg B) {
+      return VRegIsHazard ? IntervalCount[A] < IntervalCount[B]
+                          : IntervalCount[B] < IntervalCount[A];
+    });
+    AddHints(NewOrder);
+    return true;
+  }
+
+  // V3: complex partitioning, mean 35% reduction in hazards
+  assert(Strategy == 3);
+
+  // Partition the allocation order based on hazards
+  SmallVector<MCPhysReg> Unallocated, UnallocatedWithHazard;
+  SmallVector<MCPhysReg> Allocated, AllocatedWithHazard;
+
+  for (MCPhysReg PhysReg : Order) {
+    Register VReg = Matrix->getOneVReg(PhysReg);
+    bool HasHazard = false;
+    // XXX: can remove regunit scan for just SGPR32/SGPR64
+    for (auto Unit : TRI->regunits(PhysReg)) {
+      unsigned PairN = TRI->getEncodingValue(Unit) >> 1;
+      if (PairN <= 63 && HazardPairs[PairN]) {
+        HasHazard = true;
+        break;
+      }
+    }
+    if (VReg == MCRegister::NoRegister) {
+      if (HasHazard)
+        UnallocatedWithHazard.push_back(PhysReg);
+      else
+        Unallocated.push_back(PhysReg);
+    } else {
+      if (HasHazard)
+        AllocatedWithHazard.push_back(PhysReg);
+      else
+        Allocated.push_back(PhysReg);
+    }
+  }
+
+  if (FuncInfo->checkFlag(VirtReg, AMDGPU::VirtRegFlag::SGPR_HAZARD_REG)) {
+    // Reorder allocations based on usage, so least used will be reused first.
+    // This means least used regs are touched by hazards first.
+    std::sort(Allocated.begin(), Allocated.end(),
+              [&](MCPhysReg A, MCPhysReg B) {
+                return IntervalCount[A] < IntervalCount[B];
+              });
+    // Reverse order of allocations to try to keep hazards away - yes it helps.
+    std::reverse(Unallocated.begin(), Unallocated.end());
+
+    AddHints(AllocatedWithHazard);
+    AddHints(UnallocatedWithHazard);
+    AddHints(Unallocated);
+    AddHints(Allocated);
+  } else {
+    AddHints(Allocated);
+    AddHints(Unallocated);
+    AddHints(UnallocatedWithHazard);
+    AddHints(AllocatedWithHazard);
+  }
+
+  return true;
 }
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
@@ -4063,4 +4211,12 @@ SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
   if (FuncInfo->checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
     RegFlags.push_back("WWM_REG");
   return RegFlags;
+}
+
+unsigned SIRegisterInfo::getSGPRHazardAvoidanceStrategy(
+    const MachineFunction &MF) const {
+  if (SGPRHazardAvoidanceStrategy.getNumOccurrences())
+    return SGPRHazardAvoidanceStrategy;
+  return MF.getFunction().getFnAttributeAsParsedInteger(
+      "amdgpu-sgpr-hazard-regalloc", 0);
 }

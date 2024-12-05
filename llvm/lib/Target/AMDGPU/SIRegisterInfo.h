@@ -493,6 +493,8 @@ public:
 
   SmallVector<StringLiteral>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
+
+  unsigned getSGPRHazardAvoidanceStrategy(const MachineFunction &MF) const;
 };
 
 namespace AMDGPU {
