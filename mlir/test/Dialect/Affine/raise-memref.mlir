@@ -116,3 +116,23 @@ func.func @symbols(%N : index) {
 // CHECK:                  %[[lhs7:.*]] = "ab.v"
 // CHECK:                  memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs7]]] :
 // CHECK:                  affine.yield %[[lhs6]]
+
+
+// CHECK-LABEL:    func @non_affine(
+func.func @non_affine(%N : index) {
+  %2 = memref.alloc() : memref<1024x1024xf32>
+  affine.for %i = 0 to %N {
+    affine.for %j = 0 to %N {
+      %ij = arith.muli %i, %j : index
+      %7 = memref.load %2[%i, %ij] : memref<1024x1024xf32>
+      memref.store %7, %2[%ij, %ij] : memref<1024x1024xf32>
+    }
+  }
+  return
+}
+
+// CHECK:          affine.for %[[i:.*]] =
+// CHECK:             affine.for %[[j:.*]] =
+// CHECK:                  %[[ij:.*]] = arith.muli %[[i]], %[[j]]
+// CHECK:                  %[[v:.*]] = memref.load %{{.*}}[%[[i]], %[[ij]]]
+// CHECK:                  memref.store %[[v]], %{{.*}}[%[[ij]], %[[ij]]]

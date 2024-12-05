@@ -21,6 +21,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -72,28 +73,36 @@ static AffineExpr toAffineExpr(Value value,
   if (matchPattern(value, m_ConstantInt(&cst))) {
     return getAffineConstantExpr(cst.getSExtValue(), value.getContext());
   }
-  Value lhs;
-  Value rhs;
-  if (matchPattern(value, m_Op<arith::AddIOp>(m_Any(&lhs), m_Any(&rhs))) ||
-      matchPattern(value, m_Op<arith::MulIOp>(m_Any(&lhs), m_Any(&rhs)))) {
-    AffineExpr lhsE;
-    AffineExpr rhsE;
+
+  Operation *definingOp = value.getDefiningOp();
+  if (llvm::isa_and_nonnull<arith::AddIOp>(definingOp) ||
+      llvm::isa_and_nonnull<arith::MulIOp>(definingOp)) {
     // TODO: replace recursion with explicit stack.
     // For the moment this can be tolerated as we only recurse on
     // arith.addi and arith.muli, so there cannot be any infinite
     // recursion. The depth of these expressions should be in most
     // cases very manageable, as affine expressions should be as
     // simple as `a + b * c`.
-    if ((lhsE = toAffineExpr(lhs, affineDims, affineSymbols)) &&
-        (rhsE = toAffineExpr(rhs, affineDims, affineSymbols))) {
+    AffineExpr lhsE =
+        toAffineExpr(definingOp->getOperand(0), affineDims, affineSymbols);
+    AffineExpr rhsE =
+        toAffineExpr(definingOp->getOperand(1), affineDims, affineSymbols);
+
+    if (lhsE && rhsE) {
       AffineExprKind kind;
-      if (isa<arith::AddIOp>(value.getDefiningOp())) {
+      if (isa<arith::AddIOp>(definingOp)) {
         kind = mlir::AffineExprKind::Add;
       } else {
         kind = mlir::AffineExprKind::Mul;
+
+        if (!lhsE.isSymbolicOrConstant() && !rhsE.isSymbolicOrConstant()) {
+          // This is not an affine expression, give up.
+          return {};
+        }
       }
       return getAffineBinaryOpExpr(kind, lhsE, rhsE);
     }
+    return {};
   }
 
   if (auto dimIx = findInListOrAdd(value, affineSymbols, [](Value v) {
