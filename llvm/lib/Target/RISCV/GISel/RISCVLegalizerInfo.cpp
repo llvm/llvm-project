@@ -570,10 +570,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
           [=, &ST](const LegalityQuery &Query) {
             return Query.Types[0].isScalar() && Query.Types[1].isScalar() &&
                    (Query.Types[1].getSizeInBits() < ST.getXLen()) &&
-                   ((ST.hasStdExtF() && Query.Types[1].getSizeInBits() == 32) ||
-                    (ST.hasStdExtD() && Query.Types[1].getSizeInBits() == 64) ||
+                   ((ST.hasStdExtF() && Query.Types[0].getSizeInBits() == 32) ||
+                    (ST.hasStdExtD() && Query.Types[0].getSizeInBits() == 64) ||
                     (ST.hasStdExtZfh() &&
-                     Query.Types[1].getSizeInBits() == 16));
+                     Query.Types[0].getSizeInBits() == 16));
           },
           LegalizeMutations::changeTo(1, sXLen))
       // Otherwise only promote to s32 since we have si libcalls.

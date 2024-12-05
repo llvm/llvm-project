@@ -2093,7 +2093,7 @@ bool RISCVTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
   // Assume target opcodes can't be scalarized.
   // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
+  if (Opc >= ISD::BUILTIN_OP_END)
     return false;
 
   // If the vector op is not supported, try to convert to scalar.
@@ -5331,17 +5331,32 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // Extract the halves of the vectors.
     MVT HalfVT = VT.getHalfNumVectorElementsVT();
 
+    // Recognize if one half is actually undef; the matching above will
+    // otherwise reuse the even stream for the undef one.  This improves
+    // spread(2) shuffles.
+    bool LaneIsUndef[2] = { true, true};
+    for (unsigned i = 0; i < Mask.size(); i++)
+      LaneIsUndef[i % 2] &= (Mask[i] == -1);
+
     int Size = Mask.size();
     SDValue EvenV, OddV;
-    assert(EvenSrc >= 0 && "Undef source?");
-    EvenV = (EvenSrc / Size) == 0 ? V1 : V2;
-    EvenV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, EvenV,
-                        DAG.getVectorIdxConstant(EvenSrc % Size, DL));
+    if (LaneIsUndef[0]) {
+      EvenV = DAG.getUNDEF(HalfVT);
+    } else {
+      assert(EvenSrc >= 0 && "Undef source?");
+      EvenV = (EvenSrc / Size) == 0 ? V1 : V2;
+      EvenV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, EvenV,
+                          DAG.getVectorIdxConstant(EvenSrc % Size, DL));
+    }
 
-    assert(OddSrc >= 0 && "Undef source?");
-    OddV = (OddSrc / Size) == 0 ? V1 : V2;
-    OddV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, OddV,
-                       DAG.getVectorIdxConstant(OddSrc % Size, DL));
+    if (LaneIsUndef[1]) {
+      OddV = DAG.getUNDEF(HalfVT);
+    } else {
+      assert(OddSrc >= 0 && "Undef source?");
+      OddV = (OddSrc / Size) == 0 ? V1 : V2;
+      OddV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, OddV,
+                         DAG.getVectorIdxConstant(OddSrc % Size, DL));
+    }
 
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
