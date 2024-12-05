@@ -95,7 +95,7 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
-  enum class ExtendLifetimesKind {
+  enum class ExtendVariableLivenessKind {
     None,
     This,
     All,

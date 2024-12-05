@@ -4298,22 +4298,23 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
   Visibility<[CC1Option]>,
   HelpText<"Filename (or -) to write stack usage output to">,
   MarshallingInfoString<CodeGenOpts<"StackUsageOutput">>;
-def fextend_lifetimes_EQ : Joined<["-"], "fextend-lifetimes=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Extend the lifetimes of variables to improve visibility in "
-           "optimized debugging">,
+def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Extend the liveness of user variables through optimizations to "
+           "prevent stale or optimized-out variable values when debugging.">,
   Values<"all,this,none">,
   NormalizedValues<["All", "This", "None"]>,
-  NormalizedValuesScope<"CodeGenOptions::ExtendLifetimesKind">,
-  MarshallingInfoEnum<CodeGenOpts<"ExtendLifetimes">, "None">;
-def fextend_this_ptr : Flag<["-"], "fextend-this-ptr">,
-  Alias<fextend_lifetimes_EQ>, AliasArgs<["this"]>,
-  HelpText<"Extend the lifetime of the 'this' pointer to improve visibility "
-           "in optimized debugging">;
-def fextend_lifetimes : Flag<["-"], "fextend-lifetimes">,
-  Alias<fextend_lifetimes_EQ>, AliasArgs<["all"]>,
-  HelpText<"Extend the lifetimes of local variables and parameters to improve "
-           "visibility in optimized debugging">;
+  NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
+  MarshallingInfoEnum<CodeGenOpts<"ExtendVariableLiveness">, "None">;
+def fextend_this_ptr_liveness : Flag<["-"], "fextend-this-ptr-liveness">,
+  Alias<fextend_variable_liveness_EQ>, AliasArgs<["this"]>,
+  HelpText<"Extend the liveness of the `this` pointer through optimizations to "
+           "prevent a stale or optimized-out value when debugging.">;
+def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
+  Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,
+  HelpText<"Extend the liveness of all local variables and parameters through "
+           "optimizations to prevent stale or optimized-out variable values "
+           "when debugging.">;
 
 defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
   CodeGenOpts<"UniqueBasicBlockSectionNames">, DefaultFalse,
