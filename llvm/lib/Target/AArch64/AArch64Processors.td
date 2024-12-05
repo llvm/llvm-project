@@ -1113,15 +1113,15 @@ def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-r82ae", CortexA55Model, ProcessorFeatures.R82AE,
                      [TuneR82AE]>;
-def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,
+def : ProcessorModel<"cortex-x1", NeoverseV1Model, ProcessorFeatures.X1,
                      [TuneX1]>;
-def : ProcessorModel<"cortex-x1c", CortexA57Model, ProcessorFeatures.X1C,
+def : ProcessorModel<"cortex-x1c", NeoverseV1Model, ProcessorFeatures.X1C,
                      [TuneX1]>;
-def : ProcessorModel<"cortex-x2", NeoverseN2Model, ProcessorFeatures.X2,
+def : ProcessorModel<"cortex-x2", NeoverseV2Model, ProcessorFeatures.X2,
                      [TuneX2]>;
-def : ProcessorModel<"cortex-x3", NeoverseN2Model, ProcessorFeatures.X3,
+def : ProcessorModel<"cortex-x3", NeoverseV2Model, ProcessorFeatures.X3,
                      [TuneX3]>;
-def : ProcessorModel<"cortex-x4", NeoverseN2Model, ProcessorFeatures.X4,
+def : ProcessorModel<"cortex-x4", NeoverseV2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
                      [TuneX925]>;
