@@ -16,6 +16,7 @@
 #include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/io-api.h"
 #include <chrono>
 #include <cstring>
 #include <ctime>
