@@ -2089,13 +2089,11 @@ public:
   }
 
   void printLeft(OutputBuffer &OB) const override {
-    if (IsParen) {
+    if (IsParen)
       OB.printOpen();
-      Callee->print(OB);
+    Callee->print(OB);
+    if (IsParen)
       OB.printClose();
-    } else {
-      Callee->print(OB);
-    }
     OB.printOpen();
     Args.printWithComma(OB);
     OB.printClose();
