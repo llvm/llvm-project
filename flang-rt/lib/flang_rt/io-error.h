@@ -18,6 +18,7 @@
 #include "flang-rt/iostat-funcs.h"
 #include "flang-rt/memory.h"
 #include "terminator.h"
+#include "flang/Runtime/iostat.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {
