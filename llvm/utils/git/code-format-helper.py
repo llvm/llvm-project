@@ -391,7 +391,7 @@ You can test this locally with the following command:
 The following files introduce new uses of undef:
 {files}
 
-Undef is now deprecated and should only be used in the rare cases where no replacement is possible. For example, a load of uninitialized memory yields `undef`. You should use `poison` values for placeholders instead.
+[Undef](https://llvm.org/docs/LangRef.html#undefined-values) is now deprecated and should only be used in the rare cases where no replacement is possible. For example, a load of uninitialized memory yields `undef`. You should use `poison` values for placeholders instead.
 
 In tests, avoid using `undef` and having tests that trigger undefined behavior. If you need an operand with some unimportant value, you can add a new argument to the function and use that instead.
 
