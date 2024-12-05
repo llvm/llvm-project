@@ -24,18 +24,20 @@ define amdgpu_kernel void @permlane64_undef(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @permlane64_sgpr(ptr addrspace(1) %out, i32 %src) {
-; GFX-LABEL: define amdgpu_kernel void @permlane64_sgpr(
+define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
+; GFX-LABEL: define amdgpu_kernel void @permlane64_uniform(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[SRC:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.permlane64.i32(i32 [[SRC]])
+; GFX-NEXT:    store i32 [[SRC]], ptr addrspace(1) [[OUT]], align 4
 ; GFX-NEXT:    ret void
 ;
-  %v = call i32 @llvm.amdgcn.permlane64(i32 undef)
+  %v = call i32 @llvm.amdgcn.permlane64(i32 %src)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @permlane64_vgpr(i32 addrspace(1)* %out) {
-; GFX-LABEL: define amdgpu_kernel void @permlane64_vgpr(
+define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
+; GFX-LABEL: define amdgpu_kernel void @permlane64_nonuniform(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.permlane64.i32(i32 [[TID]])
@@ -51,8 +53,8 @@ define amdgpu_kernel void @permlane64_vgpr(i32 addrspace(1)* %out) {
   ret void
 }
 
-define amdgpu_kernel void @permlane64_vgpr_expression(i32 addrspace(1)* %out) {
-; GFX-LABEL: define amdgpu_kernel void @permlane64_vgpr_expression(
+define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %out) {
+; GFX-LABEL: define amdgpu_kernel void @permlane64_nonuniform_expression(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX-NEXT:    [[TID2:%.*]] = add i32 [[TID]], 1
@@ -91,8 +93,8 @@ define amdgpu_kernel void @readlane_undef(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @readlane_sgpr(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
-; GFX-LABEL: define amdgpu_kernel void @readlane_sgpr(
+define amdgpu_kernel void @readlane_nonuniform_indices(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+; GFX-LABEL: define amdgpu_kernel void @readlane_nonuniform_indices(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC0]], i32 [[SRC1]])
 ; GFX-NEXT:    store i32 [[SRC0]], ptr addrspace(1) [[OUT]], align 4
@@ -103,8 +105,8 @@ define amdgpu_kernel void @readlane_sgpr(ptr addrspace(1) %out, i32 %src0, i32 %
   ret void
 }
 
-define amdgpu_kernel void @readlane_vgpr(i32 addrspace(1)* %out) {
-; GFX-LABEL: define amdgpu_kernel void @readlane_vgpr(
+define amdgpu_kernel void @readlane_nonuniform_workitem(i32 addrspace(1)* %out) {
+; GFX-LABEL: define amdgpu_kernel void @readlane_nonuniform_workitem(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -122,8 +124,8 @@ define amdgpu_kernel void @readlane_vgpr(i32 addrspace(1)* %out) {
   ret void
 }
 
-define amdgpu_kernel void @readlane_vgpr_expression(i32 addrspace(1)* %out) {
-; GFX-LABEL: define amdgpu_kernel void @readlane_vgpr_expression(
+define amdgpu_kernel void @readlane_nonuniform_expression(i32 addrspace(1)* %out) {
+; GFX-LABEL: define amdgpu_kernel void @readlane_nonuniform_expression(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -166,8 +168,8 @@ define amdgpu_kernel void @readfirstlane_undef(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @readfirstlane_sgpr(ptr addrspace(1) %out, i32 %src0) {
-; GFX-LABEL: define amdgpu_kernel void @readfirstlane_sgpr(
+define amdgpu_kernel void @readfirstlane_with_argument(ptr addrspace(1) %out, i32 %src0) {
+; GFX-LABEL: define amdgpu_kernel void @readfirstlane_with_argument(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[SRC0:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[SRC0]])
 ; GFX-NEXT:    store i32 [[SRC0]], ptr addrspace(1) [[OUT]], align 4
@@ -178,8 +180,8 @@ define amdgpu_kernel void @readfirstlane_sgpr(ptr addrspace(1) %out, i32 %src0) 
   ret void
 }
 
-define amdgpu_kernel void @readfirstlane_vgpr(i32 addrspace(1)* %out) {
-; GFX-LABEL: define amdgpu_kernel void @readfirstlane_vgpr(
+define amdgpu_kernel void @readfirstlane_with_workitem_id(i32 addrspace(1)* %out) {
+; GFX-LABEL: define amdgpu_kernel void @readfirstlane_with_workitem_id(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TID]])
@@ -195,8 +197,8 @@ define amdgpu_kernel void @readfirstlane_vgpr(i32 addrspace(1)* %out) {
   ret void
 }
 
-define amdgpu_kernel void @readfirstlane_vgpr_expression(i32 addrspace(1)* %out) {
-; GFX-LABEL: define amdgpu_kernel void @readfirstlane_vgpr_expression(
+define amdgpu_kernel void @readfirstlane_expression(i32 addrspace(1)* %out) {
+; GFX-LABEL: define amdgpu_kernel void @readfirstlane_expression(
 ; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX-NEXT:    [[TID2:%.*]] = add i32 [[TID]], 1
@@ -213,6 +215,188 @@ define amdgpu_kernel void @readfirstlane_vgpr_expression(i32 addrspace(1)* %out)
   store i32 %v, i32 addrspace(1)* %out_ptr
   ret void
 }
+
+define amdgpu_kernel void @readfirstlane_with_readfirstlane(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @readfirstlane_with_readfirstlane(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+  %v1 = call i32 @llvm.amdgcn.readfirstlane(i32 5)
+  %v2 = call i32 @llvm.amdgcn.readfirstlane(i32 %v1)
+  store i32 %v2, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @readfirstlane_with_readlane(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @readfirstlane_with_readlane(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
+; GFX-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v1 = call i32 @llvm.amdgcn.readlane(i32 %tidx, i32 %tidy)
+  %v2 = call i32 @llvm.amdgcn.readfirstlane(i32 %v1)
+  store i32 %v2, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @readlane_with_firstlane(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @readlane_with_firstlane(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TIDX]])
+; GFX-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %v1 = call i32 @llvm.amdgcn.readfirstlane(i32 %tidx)
+  %v2 = call i32 @llvm.amdgcn.readlane(i32 %v1, i32 3)
+  store i32 %v2, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @readlane_readlane(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @readlane_readlane(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
+; GFX-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v1 = call i32 @llvm.amdgcn.readlane(i32 %tidx, i32 %tidy)
+  %v2 = call i32 @llvm.amdgcn.readlane(i32 %v1, i32 2)
+  store i32 %v2, ptr addrspace(1) %out
+  ret void
+}
+
+
+define amdgpu_kernel void @permlane64_boundary(ptr addrspace(1) %out_min, ptr addrspace(1) %out_max) {
+; GFX-LABEL: define amdgpu_kernel void @permlane64_boundary(
+; GFX-SAME: ptr addrspace(1) [[OUT_MIN:%.*]], ptr addrspace(1) [[OUT_MAX:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    store i32 -2147483648, ptr addrspace(1) [[OUT_MIN]], align 4
+; GFX-NEXT:    store i32 2147483647, ptr addrspace(1) [[OUT_MAX]], align 4
+; GFX-NEXT:    ret void
+;
+  %min_v = call i32 @llvm.amdgcn.permlane64(i32 -2147483648)
+  store i32 %min_v, ptr addrspace(1) %out_min
+  %max_v = call i32 @llvm.amdgcn.permlane64(i32 2147483647)
+  store i32 %max_v, ptr addrspace(1) %out_max
+  ret void
+}
+
+define amdgpu_kernel void @readlane_cross_lane(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @readlane_cross_lane(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX-NEXT:    [[TIDY:%.*]] = add i32 [[TIDX]], 5
+; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
+; GFX-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tidy = add i32 %tidx, 5
+  %v = call i32 @llvm.amdgcn.readlane(i32 %tidx, i32 %tidy)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @readfirstlane_random(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @readfirstlane_random(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    store i32 435, ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+  %random = xor i32 123, 456
+  %v = call i32 @llvm.amdgcn.readfirstlane(i32 %random)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @permlane64_invalid(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @permlane64_invalid(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    ret void
+;
+  %undef_v = call i32 @llvm.amdgcn.permlane64(i32 undef)
+  store i32 %undef_v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @readlane_expression(ptr addrspace(1) %out) {
+; GFX-LABEL: define amdgpu_kernel void @readlane_expression(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:    [[IDX1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX-NEXT:    [[IDX2:%.*]] = shl i32 [[IDX1]], 1
+; GFX-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[IDX1]], i32 [[IDX2]])
+; GFX-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+  %idx1 = call i32 @llvm.amdgcn.workitem.id.x()
+  %idx2 = mul i32 %idx1, 2
+  %v = call i32 @llvm.amdgcn.readlane(i32 %idx1, i32 %idx2)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; Test case: Ensure that a loop with a divergent exit and a uniform value
+; used by an intrinsic outside the loop is not optimized due to temporal divergence.
+
+define amdgpu_kernel void @test_divergent_exit(ptr addrspace(1) %out, i32 %max_iter, i32 %div_cond) {
+; GFX-LABEL: define amdgpu_kernel void @test_divergent_exit(
+; GFX-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[MAX_ITER:%.*]], i32 [[DIV_COND:%.*]]) #[[ATTR0]] {
+; GFX-NEXT:  [[ENTRY:.*:]]
+; GFX-NEXT:    [[ITER:%.*]] = alloca i32, align 4
+; GFX-NEXT:    store i32 0, ptr [[ITER]], align 4
+; GFX-NEXT:    br label %[[LOOP:.*]]
+; GFX:       [[LOOP]]:
+; GFX-NEXT:    [[ITER_VAL:%.*]] = load i32, ptr [[ITER]], align 4
+; GFX-NEXT:    [[NEW_ITER:%.*]] = add i32 [[ITER_VAL]], 1
+; GFX-NEXT:    store i32 [[NEW_ITER]], ptr [[ITER]], align 4
+; GFX-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[NEW_ITER]], [[MAX_ITER]]
+; GFX-NEXT:    [[COND2:%.*]] = icmp eq i32 [[DIV_COND]], 0
+; GFX-NEXT:    [[EXIT:%.*]] = or i1 [[COND1]], [[COND2]]
+; GFX-NEXT:    br i1 [[EXIT]], label %[[EXIT_BLOCK:.*]], label %[[LOOP]]
+; GFX:       [[EXIT_BLOCK]]:
+; GFX-NEXT:    [[FINAL_VAL:%.*]] = load i32, ptr [[ITER]], align 4
+; GFX-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlane64.i32(i32 [[FINAL_VAL]])
+; GFX-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT]], align 4
+; GFX-NEXT:    ret void
+;
+entry:
+  %iter = alloca i32, align 4
+  store i32 0, ptr %iter, align 4
+  br label %loop
+
+loop:
+  ; Increment loop counter
+  %iter_val = load i32, ptr %iter, align 4
+  %new_iter = add i32 %iter_val, 1
+  store i32 %new_iter, ptr %iter, align 4
+
+  ; Check exit conditions
+  %cond1 = icmp sgt i32 %new_iter, %max_iter
+  %cond2 = icmp eq i32 %div_cond, 0
+  %exit = or i1 %cond1, %cond2
+  br i1 %exit, label %exit_block, label %loop
+
+exit_block:
+  ; Use the uniform value in an intrinsic outside the loop
+  %final_val = load i32, ptr %iter, align 4
+  %result = call i32 @llvm.amdgcn.permlane64(i32 %final_val)
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+declare i32 @llvm.amdgcn.permlane64(i32)
+
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX10: {{.*}}
