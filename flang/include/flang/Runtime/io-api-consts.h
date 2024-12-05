@@ -1,4 +1,4 @@
-//===-- include/flang/Runtime/io-api.h --------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/io-api-consts.h -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 // Defines API between compiled code and I/O runtime library.
 
-#ifndef FORTRAN_RUNTIME_IO_API_H_
-#define FORTRAN_RUNTIME_IO_API_H_
+#ifndef FORTRAN_RUNTIME_IO_API_CONSTS_H_
+#define FORTRAN_RUNTIME_IO_API_CONSTS_H_
 
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
@@ -366,4 +366,5 @@ enum Iostat IODECL(EndIoStatement)(Cookie);
 
 } // extern "C"
 } // namespace Fortran::runtime::io
-#endif
+
+#endif /* FORTRAN_RUNTIME_IO_API_CONSTS_H_ */
