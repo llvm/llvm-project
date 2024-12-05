@@ -429,47 +429,27 @@ class BranchNodeBuilder: public NodeBuilder {
   const CFGBlock *DstT;
   const CFGBlock *DstF;
 
-  bool InFeasibleTrue;
-  bool InFeasibleFalse;
-
   void anchor() override;
 
 public:
   BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C,
-                    const CFGBlock *dstT, const CFGBlock *dstF)
-      : NodeBuilder(SrcNode, DstSet, C), DstT(dstT), DstF(dstF),
-        InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
+                    const NodeBuilderContext &C, const CFGBlock *DT,
+                    const CFGBlock *DF)
+      : NodeBuilder(SrcNode, DstSet, C), DstT(DT), DstF(DF) {
     // The branch node builder does not generate autotransitions.
     // If there are no successors it means that both branches are infeasible.
     takeNodes(SrcNode);
   }
 
   BranchNodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C,
-                    const CFGBlock *dstT, const CFGBlock *dstF)
-      : NodeBuilder(SrcSet, DstSet, C), DstT(dstT), DstF(dstF),
-        InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
+                    const NodeBuilderContext &C, const CFGBlock *DT,
+                    const CFGBlock *DF)
+      : NodeBuilder(SrcSet, DstSet, C), DstT(DT), DstF(DF) {
     takeNodes(SrcSet);
   }
 
   ExplodedNode *generateNode(ProgramStateRef State, bool branch,
                              ExplodedNode *Pred);
-
-  const CFGBlock *getTargetBlock(bool branch) const {
-    return branch ? DstT : DstF;
-  }
-
-  void markInfeasible(bool branch) {
-    if (branch)
-      InFeasibleTrue = true;
-    else
-      InFeasibleFalse = true;
-  }
-
-  bool isFeasible(bool branch) {
-    return branch ? !InFeasibleTrue : !InFeasibleFalse;
-  }
 };
 
 class IndirectGotoNodeBuilder {

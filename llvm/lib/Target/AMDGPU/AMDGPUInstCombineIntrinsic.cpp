@@ -1024,6 +1024,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
   }
+  case Intrinsic::amdgcn_wavefrontsize: {
+    if (ST->isWaveSizeKnown())
+      return IC.replaceInstUsesWith(
+          II, ConstantInt::get(II.getType(), ST->getWavefrontSize()));
+    break;
+  }
   case Intrinsic::amdgcn_wqm_vote: {
     // wqm_vote is identity when the argument is constant.
     if (!isa<Constant>(II.getArgOperand(0)))

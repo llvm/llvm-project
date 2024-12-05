@@ -39,6 +39,7 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
+#include "flang/Optimizer/Builder/Runtime/Exceptions.h"
 #include "flang/Optimizer/Builder/Runtime/Main.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
@@ -1056,6 +1057,11 @@ public:
       Fortran::semantics::SymbolRef symRef) const override final {
     auto *sym = &*symRef;
     return registeredDummySymbols.contains(sym);
+  }
+
+  const Fortran::lower::pft::FunctionLikeUnit *
+  getCurrentFunctionUnit() const override final {
+    return currentFunctionUnit;
   }
 
   void registerTypeInfo(mlir::Location loc,
@@ -2132,6 +2138,7 @@ private:
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
     mlir::Operation *boundsAndStepIP = nullptr;
+    mlir::arith::IntegerOverflowFlags iofBackup{};
 
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
       mlir::Value lowerValue;
@@ -2148,11 +2155,18 @@ private:
 
         info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
                                                    info.isUnordered);
+        if (!getLoweringOptions().getIntegerWrapAround()) {
+          iofBackup = builder->getIntegerOverflowFlags();
+          builder->setIntegerOverflowFlags(
+              mlir::arith::IntegerOverflowFlags::nsw);
+        }
         lowerValue = genControlValue(info.lowerExpr, info);
         upperValue = genControlValue(info.upperExpr, info);
         bool isConst = true;
         stepValue = genControlValue(info.stepExpr, info,
                                     info.isStructured() ? nullptr : &isConst);
+        if (!getLoweringOptions().getIntegerWrapAround())
+          builder->setIntegerOverflowFlags(iofBackup);
         boundsAndStepIP = stepValue.getDefiningOp();
 
         // Use a temp variable for unstructured loops with non-const step.
@@ -4411,6 +4425,7 @@ private:
     bool hasCUDAImplicitTransfer =
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
     llvm::SmallVector<mlir::Value> implicitTemps;
+
     if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
@@ -5167,8 +5182,8 @@ private:
       genOpenMPSymbolProperties(*this, var);
   }
 
-  /// Where applicable, save the exception state and halting and rounding
-  /// modes at function entry and restore them at function exits.
+  /// Where applicable, save the exception state and halting, rounding, and
+  /// underflow modes at function entry, and restore them at function exits.
   void manageFPEnvironment(Fortran::lower::pft::FunctionLikeUnit &funit) {
     mlir::Location loc = toLocation();
     mlir::Location endLoc =
@@ -5210,7 +5225,7 @@ private:
       });
     }
     if (funit.mayModifyRoundingMode) {
-      // F18 Clause 17.4.5: In a procedure [...], the processor shall not
+      // F18 Clause 17.4p5: In a procedure [...], the processor shall not
       // change the rounding modes on entry, and on return shall ensure that
       // the rounding modes are the same as they were on entry.
       mlir::func::FuncOp getRounding =
@@ -5221,6 +5236,18 @@ private:
           builder->create<fir::CallOp>(loc, getRounding).getResult(0);
       bridge.fctCtx().attachCleanup([=]() {
         builder->create<fir::CallOp>(endLoc, setRounding, roundingMode);
+      });
+    }
+    if ((funit.mayModifyUnderflowMode) &&
+        (bridge.getTargetCharacteristics().hasSubnormalFlushingControl(
+            /*any=*/true))) {
+      // F18 Clause 17.5p2: In a procedure [...], the processor shall not
+      // change the underflow mode on entry, and on return shall ensure that
+      // the underflow mode is the same as it was on entry.
+      mlir::Value underflowMode =
+          fir::runtime::genGetUnderflowMode(*builder, loc);
+      bridge.fctCtx().attachCleanup([=]() {
+        fir::runtime::genSetUnderflowMode(*builder, loc, {underflowMode});
       });
     }
   }
@@ -5595,6 +5622,7 @@ private:
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
+    setCurrentFunctionUnit(&funit);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -5604,6 +5632,7 @@ private:
       endNewFunction(funit);
     }
     funit.setActiveEntry(0);
+    setCurrentFunctionUnit(nullptr);
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -5967,12 +5996,17 @@ private:
   /// Reset all registered dummy symbols.
   void resetRegisteredDummySymbols() { registeredDummySymbols.clear(); }
 
+  void setCurrentFunctionUnit(Fortran::lower::pft::FunctionLikeUnit *unit) {
+    currentFunctionUnit = unit;
+  }
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
   Fortran::evaluate::FoldingContext foldingContext;
   fir::FirOpBuilder *builder = nullptr;
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
+  Fortran::lower::pft::FunctionLikeUnit *currentFunctionUnit = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;

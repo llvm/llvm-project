@@ -351,9 +351,14 @@ bool InstrProfWriter::addMemProfCallStack(
 
 bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
                                      function_ref<void(Error)> Warn) {
-  // TODO: Once we remove support for MemProf format Version V1, assert that
-  // the three components (frames, call stacks, and records) are either all
-  // empty or populated.
+  // Return immediately if everything is empty.
+  if (Incoming.Frames.empty() && Incoming.CallStacks.empty() &&
+      Incoming.Records.empty())
+    return true;
+
+  // Otherwise, every component must be non-empty.
+  assert(!Incoming.Frames.empty() && !Incoming.CallStacks.empty() &&
+         !Incoming.Records.empty());
 
   if (MemProfData.Frames.empty())
     MemProfData.Frames = std::move(Incoming.Frames);
@@ -636,7 +641,7 @@ writeMemProfCallStackArray(
       MemProfCallStackIndexes;
 
   memprof::CallStackRadixTreeBuilder<memprof::FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
   for (auto I : Builder.getRadixArray())
     OS.write32(I);
@@ -647,41 +652,6 @@ writeMemProfCallStackArray(
   MemProfCallStackData.clear();
 
   return MemProfCallStackIndexes;
-}
-
-// Write out MemProf Version1 as follows:
-// uint64_t Version (NEW in V1)
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Offset for the frame payload
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
-static Error writeMemProfV1(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData) {
-  OS.write(memprof::Version1);
-  uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof record table offset.
-  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-  OS.write(0ULL); // Reserve space for the memprof frame table offset.
-
-  auto Schema = memprof::getFullSchema();
-  writeMemProfSchema(OS, Schema);
-
-  uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version1);
-
-  uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
-
-  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
-  OS.patch({{HeaderUpdatePos, Header}});
-
-  return Error::success();
 }
 
 // Write out MemProf Version2 as follows:
@@ -805,8 +775,6 @@ static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedVersion MemProfVersionRequested,
                           bool MemProfFullSchema) {
   switch (MemProfVersionRequested) {
-  case memprof::Version1:
-    return writeMemProfV1(OS, MemProfData);
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
   case memprof::Version3:
@@ -909,6 +877,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     Header.Version |= VARIANT_MASK_INSTR_ENTRY;
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::LoopEntriesInstrumentation))
+    Header.Version |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     Header.Version |= VARIANT_MASK_BYTE_COVERAGE;
   if (static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly))
@@ -1152,6 +1123,10 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     OS << "# Always instrument the function entry block\n:entry_first\n";
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::LoopEntriesInstrumentation))
+    OS << "# Always instrument the loop entry "
+          "blocks\n:instrument_loop_entries\n";
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     OS << "# Instrument block coverage\n:single_byte_coverage\n";
   InstrProfSymtab Symtab;

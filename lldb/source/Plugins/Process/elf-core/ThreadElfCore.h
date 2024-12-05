@@ -83,10 +83,10 @@ struct ELFLinuxSigInfo {
   int32_t si_errno;
   int32_t si_code;
   // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
-  // builds.
-  struct {
-    lldb::addr_t si_addr;  /* faulting insn/memory ref. */
-    short int si_addr_lsb; /* Valid LSB of the reported address.  */
+  // builds. Slight modifications to ensure no 32b vs 64b differences.
+  struct alignas(8) {
+    lldb::addr_t si_addr; /* faulting insn/memory ref. */
+    int16_t si_addr_lsb;  /* Valid LSB of the reported address.  */
     union {
       /* used when si_code=SEGV_BNDERR */
       struct {
@@ -98,7 +98,8 @@ struct ELFLinuxSigInfo {
     } bounds;
   } sigfault;
 
-  enum { eUnspecified, eNT_SIGINFO } note_type;
+  enum SigInfoNoteType : uint8_t { eUnspecified, eNT_SIGINFO };
+  SigInfoNoteType note_type;
 
   ELFLinuxSigInfo();
 

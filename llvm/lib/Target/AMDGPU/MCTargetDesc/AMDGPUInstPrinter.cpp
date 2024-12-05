@@ -649,9 +649,9 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
                                                raw_ostream &O) {
   if (!FirstOperand)
     O << ", ";
-  printRegOperand(STI.hasFeature(AMDGPU::FeatureWavefrontSize64)
-                      ? AMDGPU::VCC
-                      : AMDGPU::VCC_LO,
+  printRegOperand(STI.hasFeature(AMDGPU::FeatureWavefrontSize32)
+                      ? AMDGPU::VCC_LO
+                      : AMDGPU::VCC,
                   O, MRI);
   if (FirstOperand)
     O << ", ";
@@ -1712,6 +1712,20 @@ void AMDGPUInstPrinter::printNamedInt(const MCInst *MI, unsigned OpNo,
   int64_t V = MI->getOperand(OpNo).getImm();
   if (AlwaysPrint || V != 0)
     O << ' ' << Prefix << ':' << (PrintInHex ? formatHex(V) : formatDec(V));
+}
+
+void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " bitop3:";
+  if (Imm <= 10)
+    O << formatDec(Imm);
+  else
+    O << formatHex(static_cast<uint64_t>(Imm));
 }
 
 #include "AMDGPUGenAsmWriter.inc"

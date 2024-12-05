@@ -2786,7 +2786,7 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
     return DAG.getNode(
         ISD::FP_ROUND, Loc, MVT::bf16,
         DAG.getNode(Op.getOpcode(), Loc, MVT::f32, Op.getOperand(0)),
-        DAG.getIntPtrConstant(0, Loc));
+        DAG.getIntPtrConstant(0, Loc, /*isTarget=*/true));
   }
 
   // Everything else is considered legal.

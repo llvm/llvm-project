@@ -3,8 +3,10 @@
 
 
 void clang_analyzer_printState();
-template<typename T> void clang_analyzer_dump_lref(T&);
-template<typename T> void clang_analyzer_dump_val(T);
+template <typename T> void clang_analyzer_dump_lref(T& param);
+template <typename T> void clang_analyzer_dump_val(T param);
+template <typename T> void clang_analyzer_denote(T param, const char *name);
+template <typename T> void clang_analyzer_express(T param);
 template <typename T> T conjure();
 template <typename... Ts> void nop(const Ts &... args) {}
 
@@ -40,16 +42,17 @@ void test_assign_return() {
 namespace trivial_struct_copy {
 
 void _01_empty_structs() {
-  clang_analyzer_dump_val(conjure<empty>()); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_dump_val(conjure<empty>()); // expected-warning {{conj_$}}
   empty Empty = conjure<empty>();
   empty Empty2 = Empty;
   empty Empty3 = Empty2;
-  // All of these should refer to the exact same LCV, because all of
+  // All of these should refer to the exact same symbol, because all of
   // these trivial copies refer to the original conjured value.
   // There were Unknown before:
-  clang_analyzer_dump_val(Empty);  // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Empty2); // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Empty3); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_denote(Empty, "$Empty");
+  clang_analyzer_express(Empty);  // expected-warning {{$Empty}}
+  clang_analyzer_express(Empty2); // expected-warning {{$Empty}}
+  clang_analyzer_express(Empty3); // expected-warning {{$Empty}}
 
   // We should have the same Conjured symbol for "Empty", "Empty2" and "Empty3".
   clang_analyzer_printState();
@@ -75,15 +78,16 @@ void _01_empty_structs() {
 }
 
 void _02_structs_with_members() {
-  clang_analyzer_dump_val(conjure<aggr>()); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_dump_val(conjure<aggr>()); // expected-warning {{conj_$}}
   aggr Aggr = conjure<aggr>();
   aggr Aggr2 = Aggr;
   aggr Aggr3 = Aggr2;
-  // All of these should refer to the exact same LCV, because all of
+  // All of these should refer to the exact same symbol, because all of
   // these trivial copies refer to the original conjured value.
-  clang_analyzer_dump_val(Aggr);  // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Aggr2); // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Aggr3); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_denote(Aggr, "$Aggr");
+  clang_analyzer_express(Aggr);  // expected-warning {{$Aggr}}
+  clang_analyzer_express(Aggr2); // expected-warning {{$Aggr}}
+  clang_analyzer_express(Aggr3); // expected-warning {{$Aggr}}
 
   // We should have the same Conjured symbol for "Aggr", "Aggr2" and "Aggr3".
   // We used to have Derived symbols for the individual fields that were

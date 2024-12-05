@@ -16,7 +16,8 @@ namespace fir {
 void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
                                           PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-                     mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
+                     mlir::omp::PrivateClauseOp, fir::GlobalOp,
+                     mlir::gpu::GPUModuleOp>(pm, ctor);
 }
 
 void addNestedPassToAllTopLevelOperationsConditionally(
@@ -247,6 +248,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
+  pm.addPass(flangomp::createGenericLoopConversionPass());
   if (isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
 }
@@ -277,22 +279,17 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   // Add function attributes
   mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
 
-  if (config.FramePointerKind != llvm::FramePointerKind::None ||
-      config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
-      config.NoSignedZerosFPMath || config.UnsafeFPMath) {
-    if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
-      framePointerKind =
-          mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
-    else if (config.FramePointerKind == llvm::FramePointerKind::All)
-      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
-    else
-      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
+  if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
+  else if (config.FramePointerKind == llvm::FramePointerKind::All)
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
+  else
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-    pm.addPass(fir::createFunctionAttr(
-        {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
-         config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
-         config.UnsafeFPMath}));
-  }
+  pm.addPass(fir::createFunctionAttr(
+      {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
+       config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
+       config.UnsafeFPMath}));
 
   fir::addFIRToLLVMPass(pm, config);
 }

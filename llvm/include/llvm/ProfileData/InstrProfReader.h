@@ -123,6 +123,9 @@ public:
 
   virtual bool instrEntryBBEnabled() const = 0;
 
+  /// Return true if the profile instruments all loop entries.
+  virtual bool instrLoopEntriesEnabled() const = 0;
+
   /// Return true if the profile has single byte counters representing coverage.
   virtual bool hasSingleByteCoverage() const = 0;
 
@@ -274,6 +277,11 @@ public:
                              InstrProfKind::FunctionEntryInstrumentation);
   }
 
+  bool instrLoopEntriesEnabled() const override {
+    return static_cast<bool>(ProfileKind &
+                             InstrProfKind::LoopEntriesInstrumentation);
+  }
+
   bool hasSingleByteCoverage() const override {
     return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
   }
@@ -396,6 +404,10 @@ public:
 
   bool instrEntryBBEnabled() const override {
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
+  }
+
+  bool instrLoopEntriesEnabled() const override {
+    return (Version & VARIANT_MASK_INSTR_LOOP_ENTRIES) != 0;
   }
 
   bool hasSingleByteCoverage() const override {
@@ -564,6 +576,7 @@ struct InstrProfReaderIndexBase {
   virtual bool isIRLevelProfile() const = 0;
   virtual bool hasCSIRLevelProfile() const = 0;
   virtual bool instrEntryBBEnabled() const = 0;
+  virtual bool instrLoopEntriesEnabled() const = 0;
   virtual bool hasSingleByteCoverage() const = 0;
   virtual bool functionEntryOnly() const = 0;
   virtual bool hasMemoryProfile() const = 0;
@@ -628,6 +641,10 @@ public:
     return (FormatVersion & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
 
+  bool instrLoopEntriesEnabled() const override {
+    return (FormatVersion & VARIANT_MASK_INSTR_LOOP_ENTRIES) != 0;
+  }
+
   bool hasSingleByteCoverage() const override {
     return (FormatVersion & VARIANT_MASK_BYTE_COVERAGE) != 0;
   }
@@ -686,7 +703,7 @@ private:
   // The number of elements in the radix tree array.
   unsigned RadixTreeSize = 0;
 
-  Error deserializeV12(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:
@@ -751,6 +768,10 @@ public:
 
   bool instrEntryBBEnabled() const override {
     return Index->instrEntryBBEnabled();
+  }
+
+  bool instrLoopEntriesEnabled() const override {
+    return Index->instrLoopEntriesEnabled();
   }
 
   bool hasSingleByteCoverage() const override {

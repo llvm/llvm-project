@@ -37,65 +37,6 @@ namespace bufferization {
 using namespace mlir;
 using namespace mlir::bufferization;
 
-//===----------------------------------------------------------------------===//
-// BufferizeTypeConverter
-//===----------------------------------------------------------------------===//
-
-static Value materializeToTensor(OpBuilder &builder, TensorType type,
-                                 ValueRange inputs, Location loc) {
-  assert(inputs.size() == 1);
-  assert(isa<BaseMemRefType>(inputs[0].getType()));
-  return builder.create<bufferization::ToTensorOp>(loc, type, inputs[0]);
-}
-
-/// Registers conversions into BufferizeTypeConverter
-BufferizeTypeConverter::BufferizeTypeConverter() {
-  // Keep all types unchanged.
-  addConversion([](Type type) { return type; });
-  // Convert RankedTensorType to MemRefType.
-  addConversion([](RankedTensorType type) -> Type {
-    return MemRefType::get(type.getShape(), type.getElementType());
-  });
-  // Convert UnrankedTensorType to UnrankedMemRefType.
-  addConversion([](UnrankedTensorType type) -> Type {
-    return UnrankedMemRefType::get(type.getElementType(), 0);
-  });
-  addArgumentMaterialization(materializeToTensor);
-  addSourceMaterialization(materializeToTensor);
-  addTargetMaterialization([](OpBuilder &builder, BaseMemRefType type,
-                              ValueRange inputs, Location loc) -> Value {
-    assert(inputs.size() == 1 && "expected exactly one input");
-
-    if (auto inputType = dyn_cast<MemRefType>(inputs[0].getType())) {
-      // MemRef to MemRef cast.
-      assert(inputType != type && "expected different types");
-      // Unranked to ranked and ranked to unranked casts must be explicit.
-      auto rankedDestType = dyn_cast<MemRefType>(type);
-      if (!rankedDestType)
-        return nullptr;
-      BufferizationOptions options;
-      options.bufferAlignment = 0;
-      FailureOr<Value> replacement =
-          castOrReallocMemRefValue(builder, inputs[0], rankedDestType, options);
-      if (failed(replacement))
-        return nullptr;
-      return *replacement;
-    }
-
-    if (isa<TensorType>(inputs[0].getType())) {
-      // Tensor to MemRef cast.
-      return builder.create<bufferization::ToMemrefOp>(loc, type, inputs[0]);
-    }
-
-    llvm_unreachable("only tensor/memref input types supported");
-  });
-}
-
-void mlir::bufferization::populateBufferizeMaterializationLegality(
-    ConversionTarget &target) {
-  target.addLegalOp<bufferization::ToTensorOp, bufferization::ToMemrefOp>();
-}
-
 namespace {
 
 static LayoutMapOption parseLayoutMapOption(const std::string &s) {
@@ -147,12 +88,31 @@ struct OneShotBufferizePass
       opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(
           parseLayoutMapOption(functionBoundaryTypeConversion));
+
+      if (mustInferMemorySpace && useEncodingForMemorySpace) {
+        emitError(getOperation()->getLoc())
+            << "only one of 'must-infer-memory-space' and "
+               "'use-encoding-for-memory-space' are allowed in "
+            << getArgument();
+        return signalPassFailure();
+      }
+
       if (mustInferMemorySpace) {
         opt.defaultMemorySpaceFn =
             [](TensorType t) -> std::optional<Attribute> {
           return std::nullopt;
         };
       }
+
+      if (useEncodingForMemorySpace) {
+        opt.defaultMemorySpaceFn =
+            [](TensorType t) -> std::optional<Attribute> {
+          if (auto rtt = dyn_cast<RankedTensorType>(t))
+            return rtt.getEncoding();
+          return std::nullopt;
+        };
+      }
+
       opt.printConflicts = printConflicts;
       opt.bufferAlignment = bufferAlignment;
       opt.testAnalysisOnly = testAnalysisOnly;
@@ -544,18 +504,4 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
   }
 
   return success();
-}
-
-BufferizationOptions bufferization::getPartialBufferizationOptions() {
-  BufferizationOptions options;
-  options.allowUnknownOps = true;
-  options.copyBeforeWrite = true;
-  options.enforceAliasingInvariants = false;
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
-                                      const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
-  };
-  options.opFilter.allowDialect<BufferizationDialect>();
-  return options;
 }

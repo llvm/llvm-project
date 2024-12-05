@@ -324,6 +324,18 @@ class VOP3OpSel_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
   let Inst{14} = !if(P.HasDst,  src0_modifiers{3}, 0);
 }
 
+// Special case for v_permlane16_swap_b32/v_permlane32_swap_b32
+// op_sel[0]/op_sel[1] are treated as bound_ctrl and fi dpp operands.
+class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
+  bits<1> fi;
+  bits<1> bound_ctrl;
+
+  // OPSEL[0] specifies FI
+  let Inst{11} = fi;
+  // OPSEL[1] specifies BOUND_CTRL
+  let Inst{12} = bound_ctrl;
+}
+
 class VOP3OpSel_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
   let Inst{11} = !if(p.HasSrc0, src0_modifiers{2}, 0);
   let Inst{12} = !if(p.HasSrc1, src1_modifiers{2}, 0);
@@ -1443,6 +1455,7 @@ def VOP3_CLAMP   : VOP3Features<1, 0, 0, 0>;
 def VOP3_OPSEL   : VOP3Features<1, 1, 0, 0>;
 def VOP3_PACKED  : VOP3Features<1, 1, 1, 0>;
 def VOP3_MAI     : VOP3Features<0, 0, 0, 1>;
+def VOP3_OPSEL_ONLY : VOP3Features<0, 1, 0, 0>;
 
 // Packed is misleading, but it enables the appropriate op_sel
 // modifiers.
@@ -1958,12 +1971,18 @@ class ClassPat<Instruction inst, ValueType vt> : GCNPat <
   (inst i32:$src0_mods, vt:$src0, (V_MOV_B32_e32 timm:$mask))
 >;
 
+class ClassPat_t16<Instruction inst, ValueType vt> : GCNPat <
+  (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
+  (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B32_e32 timm:$mask))
+>;
+
 def : ClassPat<V_CMP_CLASS_F16_e64, f16> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts];
+  let OtherPredicates = [Has16BitInsts];
+  let True16Predicate = NotHasTrue16BitInsts;
 }
 
-def : ClassPat<V_CMP_CLASS_F16_t16_e64, f16> {
-  let OtherPredicates = [HasTrue16BitInsts];
+def : ClassPat_t16<V_CMP_CLASS_F16_fake16_e64, f16> {
+  let True16Predicate = UseFakeTrue16Insts;
 }
 
 def : ClassPat<V_CMP_CLASS_F32_e64, f32>;

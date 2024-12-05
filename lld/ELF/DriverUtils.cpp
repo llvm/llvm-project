@@ -174,6 +174,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       break;
     case OPT_o:
     case OPT_Map:
+    case OPT_dependency_file:
     case OPT_print_archive_stats:
     case OPT_why_extract:
       // If an output path contains directories, "lld @response.txt" will
