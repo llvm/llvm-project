@@ -12755,21 +12755,22 @@ def err_acc_gang_multiple_elt
     : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
             "'num'|'dim'|'static'}0 argument">;
 def err_acc_int_arg_invalid
-    : Error<"'%1' argument on '%0' clause is not permitted on a%select{n "
-            "orphaned|||}2 'loop' construct %select{|associated with a "
-            "'parallel' compute construct|associated with a 'kernels' compute "
-            "construct|associated with a 'serial' compute construct}2">;
+    : Error<"'%0' argument on '%1' clause is not permitted on a%select{|n "
+            "orphaned}2 '%3' construct%select{| associated with a '%5' compute "
+            "construct}4">;
 def err_acc_gang_dim_value
     : Error<"argument to 'gang' clause dimension must be %select{a constant "
             "expression|1, 2, or 3: evaluated to %1}0">;
 def err_acc_num_arg_conflict
-    : Error<"'num' argument to '%0' clause not allowed on a 'loop' construct "
-            "associated with a 'kernels' construct that has a "
-            "'%select{num_gangs|num_workers|vector_length}1' "
-            "clause">;
+    : Error<"'num' argument to '%0' clause not allowed on a '%1' "
+            "construct%select{| associated with a '%3' construct}2 that has a "
+            "'%4' clause">;
+def err_acc_num_arg_conflict_reverse
+    : Error<"'num_gangs' clause not allowed on a 'kernels loop' construct that "
+            "has a 'gang' clause with a 'num' argument">;
 def err_acc_clause_in_clause_region
     : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
-            "clause%select{| on a 'kernels' compute construct}2">;
+            "clause%select{| on a '%3' construct}2">;
 def err_acc_gang_reduction_conflict
     : Error<"%select{OpenACC 'gang' clause with a 'dim' value greater than "
             "1|OpenACC 'reduction' clause}0 cannot "
