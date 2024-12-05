@@ -12766,8 +12766,8 @@ def err_acc_num_arg_conflict
             "construct%select{| associated with a '%3' construct}2 that has a "
             "'%4' clause">;
 def err_acc_num_arg_conflict_reverse
-    : Error<"'num_gangs' clause not allowed on a 'kernels loop' construct that "
-            "has a 'gang' clause with a 'num' argument">;
+    : Error<"'%0' clause not allowed on a 'kernels loop' construct that "
+            "has a '%1' clause with a%select{n| 'num'}2 argument">;
 def err_acc_clause_in_clause_region
     : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
             "clause%select{| on a '%3' construct}2">;
