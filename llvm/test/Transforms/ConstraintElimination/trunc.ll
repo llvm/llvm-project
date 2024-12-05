@@ -182,4 +182,31 @@ if.else:
   ret i1 false
 }
 
+; We do not know the sign of %x, so we cannot infer nuw for %ext.
+define i1 @test_icmp_ult_trunc_nsw_icmp_trunc_nuw(i64 %x, i32 %y) {
+; CHECK-LABEL: define i1 @test_icmp_ult_trunc_nsw_icmp_trunc_nuw(
+; CHECK-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[EXT:%.*]] = trunc nsw i64 [[X]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[Y]], [[EXT]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[CONV]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    ret i1 false
+;
+  %ext = trunc nsw i64 %x to i32
+  %cond = icmp ult i32 %y, %ext
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %conv = zext i32 %y to i64
+  %cmp = icmp eq i64 %x, %conv
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
 declare void @cond()
