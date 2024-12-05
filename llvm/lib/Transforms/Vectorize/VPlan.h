@@ -3845,7 +3845,9 @@ public:
 
   /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
   /// original scalar pre-header) which contains SCEV expansions that need
-  /// to happen before the CFG is modified (when executing a VPlan for the epilogue vector loop, the original entry needs to be replaced by the new entry for the epilogue vector loop); a VPBasicBlock for the vector
+  /// to happen before the CFG is modified (when executing a VPlan for the
+  /// epilogue vector loop, the original entry needs to be replaced by the new
+  /// entry for the epilogue vector loop); a VPBasicBlock for the vector
   /// pre-header, followed by a region for the vector loop, followed by the
   /// middle VPBasicBlock. If a check is needed to guard executing the scalar
   /// epilogue loop, it will be added to the middle block, together with
@@ -4176,6 +4178,8 @@ public:
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
+    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
+        "Blocks can't have more than two successors.");
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else

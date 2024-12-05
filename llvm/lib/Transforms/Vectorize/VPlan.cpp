@@ -862,8 +862,12 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPIRBasicBlock *Entry =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
-  // Connect entry only to vector preheader initially. Entry will also be connected to the scalar preheader later, during skeleton creation when runtime guards are added as needed.
-  // Note that when executing the VPlan for an epilogue vector loop, the original entry block here will be replaced by a new VPIRBasicBlock wrapping the entry to the epilogue vector loop after generating code for the main vector loop.
+  // Connect entry only to vector preheader initially. Entry will also be
+  // connected to the scalar preheader later, during skeleton creation when
+  // runtime guards are added as needed. Note that when executing the VPlan for
+  // an epilogue vector loop, the original entry block here will be replaced by
+  // a new VPIRBasicBlock wrapping the entry to the epilogue vector loop after
+  // generating code for the main vector loop.
   VPBlockUtils::connectBlocks(Entry, VecPreheader);
   VPIRBasicBlock *ScalarHeader =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getHeader());
