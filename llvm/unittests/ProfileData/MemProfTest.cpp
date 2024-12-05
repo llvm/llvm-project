@@ -434,8 +434,7 @@ TEST(MemProf, BaseMemProfReader) {
   MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack{F1.hash(), F2.hash()};
-  CallStackId CSId = hashCallStack(CallStack);
-  MemProfData.CallStacks.try_emplace(CSId, CallStack);
+  CallStackId CSId = MemProfData.addCallStack(std::move(CallStack));
 
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
@@ -470,8 +469,7 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
-  CallStackId CSId = hashCallStack(CallStack);
-  MemProfData.CallStacks.insert({CSId, CallStack});
+  MemProfData.addCallStack(CallStack);
 
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;

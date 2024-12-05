@@ -500,8 +500,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Callstack.append(Frames.begin(), Frames.end());
     }
 
-    CallStackId CSId = hashCallStack(Callstack);
-    MemProfData.CallStacks.insert({CSId, Callstack});
+    CallStackId CSId = MemProfData.addCallStack(Callstack);
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
@@ -520,11 +519,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
     IndexedMemProfRecord &Record = MemProfData.Records[Id];
-    for (LocationPtr Loc : Locs) {
-      CallStackId CSId = hashCallStack(*Loc);
-      MemProfData.CallStacks.insert({CSId, *Loc});
-      Record.CallSiteIds.push_back(CSId);
-    }
+    for (LocationPtr Loc : Locs)
+      Record.CallSiteIds.push_back(MemProfData.addCallStack(*Loc));
   }
 
   return Error::success();
@@ -769,9 +765,7 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
     IndexedCallStack.reserve(CallStack.size());
     for (const Frame &F : CallStack)
       IndexedCallStack.push_back(MemProfData.addFrame(F));
-    CallStackId CSId = hashCallStack(IndexedCallStack);
-    MemProfData.CallStacks.try_emplace(CSId, std::move(IndexedCallStack));
-    return CSId;
+    return MemProfData.addCallStack(std::move(IndexedCallStack));
   };
 
   for (const auto &[GUID, Record] : Doc.HeapProfileRecords) {
