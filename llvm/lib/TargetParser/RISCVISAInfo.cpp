@@ -741,7 +741,8 @@ Error RISCVISAInfo::checkDependency() {
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
-  static constexpr StringLiteral XqciExts[] = {{"xqcicsr"}, {"xqcisls"}};
+  static constexpr StringLiteral XqciExts[] = {
+      {"xqcia"}, {"xqcicsr"}, {"xqcisls"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");

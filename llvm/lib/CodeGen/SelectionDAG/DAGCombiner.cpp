@@ -1220,8 +1220,11 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
 
     if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
-      if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, {N01, N1}))
+      if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, {N01, N1})) {
+        NewFlags.setDisjoint(Flags.hasDisjoint() &&
+                             N0->getFlags().hasDisjoint());
         return DAG.getNode(Opc, DL, VT, N00, OpNode, NewFlags);
+      }
       return SDValue();
     }
     if (TLI.isReassocProfitable(DAG, N0, N1)) {
@@ -15495,12 +15498,14 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       unsigned BuildVecNumElts =  BuildVect.getNumOperands();
       unsigned TruncVecNumElts = VT.getVectorNumElements();
       unsigned TruncEltOffset = BuildVecNumElts / TruncVecNumElts;
+      unsigned FirstElt = isLE ? 0 : (TruncEltOffset - 1);
 
       assert((BuildVecNumElts % TruncVecNumElts) == 0 &&
              "Invalid number of elements");
 
       SmallVector<SDValue, 8> Opnds;
-      for (unsigned i = 0, e = BuildVecNumElts; i != e; i += TruncEltOffset)
+      for (unsigned i = FirstElt, e = BuildVecNumElts; i < e;
+           i += TruncEltOffset)
         Opnds.push_back(BuildVect.getOperand(i));
 
       return DAG.getBuildVector(VT, DL, Opnds);
@@ -23055,18 +23060,29 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
       // ext_elt (bitcast (scalar_to_vec i64 X to v2i64) to v4i32), TruncElt -->
       // trunc i64 X to i32
       SDValue X = BCSrc.getOperand(0);
-      assert(X.getValueType().isScalarInteger() && ScalarVT.isScalarInteger() &&
+      EVT XVT = X.getValueType();
+      assert(XVT.isScalarInteger() && ScalarVT.isScalarInteger() &&
              "Extract element and scalar to vector can't change element type "
              "from FP to integer.");
       unsigned XBitWidth = X.getValueSizeInBits();
-      BCTruncElt = IsLE ? 0 : XBitWidth / VecEltBitWidth - 1;
+      unsigned Scale = XBitWidth / VecEltBitWidth;
+      BCTruncElt = IsLE ? 0 : Scale - 1;
 
       // An extract element return value type can be wider than its vector
       // operand element type. In that case, the high bits are undefined, so
       // it's possible that we may need to extend rather than truncate.
-      if (ExtractIndex == BCTruncElt && XBitWidth > VecEltBitWidth) {
+      if (ExtractIndex < Scale && XBitWidth > VecEltBitWidth) {
         assert(XBitWidth % VecEltBitWidth == 0 &&
                "Scalar bitwidth must be a multiple of vector element bitwidth");
+
+        if (ExtractIndex != BCTruncElt) {
+          unsigned ShiftIndex =
+              IsLE ? ExtractIndex : (Scale - 1) - ExtractIndex;
+          X = DAG.getNode(
+              ISD::SRL, DL, XVT, X,
+              DAG.getShiftAmountConstant(ShiftIndex * VecEltBitWidth, XVT, DL));
+        }
+
         return DAG.getAnyExtOrTrunc(X, DL, ScalarVT);
       }
     }

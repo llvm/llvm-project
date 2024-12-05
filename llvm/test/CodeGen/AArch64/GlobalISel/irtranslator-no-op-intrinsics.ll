@@ -20,9 +20,8 @@ define i64 @expect_with_probability_i64(i64 %arg0) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.expect.with.probability), [[COPY]](s64), [[C]](s64), double 5.000000e-01
-  ; CHECK-NEXT:   $x0 = COPY [[INT]](s64)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %expval = call i64 @llvm.expect.with.probability.i64(i64 %arg0, i64 1, double 0.5)
   ret i64 %expval

@@ -5,7 +5,7 @@
 ; to do floating-point negations, because the arguments aren't vectors
 ; and aren't vector-aligned.
 
-define void @foo(ptr %p, ptr %q, float %s, float %y) {
+define void @foo(ptr %p, ptr %q, float %s, float %y) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax

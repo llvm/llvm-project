@@ -123,6 +123,9 @@ struct VPlanTransforms {
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
+
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void prepareToExecute(VPlan &Plan);
 };
 
 } // namespace llvm

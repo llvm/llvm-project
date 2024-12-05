@@ -2556,7 +2556,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   if (!MAttrs.empty()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I)
       Features.AddFeature(MAttrs[I]);
-  } else if (MCPU.empty() && Obj->getArch() == llvm::Triple::aarch64) {
+  } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
   }
 

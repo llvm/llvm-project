@@ -140,6 +140,12 @@ void uses() {
 
 #pragma acc loop worker
   for(int i= 0; i< 5; ++i) {
+#pragma acc loop vector
+  for(int k = 0; k < 5; ++k);
+  }
+
+#pragma acc loop worker
+  for(int i= 0; i< 5; ++i) {
 #pragma acc parallel
 #pragma acc loop worker, gang
   for(int k = 0; k < 5; ++k);
