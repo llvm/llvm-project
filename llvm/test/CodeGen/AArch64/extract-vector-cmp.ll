@@ -7,11 +7,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define i1 @extract_icmp_v4i32_const_splat_rhs(<4 x i32> %a) {
 ; CHECK-LABEL: extract_icmp_v4i32_const_splat_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #5
-; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    cmp w8, #5
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %icmp = icmp ult <4 x i32> %a, splat (i32 5)
   %ext = extractelement <4 x i1> %icmp, i32 1
@@ -21,11 +19,9 @@ define i1 @extract_icmp_v4i32_const_splat_rhs(<4 x i32> %a) {
 define i1 @extract_icmp_v4i32_const_splat_lhs(<4 x i32> %a) {
 ; CHECK-LABEL: extract_icmp_v4i32_const_splat_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #7
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    cmp w8, #7
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %icmp = icmp ult <4 x i32> splat(i32 7), %a
   %ext = extractelement <4 x i1> %icmp, i32 1
@@ -35,12 +31,9 @@ define i1 @extract_icmp_v4i32_const_splat_lhs(<4 x i32> %a) {
 define i1 @extract_icmp_v4i32_const_vec_rhs(<4 x i32> %a) {
 ; CHECK-LABEL: extract_icmp_v4i32_const_vec_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    cmp w8, #234
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %icmp = icmp ult <4 x i32> %a, <i32 5, i32 234, i32 -1, i32 7>
   %ext = extractelement <4 x i1> %icmp, i32 1
@@ -50,27 +43,25 @@ define i1 @extract_icmp_v4i32_const_vec_rhs(<4 x i32> %a) {
 define i1 @extract_fcmp_v4f32_const_splat_rhs(<4 x float> %a) {
 ; CHECK-LABEL: extract_fcmp_v4f32_const_splat_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov v1.4s, #4.00000000
-; CHECK-NEXT:    fcmge v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    fmov s1, #4.00000000
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
   %fcmp = fcmp ult <4 x float> %a, splat(float 4.0e+0)
   %ext = extractelement <4 x i1> %fcmp, i32 1
   ret i1 %ext
 }
 
+; Tests the code in ExpandIntRes_SETCC
 define i128 @extract_icmp_v1i128(ptr %p) {
 ; CHECK-LABEL: extract_icmp_v1i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x9, x8, [x0]
+; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    orr x8, x9, x8
 ; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x0, x8, #0, #1
-; CHECK-NEXT:    mov x1, x0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %load = load <1 x i128>, ptr %p, align 16
   %cmp = icmp eq <1 x i128> %load, zeroinitializer
@@ -83,39 +74,34 @@ define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-LABEL: vector_loop_with_icmp:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    mov w8, #15 // =0xf
-; CHECK-NEXT:    mov w9, #2 // =0x2
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    dup v2.2d, x9
-; CHECK-NEXT:    add x9, x0, #4
-; CHECK-NEXT:    mov w10, #16 // =0x10
-; CHECK-NEXT:    mov w11, #1 // =0x1
+; CHECK-NEXT:    add x8, x0, #4
+; CHECK-NEXT:    mov w10, #1 // =0x1
 ; CHECK-NEXT:    b .LBB5_2
 ; CHECK-NEXT:  .LBB5_1: // %pred.store.continue6
 ; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    subs x10, x10, #2
-; CHECK-NEXT:    add x9, x9, #8
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    subs x9, x9, #2
+; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    b.eq .LBB5_6
 ; CHECK-NEXT:  .LBB5_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmhi v3.2d, v1.2d, v0.2d
-; CHECK-NEXT:    xtn v3.2s, v3.2d
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    tbz w12, #0, .LBB5_4
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    cmp x11, #14
+; CHECK-NEXT:    b.hi .LBB5_4
 ; CHECK-NEXT:  // %bb.3: // %pred.store.if
 ; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    stur w11, [x9, #-4]
+; CHECK-NEXT:    stur w10, [x8, #-4]
 ; CHECK-NEXT:  .LBB5_4: // %pred.store.continue
 ; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    dup v3.2d, x8
-; CHECK-NEXT:    cmhi v3.2d, v3.2d, v0.2d
-; CHECK-NEXT:    xtn v3.2s, v3.2d
-; CHECK-NEXT:    mov w12, v3.s[1]
-; CHECK-NEXT:    tbz w12, #0, .LBB5_1
+; CHECK-NEXT:    mov x11, v0.d[1]
+; CHECK-NEXT:    cmp x11, #14
+; CHECK-NEXT:    b.hi .LBB5_1
 ; CHECK-NEXT:  // %bb.5: // %pred.store.if5
 ; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    str w11, [x9]
+; CHECK-NEXT:    str w10, [x8]
 ; CHECK-NEXT:    b .LBB5_1
 ; CHECK-NEXT:  .LBB5_6: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -215,3 +201,4 @@ define i1 @extract_icmp_v4i32_splat_rhs_unknown_idx(<4 x i32> %a, i32 %c) {
   %ext = extractelement <4 x i1> %icmp, i32 %c
   ret i1 %ext
 }
+
