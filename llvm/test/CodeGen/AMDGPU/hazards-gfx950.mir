@@ -530,11 +530,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_fp4_f32_neg_hazard_opsel0
+name:            test_cvt_scalef32_pk_fp4_f32_neg_hazard_opsel0
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_fp4_f32_neg_hazard_opsel0
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f32_neg_hazard_opsel0
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -552,11 +552,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_fp4_f32_opsel3_hazard
+name:            test_cvt_scalef32_pk_fp4_f32_opsel3_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_fp4_f32_opsel3_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f32_opsel3_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -575,11 +575,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_fp4_f32_opsel0_neg_fp4_as_src_hazard
+name:            test_cvt_scalef32_pk_fp4_f32_opsel0_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_fp4_f32_opsel0_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f32_opsel0_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -597,11 +597,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_fp4_f32_opsel3_neg_fp4_as_src_hazard
+name:            test_cvt_scalef32_pk_fp4_f32_opsel3_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_fp4_f32_opsel3_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f32_opsel3_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -820,11 +820,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_f16_neg_opsel0_hazard
+name:            test_cvt_scalef32_pk_fp4_f16_neg_opsel0_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_f16_neg_opsel0_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f16_neg_opsel0_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -838,11 +838,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_f16_opsel3_hazard
+name:            test_cvt_scalef32_pk_fp4_f16_opsel3_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_f16_opsel3_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f16_opsel3_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -857,11 +857,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_f16_opsel0_neg_fp4_as_src_hazard
+name:            test_cvt_scalef32_pk_fp4_f16_opsel0_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_f16_opsel0_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f16_opsel0_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -875,11 +875,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_f16_opsel3_neg_fp4_as_src_hazard
+name:            test_cvt_scalef32_pk_fp4_f16_opsel3_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_f16_opsel3_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_f16_opsel3_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -893,11 +893,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_bf16_neg_opsel0_hazard
+name:            test_cvt_scalef32_pk_fp4_bf16_neg_opsel0_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_bf16_neg_opsel0_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_bf16_neg_opsel0_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -911,11 +911,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_bf16_opsel3_hazard
+name:            test_cvt_scalef32_pk_fp4_bf16_opsel3_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_bf16_opsel3_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_bf16_opsel3_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -930,11 +930,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_bf16_opsel0_neg_fp4_as_src_hazard
+name:            test_cvt_scalef32_pk_fp4_bf16_opsel0_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_bf16_opsel0_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_bf16_opsel0_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -948,11 +948,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scalef32_fp4_bf16_opsel3_neg_fp4_as_src_hazard
+name:            test_cvt_scalef32_pk_fp4_bf16_opsel3_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN-LABEL: name: test_cvt_scalef32_fp4_bf16_opsel3_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp4_bf16_opsel3_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -1082,11 +1082,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_cvt_scalef32_fp4_f16_neg_opsel0_hazard
+name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_neg_opsel0_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_fp4_f16_neg_opsel0_hazard
+    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_neg_opsel0_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -1103,11 +1103,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_cvt_scalef32_fp4_f16_opsel3_hazard
+name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel3_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_fp4_f16_opsel3_hazard
+    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel3_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -1125,11 +1125,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_cvt_scalef32_fp4_f16_opsel0_neg_fp4_as_src_hazard
+name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel0_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_fp4_f16_opsel0_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel0_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
@@ -1145,11 +1145,11 @@ body:             |
 ...
 
 ---
-name:            test_cvt_scale_cvt_scalef32_fp4_f16_opsel3_neg_fp4_as_src_hazard
+name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel3_neg_fp4_as_src_hazard
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_fp4_f16_opsel3_neg_fp4_as_src_hazard
+    ; GCN-LABEL: name: test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel3_neg_fp4_as_src_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
