@@ -405,12 +405,13 @@ static ParamLocsVecTy computeParamInfo(
   }
 
   ParamLocsVecTy ParamLocsVec;
-  for (auto &[HashSeq, Locs] : HashSeqToLocs) {
+  for (auto &[HashSeq, Locs] : HashSeqToLocs)
     ParamLocsVec.push_back(std::move(Locs));
-    llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
-      return L[0] < R[0];
-    });
-  }
+
+  llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
+    return L[0] < R[0];
+  });
+
   return ParamLocsVec;
 }
 
@@ -637,7 +638,6 @@ bool GlobalMergeFuncPassWrapper::runOnModule(Module &M) {
 
 PreservedAnalyses GlobalMergeFuncPass::run(Module &M,
                                            AnalysisManager<Module> &AM) {
-  ModuleSummaryIndex *Index = &(AM.getResult<ModuleSummaryIndexAnalysis>(M));
-  bool Changed = GlobalMergeFunc(Index).run(M);
+  bool Changed = GlobalMergeFunc(ImportSummary).run(M);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

@@ -1057,17 +1057,21 @@ static LLVM::CallOp createSPIRVBuiltinCall(Location loc, OpBuilder &builder,
   return call;
 }
 
-class ControlBarrierPattern
-    : public SPIRVToLLVMConversion<spirv::ControlBarrierOp> {
+template <typename BarrierOpTy>
+class ControlBarrierPattern : public SPIRVToLLVMConversion<BarrierOpTy> {
 public:
-  using SPIRVToLLVMConversion<spirv::ControlBarrierOp>::SPIRVToLLVMConversion;
+  using OpAdaptor = typename SPIRVToLLVMConversion<BarrierOpTy>::OpAdaptor;
+
+  using SPIRVToLLVMConversion<BarrierOpTy>::SPIRVToLLVMConversion;
+
+  static constexpr StringRef getFuncName();
 
   LogicalResult
-  matchAndRewrite(spirv::ControlBarrierOp controlBarrierOp, OpAdaptor adaptor,
+  matchAndRewrite(BarrierOpTy controlBarrierOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    constexpr StringLiteral funcName = "_Z22__spirv_ControlBarrieriii";
+    constexpr StringRef funcName = getFuncName();
     Operation *symbolTable =
-        controlBarrierOp->getParentWithTrait<OpTrait::SymbolTable>();
+        controlBarrierOp->template getParentWithTrait<OpTrait::SymbolTable>();
 
     Type i32 = rewriter.getI32Type();
 
@@ -1265,6 +1269,24 @@ public:
     return success();
   }
 };
+
+template <>
+constexpr StringRef
+ControlBarrierPattern<spirv::ControlBarrierOp>::getFuncName() {
+  return "_Z22__spirv_ControlBarrieriii";
+}
+
+template <>
+constexpr StringRef
+ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>::getFuncName() {
+  return "_Z33__spirv_ControlBarrierArriveINTELiii";
+}
+
+template <>
+constexpr StringRef
+ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>::getFuncName() {
+  return "_Z31__spirv_ControlBarrierWaitINTELiii";
+}
 
 /// Converts `spirv.mlir.loop` to LLVM dialect. All blocks within selection
 /// should be reachable for conversion to succeed. The structure of the loop in
@@ -1899,7 +1921,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ReturnPattern, ReturnValuePattern,
 
       // Barrier ops
-      ControlBarrierPattern,
+      ControlBarrierPattern<spirv::ControlBarrierOp>,
+      ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>,
+      ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>,
 
       // Group reduction operations
       GroupReducePattern<spirv::GroupIAddOp>,

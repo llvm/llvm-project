@@ -301,9 +301,6 @@ public:
 
   bool enableSubRegLiveness() const override;
 
-  void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
-                              &Mutations) const override;
-
   bool useAA() const override;
 
   unsigned getCacheLineSize() const override {
@@ -327,6 +324,9 @@ public:
   unsigned getTailDupAggressiveThreshold() const {
     return TuneInfo->TailDupAggressiveThreshold;
   }
+
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           unsigned NumRegionInstrs) const override;
 };
 } // End llvm namespace
 

@@ -865,13 +865,9 @@ class Base(unittest.TestCase):
         session_file = self.getLogBasenameForCurrentTest() + ".log"
         self.log_files.append(session_file)
 
-        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        self.session = encoded_file.open(session_file, "utf-8", mode="w")
-
         # Optimistically set __errored__, __failed__, __expected__ to False
         # initially.  If the test errored/failed, the session info
-        # (self.session) is then dumped into a session specific file for
-        # diagnosis.
+        # is then dumped into a session specific file for diagnosis.
         self.__cleanup_errored__ = False
         self.__errored__ = False
         self.__failed__ = False
@@ -1235,20 +1231,25 @@ class Base(unittest.TestCase):
         else:
             prefix = "Success"
 
+        session_file = self.getLogBasenameForCurrentTest() + ".log"
+
+        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
+        session = encoded_file.open(session_file, "utf-8", mode="w")
+
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
-                    print(traceback, file=self.session)
+                    print(traceback, file=session)
 
         import datetime
 
         print(
             "Session info generated @",
             datetime.datetime.now().ctime(),
-            file=self.session,
+            file=session,
         )
-        self.session.close()
-        del self.session
+        session.close()
+        del session
 
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:

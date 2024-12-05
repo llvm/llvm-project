@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK-AMDGCN,CHECK %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefix=CHECK %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK,CHECK-SPIRV %s
 
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -866,7 +866,8 @@ void test_atomic_inc_dec(__attribute__((address_space(3))) uint *lptr, __attribu
 // CHECK-LABEL test_wavefrontsize(
 unsigned test_wavefrontsize() {
 
-  // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wavefrontsize()
+  // CHECK-AMDGCN: ret i32 {{[0-9]+}}
+  // CHECK-SPIRV: {{.*}}call{{.*}} i32 @llvm.amdgcn.wavefrontsize()
   return __builtin_amdgcn_wavefrontsize();
 }
 

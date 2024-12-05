@@ -130,6 +130,10 @@ public:
                            const llvm::SmallVector<memprof::FrameId> &CallStack,
                            function_ref<void(Error)> Warn);
 
+  /// Add the entire MemProfData \p Incoming to the writer context.
+  bool addMemProfData(memprof::IndexedMemProfData Incoming,
+                      function_ref<void(Error)> Warn);
+
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
 
@@ -186,7 +190,9 @@ public:
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::FunctionEntryInstrumentation)) {
+                         InstrProfKind::FunctionEntryInstrumentation) ||
+        testIncompatible(InstrProfKind::FunctionEntryOnly,
+                         InstrProfKind::LoopEntriesInstrumentation)) {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");

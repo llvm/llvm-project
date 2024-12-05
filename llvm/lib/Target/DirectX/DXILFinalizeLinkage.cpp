@@ -23,6 +23,8 @@ static bool finalizeLinkage(Module &M) {
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
+    if (EF.isIntrinsic())
+      continue;
     if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
       continue;
     Funcs.insert(&EF);

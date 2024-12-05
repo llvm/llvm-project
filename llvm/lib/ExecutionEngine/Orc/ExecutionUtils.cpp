@@ -19,7 +19,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
@@ -468,7 +467,7 @@ StaticLibraryDefinitionGenerator::StaticLibraryDefinitionGenerator(
     GetObjectFileInterface GetObjFileInterface, Error &Err)
     : L(L), GetObjFileInterface(std::move(GetObjFileInterface)),
       ArchiveBuffer(std::move(ArchiveBuffer)), Archive(std::move(Archive)) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   if (!this->GetObjFileInterface)
     this->GetObjFileInterface = getObjectFileInterface;
   if (!Err)
