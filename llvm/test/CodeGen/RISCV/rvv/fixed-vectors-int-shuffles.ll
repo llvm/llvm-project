@@ -876,19 +876,72 @@ define <8 x i32> @shuffle_spread4_singlesrc_e32(<8 x i32> %v) {
   ret <8 x i32> %out
 }
 
-; TODO: This should be either a single vslideup.vi or two widening interleaves.
-define <8 x i8> @shuffle_spread4_singlesrc_e8(<8 x i8> %v) {
-; CHECK-LABEL: shuffle_spread4_singlesrc_e8:
+define <16 x i8> @shuffle_spread4_singlesrc_e8_idx0(<16 x i8> %v) {
+; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    vsrl.vi v10, v9, 2
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %out = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef>
-  ret <8 x i8> %out
+  %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef>
+  ret <16 x i8> %out
 }
+
+define <16 x i8> @shuffle_spread4_singlesrc_e8_idx1(<16 x i8> %v) {
+; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsrl.vi v10, v9, 2
+; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef>
+  ret <16 x i8> %out
+}
+
+define <16 x i8> @shuffle_spread4_singlesrc_e8_idx2(<16 x i8> %v) {
+; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsrl.vi v10, v9, 2
+; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef>
+  ret <16 x i8> %out
+}
+
+define <16 x i8> @shuffle_spread4_singlesrc_e8_idx3(<16 x i8> %v) {
+; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsrl.vi v10, v9, 2
+; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3>
+  ret <16 x i8> %out
+}
+
+define <16 x i8> @shuffle_spread4_singlesrc_e8_idx4(<16 x i8> %v) {
+; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsrl.vi v9, v9, 2
+; CHECK-NEXT:    vadd.vi v10, v9, -1
+; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef>
+  ret <16 x i8> %out
+}
+
 
 define <32 x i8> @shuffle_spread8_singlesrc_e8(<32 x i8> %v) {
 ; CHECK-LABEL: shuffle_spread8_singlesrc_e8:
@@ -907,8 +960,8 @@ define <32 x i8> @shuffle_spread8_singlesrc_e8(<32 x i8> %v) {
 define <8 x i32> @shuffle_decompress_singlesrc_e32(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_decompress_singlesrc_e32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI61_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI61_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI65_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI65_0)
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v12, (a0)
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
@@ -917,6 +970,22 @@ define <8 x i32> @shuffle_decompress_singlesrc_e32(<8 x i32> %v) {
   %out = shufflevector <8 x i32> %v, <8 x i32> poison, <8 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 3, i32 undef, i32 undef, i32 4>
   ret <8 x i32> %out
 }
+
+; TODO: This should be a single vslideup.vi
+define <8 x i8> @shuffle_decompress_singlesrc_e8(<8 x i8> %v) {
+; CHECK-LABEL: shuffle_decompress_singlesrc_e8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI66_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI66_0)
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %out = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 2, i32 3, i32 4>
+  ret <8 x i8> %out
+}
+
 
 define <8 x i32> @shuffle_repeat2_singlesrc_e32(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_repeat2_singlesrc_e32:

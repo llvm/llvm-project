@@ -12,10 +12,10 @@ Macros
   :align: center
   :header-rows: 1
 
-  * - Function
+  * - Macro
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - FE_ALL_EXCEPT
     - |check|
     - 7.6.12
@@ -104,7 +104,7 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - fe_dec_getround
     -
     - 7.6.5.3

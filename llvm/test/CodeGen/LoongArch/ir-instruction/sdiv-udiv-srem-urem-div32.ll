@@ -73,3 +73,26 @@ define i32 @modwu(i64 %a, i64 %b) {
   %r = urem i32 %conv1, %conv2
   ret i32 %r
 }
+
+define signext i32 @sextw_rmv(i32 signext %a, i32 signext %b, i32 signext %c) {
+; LA64-LABEL: sextw_rmv:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    mul.w $a0, $a1, $a0
+; LA64-NEXT:    div.w $a1, $a2, $a0
+; LA64-NEXT:    sltu $a0, $a1, $a0
+; LA64-NEXT:    ret
+;
+; LA64-DIV32-LABEL: sextw_rmv:
+; LA64-DIV32:       # %bb.0: # %entry
+; LA64-DIV32-NEXT:    mul.d $a0, $a1, $a0
+; LA64-DIV32-NEXT:    addi.w $a1, $a0, 0
+; LA64-DIV32-NEXT:    div.w $a0, $a2, $a0
+; LA64-DIV32-NEXT:    sltu $a0, $a0, $a1
+; LA64-DIV32-NEXT:    ret
+entry:
+  %mul = mul nsw i32 %b, %a
+  %div = sdiv i32 %c, %mul
+  %cmp = icmp ult i32 %div, %mul
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}

@@ -37,6 +37,17 @@ function(find_standalone_test_dependencies)
     return()
   endif()
 
+  find_program(OFFLOAD_TBLGEN_EXECUTABLE
+    NAMES offload-tblgen
+    PATHS ${OPENMP_LLVM_TOOLS_DIR})
+  if (NOT OFFLOAD_TBLGEN_EXECUTABLE)
+    message(STATUS "Cannot find 'offload-tblgen'.")
+    message(STATUS "Please put 'not' in your PATH, set OFFLOAD_TBLGEN_EXECUTABLE to its full path, or point OPENMP_LLVM_TOOLS_DIR to its directory.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
+    return()
+  endif()
+
   find_program(OPENMP_NOT_EXECUTABLE
     NAMES not
     PATHS ${OPENMP_LLVM_TOOLS_DIR})
@@ -73,6 +84,7 @@ else()
   set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 endif()
 set(OFFLOAD_DEVICE_INFO_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-offload-device-info)
+set(OFFLOAD_TBLGEN_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/offload-tblgen)
 
 # Macro to extract information about compiler from file. (no own scope)
 macro(extract_test_compiler_information lang file)
