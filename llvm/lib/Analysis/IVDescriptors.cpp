@@ -62,6 +62,11 @@ bool RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurKind Kind) {
   return (Kind != RecurKind::None) && !isIntegerRecurrenceKind(Kind);
 }
 
+bool RecurrenceDescriptor::isArithmeticRecurrenceKind(RecurKind Kind) {
+  return (Kind != RecurKind::None) && !isMinMaxRecurrenceKind(Kind) &&
+         !isAnyOfRecurrenceKind(Kind);
+}
+
 /// Determines if Phi may have been type-promoted. If Phi has a single user
 /// that ANDs the Phi with a type mask, return the user. RT is updated to
 /// account for the narrower bit width represented by the mask, and the AND
@@ -1189,7 +1194,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
 SmallVector<Instruction *, 4>
 RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   SmallVector<Instruction *, 4> ReductionOperations;
-  unsigned RedOp = getOpcode();
   const bool IsMinMax = isMinMaxRecurrenceKind(Kind);
 
   // Search down from the Phi to the LoopExitInstr, looking for instructions
@@ -1237,7 +1241,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     if (isFMulAddIntrinsic(Cur))
       return true;
 
-    return Cur->getOpcode() == RedOp;
+    return Cur->getOpcode() == getOpcode();
   };
 
   // Attempt to look through Phis which are part of the reduction chain
