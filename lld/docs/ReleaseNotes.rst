@@ -39,6 +39,10 @@ ELF Improvements
 Breaking changes
 ----------------
 
+* Removed support for the (deprecated) `R_RISCV_RVC_LUI` relocation. This
+  was a binutils-internal relocation used during relaxation, and was not
+  emitted by compilers/assemblers.
+
 COFF Improvements
 -----------------
 * ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
