@@ -10,4 +10,4 @@ RUN:          | FileCheck %s
 Ensure there are only two modular codegen decls (one for the class, one for the
 function - none for the class and function templates).
 
-CHECK: <MODULAR_CODEGEN_DECLS op0={{[0-9]+}} op1={{[0-9]+}}/>
+CHECK: <MODULAR_CODEGEN_DECLS op0={{[0-9]+}} op1={{[0-9]+}} op2={{[0-9]+}} op3={{[0-9]+}}/>
