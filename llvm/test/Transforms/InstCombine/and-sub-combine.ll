@@ -3,9 +3,7 @@
 
 define i8 @and_sub(i8 %a) {
 ; CHECK-LABEL: @and_sub(
-; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[A:%.*]], 15
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[A]], 3
-; CHECK-NEXT:    [[RET:%.*]] = sub nsw i8 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[A:%.*]], 12
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %and1 = and i8 %a, 15
@@ -22,7 +20,7 @@ define i8 @and_sub_multi_use(i8 %a) {
 ; CHECK-NEXT:    call void @use(i8 [[AND1]])
 ; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[A]], 3
 ; CHECK-NEXT:    call void @use(i8 [[AND2]])
-; CHECK-NEXT:    [[RET:%.*]] = sub nsw i8 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[A]], 12
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %and1 = and i8 %a, 15
@@ -35,9 +33,7 @@ define i8 @and_sub_multi_use(i8 %a) {
 
 define <2 x i32> @and_sub_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @and_sub_vec(
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[A:%.*]], <i32 11, i32 10>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i32> [[A]], <i32 8, i32 2>
-; CHECK-NEXT:    [[RET:%.*]] = sub nsw <2 x i32> [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[A:%.*]], <i32 3, i32 8>
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %and1 = and <2 x i32> %a, <i32 11, i32 10>
@@ -49,10 +45,7 @@ define <2 x i32> @and_sub_vec(<2 x i32> %a) {
 
 define <2 x i32> @and_sub_vec_posion(<2 x i32> %a) {
 ; CHECK-LABEL: @and_sub_vec_posion(
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[A:%.*]], <i32 11, i32 poison>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i32> [[A]], <i32 poison, i32 2>
-; CHECK-NEXT:    [[RET:%.*]] = sub nsw <2 x i32> [[AND1]], [[AND2]]
-; CHECK-NEXT:    ret <2 x i32> [[RET]]
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %and1 = and <2 x i32> %a, <i32 11, i32 poison>
   %and2 = and <2 x i32> %a, <i32 poison, i32 2>
