@@ -3915,6 +3915,14 @@ struct OmpDeviceTypeClause {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
+// OMP 5.2 15.8.3 extened-atomic, fail-clause ->
+//    FAIL(memory-order)
+struct OmpFailClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpFailClause, common::Indirection<OmpMemoryOrderClause>);
+  CharBlock source;
+};
+
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
 //
 // from-clause ->
@@ -4097,14 +4105,6 @@ struct OmpUpdateClause {
   UNION_CLASS_BOILERPLATE(OmpUpdateClause);
   // The dependence type is an argument here, not a modifier.
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
-};
-
-// OMP 5.2 15.8.3 extened-atomic, fail-clause ->
-//    FAIL(memory-order)
-struct OmpFailClause {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpFailClause, common::Indirection<OmpMemoryOrderClause>);
-  CharBlock source;
 };
 
 // OpenMP Clauses

@@ -2494,8 +2494,7 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
             numFailClause++;
             if (numFailClause > 1) {
               context_.Say(clause.source,
-                  "More than one fail clause not allowed on "
-                  "OpenMP Atomic construct"_err_en_US);
+                  "More than one FAIL clause not allowed on OpenMP ATOMIC construct"_err_en_US);
               return;
             }
           } else {
@@ -2503,8 +2502,7 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
               numMemoryOrderClause++;
               if (numMemoryOrderClause > 1) {
                 context_.Say(clause.source,
-                    "More than one memory order clause not allowed on "
-                    "OpenMP Atomic construct"_err_en_US);
+                    "More than one memory order clause not allowed on OpenMP ATOMIC construct"_err_en_US);
                 return;
               }
             }
