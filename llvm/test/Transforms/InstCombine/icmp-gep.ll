@@ -133,6 +133,16 @@ define i1 @ult_base_inbounds(ptr %x, i64 %y) {
   ret i1 %r
 }
 
+define i1 @ult_base_nusw(ptr %x, i64 %y) {
+; CHECK-LABEL: @ult_base_nusw(
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[Y:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %g = getelementptr nusw i8, ptr %x, i64 %y
+  %r = icmp ult ptr %g, %x
+  ret i1 %r
+}
+
 define i1 @ugt_base_inbounds_commute(i64 %y) {
 ; CHECK-LABEL: @ugt_base_inbounds_commute(
 ; CHECK-NEXT:    [[X:%.*]] = call ptr @getptr()
