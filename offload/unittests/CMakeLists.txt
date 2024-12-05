@@ -5,4 +5,6 @@ function(add_libompt_unittest test_dirname)
   add_unittest(LibomptUnitTests ${test_dirname} ${ARGN})
 endfunction()
 
-add_subdirectory(Plugins)
+# FIXME: Re-enable once OMPT design allows
+# add_subdirectory(Plugins)
+# add_subdirectory(OffloadAPI)

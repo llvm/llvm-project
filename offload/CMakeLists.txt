@@ -438,6 +438,10 @@ add_subdirectory(DeviceRTL)
 # Build target agnostic offloading library.
 add_subdirectory(src)
 
+# FIXME: Re-enable once OMPT design allows
+# add_subdirectory(tools/offload-tblgen)
+# add_subdirectory(liboffload)
+
 # Add tests.
 add_subdirectory(test)
 
