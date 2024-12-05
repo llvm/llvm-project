@@ -451,7 +451,7 @@ public:
   /// DEPRECATED: Use GetAddressRanges instead.
   const AddressRange &GetAddressRange() { return m_range; }
 
-  const AddressRanges &GetAddressRanges() const { return m_ranges; }
+  AddressRanges GetAddressRanges() { return m_block.GetRanges(); }
 
   lldb::LanguageType GetLanguage() const;
   /// Find the file and line number of the source location of the start of the
