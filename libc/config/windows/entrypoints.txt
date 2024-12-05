@@ -95,6 +95,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # errno.h entrypoints
     libc.src.errno.errno
+
+    # time.h entrypoints
+    libc.src.time.time
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
