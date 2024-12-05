@@ -645,17 +645,17 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
                  biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
     return TryCand.Reason != NoCand;
 
-  // Avoid exceeding the target's limit.
-  if (DAG->isTrackingPressure() &&
-      tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
-                  RegExcess, TRI, DAG->MF))
-    return TryCand.Reason != NoCand;
+  if (DAG->isTrackingPressure()) {
+    // Avoid exceeding the target's limit.
+    if (tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
+                    RegExcess, TRI, DAG->MF))
+      return TryCand.Reason != NoCand;
 
-  // Avoid increasing the max critical pressure in the scheduled region.
-  if (DAG->isTrackingPressure() &&
-      tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
-                  TryCand, Cand, RegCritical, TRI, DAG->MF))
-    return TryCand.Reason != NoCand;
+    // Avoid increasing the max critical pressure in the scheduled region.
+    if (tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
+                    TryCand, Cand, RegCritical, TRI, DAG->MF))
+      return TryCand.Reason != NoCand;
+  }
 
   // MaxMemoryClause-specific: We prioritize clustered instructions as we would
   // get more benefit from clausing these memory instructions.
@@ -737,8 +737,8 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
       return TryCand.Reason != NoCand;
 
     // Fall through to original instruction order.
-    if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
-        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
+    if ((Zone->isTop() == (TryCand.SU->NodeNum < Cand.SU->NodeNum))) {
+      assert(TryCand.SU->NodeNum != Cand.SU->NodeNum);
       TryCand.Reason = NodeOrder;
       return true;
     }
