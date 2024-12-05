@@ -663,6 +663,8 @@ Bug Fixes in This Version
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
+- No longer incorrectly diagnosing use of a deleted destructor when the
+  selected overload of ``operator delete`` for that type is a destroying delete.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

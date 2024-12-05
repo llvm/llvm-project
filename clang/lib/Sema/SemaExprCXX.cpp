@@ -3792,13 +3792,15 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
               .HasSizeT;
       }
 
-      if (!PointeeRD->hasIrrelevantDestructor())
+      if (!PointeeRD->hasIrrelevantDestructor() &&
+          (!OperatorDelete || !OperatorDelete->isDestroyingOperatorDelete())) {
         if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
           MarkFunctionReferenced(StartLoc,
-                                    const_cast<CXXDestructorDecl*>(Dtor));
+                                 const_cast<CXXDestructorDecl *>(Dtor));
           if (DiagnoseUseOfDecl(Dtor, StartLoc))
             return ExprError();
         }
+      }
 
       CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
                            /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
