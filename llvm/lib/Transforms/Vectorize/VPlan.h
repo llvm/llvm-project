@@ -1802,6 +1802,9 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Update the step value of the recipe.
+  void setStepValue(VPValue *V) { setOperand(1, V); }
+
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
 
