@@ -16723,24 +16723,23 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of minNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the minNum semantics, if either operand
+Follows the semantics of mininumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
 function `fmin`, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or if either operand is sNaN.
 
-This behavior is stricter than minNum in IEEE-754-2008, where either zero may be returned.
-To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use
-the nsz attribute.
+IEEE-754-2008 defines minNum, and it is removed in IEEE-754-2019. The behavior of this intrinsic is
+stricter than minNum in IEEE-754-2008, where either zero may be returned. To achieve the same permissiveness,
+the backend may implement the nsz attribute, and one may use the nsz attribute.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
 and IEEE-754-2008: the result of minnum(-0.0, +0.0) may be either -0.0 or +0.0.
 
 Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar while they are not exact equivalent. Such as x86 implements `MINPS`,
+Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements `MINPS`,
 which implements the semantics of C code `a<b?a:b`: NUM vs qNaN always return qNaN. `MINPS` can be used
 if `nsz` and `nnan` are given.
 
@@ -16788,24 +16787,23 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of maxNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the maxNum semantics, if either operand
+Follows the semantics of maxinumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
-function `fmax`, although not all implementations have implemented these recommended behaviors.
+function `fmin`, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN or if either operand is sNaN.
 
-This behavior is stricter than maxNum in IEEE-754-2008, where either zero may be returned.
-To achieve the same permissiveness, the backend may implement the nsz attribute, and one may use
-the nsz attribute.
+IEEE-754-2008 defines maxNum, and it is removed in IEEE-754-2019. The behavior of this intrinsic is
+stricter than minNum in IEEE-754-2008, where either zero may be returned. To achieve the same permissiveness,
+the backend may implement the nsz attribute, and one may use the nsz attribute.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
 and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
 
 Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar while they are not exact equivalent. Such as x86 implements `MAXPS`,
+Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements `MAXPS`,
 which implements the semantics of C code `a>b?a:b`: NUM vs qNaN always return qNaN. `MAXPS` can be used
 if `nsz` and `nnan` are given.
 
@@ -19697,10 +19695,6 @@ This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
 intrinsic.  If the intrinsic call has the ``nnan`` fast-math flag, then the
 operation can assume that NaNs are not present in the input vector.
 
-It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with vector or SIMD extensions.
-Use '``llvm.vector.reduce.fmaximum``' or '``llvm.vector.reduce.fmaximumnum``' instead.
-
 Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
@@ -19729,10 +19723,6 @@ matches the element-type of the vector input.
 This instruction has the same comparison semantics as the '``llvm.minnum.*``'
 intrinsic. If the intrinsic call has the ``nnan`` fast-math flag, then the
 operation can assume that NaNs are not present in the input vector.
-
-It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with vector or SIMD extensions.
-Use '``llvm.vector.reduce.fminimum``' or '``llvm.vector.reduce.fminimumnum``' instead.
 
 Arguments:
 """"""""""
@@ -23350,10 +23340,6 @@ This instruction has the same comparison semantics as the
 
 To ignore the start value, the neutral value can be used.
 
-It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with vector or SIMD extensions.
-Use '``llvm.vp.vector.reduce.fmaximum``' or '``llvm.vp.vector.reduce.fmaximumnum``' instead.
-
 Examples:
 """""""""
 
@@ -23420,10 +23406,6 @@ This instruction has the same comparison semantics as the
 '``llvm.minnum.*``' intrinsic).
 
 To ignore the start value, the neutral value can be used.
-
-It is deprecated, since the different order of inputs may produce different
-outputs, and it is hard to optimize with vector or SIMD extensions.
-Use '``llvm.vp.vector.reduce.fminimum``' or '``llvm.vp.vector.reduce.fminimumnum``' instead.
 
 Examples:
 """""""""
