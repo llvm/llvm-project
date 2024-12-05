@@ -35,7 +35,7 @@ LegalityPredicates::typeInSet(unsigned TypeIdx,
                               std::initializer_list<LLT> TypesInit) {
   SmallVector<LLT, 4> Types = TypesInit;
   return [=](const LegalityQuery &Query) {
-    return llvm::is_contained(std::move(Types), Query.Types[TypeIdx]);
+    return llvm::is_contained(Types, Query.Types[TypeIdx]);
   };
 }
 
@@ -45,7 +45,7 @@ LegalityPredicate LegalityPredicates::typePairInSet(
   SmallVector<std::pair<LLT, LLT>, 4> Types = TypesInit;
   return [=](const LegalityQuery &Query) {
     std::pair<LLT, LLT> Match = {Query.Types[TypeIdx0], Query.Types[TypeIdx1]};
-    return llvm::is_contained(std::move(Types), Match);
+    return llvm::is_contained(Types, Match);
   };
 }
 
@@ -56,7 +56,7 @@ LegalityPredicate LegalityPredicates::typeTupleInSet(
   return [=](const LegalityQuery &Query) {
     std::tuple<LLT, LLT, LLT> Match = {
         Query.Types[TypeIdx0], Query.Types[TypeIdx1], Query.Types[TypeIdx2]};
-    return llvm::is_contained(std::move(Types), Match);
+    return llvm::is_contained(Types, Match);
   };
 }
 
