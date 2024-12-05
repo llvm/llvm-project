@@ -839,7 +839,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     -   a variadic number of Workgroup memory attributions.
     -   a variadic number of Private memory attributions.
 
-    The `kernelFunc` and `kernelModule` attributes are optional and specifies the kernel name and a module in whichthe kernel should be outlined. 
+    The `kernelFunc` and `kernelModule` attributes are optional and specifies
+    the kernel name and a module in whichthe kernel should be outlined. 
 
 
     Syntax:
