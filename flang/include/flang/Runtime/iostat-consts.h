@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Defines the values returned by the runtime for IOSTAT= specifiers
-// on I/O statements.
-
 #ifndef FORTRAN_RUNTIME_IOSTAT_CONSTS_H_
 #define FORTRAN_RUNTIME_IOSTAT_CONSTS_H_
 

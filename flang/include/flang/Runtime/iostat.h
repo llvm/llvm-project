@@ -20,5 +20,4 @@ namespace Fortran::runtime::io {
 RT_API_ATTRS const char *IostatErrorString(int);
 
 } // namespace Fortran::runtime::io
-
-#endif /* FORTRAN_RUNTIME_IOSTAT_H_ */
+#endif // FORTRAN_RUNTIME_IOSTAT_H_
