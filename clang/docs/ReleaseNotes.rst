@@ -52,6 +52,12 @@ code bases.
   `migrate to Vulkan <https://developer.android.com/guide/topics/renderscript/migrate>`_
   or other options.
 
+- Clang now emits distinct type-based alias analysis tags for incompatible
+  pointers by default, enabling more powerful alias analysis when accessing
+  pointer types. This change may silently change code behavior for code
+  containing strict-aliasing violations. The new default behavior can be
+  disabled using ``-fno-pointer-tbaa``.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -381,7 +387,7 @@ Non-comprehensive list of changes in this release
 
 - The new builtin ``__builtin_counted_by_ref`` was added. In contexts where the
   programmer needs access to the ``counted_by`` attribute's field, but it's not
-  available --- e.g. in macros. For instace, it can be used to automatically
+  available --- e.g. in macros. For instance, it can be used to automatically
   set the counter during allocation in the Linux kernel:
 
   .. code-block:: c
@@ -419,6 +425,9 @@ New Compiler Flags
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
 
+- The ``-Warray-compare`` warning has been added to warn about array comparison
+  on versions older than C++20.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -443,7 +452,7 @@ Modified Compiler Flags
   libraries remains unchanged.
 
 - The ``-Wnontrivial-memcall`` warning has been added to warn about
-  passing non-trivially-copyable destrination parameter to ``memcpy``,
+  passing non-trivially-copyable destination parameter to ``memcpy``,
   ``memset`` and similar functions for which it is a documented undefined
   behavior. It is implied by ``-Wnontrivial-memaccess``
 
@@ -678,7 +687,7 @@ Bug Fixes to C++ Support
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
-- Fix a crash when checking the initialzier of an object that was initialized
+- Fix a crash when checking the initializer of an object that was initialized
   with a string literal. (#GH82167)
 - Fix a crash when matching template template parameters with templates which have
   parameters of different class type. (#GH101394)
@@ -722,7 +731,7 @@ Bug Fixes to C++ Support
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361), (#GH112352)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
-- Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
+- Fixed a crash when clang tries to substitute parameter pack while retaining the parameter
   pack. (#GH63819), (#GH107560)
 - Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
 - Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
@@ -770,6 +779,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
+- Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1043,7 +1053,7 @@ Moved checkers
   ``bugprone-branch-clone``.
 
 - The checker ``alpha.security.MallocOverflow`` was deleted because it was
-  badly implemented and its agressive logic produced too many false positives.
+  badly implemented and its aggressive logic produced too many false positives.
   To detect too large arguments passed to malloc, consider using the checker
   ``alpha.taint.TaintedAlloc``.
 

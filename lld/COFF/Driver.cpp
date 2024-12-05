@@ -779,7 +779,7 @@ StringRef LinkerDriver::mangleMaybe(Symbol *s) {
 
   // If we find a similar mangled symbol, make this an alias to it and return
   // its name.
-  log(unmangled->getName() + " aliased to " + mangled->getName());
+  Log(ctx) << unmangled->getName() << " aliased to " << mangled->getName();
   unmangled->setWeakAlias(ctx.symtab.addUndefined(mangled->getName()));
   return mangled->getName();
 }
@@ -2419,7 +2419,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         if (s.empty())
           fatal("entry point must be defined");
         config->entry = addUndefined(s, true);
-        log("Entry name inferred: " + s);
+        Log(ctx) << "Entry name inferred: " << s;
       }
     }
   }

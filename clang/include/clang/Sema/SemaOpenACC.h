@@ -164,9 +164,14 @@ public:
   }
 
   /// If there is a current 'active' loop construct with a 'gang' clause on a
-  /// 'kernel' construct, this will have the source location for it. This
-  /// permits us to implement the restriction of no further 'gang' clauses.
-  SourceLocation LoopGangClauseOnKernelLoc;
+  /// 'kernel' construct, this will have the source location for it, and the
+  /// 'kernel kind'. This permits us to implement the restriction of no further
+  /// 'gang' clauses.
+  struct LoopGangOnKernelTy {
+    SourceLocation Loc;
+    OpenACCDirectiveKind DirKind = OpenACCDirectiveKind::Invalid;
+  } LoopGangClauseOnKernel;
+
   /// If there is a current 'active' loop construct with a 'worker' clause on it
   /// (on any sort of construct), this has the source location for it.  This
   /// permits us to implement the restriction of no further 'gang' or 'worker'
@@ -705,7 +710,9 @@ public:
   ExprResult CheckTileSizeExpr(Expr *SizeExpr);
 
   // Check a single expression on a gang clause.
-  ExprResult CheckGangExpr(OpenACCGangKind GK, Expr *E);
+  ExprResult CheckGangExpr(ArrayRef<const OpenACCClause *> ExistingClauses,
+                           OpenACCDirectiveKind DK, OpenACCGangKind GK,
+                           Expr *E);
 
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
@@ -771,7 +778,7 @@ public:
     SemaOpenACC &SemaRef;
     ComputeConstructInfo OldActiveComputeConstructInfo;
     OpenACCDirectiveKind DirKind;
-    SourceLocation OldLoopGangClauseOnKernelLoc;
+    LoopGangOnKernelTy OldLoopGangClauseOnKernel;
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
     LoopWithoutSeqCheckingInfo OldLoopWithoutSeqInfo;

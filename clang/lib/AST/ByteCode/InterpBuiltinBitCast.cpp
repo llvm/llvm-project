@@ -127,6 +127,8 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     bool Ok = true;
 
     for (const Record::Field &Fi : R->fields()) {
+      if (Fi.isUnnamedBitField())
+        continue;
       Pointer Elem = P.atField(Fi.Offset);
       Bits BitOffset =
           Offset + Bits(Layout.getFieldOffset(Fi.Decl->getFieldIndex()));
@@ -138,6 +140,10 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
           Layout.getBaseClassOffset(cast<CXXRecordDecl>(B.Decl));
       Bits BitOffset = Offset + Bits(Ctx.getASTContext().toBits(ByteOffset));
       Ok = Ok && enumerateData(Elem, Ctx, BitOffset, BitsToRead, F);
+      // FIXME: We should only (need to) do this when bitcasting OUT of the
+      // buffer, not when copying data into it.
+      if (Ok)
+        Elem.initialize();
     }
 
     return Ok;
@@ -229,19 +235,33 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
       FromPtr, Ctx, Buffer.size(),
       [&](const Pointer &P, PrimType T, Bits BitOffset,
           bool PackedBools) -> bool {
-        // if (!P.isInitialized()) {
-        // assert(false && "Implement uninitialized value tracking");
-        // return ReturnOnUninit;
-        // }
-
-        // assert(P.isInitialized());
-        // nullptr_t is a PT_Ptr for us, but it's still not std::is_pointer_v.
-        if (T == PT_Ptr)
-          assert(false && "Implement casting to pointer types");
-
         CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
         Bits BitWidth = Bits(ASTCtx.toBits(ObjectReprChars));
         Bits FullBitWidth = BitWidth;
+
+        if (const FieldDecl *FD = P.getField(); FD && FD->isBitField()) {
+          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+                                   (unsigned)FullBitWidth.getQuantity()));
+        } else if (T == PT_Bool && PackedBools)
+          BitWidth = Bits(1);
+
+        if (BitWidth.isZero())
+          return true;
+
+        if (!P.isInitialized()) {
+          assert(false && "Implement uninitialized value tracking");
+          return ReturnOnUninit;
+        }
+
+        assert(P.isInitialized());
+        if (T == PT_Ptr) {
+          assert(P.getType()->isNullPtrType());
+          // Clang treats nullptr_t has having NO bits in its value
+          // representation. So, we accept it here and leave its bits
+          // uninitialized.
+          return true;
+        }
+
         auto Buff =
             std::make_unique<std::byte[]>(ObjectReprChars.getQuantity());
         // Work around floating point types that contain unused padding bytes.
@@ -260,12 +280,6 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
             swapBytes(Buff.get(), NumBits.roundToBytes());
 
         } else {
-          if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-            BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
-                                     (unsigned)FullBitWidth.getQuantity()));
-          else if (T == PT_Bool && PackedBools)
-            BitWidth = Bits(1);
-
           BITCAST_TYPE_SWITCH(T, { P.deref<T>().bitcastToMemory(Buff.get()); });
 
           if (llvm::sys::IsBigEndianHost)
@@ -305,9 +319,17 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   return Success;
 }
-
 bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
                                  const Pointer &FromPtr, Pointer &ToPtr) {
+  const ASTContext &ASTCtx = S.getASTContext();
+  CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(ToPtr.getType());
+
+  return DoBitCastPtr(S, OpPC, FromPtr, ToPtr, ObjectReprChars.getQuantity());
+}
+
+bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
+                                 const Pointer &FromPtr, Pointer &ToPtr,
+                                 size_t Size) {
   assert(FromPtr.isLive());
   assert(FromPtr.isBlockPointer());
   assert(ToPtr.isBlockPointer());
@@ -321,9 +343,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
     return false;
 
   const ASTContext &ASTCtx = S.getASTContext();
-
-  CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(ToType);
-  BitcastBuffer Buffer(Bits(ASTCtx.toBits(ObjectReprChars)));
+  BitcastBuffer Buffer(Bytes(Size).toBits());
   readPointerToBuffer(S.getContext(), FromPtr, Buffer,
                       /*ReturnOnUninit=*/false);
 

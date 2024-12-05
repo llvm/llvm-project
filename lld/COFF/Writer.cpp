@@ -79,6 +79,11 @@ static_assert(sizeof(dosProgram) % 8 == 0,
 
 static const int dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
 static_assert(dosStubSize % 8 == 0, "DOSStub size must be multiple of 8");
+static const uint32_t coffHeaderOffset = dosStubSize + sizeof(PEMagic);
+static const uint32_t peHeaderOffset =
+    coffHeaderOffset + sizeof(coff_file_header);
+static const uint32_t dataDirOffset64 =
+    peHeaderOffset + sizeof(pe32plus_header);
 
 static const int numberOfDataDirectory = 16;
 
@@ -272,12 +277,12 @@ private:
   OutputSection *findSection(StringRef name);
   void addBaserels();
   void addBaserelBlocks(std::vector<Baserel> &v);
+  void createDynamicRelocs();
 
   uint32_t getSizeOfInitializedData();
 
   void prepareLoadConfig();
   template <typename T> void prepareLoadConfig(T *loadConfig);
-  template <typename T> void checkLoadConfigGuardData(const T *loadConfig);
 
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
@@ -671,8 +676,9 @@ void Writer::finalizeAddresses() {
     }
     if (rangesOk) {
       if (pass > 0)
-        log("Added " + Twine(numChunks - origNumChunks) + " thunks with " +
-            "margin " + Twine(margin) + " in " + Twine(pass) + " passes");
+        Log(ctx) << "Added " << Twine(numChunks - origNumChunks)
+                 << " thunks with " << "margin " << Twine(margin) << " in "
+                 << Twine(pass) << " passes";
       return;
     }
 
@@ -754,6 +760,8 @@ void Writer::run() {
     llvm::TimeTraceScope timeScope("Write PE");
     ScopedTimer t1(ctx.codeLayoutTimer);
 
+    if (ctx.config.machine == ARM64X)
+      ctx.dynamicRelocs = make<DynamicRelocsChunk>();
     createImportTables();
     createSections();
     appendImportThunks();
@@ -764,6 +772,7 @@ void Writer::run() {
     mergeSections();
     sortECChunks();
     appendECImportTables();
+    createDynamicRelocs();
     removeUnusedSections();
     finalizeAddresses();
     removeEmptySections();
@@ -1117,7 +1126,7 @@ void Writer::createSections() {
       // special case for all architectures.
       outChars = data | r;
 
-      log("Processing section " + pSec->name + " -> " + name);
+      Log(ctx) << "Processing section " << pSec->name << " -> " << name;
 
       sortCRTSectionChunks(pSec->chunks);
     }
@@ -1597,8 +1606,14 @@ void Writer::assignAddresses() {
 
   for (OutputSection *sec : ctx.outputSections) {
     llvm::TimeTraceScope timeScope("Section: ", sec->name);
-    if (sec == relocSec)
+    if (sec == relocSec) {
+      sec->chunks.clear();
       addBaserels();
+      if (ctx.dynamicRelocs) {
+        ctx.dynamicRelocs->finalize();
+        relocSec->addChunk(ctx.dynamicRelocs);
+      }
+    }
     uint64_t rawSize = 0, virtualSize = 0;
     sec->header.VirtualAddress = rva;
 
@@ -1673,6 +1688,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
+  assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   switch (config->machine) {
@@ -1705,6 +1721,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
+  assert(peHeaderOffset == buf - buffer->getBufferStart());
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1770,6 +1787,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   pe->SizeOfInitializedData = getSizeOfInitializedData();
 
   // Write data directory
+  assert(!ctx.config.is64() ||
+         dataDirOffset64 == buf - buffer->getBufferStart());
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (edataStart) {
@@ -1799,9 +1818,12 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
                                 exceptionTable.last->getSize() -
                                 exceptionTable.first->getRVA();
   }
-  if (relocSec->getVirtualSize()) {
+  size_t relocSize = relocSec->getVirtualSize();
+  if (ctx.dynamicRelocs)
+    relocSize -= ctx.dynamicRelocs->getSize();
+  if (relocSize) {
     dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = relocSec->getRVA();
-    dir[BASE_RELOCATION_TABLE].Size = relocSec->getVirtualSize();
+    dir[BASE_RELOCATION_TABLE].Size = relocSize;
   }
   if (Symbol *sym = ctx.symtab.findUnderscore("_tls_used")) {
     if (Defined *b = dyn_cast<Defined>(sym)) {
@@ -2222,7 +2244,8 @@ void Writer::createRuntimePseudoRelocs() {
   }
 
   if (!rels.empty()) {
-    log("Writing " + Twine(rels.size()) + " runtime pseudo relocations");
+    Log(ctx) << "Writing " << Twine(rels.size())
+             << " runtime pseudo relocations";
     const char *symbolName = "_pei386_runtime_relocator";
     Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
     if (!relocator)
@@ -2497,8 +2520,8 @@ void Writer::sortCRTSectionChunks(std::vector<Chunk *> &chunks) {
   if (ctx.config.verbose) {
     for (auto &c : chunks) {
       auto sc = dyn_cast<SectionChunk>(c);
-      log("  " + sc->file->mb.getBufferIdentifier().str() +
-          ", SectionID: " + Twine(sc->getSectionNumber()));
+      Log(ctx) << "  " << sc->file->mb.getBufferIdentifier().str()
+               << ", SectionID: " << Twine(sc->getSectionNumber());
     }
   }
 }
@@ -2522,7 +2545,6 @@ uint32_t Writer::getSizeOfInitializedData() {
 void Writer::addBaserels() {
   if (!ctx.config.relocatable)
     return;
-  relocSec->chunks.clear();
   std::vector<Baserel> v;
   for (OutputSection *sec : ctx.outputSections) {
     if (sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
@@ -2554,6 +2576,29 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &v) {
   if (i == j)
     return;
   relocSec->addChunk(make<BaserelChunk>(page, &v[i], &v[0] + j));
+}
+
+void Writer::createDynamicRelocs() {
+  if (!ctx.dynamicRelocs)
+    return;
+
+  // Adjust the Machine field in the COFF header to AMD64.
+  ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint16_t),
+                         coffHeaderOffset + offsetof(coff_file_header, Machine),
+                         AMD64);
+
+  // Clear the load config directory.
+  // FIXME: Use the hybrid load config value instead.
+  ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                         dataDirOffset64 +
+                             LOAD_CONFIG_TABLE * sizeof(data_directory) +
+                             offsetof(data_directory, RelativeVirtualAddress),
+                         0);
+  ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                         dataDirOffset64 +
+                             LOAD_CONFIG_TABLE * sizeof(data_directory) +
+                             offsetof(data_directory, Size),
+                         0);
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2633,14 +2678,6 @@ void Writer::prepareLoadConfig() {
 }
 
 template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
-  if (ctx.config.dependentLoadFlags)
-    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
-
-  checkLoadConfigGuardData(loadConfig);
-}
-
-template <typename T>
-void Writer::checkLoadConfigGuardData(const T *loadConfig) {
   size_t loadConfigSize = loadConfig->Size;
 
 #define RETURN_IF_NOT_CONTAINS(field)                                          \
@@ -2661,6 +2698,23 @@ void Writer::checkLoadConfigGuardData(const T *loadConfig) {
   if (auto *s = dyn_cast<DefinedAbsolute>(ctx.symtab.findUnderscore(sym)))     \
     if (loadConfig->field != s->getVA())                                       \
       warn(#field " not set correctly in '_load_config_used'");
+
+  if (ctx.config.dependentLoadFlags) {
+    RETURN_IF_NOT_CONTAINS(DependentLoadFlags)
+    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
+  }
+
+  if (ctx.dynamicRelocs) {
+    IF_CONTAINS(DynamicValueRelocTableSection) {
+      loadConfig->DynamicValueRelocTableSection = relocSec->sectionIndex;
+      loadConfig->DynamicValueRelocTableOffset =
+          ctx.dynamicRelocs->getRVA() - relocSec->getRVA();
+    }
+    else {
+      warn("'_load_config_used' structure too small to include dynamic "
+           "relocations");
+    }
+  }
 
   if (ctx.config.guardCF == GuardCFLevel::Off)
     return;

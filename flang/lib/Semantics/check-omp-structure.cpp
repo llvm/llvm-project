@@ -302,22 +302,26 @@ private:
 };
 } // namespace
 
+// Return values:
+// - std::optional<bool>{true} if the object is known to be contiguous
+// - std::optional<bool>{false} if the object is known not to be contiguous
+// - std::nullopt if the object contiguity cannot be determined
 std::optional<bool> OmpStructureChecker::IsContiguous(
     const parser::OmpObject &object) {
-  return common::visit(common::visitors{
-                           [&](const parser::Name &x) {
-                             // Any member of a common block must be contiguous.
-                             return std::optional<bool>{true};
-                           },
-                           [&](const parser::Designator &x) {
-                             evaluate::ExpressionAnalyzer ea{context_};
-                             if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
-                               return ContiguousHelper{context_}.Visit(
-                                   *maybeExpr);
-                             }
-                             return std::optional<bool>{};
-                           },
-                       },
+  return common::visit( //
+      common::visitors{
+          [&](const parser::Name &x) {
+            // Any member of a common block must be contiguous.
+            return std::optional<bool>{true};
+          },
+          [&](const parser::Designator &x) {
+            evaluate::ExpressionAnalyzer ea{context_};
+            if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
+              return ContiguousHelper{context_}.Visit(*maybeExpr);
+            }
+            return std::optional<bool>{};
+          },
+      },
       object.u);
 }
 
@@ -2761,9 +2765,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
-    for (const auto &[sym, source] : symbols) {
-      if (!IsVariableListItem(*sym)) {
-        deferredNonVariables_.insert({sym, source});
+    for (const auto &[symbol, source] : symbols) {
+      if (!IsVariableListItem(*symbol)) {
+        deferredNonVariables_.insert({symbol, source});
       }
     }
   }
@@ -3874,9 +3878,7 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
 void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
   if (context_.ShouldWarn(common::UsageWarning::Portability)) {
-    for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
-      const auto *symbol{it->first};
-      const auto source{it->second};
+    for (auto &[symbol, source] : symbols) {
       if (IsPolymorphicAllocatable(*symbol)) {
         context_.Warn(common::UsageWarning::Portability, source,
             "If a polymorphic variable with allocatable attribute '%s' is in %s clause, the behavior is unspecified"_port_en_US,
@@ -4117,10 +4119,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Enter &x) {
   const parser::OmpObjectList &objList{x.v};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
-  for (const auto &[sym, source] : symbols) {
-    if (!IsExtendedListItem(*sym)) {
-      context_.SayWithDecl(*sym, source,
-          "'%s' must be a variable or a procedure"_err_en_US, sym->name());
+  for (const auto &[symbol, source] : symbols) {
+    if (!IsExtendedListItem(*symbol)) {
+      context_.SayWithDecl(*symbol, source,
+          "'%s' must be a variable or a procedure"_err_en_US, symbol->name());
     }
   }
 }
@@ -4142,10 +4144,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
-  for (const auto &[sym, source] : symbols) {
-    if (!IsVariableListItem(*sym)) {
+  for (const auto &[symbol, source] : symbols) {
+    if (!IsVariableListItem(*symbol)) {
       context_.SayWithDecl(
-          *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
+          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
     }
   }
 
@@ -4187,10 +4189,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
-  for (const auto &[sym, source] : symbols) {
-    if (!IsVariableListItem(*sym)) {
+  for (const auto &[symbol, source] : symbols) {
+    if (!IsVariableListItem(*symbol)) {
       context_.SayWithDecl(
-          *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
+          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
     }
   }
 
@@ -4287,9 +4289,7 @@ void OmpStructureChecker::CheckIntentInPointer(
     const parser::OmpObjectList &objectList, const llvm::omp::Clause clause) {
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objectList, symbols);
-  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
-    const auto *symbol{it->first};
-    const auto source{it->second};
+  for (auto &[symbol, source] : symbols) {
     if (IsPointer(*symbol) && IsIntentIn(*symbol)) {
       context_.Say(source,
           "Pointer '%s' with the INTENT(IN) attribute may not appear "
@@ -4320,9 +4320,7 @@ void OmpStructureChecker::GetSymbolsInObjectList(
 
 void OmpStructureChecker::CheckDefinableObjects(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
-  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
-    const auto *symbol{it->first};
-    const auto source{it->second};
+  for (auto &[symbol, source] : symbols) {
     if (auto msg{WhyNotDefinable(source, context_.FindScope(source),
             DefinabilityFlags{}, *symbol)}) {
       context_
@@ -4354,9 +4352,7 @@ void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
       }
 
       // Check if the symbols in current context are private in outer context
-      for (auto iter{currSymbols.begin()}; iter != currSymbols.end(); ++iter) {
-        const auto *symbol{iter->first};
-        const auto source{iter->second};
+      for (auto &[symbol, source] : currSymbols) {
         if (enclosingSymbols.find(symbol) != enclosingSymbols.end()) {
           context_.Say(source,
               "%s variable '%s' is PRIVATE in outer context"_err_en_US,

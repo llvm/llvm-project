@@ -895,6 +895,23 @@ def OpCooperativeMatrixMulAddKHR: Op<4459, (outs ID:$res),
 def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, ID:$coop_matr_type),
                   "$res = OpCooperativeMatrixLengthKHR $type $coop_matr_type">;
 
+// SPV_INTEL_joint_matrix
+def OpCooperativeMatrixLoadCheckedINTEL: Op<6193, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$pointer, ID:$xOffset, ID:$yOffset, ID:$memory_layout, ID:$height, ID:$width, variable_ops),
+                  "$res = OpCooperativeMatrixLoadCheckedINTEL $resType $pointer $xOffset $yOffset $memory_layout $height $width">;
+def OpCooperativeMatrixStoreCheckedINTEL: Op<6194, (outs),
+                  (ins ID:$pointer, ID:$xOffset, ID:$yOffset, ID:$objectToStore, ID:$memory_layout, ID:$height, ID:$width, variable_ops),
+                  "OpCooperativeMatrixStoreCheckedINTEL $pointer $xOffset $yOffset $objectToStore $memory_layout $height $width">;
+def OpCooperativeMatrixConstructCheckedINTEL: Op<6195, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$xOffset, ID:$yOffset, ID:$height, ID:$width, ID:$value),
+                  "$res = OpCooperativeMatrixConstructCheckedINTEL $resType $xOffset $yOffset $height $width $value">;
+def OpCooperativeMatrixGetElementCoordINTEL: Op<6440, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$matrix, ID:$index),
+                  "$res = OpCooperativeMatrixGetElementCoordINTEL $resType $matrix $index">;
+def OpCooperativeMatrixPrefetchINTEL: Op<6449, (outs),
+                  (ins ID:$pointer, ID:$rows, ID:$columns, i32imm:$cacheLevel, ID:$memory_layout, variable_ops),
+                  "OpCooperativeMatrixPrefetchINTEL $pointer $rows $columns $cacheLevel $memory_layout">;
+
 // SPV_EXT_arithmetic_fence
 def OpArithmeticFenceEXT: Op<6145, (outs ID:$res), (ins TYPE:$type, ID:$target),
                   "$res = OpArithmeticFenceEXT $type $target">;

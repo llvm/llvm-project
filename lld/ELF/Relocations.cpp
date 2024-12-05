@@ -1687,6 +1687,17 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
     outerFn();
 }
 
+RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {
+  // Prior to Android V, there was a bug that caused RELR relocations to be
+  // applied after packed relocations. This meant that resolvers referenced by
+  // IRELATIVE relocations in the packed relocation section would read
+  // unrelocated globals with RELR relocations when
+  // --pack-relative-relocs=android+relr is enabled. Work around this by placing
+  // IRELATIVE in .rela.plt.
+  return ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt
+                                      : *ctx.mainPart->relaDyn;
+}
+
 static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // Handle a reference to a non-preemptible ifunc. These are special in a
   // few ways:
@@ -1736,17 +1747,9 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // original section/value pairs. For non-GOT non-PLT relocation case below, we
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
-  //
-  // Prior to Android V, there was a bug that caused RELR relocations to be
-  // applied after packed relocations. This meant that resolvers referenced by
-  // IRELATIVE relocations in the packed relocation section would read
-  // unrelocated globals with RELR relocations when
-  // --pack-relative-relocs=android+relr is enabled. Work around this by placing
-  // IRELATIVE in .rela.plt.
   auto *directSym = makeDefined(cast<Defined>(sym));
   directSym->allocateAux(ctx);
-  auto &dyn =
-      ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt : *ctx.mainPart->relaDyn;
+  auto &dyn = getIRelativeSection(ctx);
   addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
               *directSym);
   sym.allocateAux(ctx);

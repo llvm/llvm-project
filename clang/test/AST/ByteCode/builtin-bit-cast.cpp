@@ -133,8 +133,14 @@ namespace simple {
 
   /// This works in GCC and in the bytecode interpreter, but the current interpreter
   /// diagnoses it.
+  /// FIXME: Should also be rejected in the bytecode interpreter.
   static_assert(__builtin_bit_cast(intptr_t, nullptr) == 0); // ref-error {{not an integral constant expression}} \
                                                              // ref-note {{indeterminate value can only initialize an object}}
+
+  constexpr int test_from_nullptr_pass = (__builtin_bit_cast(unsigned char[sizeof(nullptr)], nullptr), 0);
+  constexpr unsigned char NPData[sizeof(nullptr)] = {1,2,3,4};
+  constexpr nullptr_t NP = __builtin_bit_cast(nullptr_t, NPData);
+  static_assert(NP == nullptr);
 }
 
 namespace Fail {
@@ -350,9 +356,8 @@ void test_record() {
   static_assert(t4 == tuple4{1, 2, 3, 4});
   static_assert(check_round_trip<tuple4>(b));
 
-  /// FIXME: We need to initialize the base pointers in the pointer we're bitcasting to.
-//  constexpr auto b2 = bit_cast<bases>(t4);
-//  static_assert(t4 == b2);
+  constexpr auto b2 = bit_cast<bases>(t4);
+  static_assert(t4 == b2);
 }
 
 void test_partially_initialized() {

@@ -518,8 +518,8 @@ void ObjFile::initializeSymbols() {
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
       StringRef name = check(coffObj->getSymbolName(sym));
-      log("comdat section " + name +
-          " without leader and unassociated, discarding");
+      Log(ctx) << "comdat section " << name
+               << " without leader and unassociated, discarding";
       continue;
     }
     symbols[i] = createRegular(sym);
@@ -620,10 +620,9 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    log(("conflicting comdat type for " + toString(ctx, *leader) + ": " +
-         Twine((int)leaderSelection) + " in " + toString(leader->getFile()) +
-         " and " + Twine((int)selection) + " in " + toString(this))
-            .str());
+    Log(ctx) << "conflicting comdat type for " << toString(ctx, *leader) << ": "
+             << (int)leaderSelection << " in " << leader->getFile() << " and "
+             << (int)selection << " in " << this;
     ctx.symtab.reportDuplicate(leader, this);
     return;
   }
