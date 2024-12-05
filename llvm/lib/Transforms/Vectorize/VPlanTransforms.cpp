@@ -20,6 +20,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "VPlanVerifier.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -29,6 +30,8 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/TypeSize.h"
 
 using namespace llvm;
 
@@ -1086,11 +1089,74 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   }
 }
 
-void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
-                                         unsigned BestUF,
-                                         PredicatedScalarEvolution &PSE) {
-  assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
-  assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
+/// Optimize the width of vector induction variables in \p Plan based on a known
+/// constant Trip Count, \p BestVF and \p BestUF.
+static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
+                                                     ElementCount BestVF,
+                                                     unsigned BestUF) {
+  // Only proceed if we have not completely removed the vector region.
+  if (!Plan.getVectorLoopRegion())
+    return false;
+
+  auto *TC = dyn_cast_if_present<ConstantInt>(
+      Plan.getTripCount()->getUnderlyingValue());
+  if (!TC || !BestVF.isFixed())
+    return false;
+
+  // Calculate the widest type required for known TC, VF and UF.
+  auto ComputeBitWidth = [](APInt TC, uint64_t Align) {
+    auto AlignedTC =
+        Align * APIntOps::RoundingUDiv(TC, APInt(TC.getBitWidth(), Align),
+                                       APInt::Rounding::UP);
+    auto MaxVal = AlignedTC - 1;
+    return std::max<unsigned>(PowerOf2Ceil(MaxVal.getActiveBits()), 8);
+  };
+  unsigned NewBitWidth =
+      ComputeBitWidth(TC->getValue(), BestVF.getKnownMinValue() * BestUF);
+
+  LLVMContext &Ctx = Plan.getCanonicalIV()->getScalarType()->getContext();
+  auto *NewIVTy = IntegerType::get(Ctx, NewBitWidth);
+
+  bool MadeChange = false;
+
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!WideIV || !WideIV->isCanonical() ||
+        WideIV->hasMoreThanOneUniqueUser() ||
+        NewIVTy == WideIV->getScalarType())
+      continue;
+
+    // Currently only handle cases where the single user is a header-mask
+    // comparison with the backedge-taken-count.
+    using namespace VPlanPatternMatch;
+    if (!match(*WideIV->user_begin(),
+               m_Binary<Instruction::ICmp>(
+                   m_Specific(WideIV),
+                   m_Specific(Plan.getOrCreateBackedgeTakenCount()))))
+      continue;
+
+    // Update IV operands and comparison bound to use new narrower type.
+    auto *NewStart = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 0));
+    WideIV->setStartValue(NewStart);
+    auto *NewStep = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 1));
+    WideIV->setStepValue(NewStep);
+
+    auto *NewBTC = new VPWidenCastRecipe(
+        Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy);
+    Plan.getVectorPreheader()->appendRecipe(NewBTC);
+    auto *Cmp = dyn_cast<VPInstruction>(*WideIV->user_begin());
+    Cmp->setOperand(1, NewBTC);
+
+    MadeChange = true;
+  }
+
+  return MadeChange;
+}
+
+bool VPlanTransforms::simplifyBranchConditionForVFAndUF(
+    VPlan &Plan, ElementCount BestVF, unsigned BestUF,
+    PredicatedScalarEvolution &PSE) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
@@ -1103,7 +1169,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   if (!match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
       !match(Term,
              m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
-    return;
+    return false;
 
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount =
@@ -1114,7 +1180,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
   if (TripCount->isZero() ||
       !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
-    return;
+    return false;
 
   // The vector loop region only executes once. If possible, completely remove
   // the region, otherwise replace the terminator controlling the latch with
@@ -1153,8 +1219,23 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
   Term->eraseFromParent();
 
-  Plan.setVF(BestVF);
-  Plan.setUF(BestUF);
+  return true;
+}
+
+void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE) {
+  assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
+  assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
+
+  bool MadeChange =
+      simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
+  MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
+
+  if (MadeChange) {
+    Plan.setVF(BestVF);
+    Plan.setUF(BestUF);
+  }
   // TODO: Further simplifications are possible
   //      1. Replace inductions with constants.
   //      2. Replace vector loop region with VPBasicBlock.
