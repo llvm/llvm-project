@@ -197,4 +197,18 @@ TEST_F(LimitedZ3CrosscheckOracleTest, SATWhenItExhaustsRLimit) {
   ASSERT_EQ(AcceptReport, interpretQueryResult({SAT, 25_ms, 405'000_step}));
 }
 
+// Demonstrate the weaknesses of the default configuration:
+// ========================================================
+
+TEST_F(DefaultZ3CrosscheckOracleTest, ManySlowQueriesHangTheAnalyzer) {
+  // Simulate many slow queries: 250 slow UNSAT queries.
+  // 250*14000ms = 3500s, ~1 hour. Since we disabled the total time limitation,
+  // this eqclass would take roughly 1 hour to process.
+  // It doesn't matter what rlimit the queries consume.
+  for (int i = 0; i < 250; ++i) {
+    ASSERT_EQ(RejectReport,
+              interpretQueryResult({UNSAT, 14'000_ms, 1'000'000_step}));
+  }
+}
+
 } // namespace
