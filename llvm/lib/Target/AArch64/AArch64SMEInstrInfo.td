@@ -1010,8 +1010,8 @@ defm FMOPA_MPPZZ_BtoH     : sme2p1_fmop_tile_f8f16<"fmopa", 0b1, 0b0, 0b01>;
 
 let Predicates = [HasSMEF8F32] in {
 // TODO : Replace nxv16i8 by nxv16f8
-defm FDOT_VG2_M2ZZI_BtoS : sme2_multi_vec_array_vg2_index_32b<"fdot", 0b01, 0b0111, ZZ_b_mul_r, ZPR4b8, nxv16i8, null_frag>;
-defm FDOT_VG4_M4ZZI_BtoS : sme2_multi_vec_array_vg4_index_32b<"fdot", 0b0001, ZZZZ_b_mul_r, ZPR4b8, nxv16i8, null_frag>;
+defm FDOT_VG2_M2ZZI_BtoS : sme2_fp8_fdot_index_za32_vg1x2<"fdot", 0b01, 0b0111, ZZ_b_mul_r,   int_aarch64_sme_fp8_fdot_lane_za32_vg1x2>;
+defm FDOT_VG4_M4ZZI_BtoS : sme2_fp8_fdot_index_za32_vg1x4<"fdot", 0b0001,       ZZZZ_b_mul_r, int_aarch64_sme_fp8_fdot_lane_za32_vg1x4>;
 defm FDOT_VG2_M2ZZ_BtoS  : sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0010011, MatrixOp32, ZZ_b, ZPR4b8>;
 defm FDOT_VG4_M4ZZ_BtoS  : sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0110011, MatrixOp32, ZZZZ_b, ZPR4b8>;
 // TODO : Replace nxv16i8 by nxv16f8

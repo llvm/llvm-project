@@ -5818,3 +5818,47 @@ multiclass sme2_fp8_fdot_index_za16_vg1x4<string mnemonic, bits<3> op,
 
   def : SME2_FP8_FMLA_FDOT_Index_VG1x4_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexH32b_timm>;
 }
+
+multiclass sme2_fp8_fdot_index_za32_vg1x2<string mnemonic, bits<2> sz, bits<4> op,
+                                          RegisterOperand multi_vector_ty,
+                                          SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg2_index<sz, {op{3},?,?,op{2-0}}, MatrixOp32, multi_vector_ty, ZPR4b8,
+                                            VectorIndexS32b_timm, mnemonic>,
+                                            SMEPseudo2Instr<NAME, 1> {
+    let Uses=[FPMR, FPCR];
+    let mayLoad = 1;
+
+    bits<2> i;
+    let Inst{11-10} = i;
+  }
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+                                           multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexS32b_timm:$i), 0>;
+
+  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexS32b_timm>;
+
+  def : SME2_FP8_FMLA_FDOT_Index_VG1x2_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexS32b_timm>;
+}
+
+multiclass sme2_fp8_fdot_index_za32_vg1x4<string mnemonic, bits<4> op,
+                                          RegisterOperand multi_vector_ty,
+                                          SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg4_index<0b1, {op{3},?,?,0b0, op{2-0}}, MatrixOp32,  multi_vector_ty,
+                                            ZPR4b8, VectorIndexS32b_timm, mnemonic>,
+                                            SMEPseudo2Instr<NAME, 1> {
+    let Uses=[FPMR, FPCR];
+    let mayLoad = 1;
+
+    bits<2> i;
+    let Inst{11-10} = i;
+  }
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+                                           multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexS32b_timm:$i), 0>;
+
+  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexS32b_timm>;
+
+  def : SME2_FP8_FMLA_FDOT_Index_VG1x4_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexS32b_timm>;
+}

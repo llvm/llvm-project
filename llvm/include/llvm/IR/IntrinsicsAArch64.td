@@ -3868,7 +3868,6 @@ def int_aarch64_neon_famin :  AdvSIMD_2VectorArg_Intrinsic;
 // SME FDOT instructions
 let TargetPrefix = "aarch64" in {
 
-
 class SME2_FP8_FDOT_LANE_VG1x2 :
     DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                llvm_nxv16i8_ty, llvm_nxv16i8_ty,
@@ -3885,4 +3884,7 @@ class SME2_FP8_FDOT_LANE_VG1x4 :
 
   def int_aarch64_sme_fp8_fdot_lane_za16_vg1x2 : SME2_FP8_FDOT_LANE_VG1x2;
   def int_aarch64_sme_fp8_fdot_lane_za16_vg1x4 : SME2_FP8_FDOT_LANE_VG1x4;
+
+  def int_aarch64_sme_fp8_fdot_lane_za32_vg1x2 : SME2_FP8_FDOT_LANE_VG1x2;
+  def int_aarch64_sme_fp8_fdot_lane_za32_vg1x4 : SME2_FP8_FDOT_LANE_VG1x4;
 }
