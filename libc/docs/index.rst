@@ -64,19 +64,8 @@ stages there is no ABI stability in any form.
    :caption: Status
 
    compiler_support
-   date_and_time
-   math/index.rst
-   strings
-   stdio
-   stdbit
-   fenv
-   libc_search
+   headers/index.rst
    c23
-   ctype
-   complex
-   signal
-   threads
-   setjmp
 
 .. toctree::
    :hidden:
