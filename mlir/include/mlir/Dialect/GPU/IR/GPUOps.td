@@ -842,7 +842,6 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     The `kernelFunc` and `kernelModule` attributes are optional and specifies
     the kernel name and a module in whichthe kernel should be outlined. 
 
-
     Syntax:
 
     ```
@@ -1035,16 +1034,6 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// located in the workgroup memory.
     static StringRef getNumWorkgroupAttributionsAttrName() {
       return "workgroup_attributions";
-    }
-
-    /// Checks if the kernel func name attribute is present.
-    bool hasKernelFuncName() {
-      return getKernelFunc().has_value();
-    }
-
-    /// Checks if the kernel module name attribute is present.
-    bool hasKernelModuleName() {
-      return getKernelModule().has_value();
     }
   }];
 
