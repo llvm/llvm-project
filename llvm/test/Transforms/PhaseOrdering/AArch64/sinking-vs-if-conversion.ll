@@ -30,7 +30,7 @@ define void @test_find_min(ptr noundef nonnull align 8 dereferenceable(24) %this
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq ptr [[MIN_010]], null
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[COND_END7]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[KEY2:%.*]] = getelementptr inbounds i8, ptr [[MIN_010]], i64 4
+; CHECK-NEXT:    [[KEY2:%.*]] = getelementptr inbounds nuw i8, ptr [[MIN_010]], i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[KEY2]], align 4
 ; CHECK-NEXT:    [[KEY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[KEY]], align 4

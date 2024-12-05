@@ -29,7 +29,7 @@ define void @basic(ptr %p, i32 %k) #0 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 3, [[FOR_BODY_PEEL7]] ]
 ; CHECK-NEXT:    [[P_ADDR_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[INCDEC_PTR_PEEL8]], [[FOR_BODY_PEEL7]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[P_ADDR_04]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_04]], i64 4
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
@@ -89,7 +89,7 @@ define i32 @output(ptr %p, i32 %k) #0 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 3, [[FOR_BODY_PEEL7]] ]
 ; CHECK-NEXT:    [[P_ADDR_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[INCDEC_PTR_PEEL8]], [[FOR_BODY_PEEL7]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[P_ADDR_04]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_04]], i64 4
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
