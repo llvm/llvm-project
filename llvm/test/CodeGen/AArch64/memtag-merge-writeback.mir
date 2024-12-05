@@ -63,7 +63,8 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
-    ; CHECK-NEXT: early-clobber $sp = STRXpre killed renamable $x0, $sp, 16
+    ; CHECK-NEXT: STRXui killed renamable $x0, $sp, 2
+    ; CHECK-NEXT: $sp = ADDXri $sp, 16, 0
     ; CHECK-NEXT: RET undef $lr
     $sp = frame-setup SUBXri $sp, 16, 0
     STRXui killed renamable $x0, $sp, 2
@@ -114,7 +115,8 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
-    ; CHECK-NEXT: early-clobber $sp = STRXpost killed renamable $x0, $sp, 16
+    ; CHECK-NEXT: STRXui killed renamable $x0, $sp, 0
+    ; CHECK-NEXT: $sp = ADDXri $sp, 16, 0
     ; CHECK-NEXT: RET undef $lr
     $sp = frame-setup SUBXri $sp, 16, 0
     STRXui killed renamable $x0, $sp, 0
