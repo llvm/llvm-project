@@ -12,7 +12,7 @@ Macros
   :align: center
   :header-rows: 1
 
-  * - Function
+  * - Macro
     - Implemented
     - C23 Standard Section
     - POSIX.1-2017 Standard Section

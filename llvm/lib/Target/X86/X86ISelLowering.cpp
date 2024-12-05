@@ -3306,7 +3306,7 @@ bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
   // Assume target opcodes can't be scalarized.
   // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
+  if (Opc >= ISD::BUILTIN_OP_END)
     return false;
 
   // If the vector op is not supported, try to convert to scalar.
@@ -52659,6 +52659,29 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
                         St->getPointerInfo(), St->getOriginalAlign(),
                         St->getMemOperand()->getFlags());
+  }
+
+  // Convert scalar fabs/fneg load-store to integer equivalents.
+  if ((VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::f32 || VT == MVT::f64) &&
+      (StoredVal.getOpcode() == ISD::FABS ||
+       StoredVal.getOpcode() == ISD::FNEG) &&
+      ISD::isNormalLoad(StoredVal.getOperand(0).getNode()) &&
+      StoredVal.hasOneUse() && StoredVal.getOperand(0).hasOneUse()) {
+    MVT IntVT = VT.getSimpleVT().changeTypeToInteger();
+    if (TLI.isTypeLegal(IntVT)) {
+      APInt SignMask = APInt::getSignMask(VT.getScalarSizeInBits());
+      unsigned SignOp = ISD::XOR;
+      if (StoredVal.getOpcode() == ISD::FABS) {
+        SignMask = ~SignMask;
+        SignOp = ISD::AND;
+      }
+      SDValue LogicOp = DAG.getNode(
+          SignOp, dl, IntVT, DAG.getBitcast(IntVT, StoredVal.getOperand(0)),
+          DAG.getConstant(SignMask, dl, IntVT));
+      return DAG.getStore(St->getChain(), dl, LogicOp, St->getBasePtr(),
+                          St->getPointerInfo(), St->getOriginalAlign(),
+                          St->getMemOperand()->getFlags());
+    }
   }
 
   // If we are saving a 32-byte vector and 32-byte stores are slow, such as on
