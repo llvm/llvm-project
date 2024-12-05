@@ -99,8 +99,8 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
     return FPBits::zero(xbits.sign()).get_val();
 
-  // Since, cosm1_y = cos_y - 1, therfore:
-  //    sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
+  // Since, cosm1_y = cos_y - 1, therefore:
+  //   sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
   return fputil::cast<float16>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
