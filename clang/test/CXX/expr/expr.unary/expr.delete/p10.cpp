@@ -38,6 +38,16 @@ struct S {
   void operator delete(S *, std::destroying_delete_t) noexcept {}
 };
 
+struct T {
+  void operator delete(T *, std::destroying_delete_t) noexcept {}
+private:
+  ~T();
+};
+
 void foo(S *s) {
   delete s; // Was rejected, is intended to be accepted.
+}
+
+void bar(T *t) {
+  delete t; // Was rejected, is intended to be accepted.
 }
