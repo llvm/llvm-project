@@ -82,7 +82,6 @@ void ManualDWARFIndex::Index() {
   Progress progress("Manually indexing DWARF", module_desc.GetData(),
                     total_progress);
 
-
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
   llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
