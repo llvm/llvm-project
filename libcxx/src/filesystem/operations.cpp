@@ -278,9 +278,8 @@ bool copy_file_impl_sendfile(FileDescriptor& read_fd, FileDescriptor& write_fd, 
 }
 #endif
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
 bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
-#  if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
   if (copy_file_impl_copy_file_range(read_fd, write_fd, ec)) {
     return true;
   }
@@ -301,9 +300,10 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
     return false;
   }
   ec.clear();
-#  endif
-
-#  if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+  return copy_file_impl_fstream(read_fd, write_fd, ec);
+}
+#elif defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
   if (copy_file_impl_sendfile(read_fd, write_fd, ec)) {
     return true;
   }
@@ -312,8 +312,6 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
     return false;
   }
   ec.clear();
-#  endif
-
   return copy_file_impl_fstream(read_fd, write_fd, ec);
 }
 #elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
