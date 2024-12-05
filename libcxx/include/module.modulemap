@@ -1532,7 +1532,6 @@ module std [system] {
     module array_cookie                       { header "__memory/array_cookie.h" }
     module assume_aligned                     { header "__memory/assume_aligned.h" }
     module auto_ptr                           { header "__memory/auto_ptr.h" }
-    module builtin_new_allocator              { header "__memory/builtin_new_allocator.h" }
     module compressed_pair                    { header "__memory/compressed_pair.h" }
     module concepts                           { header "__memory/concepts.h" }
     module construct_at                       { header "__memory/construct_at.h" }

@@ -102,7 +102,7 @@ public:
     if (__libcpp_is_constant_evaluated()) {
       return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
     } else {
-      return static_cast<_Tp*>(std::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
+      return static_cast<_Tp*>(std::__libcpp_allocate<_Tp>(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
     }
   }
 
@@ -117,7 +117,7 @@ public:
     if (__libcpp_is_constant_evaluated()) {
       ::operator delete(__p);
     } else {
-      std::__libcpp_deallocate((void*)__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
+      std::__libcpp_deallocate<_Tp>((void*)__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
     }
   }
 

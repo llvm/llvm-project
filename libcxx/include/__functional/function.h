@@ -22,7 +22,6 @@
 #include <__memory/allocator.h>
 #include <__memory/allocator_destructor.h>
 #include <__memory/allocator_traits.h>
-#include <__memory/builtin_new_allocator.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/aligned_storage.h>
@@ -212,8 +211,10 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const {
-    __builtin_new_allocator::__holder_t __hold = __builtin_new_allocator::__allocate_type<__default_alloc_func>(1);
-    __default_alloc_func* __res                = ::new ((void*)__hold.get()) __default_alloc_func(__f_);
+    using _Self = __default_alloc_func;
+    unique_ptr<_Self, __deallocating_deleter<_Self>> __hold =
+        std::__libcpp_allocate<_Self>(sizeof(_Self), _LIBCPP_ALIGNOF(_Self));
+    _Self* __res = ::new ((void*)__hold.get()) _Self(__f_);
     (void)__hold.release();
     return __res;
   }
@@ -222,7 +223,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__default_alloc_func* __f) {
     __f->destroy();
-    __builtin_new_allocator::__deallocate_type<__default_alloc_func>(__f, 1);
+    __deallocating_deleter<__default_alloc_func>()(__f);
   }
 };
 
@@ -668,8 +669,9 @@ public:
       if (__use_small_storage<_Fun>()) {
         ::new ((void*)&__buf_.__small) _Fun(std::move(__f));
       } else {
-        __builtin_new_allocator::__holder_t __hold = __builtin_new_allocator::__allocate_type<_Fun>(1);
-        __buf_.__large                             = ::new ((void*)__hold.get()) _Fun(std::move(__f));
+        unique_ptr<_Fun, __deallocating_deleter<_Fun>> __hold =
+            std::__libcpp_allocate<_Fun>(sizeof(_Fun), _LIBCPP_ALIGNOF(_Fun));
+        __buf_.__large = ::new ((void*)__hold.get()) _Fun(std::move(__f));
         (void)__hold.release();
       }
     }
