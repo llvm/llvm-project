@@ -21,6 +21,8 @@ namespace clang::tidy::bugprone {
 
 static constexpr llvm::StringLiteral OptionNameCustomFunctions =
     "CustomFunctions";
+static constexpr llvm::StringLiteral OptionNameShowFullyQualifiedNames =
+    "ShowFullyQualifiedNames";
 static constexpr llvm::StringLiteral OptionNameReportDefaultFunctions =
     "ReportDefaultFunctions";
 static constexpr llvm::StringLiteral OptionNameReportMoreUnsafeFunctions =
@@ -185,6 +187,8 @@ UnsafeFunctionsCheck::UnsafeFunctionsCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       CustomFunctions(parseCheckedFunctions(
           Options.get(OptionNameCustomFunctions, ""), Context)),
+      ShowFullyQualifiedNames(
+          Options.get(OptionNameShowFullyQualifiedNames, false)),
       ReportDefaultFunctions(
           Options.get(OptionNameReportDefaultFunctions, true)),
       ReportMoreUnsafeFunctions(
@@ -193,6 +197,8 @@ UnsafeFunctionsCheck::UnsafeFunctionsCheck(StringRef Name,
 void UnsafeFunctionsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, OptionNameCustomFunctions,
                 serializeCheckedFunctions(CustomFunctions));
+  Options.store(Opts, OptionNameShowFullyQualifiedNames,
+                ShowFullyQualifiedNames);
   Options.store(Opts, OptionNameReportDefaultFunctions, ReportDefaultFunctions);
   Options.store(Opts, OptionNameReportMoreUnsafeFunctions,
                 ReportMoreUnsafeFunctions);
@@ -314,6 +320,12 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
                "function %0 %1; '%2' should be used instead")
               << FuncDecl << Reason << Entry.Replacement
               << SourceExpr->getSourceRange();
+        }
+
+        if (ShowFullyQualifiedNames) {
+          diag(SourceExpr->getExprLoc(),
+               "fully qualified name of function is: '%0'", DiagnosticIDs::Note)
+              << FuncDecl->getQualifiedNameAsString();
         }
 
         return;

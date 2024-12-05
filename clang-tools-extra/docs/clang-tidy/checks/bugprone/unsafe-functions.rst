@@ -114,6 +114,9 @@ qualified name (i.e. ``std::original``), otherwise the regex is matched against 
 If the regular expression starts with `::` (or `^::`), it is matched against the
 fully qualified name (``::std::original``).
 
+To aid with finding the fully qualified names of expressions, the option ``ShowFullyQualifiedNames`` can be used.
+This option will show the fully qualified name of all functions matched by the custom function matchers.
+
 Options
 -------
 
@@ -138,6 +141,12 @@ Options
     function contains a regular expression, an optional name of the replacement
     function, and an optional reason, separated by comma. For more information,
     see :ref:`Custom functions<CustomFunctions>`.
+
+.. option:: ShowFullyQualifiedNames
+
+    When `true`, the fully qualified name of all functions matched by the custom
+    function matchers will be shown.
+    Default is `false`.
 
 Examples
 --------
