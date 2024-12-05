@@ -7847,8 +7847,11 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
 ; GFX11-GISEL-TRUE16-NEXT:    global_load_u16 v3, v2, s[6:7] glc dlc
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
-; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v1.l
-; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v3.l
+; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v3.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, v0.h, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
