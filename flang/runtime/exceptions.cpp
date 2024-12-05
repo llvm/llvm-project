@@ -11,6 +11,9 @@
 #include "flang/Runtime/exceptions.h"
 #include "terminator.h"
 #include <cfenv>
+#if __x86_64__
+#include <xmmintrin.h>
+#endif
 
 // When not supported, these macro are undefined in cfenv.h,
 // set them to zero in that case.
@@ -77,6 +80,23 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
 //	sizeof(int) * _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT
 // on some systems, e.g. Solaris, so omit object size comparison for now.
 // TODO: consider femode_t object size comparison once its more mature.
+
+bool RTNAME(GetUnderflowMode)(void) {
+#if __x86_64__
+  // The MXCSR Flush to Zero flag is the negation of the ieee_get_underflow_mode
+  // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
+  return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
+#else
+  return false;
+#endif
+}
+void RTNAME(SetUnderflowMode)(bool flag) {
+#if __x86_64__
+  // The MXCSR Flush to Zero flag is the negation of the ieee_set_underflow_mode
+  // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
+  _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
+#endif
+}
 
 } // extern "C"
 } // namespace Fortran::runtime
