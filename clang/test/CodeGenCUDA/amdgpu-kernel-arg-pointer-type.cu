@@ -188,14 +188,14 @@ __global__ void kernel2(int &x) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// OPT-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// OPT-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[X]], align 4
 // OPT-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[Y]], align 4
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// OPT-SPIRV-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[X]], align 4
 // OPT-SPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[Y]], align 4

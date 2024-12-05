@@ -5,8 +5,12 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===------------------------------------------------------------------------===#
+  ../Support/OpenMP-utils.cpp
 
 add_flang_library(FortranCommon
   binary-to-decimal.cpp
   decimal-to-binary.cpp
+
+  LINK_LIBS
+  MLIRIR
 )

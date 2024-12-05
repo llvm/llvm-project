@@ -42,13 +42,13 @@ t31:
 ; exercises the path and bails out without performing vectorization.
 ; CHECK-LABEL: quux
 ; CHECK-NOT: fadd <4 x 
-define void @quux() {
+define void @quux(i1 %arg) {
 bb:
   br label %header
 
 latch:                                              ; preds = %header
   %tmp = phi double [ %tmp6, %header ]
-  br i1 undef, label %header, label %bb2
+  br i1 %arg, label %header, label %bb2
 
 bb2:                                              ; preds = %latch
   %tmp3 = phi double [ %tmp, %latch ]

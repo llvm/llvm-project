@@ -50,7 +50,8 @@ public:
 
     if constexpr (sizeof(U) < sizeof(long) || sizeof(long) == sizeof(int))
       return;
-    long long_exp_array[4] = {LONG_MIN, INT_MIN - 1L, INT_MAX + 1L, LONG_MAX};
+    long long_exp_array[4] = {LONG_MIN, static_cast<long>(INT_MIN - 1LL),
+                              static_cast<long>(INT_MAX + 1LL), LONG_MAX};
     for (long exp : long_exp_array) {
       ASSERT_FP_EQ(zero, func(zero, exp));
       ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));

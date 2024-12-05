@@ -42,5 +42,7 @@ LINK_LIBS
 )
 
 if (FLANG_RT_ENABLE_CUF)
+target_compile_definitions(FlangRuntimeTests PRIVATE NOT_EXE="$<TARGET_FILE:not>")
+
   add_subdirectory(CUDA)
 endif ()

@@ -1699,6 +1699,10 @@ Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
+  if (auto *CI = dyn_cast<ConstantInt>(this))
+    return ConstantInt::get(getContext(), CI->getValue());
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return ConstantFP::get(getContext(), CFP->getValue());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))

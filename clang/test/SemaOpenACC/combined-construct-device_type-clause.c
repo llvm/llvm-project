@@ -183,7 +183,6 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc serial loop device_type(*) reduction(+:Var)
   for(int i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
 #pragma acc serial loop device_type(*) collapse(1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'bind' may not follow a 'device_type' clause in a 'parallel loop' construct}}
@@ -196,7 +195,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) num_gangs(1)
   for(int i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel loop device_type(*) num_workers(1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'device_num' may not follow a 'device_type' clause in a 'serial loop' construct}}
@@ -210,7 +208,6 @@ void uses() {
 #pragma acc parallel loop device_type(*) async
   for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc serial loop device_type(*) tile(*, 1)
   for(int j = 0; j < 5; ++j)
     for(int i = 0; i < 5; ++i);
@@ -218,7 +215,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc serial loop dtype(*) gang
   for(int i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented, clause ignored}}
 #pragma acc parallel loop device_type(*) wait
   for(int i = 0; i < 5; ++i);
 }
