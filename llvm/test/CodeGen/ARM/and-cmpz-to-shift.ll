@@ -5,33 +5,35 @@
 define void @test(i32 %x, i32 %a, i32 %b, i32 %c, i32 %d, ptr %p1, ptr %p2) {
 ; T1-LABEL: test:
 ; T1:       @ %bb.0:
-; T1-NEXT:    lsls r0, r0, #7
-; T1-NEXT:    cmp r0, #0
+; T1-NEXT:    push {r4, lr}
+; T1-NEXT:    movs r4, #1
+; T1-NEXT:    lsls r4, r4, #24
+; T1-NEXT:    tst r0, r4
 ; T1-NEXT:    beq .LBB0_2
 ; T1-NEXT:  @ %bb.1:
 ; T1-NEXT:    mov r1, r2
 ; T1-NEXT:  .LBB0_2:
-; T1-NEXT:    ldr r0, [sp, #4]
+; T1-NEXT:    ldr r0, [sp, #12]
 ; T1-NEXT:    str r1, [r0]
-; T1-NEXT:    bpl .LBB0_4
+; T1-NEXT:    beq .LBB0_4
 ; T1-NEXT:  @ %bb.3:
-; T1-NEXT:    ldr r3, [sp]
+; T1-NEXT:    ldr r3, [sp, #8]
 ; T1-NEXT:  .LBB0_4:
-; T1-NEXT:    ldr r0, [sp, #8]
+; T1-NEXT:    ldr r0, [sp, #16]
 ; T1-NEXT:    str r3, [r0]
-; T1-NEXT:    bx lr
+; T1-NEXT:    pop {r4, pc}
 ;
 ; T2-LABEL: test:
 ; T2:       @ %bb.0:
-; T2-NEXT:    lsls r0, r0, #7
+; T2-NEXT:    tst.w r0, #16777216
+; T2-NEXT:    ldr r0, [sp, #4]
 ; T2-NEXT:    it ne
 ; T2-NEXT:    movne r1, r2
-; T2-NEXT:    ldr r0, [sp, #4]
 ; T2-NEXT:    str r1, [r0]
 ; T2-NEXT:    ldr r1, [sp, #8]
 ; T2-NEXT:    ldr r0, [sp]
-; T2-NEXT:    it pl
-; T2-NEXT:    movpl r0, r3
+; T2-NEXT:    it eq
+; T2-NEXT:    moveq r0, r3
 ; T2-NEXT:    str r0, [r1]
 ; T2-NEXT:    bx lr
   %and = and i32 %x, u0x1000000
