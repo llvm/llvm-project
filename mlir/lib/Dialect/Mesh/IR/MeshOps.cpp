@@ -594,9 +594,10 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 namespace {
 // Sharding annotations "halo sizes" and "sharded dims offsets"
 // are a mix of attributes and dynamic values. This canonicalization moves
-// constant values to the respective attribute lists and so minimizes the number
+// constant values to the respective attribute lists, minimizing the number
 // of values.
-class FoldDynamicLists final : public OpRewritePattern<ShardingOp> {
+// It also removes sharded_dims_sizes and halos if they are effectively "empty".
+class NormalizeSharding final : public OpRewritePattern<ShardingOp> {
 public:
   using OpRewritePattern<ShardingOp>::OpRewritePattern;
 
@@ -608,13 +609,38 @@ public:
                                     op.getDynamicShardedDimsOffsets(), b);
 
     // No constant operands were folded, just return;
-    if (failed(foldDynamicIndexList(mixedHalos, /*onlyNonNegative=*/true)) &&
-        failed(foldDynamicIndexList(mixedOffs, /*onlyNonNegative=*/true))) {
-      return failure();
-    }
+    bool modified = succeeded(foldDynamicIndexList(mixedHalos, true)) ||
+                    succeeded(foldDynamicIndexList(mixedOffs, true));
 
     auto halos = decomposeMixedValues(mixedHalos);
     auto offs = decomposeMixedValues(mixedOffs);
+
+    if (halos.second.empty() && !halos.first.empty()) {
+      if (halos.first[0] == 0 && llvm::all_equal(halos.first)) {
+        halos.first.clear();
+        modified = true;
+      }
+    }
+
+    if (offs.second.empty() && !offs.first.empty()) {
+      assert(offs.first.size() >= 2);
+      auto diff = offs.first[1] - offs.first[0];
+      bool all_same = offs.first.size() > 2;
+      for (auto i = 2u; i < offs.first.size(); ++i) {
+        if (offs.first[i] - offs.first[i - 1] != diff) {
+          all_same = false;
+          break;
+        }
+      }
+      if (all_same) {
+        offs.first.clear();
+        modified = true;
+      }
+    }
+
+    if (!modified) {
+      return failure();
+    }
 
     op.setStaticHaloSizes(halos.first);
     op.getDynamicHaloSizesMutable().assign(halos.second);
@@ -628,7 +654,7 @@ public:
 
 void ShardingOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
                                              mlir::MLIRContext *context) {
-  results.add<FoldDynamicLists>(context);
+  results.add<NormalizeSharding>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -794,6 +820,53 @@ void ShardShapeOp::build(::mlir::OpBuilder &odsBuilder,
 void ShardOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "sharding_annotated");
+}
+
+namespace {
+// Determine if the given ShardOp is a duplicate of another ShardOp
+// on the same value. This can happen if constant values are sharded.
+class FoldDuplicateShardOp final : public OpRewritePattern<ShardOp> {
+public:
+  using OpRewritePattern<ShardOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShardOp op, PatternRewriter &b) const override {
+    // Get the use-list of the value being sharded and check if it has more than
+    // one use.
+    Value value = op.getSrc();
+    if (value.hasOneUse() || value.getDefiningOp<ShardOp>()) {
+      return failure();
+    }
+
+    // Iterate through the uses of the value to find a duplicate ShardOp.
+    for (auto &use : value.getUses()) {
+      if (use.getOwner() != op.getOperation()) {
+        auto otherOp = dyn_cast<ShardOp>(use.getOwner());
+        if (!otherOp || !otherOp->isBeforeInBlock(op)) {
+          return failure();
+        }
+        // Create a MeshSharding object for the current and the other ShardOp
+        // If the two are equal replace current op with the other op.
+        MeshSharding currentSharding(op.getSharding());
+        MeshSharding otherSharding(otherOp.getSharding());
+        if (currentSharding == otherSharding) {
+          b.replaceAllUsesWith(op.getResult(), otherOp.getResult());
+          b.eraseOp(op.getOperation());
+        } else {
+          // use the other sharding as input for op
+          op.getSrcMutable().assign(otherOp.getResult());
+        }
+        return success();
+      }
+    }
+
+    return failure();
+  }
+};
+} // namespace
+
+void ShardOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
+                                          mlir::MLIRContext *context) {
+  results.add<FoldDuplicateShardOp>(context);
 }
 
 //===----------------------------------------------------------------------===//

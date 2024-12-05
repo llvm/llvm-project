@@ -28,7 +28,7 @@ class Mesh_Op<string mnemonic, list<Trait> traits = []> :
     Op<Mesh_Dialect, mnemonic, traits> {
 }
 
-def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol]> {
+def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol, Pure]> {
   let summary = "Description of a device/process mesh.";
   let description = [{
     The mesh.mesh operation is a symbol operation that identifies a specific
@@ -460,6 +460,7 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
       (`annotate_for_users` $annotate_for_users^)?
       attr-dict `:` type($result)
   }];
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
