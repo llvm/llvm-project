@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Function.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "livestacks"
@@ -74,6 +75,12 @@ LiveStacks LiveStacksAnalysis::run(MachineFunction &MF,
   LiveStacks Impl;
   Impl.init(MF);
   return Impl;
+}
+PreservedAnalyses
+LiveStacksPrinterPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &AM) {
+  AM.getResult<LiveStacksAnalysis>(MF).print(OS, MF.getFunction().getParent());
+  return PreservedAnalyses::all();
 }
 
 bool LiveStacksWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {

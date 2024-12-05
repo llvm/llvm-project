@@ -125,6 +125,15 @@ public:
 
   LiveStacks run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };
+
+class LiveStacksPrinterPass : public PassInfoMixin<LiveStacksPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  LiveStacksPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
 } // end namespace llvm
 
 #endif
