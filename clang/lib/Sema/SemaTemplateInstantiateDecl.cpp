@@ -2003,7 +2003,7 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   // Link the instantiation back to the pattern *unless* this is a
   // non-definition friend declaration.
   if (!InstTemplate->getInstantiatedFromMemberTemplate() &&
-      !(isFriend && !D->getTemplatedDecl()->isThisDeclarationADefinition()))
+      !(isFriend && !TemplatedDecl->isThisDeclarationADefinition()))
     InstTemplate->setInstantiatedFromMemberTemplate(D);
 
   // Make declarations visible in the appropriate context.
