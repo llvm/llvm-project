@@ -36,6 +36,7 @@ using ::llvm::memprof::Frame;
 using ::llvm::memprof::FrameId;
 using ::llvm::memprof::hashCallStack;
 using ::llvm::memprof::IndexedAllocationInfo;
+using ::llvm::memprof::IndexedMemProfData;
 using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
 using ::llvm::memprof::MemProfReader;
@@ -500,25 +501,24 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   // Verify that MemProfRecord can be constructed from IndexedMemProfRecord with
   // CallStackIds only.
 
-  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  IndexedMemProfData MemProfData;
   Frame F1(1, 0, 0, false);
   Frame F2(2, 0, 0, false);
   Frame F3(3, 0, 0, false);
   Frame F4(4, 0, 0, false);
-  FrameIdMap.insert({F1.hash(), F1});
-  FrameIdMap.insert({F2.hash(), F2});
-  FrameIdMap.insert({F3.hash(), F3});
-  FrameIdMap.insert({F4.hash(), F4});
+  MemProfData.addFrame(F1);
+  MemProfData.addFrame(F2);
+  MemProfData.addFrame(F3);
+  MemProfData.addFrame(F4);
 
-  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CallStackIdMap;
   llvm::SmallVector<FrameId> CS1 = {F1.hash(), F2.hash()};
   llvm::SmallVector<FrameId> CS2 = {F1.hash(), F3.hash()};
   llvm::SmallVector<FrameId> CS3 = {F2.hash(), F3.hash()};
   llvm::SmallVector<FrameId> CS4 = {F2.hash(), F4.hash()};
-  CallStackIdMap.insert({hashCallStack(CS1), CS1});
-  CallStackIdMap.insert({hashCallStack(CS2), CS2});
-  CallStackIdMap.insert({hashCallStack(CS3), CS3});
-  CallStackIdMap.insert({hashCallStack(CS4), CS4});
+  MemProfData.addCallStack(CS1);
+  MemProfData.addCallStack(CS2);
+  MemProfData.addCallStack(CS3);
+  MemProfData.addCallStack(CS4);
 
   IndexedMemProfRecord IndexedRecord;
   IndexedAllocationInfo AI;
@@ -529,9 +529,10 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.CallSiteIds.push_back(hashCallStack(CS3));
   IndexedRecord.CallSiteIds.push_back(hashCallStack(CS4));
 
-  llvm::memprof::FrameIdConverter<decltype(FrameIdMap)> FrameIdConv(FrameIdMap);
-  llvm::memprof::CallStackIdConverter<decltype(CallStackIdMap)> CSIdConv(
-      CallStackIdMap, FrameIdConv);
+  llvm::memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  llvm::memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)>
+      CSIdConv(MemProfData.CallStacks, FrameIdConv);
 
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
