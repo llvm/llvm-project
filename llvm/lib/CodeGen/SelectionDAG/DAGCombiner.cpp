@@ -20357,10 +20357,9 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     if (NewBW >= BitWidth)
       return SDValue();
 
-    // If the lsb changed does not start at the type bitwidth boundary,
-    // start at the previous one.
-    if (ShAmt % NewBW)
-      ShAmt = (((ShAmt + NewBW - 1) / NewBW) * NewBW) - NewBW;
+    // If the lsb that is modified does not start at the type bitwidth boundary,
+    // align to start at the previous boundary.
+    ShAmt = ShAmt - (ShAmt % NewBW);
     APInt Mask = APInt::getBitsSet(BitWidth, ShAmt,
                                    std::min(BitWidth, ShAmt + NewBW));
     if ((Imm & Mask) == Imm) {
