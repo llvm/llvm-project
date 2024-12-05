@@ -1471,6 +1471,15 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
   return M.getDataLayout().getIndexSizeInBits(AddressSpace);
 }
 
+IntegerType *TargetLibraryInfoImpl::getSizeTType(const Module &M) const {
+  return IntegerType::get(M.getContext(), getSizeTSize(M));
+}
+
+ConstantInt *TargetLibraryInfoImpl::getAsSizeT(uint64_t V,
+                                               const Module &M) const {
+  return ConstantInt::get(getSizeTType(M), V);
+}
+
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
     : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());

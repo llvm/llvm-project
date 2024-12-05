@@ -20,6 +20,7 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
+class ConstantInt;
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -248,6 +249,12 @@ public:
 
   /// Returns the size of the size_t type in bits.
   unsigned getSizeTSize(const Module &M) const;
+
+  /// Returns an IntegerType corresponding to size_t.
+  IntegerType *getSizeTType(const Module &M) const;
+
+  /// Returns a constant materialized as a size_t type.
+  ConstantInt *getAsSizeT(uint64_t V, const Module &M) const;
 
   /// Get size of a C-level int or unsigned int, in bits.
   unsigned getIntSize() const {
@@ -564,6 +571,16 @@ public:
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
   unsigned getSizeTSize(const Module &M) const { return Impl->getSizeTSize(M); }
+
+  /// \copydoc TargetLibraryInfoImpl::getSizeTType()
+  IntegerType *getSizeTType(const Module &M) const {
+    return Impl->getSizeTType(M);
+  }
+
+  /// \copydoc TargetLibraryInfoImpl::getAsSizeT()
+  ConstantInt *getAsSizeT(uint64_t V, const Module &M) const {
+    return Impl->getAsSizeT(V, M);
+  }
 
   /// \copydoc TargetLibraryInfoImpl::getIntSize()
   unsigned getIntSize() const {
