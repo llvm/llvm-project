@@ -1976,14 +1976,16 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (!InstParams)
     return nullptr;
 
+  // Use canonical templated decl because only canonical decl has body
+  // if declarations were merged during loading from modules.
+  FunctionDecl *TemplatedDecl = D->getTemplatedDecl()->getCanonicalDecl();
   FunctionDecl *Instantiated = nullptr;
-  if (CXXMethodDecl *DMethod = dyn_cast<CXXMethodDecl>(D->getTemplatedDecl()))
-    Instantiated = cast_or_null<FunctionDecl>(VisitCXXMethodDecl(DMethod,
-                                                                 InstParams));
+  if (CXXMethodDecl *DMethod = dyn_cast<CXXMethodDecl>(TemplatedDecl))
+    Instantiated =
+        cast_or_null<FunctionDecl>(VisitCXXMethodDecl(DMethod, InstParams));
   else
-    Instantiated = cast_or_null<FunctionDecl>(VisitFunctionDecl(
-                                                          D->getTemplatedDecl(),
-                                                                InstParams));
+    Instantiated = cast_or_null<FunctionDecl>(
+        VisitFunctionDecl(TemplatedDecl, InstParams));
 
   if (!Instantiated)
     return nullptr;
