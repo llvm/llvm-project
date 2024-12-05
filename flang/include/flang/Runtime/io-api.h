@@ -8,8 +8,8 @@
 
 // Defines API between compiled code and I/O runtime library.
 
-#ifndef FORTRAN_RUNTIME_IO_API_FUNCS_H_
-#define FORTRAN_RUNTIME_IO_API_FUNCS_H_
+#ifndef FORTRAN_RUNTIME_IO_API_H_
+#define FORTRAN_RUNTIME_IO_API_H_
 
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
@@ -37,4 +37,4 @@ RT_API_ATTRS const char *InquiryKeywordHashDecode(
 
 } // namespace Fortran::runtime::io
 
-#endif /* FORTRAN_RUNTIME_IO_API_FUNCS_H_ */
+#endif /* FORTRAN_RUNTIME_IO_API_H_ */
