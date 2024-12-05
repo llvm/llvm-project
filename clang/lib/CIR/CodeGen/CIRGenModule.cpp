@@ -78,17 +78,27 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
                                                 mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
-  auto funcOp = builder.create<cir::FuncOp>(
-      getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
-  theModule.push_back(funcOp);
+  if (clang::IdentifierInfo *identifier = funcDecl->getIdentifier()) {
+    auto funcOp = builder.create<cir::FuncOp>(
+        getLoc(funcDecl->getSourceRange()), identifier->getName());
+    theModule.push_back(funcOp);
+  } else {
+    errorNYI(funcDecl->getSourceRange().getBegin(),
+             "function definition with a non-identifier for a name");
+  }
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
   mlir::Type type = getTypes().convertType(vd->getType());
-  auto varOp = builder.create<cir::GlobalOp>(
-      getLoc(vd->getSourceRange()), vd->getIdentifier()->getName(), type);
-  theModule.push_back(varOp);
+  if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
+    auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
+                                               identifier->getName(), type);
+    theModule.push_back(varOp);
+  } else {
+    errorNYI(vd->getSourceRange().getBegin(),
+             "variable definition with a non-identifier for a name");
+  }
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,

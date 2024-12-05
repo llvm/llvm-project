@@ -99,7 +99,7 @@ def GlobalOp : CIR_Op<"global"> {
   let skipDefaultBuilders = 1;
 
   let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
-		                             "mlir::Type":$sym_type)>];
+                                 "mlir::Type":$sym_type)>];
 
   let hasVerifier = 1;
 }
@@ -115,7 +115,7 @@ def GlobalOp : CIR_Op<"global"> {
 def FuncOp : CIR_Op<"func"> {
   let summary = "Declare or define a function";
   let description = [{
-    THe `cir.func` operation defines a function, similar to the `mlir::FuncOp`
+    The `cir.func` operation defines a function, similar to the `mlir::FuncOp`
     built-in.
   }];
 
