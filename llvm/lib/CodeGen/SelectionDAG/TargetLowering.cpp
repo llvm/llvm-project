@@ -8417,8 +8417,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
     SDLoc Loc(Node);
     SDValue Operand = Node->getOperand(0);
 
-    Result = DAG.getNode(
-        ISD::FP_ROUND, Loc, MVT::bf16,
+    Result = DAG.getNode(ISD::FP_ROUND, Loc, MVT::bf16,
         DAG.getNode(ISD::UINT_TO_FP, Loc, MVT::f32, Operand),
         DAG.getIntPtrConstant(0, Loc));
     return true;
