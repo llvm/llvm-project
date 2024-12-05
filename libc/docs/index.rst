@@ -47,7 +47,7 @@ For Linux, we support kernel versions as listed on `kernel.org <https://kernel.o
 ``longterm`` (not past EOL date), ``stable``, and ``mainline`` versions. We actively adopt new features
 from ``linux-next``.
 
-For Windows, we support products within their lifecycle. Please refer to 
+For Windows, we plan to support products within their lifecycle. Please refer to 
 `Search Product and Services Lifecycle Information <https://learn.microsoft.com/en-us/lifecycle/products/?products=windows>`_ for more information.
 
 ABI Compatibility
