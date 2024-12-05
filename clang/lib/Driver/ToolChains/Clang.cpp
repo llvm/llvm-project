@@ -1876,6 +1876,8 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   Args.addOptInFlag(CmdArgs,
                     options::OPT_fptrauth_init_fini_address_discrimination,
                     options::OPT_fno_ptrauth_init_fini_address_discrimination);
+  Args.addOptInFlag(CmdArgs, options::OPT_faarch64_jump_table_hardening,
+                    options::OPT_fno_aarch64_jump_table_hardening);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -5937,9 +5939,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
                     options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
     CmdArgs.push_back("-relaxed-aliasing");
-  if (Args.hasFlag(options::OPT_fpointer_tbaa, options::OPT_fno_pointer_tbaa,
+  if (Args.hasFlag(options::OPT_fno_pointer_tbaa, options::OPT_fpointer_tbaa,
                    false))
-    CmdArgs.push_back("-pointer-tbaa");
+    CmdArgs.push_back("-no-pointer-tbaa");
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
     CmdArgs.push_back("-no-struct-path-tbaa");

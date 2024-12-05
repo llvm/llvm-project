@@ -121,31 +121,17 @@ void logIfOverflow(const SymbolLocation &Loc) {
 
 // Convert a SymbolLocation to LSP's Location.
 // TUPath is used to resolve the path of URI.
-// FIXME: figure out a good home for it, and share the implementation with
-// FindSymbols.
 std::optional<Location> toLSPLocation(const SymbolLocation &Loc,
                                       llvm::StringRef TUPath) {
   if (!Loc)
     return std::nullopt;
-  auto Uri = URI::parse(Loc.FileURI);
-  if (!Uri) {
-    elog("Could not parse URI {0}: {1}", Loc.FileURI, Uri.takeError());
+  auto LSPLoc = indexToLSPLocation(Loc, TUPath);
+  if (!LSPLoc) {
+    elog("{0}", LSPLoc.takeError());
     return std::nullopt;
   }
-  auto U = URIForFile::fromURI(*Uri, TUPath);
-  if (!U) {
-    elog("Could not resolve URI {0}: {1}", Loc.FileURI, U.takeError());
-    return std::nullopt;
-  }
-
-  Location LSPLoc;
-  LSPLoc.uri = std::move(*U);
-  LSPLoc.range.start.line = Loc.Start.line();
-  LSPLoc.range.start.character = Loc.Start.column();
-  LSPLoc.range.end.line = Loc.End.line();
-  LSPLoc.range.end.character = Loc.End.column();
   logIfOverflow(Loc);
-  return LSPLoc;
+  return *LSPLoc;
 }
 
 SymbolLocation toIndexLocation(const Location &Loc, std::string &URIStorage) {

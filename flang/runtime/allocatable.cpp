@@ -133,15 +133,17 @@ void RTDEF(AllocatableApplyMold)(
   }
 }
 
-int RTDEF(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+int RTDEF(AllocatableAllocate)(Descriptor &descriptor, std::int64_t asyncId,
+    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
+    int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
   } else if (descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNotNull, errMsg, hasStat);
   } else {
-    int stat{ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat)};
+    int stat{
+        ReturnError(terminator, descriptor.Allocate(asyncId), errMsg, hasStat)};
     if (stat == StatOk) {
       if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
         if (const auto *derived{addendum->derivedType()}) {
@@ -160,7 +162,7 @@ int RTDEF(AllocatableAllocateSource)(Descriptor &alloc,
     const Descriptor &source, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   int stat{RTNAME(AllocatableAllocate)(
-      alloc, hasStat, errMsg, sourceFile, sourceLine)};
+      alloc, /*asyncId=*/-1, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
     DoFromSourceAssign(alloc, source, terminator);
