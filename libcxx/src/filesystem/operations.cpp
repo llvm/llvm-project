@@ -41,7 +41,8 @@
 // since Linux 4.5 and FreeBSD 13
 #if defined(__linux__) || defined(__FreeBSD__)
 #  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
-#elif __has_include(<sys/sendfile.h>)
+#endif
+#if __has_include(<sys/sendfile.h>)
 #  include <sys/sendfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_SENDFILE
 #elif defined(__APPLE__) || __has_include(<copyfile.h>)
@@ -277,8 +278,11 @@ bool copy_file_impl_sendfile(FileDescriptor& read_fd, FileDescriptor& write_fd, 
 }
 #endif
 
-#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
+#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) || defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+// If we have copy_file_range or sendfile, try both in succession (if available).
+// If both fail, fall back to using fstream.
 bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+#  if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
   if (copy_file_impl_copy_file_range(read_fd, write_fd, ec)) {
     return true;
   }
@@ -299,10 +303,9 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
     return false;
   }
   ec.clear();
-  return copy_file_impl_fstream(read_fd, write_fd, ec);
-}
-#elif defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+#  endif
+
+#  if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
   if (copy_file_impl_sendfile(read_fd, write_fd, ec)) {
     return true;
   }
@@ -311,6 +314,8 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
     return false;
   }
   ec.clear();
+#  endif
+
   return copy_file_impl_fstream(read_fd, write_fd, ec);
 }
 #elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
