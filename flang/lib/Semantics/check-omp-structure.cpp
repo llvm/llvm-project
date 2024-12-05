@@ -2911,6 +2911,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_reduction);
+  auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+
   if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_reduction,
           GetContext().clauseSource, context_)) {
     if (CheckReductionOperators(x)) {
@@ -2923,8 +2925,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
       CheckReductionModifier(*maybeModifier);
     }
   }
-  CheckReductionObjects(std::get<parser::OmpObjectList>(x.v.t),
-      llvm::omp::Clause::OMPC_reduction);
+  CheckReductionObjects(objects, llvm::omp::Clause::OMPC_reduction);
+
+  // If this is a worksharing construct then ensure the reduction variable
+  // is not private in the parallel region that it binds to.
+  if (llvm::omp::nestedReduceWorkshareAllowedSet.test(GetContext().directive)) {
+    CheckSharedBindingInOuterContext(objects);
+  }
 }
 
 bool OmpStructureChecker::CheckReductionOperators(
@@ -3147,13 +3154,6 @@ void OmpStructureChecker::CheckReductionTypeList(
   const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(ompObjectList, symbols);
-
-  CheckReductionArraySection(ompObjectList);
-  // If this is a worksharing construct then ensure the reduction variable
-  // is not private in the parallel region that it binds to.
-  if (llvm::omp::nestedReduceWorkshareAllowedSet.test(GetContext().directive)) {
-    CheckSharedBindingInOuterContext(ompObjectList);
-  }
 
   for (auto &[symbol, source] : symbols) {
     if (auto *type{symbol->GetType()}) {
