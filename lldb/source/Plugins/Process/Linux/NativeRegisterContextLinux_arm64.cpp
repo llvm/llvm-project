@@ -202,6 +202,9 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_max_hwp_supported = 16;
   m_max_hbp_supported = 16;
 
+  // E (bit 0), used to enable breakpoint/watchpoint
+  m_hw_dbg_enable_bit = 1;
+
   m_refresh_hwdebug_info = true;
 
   m_gpr_is_valid = false;
@@ -1067,10 +1070,9 @@ bool NativeRegisterContextLinux_arm64::IsFPMR(unsigned reg) const {
   return GetRegisterInfo().IsFPMRReg(reg);
 }
 
-llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
-  if (!m_refresh_hwdebug_info) {
-    return llvm::Error::success();
-  }
+Status NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
+  if (!m_refresh_hwdebug_info)
+    return Status();
 
   ::pid_t tid = m_thread.GetID();
 
@@ -1085,7 +1087,7 @@ llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
                                             &ioVec, ioVec.iov_len);
 
   if (error.Fail())
-    return error.ToError();
+    return error;
 
   m_max_hwp_supported = dreg_state.dbg_info & 0xff;
 
@@ -1094,15 +1096,15 @@ llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
                                             &ioVec, ioVec.iov_len);
 
   if (error.Fail())
-    return error.ToError();
+    return error;
 
   m_max_hbp_supported = dreg_state.dbg_info & 0xff;
   m_refresh_hwdebug_info = false;
 
-  return llvm::Error::success();
+  return Status();
 }
 
-llvm::Error
+Status
 NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
   struct iovec ioVec;
   struct user_hwdebug_state dreg_state;
@@ -1135,8 +1137,7 @@ NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
   }
 
   return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, ioVec.iov_len)
-      .ToError();
+                                           &regset, &ioVec, ioVec.iov_len);
 }
 
 Status NativeRegisterContextLinux_arm64::ReadGPR() {

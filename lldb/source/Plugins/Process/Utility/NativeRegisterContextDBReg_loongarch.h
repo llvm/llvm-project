@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextDBReg_arm64.h ----------------------*- C++ -*-===//
+//===-- NativeRegisterContextDBReg_loongarch.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeRegisterContextDBReg_arm64_h
-#define lldb_NativeRegisterContextDBReg_arm64_h
+#ifndef lldb_NativeRegisterContextDBReg_loongarch_h
+#define lldb_NativeRegisterContextDBReg_loongarch_h
 
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
 
 namespace lldb_private {
 
-class NativeRegisterContextDBReg_arm64 : public NativeRegisterContextDBReg {
+class NativeRegisterContextDBReg_loongarch : public NativeRegisterContextDBReg {
 public:
   uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
 
@@ -26,4 +26,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextDBReg_arm64_h
+#endif // #ifndef lldb_NativeRegisterContextDBReg_loongarch_h
