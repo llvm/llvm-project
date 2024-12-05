@@ -26,4 +26,13 @@ void test_imm(uint32_t slice, svmfloat8_t f8, svmfloat8x2_t f8x2,
   svdot_lane_za16_mf8_vg1x2_fpm(slice, f8x2, f8, -1, fpmr);
 // expected-error@+1{{argument value 18446744073709551615 is outside the valid range [0, 7]}}
   svdot_lane_za16_mf8_vg1x4_fpm(slice, f8x4, f8, -1, fpmr);
+
+// expected-error@+1{{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_za32_mf8_vg1x2_fpm(slice, f8x2, f8, 4, fpmr);
+// expected-error@+1{{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_za32_mf8_vg1x4_fpm(slice, f8x4, f8, 4, fpmr);
+// expected-error@+1{{argument value 8 is outside the valid range [0, 7]}}
+  svdot_lane_za16_mf8_vg1x2_fpm(slice, f8x2, f8, 8, fpmr);
+// expected-error@+1{{argument value 8 is outside the valid range [0, 7]}}
+  svdot_lane_za16_mf8_vg1x4_fpm(slice, f8x4, f8, 8, fpmr);
 }

@@ -220,36 +220,6 @@ class SME2_Tile_Movaz_Pat<string name, SDPatternOperator intrinsic, ValueType ou
           (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset)>;
 
 
-// FP8 SME FDOT instructions
-
-// Selection DAG patterns - map to first level of pseudo-instructions (xxx_PSEUDO)
-class SME2_FP8_FMLA_FDOT_Index_VG1x2_Pat<string name, SDPatternOperator intrinsic,
-                                         ComplexPattern tileslice, Operand offset_ty, Operand imm_ty,
-                                         ValueType vt = nxv16i8>
-  : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset)),
-                    vt:$Zn1, vt:$Zn2, vt:$Zm, (i32 imm_ty:$i)),
-        (!cast<Instruction>(name # _PSEUDO) $base, $offset,
-                                            (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1),
-                                            ZPR4b8:$Zm, imm_ty:$i)>;
-
-class SME2_FP8_FMLA_FDOT_Index_VG1x4_Pat<string name, SDPatternOperator intrinsic,
-                                         ComplexPattern tileslice, Operand offset_ty, Operand imm_ty,
-                                         ValueType vt = nxv16i8>
-  : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset)),
-                   vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4,
-                   vt:$Zm, (i32 imm_ty:$i)),
-        (!cast<Instruction>(name # _PSEUDO) $base, $offset,
-                                            (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3),
-                                            ZPR4b8:$Zm, imm_ty:$i)>;
-
-class sme2_fp8_fmla_fdot_index_pseudo<string name, Operand offset_ty, RegisterOperand src1_ty, RegisterOperand src2_ty, Operand imm_ty>
-  : SMEPseudo2Instr<name, 0>,
-    Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rv, offset_ty:$offs, src1_ty:$Zn, src2_ty:$Zm, imm_ty:$i), []> {
-  let mayLoad = 1;
-  let SMEMatrixType = SMEMatrixArray;
-  let usesCustomInserter = 1;
-}
-
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -5790,9 +5760,9 @@ multiclass sme2_fp8_fdot_index_za16_vg1x2<string mnemonic, bits<2> sz, bits<3> o
                                            multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexH32b_timm:$i), 0>;
 
 
-  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexH32b_timm>;
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, ZZ_b_mul_r, ZPR4b8, VectorIndexH32b_timm, SMEMatrixArray>;
 
-  def : SME2_FP8_FMLA_FDOT_Index_VG1x2_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexH32b_timm>;
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexH32b_timm, tileslice16>;
 }
 
 multiclass sme2_fp8_fdot_index_za16_vg1x4<string mnemonic, bits<3> op,
@@ -5814,9 +5784,9 @@ multiclass sme2_fp8_fdot_index_za16_vg1x4<string mnemonic, bits<3> op,
                                            sme_elm_idx0_7:$imm3, multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexH32b_timm:$i), 0>;
 
 
-  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexH32b_timm>;
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, ZZZZ_b_mul_r, ZPR4b8, VectorIndexH32b_timm, SMEMatrixArray>;
 
-  def : SME2_FP8_FMLA_FDOT_Index_VG1x4_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexH32b_timm>;
+  def : SME2_ZA_TwoOp_VG4_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexH32b_timm, tileslice16>;
 }
 
 multiclass sme2_fp8_fdot_index_za32_vg1x2<string mnemonic, bits<2> sz, bits<4> op,
@@ -5836,9 +5806,9 @@ multiclass sme2_fp8_fdot_index_za32_vg1x2<string mnemonic, bits<2> sz, bits<4> o
                  (!cast<Instruction>(NAME) MatrixOp32:$ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
                                            multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexS32b_timm:$i), 0>;
 
-  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexS32b_timm>;
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, ZZ_b_mul_r, ZPR4b8, VectorIndexH32b_timm, SMEMatrixArray>;
 
-  def : SME2_FP8_FMLA_FDOT_Index_VG1x2_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexS32b_timm>;
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexH32b_timm, tileslice16>;
 }
 
 multiclass sme2_fp8_fdot_index_za32_vg1x4<string mnemonic, bits<4> op,
@@ -5858,7 +5828,7 @@ multiclass sme2_fp8_fdot_index_za32_vg1x4<string mnemonic, bits<4> op,
                  (!cast<Instruction>(NAME) MatrixOp32:$ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
                                            multi_vector_ty:$Zn, ZPR4b8:$Zm, VectorIndexS32b_timm:$i), 0>;
 
-  def _PSEUDO : sme2_fp8_fmla_fdot_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, ZPR4b8, VectorIndexS32b_timm>;
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, ZZZZ_b_mul_r, ZPR4b8, VectorIndexH32b_timm, SMEMatrixArray>;
 
-  def : SME2_FP8_FMLA_FDOT_Index_VG1x4_Pat<NAME, intrinsic, tileslice16, sme_elm_idx0_7, VectorIndexS32b_timm>;
+  def : SME2_ZA_TwoOp_VG4_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexH32b_timm, tileslice16>;
 }

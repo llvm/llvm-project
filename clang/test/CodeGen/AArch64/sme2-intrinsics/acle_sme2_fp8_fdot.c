@@ -15,14 +15,6 @@
 #define SVE_ACLE_FUNC(A1,A2,A3) A1##A2##A3
 #endif
 
-//
-// CHECK-CXX-LABEL: define dso_local void @_Z29test_svdot_lane_za32_f8_vg1x2j11svuint8x2_tu11__SVUint8_tm(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) local_unnamed_addr #[[>
-// CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.fp8.fdot.lane.za32.vg1x2(i32 [[SLICE]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vs>
-// CHECK-CXX-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @test_svdot_lane_za32_f8_vg1x2(
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -38,21 +30,11 @@
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_lane_za32_f8_vg1x2(uint32_t slice, svmfloat8x2_t zn,
-                                   svmfloat8_t zm, uint64_t fpmr)
+                                   svmfloat8_t zm, fpm_t fpmr)
      __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svdot_lane_za32,_mf8,_vg1x2_fpm)(slice, zn, zm, 3, fpmr);
 }
 
-//
-// CHECK-CXX-LABEL: define dso_local void @_Z29test_svdot_lane_za32_f8_vg1x4j11svuint8x4_tu11__SVUint8_tm(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 64 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) local_unnamed_addr #[[>
-// CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
-// CHECK-CXX-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
-// CHECK-CXX-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.fp8.fdot.lane.za32.vg1x4(i32 [[SLICE]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vs>
-// CHECK-CXX-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @test_svdot_lane_za32_f8_vg1x4(
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZN_COERCE2:%.*]], <vscale x 16 x i8> [[ZN_COERCE3:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -68,7 +50,7 @@ void test_svdot_lane_za32_f8_vg1x2(uint32_t slice, svmfloat8x2_t zn,
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_lane_za32_f8_vg1x4(uint32_t slice, svmfloat8x4_t zn,
-                                   svmfloat8_t zm, uint64_t fpmr)
+                                   svmfloat8_t zm, fpm_t fpmr)
      __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svdot_lane_za32,_mf8,_vg1x4_fpm)(slice, zn, zm, 3, fpmr);
 }
