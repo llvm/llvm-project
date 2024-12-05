@@ -4,16 +4,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_HAS_NO_UNICODE
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
+#  include <concepts>
 #  include <format>
 #  include <string_view>
 
 #  include "benchmark/benchmark.h"
-
 #  include "make_string.h"
+#  include "test_macros.h"
 
 #  define SV(S) MAKE_STRING_VIEW(CharT, S)
+
+#if _LIBCPP_HAS_UNICODE
 
 // generated with https://generator.lorem-ipsum.info/_latin
 
@@ -282,11 +285,13 @@ BENCHMARK(BM_cyrillic_text<char>);
 BENCHMARK(BM_japanese_text<char>);
 BENCHMARK(BM_emoji_text<char>);
 
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
 BENCHMARK(BM_ascii_text<wchar_t>);
 BENCHMARK(BM_unicode_text<wchar_t>);
 BENCHMARK(BM_cyrillic_text<wchar_t>);
 BENCHMARK(BM_japanese_text<wchar_t>);
 BENCHMARK(BM_emoji_text<wchar_t>);
+#  endif
 
 BENCHMARK_MAIN();
 

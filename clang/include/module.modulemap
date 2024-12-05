@@ -116,7 +116,6 @@ module Clang_Diagnostics {
   module Frontend { header "clang/Frontend/FrontendDiagnostic.h" export * }
   module Lex { header "clang/Lex/LexDiagnostic.h" export * }
   module Parse { header "clang/Parse/ParseDiagnostic.h" export * }
-  module Sema { header "clang/Sema/SemaDiagnostic.h" export * }
   module Serialization { header "clang/Serialization/SerializationDiagnostic.h" export * }
   module Refactoring { header "clang/Tooling/Refactoring/RefactoringDiagnostic.h" export * }
 }

@@ -12,17 +12,17 @@
 #ifndef _LIBCPP___BIT_POPCOUNT_H
 #define _LIBCPP___BIT_POPCOUNT_H
 
-#include <__bit/rotate.h>
-#include <__concepts/arithmetic.h>
-#include <__config>
-#include <limits>
+#include <__cxx03/__bit/rotate.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

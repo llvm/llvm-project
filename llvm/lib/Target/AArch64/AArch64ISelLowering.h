@@ -14,8 +14,6 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 
-#include "AArch64.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -275,6 +273,12 @@ enum NodeType : unsigned {
   UADDLV,
   SADDLV,
 
+  // Wide adds
+  SADDWT,
+  SADDWB,
+  UADDWT,
+  UADDWB,
+
   // Add Pairwise of two vectors
   ADDP,
   // Add Long Pairwise
@@ -516,12 +520,6 @@ enum NodeType : unsigned {
   STP,
   STILP,
   STNP,
-
-  // Memory Operations
-  MOPS_MEMSET,
-  MOPS_MEMSET_TAGGING,
-  MOPS_MEMCOPY,
-  MOPS_MEMMOVE,
 };
 
 } // end namespace AArch64ISD
@@ -830,18 +828,12 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override {
-    // FIXME: This is a guess. Has this been defined yet?
-    return AArch64::X0;
-  }
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
-    // FIXME: This is a guess. Has this been defined yet?
-    return AArch64::X1;
-  }
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -993,6 +985,8 @@ public:
 
   bool shouldExpandCttzElements(EVT VT) const override;
 
+  bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const override;
+
   /// If a change in streaming mode is required on entry to/return from a
   /// function call it emits and returns the corresponding SMSTART or SMSTOP
   /// node. \p Condition should be one of the enum values from
@@ -1132,11 +1126,6 @@ private:
                                  SelectionDAG &DAG) const;
   SDValue LowerWindowsGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPtrAuthGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerPtrAuthGlobalAddressStatically(SDValue TGA, SDLoc DL, EVT VT,
-                                              AArch64PACKey::ID Key,
-                                              SDValue Discriminator,
-                                              SDValue AddrDiscriminator,
-                                              SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;

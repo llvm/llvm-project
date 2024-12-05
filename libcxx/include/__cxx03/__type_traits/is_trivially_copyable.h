@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
 #define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

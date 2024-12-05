@@ -460,7 +460,7 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>(allocatable) ||
     construct<ComponentAttrSpec>("CODIMENSION" >> coarraySpec) ||
     construct<ComponentAttrSpec>(contiguous) ||
-    construct<ComponentAttrSpec>("DIMENSION" >> Parser<ComponentArraySpec>{}) ||
+    construct<ComponentAttrSpec>("DIMENSION" >> componentArraySpec) ||
     construct<ComponentAttrSpec>(pointer) ||
     extension<LanguageFeature::CUDA>(
         construct<ComponentAttrSpec>(Parser<common::CUDADataAttr>{})) ||
@@ -471,17 +471,23 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
 
 // R739 component-decl ->
 //        component-name [( component-array-spec )]
-//        [lbracket coarray-spec rbracket] [* char-length]
-//        [component-initialization]
+//          [lbracket coarray-spec rbracket] [* char-length]
+//          [component-initialization] |
+// (ext.) component-name *char-length [(component-array-spec)]
+//          [lbracket coarray-spec rbracket] [* char-length]
+//          [component-initialization]
 TYPE_CONTEXT_PARSER("component declaration"_en_US,
-    construct<ComponentDecl>(name, maybe(Parser<ComponentArraySpec>{}),
-        maybe(coarraySpec), maybe("*" >> charLength), maybe(initialization)))
+    construct<ComponentDecl>(name, "*" >> charLength, maybe(componentArraySpec),
+        maybe(coarraySpec), maybe(initialization)) ||
+        construct<ComponentDecl>(name, maybe(componentArraySpec),
+            maybe(coarraySpec), maybe("*" >> charLength),
+            maybe(initialization)))
 // The source field of the Name will be replaced with a distinct generated name.
 TYPE_CONTEXT_PARSER("%FILL item"_en_US,
     extension<LanguageFeature::DECStructures>(
         "nonstandard usage: %FILL"_port_en_US,
         construct<FillDecl>(space >> sourced("%FILL" >> construct<Name>()),
-            maybe(Parser<ComponentArraySpec>{}), maybe("*" >> charLength))))
+            maybe(componentArraySpec), maybe("*" >> charLength))))
 TYPE_PARSER(construct<ComponentOrFill>(Parser<ComponentDecl>{}) ||
     construct<ComponentOrFill>(Parser<FillDecl>{}))
 
@@ -658,9 +664,13 @@ TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
 
 // R801 type-declaration-stmt ->
 //        declaration-type-spec [[, attr-spec]... ::] entity-decl-list
-constexpr auto entityDeclWithoutEqInit{construct<EntityDecl>(name,
-    maybe(arraySpec), maybe(coarraySpec), maybe("*" >> charLength),
-    !"="_tok >> maybe(initialization))}; // old-style REAL A/0/ still works
+constexpr auto entityDeclWithoutEqInit{
+    construct<EntityDecl>(name, "*" >> charLength, maybe(arraySpec),
+        maybe(coarraySpec), !"="_tok >> maybe(initialization)) ||
+    construct<EntityDecl>(name, maybe(arraySpec), maybe(coarraySpec),
+        maybe("*" >> charLength),
+        !"="_tok >>
+            maybe(initialization) /* old-style REAL A/0/ still works */)};
 TYPE_PARSER(
     construct<TypeDeclarationStmt>(declarationTypeSpec,
         defaulted("," >> nonemptyList(Parser<AttrSpec>{})) / "::",
@@ -720,9 +730,13 @@ constexpr auto objectName{name};
 // R803 entity-decl ->
 //        object-name [( array-spec )] [lbracket coarray-spec rbracket]
 //          [* char-length] [initialization] |
-//        function-name [* char-length]
-TYPE_PARSER(construct<EntityDecl>(objectName, maybe(arraySpec),
-    maybe(coarraySpec), maybe("*" >> charLength), maybe(initialization)))
+//        function-name [* char-length] |
+// (ext.) object-name *char-length [(array-spec)]
+//          [lbracket coarray-spec rbracket] [initialization]
+TYPE_PARSER(construct<EntityDecl>(objectName, "*" >> charLength,
+                maybe(arraySpec), maybe(coarraySpec), maybe(initialization)) ||
+    construct<EntityDecl>(objectName, maybe(arraySpec), maybe(coarraySpec),
+        maybe("*" >> charLength), maybe(initialization)))
 
 // R806 null-init -> function-reference   ... which must resolve to NULL()
 TYPE_PARSER(lookAhead(name / "( )") >> construct<NullInit>(expr))

@@ -161,7 +161,8 @@ module attributes {transform.with_named_sequence} {
 
 ///----------------------------------------------------------------------------------------
 /// tensor::PadOp -> tensor::EmptyOp + linalg::FillOp/tensor::GenerateOp + tensor::InsertSliceOp
-/// [Pattern: GenericPadOpVectorizationPattern]
+/// [Pattern: GenericPadOpVectorizationPattern + InsertSliceVectorizePattern]
+/// TODO: Split the test into two, one for each pattern.
 ///----------------------------------------------------------------------------------------
 
 func.func private @make_vector() -> tensor<12x13xf32>
@@ -174,12 +175,14 @@ func.func private @make_vector() -> tensor<12x13xf32>
 //  CHECK-NOT:     tensor.pad
 //  CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 //  CHECK-DAG:     %[[PAD:.*]] = arith.constant 5.000000e+00 : f32
+//  CHECK-DAG:     %[[PAD_READ:.*]] = arith.constant 0.000000e+00 : f32
 //      CHECK:     %[[EMPTY:.*]] = tensor.empty() : tensor<1x12x13xf32>
 //      CHECK:     %[[FILL:.*]] = linalg.fill ins(%[[PAD]] : f32) outs(%[[EMPTY]] : tensor<1x12x13xf32>) -> tensor<1x12x13xf32>
-//      CHECK:     %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{\[}}%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true, true]} : tensor<1x5x6xf32>, vector<1x5x6xf32>
-//      CHECK:     %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[FILL]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x5x6xf32>, tensor<1x12x13xf32>
+//      CHECK:     %[[READ_1:.*]] = vector.transfer_read %[[ARG_0]]{{\[}}%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true, true]} : tensor<1x5x6xf32>, vector<1x5x6xf32>
+//      CHECK:     %[[WRITE_1:.*]] = vector.transfer_write %[[READ_1]], %[[FILL]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x5x6xf32>, tensor<1x12x13xf32>
 //      CHECK:     %[[VEC:.*]] = call @make_vector() : () -> tensor<12x13xf32>
-//      CHECK:     %[[RES:.*]] = tensor.insert_slice %[[VEC]] into %[[WRITE]][0, 0, 0] [1, 12, 13] [1, 1, 1] : tensor<12x13xf32> into tensor<1x12x13xf32>
+//      CHECK:     %[[READ_2:.*]] = vector.transfer_read %[[VEC]]{{\[}}%[[C0]], %[[C0]]], %[[PAD_READ]] {in_bounds = [true, true]} : tensor<12x13xf32>, vector<12x13xf32>
+//      CHECK:     %[[RES:.*]] = vector.transfer_write %[[READ_2]], %[[WRITE_1]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<12x13xf32>, tensor<1x12x13xf32>
 //      CHECK:     return %[[RES]] : tensor<1x12x13xf32>
 
 func.func @pad_and_insert_slice_dest(
@@ -199,6 +202,8 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
 
     transform.apply_patterns to %func_op {
+      // TODO: Split into two tests, one for each pattern
+      transform.apply_patterns.linalg.decompose_pad
       transform.apply_patterns.linalg.pad_vectorization
     } : !transform.op<"func.func">
     transform.yield
@@ -233,6 +238,8 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
 
     transform.apply_patterns to %func_op {
+      // TODO: Split into two tests, one for each pattern
+      transform.apply_patterns.linalg.decompose_pad
       transform.apply_patterns.linalg.pad_vectorization
     } : !transform.op<"func.func">
     transform.yield
@@ -267,6 +274,8 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
 
     transform.apply_patterns to %func_op {
+      // TODO: Split into two tests, one for each pattern
+      transform.apply_patterns.linalg.decompose_pad
       transform.apply_patterns.linalg.pad_vectorization
     } : !transform.op<"func.func">
     transform.yield

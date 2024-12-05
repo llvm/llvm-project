@@ -55,22 +55,22 @@ define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) inreg %o
 ; GFX940:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
 ; GFX940-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
 ; GFX940-NEXT:  ; %bb.0:
-; GFX940-NEXT:    s_load_dword s0, s[2:3], 0x28
+; GFX940-NEXT:    s_load_dword s0, s[4:5], 0x28
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b32_e32 v1, s0
-; GFX940-NEXT:    global_store_dword v0, v1, s[6:7] sc0 sc1
+; GFX940-NEXT:    global_store_dword v0, v1, s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 ;
 ; GFX90a-LABEL: no_free_sgprs_block_count_x:
 ; GFX90a:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
 ; GFX90a-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
 ; GFX90a-NEXT:  ; %bb.0:
-; GFX90a-NEXT:    s_load_dword s0, s[6:7], 0x28
+; GFX90a-NEXT:    s_load_dword s0, s[8:9], 0x28
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s0
-; GFX90a-NEXT:    global_store_dword v0, v1, s[10:11]
+; GFX90a-NEXT:    global_store_dword v0, v1, s[12:13]
 ; GFX90a-NEXT:    s_endpgm
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load i32, ptr addrspace(4) %imp_arg_ptr
@@ -599,24 +599,24 @@ define amdgpu_kernel void @no_free_sgprs_preloadremainder_z(ptr addrspace(1) inr
 ; GFX940:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
 ; GFX940-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
 ; GFX940-NEXT:  ; %bb.0:
-; GFX940-NEXT:    s_load_dword s0, s[2:3], 0x1c
+; GFX940-NEXT:    s_load_dword s0, s[4:5], 0x1c
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX940-NEXT:    v_mov_b32_e32 v1, s0
-; GFX940-NEXT:    global_store_dword v0, v1, s[6:7] sc0 sc1
+; GFX940-NEXT:    global_store_dword v0, v1, s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 ;
 ; GFX90a-LABEL: no_free_sgprs_preloadremainder_z:
 ; GFX90a:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
 ; GFX90a-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
 ; GFX90a-NEXT:  ; %bb.0:
-; GFX90a-NEXT:    s_load_dword s0, s[6:7], 0x1c
+; GFX90a-NEXT:    s_load_dword s0, s[8:9], 0x1c
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90a-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s0
-; GFX90a-NEXT:    global_store_dword v0, v1, s[10:11]
+; GFX90a-NEXT:    global_store_dword v0, v1, s[12:13]
 ; GFX90a-NEXT:    s_endpgm
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr i8, ptr addrspace(4) %imp_arg_ptr, i32 22

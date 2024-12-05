@@ -40,8 +40,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&   \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 namespace chrono {
 
@@ -59,7 +58,7 @@ struct zoned_traits<const time_zone*> {
 template <class _Duration, class _TimeZonePtr = const time_zone*>
 class zoned_time {
   // [time.zone.zonedtime.ctor]/2
-  static_assert(__is_duration<_Duration>::value,
+  static_assert(__is_duration_v<_Duration>,
                 "the program is ill-formed since _Duration is not a specialization of std::chrono::duration");
 
   // The wording uses the constraints like
@@ -217,8 +216,8 @@ operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_
 
 } // namespace chrono
 
-#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
-         // && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
+         // _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_END_NAMESPACE_STD
 

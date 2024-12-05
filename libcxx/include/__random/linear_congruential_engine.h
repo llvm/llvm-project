@@ -251,12 +251,12 @@ public:
   static_assert(_Min < _Max, "linear_congruential_engine invalid parameters");
 
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const result_type multiplier = __a;
-  static _LIBCPP_CONSTEXPR const result_type increment  = __c;
-  static _LIBCPP_CONSTEXPR const result_type modulus    = __m;
+  static inline _LIBCPP_CONSTEXPR const result_type multiplier = __a;
+  static inline _LIBCPP_CONSTEXPR const result_type increment  = __c;
+  static inline _LIBCPP_CONSTEXPR const result_type modulus    = __m;
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
-  static _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
+  static inline _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
 
   // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
@@ -317,22 +317,6 @@ private:
   friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, linear_congruential_engine<_Up, _Ap, _Cp, _Np>& __x);
 };
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::multiplier;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::increment;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::modulus;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::default_seed;
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
 template <class _Sseq>

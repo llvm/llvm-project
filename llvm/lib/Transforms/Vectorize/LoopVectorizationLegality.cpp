@@ -460,11 +460,8 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides =
     LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
-  Function *F = TheLoop->getHeader()->getParent();
-  bool OptForSize = F->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(TheLoop->getHeader(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
-  bool CanAddPredicate = !OptForSize;
+  bool CanAddPredicate = !llvm::shouldOptimizeForSize(
+      TheLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides,
                             CanAddPredicate, false).value_or(0);
   if (Stride == 1 || Stride == -1)

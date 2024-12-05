@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstddef>
 #include <memory>
 #include <memory_resource>
 
 #if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <atomic>
-#elif !defined(_LIBCPP_HAS_NO_THREADS)
+#elif _LIBCPP_HAS_THREADS
 #  include <mutex>
 #  if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
 #    pragma comment(lib, "pthread")
@@ -100,7 +101,7 @@ static memory_resource* __default_memory_resource(bool set = false, memory_resou
   } else {
     return std::atomic_load_explicit(&__res, memory_order_acquire);
   }
-#elif !defined(_LIBCPP_HAS_NO_THREADS)
+#elif _LIBCPP_HAS_THREADS
   static constinit memory_resource* res = &res_init.resources.new_delete_res;
   static mutex res_lock;
   if (set) {

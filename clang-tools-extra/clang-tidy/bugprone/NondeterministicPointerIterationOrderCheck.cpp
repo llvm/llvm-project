@@ -57,7 +57,6 @@ void NondeterministicPointerIterationOrderCheck::check(
                 "recorddecl")) {
       const TemplateArgumentList &TemplateArgs =
           ClassTemplate->getTemplateArgs();
-      const llvm::StringRef AlgoName = ClassTemplate->getName();
       const bool IsAlgoArgPointer =
           TemplateArgs[0].getAsType()->isPointerType();
 

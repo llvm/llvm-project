@@ -772,6 +772,7 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << "negate_ra_sign_state_with_pc ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
+    break;
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi directive>";
@@ -908,7 +909,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << printJumpTableEntryReference(getIndex());
     break;
   case MachineOperand::MO_GlobalAddress:
-    getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
+    if (auto *GV = getGlobal())
+      GV->printAsOperand(OS, /*PrintType=*/false, MST);
+    else // Invalid, but may appear in debugging scenarios.
+      OS << "globaladdress(null)";
+
     printOperandOffset(OS, getOffset());
     break;
   case MachineOperand::MO_ExternalSymbol: {

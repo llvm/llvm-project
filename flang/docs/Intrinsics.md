@@ -1052,6 +1052,9 @@ end program rename_proc
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-standard Intrinsics: LNBLNK
+This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
+
 #### Usage and Info
 
 - **Standard:** GNU extension

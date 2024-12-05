@@ -44,7 +44,7 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-NEXT:    br label [[IF_END75]]
 ; CHECK:       if.end75:
 ; CHECK-NEXT:    [[TMP22:%.*]] = phi <4 x i32> [ [[TMP20]], [[IF_THEN74]] ], [ [[TMP21]], [[IF_END72]] ]
-; CHECK-NEXT:    [[TMP23:%.*]] = or <4 x i32> [[TMP22]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP23:%.*]] = or <4 x i32> [[TMP22]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = mul <4 x i32> [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = sitofp <4 x i32> [[TMP25]] to <4 x float>

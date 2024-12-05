@@ -38,7 +38,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsX86.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1255,16 +1254,16 @@ bool X86InstructionSelector::selectExtract(MachineInstr &I,
 
   if (SrcTy.getSizeInBits() == 256 && DstTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Z256rri));
+      I.setDesc(TII.get(X86::VEXTRACTF32X4Z256rri));
     else if (HasAVX)
       I.setDesc(TII.get(X86::VEXTRACTF128rri));
     else
       return false;
   } else if (SrcTy.getSizeInBits() == 512 && HasAVX512) {
     if (DstTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Zrri));
+      I.setDesc(TII.get(X86::VEXTRACTF32X4Zrri));
     else if (DstTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VEXTRACTF64x4Zrri));
+      I.setDesc(TII.get(X86::VEXTRACTF64X4Zrri));
     else
       return false;
   } else
@@ -1388,16 +1387,16 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
 
   if (DstTy.getSizeInBits() == 256 && InsertRegTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VINSERTF32x4Z256rri));
+      I.setDesc(TII.get(X86::VINSERTF32X4Z256rri));
     else if (HasAVX)
       I.setDesc(TII.get(X86::VINSERTF128rri));
     else
       return false;
   } else if (DstTy.getSizeInBits() == 512 && HasAVX512) {
     if (InsertRegTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VINSERTF32x4Zrri));
+      I.setDesc(TII.get(X86::VINSERTF32X4Zrri));
     else if (InsertRegTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VINSERTF64x4Zrri));
+      I.setDesc(TII.get(X86::VINSERTF64X4Zrri));
     else
       return false;
   } else

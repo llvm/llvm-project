@@ -306,6 +306,16 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
       continue;
 
     llvm::hlsl::ResourceClass RC = AttrResType->getAttrs().ResourceClass;
+    if (RC == llvm::hlsl::ResourceClass::UAV ||
+        RC == llvm::hlsl::ResourceClass::SRV)
+      // UAVs and SRVs have already been converted to use LLVM target types,
+      // we can disable generating of these resource annotations. This will
+      // enable progress on structured buffers with user defined types this
+      // resource annotations code does not handle and it crashes.
+      // This whole function is going to be removed as soon as cbuffers are
+      // converted to target types (llvm/llvm-project #114126).
+      return;
+
     bool IsROV = AttrResType->getAttrs().IsROV;
     llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
     llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
@@ -379,6 +389,10 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
         CGM.getIntrinsic(getThreadIdIntrinsic());
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
+  if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
+    llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(Intrinsic::dx_group_id);
+    return buildVectorInput(B, GroupIDIntrinsic, Ty);
+  }
   assert(false && "Unhandled parameter attribute");
   return nullptr;
 }
@@ -404,6 +418,16 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", EntryFn);
   IRBuilder<> B(BB);
   llvm::SmallVector<Value *> Args;
+
+  SmallVector<OperandBundleDef, 1> OB;
+  if (CGM.shouldEmitConvergenceTokens()) {
+    assert(EntryFn->isConvergent());
+    llvm::Value *I = B.CreateIntrinsic(
+        llvm::Intrinsic::experimental_convergence_entry, {}, {});
+    llvm::Value *bundleArgs[] = {I};
+    OB.emplace_back("convergencectrl", bundleArgs);
+  }
+
   // FIXME: support struct parameters where semantics are on members.
   // See: https://github.com/llvm/llvm-project/issues/57874
   unsigned SRetOffset = 0;
@@ -419,7 +443,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     Args.push_back(emitInputSemantic(B, *PD, Param.getType()));
   }
 
-  CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args);
+  CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
   CI->setCallingConv(Fn->getCallingConv());
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
@@ -474,14 +498,22 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   for (auto &F : M.functions()) {
     if (!F.hasFnAttribute("hlsl.shader"))
       continue;
-    IRBuilder<> B(&F.getEntryBlock(), F.getEntryBlock().begin());
+    auto *Token = getConvergenceToken(F.getEntryBlock());
+    Instruction *IP = &*F.getEntryBlock().begin();
+    SmallVector<OperandBundleDef, 1> OB;
+    if (Token) {
+      llvm::Value *bundleArgs[] = {Token};
+      OB.emplace_back("convergencectrl", bundleArgs);
+      IP = Token->getNextNode();
+    }
+    IRBuilder<> B(IP);
     for (auto *Fn : CtorFns)
-      B.CreateCall(FunctionCallee(Fn));
+      B.CreateCall(FunctionCallee(Fn), {}, OB);
 
     // Insert global dtors before the terminator of the last instruction
     B.SetInsertPoint(F.back().getTerminator());
     for (auto *Fn : DtorFns)
-      B.CreateCall(FunctionCallee(Fn));
+      B.CreateCall(FunctionCallee(Fn), {}, OB);
   }
 
   // No need to keep global ctors/dtors for non-lib profile after call to
@@ -578,4 +610,19 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
 
   Builder.CreateRetVoid();
   return InitResBindingsFunc;
+}
+
+llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
+  if (!CGM.shouldEmitConvergenceTokens())
+    return nullptr;
+
+  auto E = BB.end();
+  for (auto I = BB.begin(); I != E; ++I) {
+    auto *II = dyn_cast<llvm::IntrinsicInst>(&*I);
+    if (II && llvm::isConvergenceControlIntrinsic(II->getIntrinsicID())) {
+      return II;
+    }
+  }
+  llvm_unreachable("Convergence token should have been emitted.");
+  return nullptr;
 }

@@ -1541,6 +1541,24 @@ defm VFNMSUB132NEPBF16 : avx10_fma3p_132_bf16<0x9E, "vfnmsub132nepbf16", X86any_
 //-------------------------------------------------
 // AVX10  COMEF instructions
 //-------------------------------------------------
+multiclass avx10_com_ef<bits<8> Opc, RegisterClass RC, ValueType VT,
+                        SDPatternOperator OpNode, string OpcodeStr,
+                        X86MemOperand x86memop, PatFrag ld_frag,
+                        Domain d, X86FoldableSchedWrite sched = WriteFComX>{
+  let ExeDomain = d, mayRaiseFPException = 1, isCodeGenOnly = 1 in {
+    def rr : AVX512<Opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
+                    !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
+                    [(set EFLAGS, (OpNode (VT RC:$src1), RC:$src2))]>,
+                    EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
+    let mayLoad = 1 in {
+      def rm : AVX512<Opc, MRMSrcMem, (outs), (ins RC:$src1, x86memop:$src2),
+                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
+                      [(set EFLAGS, (OpNode (VT RC:$src1), (ld_frag addr:$src2)))]>,
+                      EVEX, EVEX_V128, Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
+    }
+  }
+}
+
 multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
                              string OpcodeStr,
                              Domain d,
@@ -1564,6 +1582,15 @@ multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
 }
 
 let Defs = [EFLAGS], Uses = [MXCSR], Predicates = [HasAVX10_2] in {
+  defm VUCOMXSDZ  :  avx10_com_ef<0x2e, FR64X, f64, X86ucomi512,
+                                  "vucomxsd", f64mem, loadf64, SSEPackedDouble>,
+                                  TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
+  defm VUCOMXSHZ  :  avx10_com_ef<0x2e, FR16X, f16, X86ucomi512,
+                                  "vucomxsh", f16mem, loadf16, SSEPackedSingle>,
+                                  T_MAP5, XD, EVEX_CD8<16, CD8VT1>;
+  defm VUCOMXSSZ  :  avx10_com_ef<0x2e, FR32X, f32, X86ucomi512,
+                                  "vucomxss", f32mem, loadf32, SSEPackedSingle>,
+                                  TB, XD, VEX_LIG, EVEX_CD8<32, CD8VT1>;
   defm VCOMXSDZ   :  avx10_com_ef_int<0x2f, v2f64x_info, X86comi512,
                                       "vcomxsd", SSEPackedDouble>,
                                       TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;

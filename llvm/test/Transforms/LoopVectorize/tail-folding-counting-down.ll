@@ -45,8 +45,8 @@ while.end:
 ;
 define void @reuse_const_btc(ptr %A) optsize {
 ; CHECK-LABEL: @reuse_const_btc
-; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, <i32 13, i32 13, i32 13, i32 13>
-; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> <i32 12, i32 12, i32 12, i32 12>, <4 x i32> <i32 13, i32 13, i32 13, i32 13>
+; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, splat (i32 13)
+; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> splat (i32 12), <4 x i32> splat (i32 13)
 ;
 entry:
   br label %loop

@@ -43,7 +43,9 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/Demangle/Demangle.h"
 
 #include <map>
@@ -825,11 +827,11 @@ std::string DWARFASTParserClang::GetDIEClassTemplateParams(DWARFDIE die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
     return {};
 
-  TypeSystemClang::TemplateParameterInfos template_param_infos;
-  if (ParseTemplateParameterInfos(die, template_param_infos))
-    return m_ast.PrintTemplateParams(template_param_infos);
-
-  return {};
+  std::string name;
+  llvm::raw_string_ostream os(name);
+  llvm::DWARFTypePrinter<DWARFDIE> type_printer(os);
+  type_printer.appendAndTerminateTemplateParameters(die);
+  return name;
 }
 
 void DWARFASTParserClang::MapDeclDIEToDefDIE(
@@ -1617,9 +1619,9 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
       if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
-        qualified_name.insert(
-            0, GetDIEClassTemplateParams(parent_decl_ctx_die));
         qualified_name.insert(0, "::");
+        qualified_name.insert(0,
+                              GetDIEClassTemplateParams(parent_decl_ctx_die));
         qualified_name.insert(0, class_union_struct_name);
       }
       parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
@@ -1672,6 +1674,12 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   if (attrs.name) {
     GetUniqueTypeNameAndDeclaration(die, cu_language, unique_typename,
                                     unique_decl);
+    if (log) {
+      dwarf->GetObjectFile()->GetModule()->LogMessage(
+          log, "SymbolFileDWARF({0:p}) - {1:x16}: {2} has unique name: {3} ",
+          static_cast<void *>(this), die.GetID(), DW_TAG_value_to_name(tag),
+          unique_typename.AsCString());
+    }
     if (UniqueDWARFASTType *unique_ast_entry_type =
             dwarf->GetUniqueDWARFASTTypeMap().Find(
                 unique_typename, die, unique_decl, byte_size,
@@ -2138,6 +2146,16 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   if (record_decl)
     GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
 
+  // DWARF doesn't have the attribute, but we can infer the value the same way
+  // as Clang Sema does. It's required to calculate the size of pointers to
+  // member functions of this type.
+  if (m_ast.getASTContext().getTargetInfo().getCXXABI().isMicrosoft()) {
+    auto IM = record_decl->calculateInheritanceModel();
+    record_decl->addAttr(clang::MSInheritanceAttr::CreateImplicit(
+        m_ast.getASTContext(), true, {},
+        clang::MSInheritanceAttr::Spelling(IM)));
+  }
+
   // Now parse all contained types inside of the class. We make forward
   // declarations to all classes, but we need the CXXRecordDecl to have decls
   // for all contained types because we don't get asked for them via the
@@ -2340,12 +2358,9 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   return ConstString(sstr.GetString());
 }
 
-Function *
-DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
-                                            const DWARFDIE &die,
-                                            const AddressRange &func_range) {
-  assert(func_range.GetBaseAddress().IsValid());
-  DWARFRangeList func_ranges;
+Function *DWARFASTParserClang::ParseFunctionFromDWARF(
+    CompileUnit &comp_unit, const DWARFDIE &die, AddressRanges func_ranges) {
+  DWARFRangeList unused_func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;
   std::optional<int> decl_file;
@@ -2361,9 +2376,9 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   if (tag != DW_TAG_subprogram)
     return nullptr;
 
-  if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
-                               decl_column, call_file, call_line, call_column,
-                               &frame_base)) {
+  if (die.GetDIENamesAndRanges(name, mangled, unused_func_ranges, decl_file,
+                               decl_line, decl_column, call_file, call_line,
+                               call_column, &frame_base)) {
     Mangled func_name;
     if (mangled)
       func_name.SetValue(ConstString(mangled));
@@ -2395,11 +2410,10 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
     assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
 
     const user_id_t func_user_id = die.GetID();
-    func_sp =
-        std::make_shared<Function>(&comp_unit,
-                                   func_user_id, // UserID is the DIE offset
-                                   func_user_id, func_name, func_type,
-                                   func_range); // first address range
+    func_sp = std::make_shared<Function>(
+        &comp_unit,
+        func_user_id, // UserID is the DIE offset
+        func_user_id, func_name, func_type, std::move(func_ranges));
 
     if (func_sp.get() != nullptr) {
       if (frame_base.IsValid())

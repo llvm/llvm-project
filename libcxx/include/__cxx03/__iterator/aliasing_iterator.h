@@ -9,11 +9,11 @@
 #ifndef _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
 #define _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
 
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
-#include <__type_traits/is_trivial.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__type_traits/is_trivial.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

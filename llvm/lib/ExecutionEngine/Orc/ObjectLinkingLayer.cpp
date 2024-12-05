@@ -9,9 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -67,6 +65,8 @@ JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
 
   if (Sym.getScope() == Scope::Default)
     Flags |= JITSymbolFlags::Exported;
+  else if (Sym.getScope() == Scope::SideEffectsOnly)
+    Flags |= JITSymbolFlags::MaterializationSideEffectsOnly;
 
   if (Sym.isCallable())
     Flags |= JITSymbolFlags::Callable;
@@ -238,7 +238,7 @@ public:
 
     SymbolMap InternedResult;
     for (auto *Sym : G.defined_symbols())
-      if (Sym->hasName() && Sym->getScope() != Scope::Local) {
+      if (Sym->getScope() < Scope::SideEffectsOnly) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
@@ -251,7 +251,7 @@ public:
       }
 
     for (auto *Sym : G.absolute_symbols())
-      if (Sym->hasName() && Sym->getScope() != Scope::Local) {
+      if (Sym->getScope() < Scope::SideEffectsOnly) {
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
@@ -283,11 +283,9 @@ public:
         // If this is a materialization-side-effects only symbol then bump
         // the counter and remove in from the result, otherwise make sure that
         // it's defined.
-        if (Flags.hasMaterializationSideEffectsOnly()) {
+        if (Flags.hasMaterializationSideEffectsOnly())
           ++NumMaterializationSideEffectsOnlySymbols;
-          InternedResult.erase(Sym);
-          continue;
-        } else if (I == InternedResult.end())
+        else if (I == InternedResult.end())
           MissingSymbols.push_back(Sym);
         else if (Layer.OverrideObjectFlags)
           I->second.setFlags(Flags);
@@ -701,16 +699,15 @@ Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {
 void ObjectLinkingLayer::handleTransferResources(JITDylib &JD,
                                                  ResourceKey DstKey,
                                                  ResourceKey SrcKey) {
-  auto I = Allocs.find(SrcKey);
-  if (I != Allocs.end()) {
-    auto &SrcAllocs = I->second;
+  if (Allocs.contains(SrcKey)) {
+    // DstKey may not be in the DenseMap yet, so the following line may resize
+    // the container and invalidate iterators and value references.
     auto &DstAllocs = Allocs[DstKey];
+    auto &SrcAllocs = Allocs[SrcKey];
     DstAllocs.reserve(DstAllocs.size() + SrcAllocs.size());
     for (auto &Alloc : SrcAllocs)
       DstAllocs.push_back(std::move(Alloc));
 
-    // Erase SrcKey entry using value rather than iterator I: I may have been
-    // invalidated when we looked up DstKey.
     Allocs.erase(SrcKey);
   }
 

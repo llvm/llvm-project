@@ -25,10 +25,11 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/byte.h>
+#include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 

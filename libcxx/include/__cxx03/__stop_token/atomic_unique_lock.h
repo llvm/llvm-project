@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_GUARD_H
 #define _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_GUARD_H
 
-#include <__bit/popcount.h>
-#include <__config>
-#include <atomic>
+#include <__cxx03/__bit/popcount.h>
+#include <__cxx03/__config>
+#include <__cxx03/atomic>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

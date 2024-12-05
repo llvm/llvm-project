@@ -305,11 +305,11 @@ bool objdump::ArchiveHeaders;
 bool objdump::Demangle;
 bool objdump::Disassemble;
 bool objdump::DisassembleAll;
+std::vector<std::string> objdump::DisassemblerOptions;
 bool objdump::SymbolDescription;
 bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
-static std::vector<std::string> DisassemblerOptions;
 static ColorOutput DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
@@ -2556,7 +2556,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   if (!MAttrs.empty()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I)
       Features.AddFeature(MAttrs[I]);
-  } else if (MCPU.empty() && Obj->getArch() == llvm::Triple::aarch64) {
+  } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
   }
 

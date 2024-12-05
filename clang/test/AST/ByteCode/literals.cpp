@@ -980,6 +980,8 @@ namespace DiscardExprs {
     __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
 
     requires{false;};
+    constexpr int *p = nullptr;
+    p - p;
 
     return 0;
   }

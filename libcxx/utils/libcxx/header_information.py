@@ -6,9 +6,9 @@
 #
 # ===----------------------------------------------------------------------===##
 
-import os, pathlib, functools
+import pathlib, functools
 
-libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+libcxx_root = pathlib.Path(__file__).resolve().parent.parent.parent
 libcxx_include = libcxx_root / "include"
 assert libcxx_root.exists()
 
@@ -66,6 +66,7 @@ class Header:
             "cmath",
             "csetjmp",
             "csignal",
+            "cstdalign",
             "cstdarg",
             "cstdbool",
             "cstddef",
@@ -92,7 +93,7 @@ class Header:
         experimental headers.
         """
         # These headers have been removed in C++20 so are never part of a module.
-        removed_in_20 = ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+        removed_in_20 = ["ccomplex", "ciso646", "cstdalign", "cstdbool", "ctgmath"]
         return self.is_public() and not self.is_experimental() and not self.is_C_compatibility() and not self._name in removed_in_20
 
     def is_cxx03_frozen_header(self) -> bool:
@@ -181,21 +182,21 @@ header_restrictions = {
     "stdatomic.h": "_LIBCPP_HAS_ATOMIC_HEADER",
 
     # headers with #error directives
-    "ios": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "ios": "_LIBCPP_HAS_LOCALIZATION",
     # transitive includers of the above headers
-    "clocale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "codecvt": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "iomanip": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "iostream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "istream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "locale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "ostream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "regex": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "sstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "clocale": "_LIBCPP_HAS_LOCALIZATION",
+    "codecvt": "_LIBCPP_HAS_LOCALIZATION",
+    "fstream": "_LIBCPP_HAS_LOCALIZATION",
+    "iomanip": "_LIBCPP_HAS_LOCALIZATION",
+    "iostream": "_LIBCPP_HAS_LOCALIZATION",
+    "istream": "_LIBCPP_HAS_LOCALIZATION",
+    "locale": "_LIBCPP_HAS_LOCALIZATION",
+    "ostream": "_LIBCPP_HAS_LOCALIZATION",
+    "regex": "_LIBCPP_HAS_LOCALIZATION",
+    "sstream": "_LIBCPP_HAS_LOCALIZATION",
+    "streambuf": "_LIBCPP_HAS_LOCALIZATION",
+    "strstream": "_LIBCPP_HAS_LOCALIZATION",
+    "syncstream": "_LIBCPP_HAS_LOCALIZATION",
 }
 
 lit_header_restrictions = {
@@ -234,6 +235,15 @@ lit_header_restrictions = {
     "thread": "// UNSUPPORTED: no-threads, c++03",
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
+}
+
+# Undeprecate headers that are deprecated in C++17 and removed in C++20.
+lit_header_undeprecations = {
+    "ccomplex": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ciso646": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdalign": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdbool": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ctgmath": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
 }
 
 # This table was produced manually, by grepping the TeX source of the Standard's

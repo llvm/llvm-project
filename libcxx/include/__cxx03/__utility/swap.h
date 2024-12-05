@@ -9,22 +9,22 @@
 #ifndef _LIBCPP___UTILITY_SWAP_H
 #define _LIBCPP___UTILITY_SWAP_H
 
-#include <__config>
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_swappable.h>
-#include <__utility/declval.h>
-#include <__utility/move.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
