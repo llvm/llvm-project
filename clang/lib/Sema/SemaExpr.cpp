@@ -5563,6 +5563,12 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
 ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   assert(Field->hasInClassInitializer());
 
+  // We do not want to aggressively cutoff parsing. Try to recover when
+  // in-class-initializer had errors.
+  if (Field->getInClassInitializer() &&
+      Field->getInClassInitializer()->containsErrors())
+    return Field->getInClassInitializer();
+
   // If we might have already tried and failed to instantiate, don't try again.
   if (Field->isInvalidDecl())
     return ExprError();
