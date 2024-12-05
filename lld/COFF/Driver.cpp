@@ -809,7 +809,7 @@ StringRef LinkerDriver::findDefaultEntry() {
   if (findUnderscoreMangle("wmain")) {
     if (!findUnderscoreMangle("main"))
       return mangle("wmainCRTStartup");
-    warn("found both wmain and main; using latter");
+    Warn(ctx) << "found both wmain and main; using latter";
   }
   return mangle("mainCRTStartup");
 }
@@ -828,9 +828,9 @@ WindowsSubsystem LinkerDriver::inferSubsystem() {
   bool haveWWinMain = findUnderscoreMangle("wWinMain");
   if (haveMain || haveWMain) {
     if (haveWinMain || haveWWinMain) {
-      warn(std::string("found ") + (haveMain ? "main" : "wmain") + " and " +
-           (haveWinMain ? "WinMain" : "wWinMain") +
-           "; defaulting to /subsystem:console");
+      Warn(ctx) << "found " << (haveMain ? "main" : "wmain") << " and "
+                << (haveWinMain ? "WinMain" : "wWinMain")
+                << "; defaulting to /subsystem:console";
     }
     return IMAGE_SUBSYSTEM_WINDOWS_CUI;
   }
@@ -910,7 +910,8 @@ static std::string createResponseFile(const opt::InputArgList &args,
   return std::string(data);
 }
 
-static unsigned parseDebugTypes(const opt::InputArgList &args) {
+static unsigned parseDebugTypes(COFFLinkerContext &ctx,
+                                const opt::InputArgList &args) {
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
 
   if (auto *a = args.getLastArg(OPT_debugtype)) {
@@ -925,7 +926,7 @@ static unsigned parseDebugTypes(const opt::InputArgList &args) {
                        .Case("fixup", static_cast<unsigned>(DebugType::Fixup))
                        .Default(0);
       if (v == 0) {
-        warn("/debugtype: unknown option '" + type + "'");
+        Warn(ctx) << "/debugtype: unknown option '" << type << "'";
         continue;
       }
       debugTypes |= v;
@@ -1162,7 +1163,8 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
 
     if (set.count(s) == 0) {
       if (ctx.config.warnMissingOrderSymbol)
-        warn("/order:" + arg + ": missing symbol: " + s + " [LNK4037]");
+        Warn(ctx) << "/order:" << arg << ": missing symbol: " << s
+                  << " [LNK4037]";
     } else
       ctx.config.order[s] = INT_MIN + ctx.config.order.size();
   }
@@ -1189,7 +1191,7 @@ void LinkerDriver::parseCallGraphFile(StringRef path) {
     Symbol *sym = map.lookup(name);
     if (!sym) {
       if (ctx.config.warnMissingOrderSymbol)
-        warn(path + ": no such symbol: " + name);
+        Warn(ctx) << path << ": no such symbol: " << name;
       return nullptr;
     }
 
@@ -1332,8 +1334,8 @@ void LinkerDriver::parsePDBAltPath() {
     else if (var.equals_insensitive("%_ext%"))
       buf.append(binaryExtension);
     else {
-      warn("only %_PDB% and %_EXT% supported in /pdbaltpath:, keeping " + var +
-           " as literal");
+      Warn(ctx) << "only %_PDB% and %_EXT% supported in /pdbaltpath:, keeping "
+                << var << " as literal";
       buf.append(var);
     }
 
@@ -1691,7 +1693,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         addLibSearchPaths();
     } else {
       if (args.hasArg(OPT_vctoolsdir, OPT_winsysroot))
-        warn("ignoring /vctoolsdir or /winsysroot flags in MinGW mode");
+        Warn(ctx) << "ignoring /vctoolsdir or /winsysroot flags in MinGW mode";
     }
   }
 
@@ -1752,7 +1754,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     StringRef(str).split(vec, ',');
     for (StringRef s : vec) {
       if (s == "fastlink") {
-        warn("/debug:fastlink unsupported; using /debug:full");
+        Warn(ctx) << "/debug:fastlink unsupported; using /debug:full";
         s = "full";
       }
       if (s == "none") {
@@ -1795,7 +1797,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->demangle = args.hasFlag(OPT_demangle, OPT_demangle_no, true);
 
   // Handle /debugtype
-  config->debugTypes = parseDebugTypes(args);
+  config->debugTypes = parseDebugTypes(ctx, args);
 
   // Handle /driver[:uponly|:wdm].
   config->driverUponly = args.hasArg(OPT_driver_uponly) ||
@@ -1832,7 +1834,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /pdbstripped
   if (args.hasArg(OPT_pdbstripped))
-    warn("ignoring /pdbstripped flag, it is not yet supported");
+    Warn(ctx) << "ignoring /pdbstripped flag, it is not yet supported";
 
   // Handle /noentry
   if (args.hasArg(OPT_noentry)) {
@@ -2114,7 +2116,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (!isPowerOf2_64(config->align))
       error("/align: not a power of two: " + StringRef(arg->getValue()));
     if (!args.hasArg(OPT_driver))
-      warn("/align specified without /driver; image may not run");
+      Warn(ctx) << "/align specified without /driver; image may not run";
   }
 
   // Handle /aligncomm
@@ -2199,27 +2201,29 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
                    OPT_lld_allow_duplicate_weak_no, config->mingw);
 
   if (args.hasFlag(OPT_inferasanlibs, OPT_inferasanlibs_no, false))
-    warn("ignoring '/inferasanlibs', this flag is not supported");
+    Warn(ctx) << "ignoring '/inferasanlibs', this flag is not supported";
 
   if (config->incremental && args.hasArg(OPT_profile)) {
-    warn("ignoring '/incremental' due to '/profile' specification");
+    Warn(ctx) << "ignoring '/incremental' due to '/profile' specification";
     config->incremental = false;
   }
 
   if (config->incremental && args.hasArg(OPT_order)) {
-    warn("ignoring '/incremental' due to '/order' specification");
+    Warn(ctx) << "ignoring '/incremental' due to '/order' specification";
     config->incremental = false;
   }
 
   if (config->incremental && config->doGC) {
-    warn("ignoring '/incremental' because REF is enabled; use '/opt:noref' to "
-         "disable");
+    Warn(ctx) << "ignoring '/incremental' because REF is enabled; use "
+                 "'/opt:noref' to "
+                 "disable";
     config->incremental = false;
   }
 
   if (config->incremental && config->doICF != ICFLevel::None) {
-    warn("ignoring '/incremental' because ICF is enabled; use '/opt:noicf' to "
-         "disable");
+    Warn(ctx) << "ignoring '/incremental' because ICF is enabled; use "
+                 "'/opt:noicf' to "
+                 "disable";
     config->incremental = false;
   }
 
@@ -2285,7 +2289,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.
   if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-    warn("/machine is not specified. x64 is assumed");
+    Warn(ctx) << "/machine is not specified. x64 is assumed";
     config->machine = AMD64;
     addWinSysRootLibSearchPaths();
   }
@@ -2460,8 +2464,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   if (config->lldmapFile != "" && config->lldmapFile == config->mapFile) {
-    warn("/lldmap and /map have the same output file '" + config->mapFile +
-         "'.\n>>> ignoring /lldmap");
+    Warn(ctx) << "/lldmap and /map have the same output file '"
+              << config->mapFile << "'.\n>>> ignoring /lldmap";
     config->lldmapFile.clear();
   }
 
@@ -2741,7 +2745,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     Symbol *sym = ctx.symtab.find(name);
     if (!sym) {
-      warn("/aligncomm symbol " + name + " not found");
+      Warn(ctx) << "/aligncomm symbol " << name << " not found";
       continue;
     }
 
