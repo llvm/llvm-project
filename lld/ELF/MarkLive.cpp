@@ -218,11 +218,17 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec,
     return;
   sec->partition = sec->partition ? 1 : partition;
 
-  whyLive.try_emplace(sec, parent);
-  if (offset) {
-    Defined *sym = sec->getEnclosingSymbol(*offset);
-    if (sym)
-      whyLive.try_emplace(sym, parent);
+  Defined *sym = nullptr;
+  if (offset)
+    sym = sec->getEnclosingSymbol(*offset);
+  if (sym) {
+    // If a specific symbol is referenced, the parent makes it alive, and it
+    // (may) makes its section alive.
+    whyLive.try_emplace(sym, parent);
+    whyLive.try_emplace(sec, sym);
+  } else {
+    // Otherwise, the parent generically makes the section itself live.
+    whyLive.try_emplace(sec, parent);
   }
 
   // Add input section to the queue.
