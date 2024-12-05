@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for recursive
+; CHECK-GI:  warning: Instruction selection used fallback path for recursive
 
 define <8 x i16> @abdu_base(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-SD-LABEL: abdu_base:
