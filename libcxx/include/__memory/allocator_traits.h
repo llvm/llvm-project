@@ -236,34 +236,34 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
 
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits {
-  using allocator_type _LIBCPP_NODEBUG     = _Alloc;
-  using value_type _LIBCPP_NODEBUG         = typename allocator_type::value_type;
-  using pointer _LIBCPP_NODEBUG            = __pointer<value_type, allocator_type>;
-  using const_pointer _LIBCPP_NODEBUG      = typename __const_pointer<value_type, pointer, allocator_type>::type;
-  using void_pointer _LIBCPP_NODEBUG       = typename __void_pointer<pointer, allocator_type>::type;
-  using const_void_pointer _LIBCPP_NODEBUG = typename __const_void_pointer<pointer, allocator_type>::type;
-  using difference_type _LIBCPP_NODEBUG    = typename __alloc_traits_difference_type<allocator_type, pointer>::type;
-  using size_type _LIBCPP_NODEBUG          = __size_type<allocator_type, difference_type>;
-  using propagate_on_container_copy_assignment _LIBCPP_NODEBUG =
+  using allocator_type     = _Alloc;
+  using value_type         = typename allocator_type::value_type;
+  using pointer            = __pointer<value_type, allocator_type>;
+  using const_pointer      = typename __const_pointer<value_type, pointer, allocator_type>::type;
+  using void_pointer       = typename __void_pointer<pointer, allocator_type>::type;
+  using const_void_pointer = typename __const_void_pointer<pointer, allocator_type>::type;
+  using difference_type    = typename __alloc_traits_difference_type<allocator_type, pointer>::type;
+  using size_type          = __size_type<allocator_type, difference_type>;
+  using propagate_on_container_copy_assignment =
       __propagate_on_container_copy_assignment<allocator_type>;
-  using propagate_on_container_move_assignment _LIBCPP_NODEBUG =
+  using propagate_on_container_move_assignment =
       __propagate_on_container_move_assignment<allocator_type>;
-  using propagate_on_container_swap _LIBCPP_NODEBUG = __propagate_on_container_swap<allocator_type>;
-  using is_always_equal _LIBCPP_NODEBUG             = __is_always_equal<allocator_type>;
+  using propagate_on_container_swap = __propagate_on_container_swap<allocator_type>;
+  using is_always_equal             = __is_always_equal<allocator_type>;
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Tp>
-  using rebind_alloc _LIBCPP_NODEBUG = __allocator_traits_rebind_t<allocator_type, _Tp>;
+  using rebind_alloc = __allocator_traits_rebind_t<allocator_type, _Tp>;
   template <class _Tp>
-  using rebind_traits _LIBCPP_NODEBUG = allocator_traits<rebind_alloc<_Tp> >;
+  using rebind_traits = allocator_traits<rebind_alloc<_Tp> >;
 #else  // _LIBCPP_CXX03_LANG
   template <class _Tp>
   struct rebind_alloc {
-    using other _LIBCPP_NODEBUG = __allocator_traits_rebind_t<allocator_type, _Tp>;
+    using other = __allocator_traits_rebind_t<allocator_type, _Tp>;
   };
   template <class _Tp>
   struct rebind_traits {
-    using other _LIBCPP_NODEBUG = allocator_traits<typename rebind_alloc<_Tp>::other>;
+    using other = allocator_traits<typename rebind_alloc<_Tp>::other>;
   };
 #endif // _LIBCPP_CXX03_LANG
 

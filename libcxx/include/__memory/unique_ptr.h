@@ -410,7 +410,7 @@ class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp>
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  using pointer _LIBCPP_NODEBUG = __pointer<_Tp, deleter_type>;
+  using pointer = __pointer<_Tp, deleter_type>;
 
   // A unique_ptr contains the following members which may be trivially relocatable:
   // - pointer: this may be trivially relocatable, so it's checked
