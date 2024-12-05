@@ -3,4 +3,6 @@
 //
 // RUN: not %orc_rt_executor 2>&1 | FileCheck %s
 
+// REQUIRES: system-linux
+
 // CHECK: usage: orc-rt-executor [help] [<mode>] <program arguments>...

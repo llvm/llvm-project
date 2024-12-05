@@ -23,6 +23,7 @@ namespace orc {
 class RedirectionManager {
 public:
   virtual ~RedirectionManager() = default;
+
   /// Change the redirection destination of given symbols to new destination
   /// symbols.
   virtual Error redirect(JITDylib &JD, const SymbolMap &NewDests) = 0;
