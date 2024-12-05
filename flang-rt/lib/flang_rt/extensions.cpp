@@ -11,11 +11,11 @@
 
 #include "flang/Runtime/extensions.h"
 #include "flang-rt/descriptor.h"
-#include "flang-rt/io-api-funcs.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/io-api.h"
 #include <chrono>
 #include <cstring>
 #include <ctime>

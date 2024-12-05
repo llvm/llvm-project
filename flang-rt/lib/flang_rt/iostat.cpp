@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/iostat-funcs.h"
+#include "flang/Runtime/iostat.h"
 
 namespace Fortran::runtime::io {
 RT_OFFLOAD_API_GROUP_BEGIN

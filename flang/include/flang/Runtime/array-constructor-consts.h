@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// External APIs to create temporary storage for array constructors when their
-// final extents or length parameters cannot be pre-computed.
-
 #ifndef FORTRAN_RUNTIME_ARRAY_CONSTRUCTOR_CONSTS_H_
 #define FORTRAN_RUNTIME_ARRAY_CONSTRUCTOR_CONSTS_H_
 

@@ -8,8 +8,8 @@
 
 #include "CrashHandlerFixture.h"
 #include "flang-rt/descriptor.h"
-#include "flang-rt/io-api-funcs.h"
 #include "../../lib/flang_rt/io-error.h"
+#include "flang/Runtime/io-api-consts.h"
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;

@@ -9,8 +9,8 @@
 #include "../../lib/flang_rt/namelist.h"
 #include "CrashHandlerFixture.h"
 #include "flang-rt/descriptor.h"
-#include "flang-rt/io-api-funcs.h"
 #include "tools.h"
+#include "flang/Runtime/io-api-consts.h"
 #include <algorithm>
 #include <cinttypes>
 #include <complex>

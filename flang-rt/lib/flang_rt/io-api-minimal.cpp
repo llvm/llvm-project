@@ -10,13 +10,13 @@
 // list-directed output (PRINT *) of intrinsic types.
 
 #include "edit-output.h"
-#include "flang-rt/io-api-funcs.h"
 #include "format.h"
 #include "io-api-common.h"
 #include "io-stmt.h"
 #include "terminator.h"
 #include "tools.h"
 #include "unit.h"
+#include "flang/Runtime/io-api.h"
 
 namespace Fortran::runtime::io {
 RT_EXT_API_GROUP_BEGIN
