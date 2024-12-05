@@ -24,6 +24,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 #include <atomic>
+#include <chrono>
 #include <optional>
 
 using namespace lldb_private;
@@ -91,14 +92,27 @@ void ManualDWARFIndex::Index() {
   // are available. This is significantly faster than submiting a new task for
   // each unit.
   auto for_each_unit = [&](auto &&fn) {
-    std::atomic<size_t> next_cu_idx = 0;
-    auto wrapper = [&fn, &next_cu_idx, &units_to_index,
-                    &progress](size_t worker_id) {
-      size_t cu_idx;
-      while ((cu_idx = next_cu_idx.fetch_add(1, std::memory_order_relaxed)) <
-             units_to_index.size()) {
-        fn(worker_id, cu_idx, units_to_index[cu_idx]);
-        progress.Increment();
+    std::atomic<size_t> next_unit_idx = 0;
+    std::atomic<size_t> units_indexed = 0;
+    auto wrapper = [&fn, &next_unit_idx, &units_indexed, &units_to_index,
+                    &progress, num_threads](size_t worker_id) {
+      constexpr auto progress_interval = std::chrono::milliseconds(10);
+
+      // Stagger the reports for different threads so we get a steady stream of
+      // one report per ~10ms.
+      auto next_report = std::chrono::steady_clock::now() +
+                         progress_interval * (1 + worker_id);
+      size_t unit_idx;
+      while ((unit_idx = next_unit_idx.fetch_add(
+                  1, std::memory_order_relaxed)) < units_to_index.size()) {
+        fn(worker_id, unit_idx, units_to_index[unit_idx]);
+
+        units_indexed.fetch_add(1, std::memory_order_acq_rel);
+        if (auto now = std::chrono::steady_clock::now(); now >= next_report) {
+          progress.Increment(
+              units_indexed.exchange(0, std::memory_order_acq_rel));
+          next_report = now + num_threads * progress_interval;
+        }
       }
     };
 
@@ -106,6 +120,7 @@ void ManualDWARFIndex::Index() {
       task_group.async(wrapper, i);
 
     task_group.wait();
+    progress.Increment(units_indexed.load(std::memory_order_acquire));
   };
 
   // Extract dies for all DWARFs unit in parallel.  Figure out which units
