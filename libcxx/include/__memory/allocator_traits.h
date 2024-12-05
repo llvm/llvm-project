@@ -73,7 +73,7 @@ struct __void_pointer {
 template <class _Ptr, class _Alloc>
 struct __void_pointer<_Ptr, _Alloc, false> {
 #ifdef _LIBCPP_CXX03_LANG
-  using type = typename pointer_traits<_Ptr>::template rebind<void>::other;
+  using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<void>::other;
 #else
   using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<void>;
 #endif
