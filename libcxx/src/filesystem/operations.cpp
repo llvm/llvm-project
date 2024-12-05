@@ -41,8 +41,7 @@
 // since Linux 4.5 and FreeBSD 13
 #if defined(__linux__) || defined(__FreeBSD__)
 #  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
-#endif
-#if __has_include(<sys/sendfile.h>)
+#elif __has_include(<sys/sendfile.h>)
 #  include <sys/sendfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_SENDFILE
 #elif defined(__APPLE__) || __has_include(<copyfile.h>)
