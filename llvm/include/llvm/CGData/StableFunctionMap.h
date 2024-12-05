@@ -42,8 +42,8 @@ struct StableFunction {
   StableFunction(stable_hash Hash, const std::string FunctionName,
                  const std::string ModuleName, unsigned InstCount,
                  IndexOperandHashVecType &&IndexOperandHashes)
-      : Hash(Hash), FunctionName(std::move(FunctionName)),
-        ModuleName(std::move(ModuleName)), InstCount(InstCount),
+      : Hash(Hash), FunctionName(FunctionName), ModuleName(ModuleName), 
+        InstCount(InstCount),
         IndexOperandHashes(std::move(IndexOperandHashes)) {}
   StableFunction() = default;
 };
