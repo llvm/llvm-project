@@ -197,7 +197,7 @@ Flang runtime can be built for accelerators in experimental mode, i.e.
 complete enabling is WIP.  CUDA and OpenMP target offload builds
 are currently supported.
 
-#### Building out-of-tree (Runtime-only build)
+#### Building out-of-tree (runtime-only build)
 
 ##### CUDA build
 Clang with NVPTX backend and NVCC compilers are supported.
@@ -209,7 +209,7 @@ mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
   -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
@@ -217,7 +217,7 @@ cmake \
   -DCMAKE_CUDA_COMPILER=clang \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtimes/
-make -j`nprocs` flang_rt
+make flang-rt
 ```
 
 Note that the used version of `clang` must [support](https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#cuda-support)
@@ -232,7 +232,7 @@ mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
   -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
@@ -241,7 +241,7 @@ cmake \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtimes/
 
-make -j`nprocs` flang_rt
+make flang-rt
 ```
 
 Note that `nvcc` might limit support to certain
@@ -260,7 +260,7 @@ build config:
 
 For example:
 ```bash
-  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
   -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
@@ -272,7 +272,7 @@ For example:
 
 Or:
 ```bash
-  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
   -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=gcc \
@@ -282,8 +282,11 @@ Or:
   ../llvm
 ```
 
-Normal `make -j`nprocs` check-flang` will work with such CMake configuration.
-Consider a lower value instead of `nprocs` appropriate to the available RAM.
+Normal `make check-flang` will work with such CMake configuration.
+Consider building in parallel using the `-j<jobs>` flag, where `<jobs>` is a
+number low enough for all build jobs to fit into the available RAM. Using
+the number of harware threads (`nprocs`) is likely too much for most
+commodity computers.
 
 ##### OpenMP target offload build
 Only Clang compiler is currently supported.
@@ -295,14 +298,14 @@ mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
   -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT="OpenMP" \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
-  -DFLANG_RT_DEVICE_ARCHITECTURES="all" \
+  -DFLANG_RT_DEVICE_ARCHITECTURES=all \
   ../runtimes/
 
-make -j`nprocs` flang_rt
+make flang-rt
 ```
 
 The result of the build is a "device-only" library, i.e. the host

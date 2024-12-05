@@ -6,15 +6,15 @@
 
 -->
 
-# Fortran Runtime (flang-rt)
+# Fortran Runtime (Flang-RT)
 
-Flang-rt is the runtime library for code emitted by the Flang compiler
+Flang-RT is the runtime library for code emitted by the Flang compiler
 (https://flang.llvm.org).
 
 
 ## Getting Started
 
-There are two build modes for the flang-rt. The bootstrap build, also
+There are two build modes for the Flang-RT. The bootstrap build, also
 called the in-tree build, and the runtime-only build, also called the
 out-of-tree build.
 Not to be confused with the terms
@@ -34,31 +34,31 @@ Requirements:
 ### Bootstrap/In-Tree Build
 
 The bootstrap build will first build Clang and Flang, then use these compilers
-to compile flang-rt. CMake will create a secondary build tree in
-configured with these just-built compilers. The secondary build will reuse the
-same build options (Flags, Debug/Release, ...) as the primary build. It will
-also ensure that once built, flang-rt is found by Flang from either
+to compile Flang-RT. CMake will create a secondary build tree
+configured to use these just-built compilers. The secondary build will reuse
+the same build options (Flags, Debug/Release, ...) as the primary build.
+It will also ensure that once built, Flang-RT is found by Flang from either
 the build- or install-prefix. To enable, add `flang-rt` to
 `LLVM_ENABLE_RUNTIMES`:
 
 ```bash
-cmake -S <path-to-llvm-project>/llvm    \
-  -DNinja                               \
-  -DLLVM_ENABLE_PROJECTS=flang          \
-  -DLLVM_ENABLE_RUNTIMES=flang-rt \
+cmake -S <path-to-llvm-project-source>/llvm \
+  -GNinja                                   \
+  -DLLVM_ENABLE_PROJECTS="clang;flang"      \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt           \
   ...
 ```
 
-It is recommended to enable building OpenMP alongside Flang and flang-rt
+It is recommended to enable building OpenMP alongside Flang and Flang-RT
 as well. This will build `omp_lib.mod` required to use OpenMP from Fortran.
 Building Compiler-RT may also be required, particularly on platforms that do
 not provide all C-ABI functionality (such as Windows).
 
 ```bash
-cmake -S <path-to-llvm-project>/llvm                  \
-  -DNinja                                             \
-  -DCMAKE_BUILD_TYPE=Release                          \
-  -DLLVM_ENABLE_PROJECTS="flang;openmp"               \
+cmake -S <path-to-llvm-project-source>/llvm     \
+  -GNinja                                       \
+  -DCMAKE_BUILD_TYPE=Release                    \
+  -DLLVM_ENABLE_PROJECTS="clang;flang;openmp"   \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt" \
   ...
 ```
@@ -85,16 +85,16 @@ CMake's environment introspection to find a C, C++, and Fortran compiler. The
 compiler to be used can be controlled using CMake's standard mechanisms such as
 `CMAKE_CXX_COMPILER`, `CMAKE_CXX_COMPILER`, and `CMAKE_Fortran_COMPILER`.
 `CMAKE_Fortran_COMPILER` must be `flang` built from the same Git commit as
-flang-rt to ensure they are using the same ABI. The C and C++ compiler
+Flang-RT to ensure they are using the same ABI. The C and C++ compiler
 can be any compiler supporting the same ABI.
 
 In addition to the compiler, the build be able to find LLVM development tools
-such as `lit` and `FileCheck` that are not found in an LLVM's install directory.
-Use `CMAKE_BINARY_DIR` to point to directory where LLVM has been built.
-A simple build configuration might look like the following:
+such as `lit` and `FileCheck` that are not found in an LLVM's install
+directory. Use `CMAKE_BINARY_DIR` to point to directory where LLVM has
+been built. A simple build configuration might look like the following:
 
 ```bash
-cmake -S <path-to-llvm-project>/runtimes                     \
+cmake -S <path-to-llvm-project-source>/runtimes              \
   -GNinja                                                    \
   -DLLVM_BINARY_DIR=<path-to-llvm-builddir>                  \
   -DCMAKE_Fortran_COMPILER=<path-to-llvm-builddir>/bin/flang \
@@ -107,16 +107,16 @@ The `CMAKE_Fortran_COMPILER_WORKS` parameter must be set because otherwise CMake
 will test whether the Fortran compiler can compile and link programs which will
 obviously fail without a runtime library available yet.
 
-Building flang-rt for cross-compilation triple, the target triple can
+Building Flang-RT for cross-compilation triple, the target triple can
 be selected using `LLVM_DEFAULT_TARGET_TRIPLE` AND `LLVM_RUNTIMES_TARGET`.
-Of course, flang-rt can be built multiple times with different build
+Of course, Flang-RT can be built multiple times with different build
 configurations, but have to be located manually when using with the Flang
 driver using the `-L` option.
 
 A more complete build configuration could be the following:
 
 ```bash
-cmake -S <path-to-llvm-project>/runtimes                                      \
+cmake -S <path-to-llvm-project-source>/runtimes                               \
   -GNinja                                                                     \
   -DCMAKE_BUILD_TYPE=Release                                                  \
   -DCMAKE_INSTALL_PREFIX="${HOME}/local"                                      \
@@ -134,7 +134,7 @@ cmake -S <path-to-llvm-project>/runtimes                                      \
 
 ## Configuration Option Reference
 
-Flang-rt has the followign configuration options. This is in
+Flang-RT has the followign configuration options. This is in
 addition to the build options the LLVM_ENABLE_RUNTIMES mechanism and
 CMake itself provide.
 
@@ -153,11 +153,11 @@ CMake itself provide.
 
  * `FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT` (values: `"CUDA"`,`"OpenMP"`, `""` default: `""`)
 
-   When set to `CUDA`, builds flang-rt with experimental support for GPU
+   When set to `CUDA`, builds Flang-RT with experimental support for GPU
    accelerators using CUDA. `CMAKE_CUDA_COMPILER` must be set if not
    automatically detected by CMake. `nvcc` as well as `clang` are supported.
 
-   When set to `OpenMP`, builds flang-rt with experimental support for
+   When set to `OpenMP`, builds Flang-RT with experimental support for
    GPU accelerators using OpenMP offloading. Only Clang is supported for
    `CMAKE_C_COMPILER` and `CMAKE_CXX_COMPILER`.
 
@@ -170,7 +170,7 @@ CMake itself provide.
    (no `CMAKE_CUDA_COMPILER`).
 
 
-### CUDA Support
+### Exprimental CUDA Support
 
 With `-DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA`, the following
 additional configuration options become available.
@@ -186,13 +186,13 @@ additional configuration options become available.
    default.
 
 
-### OpenMP Offload Support
+### Exprimental OpenMP Offload Support
 
 With `-DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=OpenMP`, the following
 additional configuration options become available.
 
  * `FLANG_RT_DEVICE_ARCHITECTURES` (default: `"all"`)
 
-   A list of device architectures that flang-rt is supporting.
+   A list of device architectures that Flang-RT is going to support.
    If `"all"` uses a pre-defined list of architectures. Same purpose as
    `LIBOMPTARGET_DEVICE_ARCHITECTURES` from liboffload.
