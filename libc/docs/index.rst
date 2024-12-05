@@ -44,7 +44,7 @@ LLVM-libc does not guarantee backward compatibility with operating systems that 
 Compatibility patch for obsolete operating systems will not be accepted.
 
 For Linux, we support kernel versions as listed on `kernel.org <https://kernel.org/>`_, including
-``longterm``, ``stable``, and ``mainline`` versions. We actively adapt new features
+``longterm`` (not past EOL date), ``stable``, and ``mainline`` versions. We actively adopt new features
 from ``linux-next``.
 
 For Windows, we support products within their lifecycle. Please refer to 
