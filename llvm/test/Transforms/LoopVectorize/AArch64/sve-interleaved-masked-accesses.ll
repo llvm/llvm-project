@@ -79,19 +79,19 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING:       if.then:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_024]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP18]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP18]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP20]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP20]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[SPEC_SELECT_I:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP19]], i8 [[TMP21]])
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP22:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP22]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP22]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 [[SPEC_SELECT_I]], ptr [[ARRAYIDX6]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[SUB:%.*]] = sub i8 0, [[SPEC_SELECT_I]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP23:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP23]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP23]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 [[SUB]], ptr [[ARRAYIDX11]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       for.inc:
@@ -253,14 +253,14 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[IX_012:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_012]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP15]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP15]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 1, ptr [[ARRAYIDX]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 [[IX_012]], [[CONV]]
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       if.then:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP16]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP16]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 2, ptr [[ARRAYIDX3]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       for.inc:
@@ -417,7 +417,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; SCALAR_TAIL_FOLDING:       if.then:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP16]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP16]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 1, ptr [[ARRAYIDX]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[IF_END]]
 ; SCALAR_TAIL_FOLDING:       if.end:
@@ -426,7 +426,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING:       if.then6:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP17]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP17]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 2, ptr [[ARRAYIDX7]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       for.inc:
