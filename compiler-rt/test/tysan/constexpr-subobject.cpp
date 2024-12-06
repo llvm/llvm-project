@@ -1,5 +1,5 @@
 // RUN: %clang_tysan -O0 %s -o %t && %run %t >%t.out 2>&1
-// RUN: FileCheck %s < %t.out
+// RUN: FileCheck --allow-empty %s < %t.out
 
 // CHECK-NOT: TypeSanitizer
 
