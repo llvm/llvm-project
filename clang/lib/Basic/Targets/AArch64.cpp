@@ -232,14 +232,23 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
 
 bool AArch64TargetInfo::validateGlobalRegisterVariable(
     StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
-  if ((RegName == "sp") || RegName.starts_with("x")) {
+  if (RegName == "sp") {
     HasSizeMismatch = RegSize != 64;
     return true;
-  } else if (RegName.starts_with("w")) {
-    HasSizeMismatch = RegSize != 32;
-    return true;
   }
-  return false;
+  if (RegName.starts_with("w"))
+    HasSizeMismatch = RegSize != 32;
+  else if (RegName.starts_with("x"))
+    HasSizeMismatch = RegSize != 64;
+  else
+    return false;
+  StringRef RegNum = RegName.drop_front();
+  // Check if the register is reserved. See also
+  // AArch64TargetLowering::getRegisterByName().
+  return RegNum == "0" ||
+         (RegNum == "18" &&
+          llvm::AArch64::isX18ReservedByDefault(getTriple())) ||
+         getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
