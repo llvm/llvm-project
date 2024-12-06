@@ -1592,6 +1592,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_AtomicToNonAtomic:
   case CK_HLSLVectorTruncation:
   case CK_HLSLElementwiseCast:
+    // TODO is this true for CK_HLSLSplatCast
     return true;
 
   case CK_BaseToDerivedMemberPointer:
