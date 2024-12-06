@@ -1022,136 +1022,203 @@ float64x2_t test_vabdq_f64(float64x2_t v1, float64x2_t v2) {
   // LLVM: ret <2 x double> [[VABD_F]]
 }
 
-// NYI-LABEL: @test_vbsl_s8(
-// NYI:   [[VBSL_I:%.*]] = and <8 x i8> %v1, %v2
-// NYI:   [[TMP0:%.*]] = xor <8 x i8> %v1, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-// NYI:   [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], %v3
-// NYI:   [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
-// NYI:   ret <8 x i8> [[VBSL2_I]]
-// int8x8_t test_vbsl_s8(uint8x8_t v1, int8x8_t v2, int8x8_t v3) {
-//   return vbsl_s8(v1, v2, v3);
-// }
+int8x8_t test_vbsl_s8(uint8x8_t v1, int8x8_t v2, int8x8_t v3) {
+  return vbsl_s8(v1, v2, v3);
 
-// NYI-LABEL: @test_vbsl_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %v1 to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i16> %v2 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <4 x i16> %v3 to <8 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <4 x i16> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <4 x i16> %v1, <i16 -1, i16 -1, i16 -1, i16 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   [[TMP4:%.*]] = bitcast <4 x i16> [[VBSL5_I]] to <8 x i8>
-// NYI:   ret <8 x i8> [[TMP4]]
-// int8x8_t test_vbsl_s16(uint16x4_t v1, int16x4_t v2, int16x4_t v3) {
-//   return (int8x8_t)vbsl_s16(v1, v2, v3);
-// }
+  // CIR-LABEL: vbsl_s8
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s8i x 8>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s8i x 8>, !cir.vector<!s8i x 8>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s8i x 8>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s8i x 8>
 
-// NYI-LABEL: @test_vbsl_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %v1 to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i32> %v2 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x i32> %v3 to <8 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <2 x i32> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <2 x i32> %v1, <i32 -1, i32 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <2 x i32> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <2 x i32> [[VBSL5_I]]
-// int32x2_t test_vbsl_s32(uint32x2_t v1, int32x2_t v2, int32x2_t v3) {
-//   return vbsl_s32(v1, v2, v3);
-// }
+  // LLVM: {{.*}}test_vbsl_s8(<8 x i8>{{.*}}[[v1:%.*]], <8 x i8>{{.*}}[[v2:%.*]], <8 x i8>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <8 x i8> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <8 x i8> [[v1]], splat (i8 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <8 x i8> [[VBSL2_I]]
+}
 
-// NYI-LABEL: @test_vbsl_s64(
-// NYI:   [[TMP0:%.*]] = bitcast <1 x i64> %v1 to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <1 x i64> %v2 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <1 x i64> %v3 to <8 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <1 x i64> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <1 x i64> %v1, <i64 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <1 x i64> [[VBSL5_I]]
-// int64x1_t test_vbsl_s64(uint64x1_t v1, int64x1_t v2, int64x1_t v3) {
-//   return vbsl_s64(v1, v2, v3);
-// }
+int8x8_t test_vbsl_s16(uint16x4_t v1, int16x4_t v2, int16x4_t v3) {
+  return (int8x8_t)vbsl_s16(v1, v2, v3);
 
-// NYI-LABEL: @test_vbsl_u8(
-// NYI:   [[VBSL_I:%.*]] = and <8 x i8> %v1, %v2
-// NYI:   [[TMP0:%.*]] = xor <8 x i8> %v1, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-// NYI:   [[VBSL1_I:%.*]] = and <8 x i8> [[TMP0]], %v3
-// NYI:   [[VBSL2_I:%.*]] = or <8 x i8> [[VBSL_I]], [[VBSL1_I]]
-// NYI:   ret <8 x i8> [[VBSL2_I]]
-// uint8x8_t test_vbsl_u8(uint8x8_t v1, uint8x8_t v2, uint8x8_t v3) {
-//   return vbsl_u8(v1, v2, v3);
-// }
+  // CIR-LABEL: vbsl_s16
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s16i x 4>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s16i x 4>, !cir.vector<!s16i x 4>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s16i x 4>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s16i x 4>
 
-// NYI-LABEL: @test_vbsl_u16(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i16> %v1 to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i16> %v2 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <4 x i16> %v3 to <8 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <4 x i16> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <4 x i16> %v1, <i16 -1, i16 -1, i16 -1, i16 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <4 x i16> [[VBSL5_I]]
-// uint16x4_t test_vbsl_u16(uint16x4_t v1, uint16x4_t v2, uint16x4_t v3) {
-//   return vbsl_u16(v1, v2, v3);
-// }
+  // LLVM: {{.*}}test_vbsl_s16(<4 x i16>{{.*}}[[v1:%.*]], <4 x i16>{{.*}}[[v2:%.*]], <4 x i16>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL3_I:%.*]] = and <4 x i16> [[v1]], [[v2]]
+  // LLVM:   [[TMP3:%.*]] = xor <4 x i16> [[v1]], splat (i16 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], [[v3]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   [[TMP4:%.*]] = bitcast <4 x i16> [[VBSL5_I]] to <8 x i8>
+  // LLVM:   ret <8 x i8> [[TMP4]]
+}
 
-// NYI-LABEL: @test_vbsl_u32(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i32> %v1 to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i32> %v2 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x i32> %v3 to <8 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <2 x i32> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <2 x i32> %v1, <i32 -1, i32 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <2 x i32> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <2 x i32> [[VBSL5_I]]
-// uint32x2_t test_vbsl_u32(uint32x2_t v1, uint32x2_t v2, uint32x2_t v3) {
-//   return vbsl_u32(v1, v2, v3);
-// }
+int32x2_t test_vbsl_s32(uint32x2_t v1, int32x2_t v2, int32x2_t v3) {
+  return vbsl_s32(v1, v2, v3);
 
-// NYI-LABEL: @test_vbsl_u64(
-// NYI:   [[TMP0:%.*]] = bitcast <1 x i64> %v1 to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <1 x i64> %v2 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <1 x i64> %v3 to <8 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <1 x i64> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <1 x i64> %v1, <i64 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <1 x i64> [[VBSL5_I]]
-// uint64x1_t test_vbsl_u64(uint64x1_t v1, uint64x1_t v2, uint64x1_t v3) {
-//   return vbsl_u64(v1, v2, v3);
-// }
+  // CIR-LABEL: vbsl_s32
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s32i x 2>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s32i x 2>, !cir.vector<!s32i x 2>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s32i x 2>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s32i x 2>
 
-// NYI-LABEL: @test_vbsl_f32(
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i32> %v1 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x float> %v2 to <8 x i8>
-// NYI:   [[TMP3:%.*]] = bitcast <2 x float> %v3 to <8 x i8>
-// NYI:   [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
-// NYI:   [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x i32>
-// NYI:   [[VBSL3_I:%.*]] = and <2 x i32> %v1, [[VBSL1_I]]
-// NYI:   [[TMP4:%.*]] = xor <2 x i32> %v1, <i32 -1, i32 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <2 x i32> [[TMP4]], [[VBSL2_I]]
-// NYI:   [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   [[TMP5:%.*]] = bitcast <2 x i32> [[VBSL5_I]] to <2 x float>
-// NYI:   ret <2 x float> [[TMP5]]
-// float32x2_t test_vbsl_f32(uint32x2_t v1, float32x2_t v2, float32x2_t v3) {
-//   return vbsl_f32(v1, v2, v3);
-// }
+  // LLVM: {{.*}}test_vbsl_s32(<2 x i32>{{.*}}[[v1:%.*]], <2 x i32>{{.*}}[[v2:%.*]], <2 x i32>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL3_I:%.*]] = and <2 x i32> [[v1]], [[v2]]
+  // LLVM:   [[TMP3:%.*]] = xor <2 x i32> [[v1]], splat (i32 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <2 x i32> [[TMP3]], [[v3]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   ret <2 x i32> [[VBSL5_I]]
+}
 
-// NYI-LABEL: @test_vbsl_f64(
-// NYI:   [[TMP0:%.*]] = bitcast <1 x i64> %v1 to <8 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <1 x double> %v2 to <8 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <1 x double> %v3 to <8 x i8>
-// NYI:   [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// NYI:   [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
-// NYI:   [[VBSL3_I:%.*]] = and <1 x i64> %v1, [[VBSL1_I]]
-// NYI:   [[TMP3:%.*]] = xor <1 x i64> %v1, <i64 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[VBSL2_I]]
-// NYI:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   [[TMP4:%.*]] = bitcast <1 x i64> [[VBSL5_I]] to <1 x double>
-// NYI:   ret <1 x double> [[TMP4]]
-// float64x1_t test_vbsl_f64(uint64x1_t v1, float64x1_t v2, float64x1_t v3) {
-//   return vbsl_f64(v1, v2, v3);
-// }
+int64x1_t test_vbsl_s64(uint64x1_t v1, int64x1_t v2, int64x1_t v3) {
+  return vbsl_s64(v1, v2, v3);
+
+  // CIR-LABEL: vbsl_s64
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s64i x 1>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s64i x 1>, !cir.vector<!s64i x 1>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s64i x 1>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s64i x 1>
+
+  // LLVM: {{.*}}test_vbsl_s64(<1 x i64>{{.*}}[[v1:%.*]], <1 x i64>{{.*}}[[v2:%.*]], <1 x i64>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL3_I:%.*]] = and <1 x i64> [[v1]], [[v2]]
+  // LLVM:   [[TMP3:%.*]] = xor <1 x i64> [[v1]], splat (i64 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[v3]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   ret <1 x i64> [[VBSL5_I]]
+}
+
+uint8x8_t test_vbsl_u8(uint8x8_t v1, uint8x8_t v2, uint8x8_t v3) {
+  return vbsl_u8(v1, v2, v3);
+
+  // CIR-LABEL: vbsl_u8
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u8i x 8>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u8i x 8>, !cir.vector<!u8i x 8>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u8i x 8>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u8i x 8>
+
+  // LLVM: {{.*}}test_vbsl_u8(<8 x i8>{{.*}}[[v1:%.*]], <8 x i8>{{.*}}[[v2:%.*]], <8 x i8>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL3_I:%.*]] = and <8 x i8> [[v1]], [[v2]]
+  // LLVM:   [[TMP3:%.*]] = xor <8 x i8> [[v1]], splat (i8 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <8 x i8> [[TMP3]], [[v3]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <8 x i8> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   ret <8 x i8> [[VBSL5_I]]
+}
+
+uint16x4_t test_vbsl_u16(uint16x4_t v1, uint16x4_t v2, uint16x4_t v3) {
+  return vbsl_u16(v1, v2, v3);
+
+  // CIR-LABEL: vbsl_u16
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u16i x 4>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u16i x 4>, !cir.vector<!u16i x 4>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u16i x 4>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u16i x 4>
+
+  // LLVM: {{.*}}test_vbsl_u16(<4 x i16>{{.*}}[[v1:%.*]], <4 x i16>{{.*}}[[v2:%.*]], <4 x i16>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL3_I:%.*]] = and <4 x i16> [[v1]], [[v2]]
+  // LLVM:   [[TMP3:%.*]] = xor <4 x i16> [[v1]], splat (i16 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <4 x i16> [[TMP3]], [[v3]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <4 x i16> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   ret <4 x i16> [[VBSL5_I]]
+}
+
+
+uint32x2_t test_vbsl_u32(uint32x2_t v1, uint32x2_t v2, uint32x2_t v3) {
+  return vbsl_u32(v1, v2, v3);
+
+  // CIR-LABEL: vbsl_u32
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u32i x 2>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u32i x 2>, !cir.vector<!u32i x 2>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u32i x 2>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u32i x 2>
+
+  // LLVM: {{.*}}test_vbsl_u32(<2 x i32>{{.*}}[[v1:%.*]], <2 x i32>{{.*}}[[v2:%.*]], <2 x i32>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL3_I:%.*]] = and <2 x i32> [[v1]], [[v2]]
+  // LLVM:   [[TMP3:%.*]] = xor <2 x i32> [[v1]], splat (i32 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <2 x i32> [[TMP3]], [[v3]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   ret <2 x i32> [[VBSL5_I]]
+}
+
+uint64x1_t test_vbsl_u64(uint64x1_t v1, uint64x1_t v2, uint64x1_t v3) {
+  return vbsl_u64(v1, v2, v3);
+
+  // CIR-LABEL: vbsl_u64
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u64i x 1>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u64i x 1>, !cir.vector<!u64i x 1>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u64i x 1>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u64i x 1>
+
+  // LLVM: {{.*}}test_vbsl_u64(<1 x i64>{{.*}}[[v1:%.*]], <1 x i64>{{.*}}[[v2:%.*]], <1 x i64>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL3_I:%.*]] = and <1 x i64> [[v1]], [[v2]]
+  // LLVM:   [[TMP3:%.*]] = xor <1 x i64> [[v1]], splat (i64 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[v3]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   ret <1 x i64> [[VBSL5_I]]
+}
+
+float32x2_t test_vbsl_f32(uint32x2_t v1, float32x2_t v2, float32x2_t v3) {
+  return vbsl_f32(v1, v2, v3);
+
+  // CIR-LABEL: vbsl_f32
+  // CIR: [[v1:%.*]]  = cir.cast(bitcast, {{%.*}} : !cir.vector<!u32i x 2>), !cir.vector<!s8i x 8>
+  // CIR: [[v2:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.float x 2>), !cir.vector<!s8i x 8>
+  // CIR: [[v3:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.float x 2>), !cir.vector<!s8i x 8>
+  // CIR: [[v1_tmp:%.*]] = cir.cast(bitcast, [[v1]] : !cir.vector<!s8i x 8>), !cir.vector<!s32i x 2>
+  // CIR: [[v2_tmp:%.*]] = cir.cast(bitcast, [[v2]] : !cir.vector<!s8i x 8>), !cir.vector<!s32i x 2>
+  // CIR: [[v3_tmp:%.*]] = cir.cast(bitcast, [[v3]] : !cir.vector<!s8i x 8>), !cir.vector<!s32i x 2>
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1_tmp]], [[v2_tmp]]) : !cir.vector<!s32i x 2>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1_tmp]]) : !cir.vector<!s32i x 2>, !cir.vector<!s32i x 2>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3_tmp]]) : !cir.vector<!s32i x 2>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s32i x 2>
+  // CIR: cir.cast(bitcast, [[VBSL2_I]] : !cir.vector<!s32i x 2>), !cir.vector<!cir.float x 2>
+
+  // LLVM: {{.*}}test_vbsl_f32(<2 x i32>{{.*}}[[v1:%.*]], <2 x float>{{.*}}[[v2:%.*]], <2 x float>{{.*}}[[v3:%.*]])
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i32> [[v1]] to <8 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <2 x float> [[v2]] to <8 x i8>
+  // LLVM:   [[TMP3:%.*]] = bitcast <2 x float> [[v3]] to <8 x i8>
+  // LLVM:   [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
+  // LLVM:   [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x i32>
+  // LLVM:   [[VBSL3_I:%.*]] = and <2 x i32> [[v1]], [[VBSL1_I]]
+  // LLVM:   [[TMP4:%.*]] = xor <2 x i32> [[v1]], splat (i32 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <2 x i32> [[TMP4]], [[VBSL2_I]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <2 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   [[TMP5:%.*]] = bitcast <2 x i32> [[VBSL5_I]] to <2 x float>
+  // LLVM:   ret <2 x float> [[TMP5]]
+}
+
+float64x1_t test_vbsl_f64(uint64x1_t v1, float64x1_t v2, float64x1_t v3) {
+  return vbsl_f64(v1, v2, v3);
+
+  // CIR-LABEL: vbsl_f64
+  // CIR: [[v1:%.*]]  = cir.cast(bitcast, {{%.*}} : !cir.vector<!u64i x 1>), !cir.vector<!s8i x 8>
+  // CIR: [[v2:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.double x 1>), !cir.vector<!s8i x 8>
+  // CIR: [[v3:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.double x 1>), !cir.vector<!s8i x 8>
+  // CIR: [[v1_tmp:%.*]] = cir.cast(bitcast, [[v1]] : !cir.vector<!s8i x 8>), !cir.vector<!s64i x 1>
+  // CIR: [[v2_tmp:%.*]] = cir.cast(bitcast, [[v2]] : !cir.vector<!s8i x 8>), !cir.vector<!s64i x 1>
+  // CIR: [[v3_tmp:%.*]] = cir.cast(bitcast, [[v3]] : !cir.vector<!s8i x 8>), !cir.vector<!s64i x 1>
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1_tmp]], [[v2_tmp]]) : !cir.vector<!s64i x 1>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1_tmp]]) : !cir.vector<!s64i x 1>, !cir.vector<!s64i x 1>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3_tmp]]) : !cir.vector<!s64i x 1>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s64i x 1>
+  // CIR: cir.cast(bitcast, [[VBSL2_I]] : !cir.vector<!s64i x 1>), !cir.vector<!cir.double x 1>
+
+  // LLVM: {{.*}}test_vbsl_f64(<1 x i64>{{.*}}[[v1:%.*]], <1 x double>{{.*}}[[v2:%.*]], <1 x double>{{.*}}[[v3:%.*]])
+  // LLVM:   [[TMP1:%.*]] = bitcast <1 x i64> [[v1]] to <8 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <1 x double> [[v2]] to <8 x i8>
+  // LLVM:   [[TMP3:%.*]] = bitcast <1 x double> [[v3]] to <8 x i8>
+  // LLVM:   [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
+  // LLVM:   [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+  // LLVM:   [[VBSL3_I:%.*]] = and <1 x i64> [[v1]], [[VBSL1_I]]
+  // LLVM:   [[TMP4:%.*]] = xor <1 x i64> [[v1]], splat (i64 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP4]], [[VBSL2_I]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   [[TMP5:%.*]] = bitcast <1 x i64> [[VBSL5_I]] to <1 x double>
+  // LLVM:   ret <1 x double> [[TMP5]]
+}
 
 // NYI-LABEL: @test_vbsl_p8(
 // NYI:   [[VBSL_I:%.*]] = and <8 x i8> %v1, %v2
@@ -1176,119 +1243,201 @@ float64x2_t test_vabdq_f64(float64x2_t v1, float64x2_t v2) {
 //   return vbsl_p16(v1, v2, v3);
 // }
 
-// NYI-LABEL: @test_vbslq_s8(
-// NYI:   [[VBSL_I:%.*]] = and <16 x i8> %v1, %v2
-// NYI:   [[TMP0:%.*]] = xor <16 x i8> %v1, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-// NYI:   [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], %v3
-// NYI:   [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
-// NYI:   ret <16 x i8> [[VBSL2_I]]
-// int8x16_t test_vbslq_s8(uint8x16_t v1, int8x16_t v2, int8x16_t v3) {
-//   return vbslq_s8(v1, v2, v3);
-// }
+int8x16_t test_vbslq_s8(uint8x16_t v1, int8x16_t v2, int8x16_t v3) {
+  return vbslq_s8(v1, v2, v3);
 
-// NYI-LABEL: @test_vbslq_s16(
-// NYI:   [[TMP0:%.*]] = bitcast <8 x i16> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i16> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <8 x i16> %v3 to <16 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <8 x i16> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <8 x i16> %v1, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <8 x i16> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <8 x i16> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <8 x i16> [[VBSL5_I]]
-// int16x8_t test_vbslq_s16(uint16x8_t v1, int16x8_t v2, int16x8_t v3) {
-//   return vbslq_s16(v1, v2, v3);
-// }
+  // CIR-LABEL: vbslq_s8
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s8i x 16>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s8i x 16>, !cir.vector<!s8i x 16>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s8i x 16>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s8i x 16>
 
-// NYI-LABEL: @test_vbslq_s32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i32> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <4 x i32> %v3 to <16 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <4 x i32> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <4 x i32> %v1, <i32 -1, i32 -1, i32 -1, i32 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <4 x i32> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <4 x i32> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <4 x i32> [[VBSL5_I]]
-// int32x4_t test_vbslq_s32(uint32x4_t v1, int32x4_t v2, int32x4_t v3) {
-//   return vbslq_s32(v1, v2, v3);
-// }
+  // LLVM: {{.*}}test_vbslq_s8(<16 x i8>{{.*}}[[v1:%.*]], <16 x i8>{{.*}}[[v2:%.*]], <16 x i8>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <16 x i8> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <16 x i8> [[v1]], splat (i8 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <16 x i8> [[VBSL2_I]]
+}
 
-// NYI-LABEL: @test_vbslq_s64(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i64> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i64> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x i64> %v3 to <16 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <2 x i64> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <2 x i64> %v1, <i64 -1, i64 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <2 x i64> [[VBSL5_I]]
-// int64x2_t test_vbslq_s64(uint64x2_t v1, int64x2_t v2, int64x2_t v3) {
-//   return vbslq_s64(v1, v2, v3);
-// }
+int16x8_t test_vbslq_s16(uint16x8_t v1, int16x8_t v2, int16x8_t v3) {
+  return vbslq_s16(v1, v2, v3);
 
-// NYI-LABEL: @test_vbslq_u8(
-// NYI:   [[VBSL_I:%.*]] = and <16 x i8> %v1, %v2
-// NYI:   [[TMP0:%.*]] = xor <16 x i8> %v1, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-// NYI:   [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], %v3
-// NYI:   [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
-// NYI:   ret <16 x i8> [[VBSL2_I]]
-// uint8x16_t test_vbslq_u8(uint8x16_t v1, uint8x16_t v2, uint8x16_t v3) {
-//   return vbslq_u8(v1, v2, v3);
-// }
+  // CIR-LABEL: vbslq_s16
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s16i x 8>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s16i x 8>, !cir.vector<!s16i x 8>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s16i x 8>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s16i x 8>
 
-// NYI-LABEL: @test_vbslq_u16(
-// NYI:   [[TMP0:%.*]] = bitcast <8 x i16> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <8 x i16> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <8 x i16> %v3 to <16 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <8 x i16> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <8 x i16> %v1, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <8 x i16> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <8 x i16> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <8 x i16> [[VBSL5_I]]
-// uint16x8_t test_vbslq_u16(uint16x8_t v1, uint16x8_t v2, uint16x8_t v3) {
-//   return vbslq_u16(v1, v2, v3);
-// }
+  // LLVM: {{.*}}test_vbslq_s16(<8 x i16>{{.*}}[[v1:%.*]], <8 x i16>{{.*}}[[v2:%.*]], <8 x i16>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <8 x i16> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <8 x i16> [[v1]], splat (i16 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <8 x i16> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <8 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <8 x i16> [[VBSL2_I]]
+}
 
-// NYI-LABEL: @test_vbslq_u32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x i32> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <4 x i32> %v3 to <16 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <4 x i32> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <4 x i32> %v1, <i32 -1, i32 -1, i32 -1, i32 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <4 x i32> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <4 x i32> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <4 x i32> [[VBSL5_I]]
-// int32x4_t test_vbslq_u32(uint32x4_t v1, int32x4_t v2, int32x4_t v3) {
-//   return vbslq_s32(v1, v2, v3);
-// }
+int32x4_t test_vbslq_s32(uint32x4_t v1, int32x4_t v2, int32x4_t v3) {
+  return vbslq_s32(v1, v2, v3);
 
-// NYI-LABEL: @test_vbslq_u64(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i64> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x i64> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x i64> %v3 to <16 x i8>
-// NYI:   [[VBSL3_I:%.*]] = and <2 x i64> %v1, %v2
-// NYI:   [[TMP3:%.*]] = xor <2 x i64> %v1, <i64 -1, i64 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], %v3
-// NYI:   [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   ret <2 x i64> [[VBSL5_I]]
-// uint64x2_t test_vbslq_u64(uint64x2_t v1, uint64x2_t v2, uint64x2_t v3) {
-//   return vbslq_u64(v1, v2, v3);
-// }
+  // CIR-LABEL: vbslq_s32
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s32i x 4>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s32i x 4>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s32i x 4>
 
-// NYI-LABEL: @test_vbslq_f32(
-// NYI:   [[TMP0:%.*]] = bitcast <4 x i32> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <4 x float> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <4 x float> %v3 to <16 x i8>
-// NYI:   [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// NYI:   [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// NYI:   [[VBSL3_I:%.*]] = and <4 x i32> %v1, [[VBSL1_I]]
-// NYI:   [[TMP3:%.*]] = xor <4 x i32> %v1, <i32 -1, i32 -1, i32 -1, i32 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <4 x i32> [[TMP3]], [[VBSL2_I]]
-// NYI:   [[VBSL5_I:%.*]] = or <4 x i32> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   [[TMP4:%.*]] = bitcast <4 x i32> [[VBSL5_I]] to <4 x float>
-// NYI:   ret <4 x float> [[TMP4]]
-// float32x4_t test_vbslq_f32(uint32x4_t v1, float32x4_t v2, float32x4_t v3) {
-//   return vbslq_f32(v1, v2, v3);
-// }
+  // LLVM: {{.*}}test_vbslq_s32(<4 x i32>{{.*}}[[v1:%.*]], <4 x i32>{{.*}}[[v2:%.*]], <4 x i32>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <4 x i32> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <4 x i32> [[v1]], splat (i32 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <4 x i32> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <4 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <4 x i32> [[VBSL2_I]]
+}
+
+int64x2_t test_vbslq_s64(uint64x2_t v1, int64x2_t v2, int64x2_t v3) {
+  return vbslq_s64(v1, v2, v3);
+
+  // CIR-LABEL: vbslq_s64
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!s64i x 2>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!s64i x 2>, !cir.vector<!s64i x 2>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!s64i x 2>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s64i x 2>
+
+  // LLVM: {{.*}}test_vbslq_s64(<2 x i64>{{.*}}[[v1:%.*]], <2 x i64>{{.*}}[[v2:%.*]], <2 x i64>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <2 x i64> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <2 x i64> [[v1]], splat (i64 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <2 x i64> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <2 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <2 x i64> [[VBSL2_I]]
+}
+
+uint8x16_t test_vbslq_u8(uint8x16_t v1, uint8x16_t v2, uint8x16_t v3) {
+  return vbslq_u8(v1, v2, v3);
+
+  // CIR-LABEL: vbslq_u8
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u8i x 16>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u8i x 16>, !cir.vector<!u8i x 16>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u8i x 16>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u8i x 16>
+
+  // LLVM: {{.*}}test_vbslq_u8(<16 x i8>{{.*}}[[v1:%.*]], <16 x i8>{{.*}}[[v2:%.*]], <16 x i8>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <16 x i8> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <16 x i8> [[v1]], splat (i8 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <16 x i8> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <16 x i8> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <16 x i8> [[VBSL2_I]]
+}
+
+uint16x8_t test_vbslq_u16(uint16x8_t v1, uint16x8_t v2, uint16x8_t v3) {
+  return vbslq_u16(v1, v2, v3);
+
+  // CIR-LABEL: vbslq_u16
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u16i x 8>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u16i x 8>, !cir.vector<!u16i x 8>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u16i x 8>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u16i x 8>
+
+  // LLVM: {{.*}}test_vbslq_u16(<8 x i16>{{.*}}[[v1:%.*]], <8 x i16>{{.*}}[[v2:%.*]], <8 x i16>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <8 x i16> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <8 x i16> [[v1]], splat (i16 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <8 x i16> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <8 x i16> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <8 x i16> [[VBSL2_I]]
+}
+
+uint32x4_t test_vbslq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
+  return vbslq_u32(v1, v2, v3);
+
+  // CIR-LABEL: vbslq_u32
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u32i x 4>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u32i x 4>, !cir.vector<!u32i x 4>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u32i x 4>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u32i x 4>
+
+  // LLVM: {{.*}}test_vbslq_u32(<4 x i32>{{.*}}[[v1:%.*]], <4 x i32>{{.*}}[[v2:%.*]], <4 x i32>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <4 x i32> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <4 x i32> [[v1]], splat (i32 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <4 x i32> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <4 x i32> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <4 x i32> [[VBSL2_I]]
+}
+
+uint64x2_t test_vbslq_u64(uint64x2_t v1, uint64x2_t v2, uint64x2_t v3) {
+  return vbslq_u64(v1, v2, v3);
+
+  // CIR-LABEL: vbslq_u64
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1:%.*]], [[v2:%.*]]) : !cir.vector<!u64i x 2>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1]]) : !cir.vector<!u64i x 2>, !cir.vector<!u64i x 2>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3:%.*]]) : !cir.vector<!u64i x 2>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!u64i x 2>
+
+  // LLVM: {{.*}}test_vbslq_u64(<2 x i64>{{.*}}[[v1:%.*]], <2 x i64>{{.*}}[[v2:%.*]], <2 x i64>{{.*}}[[v3:%.*]])
+  // LLVM:   [[VBSL_I:%.*]] = and <2 x i64> [[v1]], [[v2]]
+  // LLVM:   [[TMP0:%.*]] = xor <2 x i64> [[v1]], splat (i64 -1)
+  // LLVM:   [[VBSL1_I:%.*]] = and <2 x i64> [[TMP0]], [[v3]]
+  // LLVM:   [[VBSL2_I:%.*]] = or <2 x i64> [[VBSL_I]], [[VBSL1_I]]
+  // LLVM:   ret <2 x i64> [[VBSL2_I]]
+}
+
+float32x4_t test_vbslq_f32(uint32x4_t v1, float32x4_t v2, float32x4_t v3) {
+  return vbslq_f32(v1, v2, v3);
+
+  // CIR-LABEL: vbslq_f32
+  // CIR: [[v1:%.*]]  = cir.cast(bitcast, {{%.*}} : !cir.vector<!u32i x 4>), !cir.vector<!s8i x 16>
+  // CIR: [[v2:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.float x 4>), !cir.vector<!s8i x 16>
+  // CIR: [[v3:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.float x 4>), !cir.vector<!s8i x 16>
+  // CIR: [[v1_tmp:%.*]] = cir.cast(bitcast, [[v1]] : !cir.vector<!s8i x 16>), !cir.vector<!s32i x 4>
+  // CIR: [[v2_tmp:%.*]] = cir.cast(bitcast, [[v2]] : !cir.vector<!s8i x 16>), !cir.vector<!s32i x 4>
+  // CIR: [[v3_tmp:%.*]] = cir.cast(bitcast, [[v3]] : !cir.vector<!s8i x 16>), !cir.vector<!s32i x 4>
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1_tmp]], [[v2_tmp]]) : !cir.vector<!s32i x 4>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1_tmp]]) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3_tmp]]) : !cir.vector<!s32i x 4>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s32i x 4>
+  // CIR: cir.cast(bitcast, [[VBSL2_I]] : !cir.vector<!s32i x 4>), !cir.vector<!cir.float x 4>
+
+  // LLVM: {{.*}}test_vbslq_f32(<4 x i32>{{.*}}[[v1:%.*]], <4 x float>{{.*}}[[v2:%.*]], <4 x float>{{.*}}[[v3:%.*]])
+  // LLVM:   [[TMP1:%.*]] = bitcast <4 x i32> [[v1]] to <16 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <4 x float> [[v2]] to <16 x i8>
+  // LLVM:   [[TMP3:%.*]] = bitcast <4 x float> [[v3]] to <16 x i8>
+  // LLVM:   [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
+  // LLVM:   [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x i32>
+  // LLVM:   [[VBSL3_I:%.*]] = and <4 x i32> [[v1]], [[VBSL1_I]]
+  // LLVM:   [[TMP4:%.*]] = xor <4 x i32> [[v1]], splat (i32 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <4 x i32> [[TMP4]], [[VBSL2_I]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <4 x i32> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   [[TMP5:%.*]] = bitcast <4 x i32> [[VBSL5_I]] to <4 x float>
+  // LLVM:   ret <4 x float> [[TMP5]]
+}
+
+float64x2_t test_vbslq_f64(uint64x2_t v1, float64x2_t v2, float64x2_t v3) {
+  return vbslq_f64(v1, v2, v3);
+
+  // CIR-LABEL: vbslq_f64
+  // CIR: [[v1:%.*]]  = cir.cast(bitcast, {{%.*}} : !cir.vector<!u64i x 2>), !cir.vector<!s8i x 16>
+  // CIR: [[v2:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.double x 2>), !cir.vector<!s8i x 16>
+  // CIR: [[v3:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!cir.double x 2>), !cir.vector<!s8i x 16>
+  // CIR: [[v1_tmp:%.*]] = cir.cast(bitcast, [[v1]] : !cir.vector<!s8i x 16>), !cir.vector<!s64i x 2>
+  // CIR: [[v2_tmp:%.*]] = cir.cast(bitcast, [[v2]] : !cir.vector<!s8i x 16>), !cir.vector<!s64i x 2>
+  // CIR: [[v3_tmp:%.*]] = cir.cast(bitcast, [[v3]] : !cir.vector<!s8i x 16>), !cir.vector<!s64i x 2>
+  // CIR: [[VBSL_I:%.*]] = cir.binop(and, [[v1_tmp]], [[v2_tmp]]) : !cir.vector<!s64i x 2>
+  // CIR: [[TMP0:%.*]] = cir.unary(not, [[v1_tmp]]) : !cir.vector<!s64i x 2>, !cir.vector<!s64i x 2>
+  // CIR: [[VBSL1_I:%.*]] = cir.binop(and, [[TMP0]], [[v3_tmp]]) : !cir.vector<!s64i x 2>
+  // CIR: [[VBSL2_I:%.*]] = cir.binop(or, [[VBSL_I]], [[VBSL1_I]]) : !cir.vector<!s64i x 2>
+  // CIR: cir.cast(bitcast, [[VBSL2_I]] : !cir.vector<!s64i x 2>), !cir.vector<!cir.double x 2>
+
+  // LLVM: {{.*}}test_vbslq_f64(<2 x i64>{{.*}}[[v1:%.*]], <2 x double>{{.*}}[[v2:%.*]], <2 x double>{{.*}}[[v3:%.*]])
+  // LLVM:   [[TMP1:%.*]] = bitcast <2 x i64> [[v1]] to <16 x i8>
+  // LLVM:   [[TMP2:%.*]] = bitcast <2 x double> [[v2]] to <16 x i8>
+  // LLVM:   [[TMP3:%.*]] = bitcast <2 x double> [[v3]] to <16 x i8>
+  // LLVM:   [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+  // LLVM:   [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x i64>
+  // LLVM:   [[VBSL3_I:%.*]] = and <2 x i64> [[v1]], [[VBSL1_I]]
+  // LLVM:   [[TMP4:%.*]] = xor <2 x i64> [[v1]], splat (i64 -1)
+  // LLVM:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP4]], [[VBSL2_I]]
+  // LLVM:   [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
+  // LLVM:   [[TMP5:%.*]] = bitcast <2 x i64> [[VBSL5_I]] to <2 x double>
+  // LLVM:   ret <2 x double> [[TMP5]]
+}
 
 // NYI-LABEL: @test_vbslq_p8(
 // NYI:   [[VBSL_I:%.*]] = and <16 x i8> %v1, %v2
@@ -1311,22 +1460,6 @@ float64x2_t test_vabdq_f64(float64x2_t v1, float64x2_t v2) {
 // NYI:   ret <8 x i16> [[VBSL5_I]]
 // poly16x8_t test_vbslq_p16(uint16x8_t v1, poly16x8_t v2, poly16x8_t v3) {
 //   return vbslq_p16(v1, v2, v3);
-// }
-
-// NYI-LABEL: @test_vbslq_f64(
-// NYI:   [[TMP0:%.*]] = bitcast <2 x i64> %v1 to <16 x i8>
-// NYI:   [[TMP1:%.*]] = bitcast <2 x double> %v2 to <16 x i8>
-// NYI:   [[TMP2:%.*]] = bitcast <2 x double> %v3 to <16 x i8>
-// NYI:   [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// NYI:   [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
-// NYI:   [[VBSL3_I:%.*]] = and <2 x i64> %v1, [[VBSL1_I]]
-// NYI:   [[TMP3:%.*]] = xor <2 x i64> %v1, <i64 -1, i64 -1>
-// NYI:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], [[VBSL2_I]]
-// NYI:   [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
-// NYI:   [[TMP4:%.*]] = bitcast <2 x i64> [[VBSL5_I]] to <2 x double>
-// NYI:   ret <2 x double> [[TMP4]]
-// float64x2_t test_vbslq_f64(uint64x2_t v1, float64x2_t v2, float64x2_t v3) {
-//   return vbslq_f64(v1, v2, v3);
 // }
 
 // NYI-LABEL: @test_vrecps_f32(

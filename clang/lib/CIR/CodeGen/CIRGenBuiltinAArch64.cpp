@@ -2178,6 +2178,19 @@ getHalfEltSizeTwiceNumElemsVecType(CIRGenBuilderTy &builder,
                               vecTy.getSize() * 2);
 }
 
+static cir::VectorType
+castVecOfFPTypeToVecOfIntWithSameWidth(CIRGenBuilderTy &builder,
+                                       cir::VectorType vecTy) {
+  if (mlir::isa<cir::SingleType>(vecTy.getEltType()))
+    return cir::VectorType::get(builder.getContext(), builder.getSInt32Ty(),
+                                vecTy.getSize());
+  if (mlir::isa<cir::DoubleType>(vecTy.getEltType()))
+    return cir::VectorType::get(builder.getContext(), builder.getSInt64Ty(),
+                                vecTy.getSize());
+  llvm_unreachable(
+      "Unsupported element type in getVecOfIntTypeWithSameEltWidth");
+}
+
 /// Get integer from a mlir::Value that is an int constant or a constant op.
 static int64_t getIntValueFromConstOp(mlir::Value val) {
   auto constOp = mlir::cast<cir::ConstantOp>(val.getDefiningOp());
@@ -3837,7 +3850,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     return nullptr;
   case NEON::BI__builtin_neon_vbsl_v:
   case NEON::BI__builtin_neon_vbslq_v: {
-    llvm_unreachable("NEON::BI__builtin_neon_vbslq_v NYI");
+    cir::VectorType bitTy = vTy;
+    if (cir::isAnyFloatingPointType(bitTy.getEltType()))
+      bitTy = castVecOfFPTypeToVecOfIntWithSameWidth(builder, vTy);
+    Ops[0] = builder.createBitcast(Ops[0], bitTy);
+    Ops[1] = builder.createBitcast(Ops[1], bitTy);
+    Ops[2] = builder.createBitcast(Ops[2], bitTy);
+
+    Ops[1] = builder.createAnd(Ops[0], Ops[1]);
+    Ops[2] = builder.createAnd(builder.createNot(Ops[0]), Ops[2]);
+    Ops[0] = builder.createOr(Ops[1], Ops[2]);
+    return builder.createBitcast(Ops[0], ty);
   }
   case NEON::BI__builtin_neon_vfma_lane_v:
   case NEON::BI__builtin_neon_vfmaq_lane_v: { // Only used for FP types
