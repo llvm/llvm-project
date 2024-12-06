@@ -157,6 +157,21 @@ public:
     return false;
   }
 
+  /// Load all the external specializations for the Decl \param D if \param
+  /// OnlyPartial is false. Otherwise, load all the external **partial**
+  /// specializations for the \param D.
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
+  virtual bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial);
+
+  /// Load all the specializations for the Decl \param D with the same template
+  /// args specified by \param TemplateArgs.
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
+  virtual bool
+  LoadExternalSpecializations(const Decl *D,
+                              ArrayRef<TemplateArgument> TemplateArgs);
+
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
   ///
