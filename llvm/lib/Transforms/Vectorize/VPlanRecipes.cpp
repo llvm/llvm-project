@@ -631,8 +631,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
     // TODO: Predecessors are temporarily reversed to reduce test changes.
     // Remove it and update remaining tests after functional change landed.
-    for (auto *OtherPred :
-         reverse(to_vector(predecessors(Builder.GetInsertBlock())))) {
+    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
+    for (auto *OtherPred : reverse(Predecessors)) {
       assert(OtherPred != VPlanPred &&
              "VPlan predecessors should not be connected yet");
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
