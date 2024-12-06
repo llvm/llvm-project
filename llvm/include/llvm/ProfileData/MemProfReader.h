@@ -220,8 +220,8 @@ public:
   // a raw binary memprof profile.
   static bool hasFormat(const StringRef Path);
 
-  // Create a YAMLMemProfReader after sanity checking the contents of the file at
-  // \p Path or the \p Buffer.
+  // Create a YAMLMemProfReader after sanity checking the contents of the file
+  // at \p Path or the \p Buffer.
   static Expected<std::unique_ptr<YAMLMemProfReader>> create(const Twine &Path);
   static Expected<std::unique_ptr<YAMLMemProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);

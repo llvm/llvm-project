@@ -1666,7 +1666,8 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
 
 memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
   memprof::AllMemProfData AllMemProfData;
-  AllMemProfData.HeapProfileRecords.reserve(MemProfRecordTable->getNumEntries());
+  AllMemProfData.HeapProfileRecords.reserve(
+      MemProfRecordTable->getNumEntries());
   for (uint64_t Key : MemProfRecordTable->keys()) {
     auto Record = getMemProfRecord(Key);
     if (Record.takeError())
