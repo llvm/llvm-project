@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -x c -fsyntax-only -verify %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify=expected,cxx %s
-// RUN: %clang_cc1 -x c++ -std=c++26 -fsyntax-only -verify=expected,cxx-26 %s
+// RUN: %clang_cc1 -x c++ -std=c++26 -fsyntax-only -verify=expected,cxx26 %s
 
 #define DELIM "/"
 #define DOT "."
