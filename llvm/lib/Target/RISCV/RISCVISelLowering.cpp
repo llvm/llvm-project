@@ -4824,6 +4824,36 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
 
+// Match a mask which "spreads" the leading elements of a vector evenly
+// across the result.  Factor is the spread amount, and Index is the
+// offset applied.  (on success, Index < Factor)  This is the inverse
+// of a deinterleave with the same Factor and Index.  This is analogous
+// to an interleave, except that all but one lane is undef.
+static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor, unsigned &Index) {
+  SmallVector<bool> LaneIsUndef(Factor, true);
+  for (unsigned i = 0; i < Mask.size(); i++)
+    LaneIsUndef[i % Factor] &= (Mask[i] == -1);
+
+  bool Found = false;
+  for (unsigned i = 0; i < Factor; i++) {
+    if (LaneIsUndef[i])
+      continue;
+    if (Found)
+      return false;
+    Index = i;
+    Found = true;
+  }
+  if (!Found)
+    return false;
+
+  for (unsigned i = 0; i < Mask.size() / Factor; i++) {
+    unsigned j = i * Factor + Index;
+    if (Mask[j] != -1 && (unsigned)Mask[j] != i)
+      return false;
+  }
+  return true;
+}
+
 // Given a vector a, b, c, d return a vector Factor times longer
 // with Factor-1 undef's between elements. Ex:
 //   a, undef, b, undef, c, undef, d, undef (Factor=2, Index=0)
@@ -5415,6 +5445,23 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       SDValue CompressMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
       return DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, V1, CompressMask,
                          DAG.getUNDEF(VT));
+    }
+
+    // Match a spread(4,8) which can be done via extend and shift.  Spread(2)
+    // is fully covered in interleave(2) above, so it is ignored here.
+    if (VT.getScalarSizeInBits() < Subtarget.getELen()) {
+      unsigned MaxFactor = Subtarget.getELen() / VT.getScalarSizeInBits();
+      assert(MaxFactor == 2 || MaxFactor == 4 || MaxFactor == 8);
+      for (unsigned Factor = 4; Factor <= MaxFactor; Factor <<= 1) {
+        unsigned Index;
+        if (isSpreadMask(Mask, Factor, Index)) {
+          MVT NarrowVT =
+              MVT::getVectorVT(VT.getVectorElementType(), NumElts / Factor);
+          SDValue Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT, V1,
+                                    DAG.getVectorIdxConstant(0, DL));
+          return getWideningSpread(Src, Factor, Index, DL, DAG);
+        }
+      }
     }
 
     if (VT.getScalarSizeInBits() == 8 &&
