@@ -219,7 +219,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
       make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
       int memberIndex = 0;
-      for (MemoryBufferRef m : getArchiveMembers(archive))
+      for (MemoryBufferRef m : getArchiveMembers(ctx, archive))
         addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
       return;
     }
@@ -1033,8 +1033,8 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   SmallString<128> tmpName;
   if (std::error_code ec =
           sys::fs::createUniqueFile(path + ".tmp-%%%%%%%%.lib", tmpName))
-    fatal("cannot create temporary file for import library " + path + ": " +
-          ec.message());
+    Fatal(ctx) << "cannot create temporary file for import library " << path
+               << ": " << ec.message();
 
   if (Error e = writeImportLibrary(libName, tmpName, exports,
                                    ctx.config.machine, ctx.config.mingw)) {
@@ -1233,11 +1233,11 @@ static void readCallGraphsFromObjectFiles(COFFLinkerContext &ctx) {
         uint32_t fromIndex, toIndex;
         uint64_t count;
         if (Error err = reader.readInteger(fromIndex))
-          fatal(toString(obj) + ": Expected 32-bit integer");
+          Fatal(ctx) << toString(obj) << ": Expected 32-bit integer";
         if (Error err = reader.readInteger(toIndex))
-          fatal(toString(obj) + ": Expected 32-bit integer");
+          Fatal(ctx) << toString(obj) << ": Expected 32-bit integer";
         if (Error err = reader.readInteger(count))
-          fatal(toString(obj) + ": Expected 64-bit integer");
+          Fatal(ctx) << toString(obj) << ": Expected 64-bit integer";
         auto *fromSym = dyn_cast_or_null<Defined>(obj->getSymbol(fromIndex));
         auto *toSym = dyn_cast_or_null<Defined>(obj->getSymbol(toIndex));
         if (!fromSym || !toSym)
@@ -1279,9 +1279,11 @@ static void findKeepUniqueSections(COFFLinkerContext &ctx) {
         const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
-          fatal(toString(obj) + ": could not decode addrsig section: " + err);
+          Fatal(ctx) << toString(obj)
+                     << ": could not decode addrsig section: " << err;
         if (symIndex >= syms.size())
-          fatal(toString(obj) + ": invalid symbol index in addrsig section");
+          Fatal(ctx) << toString(obj)
+                     << ": invalid symbol index in addrsig section";
         markAddrsig(syms[symIndex]);
         cur += size;
       }
@@ -1574,7 +1576,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       (StringRef(argsArr[1]).equals_insensitive("/lib") ||
        StringRef(argsArr[1]).equals_insensitive("-lib"))) {
     if (llvm::libDriverMain(argsArr.slice(1)) != 0)
-      fatal("lib failed");
+      Fatal(ctx) << "lib failed";
     return;
   }
 
@@ -1676,7 +1678,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (args.hasArg(OPT_deffile))
       config->noEntry = true;
     else
-      fatal("no input files");
+      Fatal(ctx) << "no input files";
   }
 
   // Construct search path list.
@@ -1887,7 +1889,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (auto *arg = args.getLastArg(OPT_machine)) {
       config->machine = getMachineType(arg->getValue());
       if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN)
-        fatal(Twine("unknown /machine argument: ") + arg->getValue());
+        Fatal(ctx) << "unknown /machine argument: " << arg->getValue();
       addWinSysRootLibSearchPaths();
     }
   }
@@ -1955,8 +1957,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->repro = false;
       StringRef value(arg->getValue());
       if (value.getAsInteger(0, config->timestamp))
-        fatal(Twine("invalid timestamp: ") + value +
-              ".  Expected 32-bit integer");
+        Fatal(ctx) << "invalid timestamp: " << value
+                   << ".  Expected 32-bit integer";
     }
   } else {
     config->repro = false;
@@ -1964,8 +1966,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
             Process::GetEnv("SOURCE_DATE_EPOCH")) {
       StringRef value(*epoch);
       if (value.getAsInteger(0, config->timestamp))
-        fatal(Twine("invalid SOURCE_DATE_EPOCH timestamp: ") + value +
-              ".  Expected 32-bit integer");
+        Fatal(ctx) << "invalid SOURCE_DATE_EPOCH timestamp: " << value
+                   << ".  Expected 32-bit integer";
     } else {
       config->timestamp = time(nullptr);
     }
@@ -2155,7 +2157,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (!config->manifestInput.empty() &&
       config->manifest != Configuration::Embed) {
-    fatal("/manifestinput: requires /manifest:embed");
+    Fatal(ctx) << "/manifestinput: requires /manifest:embed";
   }
 
   // Handle /dwodir
@@ -2400,7 +2402,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     llvm::TimeTraceScope timeScope("Infer subsystem");
     config->subsystem = inferSubsystem();
     if (config->subsystem == IMAGE_SUBSYSTEM_UNKNOWN)
-      fatal("subsystem must be defined");
+      Fatal(ctx) << "subsystem must be defined";
   }
 
   // Handle /entry and /dll
@@ -2408,7 +2410,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     llvm::TimeTraceScope timeScope("Entry point");
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
-        fatal("missing entry point symbol name");
+        Fatal(ctx) << "missing entry point symbol name";
       config->entry = addUndefined(mangle(arg->getValue()), true);
     } else if (!config->entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
@@ -2423,7 +2425,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         // infer that from user-defined entry name.
         StringRef s = findDefaultEntry();
         if (s.empty())
-          fatal("entry point must be defined");
+          Fatal(ctx) << "entry point must be defined";
         config->entry = addUndefined(s, true);
         Log(ctx) << "Entry name inferred: " << s;
       }
