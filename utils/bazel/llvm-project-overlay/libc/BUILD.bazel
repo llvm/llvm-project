@@ -1442,7 +1442,10 @@ libc_support_library(
     hdrs = glob(["src/__support/time/*.h"]),
     deps = [
         ":__support_common",
+        ":__support_error_or",
         ":hdr_time_macros",
+        ":types_clockid_t",
+        ":types_struct_timespec",
         ":types_time_t",
     ],
 )
@@ -1471,13 +1474,13 @@ libc_support_library(
     }),
     deps = [
         ":__support_time",
-        ":__support_time_linux_clock_gettime",
+        ":__support_time_clock_gettime",
     ],
 )
 
 libc_support_library(
-    name = "__support_time_linux_clock_gettime",
-    hdrs = ["src/__support/time/linux/clock_gettime.h"],
+    name = "__support_time_clock_gettime",
+    hdrs = ["src/__support/time/clock_gettime.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -1486,6 +1489,8 @@ libc_support_library(
         ":__support_common",
         ":__support_error_or",
         ":__support_osutil_vdso",
+        ":types_clockid_t",
+        ":types_struct_timespec",
     ],
 )
 

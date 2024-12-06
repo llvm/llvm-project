@@ -391,8 +391,6 @@ struct FP8DstByteSelInfo {
   bool HasFP8DstByteSel;
 };
 
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL

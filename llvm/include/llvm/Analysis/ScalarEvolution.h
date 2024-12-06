@@ -1780,6 +1780,10 @@ private:
   /// V.
   const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops);
 
+  /// Returns SCEV for the first operand of a phi if all phi operands have
+  /// identical opcodes and operands.
+  const SCEV *createNodeForPHIWithIdenticalOperands(PHINode *PN);
+
   /// Provide the special handling we need to analyze PHI SCEVs.
   const SCEV *createNodeForPHI(PHINode *PN);
 

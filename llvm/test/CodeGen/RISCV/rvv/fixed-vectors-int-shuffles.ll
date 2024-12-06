@@ -879,10 +879,8 @@ define <8 x i32> @shuffle_spread4_singlesrc_e32(<8 x i32> %v) {
 define <16 x i8> @shuffle_spread4_singlesrc_e8_idx0(<16 x i8> %v) {
 ; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vsrl.vi v10, v9, 2
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf4 v9, v8
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef>
@@ -892,11 +890,9 @@ define <16 x i8> @shuffle_spread4_singlesrc_e8_idx0(<16 x i8> %v) {
 define <16 x i8> @shuffle_spread4_singlesrc_e8_idx1(<16 x i8> %v) {
 ; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vsrl.vi v10, v9, 2
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf4 v9, v8
+; CHECK-NEXT:    vsll.vi v8, v9, 8
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef>
   ret <16 x i8> %out
@@ -905,11 +901,9 @@ define <16 x i8> @shuffle_spread4_singlesrc_e8_idx1(<16 x i8> %v) {
 define <16 x i8> @shuffle_spread4_singlesrc_e8_idx2(<16 x i8> %v) {
 ; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vsrl.vi v10, v9, 2
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf4 v9, v8
+; CHECK-NEXT:    vsll.vi v8, v9, 16
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef>
   ret <16 x i8> %out
@@ -918,11 +912,9 @@ define <16 x i8> @shuffle_spread4_singlesrc_e8_idx2(<16 x i8> %v) {
 define <16 x i8> @shuffle_spread4_singlesrc_e8_idx3(<16 x i8> %v) {
 ; CHECK-LABEL: shuffle_spread4_singlesrc_e8_idx3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vsrl.vi v10, v9, 2
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf4 v9, v8
+; CHECK-NEXT:    vsll.vi v8, v9, 24
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3>
   ret <16 x i8> %out
@@ -946,11 +938,8 @@ define <16 x i8> @shuffle_spread4_singlesrc_e8_idx4(<16 x i8> %v) {
 define <32 x i8> @shuffle_spread8_singlesrc_e8(<32 x i8> %v) {
 ; CHECK-LABEL: shuffle_spread8_singlesrc_e8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vsrl.vi v12, v10, 3
-; CHECK-NEXT:    vrgather.vv v10, v8, v12
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %out = shufflevector <32 x i8> %v, <32 x i8> poison, <32 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

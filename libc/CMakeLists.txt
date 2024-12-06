@@ -7,6 +7,7 @@ if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
 endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
+include(CheckCXXCompilerFlag)
 
 if (LIBC_CMAKE_VERBOSE_LOGGING)
   get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
