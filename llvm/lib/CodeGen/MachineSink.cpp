@@ -788,14 +788,15 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   if (SinkInstsIntoCycle) {
     SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
     SchedModel.init(STI);
-    enum CycleSinkStage { COPY, LOW_LATENCY, AGGRESSIVE, END };
-
-    CycleSinkStage Stage = CycleSinkStage::COPY;
     bool HasHighPressure;
-    do {
+    DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
+        SunkInstrs;
+
+    enum CycleSinkStage { COPY, LOW_LATENCY, AGGRESSIVE, END };
+    for (unsigned Stage = CycleSinkStage::COPY; Stage != CycleSinkStage::END;
+         ++Stage) {
       HasHighPressure = false;
-      DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
-          SunkInstrs;
+      SunkInstrs.clear();
       for (auto *Cycle : Cycles) {
         MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
         if (!Preheader) {
@@ -816,7 +817,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
             if (i++ == SinkIntoCycleLimit) {
               LLVM_DEBUG(dbgs()
                          << "CycleSink:   Limit reached of instructions to "
-                            "be analysed.");
+                            "be analyzed.");
               break;
             }
 
@@ -840,8 +841,9 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
         if (!HasHighPressure)
           HasHighPressure = registerPressureExceedsLimit(*Preheader);
       }
-      Stage = (CycleSinkStage)(Stage + 1);
-    } while (HasHighPressure && Stage < CycleSinkStage::END);
+      if (!HasHighPressure)
+        break;
+    }
   }
 
   HasStoreCache.clear();
@@ -1726,12 +1728,14 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     MachineInstr *NewMI = nullptr;
     std::pair<MachineInstr *, MachineBasicBlock *> MapEntry(&I, SinkBlock);
 
+    auto SI = SunkInstrs.find(MapEntry);
+
     // Check for the case in which we have already sunk a copy of this
     // instruction into the user block.
-    if (SunkInstrs.contains(MapEntry)) {
+    if (SI != SunkInstrs.end()) {
       LLVM_DEBUG(dbgs() << "AggressiveCycleSink:   Already sunk to block: "
                         << printMBBReference(*SinkBlock) << "\n");
-      NewMI = SunkInstrs[MapEntry];
+      NewMI = SI->second;
     }
 
     // Create a copy of the instruction in the use block.
@@ -1748,12 +1752,12 @@ bool MachineSinking::aggressivelySinkIntoCycle(
       }
       SinkBlock->insert(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()),
                         NewMI);
-      SunkInstrs[MapEntry] = NewMI;
+      SunkInstrs.insert({MapEntry, NewMI});
     }
 
     // Conservatively clear any kill flags on uses of sunk instruction
-    for (MachineOperand &MO : NewMI->operands()) {
-      if (MO.isReg() && MO.readsReg())
+    for (MachineOperand &MO : NewMI->all_uses()) {
+      if (MO.isReg())
         RegsToClearKillFlags.insert(MO.getReg());
     }
 
