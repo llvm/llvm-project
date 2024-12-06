@@ -914,6 +914,8 @@ public:
 
   /// Get the register unit pressure limit for this dimension.
   /// TargetRegisterInfo adjusts this limit for reserved registers.
+  /// Avoid using this method directly as it is costly to compute. Use the
+  /// cached version `RegisterClassInfo::getRegPressureSetLimit` instead.
   virtual unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                           unsigned Idx) const;
 
