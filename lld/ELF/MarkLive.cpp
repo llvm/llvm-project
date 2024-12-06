@@ -246,11 +246,11 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
       out += "\n" + std::string(indent, ' ');
     if (std::holds_alternative<Symbol *>(*cur)) {
       auto *s = std::get<Symbol *>(*cur);
-      out += toString(*s) + " from " + toString(s->file);
+      out += toStr(ctx, *s) + " from " + toStr(ctx, s->file);
     } else {
       auto *s = std::get<InputSectionBase *>(*cur);
       // TODO: Fancy formatting
-      out += toString(s);
+      out += toStr(ctx, s);
     }
 
     auto it = whyLive.find(*cur);
