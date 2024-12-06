@@ -2646,8 +2646,11 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
     llvm_unreachable(" neon_vaddlv_u32 NYI ");
   case NEON::BI__builtin_neon_vaddlvq_s32:
     llvm_unreachable(" neon_vaddlvq_s32 NYI ");
-  case NEON::BI__builtin_neon_vaddlvq_u32:
-    llvm_unreachable(" neon_vaddlvq_u32 NYI ");
+  case NEON::BI__builtin_neon_vaddlvq_u32: {
+    mlir::Type argTy = cgf.convertType(expr->getArg(0)->getType());
+    return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.uaddlv", resultTy,
+                        loc);
+  }
   case NEON::BI__builtin_neon_vaddv_f32:
     llvm_unreachable(" neon_vaddv_f32 NYI ");
   case NEON::BI__builtin_neon_vaddv_s32:

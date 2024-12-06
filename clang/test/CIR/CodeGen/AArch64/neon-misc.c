@@ -1716,3 +1716,14 @@ uint64x2_t test_vpadalq_u32(uint64x2_t a, uint32x4_t b) {
   // LLVM:   [[TMP2:%.*]] = add <2 x i64> [[VPADAL1_I]], [[a]]
   // LLVM:   ret <2 x i64> [[TMP2]]
 }
+
+uint64_t test_vaddlvq_u32(uint32x4_t a) {
+  return vaddlvq_u32(a);
+
+  // CIR-LABEL: vaddlvq_u32
+  // CIR: = cir.llvm.intrinsic "aarch64.neon.uaddlv" {{%.*}} : (!cir.vector<!u32i x 4>) -> !u64i
+
+  // LLVM: {{.*}}@test_vaddlvq_u32(<4 x i32>{{.*}}[[A:%.*]])
+  // LLVM-NEXT:    [[VADDLVQ_U32_I:%.*]] = call i64 @llvm.aarch64.neon.uaddlv.i64.v4i32(<4 x i32> [[A]])
+  // LLVM-NEXT:    ret i64 [[VADDLVQ_U32_I]]
+}
