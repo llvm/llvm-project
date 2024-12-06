@@ -22,6 +22,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -72,7 +73,7 @@ namespace {
 struct TypeSanitizer {
   TypeSanitizer(Module &M);
   bool run(Function &F, const TargetLibraryInfo &TLI);
-  void instrumentGlobals();
+  void instrumentGlobals(Module &M);
 
 private:
   typedef SmallDenseMap<const MDNode *, GlobalVariable *, 8>
@@ -114,9 +115,11 @@ private:
   uint64_t PtrShift;
   IntegerType *OrdTy;
 
-  // Callbacks to run-time library are computed in doInitialization.
-  Function *TysanCheck;
-  Function *TysanCtorFunction;
+  /// Callbacks to run-time library are computed in initializeCallbacks.
+  FunctionCallee TysanCheck;
+  FunctionCallee TysanCtorFunction;
+
+  /// Callback to set types for gloabls.
   Function *TysanGlobalsSetTypeFunction;
 };
 } // namespace
@@ -139,28 +142,32 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
   AttributeList Attr;
   Attr = Attr.addFnAttribute(M.getContext(), Attribute::NoUnwind);
   // Initialize the callbacks.
-  TysanCheck = cast<Function>(
+  TysanCheck =
       M.getOrInsertFunction(kTysanCheckName, Attr, IRB.getVoidTy(),
                             IRB.getPtrTy(), // Pointer to data to be read.
                             OrdTy,          // Size of the data in bytes.
                             IRB.getPtrTy(), // Pointer to type descriptor.
                             OrdTy           // Flags.
-                            )
-          .getCallee());
+      );
 
   TysanCtorFunction = cast<Function>(
       M.getOrInsertFunction(kTysanModuleCtorName, Attr, IRB.getVoidTy())
           .getCallee());
 }
 
-void TypeSanitizer::instrumentGlobals() {
-  Module &M = *TysanCtorFunction->getParent();
-  initializeCallbacks(M);
+void TypeSanitizer::instrumentGlobals(Module &M) {
   TysanGlobalsSetTypeFunction = nullptr;
 
   NamedMDNode *Globals = M.getNamedMetadata("llvm.tysan.globals");
   if (!Globals)
     return;
+
+  TysanGlobalsSetTypeFunction = Function::Create(
+      FunctionType::get(Type::getVoidTy(M.getContext()), false),
+      GlobalValue::InternalLinkage, "__tysan_set_globals_types", &M);
+  BasicBlock *BB =
+      BasicBlock::Create(M.getContext(), "", TysanGlobalsSetTypeFunction);
+  ReturnInst::Create(M.getContext(), BB);
 
   const DataLayout &DL = M.getDataLayout();
   Value *ShadowBase = nullptr, *AppMemMask = nullptr;
@@ -175,15 +182,6 @@ void TypeSanitizer::instrumentGlobals() {
     if (!generateBaseTypeDescriptor(TBAAMD, TypeDescriptors, TypeNames, M))
       continue;
 
-    if (!TysanGlobalsSetTypeFunction) {
-      TysanGlobalsSetTypeFunction = Function::Create(
-          FunctionType::get(Type::getVoidTy(M.getContext()), false),
-          GlobalValue::InternalLinkage, "__tysan_set_globals_types", &M);
-      BasicBlock *BB =
-          BasicBlock::Create(M.getContext(), "", TysanGlobalsSetTypeFunction);
-      ReturnInst::Create(M.getContext(), BB);
-    }
-
     IRBuilder<> IRB(
         TysanGlobalsSetTypeFunction->getEntryBlock().getTerminator());
     Type *AccessTy = GV->getValueType();
@@ -195,21 +193,11 @@ void TypeSanitizer::instrumentGlobals() {
   }
 
   if (TysanGlobalsSetTypeFunction) {
-    IRBuilder<> IRB(TysanCtorFunction->getEntryBlock().getTerminator());
+    IRBuilder<> IRB(cast<Function>(TysanCtorFunction.getCallee())
+                        ->getEntryBlock()
+                        .getTerminator());
     IRB.CreateCall(TysanGlobalsSetTypeFunction, {});
   }
-}
-
-static void insertModuleCtor(Module &M) {
-  Function *TysanCtorFunction;
-  std::tie(TysanCtorFunction, std::ignore) =
-      createSanitizerCtorAndInitFunctions(M, kTysanModuleCtorName,
-                                          kTysanInitName, /*InitArgTypes=*/{},
-                                          /*InitArgs=*/{});
-
-  TypeSanitizer TySan(M);
-  TySan.instrumentGlobals();
-  appendToGlobalCtors(M, TysanCtorFunction, 0);
 }
 
 static const char LUT[] = "0123456789abcdef";
@@ -220,7 +208,7 @@ static std::string encodeName(StringRef Name) {
   Output.reserve(Output.size() + 3 * Length);
   for (size_t i = 0; i < Length; ++i) {
     const unsigned char c = Name[i];
-    if (isalnum((int)c)) {
+    if (isalnum(c)) {
       Output.push_back(c);
       continue;
     }
@@ -337,11 +325,13 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
   SmallVector<Type *> TDSubTys;
   SmallVector<Constant *> TDSubData;
 
-  TDSubTys.push_back(IntptrTy);
-  TDSubData.push_back(ConstantInt::get(IntptrTy, 2));
+  auto PushTDSub = [&](Constant *C) {
+    TDSubTys.push_back(C->getType());
+    TDSubData.push_back(C);
+  };
 
-  TDSubTys.push_back(IntptrTy);
-  TDSubData.push_back(ConstantInt::get(IntptrTy, Members.size()));
+  PushTDSub(ConstantInt::get(IntptrTy, 2));
+  PushTDSub(ConstantInt::get(IntptrTy, Members.size()));
 
   // Types that are in an anonymous namespace are local to this module.
   // FIXME: This should really be marked by the frontend in the metadata
@@ -351,15 +341,11 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
   // anonymous namespace is a template parameter, etc.).
   bool ShouldBeComdat = !AnonNameRegex.match(NameNode->getString());
   for (auto &Member : Members) {
-    TDSubTys.push_back(Member.first->getType());
-    TDSubData.push_back(Member.first);
-
-    TDSubTys.push_back(IntptrTy);
-    TDSubData.push_back(ConstantInt::get(IntptrTy, Member.second));
+    PushTDSub(Member.first);
+    PushTDSub(ConstantInt::get(IntptrTy, Member.second));
   }
 
-  TDSubTys.push_back(NameData->getType());
-  TDSubData.push_back(NameData);
+  PushTDSub(NameData);
 
   StructType *TDTy = StructType::get(C, TDSubTys);
   Constant *TD = ConstantStruct::get(TDTy, TDSubData);
@@ -482,59 +468,65 @@ Value *TypeSanitizer::getAppMemMask(Function &F) {
   return IRB.CreateLoad(IntptrTy, GlobalAppMemMask, "app.mem.mask");
 }
 
+/// Collect all loads and stores, and for what TBAA nodes we need to generate
+/// type descriptors.
+void collectMemAccessInfo(
+    Function &F, const TargetLibraryInfo &TLI,
+    SmallVectorImpl<std::pair<Instruction *, MemoryLocation>> &MemoryAccesses,
+    SmallSetVector<const MDNode *, 8> &TBAAMetadata,
+    SmallVectorImpl<Value *> &MemTypeResetInsts) {
+  // Traverse all instructions, collect loads/stores/returns, check for calls.
+  for (Instruction &Inst : instructions(F)) {
+    // Skip memory accesses inserted by another instrumentation.
+    if (Inst.getMetadata(LLVMContext::MD_nosanitize))
+      continue;
+
+    if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst) ||
+        isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst)) {
+      MemoryLocation MLoc = MemoryLocation::get(&Inst);
+
+      // Swift errors are special (we can't introduce extra uses on them).
+      if (MLoc.Ptr->isSwiftError())
+        continue;
+
+      // Skip non-address-space-0 pointers; we don't know how to handle them.
+      Type *PtrTy = cast<PointerType>(MLoc.Ptr->getType());
+      if (PtrTy->getPointerAddressSpace() != 0)
+        continue;
+
+      if (MLoc.AATags.TBAA)
+        TBAAMetadata.insert(MLoc.AATags.TBAA);
+      MemoryAccesses.push_back(std::make_pair(&Inst, MLoc));
+    } else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
+      if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+        maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+
+      if (isa<MemIntrinsic>(Inst)) {
+        MemTypeResetInsts.push_back(&Inst);
+      } else if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+            II->getIntrinsicID() == Intrinsic::lifetime_end)
+          MemTypeResetInsts.push_back(&Inst);
+      }
+    } else if (isa<AllocaInst>(Inst)) {
+      MemTypeResetInsts.push_back(&Inst);
+    }
+  }
+}
+
 bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
   // This is required to prevent instrumenting call to __tysan_init from within
   // the module constructor.
-  if (&F == TysanCtorFunction || &F == TysanGlobalsSetTypeFunction)
+  if (&F == TysanCtorFunction.getCallee() || &F == TysanGlobalsSetTypeFunction)
     return false;
   initializeCallbacks(*F.getParent());
 
+  // We need to collect all loads and stores, and know for what TBAA nodes we
+  // need to generate type descriptors.
   SmallVector<std::pair<Instruction *, MemoryLocation>> MemoryAccesses;
   SmallSetVector<const MDNode *, 8> TBAAMetadata;
   SmallVector<Value *> MemTypeResetInsts;
-
-  bool Res = false;
-  bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeType);
-  const DataLayout &DL = F.getParent()->getDataLayout();
-  // Traverse all instructions, collect loads/stores/returns, check for calls.
-  for (auto &BB : F) {
-    for (auto &Inst : BB) {
-      // Skip memory accesses inserted by another instrumentation.
-      if (Inst.getMetadata(LLVMContext::MD_nosanitize))
-        continue;
-
-      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst) ||
-          isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst)) {
-        MemoryLocation MLoc = MemoryLocation::get(&Inst);
-
-        // Swift errors are special (we can't introduce extra uses on them).
-        if (MLoc.Ptr->isSwiftError())
-          continue;
-
-        // Skip non-address-space-0 pointers; we don't know how to handle them.
-        Type *PtrTy = cast<PointerType>(MLoc.Ptr->getType());
-        if (PtrTy->getPointerAddressSpace() != 0)
-          continue;
-
-        if (MLoc.AATags.TBAA)
-          TBAAMetadata.insert(MLoc.AATags.TBAA);
-        MemoryAccesses.push_back(std::make_pair(&Inst, MLoc));
-      } else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
-        if (CallInst *CI = dyn_cast<CallInst>(&Inst))
-          maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
-
-        if (isa<MemIntrinsic>(Inst)) {
-          MemTypeResetInsts.push_back(&Inst);
-        } else if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-          if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-              II->getIntrinsicID() == Intrinsic::lifetime_end)
-            MemTypeResetInsts.push_back(&Inst);
-        }
-      } else if (isa<AllocaInst>(Inst)) {
-        MemTypeResetInsts.push_back(&Inst);
-      }
-    }
-  }
+  collectMemAccessInfo(F, TLI, MemoryAccesses, TBAAMetadata, MemTypeResetInsts);
 
   // byval arguments also need their types reset (they're new stack memory,
   // just like allocas).
@@ -542,12 +534,11 @@ bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
     if (A.hasByValAttr())
       MemTypeResetInsts.push_back(&A);
 
-  // We have collected all loads and stores, and know for what TBAA nodes we
-  // need to generate type descriptors.
 
   Module &M = *F.getParent();
   TypeDescriptorsMapTy TypeDescriptors;
   TypeNameMapTy TypeNames;
+  bool Res = false;
   for (const MDNode *MD : TBAAMetadata) {
     if (TypeDescriptors.count(MD))
       continue;
@@ -558,6 +549,8 @@ bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
     Res = true;
   }
 
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeType);
   Value *ShadowBase = nullptr, *AppMemMask = nullptr;
   for (auto &MA : MemoryAccesses)
     Res |= instrumentMemoryAccess(MA.first, MA.second, ShadowBase, AppMemMask,
@@ -863,6 +856,14 @@ PreservedAnalyses TypeSanitizerPass::run(Function &F,
 
 PreservedAnalyses ModuleTypeSanitizerPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  insertModuleCtor(M);
+  Function *TysanCtorFunction;
+  std::tie(TysanCtorFunction, std::ignore) =
+      createSanitizerCtorAndInitFunctions(M, kTysanModuleCtorName,
+                                          kTysanInitName, /*InitArgTypes=*/{},
+                                          /*InitArgs=*/{});
+
+  TypeSanitizer TySan(M);
+  TySan.instrumentGlobals(M);
+  appendToGlobalCtors(M, TysanCtorFunction, 0);
   return PreservedAnalyses::none();
 }

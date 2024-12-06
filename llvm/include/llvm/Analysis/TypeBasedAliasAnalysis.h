@@ -60,6 +60,10 @@ public:
 
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;
+
+  /// Returns true if TBAA metadata should be used, that is if TBAA is enabled
+  /// and type sanitizer is not used.
+  bool shouldUseTBAA() const;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
