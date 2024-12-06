@@ -217,7 +217,8 @@ public:
   // Return true if the \p DataBuffer starts with "---" indicating it is a YAML
   // file.
   static bool hasFormat(const MemoryBuffer &DataBuffer);
-  // Wrapper around hasFormat above, reading the file instead of the memory buffer.
+  // Wrapper around hasFormat above, reading the file instead of the memory
+  // buffer.
   static bool hasFormat(const StringRef Path);
 
   // Create a YAMLMemProfReader after sanity checking the contents of the file
