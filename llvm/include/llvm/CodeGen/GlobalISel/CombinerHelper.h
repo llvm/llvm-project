@@ -943,22 +943,22 @@ public:
   bool matchSuboCarryOut(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
   // trunc(abs(sext(x) - sext(y))) -> abds(x, y)
-  bool matchTruncAbds(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchTruncAbds(const MachineInstr &MI);
 
   // trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
-  bool matchTruncAbdu(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchTruncAbdu(const MachineInstr &MI);
 
   // select(slt(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs)) -> abds(lhs, rhs)
-  bool matchSelectAbds(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchSelectAbds(const MachineInstr &MI);
 
   // select(ult(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs)) -> abdu(lhs, rhs)
-  bool matchSelectAbdu(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchSelectAbdu(const MachineInstr &MI);
 
   // sub(smax(lhs,rhs), smin(lhs,rhs)) -> abds(lhs, rhs)
-  bool matchSubAbds(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchSubAbds(const MachineInstr &MI);
 
   // sub(umax(lhs,rhs), umin(lhs,rhs)) - abdu(lhs, rhs)
-  bool matchSubAbdu(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchSubAbdu(const MachineInstr &MI);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

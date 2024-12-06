@@ -7867,11 +7867,10 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
 }
 
 // sub(smax(lhs,rhs), smin(lhs,rhs)) -> abds(lhs, rhs)
-bool CombinerHelper::matchSubAbds(const MachineInstr &MI,
-                                  BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchSubAbds(const MachineInstr &MI) {
   const GSub *Sub = cast<GSub>(&MI);
-  const GMMaxMinOp *LHS = cast<GMMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
-  const GMMaxMinOp *RHS = cast<GMMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
+  const GMaxMinOp *LHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
+  const GMaxMinOp *RHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
 
   if (!MRI.hasOneNonDBGUse(LHS->getReg(0)) ||
       !MRI.hasOneNonDBGUse(RHS->getReg(0)))
@@ -7880,21 +7879,14 @@ bool CombinerHelper::matchSubAbds(const MachineInstr &MI,
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}}))
-    return false;
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildAbds(Dst, LHS->getLHSReg(), LHS->getRHSReg());
-  };
-  return true;
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
 }
 
 // sub(umax(lhs,rhs), umin(lhs,rhs)) -> abdu(lhs, rhs)
-bool CombinerHelper::matchSubAbdu(const MachineInstr &MI,
-                                  BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchSubAbdu(const MachineInstr &MI) {
   const GSub *Sub = cast<GSub>(&MI);
-  const GMMaxMinOp *LHS = cast<GMMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
-  const GMMaxMinOp *RHS = cast<GMMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
+  const GMaxMinOp *LHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
+  const GMaxMinOp *RHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
 
   if (!MRI.hasOneNonDBGUse(LHS->getReg(0)) ||
       !MRI.hasOneNonDBGUse(RHS->getReg(0)))
@@ -7903,11 +7895,5 @@ bool CombinerHelper::matchSubAbdu(const MachineInstr &MI,
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}}))
-    return false;
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildAbdu(Dst, LHS->getLHSReg(), LHS->getRHSReg());
-  };
-  return true;
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
 }

@@ -361,8 +361,7 @@ bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
 }
 
 // trunc(abs(sext(x) - sext(y))) -> abds(x, y)
-bool CombinerHelper::matchTruncAbds(const MachineInstr &MI,
-                                    BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchTruncAbds(const MachineInstr &MI) {
   const GTrunc *Trunc = cast<GTrunc>(&MI);
   const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
   const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
@@ -386,18 +385,11 @@ bool CombinerHelper::matchTruncAbds(const MachineInstr &MI,
       !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
     return false;
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}}))
-    return false;
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildAbds(Dst, SextLHS->getSrcReg(), SextLHS->getSrcReg());
-  };
-  return true;
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
 }
 
 // trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
-bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI,
-                                    BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI) {
   const GTrunc *Trunc = cast<GTrunc>(&MI);
   const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
   const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
@@ -421,11 +413,5 @@ bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI,
       !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
     return false;
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}}))
-    return false;
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildAbdu(Dst, ZextLHS->getSrcReg(), ZextLHS->getSrcReg());
-  };
-  return true;
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
 }

@@ -25,8 +25,7 @@
 using namespace llvm;
 
 // select(slt(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs) -> abds(lhs, rhs)
-bool CombinerHelper::matchSelectAbds(const MachineInstr &MI,
-                                     BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchSelectAbds(const MachineInstr &MI) {
   const GSelect *Select = cast<GSelect>(&MI);
   GSub *LHS = cast<GSub>(MRI.getVRegDef(Select->getTrueReg()));
   GSub *RHS = cast<GSub>(MRI.getVRegDef(Select->getFalseReg()));
@@ -39,18 +38,11 @@ bool CombinerHelper::matchSelectAbds(const MachineInstr &MI,
   Register Dst = Select->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}}))
-    return false;
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildAbds(Dst, RHS->getLHSReg(), RHS->getRHSReg());
-  };
-  return true;
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
 }
 
 // select(ult(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs)) -> abdu(lhs, rhs)
-bool CombinerHelper::matchSelectAbdu(const MachineInstr &MI,
-                                     BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchSelectAbdu(const MachineInstr &MI) {
   const GSelect *Select = cast<GSelect>(&MI);
   GSub *LHS = cast<GSub>(MRI.getVRegDef(Select->getTrueReg()));
   GSub *RHS = cast<GSub>(MRI.getVRegDef(Select->getFalseReg()));
@@ -63,11 +55,5 @@ bool CombinerHelper::matchSelectAbdu(const MachineInstr &MI,
   Register Dst = Select->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}}))
-    return false;
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildAbdu(Dst, RHS->getLHSReg(), RHS->getRHSReg());
-  };
-  return true;
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
 }

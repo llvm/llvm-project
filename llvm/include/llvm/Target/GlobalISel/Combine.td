@@ -1914,58 +1914,58 @@ def overflow_combines: GICombineGroup<[
 ]>;
 
 def trunc_abds : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (defs root:$root),
   (match (G_SEXT $lhs, $x),
          (G_SEXT $rhs, $y),
          (G_SUB $sub, $lhs, $rhs),
          (G_ABS $abs, $sub),
          (G_TRUNC $root, $abs):$trunc,
-         [{ return Helper.matchTruncAbds(*${trunc}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${trunc}, ${matchinfo}); }])>;
+         [{ return Helper.matchTruncAbds(*${trunc}); }]),
+  (apply (G_ABDS $root, $x, $y))>;
 
 def trunc_abdu : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (defs root:$root),
   (match (G_ZEXT $lhs, $x),
          (G_ZEXT $rhs, $y),
          (G_SUB $sub, $lhs, $rhs),
          (G_ABS $abs, $sub),
          (G_TRUNC $root, $abs):$trunc,
-         [{ return Helper.matchTruncAbdu(*${trunc}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${trunc}, ${matchinfo}); }])>;
+         [{ return Helper.matchTruncAbdu(*${trunc}); }]),
+  (apply (G_ABDU $root, $x, $y))>;
 
 def select_abds : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (defs root:$root),
   (match (G_SUB $lhs, $inputr, $inputl),
          (G_SUB $rhs, $inputl, $inputr),
          (G_ICMP $cond, $p, $inputl, $inputr),
          (G_SELECT $root, $cond, $lhs, $rhs):$select,
-         [{ return ${p}.getPredicate() == CmpInst::ICMP_SLT && Helper.matchSelectAbds(*${select}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${select}, ${matchinfo}); }])>;
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_SLT && Helper.matchSelectAbds(*${select}); }]),
+  (apply (G_ABDS $root, $inputl, $inputr))>;
 
 def select_abdu : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (defs root:$root),
   (match (G_SUB $lhs, $inputr, $inputl),
          (G_SUB $rhs, $inputl, $inputr),
          (G_ICMP $cond, $p, $inputl, $inputr),
          (G_SELECT $root, $cond, $lhs, $rhs):$select,
-         [{ return ${p}.getPredicate() == CmpInst::ICMP_ULT && Helper.matchSelectAbdu(*${select}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${select}, ${matchinfo}); }])>;
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_ULT && Helper.matchSelectAbdu(*${select}); }]),
+  (apply (G_ABDU $root, $inputl, $inputr))>;
 
 def sub_abds : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (defs root:$root),
   (match (G_SMAX $smax, $inputl, $inputr),
          (G_SMIN $smin, $inputl, $inputr),
          (G_SUB $root, $smax, $smin):$sub,
-         [{ return Helper.matchSubAbds(*${sub}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${sub}, ${matchinfo}); }])>;
+         [{ return Helper.matchSubAbds(*${sub}); }]),
+  (apply (G_ABDS $root, $inputl, $inputr))>;
 
 def sub_abdu : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (defs root:$root),
   (match (G_UMAX $umax, $inputl, $inputr),
          (G_UMIN $umin, $inputl, $inputr),
          (G_SUB $root, $umax, $umin):$sub,
-         [{ return Helper.matchSubAbdu(*${sub}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${sub}, ${matchinfo}); }])>;
+         [{ return Helper.matchSubAbdu(*${sub}); }]),
+  (apply (G_ABDU $root, $inputl, $inputr))>;
 
 def abd_su_combines: GICombineGroup<[
   trunc_abds,

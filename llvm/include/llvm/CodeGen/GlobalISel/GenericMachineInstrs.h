@@ -1033,7 +1033,7 @@ public:
 };
 
 /// Represents an integer max or min op.
-class GMMaxMinOp : public GenericMachineInstr {
+class GMaxMinOp : public GenericMachineInstr {
 public:
   Register getLHSReg() const { return getReg(1); }
   Register getRHSReg() const { return getReg(2); }
