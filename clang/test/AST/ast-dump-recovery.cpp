@@ -487,7 +487,8 @@ union U {
 // CHECK-NEXT:      `-DeclStmt {{.*}}
 // CHECK-NEXT:        `-VarDecl {{.*}} g 'U':'GH112560::U' listinit
 // CHECK-NEXT:          `-InitListExpr {{.*}} 'U':'GH112560::U' contains-errors field Field {{.*}} 'f' 'int'
-// CHECK-NEXT:            `-RecoveryExpr {{.*}} 'int' contains-errors
+// CHECK-NEXT:            `-CXXDefaultInitExpr {{.*}} 'int' contains-errors has rewritten init
+// CHECK-NEXT:              `-RecoveryExpr {{.*}} 'int' contains-errors
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 void foo() {
   U g{};
