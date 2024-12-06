@@ -7870,7 +7870,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
 bool CombinerHelper::matchSubAbds(const MachineInstr &MI) {
   const GSub *Sub = cast<GSub>(&MI);
   const GMaxMinOp *LHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
-  const GMaxMinOp *RHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
+  const GMaxMinOp *RHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getRHSReg()));
 
   if (!MRI.hasOneNonDBGUse(LHS->getReg(0)) ||
       !MRI.hasOneNonDBGUse(RHS->getReg(0)))
@@ -7886,7 +7886,7 @@ bool CombinerHelper::matchSubAbds(const MachineInstr &MI) {
 bool CombinerHelper::matchSubAbdu(const MachineInstr &MI) {
   const GSub *Sub = cast<GSub>(&MI);
   const GMaxMinOp *LHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
-  const GMaxMinOp *RHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getLHSReg()));
+  const GMaxMinOp *RHS = cast<GMaxMinOp>(MRI.getVRegDef(Sub->getRHSReg()));
 
   if (!MRI.hasOneNonDBGUse(LHS->getReg(0)) ||
       !MRI.hasOneNonDBGUse(RHS->getReg(0)))
