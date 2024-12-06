@@ -164,8 +164,8 @@ struct LiftControlFlowToSCF
 
     bool changed = false;
     Operation *op = getOperation();
-    WalkResult result = op->walk([&](func::FuncOp funcOp) {
-      if (funcOp.getBody().empty())
+    WalkResult result = op->walk([&](FunctionOpInterface funcOp) {
+      if (funcOp.getFunctionBody().empty())
         return WalkResult::advance();
 
       auto &domInfo = funcOp != op ? getChildAnalysis<DominanceInfo>(funcOp)
