@@ -77,6 +77,10 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILBindingMap &DBM,
                                          const dxil::Resources &MDResources) {
   LLVMContext &Context = M.getContext();
 
+  for (ResourceBindingInfo &RI : DBM)
+    if (!RI.hasSymbol())
+      RI.createSymbol(M, DRTM[RI.getHandleTy()].createElementStruct());
+
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
   for (const ResourceBindingInfo &RI : DBM.srvs())
     SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
