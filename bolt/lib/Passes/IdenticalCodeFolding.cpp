@@ -376,7 +376,7 @@ Error IdenticalCodeFolding::processDataRelocations(
     const ObjectFile *OwningObj = Rel.getObject();
     assert(SymbolIter != OwningObj->symbol_end() &&
            "relocation Symbol expected");
-    const SymbolRef &Symbol = *SymbolIter;    
+    const SymbolRef &Symbol = *SymbolIter;
     const uint64_t SymbolAddress = cantFail(Symbol.getAddress());
     const ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(OwningObj);
     if (!ELFObj)
