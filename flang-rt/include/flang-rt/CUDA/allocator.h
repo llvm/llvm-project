@@ -9,7 +9,7 @@
 #ifndef FLANG_RT_CUDA_ALLOCATOR_H_
 #define FLANG_RT_CUDA_ALLOCATOR_H_
 
-#include "common.h"
+#include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
