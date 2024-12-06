@@ -11,10 +11,10 @@
 
 #include "../ClangTidyCheck.h"
 #include "../ClangTidyOptions.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 
 namespace clang::tidy::bugprone {
 
@@ -40,8 +40,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
     Options.store(Opts, "IgnoreSmartPointerDereference",
                   ModelOptions.IgnoreSmartPointerDereference);
-    Options.store(Opts, "IgnoreTestTUs",
-                  ignore_test_tus_);
+    Options.store(Opts, "IgnoreTestTUs", ignore_test_tus_);
   }
 
 private:
