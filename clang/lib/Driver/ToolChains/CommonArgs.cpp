@@ -1445,10 +1445,10 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.needsScudoRt()) {
       SharedRuntimes.push_back("scudo_standalone");
     }
-    if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
+    if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
     if (SanArgs.needsTysanRt())
-      StaticRuntimes.push_back("tysan");
+      SharedRuntimes.push_back("tysan");
     if (SanArgs.needsHwasanRt()) {
       if (SanArgs.needsHwasanAliasesRt())
         SharedRuntimes.push_back("hwasan_aliases");
