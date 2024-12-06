@@ -278,6 +278,7 @@ function(runtime_default_target)
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 CUDA CMAKE_CUDA # For runtimes that may look for the CUDA compiler and/or SDK (libc, offload, flang-rt)
+                                                FFI # offload uses libffi
                                                 FLANG_RUNTIME # Shared between Flang and Flang-RT
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}

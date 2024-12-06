@@ -118,8 +118,11 @@ public:
 
   /// For a given symbol which is host-associated, create a clone using
   /// parameters from the host-associated symbol.
+  /// The clone is default initialized if its type has any default
+  /// initialization unless `skipDefaultInit` is set.
   virtual bool
-  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
+  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym,
+                              bool skipDefaultInit) = 0;
 
   virtual void
   createHostAssociateVarCloneDealloc(const Fortran::semantics::Symbol &sym) = 0;
