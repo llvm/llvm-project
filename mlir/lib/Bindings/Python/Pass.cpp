@@ -76,20 +76,33 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           "enable_ir_printing",
           [](PyPassManager &passManager, bool printBeforeAll,
              bool printAfterAll, bool printModuleScope, bool printAfterChange,
-             bool printAfterFailure,
+             bool printAfterFailure, std::optional<int64_t> largeElementsLimit,
+             bool enableDebugInfo, bool printGenericOpForm,
              std::optional<std::string> optionalTreePrintingPath) {
+            MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
+            if (largeElementsLimit)
+              mlirOpPrintingFlagsElideLargeElementsAttrs(flags,
+                                                         *largeElementsLimit);
+            if (enableDebugInfo)
+              mlirOpPrintingFlagsEnableDebugInfo(flags, /*enable=*/true,
+                                                 /*prettyForm=*/false);
+            if (printGenericOpForm)
+              mlirOpPrintingFlagsPrintGenericOpForm(flags);
             std::string treePrintingPath = "";
             if (optionalTreePrintingPath.has_value())
               treePrintingPath = optionalTreePrintingPath.value();
             mlirPassManagerEnableIRPrinting(
                 passManager.get(), printBeforeAll, printAfterAll,
-                printModuleScope, printAfterChange, printAfterFailure,
+                printModuleScope, printAfterChange, printAfterFailure, flags,
                 mlirStringRefCreate(treePrintingPath.data(),
                                     treePrintingPath.size()));
+            mlirOpPrintingFlagsDestroy(flags);
           },
           "print_before_all"_a = false, "print_after_all"_a = true,
           "print_module_scope"_a = false, "print_after_change"_a = false,
           "print_after_failure"_a = false,
+          "large_elements_limit"_a = py::none(), "enable_debug_info"_a = false,
+          "print_generic_op_form"_a = false,
           "tree_printing_dir_path"_a = py::none(),
           "Enable IR printing, default as mlir-print-ir-after-all.")
       .def(
