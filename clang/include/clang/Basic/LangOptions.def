@@ -179,6 +179,7 @@ LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
 LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0,
         "incorporate address discrimination in authenticated function pointers in init/fini arrays")
 LANGOPT(PointerAuthELFGOT, 1, 0, "authenticate pointers from GOT")
+LANGOPT(AArch64JumpTableHardening, 1, 0, "use hardened lowering for jump-table dispatch")
 
 LANGOPT(PointerAuthIndirectGotos, 1, 0, "indirect gotos pointer authentication")
 LANGOPT(SoftPointerAuth   , 1, 0, "software emulation of pointer authentication")
