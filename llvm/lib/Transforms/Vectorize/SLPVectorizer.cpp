@@ -1229,10 +1229,13 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
 
   if (IsBinOp) {
     auto FindOp = [&](ArrayRef<InterchangeableInstruction> CandidateOp) {
-      for (Value *V : VL)
+      for (Value *V : VL) {
+        if (!isa<Instruction>(V))
+          continue;
         for (const InterchangeableInstruction &I : CandidateOp)
           if (cast<Instruction>(V)->getOpcode() == I.Opcode)
             return cast<Instruction>(V);
+      }
       llvm_unreachable(
           "Cannot find the candidate instruction for InstructionsState.");
     };
