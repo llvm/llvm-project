@@ -6,7 +6,7 @@ define ptr @gep_nusw_nneg(ptr %p, i32 %x, i32 %y) {
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X]] to i64
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [1 x i8], ptr [[P]], i64 [[X_EXT]], i64 [[Y_EXT]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw [1 x i8], ptr [[P]], i64 [[X_EXT]], i64 [[Y_EXT]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %x.ext = zext i32 %x to i64
@@ -20,7 +20,7 @@ define ptr @gep_inbounds_nneg(ptr %p, i32 %x, i32 %y) {
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X]] to i64
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x i8], ptr [[P]], i64 [[X_EXT]], i64 [[Y_EXT]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [1 x i8], ptr [[P]], i64 [[X_EXT]], i64 [[Y_EXT]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %x.ext = zext i32 %x to i64
