@@ -27,7 +27,7 @@
 int main(int, char**) {
   std::array<int, 3> array{0, 1, 2};
 
-  // Providing too large value in constructor
+  // Input range too large (exceeds the span extent)
   {
     auto f = [&] {
       std::span<int, 3> const s(array.data(), 4);
@@ -36,7 +36,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(f(), "size mismatch in span's constructor (iterator, len)");
   }
 
-  // Providing too small value in constructor
+  // Input range too small (doesn't fill the span)
   {
     auto f = [&] {
       std::span<int, 3> const s(array.data(), 2);
@@ -45,7 +45,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(f(), "size mismatch in span's constructor (iterator, len)");
   }
 
-  // Providing nullptr with a non-zero size in construction
+  // Input range is non-empty but starts with a null pointer
   {
     // static extent
     {
