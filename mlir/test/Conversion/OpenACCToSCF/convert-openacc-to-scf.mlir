@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-openacc-to-scf -split-input-file | FileCheck %s
 
 func.func @testenterdataop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.create varPtr(%a : memref<f32>, f32) -> memref<f32>
+  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
   acc.enter_data if(%ifCond) dataOperands(%0 : memref<f32>)
   return
 }
@@ -14,7 +14,7 @@ func.func @testenterdataop(%a: memref<f32>, %ifCond: i1) -> () {
 // -----
 
 func.func @testexitdataop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.getdeviceptr varPtr(%a : memref<f32>, f32) -> memref<f32>
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
   acc.exit_data if(%ifCond) dataOperands(%0 : memref<f32>)
   acc.delete accPtr(%0 : memref<f32>)
   return
@@ -28,7 +28,7 @@ func.func @testexitdataop(%a: memref<f32>, %ifCond: i1) -> () {
 // -----
 
 func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.update_device varPtr(%a : memref<f32>, f32) -> memref<f32>
+  %0 = acc.update_device varPtr(%a : memref<f32>) -> memref<f32>
   acc.update if(%ifCond) dataOperands(%0 : memref<f32>)
   return
 }
@@ -42,7 +42,7 @@ func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
 
 func.func @update_true(%arg0: memref<f32>) {
   %true = arith.constant true
-  %0 = acc.update_device varPtr(%arg0 : memref<f32>, f32) -> memref<f32>
+  %0 = acc.update_device varPtr(%arg0 : memref<f32>) -> memref<f32>
   acc.update if(%true) dataOperands(%0 : memref<f32>)
   return
 }
@@ -55,7 +55,7 @@ func.func @update_true(%arg0: memref<f32>) {
 
 func.func @update_false(%arg0: memref<f32>) {
   %false = arith.constant false
-  %0 = acc.update_device varPtr(%arg0 : memref<f32>, f32) -> memref<f32>
+  %0 = acc.update_device varPtr(%arg0 : memref<f32>) -> memref<f32>
   acc.update if(%false) dataOperands(%0 : memref<f32>)
   return
 }
@@ -67,7 +67,7 @@ func.func @update_false(%arg0: memref<f32>) {
 
 func.func @enter_data_true(%d1 : memref<f32>) {
   %true = arith.constant true
-  %0 = acc.create varPtr(%d1 : memref<f32>, f32) -> memref<f32>
+  %0 = acc.create varPtr(%d1 : memref<f32>) -> memref<f32>
   acc.enter_data if(%true) dataOperands(%0 : memref<f32>) attributes {async}
   return
 }
@@ -80,7 +80,7 @@ func.func @enter_data_true(%d1 : memref<f32>) {
 
 func.func @enter_data_false(%d1 : memref<f32>) {
   %false = arith.constant false
-  %0 = acc.create varPtr(%d1 : memref<f32>, f32) -> memref<f32>
+  %0 = acc.create varPtr(%d1 : memref<f32>) -> memref<f32>
   acc.enter_data if(%false) dataOperands(%0 : memref<f32>) attributes {async}
   return
 }
@@ -92,7 +92,7 @@ func.func @enter_data_false(%d1 : memref<f32>) {
 
 func.func @exit_data_true(%d1 : memref<f32>) {
   %true = arith.constant true
-  %0 = acc.getdeviceptr varPtr(%d1 : memref<f32>, f32) -> memref<f32>
+  %0 = acc.getdeviceptr varPtr(%d1 : memref<f32>) -> memref<f32>
   acc.exit_data if(%true) dataOperands(%0 : memref<f32>) attributes {async}
   acc.delete accPtr(%0 : memref<f32>)
   return
@@ -106,7 +106,7 @@ func.func @exit_data_true(%d1 : memref<f32>) {
 
 func.func @exit_data_false(%d1 : memref<f32>) {
   %false = arith.constant false
-  %0 = acc.getdeviceptr varPtr(%d1 : memref<f32>, f32) -> memref<f32>
+  %0 = acc.getdeviceptr varPtr(%d1 : memref<f32>) -> memref<f32>
   acc.exit_data if(%false) dataOperands(%0 : memref<f32>) attributes {async}
   acc.delete accPtr(%0 : memref<f32>)
   return
