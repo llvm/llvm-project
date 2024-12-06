@@ -276,6 +276,12 @@ public:
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
+            // For AArch64, PPC32 and PPC64, the thunk is populated by a call to
+            // __trampoline_setup, which is defined in
+            // compiler-rt/lib/builtins/trampoline_setup.c and requires the
+            // thunk size greater than 32 bytes.  For RISCV and x86_64, the
+            // thunk setup doesn't go through __trampoline_setup and fits in 32
+            // bytes.
             fir::SequenceType::Extent thunkSize = 32;
             if (triple.isPPC32())
               thunkSize = 40;
