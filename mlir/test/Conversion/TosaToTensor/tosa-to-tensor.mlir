@@ -466,7 +466,7 @@ func.func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
-  // CHECK: tensor.pad %[[ARG0]] low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
+  // CHECK: tensor.pad %[[ARG0]] low[1, 3] high[2, 4]  {
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
@@ -501,7 +501,7 @@ func.func @pad_float_explicit(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 4.200000e+01 : f32
-  // CHECK: tensor.pad %[[ARG0]] low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
+  // CHECK: tensor.pad %[[ARG0]] low[1, 3] high[2, 4]  {
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = arith.constant dense<42.0> : tensor<f32>
@@ -519,14 +519,14 @@ func.func @pad_dyn_input(%arg0 : tensor<?x2xf32>) -> (tensor<?x9xf32>) {
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
-  // CHECK: tensor.pad %[[ARG0]] low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
+  // CHECK: tensor.pad %[[ARG0]] low[1, 3] high[2, 4]  {
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<?x2xf32> to tensor<?x9xf32>
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<?x2xf32>, tensor<2x2xi32>)  -> (tensor<?x9xf32>)
   return %1 : tensor<?x9xf32>
 }
 
-func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
+func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<2x9xf32>) {
   %0 = arith.constant dense<[[-1, 2], [3, 4]]> : tensor<2x2xi32>
   // TODO: Output contains multiple "arith.constant 1 : index".
   // CHECK-DAG: [[INDEX1:%.+]] = arith.constant 1 : index
@@ -534,11 +534,11 @@ func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
-  // CHECK: tensor.pad %[[ARG0]] low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
+  // CHECK: tensor.pad %[[ARG0]] low[-1, 3] high[2, 4] {
   // CHECK:   tensor.yield [[CST]]
-  // CHECK: } : tensor<1x2xf32> to tensor<?x9xf32>
-  %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<?x9xf32>)
-  return %1 : tensor<?x9xf32>
+  // CHECK: } : tensor<1x2xf32> to tensor<2x9xf32>
+  %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<2x9xf32>)
+  return %1 : tensor<2x9xf32>
 }
 
 // -----

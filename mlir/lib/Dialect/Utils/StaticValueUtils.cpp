@@ -41,6 +41,7 @@ getOffsetsSizesAndStrides(ArrayRef<Range> ranges) {
 
 /// Helper function to dispatch an OpFoldResult into `staticVec` if:
 ///   a) it is an IntegerAttr
+///   b) it is a constant integer value
 /// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
 /// In such dynamic cases, a copy of the `sentinel` value is also pushed to
 /// `staticVec`. This is useful to extract mixed static and dynamic entries that
@@ -54,8 +55,13 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
     staticVec.push_back(apInt.getSExtValue());
     return;
   }
-  dynamicVec.push_back(v);
-  staticVec.push_back(ShapedType::kDynamic);
+  std::optional<int64_t> maybeConstantInt = getConstantIntValue(ofr);
+  if (!maybeConstantInt) {
+    dynamicVec.push_back(v);
+    staticVec.push_back(ShapedType::kDynamic);
+  } else {
+    staticVec.push_back(*maybeConstantInt);
+  }
 }
 
 std::pair<int64_t, OpFoldResult>

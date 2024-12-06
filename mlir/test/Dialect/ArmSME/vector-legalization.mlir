@@ -416,9 +416,8 @@ func.func @lift_illegal_transpose_to_memory(%a: index, %b: index, %memref: memre
   // CHECK-DAG: %[[VSCALE:.*]] = vector.vscale
   // CHECK-DAG: %[[C8_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C8]] : index
   // CHECK-NEXT: %[[READ_SUBVIEW:.*]] = memref.subview %[[MEMREF]][%[[INDEXA]], %[[INDEXB]]] [%[[C8_VSCALE]], 4] [1, 1] : memref<?x?xf32> to memref<?x4xf32, strided<[?, 1], offset: ?>>
-  // CHECK-NEXT: %[[CAST:.*]] = memref.cast %[[READ_SUBVIEW]] : memref<?x4xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  // CHECK-NEXT: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]] (d0, d1) -> (d1, d0) : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  // CHECK-NEXT: %[[LEGAL_READ:.*]]  = vector.transfer_read %[[TRANSPOSE]][%c0, %c0], %[[C0_F32]] : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4x[8]xf32>
+  // CHECK-NEXT: %[[TRANSPOSE:.*]] = memref.transpose %[[READ_SUBVIEW]] (d0, d1) -> (d1, d0) : memref<?x4xf32, strided<[?, 1], offset: ?>> to memref<4x?xf32, strided<[1, ?], offset: ?>>
+  // CHECK-NEXT: %[[LEGAL_READ:.*]]  = vector.transfer_read %[[TRANSPOSE]][%c0, %c0], %[[C0_F32]] {in_bounds = [true, false]} : memref<4x?xf32, strided<[1, ?], offset: ?>>, vector<4x[8]xf32>
   // CHECK-NEXT: return %[[LEGAL_READ]]
   %pad = arith.constant 0.0 : f32
   %illegalRead = vector.transfer_read %memref[%a, %b], %pad : memref<?x?xf32>, vector<[8]x4xf32>
@@ -434,11 +433,10 @@ func.func @lift_illegal_transpose_to_memory(%a: index, %b: index, %memref: memre
 // CHECK-SAME:                                              %[[MEMREF:[a-z0-9]+]]: memref<?x?xf32>
 func.func @lift_illegal_transpose_to_memory_with_mask(%dim0: index, %dim1: index, %memref: memref<?x?xf32>, %a: index, %b: index) -> vector<4x[8]xf32> {
   // CHECK-DAG: %[[READ_SUBVIEW:.*]] = memref.subview %[[MEMREF]]
-  // CHECK-DAG: %[[CAST:.*]] = memref.cast %[[READ_SUBVIEW]]
-  // CHECK-DAG: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]]
+  // CHECK-DAG: %[[TRANSPOSE:.*]] = memref.transpose %[[READ_SUBVIEW]]
   // CHECK-DAG: %[[MASK:.*]] = vector.create_mask %[[DIM1]], %[[DIM0]] : vector<4x[8]xi1>
   // CHECK:     %[[LEGAL_READ:.*]] = vector.transfer_read %[[TRANSPOSE]]
-  // CHECK-SAME:                       %[[MASK]] : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4x[8]xf32>
+  // CHECK-SAME:                       %[[MASK]] {in_bounds = [true, false]} : memref<4x?xf32, strided<[1, ?], offset: ?>>, vector<4x[8]xf32>
   // CHECK-NEXT: return %[[LEGAL_READ]]
   %pad = arith.constant 0.0 : f32
   %mask = vector.create_mask %dim0, %dim1 : vector<[8]x4xi1>
@@ -453,8 +451,7 @@ func.func @lift_illegal_transpose_to_memory_with_mask(%dim0: index, %dim1: index
 // CHECK-SAME:                                                     %[[MEMREF:[a-z0-9]+]]: memref<?x?xi8>
 func.func @lift_illegal_transpose_to_memory_with_arith_extop(%a: index, %b: index, %memref: memref<?x?xi8>) -> vector<4x[8]xi32> {
   // CHECK-DAG: %[[READ_SUBVIEW:.*]] = memref.subview %[[MEMREF]]
-  // CHECK-DAG: %[[CAST:.*]] = memref.cast %[[READ_SUBVIEW]]
-  // CHECK-DAG: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]]
+  // CHECK-DAG: %[[TRANSPOSE:.*]] = memref.transpose %[[READ_SUBVIEW]]
   // CHECK:     %[[LEGAL_READ:.*]] = vector.transfer_read %[[TRANSPOSE]]
   // CHECK-NEXT: %[[EXT_TYPE:.*]] = arith.extsi %[[LEGAL_READ]] : vector<4x[8]xi8> to vector<4x[8]xi32>
   // CHECK-NEXT: return %[[EXT_TYPE]]
@@ -514,7 +511,7 @@ func.func @illegal_shape_cast_to_transpose_1d(%vec: vector<[4]x1xf32>) -> vector
 
 // CHECK-LABEL: @lift_illegal_2d_shape_cast_to_memory
 func.func @lift_illegal_2d_shape_cast_to_memory(%a: index, %b: index, %memref: memref<?x?xf32>) -> vector<1x[4]xf32> {
-  // CHECK: vector.transfer_read {{.*}} : memref<?x?xf32, {{.*}}>, vector<1x[4]xf32>
+  // CHECK: vector.transfer_read {{.*}} : memref<1x?xf32, {{.*}}>, vector<1x[4]xf32>
   // CHECK-NOT: vector.shape_cast
   %pad = arith.constant 0.0 : f32
   %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = [false, true]}: memref<?x?xf32>, vector<[4]x1xf32>
@@ -526,7 +523,7 @@ func.func @lift_illegal_2d_shape_cast_to_memory(%a: index, %b: index, %memref: m
 
 // CHECK-LABEL: @lift_illegal_1d_shape_cast_to_memory
 func.func @lift_illegal_1d_shape_cast_to_memory(%a: index, %b: index, %memref: memref<?x?xf32>) -> vector<[4]xf32> {
-  // CHECK: vector.transfer_read {{.*}} : memref<?x?xf32, {{.*}}>, vector<1x[4]xf32>
+  // CHECK: vector.transfer_read {{.*}} : memref<1x?xf32, {{.*}}>, vector<1x[4]xf32>
   // CHECK-NOT: vector.shape_cast {{.*}} : vector<[4]x1xf32> to vector<[4]xf32>
   %pad = arith.constant 0.0 : f32
   %illegalRead = vector.transfer_read %memref[%a, %b], %pad {in_bounds = [false, true]}: memref<?x?xf32>, vector<[4]x1xf32>

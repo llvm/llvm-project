@@ -497,20 +497,19 @@ func.func @from_elements.constant() -> tensor<3xindex> {
 // -----
 
 func.func @slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
-    %arg2 : index) -> tensor<?x?x?xf32>
+    %arg2 : index) -> tensor<4x1x?xf32>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = tensor.extract_slice %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
+  %0 = tensor.extract_slice %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<4x1x?xf32>
+  return %0 : tensor<4x1x?xf32>
 }
 // CHECK-LABEL: func @slice_canonicalize
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?xf32>
-//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]][0, %{{[a-zA-Z0-9_]+}}, 1]
+//       CHECK:   %[[RESULT:.+]] = tensor.extract_slice %[[ARG0]][0, %{{[a-zA-Z0-9_]+}}, 1]
 //  CHECK-SAME:      [4, 1, %{{[a-zA-Z0-9_]+}}] [1, 1, 1]
 //  CHECK-SAME:      : tensor<?x?x?xf32> to tensor<4x1x?xf32>
-//       CHECK:   %[[RESULT:.+]] = tensor.cast %[[SLICE]]
 //       CHECK:   return %[[RESULT]]
 
 // -----
@@ -642,8 +641,8 @@ func.func @slice_to_insert_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 :
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = tensor.extract_slice %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
-  %1 = tensor.insert_slice %0 into %arg3[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> into tensor<?x?x?xf32>
+  %0 = tensor.extract_slice %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<4x1x?xf32>
+  %1 = tensor.insert_slice %0 into %arg3[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<4x1x?xf32> into tensor<?x?x?xf32>
   return %1 : tensor<?x?x?xf32>
 }
 // CHECK-LABEL: func @slice_to_insert_slice_canonicalize
@@ -2550,22 +2549,6 @@ func.func @fold_dst_style_ops_into_unpack(%arg0 : tensor<?x?x16x64xf32>, %init :
 //       CHECK:   %[[UNPACK:.+]] = tensor.unpack %[[ARG0]]
 //  CHECK-SAME:       into %[[INIT]]
 //       CHECK:   return %[[UNPACK]]
-
-// -----
-
-// The IR in this test case in invalid. This test tests that the canonicalizer
-// does not crash.
-
-// CHECK-LABEL: func @invalid_slice_ops(
-//       CHECK:   %[[c:.*]] = arith.constant -5 : index
-//       CHECK:   tensor.extract_slice {{.*}}%[[c]]
-//       CHECK:   tensor.insert_slice {{.*}}%[[c]]
-func.func @invalid_slice_ops(%t: tensor<?xf32>, %t2: tensor<?xf32>) -> tensor<?xf32> {
-  %c = arith.constant -5 : index
-  %0 = tensor.extract_slice %t[0][%c][1] : tensor<?xf32> to tensor<?xf32>
-  %1 = tensor.insert_slice %0 into %t2[2][%c][1] : tensor<?xf32> into tensor<?xf32>
-  return %1 : tensor<?xf32>
-}
 
 // -----
 

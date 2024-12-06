@@ -2328,7 +2328,22 @@ LogicalResult ExtractSliceOp::verify() {
   // Verify result type against inferred type.
   RankedTensorType expectedType = ExtractSliceOp::inferResultType(
       getSourceType(), getMixedOffsets(), getMixedSizes(), getMixedStrides());
-  SliceVerificationResult result = isRankReducedType(expectedType, getType());
+  SliceVerificationResult result;
+  if (getSizes().size() != 0) {
+    bool hasNonCstValue = false;
+    for (OpFoldResult size : getSizes()) {
+      std::optional<int64_t> cst = getConstantIntValue(size);
+      if (!cst) {
+        hasNonCstValue = true;
+        break;
+      }
+    }
+    if (hasNonCstValue && llvm::cast<ShapedType>(getType()).hasStaticShape()) {
+      result = SliceVerificationResult::SizeMismatch;
+      return produceSliceErrorMsg(result, *this, expectedType);
+    }
+  }
+  result = isRankReducedType(expectedType, getType());
   return produceSliceErrorMsg(result, *this, expectedType);
 }
 
@@ -2700,10 +2715,26 @@ static SliceVerificationResult verifyInsertSliceOp(
 
 /// Verifier for InsertSliceOp.
 LogicalResult InsertSliceOp::verify() {
-  RankedTensorType expectedType;
-  SliceVerificationResult result =
-      verifyInsertSliceOp(getSourceType(), getType(), getStaticOffsets(),
-                          getStaticSizes(), getStaticStrides(), &expectedType);
+  // insert_slice is the inverse of extract_slice, use the same type
+  // inference.
+  RankedTensorType expectedType = ExtractSliceOp::inferResultType(
+      getType(), getStaticOffsets(), getStaticSizes(), getStaticStrides());
+  SliceVerificationResult result;
+  if (getSizes().size() != 0) {
+    bool hasNonCstValue = false;
+    for (OpFoldResult size : getSizes()) {
+      std::optional<int64_t> cst = getConstantIntValue(size);
+      if (!cst) {
+        hasNonCstValue = true;
+        break;
+      }
+    }
+    if (hasNonCstValue && getSourceType().hasStaticShape()) {
+      result = SliceVerificationResult::SizeMismatch;
+      return produceSliceErrorMsg(result, *this, expectedType);
+    }
+  }
+  result = isRankReducedType(expectedType, getSourceType());
   return produceSliceErrorMsg(result, *this, expectedType);
 }
 

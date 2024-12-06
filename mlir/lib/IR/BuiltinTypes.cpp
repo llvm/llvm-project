@@ -431,8 +431,8 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
     int64_t origSize = originalShape[originalIdx];
     // if `matchDynamic`, count dynamic dims as a match, unless `origSize` is 1.
     if (matchDynamic && reducedIdx < reducedRank && origSize != 1 &&
-        (ShapedType::isDynamic(reducedShape[reducedIdx]) ||
-         ShapedType::isDynamic(origSize))) {
+        (ShapedType::isDynamic(origSize) ||
+         ShapedType::isDynamic(reducedShape[reducedIdx]))) {
       reducedIdx++;
       continue;
     }
@@ -448,7 +448,7 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
       return std::nullopt;
   }
   // The whole reducedShape must be scanned, otherwise we bail.
-  if (reducedIdx != reducedRank)
+  if (reducedIdx != reducedRank && originalRank != 1)
     return std::nullopt;
   return unusedDims;
 }
@@ -472,8 +472,8 @@ mlir::isRankReducedType(ShapedType originalType,
   if (candidateReducedRank > originalRank)
     return SliceVerificationResult::RankTooLarge;
 
-  auto optionalUnusedDimsMask =
-      computeRankReductionMask(originalShape, candidateReducedShape);
+  auto optionalUnusedDimsMask = computeRankReductionMask(
+      originalShape, candidateReducedShape, /*matchDynamic=*/true);
 
   // Sizes cannot be matched in case empty vector is returned.
   if (!optionalUnusedDimsMask)
