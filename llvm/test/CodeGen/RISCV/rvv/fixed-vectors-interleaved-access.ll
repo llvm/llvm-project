@@ -1247,3 +1247,55 @@ define <4 x i8> @load_factor8_one_active(ptr %ptr) vscale_range(8,1024) {
   %v0 = shufflevector <32 x i8> %interleaved.vec, <32 x i8> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
   ret <4 x i8> %v0
 }
+
+define void @load_factor4_one_active_storeback(ptr %ptr) {
+; CHECK-LABEL: load_factor4_one_active_storeback:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = load <16 x i32>, ptr %ptr
+  %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  store <4 x i32> %v0, ptr %ptr
+  ret void
+}
+
+; TODO: This should be a strided load
+define void @load_factor4_one_active_storeback_full(ptr %ptr) {
+; CHECK-LABEL: load_factor4_one_active_storeback_full:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vmv1r.v v13, v8
+; CHECK-NEXT:    vmv1r.v v14, v12
+; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v16, v8, 8
+; CHECK-NEXT:    vmv1r.v v15, v16
+; CHECK-NEXT:    vslidedown.vi v16, v8, 12
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v13, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = load <16 x i32>, ptr %ptr
+  %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  store <16 x i32> %v0, ptr %ptr
+  ret void
+}
+
+; TODO: This should be a strided store
+define void @store_factor4_one_active_storeback(ptr %ptr, <4 x i32> %v) {
+; CHECK-LABEL: store_factor4_one_active_storeback:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vmv.v.v v10, v9
+; CHECK-NEXT:    vmv.v.v v11, v9
+; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
+  store <16 x i32> %v0, ptr %ptr
+  ret void
+}
