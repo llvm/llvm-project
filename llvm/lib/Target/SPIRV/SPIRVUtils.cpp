@@ -207,8 +207,12 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
                : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
+  case 8:
+    return SPIRV::StorageClass::Output;
   case 9:
     return SPIRV::StorageClass::CodeSectionINTEL;
+  case 10:
+    return SPIRV::StorageClass::Private;
   default:
     report_fatal_error("Unknown address space");
   }
